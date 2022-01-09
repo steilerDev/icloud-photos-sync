@@ -1,0 +1,4 @@
+== Important ==
+
+  - Attach to session using `docker attach <container-name>`
+  - Detach from session `CTRL-P-Q`
