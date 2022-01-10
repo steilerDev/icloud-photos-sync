@@ -26,4 +26,5 @@ RUN pip install icloudpd && \
 #    npm install
 
 RUN chmod +x /opt/*.sh /opt/*.py
-#ENTRYPOINT ["/opt/entry.sh"]
+
+ENTRYPOINT ["/opt/entry.sh"]

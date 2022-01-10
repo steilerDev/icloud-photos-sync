@@ -8,5 +8,4 @@ icloudpd -d $ALL_PHOTOS_DIR
     --set-exif-datetime \
     --log-level $LOG_LEVEL \
 
-
-
+python /opt/folder-sync.py

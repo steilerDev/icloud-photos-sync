@@ -9,3 +9,5 @@ log_level = os.environ.get("LOG_LEVEL")
 cookie_dir = os.environ.get("COOKIE_DIR")
 data_dir = os.environ.get("DATA_DIR")
 all_photos_dir = os.environ.get("ALL_PHOTOS_DIR")
+
+ignore_albums = os.environ.get("IGNORE_ALBUMS")
