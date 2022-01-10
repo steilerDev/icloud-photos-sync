@@ -27,7 +27,7 @@ fi
 
 === Run ===
 
-This is my `docker-compose.yml` started through `docker-compose up`
+This is my `docker-compose.yml` started through `docker-compose up && docker attach photo-sync`
 
 ```
 version: '2'

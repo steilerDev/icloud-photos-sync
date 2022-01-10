@@ -62,4 +62,4 @@ for albumName, album in albums.items():
             logger.debug("Using relative path " + relative_src_path)
             os.symlink(relative_src_path, dest_path)
         except FileExistsError:
-            logger.warn("File " + dest_path + " already exists, ignoring...")
+            logger.warning("File " + dest_path + " already exists, ignoring...")
