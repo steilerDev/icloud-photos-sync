@@ -4,7 +4,7 @@ This uses the [currently pending PR](https://github.com/picklepete/pyicloud/pull
 
 This is my first Python project and the code is heavily borrowed from the original project and might not be optimal, feedback welcomed!
 
-=== Build ===
+## Build
 
 Run the following to build the Docker Container. The container will run once before quitting. This is intended due to the iCloud Auth timeout. I've included -but uncommented- the cron logic.
 
@@ -25,7 +25,7 @@ if [ -f "./rootfs.tar.gz" ]; then
 fi
 ```
 
-=== Run ===
+## Run
 
 This is my `docker-compose.yml` started through `docker-compose up && docker attach photo-sync`
 
