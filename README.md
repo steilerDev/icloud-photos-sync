@@ -1,8 +1,8 @@
 This is a PoC/WIP to demonstrate how [icloud-photos-downloader](https://github.com/icloud-photos-downloader/icloud_photos_downloader) could be expanded as a full sync engine also mirroring all folders and album structures.
 
-This uses the [currently pending PR](https://github.com/picklepete/pyicloud/pull/297) from noizwaves to the pyicloud project (https://github.com/noizwaves/pyicloud/tree/albums-in-folders). Once merged upstream and added to `icloudpd` this fucntionality should be added to `icloudpd`.
+This uses the [currently pending PR](https://github.com/picklepete/pyicloud/pull/297) from [noizwaves to the pyicloud project](https://github.com/noizwaves/pyicloud/tree/albums-in-folders). Once merged upstream and added to `icloudpd` this functionality should be added to `icloudpd`.
 
-This is my first Python project and the code is heavily borrowed from the original project.
+This is my first Python project and the code is heavily borrowed from the original project and might not be optimal, feedback welcomed!
 
 === Build ===
 
