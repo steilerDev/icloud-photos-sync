@@ -1,4 +1,4 @@
-name: Build steilerGroup Docker
+name: Build to steilerGroup-Docker
 
 on:
   push:
@@ -21,4 +21,4 @@ jobs:
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag docker.steilergroup.net/$(echo "${{github.repository}}" | awk -F / '{print $2}'):latest
     - name: Push the Docker image
-      run: docker push docker.steilergroup.net/${{github.repository}}:latest
+      run: docker push docker.steilergroup.net/$(echo "${{github.repository}}" | awk -F / '{print $2}'):latest
