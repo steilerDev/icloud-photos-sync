@@ -1,0 +1,24 @@
+name: Build steilerGroup Docker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Prepare assets
+      run: tar -C ./rootfs -czvf ./rootfs.tar.gz ./
+    - name: Login to Docker Registry
+      run: docker login docker.steilergroup.net -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag docker.steilergroup.net/${{github.repository}}:latest
+    - name: Push the Docker image
+      run: docker push docker.steilergroup.net/${{github.repository}}:latest
