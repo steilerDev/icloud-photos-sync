@@ -19,6 +19,6 @@ jobs:
     - name: Login to Docker Registry
       run: docker login docker.steilergroup.net -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag docker.steilergroup.net/${{github.repository}}:latest
+      run: docker build . --file Dockerfile --tag docker.steilergroup.net/$(echo "${{github.repository}}" | awk -F / '{print $2}'):latest
     - name: Push the Docker image
       run: docker push docker.steilergroup.net/${{github.repository}}:latest
