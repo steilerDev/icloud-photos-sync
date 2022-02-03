@@ -19,13 +19,22 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
     - name: Install dependencies & build app
       run: |
-        cd rootfs/opt/icloud-photos-sync/ && \
         npm install && \
         npm run test && \
         npm run build
-    - name: Prepare assets
+      working-directory: rootfs/opt/icloud-photos-sync/
+    - name: Package npm assets
+      run: |
+        cp README.md LICENSE rootfs/opt/icloud-photos-sync/ && \
+        tar -C rootfs/opt/icloud-photos-sync/ -cvzf ./npm.tar.gz README.md package.json LICENSE dist/
+    - name: Upload npm assets
+      uses: actions/upload-artifact@v2
+      with:
+        name: npm-assets
+        path: ./npm.tar.gz
+    - name: Package docker assets
       run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
-    - name: Upload build
+    - name: Upload docker assets
       uses: actions/upload-artifact@v2
       with:
         name: rootfs
@@ -92,18 +101,20 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v1
     - name: Setup Node
       uses: actions/setup-node@v1
       with:
         node-version: ${{ env.NODE_VERSION }}
-    - name: Install dependencies
+    - name: Download build
+      uses: actions/download-artifact@v2
+      with:
+        name: npm-assets
+    - name: Prepare build
       run: |
-        cp README.md rootfs/opt/icloud-photos-sync/ && \
-        cd rootfs/opt/icloud-photos-sync/ && \
-        npm install
+        tar -xzf npm.tar.gz && \
+        rm npm.tar.gz && \
+        npm install && \
+        tree .
     - uses: JS-DevTools/npm-publish@v1
       with:
         token: ${{ secrets.NPM_TOKEN }}
-        package: rootfs/opt/icloud-photos-sync/package.json
