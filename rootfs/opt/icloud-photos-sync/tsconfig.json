@@ -5,12 +5,12 @@
       "target": "es6",
       "moduleResolution": "node",
       "sourceMap": true,
-      "outDir": "dist",
+      "outDir": "bin",
       "declaration": true
     },
     "exclude": [
         "node_modules",
-        "dist"
+        "bin"
     ],
     "lib": ["es2015"]
   }

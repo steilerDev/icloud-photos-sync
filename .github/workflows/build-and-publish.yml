@@ -23,18 +23,18 @@ jobs:
         npm run test && \
         npm run build
       working-directory: rootfs/opt/icloud-photos-sync/
-    - name: Package npm assets
+    - name: Package npm artifacts
       run: |
         cp README.md LICENSE rootfs/opt/icloud-photos-sync/ && \
-        tar -C rootfs/opt/icloud-photos-sync/ -cvzf ./npm.tar.gz README.md package.json LICENSE dist/
-    - name: Upload npm assets
+        tar -C rootfs/opt/icloud-photos-sync/ -czf ./npm.tar.gz README.md LICENSE package.json bin/
+    - name: Upload npm artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: npm-assets
+        name: npm-artifacts
         path: ./npm.tar.gz
-    - name: Package docker assets
+    - name: Package docker artifacts
       run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
-    - name: Upload docker assets
+    - name: Upload docker artifacts
       uses: actions/upload-artifact@v2
       with:
         name: rootfs
@@ -48,7 +48,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Download build
+    - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
         name: rootfs
@@ -67,7 +67,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Download build
+    - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
         name: rootfs
@@ -105,16 +105,15 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ env.NODE_VERSION }}
-    - name: Download build
+    - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
-        name: npm-assets
-    - name: Prepare build
+        name: npm-artifacts
+    - name: Prepare artifacts
       run: |
         tar -xzf npm.tar.gz && \
         rm npm.tar.gz && \
-        npm install && \
-        tree .
+        npm install
     - uses: JS-DevTools/npm-publish@v1
       with:
         token: ${{ secrets.NPM_TOKEN }}
