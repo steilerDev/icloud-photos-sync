@@ -16,7 +16,7 @@ jobs:
     - name: Setup node
       uses: actions/setup-node@v2
       with:
-        node-version: $NODE_VERSION
+        node-version: ${{ env.NODE_VERSION }}
     - name: Install dependencies & build app
       run: |
         cd rootfs/opt/icloud-photos-sync/ && \
@@ -97,7 +97,7 @@ jobs:
     - name: Setup Node
       uses: actions/setup-node@v1
       with:
-        node-version: $NODE_VERSION
+        node-version: ${{ env.NODE_VERSION }}
     - name: Navigate to package
       run: cd rootfs/opt/icloud-photos-sync/
     - name: Install dependencies
