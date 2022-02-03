@@ -1,10 +1,9 @@
-name: Build & Publish to steilerGroup-Docker
+name: Build & Publish
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request]
+
+env:
+  PKG_NAME: icloud-photos-sync
 
 jobs:
   build:
@@ -25,16 +24,17 @@ jobs:
         npm run build && \
         cd ../../../
     - name: Prepare assets
-      run: tar -C ./rootfs -czvf ./rootfs.tar.gz ./
+      run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
     - name: Upload build
       uses: actions/upload-artifact@v2
       with:
         name: rootfs
         path: ./rootfs.tar.gz
   
-  publish:
+  publish-docker-dev:
     name: Publish Project to steilerGroup-Docker
     needs: build
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -44,8 +44,37 @@ jobs:
       with:
         name: rootfs
     - name: Login to Docker Registry
-      run: docker login docker.steilergroup.net -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
+      run: docker login ${{secrets.DOCKER_DEV_HOST}} -u ${{secrets.DOCKER_DEV_USERNAME}} -p ${{secrets.DOCKER_DEV_PWD}}
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag docker.steilergroup.net/$(echo "${{github.repository}}" | awk -F / '{print $2}'):latest
+      run: docker build . --file Dockerfile --tag ${{secrets.DOCKER_DEV_HOST}}/$PKG_NAME:latest
     - name: Push the Docker image
-      run: docker push ${{secrets.DOCKER_HOST}}/$(echo "${{github.repository}}" | awk -F / '{print $2}'):latest
+      run: docker push ${{secrets.DOCKER_DEV_HOST}}/$PKG_NAME:latest
+
+  publish-docker-prod:
+    name: Publish Project to Docker
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Download build
+      uses: actions/download-artifact@v2
+      with:
+        name: rootfs
+    - name: Login to Docker Registry
+      run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag $PKG_NAME
+    - name: get-npm-version
+      id: package-version
+      uses: martinbeentjes/npm-get-version-action@master
+      with:
+        path: rootfs/opt/icloud-photos-sync
+    - name: Tag the Docker image
+      run: |
+        docker image tag $PKG_NAME ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:latest && \
+        docker image tag $PKG_NAME ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:${{ steps.package-version.outputs.current-version}} && \
+        docker image ls
+    - name: Push the Docker image
+      run: docker image push --all-tags ${{secrets.DOCKER_USERNAME}}/$PKG_NAME
