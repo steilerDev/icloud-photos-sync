@@ -1,4 +1,4 @@
-name: Build to steilerGroup-Docker
+name: Build & Publish to steilerGroup-Docker
 
 on:
   push:
@@ -7,13 +7,12 @@ on:
     branches: [ main ]
 
 jobs:
-
   build:
-
+    name: Build Project
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout
+      uses: actions/checkout@v2
     - name: Setup node
       uses: actions/setup-node@v2
       with:
@@ -27,6 +26,23 @@ jobs:
         cd ../../../
     - name: Prepare assets
       run: tar -C ./rootfs -czvf ./rootfs.tar.gz ./
+    - name: Upload build
+      uses: actions/upload-artifact@v2
+      with:
+        name: rootfs
+        path: ./rootfs.tar.gz
+  
+  publish:
+    name: Publish Project to steilerGroup-Docker
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Download build
+      uses: actions/download-artifact@v2
+      with:
+        name: rootfs
     - name: Login to Docker Registry
       run: docker login docker.steilergroup.net -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
     - name: Build the Docker image

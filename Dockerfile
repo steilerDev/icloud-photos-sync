@@ -8,7 +8,7 @@ RUN apt-get update \
         --no-install-recommends \
         --fix-missing \
         --assume-yes \
-            vim \
+            apt-utils vim \
         && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENTRYPOINT ["node", "/opt/icloud-photos-sync/dist/index.js"]
