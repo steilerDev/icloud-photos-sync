@@ -1,6 +1,6 @@
 {
   "name": "icloud-photos-sync",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Sync engine for iCloud Photos library within the native file system",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,6 +22,9 @@
     "url": "https://github.com/steilerDev/icloud-photos-sync/issues"
   },
   "homepage": "https://github.com/steilerDev/icloud-photos-sync#readme",
+  "files": [
+    "dist/**/*"
+  ],
   "engines": {
     "node": ">=17.4.0"
   },
