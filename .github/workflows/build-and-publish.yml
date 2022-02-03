@@ -22,8 +22,7 @@ jobs:
         cd rootfs/opt/icloud-photos-sync/ && \
         npm install && \
         npm run test && \
-        npm run build && \
-        cd ../../../
+        npm run build
     - name: Prepare assets
       run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
     - name: Upload build
@@ -84,7 +83,7 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PWD }}
-        repository: ${{secrets.DOCKER_USERNAME}}/$PKG_NAME
+        repository: steilerdev/$PKG_NAME
 
   publish-npm:
     name: Publish Project to npm
@@ -98,10 +97,11 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ env.NODE_VERSION }}
-    - name: Navigate to package
-      run: cd rootfs/opt/icloud-photos-sync/
     - name: Install dependencies
-      run: npm install
+      run: |
+        cd rootfs/opt/icloud-photos-sync/ && \
+        npm install
     - uses: JS-DevTools/npm-publish@v1
       with:
         token: ${{ secrets.NPM_TOKEN }}
+        package: rootfs/opt/icloud-photos-sync/package.json
