@@ -66,7 +66,7 @@ jobs:
       run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag $PKG_NAME
-    - name: get-npm-version
+    - name: Get current version
       id: package-version
       uses: martinbeentjes/npm-get-version-action@master
       with:
@@ -78,13 +78,16 @@ jobs:
         docker image ls
     - name: Push the Docker image
       run: docker image push --all-tags ${{secrets.DOCKER_USERNAME}}/$PKG_NAME
-    - name: Update Docker Hub Description
-      uses: peter-evans/dockerhub-description@v2
+    - name: Update Docker Hub readme
+      uses: christian-korneck/update-container-description-action@v1
+      env:
+        DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASS: ${{ secrets.DOCKER_PWD }}
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PWD }}
-        repository: ${{secrets.DOCKER_USERNAME}}/$PKG_NAME
-        readme-filepath: ./README.md
+        destination_container_repo: ${{secrets.DOCKER_USERNAME}}/$PKG_NAME
+        provider: dockerhub
+        short_description: 'Sync engine for iCloud Photos library within the native file system'
+        readme_file: 'README.md'
 
   publish-npm:
     name: Publish Project to npm
