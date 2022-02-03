@@ -14,6 +14,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Setup node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '17'
+    - name: Install dependencies & build app
+      run: |
+        cd rootfs/opt/icloud-photos-sync/ && \
+        npm install && \
+        npm run test && \
+        npm run build && \
+        cd ../../../
     - name: Prepare assets
       run: tar -C ./rootfs -czvf ./rootfs.tar.gz ./
     - name: Login to Docker Registry
@@ -21,4 +32,4 @@ jobs:
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag docker.steilergroup.net/$(echo "${{github.repository}}" | awk -F / '{print $2}'):latest
     - name: Push the Docker image
-      run: docker push docker.steilergroup.net/$(echo "${{github.repository}}" | awk -F / '{print $2}'):latest
+      run: docker push ${{secrets.DOCKER_HOST}}/$(echo "${{github.repository}}" | awk -F / '{print $2}'):latest
