@@ -6,13 +6,7 @@ import chalk from 'chalk';
  * Logger color definitions
  */
 export const colors = {
-    /**
-     * TRace
-     */
     TRACE: chalk.magenta,
-    /**
-     * Debug
-     */
     DEBUG: chalk.cyan,
     INFO: chalk.blue,
     WARN: chalk.yellow,

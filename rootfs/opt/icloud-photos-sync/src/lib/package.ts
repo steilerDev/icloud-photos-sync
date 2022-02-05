@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 export const PACKAGE_INFO: {
     /**

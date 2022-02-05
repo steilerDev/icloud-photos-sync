@@ -2,6 +2,10 @@ import {Command, Option, OptionValues} from 'commander';
 import chalk from 'chalk';
 import {PACKAGE_INFO} from './package.js';
 
+/**
+ * Processing CLI arguments
+ * @returns The parsed values from the commandline/environment variables
+ */
 export function setupCLI(): OptionValues {
     console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.name}, v.${PACKAGE_INFO.version}!`));
     console.log(chalk.green(`Made with <3 by steilerDev`));
@@ -17,7 +21,7 @@ export function setupCLI(): OptionValues {
         .addOption(new Option(`-l, --log_level <level>`, `Set the log level`)
             .env(`LOG_LEVEL`)
             .choices([`trace`, `debug`, `info`, `warn`, `error`])
-            .default(`info`));
+            .default(`debug`));
     program.parse();
     return program.opts();
 }

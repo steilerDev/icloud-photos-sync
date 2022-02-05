@@ -20,6 +20,7 @@
         "indent": ["error", 4],
         "eol-last": ["error", "never"],
         "new-cap": ["error", { "newIsCapExceptions": ["iCloud"] }],
-        "tsdoc/syntax": "warn"
+        "tsdoc/syntax": "warn",
+        "no-unused-vars": ["error", { "args": "none" }]
     }
 }
