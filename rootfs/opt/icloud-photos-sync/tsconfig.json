@@ -1,16 +1,19 @@
 {
     "compilerOptions": {
-      "module": "commonjs",
+      "module": "ES6",
       "esModuleInterop": true,
-      "target": "es6",
+      "target": "ES6",
       "moduleResolution": "node",
       "sourceMap": true,
       "outDir": "bin",
-      "declaration": true
+      "declaration": true,
+      "rootDir": "src",
     },
     "exclude": [
         "node_modules",
         "bin"
     ],
-    "lib": ["es2015"]
+    "lib": [
+      "es2017"
+    ]
   }

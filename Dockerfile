@@ -11,4 +11,4 @@ RUN apt-get update \
             apt-utils vim \
         && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-ENTRYPOINT ["node", "/opt/icloud-photos-sync/bin/index.js"]
+ENTRYPOINT ["node", "/opt/icloud-photos-sync/bin/main.js"]
