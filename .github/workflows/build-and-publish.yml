@@ -21,7 +21,8 @@ jobs:
       run: |
         npm install && \
         npm run test && \
-        npm run build
+        npm run build && \
+        npm run docs
       working-directory: rootfs/opt/icloud-photos-sync/
     - name: Package npm artifacts
       run: |
@@ -39,6 +40,13 @@ jobs:
       with:
         name: rootfs
         path: ./rootfs.tar.gz
+    - name: Package docs
+      run: tar -C rootfs/opt/icloud-photos-sync/ -czf ./docs.tar.gz docs/
+    - name: Upload docs artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: docs-artifacts
+        path: ./docs.tar.gz
   
   publish-docker-dev:
     name: Publish Project to steilerGroup-Docker
@@ -117,3 +125,22 @@ jobs:
     - uses: JS-DevTools/npm-publish@v1
       with:
         token: ${{ secrets.NPM_TOKEN }}
+  
+  publish-wiki:
+    name: Publish documentation to GitHub publish-wiki
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: docs-artifacts
+      - name: Prepare artifacts
+        run: tar -xzf docs.tar.gz
+      - name: Upload Documentation to Wiki
+        uses: SwiftDocOrg/github-wiki-publish-action@v1
+        with:
+          path: "docs"
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}

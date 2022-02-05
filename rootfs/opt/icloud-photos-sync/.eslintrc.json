@@ -12,12 +12,14 @@
         "sourceType": "module"
     },
     "plugins": [
-        "@typescript-eslint"
+        "@typescript-eslint",
+        "eslint-plugin-tsdoc"
     ],
     "rules": {
         "quotes": ["error", "backtick"],
         "indent": ["error", 4],
         "eol-last": ["error", "never"],
-        "new-cap": ["error", { "newIsCapExceptions": ["iCloud"] }]
+        "new-cap": ["error", { "newIsCapExceptions": ["iCloud"] }],
+        "tsdoc/syntax": "warn"
     }
 }

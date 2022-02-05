@@ -9,6 +9,13 @@
       "declaration": true,
       "rootDir": "src",
     },
+    "typedocOptions": {
+      "entryPoints": ["src/"],
+      "out": "docs",
+      "excludeExternals": true,
+      "entryPointStrategy": "expand",
+      "theme": "github-wiki"
+    },
     "exclude": [
         "node_modules",
         "bin"
