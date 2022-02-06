@@ -17,5 +17,5 @@ setupLogger(opts.log_level);
  */
 
 import {iCloud} from './lib/icloud.js';
-const icloud = iCloud.getInstance(`frank@steiler.de`, `nodFFMV8mf7Li.PktxXUfk86i7yueHHD`);
-icloud.login();
+const icloud = iCloud.getInstance(opts.username, opts.password, opts.port);
+icloud.authenticate();

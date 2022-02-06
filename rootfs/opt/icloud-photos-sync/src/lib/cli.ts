@@ -15,13 +15,19 @@ export function setupCLI(): OptionValues {
     program.name(PACKAGE_INFO.name)
         .description(PACKAGE_INFO.description)
         .version(PACKAGE_INFO.version)
-        .addOption(new Option(`-p, --port <number>`, `port number`)
+        .addOption(new Option(`-p, --port <number>`, `port number for MFA server (Awaiting MFA code when necessary)`)
             .env(`PORT`)
             .default(8080))
         .addOption(new Option(`-l, --log_level <level>`, `Set the log level`)
             .env(`LOG_LEVEL`)
             .choices([`trace`, `debug`, `info`, `warn`, `error`])
-            .default(`debug`));
+            .default(`debug`))
+        .addOption(new Option(`-u, --username <email>`, `AppleID username`)
+            .env(`APPLE_ID_USER`)
+            .makeOptionMandatory(true))
+        .addOption(new Option(`-p, --password <email>`, `AppleID password`)
+            .env(`APPLE_ID_PWD`)
+            .makeOptionMandatory(true));
     program.parse();
     return program.opts();
 }

@@ -49,6 +49,7 @@
     "commander": "^9.0.0",
     "loglevel": "^1.8.0",
     "loglevel-plugin-prefix": "^0.8.4",
-    "needle": "^3.0.0"
+    "needle": "^3.0.0",
+    "unirest": "^0.6.0"
   }
 }
