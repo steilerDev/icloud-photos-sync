@@ -21,6 +21,7 @@
         "eol-last": ["error", "never"],
         "new-cap": ["error", { "newIsCapExceptions": ["iCloud"] }],
         "tsdoc/syntax": "warn",
-        "no-unused-vars": ["warn", { "args": "none" }]
+        "no-unused-vars": "off",
+        "@typescript-eslint/no-unused-vars": ["warn"]
     }
 }

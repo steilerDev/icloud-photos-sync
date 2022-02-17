@@ -1,47 +1,8 @@
 import log from 'loglevel';
 import EventEmitter from 'events';
 import unirest from 'unirest';
-import http from 'http';
-
-const CLIENT_ID = `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d`;
-const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`;
-const CLIENT_INFO = JSON.stringify({
-    U: USER_AGENT,
-    L: `en-US`,
-    Z: `GMT+01:00`,
-    V: `1.1`,
-    F: ``,
-});
-
-const ENDPOINT = `/mfa`;
-
-/**
- * Header used for authentication
- */
-const DEFAULT_AUTH_HEADER = {
-    'User-Agent': USER_AGENT,
-    Accept: `application/json`,
-    Connection: `keep-alive`,
-    Origin: `https://idmsa.apple.com`,
-    Referer: `https://idmsa.apple.com/`,
-    'Accept-Encoding': `gzip, deflate, br`,
-    'Content-Type': `application/json`,
-    'X-Apple-Widget-Key': CLIENT_ID,
-    'X-Apple-OAuth-Client-Id': CLIENT_ID,
-    'X-Apple-I-FD-Client-Info': CLIENT_INFO,
-    'X-Apple-OAuth-Response-Type': `code`,
-    'X-Apple-OAuth-Response-Mode': `web_message`,
-    'X-Apple-OAuth-Client-Type': `firstPartyAuth`,
-};
-
-enum ICLOUD_EVENTS {
-    MFA_REQUIRED = `mfa_req`,
-    MFA_RECEIVED = `mfa_rec`,
-    AUTHENTICATED = `auth`,
-    SETUP_REQUIRED = `setup_req`,
-    READY = `ready`,
-    ERROR = `error`
-}
+import {MFAServer} from './icloud.mfa-server.js';
+import * as ICLOUD from './icloud.constants.js';
 
 /**
  * This class holds the iCloud connection
@@ -86,31 +47,41 @@ export class iCloud extends EventEmitter {
      */
     sessionToken: string = ``;
 
-    mfaServer: http.Server;
-    logger: log.Logger;
+    /**
+     * Server object to input MFA code
+     */
+    mfaServer: MFAServer;
 
-    mfaPort: number;
+    /**
+     * Holding the cookies necessary for authentication
+     */
+    cookieJar: any;
+
+    logger: log.Logger = log.getLogger(`I-Cloud`);
 
     private constructor(username: string, password: string, mfaPort: number) {
         super();
-        this.logger = log.getLogger(`I-Cloud`);
-        this.logger.info(`Initiating iCloud connection...`);
+        this.logger.info(`Initiating iCloud connection`);
+        this.logger.debug(`Using ${username}, ${password}, ${mfaPort}`);
         this.username = username;
         this.password = password;
-        this.mfaPort = mfaPort;
+        this.mfaServer = new MFAServer(mfaPort, this);
 
-        this.on(ICLOUD_EVENTS.ERROR, (msg: string) => {
+        this.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
             this.logger.error(`Error ocurred: ${msg}`);
         });
 
-        this.on(ICLOUD_EVENTS.MFA_REQUIRED, this.mfaRequired);
-        this.on(ICLOUD_EVENTS.MFA_RECEIVED, this.mfaReceived);
-        this.on(ICLOUD_EVENTS.AUTHENTICATED, this.getTokens);
+        this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
+            this.mfaServer.startServer();
+        });
+        this.on(ICLOUD.EVENTS.MFA_RECEIVED, this.mfaReceived);
+        this.on(ICLOUD.EVENTS.AUTHENTICATED, this.getTokens);
+        this.on(ICLOUD.EVENTS.SETUP_REQUIRED, this.setupICloud);
     }
 
     /**
      * Facilitator function for iCloud
-     * @param mfaPort The port for the MFA receiving server
+     * @param mfaPort - The port for the MFA receiving server
      */
     public static getInstance(username: string, password: string, mfaPort: number) {
         if (!this._instance) {
@@ -122,8 +93,8 @@ export class iCloud extends EventEmitter {
 
     authenticate() {
         this.logger.info(`Authenticating user`);
-        unirest(`POST`, `https://idmsa.apple.com/appleauth/auth/signin`)
-            .headers(DEFAULT_AUTH_HEADER)
+        unirest(`POST`, `${ICLOUD.AUTH_ENDPOINT}/signin`)
+            .headers(ICLOUD.DEFAULT_AUTH_HEADER)
             .send(JSON.stringify({
                 accountName: this.username,
                 password: this.password,
@@ -133,71 +104,47 @@ export class iCloud extends EventEmitter {
             }))
             .end(res => {
                 if (res.code === 200) {
-                    if (res.headers[`x-apple-session-token`]) {
+                    if (res.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN]) {
                         this.logger.info(`Authenticated successfully`);
-                        this.sessionToken = res.headers[`x-apple-session-token`];
+                        this.sessionToken = res.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN];
                         this.logger.debug(`Acquired session token: ${this.sessionToken}`);
-                        this.emit(ICLOUD_EVENTS.SETUP_REQUIRED);
+                        this.emit(ICLOUD.EVENTS.SETUP_REQUIRED);
                     } else {
-                        this.emit(ICLOUD_EVENTS.ERROR, `Expected Session Token, but received ${JSON.stringify(res.headers)}`);
+                        this.emit(ICLOUD.EVENTS.ERROR, `Expected Session Token, but received ${JSON.stringify(res.headers)}`);
                     }
                 } else if (res.code === 409) {
-                    if (res.headers[`x-apple-id-session-id`] && res.headers.scnt) {
-                        this.sessionID = res.headers[`x-apple-id-session-id`];
+                    if (res.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN] && res.headers.scnt) {
+                        this.sessionID = res.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN];
                         this.scnt = res.headers.scnt;
                         this.logger.debug(`Acquired Session ID (${this.sessionID}) and scnt (${this.scnt})`);
-                        this.emit(ICLOUD_EVENTS.MFA_REQUIRED);
+                        this.emit(ICLOUD.EVENTS.MFA_REQUIRED);
                     } else {
-                        this.emit(ICLOUD_EVENTS.ERROR, `Expected Session ID and scnt, but received ${JSON.stringify(res.headers)}`);
+                        this.emit(ICLOUD.EVENTS.ERROR, `Expected Session ID and scnt, but received ${JSON.stringify(res.headers)}`);
                     }
                 } else {
-                    this.emit(ICLOUD_EVENTS.ERROR, `Unexpected HTTP code: ${res.code}`);
+                    this.emit(ICLOUD.EVENTS.ERROR, `Unexpected HTTP code: ${res.code}`);
                 }
             });
     }
 
     /**
-     * This function is triggered, once the MFA code is required. It will spin up a web server to receive MFA code
-     * @todo Add functions to re-send code and switch device
+     * Enter the MFA code and finalize authentication
+     * @param mfa - The MFA code
      */
-    mfaRequired() {
-        // Creating a server, that waits for MFA code
-        this.mfaServer = http.createServer((req, res) => {
-            if (req.url.startsWith(ENDPOINT) && req.url.match(/\?code=\d{6}$/) && req.method === `POST`) {
-                log.getLogger(`MFA Server`).debug(`Received MFA: ${req.url}`);
-
-                const mfa: string = req.url.slice(-6);
-
-                res.writeHead(200, {"Content-Type": `application/json`});
-                res.write(`Read MFA code: ${mfa}`);
-                this.emit(ICLOUD_EVENTS.MFA_RECEIVED, mfa);
-                res.end();
-            } else {
-                log.getLogger(`MFA Server`).warn(`Received unknown request to endpoint ${req.url}`);
-                res.writeHead(404, {"Content-Type": `application/json`});
-                res.end(JSON.stringify({message: `Route not found`}));
-            }
-        });
-
-        this.mfaServer.listen(this.mfaPort, () => {
-            log.getLogger(`MFA Server`).info(`MFA server started on port ${this.mfaPort}, awaiting POST request on ${ENDPOINT}`);
-        });
-
-        this.mfaServer.on(`close`, () => {
-            log.getLogger(`MFA Server`).info(`MFA server stopped`);
-        });
-    }
-
     mfaReceived(mfa: string) {
-        this.mfaServer.close();
+        this.mfaServer.stopServer();
 
         this.logger.debug(`Authenticating MFA with code ${mfa}`);
+
         if (this.scnt && this.sessionID) {
-            unirest(`POST`, `https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode`)
-                .headers({...DEFAULT_AUTH_HEADER,
-                    scnt: this.scnt,
-                    'X-Apple-ID-Session-Id': this.sessionID,
-                })
+            const header = {...ICLOUD.DEFAULT_AUTH_HEADER,
+                scnt: this.scnt,
+                'X-Apple-ID-Session-Id': this.sessionID};
+
+            this.logger.debug(JSON.stringify(header));
+
+            unirest(`POST`, `${ICLOUD.AUTH_ENDPOINT}/verify/trusteddevice/securitycode`)
+                .headers(header)
                 .send(JSON.stringify({
                     securityCode: {
                         code: mfa,
@@ -206,9 +153,10 @@ export class iCloud extends EventEmitter {
                 .end(res => {
                     if (res.code === 204) {
                         this.logger.info(`MFA code correct!`);
-                        this.emit(ICLOUD_EVENTS.AUTHENTICATED);
+                        this.emit(ICLOUD.EVENTS.AUTHENTICATED);
                     } else {
-                        this.emit(ICLOUD_EVENTS.ERROR, res.error);
+                        this.logger.debug(`Received error during MSA validation: ${JSON.stringify(res.headers)}`);
+                        this.emit(ICLOUD.EVENTS.ERROR, res.error);
                     }
                 });
         }
@@ -219,22 +167,49 @@ export class iCloud extends EventEmitter {
      */
     getTokens() {
         this.logger.info(`Trusting device and acquiring tokens`);
-        const req = unirest(`GET`, `https://idmsa.apple.com/appleauth/auth/2sv/trust`)
-            .headers({...DEFAULT_AUTH_HEADER, scnt: this.scnt,
+        unirest(`GET`, `${ICLOUD.AUTH_ENDPOINT}/2sv/trust`)
+            .headers({...ICLOUD.DEFAULT_AUTH_HEADER,
+                scnt: this.scnt,
                 'X-Apple-ID-Session-Id': this.sessionID})
             .end(res => {
-                if (res.headers[`x-apple-session-token`]) {
-                    if (res.headers[`x-apple-twosv-trust-token`]) {
-                        this.trustToken = res.headers[`x-apple-twosv-trust-token`];
+                if (res.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN]) {
+                    this.sessionToken = res.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN];
+                    this.logger.debug(`Acquired session token: ${this.sessionToken}`);
+
+                    if (res.headers[ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN]) {
+                        this.trustToken = res.headers[ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN];
                         this.logger.debug(`Acquired trust tokwn: ${this.trustToken}`);
                     }
 
-                    this.sessionToken = res.headers[`x-apple-session-token`];
-                    this.logger.debug(`Acquired session token: ${this.sessionToken}`);
-                    this.emit(ICLOUD_EVENTS.SETUP_REQUIRED);
+                    this.emit(ICLOUD.EVENTS.SETUP_REQUIRED);
                 } else {
-                    this.emit(ICLOUD_EVENTS.ERROR, `Expected Session Token, but received ${JSON.stringify(res.headers)}`);
+                    this.emit(ICLOUD.EVENTS.ERROR, `Expected Session Token, but received ${JSON.stringify(res.headers)}`);
                 }
+            });
+    }
+
+    /**
+     * Acquiring necessary cookies from session token for further processing
+     */
+    setupICloud() {
+        this.logger.debug(`Setting up iCloud connection`);
+        this.cookieJar = unirest.jar();
+        unirest(`POST`, ICLOUD.SETUP_ENDPOINT)
+            .headers(ICLOUD.DEFAULT_SETUP_HEADER)
+            .jar(this.cookieJar)
+            .send(JSON.stringify({
+                dsWebAuthToken: this.sessionToken,
+                // Extended_login: true, //    "accountCountryCode": "DEU",
+                trustToken: this.trustToken,
+            }))
+            .end(res => {
+                if (res.error) {
+                    this.logger.error(res.error);
+                } else {
+                    this.logger.debug(res.raw_body);
+                }
+
+                this.logger.debug(JSON.stringify(this.cookieJar));
             });
     }
 }
