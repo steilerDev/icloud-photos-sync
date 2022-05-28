@@ -22,6 +22,7 @@
         "new-cap": ["error", { "newIsCapExceptions": ["iCloud"] }],
         "tsdoc/syntax": "warn",
         "no-unused-vars": "off",
+        "no-negated-condition": "off",
         "@typescript-eslint/no-unused-vars": ["warn"]
     }
 }

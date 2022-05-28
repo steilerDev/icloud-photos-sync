@@ -48,10 +48,31 @@ export enum EVENTS {
     MFA_REQUIRED = `mfa_req`,
     MFA_RECEIVED = `mfa_rec`,
     AUTHENTICATED = `auth`,
-    SETUP_REQUIRED = `setup_req`,
+    TRUSTED = `trusted`,
     READY = `ready`,
     ERROR = `error`
 }
 
-export const AUTH_ENDPOINT = `https://idmsa.apple.com/appleauth/auth`;
-export const SETUP_ENDPOINT = `https://setup.icloud.com/setup/ws/1/accountLogin`;
+export const ENPOINT = {
+    AUTH: {
+        BASE: `https://idmsa.apple.com/appleauth/auth`,
+        PATH: {
+            SIGNIN: `/signin`,
+            MFA: `/verify/trusteddevice/securitycode`,
+            TRUST: `/2sv/trust`,
+        },
+    },
+    SETUP: {
+        BASE: `https://setup.icloud.com`,
+        PATH: {
+            ACCOUNT: `/setup/ws/1/accountLogin`,
+        },
+    },
+};
+
+export const URL = {
+    SIGNIN: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.SIGNIN}`,
+    MFA: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA}`,
+    TRUST: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.TRUST}`,
+    SETUP: `${ENPOINT.SETUP.BASE}${ENPOINT.SETUP.PATH.ACCOUNT}`,
+};
