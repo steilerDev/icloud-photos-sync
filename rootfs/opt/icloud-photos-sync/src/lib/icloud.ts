@@ -77,6 +77,9 @@ export class iCloud extends EventEmitter {
         this.on(ICLOUD.EVENTS.MFA_RECEIVED, this.mfaReceived);
         this.on(ICLOUD.EVENTS.AUTHENTICATED, this.getTokens);
         this.on(ICLOUD.EVENTS.SETUP_REQUIRED, this.setupICloud);
+        this.on(ICLOUD.EVENTS.READY, () => {
+            this.logger.info('iCloud connection ready!')
+        });
     }
 
     /**
@@ -144,8 +147,6 @@ export class iCloud extends EventEmitter {
                 scnt: this.scnt,
                 'X-Apple-ID-Session-Id': this.sessionID};
 
-            // This.logger.debug(JSON.stringify(header));
-
             unirest(`POST`, `${ICLOUD.AUTH_ENDPOINT}/verify/trusteddevice/securitycode`)
                 .headers(header)
                 .jar(this.cookieJar)
@@ -197,24 +198,22 @@ export class iCloud extends EventEmitter {
      * Acquiring necessary cookies from session token for further processing
      */
     setupICloud() {
-        this.logger.debug(`Setting up iCloud connection`);
+        this.logger.info(`Setting up iCloud connection`);
         this.cookieJar = unirest.jar();
         unirest(`POST`, ICLOUD.SETUP_ENDPOINT)
             .headers(ICLOUD.DEFAULT_SETUP_HEADER)
             .jar(this.cookieJar)
             .send(JSON.stringify({
                 dsWebAuthToken: this.sessionToken,
-                // Extended_login: true, //    "accountCountryCode": "DEU",
                 trustToken: this.trustToken,
             }))
             .end(res => {
-                if (res.error) {
-                    this.logger.error(res.error);
+                if (res.code === 200) {
+                    res.body.apps.photos
+                    this.emit(ICLOUD.EVENTS.READY)
                 } else {
-                    this.logger.debug(res.raw_body);
+                    this.emit(ICLOUD.EVENTS.ERROR, `Got non-200 response while setting up iCloud connection: ${res.code} (${res.error})`)
                 }
-
-                this.logger.debug(JSON.stringify(this.cookieJar));
             });
     }
 }

@@ -17,13 +17,17 @@ export const colors = {
  * Logger setup including the configuration of logger prefix
  * @param logLevel - The log level for this application
  */
-export function setupLogger(logLevel: string): void {
+export function setupLogger(logLevel: log.LogLevelDesc): void {
     prefix.reg(log);
-    log.setLevel(logLevel as any, false);
+    log.setLevel(logLevel, false);
 
     prefix.apply(log, {
         format(level, name, timestamp) {
             return `${chalk.gray(`[${timestamp}]`)} ${colors[level.toUpperCase()](level)} ${chalk.green(`${name}:`)}`;
         },
     });
+
+    // Set specific loggers to levels to reduce verbosity during development
+    log.getLogger(`I-Cloud`).setLevel(log.levels.DEBUG);
+    log.getLogger(`MFAServer`).setLevel(log.levels.INFO);
 }
