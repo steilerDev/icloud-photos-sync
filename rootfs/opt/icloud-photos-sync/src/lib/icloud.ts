@@ -55,7 +55,7 @@ export class iCloud extends EventEmitter {
     /**
      * Holding the cookies necessary for authentication
      */
-    cookieJar: any;
+    cookieJar = unirest.jar();
 
     logger: log.Logger = log.getLogger(`I-Cloud`);
 
@@ -95,6 +95,7 @@ export class iCloud extends EventEmitter {
         this.logger.info(`Authenticating user`);
         unirest(`POST`, `${ICLOUD.AUTH_ENDPOINT}/signin`)
             .headers(ICLOUD.DEFAULT_AUTH_HEADER)
+            .jar(this.cookieJar)
             .send(JSON.stringify({
                 accountName: this.username,
                 password: this.password,
@@ -121,6 +122,8 @@ export class iCloud extends EventEmitter {
                     } else {
                         this.emit(ICLOUD.EVENTS.ERROR, `Expected Session ID and scnt, but received ${JSON.stringify(res.headers)}`);
                     }
+                } else if (res.code === 401) {
+                    this.emit(ICLOUD.EVENTS.ERROR, `401 (Unauthorized): username/password does not match!`);
                 } else {
                     this.emit(ICLOUD.EVENTS.ERROR, `Unexpected HTTP code: ${res.code}`);
                 }
@@ -141,15 +144,16 @@ export class iCloud extends EventEmitter {
                 scnt: this.scnt,
                 'X-Apple-ID-Session-Id': this.sessionID};
 
-            this.logger.debug(JSON.stringify(header));
+            // This.logger.debug(JSON.stringify(header));
 
             unirest(`POST`, `${ICLOUD.AUTH_ENDPOINT}/verify/trusteddevice/securitycode`)
                 .headers(header)
-                .send(JSON.stringify({
+                .jar(this.cookieJar)
+                .send({
                     securityCode: {
-                        code: mfa,
+                        code: `${mfa}`,
                     },
-                }))
+                })
                 .end(res => {
                     if (res.code === 204) {
                         this.logger.info(`MFA code correct!`);
@@ -171,6 +175,7 @@ export class iCloud extends EventEmitter {
             .headers({...ICLOUD.DEFAULT_AUTH_HEADER,
                 scnt: this.scnt,
                 'X-Apple-ID-Session-Id': this.sessionID})
+            .jar(this.cookieJar)
             .end(res => {
                 if (res.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN]) {
                     this.sessionToken = res.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN];
