@@ -10,10 +10,12 @@
     "icloud-photos-sync": "bin/main.js"
   },
   "scripts": {
-    "build": "eslint --fix --ext .ts ./src && tsc",
+    "build": "npm install && eslint --fix --ext .ts ./src && tsc",
     "docs": "npx typedoc",
     "clean": "rm -rf bin/ docs/",
-    "test": "echo \"Currently no test specified\" && exit 0"
+    "test": "echo \"Currently no test specified\" && exit 0",
+    "execute": "node bin/main.js",
+    "start": "npm run build && npm run execute"
   },
   "repository": {
     "type": "git",
