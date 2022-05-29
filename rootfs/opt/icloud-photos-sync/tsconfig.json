@@ -1,26 +1,26 @@
 {
-    "compilerOptions": {
-      "module": "ES6",
-      "esModuleInterop": true,
-      "target": "ES6",
-      "moduleResolution": "node",
-      "sourceMap": true,
-      "outDir": "bin",
-      "declaration": true,
-      "rootDir": "src",
-    },
-    "typedocOptions": {
-      "entryPoints": ["src/"],
-      "out": "docs",
-      "excludeExternals": true,
-      "entryPointStrategy": "expand",
-      "theme": "github-wiki"
-    },
-    "exclude": [
-        "node_modules",
-        "bin"
-    ],
-    "lib": [
-      "es2017"
-    ]
-  }
+  "compilerOptions": {
+    "module": "ES6",
+    "esModuleInterop": true,
+    "target": "ES6",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "outDir": "bin",
+    "declaration": true,
+    "rootDir": "src",
+  },
+  "typedocOptions": {
+    "entryPoints": ["src/"],
+    "out": "docs",
+    "excludeExternals": true,
+    "entryPointStrategy": "expand",
+    "theme": "github-wiki"
+  },
+  "exclude": [
+      "node_modules",
+      "bin"
+  ],
+  "lib": [
+    "es2017"
+  ]
+}

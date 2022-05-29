@@ -39,9 +39,10 @@ export const DEFAULT_SETUP_HEADER = {
 };
 
 export enum AUTH_RESPONSE_HEADER {
-    SESSION_TOKEN = `x-apple-session-token`,
+    SESSION_TOKEN = `X-Apple-Session-Token`,
     SCNT = `scnt`,
-    TRUST_TOKEN = `x-apple-twosv-trust-token`
+    TRUST_TOKEN = `X-Apple-TwoSV-Trust-Token`,
+    AASP_COOKIE = `aasp`
 }
 
 export enum EVENTS {
@@ -49,6 +50,7 @@ export enum EVENTS {
     MFA_RECEIVED = `mfa_rec`,
     AUTHENTICATED = `auth`,
     TRUSTED = `trusted`,
+    ACCOUNT_READY = `account_ready`,
     READY = `ready`,
     ERROR = `error`
 }

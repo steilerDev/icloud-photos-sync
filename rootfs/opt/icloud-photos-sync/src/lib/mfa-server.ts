@@ -1,10 +1,13 @@
 import http from 'http';
 import log from 'loglevel';
-import {iCloud} from './icloud.js';
-import * as ICLOUD from './icloud.constants.js';
+import {iCloud} from './icloud/icloud.js';
+import * as ICLOUD from './icloud/icloud.constants.js';
 
 const MFA_ENDPOINT = `/mfa`;
 
+/**
+ * This objects starts a server, that will listen to incoming MFA codes
+ */
 export class MFAServer {
     /**
      * The server object

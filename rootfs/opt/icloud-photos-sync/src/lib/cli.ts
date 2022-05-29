@@ -1,6 +1,8 @@
 import {Command, Option, OptionValues} from 'commander';
 import chalk from 'chalk';
 import {PACKAGE_INFO} from './package.js';
+import {iCloud} from './icloud/icloud.js';
+import * as ICLOUD from './icloud/icloud.constants.js';
 
 /**
  * Processing CLI arguments
@@ -30,4 +32,37 @@ export function setupCLI(): OptionValues {
             .makeOptionMandatory(true));
     program.parse();
     return program.opts();
+}
+
+/**
+ * Listen to iCloud events and provide CLI output
+ */
+export function setupCLIiCloudInterface(iCloud: iCloud) {
+    iCloud.on(ICLOUD.EVENTS.AUTHENTICATED, () => {
+        console.log(chalk.white(`User authenticated`));
+    });
+
+    iCloud.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
+        console.log(chalk.yellowBright(`MFA code required`));
+    });
+
+    iCloud.on(ICLOUD.EVENTS.MFA_RECEIVED, () => {
+        console.log(chalk.white(`MFA code received`));
+    });
+
+    iCloud.on(ICLOUD.EVENTS.TRUSTED, () => {
+        console.log(chalk.whiteBright(`Device trusted`));
+    });
+
+    iCloud.on(ICLOUD.EVENTS.ACCOUNT_READY, () => {
+        console.log(chalk.whiteBright(`Sign in successful`));
+    });
+
+    iCloud.on(ICLOUD.EVENTS.READY, () => {
+        console.log(chalk.green(`iCloud connection established!`));
+    });
+
+    iCloud.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
+        console.log(chalk.red(`Unexpected error: ${msg}`));
+    });
 }

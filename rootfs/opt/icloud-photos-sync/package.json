@@ -48,7 +48,6 @@
   },
   "dependencies": {
     "axios": "^0.27.2",
-    "axios-cookiejar-support": "^4.0.2",
     "chalk": "^5.0.0",
     "commander": "^9.0.0",
     "loglevel": "^1.8.0",
