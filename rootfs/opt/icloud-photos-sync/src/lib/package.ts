@@ -15,7 +15,7 @@ export const PACKAGE_INFO: {
      */
     description: string
 } = {
-    version: `0.0.1`,
+    version: `0.0.5`,
     name: `icloud-photos-sync`,
     description: `One-way Sync engine for iCloud Photos library within the native file system`,
 };

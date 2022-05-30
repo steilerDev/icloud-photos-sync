@@ -3,9 +3,8 @@ import log from "loglevel";
 import {Cookie} from "tough-cookie";
 
 import * as ICLOUD from './icloud.constants.js';
-import * as ICLOUD_PHOTOS from './photos/icloud.photos.constants.js';
 
-export interface AuthSecret {
+export interface AuthSecrets {
     /**
      * X-Apple-ID-Session-Id / X-Apple-Session-Token
      */
@@ -23,7 +22,7 @@ export interface AuthSecret {
 /**
  * Account secrets
  */
-export interface AccountSecret {
+export interface AccountSecrets {
     /**
      * Apple ID username
      */
@@ -67,7 +66,7 @@ export class iCloudAuth {
     /**
      * Secrets required during authentication process
      */
-    iCloudAuthSecrets: AuthSecret = {};
+    iCloudAuthSecrets: AuthSecrets = {};
 
     /**
      * Account tokens
@@ -77,7 +76,7 @@ export class iCloudAuth {
     /**
      * General Account secrets
      */
-    iCloudAccountSecrets: AccountSecret = {};
+    iCloudAccountSecrets: AccountSecrets = {};
 
     /**
      * Relevant account information for iCloud Photos Service
@@ -178,7 +177,7 @@ export class iCloudAuth {
      * @returns A fully authenticated header, to be used with the iCloud Photos Service
      */
     getPhotosHeader(): any {
-        return {...ICLOUD_PHOTOS.DEFAULT_HEADER,
+        return {...ICLOUD.DEFAULT_HEADER,
             Cookie: this.getCookiesHeaderString(),
         };
     }
@@ -220,10 +219,10 @@ export class iCloudAuth {
 
     /**
      * Validates that the object is in a authenticated iCloud state
-     * Todo: Check if cookies have expired
      * @Returns true if there are cookies stored and they are valid
      */
     validateCloudCookies(): boolean {
+        // @todo Check if cookies are still valid
         return this.iCloudCookies && this.iCloudCookies.length > 0
             && this.iCloudPhotosAccount.photosDomain && this.iCloudPhotosAccount.photosDomain.length > 0;
     }

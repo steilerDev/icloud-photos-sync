@@ -14,11 +14,6 @@ export class iCloudPhotos extends EventEmitter {
      */
     auth: iCloudAuth;
 
-    /**
-     * Sync token provided by the backend
-     */
-    syncToken: string = ``;
-
     logger: log.Logger = log.getLogger(`I-Cloud-Photos`);
 
     constructor(auth: iCloudAuth) {
@@ -42,13 +37,14 @@ export class iCloudPhotos extends EventEmitter {
 
     /**
      * Builds the full service endpoint URL based on currently assigned iCP domain
+     * @param ext - The service endpoint extension applied to the base domain
      */
-    getServiceEndpoint(path: string): string {
-        return `${this.auth.iCloudPhotosAccount.photosDomain}${ICLOUD_PHOTOS.SERVICE_ENDPOINT_PATH}${path}`;
+    getServiceEndpoint(ext: string): string {
+        return `${this.auth.iCloudPhotosAccount.photosDomain}${ICLOUD_PHOTOS.PATHS.BASE_PATH}${ext}`;
     }
 
     /**
-     * Checking indexing state and gathering all additional information
+     * Starting iCloud Photos service, acquiring all necessary account information stored in iCloudAuth.iCloudPhotosAccount
      */
     setup() {
         this.logger.debug(`Checking indexing status & getting syncToken`);
@@ -61,7 +57,7 @@ export class iCloudPhotos extends EventEmitter {
             },
         };
 
-        axios.get(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.SETUP), config)
+        axios.get(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.SETUP), config)
             .then(res => {
                 if (this.auth.processPhotosSetupResponse(res)) {
                     this.logger.debug(`Successfully setup iCloud Photos!`);
@@ -75,6 +71,9 @@ export class iCloudPhotos extends EventEmitter {
             });
     }
 
+    /**
+     * Checking indexing state of photos service (sync should only safely be performed, after indexing is completed)
+     */
     checkingIndexingStatus() {
         this.performQuery(`CheckIndexingState`, res => {
             const state = res.data.records[0].fields.state.value;
@@ -94,6 +93,11 @@ export class iCloudPhotos extends EventEmitter {
         });
     }
 
+    /**
+     * Performs an arbitrary iCloud Photos Query
+     * @param recordType - The recordType requested in the query
+     * @param callback - A callback, executed upon sucessfull execution of the query
+     */
     performQuery(recordType: string, callback: (res: AxiosResponse<any, any>) => void) {
         if (this.auth.validatePhotosAccount()) {
             const config: AxiosRequestConfig = {
@@ -111,7 +115,7 @@ export class iCloudPhotos extends EventEmitter {
                 },
             };
 
-            axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.QUERY), data, config)
+            axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)
                 .then(callback)
                 .catch(err => {
                     this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unexpected error when performing query ${recordType}: ${err}`);

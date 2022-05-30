@@ -22,6 +22,6 @@ const icloud = iCloud.getInstance(opts.username, opts.password, opts.port);
 
 setupCLIiCloudInterface(icloud);
 icloud.on(ICLOUD.EVENTS.READY, () => {
-
+    // Get sync going!
 });
 icloud.authenticate();

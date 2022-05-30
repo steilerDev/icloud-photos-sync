@@ -23,16 +23,6 @@ export class iCloud extends EventEmitter {
     private static _instance: iCloud;
 
     /**
-     * AppleID username
-     */
-    username: string;
-
-    /**
-     * AppleID password
-     */
-    password: string;
-
-    /**
      * Authentication object of the current iCloud session
      */
     auth: iCloudAuth;
@@ -47,12 +37,20 @@ export class iCloud extends EventEmitter {
      */
     photos: iCloudPhotos = null;
 
+    /**
+     * Default logger for the class
+     */
     logger: log.Logger = log.getLogger(`I-Cloud`);
 
+    /**
+     * Creates a new iCloud Object - Can only be acquired as singleton
+     * @param username - The iCloud username
+     * @param password - The iCloud password
+     * @param mfaPort - The port to start the MFA server on
+     */
     private constructor(username: string, password: string, mfaPort: number) {
         super();
-        this.logger.info(`Initiating iCloud connection`);
-        this.logger.debug(`Using ${username}, ${password}, ${mfaPort}`);
+        this.logger.info(`Initiating iCloud connection for ${username}`);
 
         this.mfaServer = new MFAServer(mfaPort, this);
         this.auth = new iCloudAuth(username, password);
@@ -71,13 +69,15 @@ export class iCloud extends EventEmitter {
 
         this.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
             this.logger.error(`Error ocurred: ${msg}`);
-            // @TODO: Retry by calling authenticate()
+            // @todo Retry by calling authenticate()
         });
     }
 
     /**
      * Facilitator function for iCloud
      * @param mfaPort - The port for the MFA receiving server
+     * @param username - The iCloud username
+     * @param password - The iCloud password
      */
     public static getInstance(username: string, password: string, mfaPort: number) {
         if (!this._instance) {
@@ -87,6 +87,10 @@ export class iCloud extends EventEmitter {
         return this._instance;
     }
 
+    /**
+     * Initiatiates authentication flow
+     * Tries to directly login using trustToken, otherwise starts MFA flow
+     */
     authenticate() {
         this.logger.info(`Authenticating user`);
 
@@ -127,7 +131,7 @@ export class iCloud extends EventEmitter {
                             this.emit(ICLOUD.EVENTS.ERROR, `Unable to process auth response and extract necessary secrets: ${this.auth.iCloudAuthSecrets}`);
                         }
                     } else {
-                        this.emit(ICLOUD.EVENTS.ERROR, `Unexpected HTTP code: ${res.status}`);
+                        this.emit(ICLOUD.EVENTS.ERROR, `Unexpected HTTP code: ${res.status}, ${res.statusText}`);
                     }
                 } else {
                     this.emit(ICLOUD.EVENTS.ERROR, `Error during sign-in ${err}`);
@@ -136,7 +140,7 @@ export class iCloud extends EventEmitter {
     }
 
     /**
-     * Enter the MFA code and finalize authentication
+     * Enters and validates the MFA code in order to acquire necessary account tokens
      * @param mfa - The MFA code
      */
     mfaReceived(mfa: string) {
@@ -209,7 +213,7 @@ export class iCloud extends EventEmitter {
         } else {
             this.logger.info(`Setting up iCloud connection`);
             const config = {
-                headers: ICLOUD.DEFAULT_SETUP_HEADER,
+                headers: ICLOUD.DEFAULT_HEADER,
             };
 
             const data = this.auth.getSetupData();

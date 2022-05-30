@@ -13,7 +13,7 @@ export const CLIENT_INFO = JSON.stringify({
 });
 
 /**
- * Header used for authentication
+ * Header used for authentication flow
  */
 export const DEFAULT_AUTH_HEADER = {
     'User-Agent': USER_AGENT,
@@ -31,13 +31,19 @@ export const DEFAULT_AUTH_HEADER = {
     'X-Apple-OAuth-Client-Type': `firstPartyAuth`,
 };
 
-export const DEFAULT_SETUP_HEADER = {
+/**
+ * Default header for most iCloud requests
+ */
+export const DEFAULT_HEADER = {
     'User-Agent': USER_AGENT,
     Accept: `application/json`,
     'Content-Type': `application/json`,
     Origin: `https://www.icloud.com`,
 };
 
+/**
+ * Values extracted from auth response headers
+ */
 export enum AUTH_RESPONSE_HEADER {
     SESSION_TOKEN = `X-Apple-Session-Token`,
     SCNT = `scnt`,
