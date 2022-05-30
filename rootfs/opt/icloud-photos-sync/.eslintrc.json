@@ -19,7 +19,10 @@
         "quotes": ["error", "backtick"],
         "indent": ["error", 4],
         "eol-last": ["error", "never"],
-        "new-cap": ["error", { "newIsCapExceptions": ["iCloud"] }],
-        "tsdoc/syntax": "warn"
+        "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudPhotos", "iCloudAuth"] }],
+        "tsdoc/syntax": "warn",
+        "no-unused-vars": "off",
+        "no-negated-condition": "off",
+        "@typescript-eslint/no-unused-vars": ["warn"]
     }
 }

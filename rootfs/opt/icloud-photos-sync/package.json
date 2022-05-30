@@ -1,7 +1,7 @@
 {
   "name": "icloud-photos-sync",
-  "version": "0.0.4",
-  "description": "Sync engine for iCloud Photos library within the native file system",
+  "version": "0.0.5",
+  "description": "One-way sync engine for iCloud Photos library within the native file system",
   "preferGlobal": true,
   "type": "module",
   "main": "bin/main.js",
@@ -10,11 +10,12 @@
     "icloud-photos-sync": "bin/main.js"
   },
   "scripts": {
-    "build": "eslint --fix --ext .ts ./src && tsc",
-    "build-watch": "npm run build -- -w",
+    "build": "npm install && eslint --fix --ext .ts ./src && tsc",
     "docs": "npx typedoc",
     "clean": "rm -rf bin/ docs/",
-    "test": "echo \"Currently no test specified\" && exit 0"
+    "test": "echo \"Currently no test specified\" && exit 0",
+    "execute": "node bin/main.js",
+    "start": "npm run build && npm run execute"
   },
   "repository": {
     "type": "git",
@@ -46,10 +47,11 @@
     "typescript": "^4.5.5"
   },
   "dependencies": {
+    "axios": "^0.27.2",
     "chalk": "^5.0.0",
     "commander": "^9.0.0",
     "loglevel": "^1.8.0",
     "loglevel-plugin-prefix": "^0.8.4",
-    "needle": "^3.0.0"
+    "tough-cookie": "^4.0.0"
   }
 }
