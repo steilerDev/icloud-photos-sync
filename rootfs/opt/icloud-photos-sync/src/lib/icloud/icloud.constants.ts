@@ -84,3 +84,9 @@ export const URL = {
     TRUST: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.TRUST}`,
     SETUP: `${ENPOINT.SETUP.BASE}${ENPOINT.SETUP.PATH.ACCOUNT}`,
 };
+
+/**
+ * Filename of persistent trust token file
+ */
+export const TRUST_TOKEN_FILE_NAME = `trust-token.icloud`;
+export const TRUST_TOKEN_FILE_ENCODING = `utf8`;

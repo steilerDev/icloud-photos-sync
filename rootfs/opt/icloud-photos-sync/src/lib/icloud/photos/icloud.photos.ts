@@ -47,7 +47,7 @@ export class iCloudPhotos extends EventEmitter {
      * Starting iCloud Photos service, acquiring all necessary account information stored in iCloudAuth.iCloudPhotosAccount
      */
     setup() {
-        this.logger.debug(`Checking indexing status & getting syncToken`);
+        this.logger.debug(`Getting iCloud Photos account information`);
 
         const config: AxiosRequestConfig = {
             headers: this.auth.getPhotosHeader(),
@@ -60,10 +60,10 @@ export class iCloudPhotos extends EventEmitter {
         axios.get(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.SETUP), config)
             .then(res => {
                 if (this.auth.processPhotosSetupResponse(res)) {
-                    this.logger.debug(`Successfully setup iCloud Photos!`);
+                    this.logger.debug(`Successfully gathered iCloud Photos account information!`);
                     this.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
                 } else {
-                    this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unable to acquire iCloud Photos parameters`);
+                    this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unable to acquire iCloud Photos account information`);
                 }
             })
             .catch(err => {
@@ -75,6 +75,7 @@ export class iCloudPhotos extends EventEmitter {
      * Checking indexing state of photos service (sync should only safely be performed, after indexing is completed)
      */
     checkingIndexingStatus() {
+        this.logger.debug(`Checking Indexing Status of iCloud Photos Account`);
         this.performQuery(`CheckIndexingState`, res => {
             const state = res.data.records[0].fields.state.value;
             if (!state) {

@@ -18,7 +18,7 @@ setupLogger(opts.log_level);
 
 import {iCloud} from './lib/icloud/icloud.js';
 import * as ICLOUD from './lib/icloud/icloud.constants.js';
-const icloud = iCloud.getInstance(opts.username, opts.password, opts.port);
+const icloud = iCloud.getInstance(opts);
 
 setupCLIiCloudInterface(icloud);
 icloud.on(ICLOUD.EVENTS.READY, () => {

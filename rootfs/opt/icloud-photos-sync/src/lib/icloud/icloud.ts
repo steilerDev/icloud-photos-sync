@@ -8,6 +8,7 @@ import * as ICLOUD from './icloud.constants.js';
 import * as ICLOUD_PHOTOS from './photos/icloud.photos.constants.js';
 import {iCloudPhotos} from './photos/icloud.photos.js';
 import {iCloudAuth} from './icloud.auth.js';
+import {OptionValues} from 'commander';
 
 /**
  * This class holds the iCloud connection
@@ -44,16 +45,14 @@ export class iCloud extends EventEmitter {
 
     /**
      * Creates a new iCloud Object - Can only be acquired as singleton
-     * @param username - The iCloud username
-     * @param password - The iCloud password
-     * @param mfaPort - The port to start the MFA server on
+     * @param cliOpts - The read CLI options containing username, password and MFA server port
      */
-    private constructor(username: string, password: string, mfaPort: number) {
+    private constructor(cliOpts: OptionValues) {
         super();
-        this.logger.info(`Initiating iCloud connection for ${username}`);
+        this.logger.info(`Initiating iCloud connection for ${cliOpts.username}`);
 
-        this.mfaServer = new MFAServer(mfaPort, this);
-        this.auth = new iCloudAuth(username, password);
+        this.mfaServer = new MFAServer(cliOpts.port, this);
+        this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.app_data_dir);
 
         this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
             this.mfaServer.startServer();
@@ -79,9 +78,9 @@ export class iCloud extends EventEmitter {
      * @param username - The iCloud username
      * @param password - The iCloud password
      */
-    public static getInstance(username: string, password: string, mfaPort: number) {
+    public static getInstance(cliOpts: OptionValues) {
         if (!this._instance) {
-            this._instance = new this(username, password, mfaPort);
+            this._instance = new this(cliOpts);
         }
 
         return this._instance;

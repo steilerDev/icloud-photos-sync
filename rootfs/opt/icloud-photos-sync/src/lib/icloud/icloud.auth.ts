@@ -1,4 +1,7 @@
 import {AxiosResponse} from "axios";
+import {writeFile, mkdir} from 'fs/promises';
+import {readFileSync} from 'fs';
+import * as path from 'path';
 import log from "loglevel";
 import {Cookie} from "tough-cookie";
 
@@ -83,10 +86,51 @@ export class iCloudAuth {
      */
     iCloudPhotosAccount: PhotosAccount = {};
 
-    constructor(username: string, password: string, trustToken?: string) {
+    /**
+     * File path to the location, where the trust token is persisted on disk to circumvent future MFA requests
+     */
+    trustTokenFile: string;
+
+    constructor(username: string, password: string, appDataDir: string) {
         this.iCloudAccountSecrets.username = username;
         this.iCloudAccountSecrets.password = password;
-        this.iCloudAccountTokens.trustToken = trustToken;
+        this.trustTokenFile = path.format({
+            dir: appDataDir,
+            base: ICLOUD.TRUST_TOKEN_FILE_NAME,
+        });
+        this.tryLoadingTrustToken();
+    }
+
+    /**
+     * Tries loading the trust token from disk. Loading is done synchronously in order to avoid race conditions, where authentication is attempted before token is loaded
+     */
+    tryLoadingTrustToken() {
+        this.logger.debug(`Trying to load trust token from disk`);
+        try {
+            const trustToken = readFileSync(this.trustTokenFile, {encoding: ICLOUD.TRUST_TOKEN_FILE_ENCODING});
+            this.logger.debug(`Acquired trust token from file: ${trustToken}`);
+            this.iCloudAccountTokens.trustToken = trustToken;
+        } catch (err) {
+            this.logger.warn(`Unable to acquire trust token from file: ${err}`);
+        }
+    }
+
+    /**
+     * Tries to write the trust token to disk
+     */
+    storeTrustToken() {
+        this.logger.debug(`Trying to persist trust token to disk`);
+
+        const trustTokenPath = path.dirname(this.trustTokenFile);
+        mkdir(trustTokenPath, {recursive: true})
+            .catch(err => {
+                this.logger.warn(`Unable to create trust token directory (${trustTokenPath}): ${err}`);
+            });
+
+        writeFile(this.trustTokenFile, this.iCloudAccountTokens.trustToken, {encoding: ICLOUD.TRUST_TOKEN_FILE_ENCODING})
+            .catch(err => {
+                this.logger.warn(`Unable to persist trust token to disk: ${err}`);
+            });
     }
 
     /**
@@ -128,13 +172,14 @@ export class iCloudAuth {
     }
 
     /**
-     * Processing the response from acquiring the necessary trust tokens
+     * Processing the response from acquiring the necessary trust tokens. This method is automatically storing the trust token on disk
      * @param response - The response from the trust token endpoint
      */
     processAccountTokens(response: AxiosResponse): boolean {
         this.logger.debug(`Processing trust token response`);
         this.iCloudAccountTokens.sessionToken = response.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()];
         this.iCloudAccountTokens.trustToken = response.headers[ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN.toLowerCase()];
+        this.storeTrustToken();
         return this.validateAccountTokens();
     }
 
