@@ -1,23 +1,18 @@
+import EventEmitter from 'events';
 import http from 'http';
 import log from 'loglevel';
-import {iCloud} from './icloud/icloud.js';
-import * as ICLOUD from './icloud/icloud.constants.js';
+import * as MFA_SERVER from './mfa-server.constants.js';
 
 const MFA_ENDPOINT = `/mfa`;
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
  */
-export class MFAServer {
+export class MFAServer extends EventEmitter {
     /**
      * The server object
      */
     server: http.Server;
-
-    /**
-     * Link to parent object
-     */
-    iCloud: iCloud;
 
     /**
      * Port to start server on
@@ -29,10 +24,9 @@ export class MFAServer {
     /**
      * Creates the server object
      * @param port - The port to listen on
-     * @param iCloud - The parent object currently performing authentication
      */
-    constructor(port: number, iCloud: iCloud) {
-        this.iCloud = iCloud;
+    constructor(port: number) {
+        super();
         this.port = port;
     }
 
@@ -67,7 +61,7 @@ export class MFAServer {
             res.write(`Read MFA code: ${mfa}`);
             res.end();
 
-            this.iCloud.emit(ICLOUD.EVENTS.MFA_RECEIVED, mfa);
+            this.emit(MFA_SERVER.EVENTS.MFA_RECEIVED, mfa);
         } else {
             // @todo Implement resend codes via phone or text
             this.logger.warn(`Received unknown request to endpoint ${req.url}`);

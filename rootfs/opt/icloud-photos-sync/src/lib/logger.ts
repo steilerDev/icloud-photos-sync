@@ -29,7 +29,7 @@ export function setupLogger(logLevel: log.LogLevelDesc): void {
 
     // Set specific loggers to levels to reduce verbosity during development
     log.getLogger(`I-Cloud`).setLevel(log.levels.INFO);
-    log.getLogger(`I-Cloud-Photos`).setLevel(log.levels.DEBUG);
+    log.getLogger(`I-Cloud-Photos`).setLevel(log.levels.INFO);
     log.getLogger(`I-Cloud-Auth`).setLevel(log.levels.INFO);
     log.getLogger(`MFAServer`).setLevel(log.levels.INFO);
 }

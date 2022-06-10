@@ -6,6 +6,7 @@ import EventEmitter from 'events';
 import {MFAServer} from '../mfa-server.js';
 import * as ICLOUD from './icloud.constants.js';
 import * as ICLOUD_PHOTOS from './photos/icloud.photos.constants.js';
+import * as MFA_SERVER from '../mfa-server.constants.js';
 import {iCloudPhotos} from './photos/icloud.photos.js';
 import {iCloudAuth} from './icloud.auth.js';
 import {OptionValues} from 'commander';
@@ -51,13 +52,12 @@ export class iCloud extends EventEmitter {
         super();
         this.logger.info(`Initiating iCloud connection for ${cliOpts.username}`);
 
-        this.mfaServer = new MFAServer(cliOpts.port, this);
+        this.mfaServer = new MFAServer(cliOpts.port);
+        this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.mfaReceived);
+
         this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.app_data_dir);
 
-        this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
-            this.mfaServer.startServer();
-        });
-        this.on(ICLOUD.EVENTS.MFA_RECEIVED, this.mfaReceived);
+        this.on(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.startServer);
         this.on(ICLOUD.EVENTS.AUTHENTICATED, this.getTokens);
         this.on(ICLOUD.EVENTS.TRUSTED, this.getiCloudCookies);
         this.on(ICLOUD.EVENTS.ACCOUNT_READY, this.getiCloudPhotosReady);
@@ -74,9 +74,7 @@ export class iCloud extends EventEmitter {
 
     /**
      * Facilitator function for iCloud
-     * @param mfaPort - The port for the MFA receiving server
-     * @param username - The iCloud username
-     * @param password - The iCloud password
+     * @param cliOpts - The read CLI options containing username, password and MFA server port
      */
     public static getInstance(cliOpts: OptionValues) {
         if (!this._instance) {
@@ -143,6 +141,7 @@ export class iCloud extends EventEmitter {
      * @param mfa - The MFA code
      */
     mfaReceived(mfa: string) {
+        this.emit(ICLOUD.EVENTS.MFA_RECEIVED);
         this.mfaServer.stopServer();
 
         if (!this.auth.validateAuthSecrets()) {
