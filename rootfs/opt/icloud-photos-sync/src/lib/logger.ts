@@ -32,4 +32,6 @@ export function setupLogger(logLevel: log.LogLevelDesc): void {
     log.getLogger(`I-Cloud-Photos`).setLevel(log.levels.INFO);
     log.getLogger(`I-Cloud-Auth`).setLevel(log.levels.INFO);
     log.getLogger(`MFAServer`).setLevel(log.levels.INFO);
+    log.getLogger(`Photos-Library-DB`).setLevel(log.levels.DEBUG);
+    log.getLogger(`Sequelize`).setLevel(log.levels.DEBUG);
 }

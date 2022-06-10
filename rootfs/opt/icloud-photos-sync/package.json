@@ -52,6 +52,8 @@
     "commander": "^9.0.0",
     "loglevel": "^1.8.0",
     "loglevel-plugin-prefix": "^0.8.4",
+    "sequelize": "^6.20.1",
+    "sqlite3": "^5.0.8",
     "tough-cookie": "^4.0.0"
   }
 }

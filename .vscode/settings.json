@@ -1,0 +1,11 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "iCloud-Photos-Sync",
+            "database": "${workspaceFolder:icloud-photos-sync}/debug-fs/photos-library.db"
+        }
+    ],
+    "sqltools.useNodeRuntime": true
+}

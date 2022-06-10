@@ -57,7 +57,7 @@ export class iCloudPhotos extends EventEmitter {
             },
         };
 
-        axios.get(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.SETUP), config)
+        axios.get(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.LIST), config)
             .then(res => {
                 if (this.auth.processPhotosSetupResponse(res)) {
                     this.logger.debug(`Successfully gathered iCloud Photos account information!`);
@@ -124,5 +124,45 @@ export class iCloudPhotos extends EventEmitter {
         } else {
             this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unable to perform query, because photos account validation failed`);
         }
+    }
+
+    async performPromiseQuery(recordType: string, filterBy?: [any]): Promise<AxiosResponse<any, any>> {
+        if (this.auth.validatePhotosAccount()) {
+            const config: AxiosRequestConfig = {
+                headers: this.auth.getPhotosHeader(),
+            };
+
+            const data = {
+                query: {
+                    recordType: `${recordType}`,
+                    filterBy,
+                },
+                zoneID: {
+                    ownerRecordName: this.auth.iCloudPhotosAccount.ownerName,
+                    zoneName: this.auth.iCloudPhotosAccount.zoneName,
+                    zoneType: this.auth.iCloudPhotosAccount.zoneType,
+                },
+            };
+
+            return axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config);
+        }
+
+        throw (new Error(`Unable to perform query, because photos account validation failed`));
+    }
+
+    async queryAllAlbums(): Promise<AxiosResponse<any, any>> {
+        return this.performPromiseQuery(`CPLAlbumByPositionLive`);
+    }
+
+    async queryAllAlbumsByParentId(parentId: string): Promise<AxiosResponse<any, any>> {
+        const parentFilter = {
+            comparator: `EQUALS`,
+            fieldName: `parentId`,
+            fieldValue: {
+                type: `STRING`,
+                value: parentId,
+            },
+        };
+        return this.performPromiseQuery(`CPLAlbumByPositionLive`, [parentFilter]);
     }
 }

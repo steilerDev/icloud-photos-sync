@@ -13,15 +13,27 @@ import {setupLogger} from './lib/logger.js';
 setupLogger(opts.log_level);
 
 /**
- * Getting Started
+ * Database setup
  */
+import {PhotosLibraryDB} from './lib/db/photos-library-db.js';
+const photosLibraryDB = new PhotosLibraryDB(opts.app_data_dir);
+photosLibraryDB.open();
 
+/**
+ * ICloud connection
+ */
 import {iCloud} from './lib/icloud/icloud.js';
-import * as ICLOUD from './lib/icloud/icloud.constants.js';
 const icloud = iCloud.getInstance(opts);
-
 setupCLIiCloudInterface(icloud);
-icloud.on(ICLOUD.EVENTS.READY, () => {
-    // Get sync going!
-});
 icloud.authenticate();
+
+/**
+ * Waiting for setup to complete
+ */
+await photosLibraryDB.getReadyPromise();
+await icloud.getReadyPromise();
+
+import {SyncEngine} from './lib/sync/sync-engine.js';
+
+const syncEngine = new SyncEngine(icloud, photosLibraryDB);
+await syncEngine.sync();

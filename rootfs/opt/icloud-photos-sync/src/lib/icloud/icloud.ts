@@ -1,6 +1,6 @@
 import log from 'loglevel';
 
-import axios from 'axios';
+import axios, {AxiosRequestConfig, AxiosRequestHeaders} from 'axios';
 
 import EventEmitter from 'events';
 import {MFAServer} from '../mfa-server.js';
@@ -84,6 +84,13 @@ export class iCloud extends EventEmitter {
         return this._instance;
     }
 
+    getReadyPromise() {
+        return new Promise((resolve, reject) => {
+            this.once(ICLOUD.EVENTS.READY, resolve);
+            this.once(ICLOUD.EVENTS.ERROR, reject);
+        });
+    }
+
     /**
      * Initiatiates authentication flow
      * Tries to directly login using trustToken, otherwise starts MFA flow
@@ -91,8 +98,11 @@ export class iCloud extends EventEmitter {
     authenticate() {
         this.logger.info(`Authenticating user`);
 
-        const config = {
+        const config: AxiosRequestConfig = {
             headers: ICLOUD.DEFAULT_AUTH_HEADER,
+            params: {
+                isRememberMeEnabled: true,
+            },
         };
 
         const data = {
@@ -149,7 +159,7 @@ export class iCloud extends EventEmitter {
         } else {
             this.logger.info(`Authenticating MFA with code ${mfa}`);
 
-            const config = {
+            const config: AxiosRequestHeaders = {
                 headers: this.auth.getMFAHeaders(),
             };
 
@@ -183,7 +193,7 @@ export class iCloud extends EventEmitter {
         } else {
             this.logger.info(`Trusting device and acquiring trust tokens`);
 
-            const config = {
+            const config: AxiosRequestConfig = {
                 headers: this.auth.getMFAHeaders(),
             };
 
@@ -210,7 +220,7 @@ export class iCloud extends EventEmitter {
             this.emit(ICLOUD.EVENTS.ERROR, `Unable to setup iCloud, because tokens are missing: ${JSON.stringify(this.auth.iCloudAccountTokens)}!`);
         } else {
             this.logger.info(`Setting up iCloud connection`);
-            const config = {
+            const config: AxiosRequestConfig = {
                 headers: ICLOUD.DEFAULT_HEADER,
             };
 

@@ -16,6 +16,6 @@ export const PATHS = {
     BASE_PATH: `/database/1/com.apple.photos.cloud/production/private`,
     EXT: {
         QUERY: `/records/query`,
-        SETUP: `/zones/list`,
+        LIST: `/zones/list`,
     },
 };
