@@ -4,16 +4,22 @@ export const RECORD_TYPES = {
     ALBUM_RECORDS: `CPLAlbumByPositionLive`,
     INDEX_COUNT: `HyperionIndexCountLookup`,
     //   ALL_PHOTOS_FOLDER: `CPLAssetByAssetDateWithoutHiddenOrDeleted`,
-    ALL_PHOTOS: `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted`,
+    ALL_PHOTOS: `CPLAssetAndMasterByAddedDate`,
+//    ALL_PHOTOS: `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted`,
 };
 
 export const DESIRED_KEYS = {
     RECORD_NAME: `recordName`,
     IS_DELETED: `isDeleted`,
-    ORIGINAL_RESSOURCE: `ResOriginalRes`,
+    ORIGINAL_RESSOURCE: `resOriginalRes`,
+    ORIGINAL_RESSOURCE_FILE_TYPE: `resOriginalFileType`,
     EDITED_JPEG_RESSOURCE: `resJPEGFullRes`,
+    EDITED_JPEG_RESSOURCE_FILE_TYPE: `resJPEGFullFileType`,
     EDITED_VIDEO_RESSOURCE: `resVidFullRes`,
+    EDITED_VIDEO_RESSOURCE_FILE_TYPE: `resVidFullFileType`,
     ENCODED_FILE_NAME: `filenameEnc`,
+    FAVORITE: `isFavorite`,
+//    ITEM_TYPE: `itemType`,
 };
 
 export function getParentFilterforParentId(parentId: string): any {

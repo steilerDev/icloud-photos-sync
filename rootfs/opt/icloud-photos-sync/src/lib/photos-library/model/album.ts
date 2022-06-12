@@ -41,32 +41,37 @@ export class Album {
 
     static parseAlbumFromJson(json: any): Album {
         const newAlbum = new Album();
-        if (json.recordName) {
+        if (json.recordName && json.recordName !== `----Project-Root-Folder----` && json.recordName !== `----Root-Folder----`) {
             newAlbum.recordName = json.recordName;
         } else {
-            throw new Error(`Unable to construct album from json: RecordName not found (${json})`);
-        }
-
-        if (json.albumType) {
-            newAlbum.albumType = json.albumType;
-        } else {
-            throw new Error(`Unable to construct album from json: AlbumType not found (${json})`);
+            throw new Error(`Unable to construct album from json: RecordName not found or ignored (${JSON.stringify(json)})`);
         }
 
         if (json.albumName) {
             newAlbum.albumName = json.albumName;
         } else {
-            throw new Error(`Unable to construct album from json: AlbumName not found (${json})`);
+            throw new Error(`Unable to construct album from json: AlbumName not found or ignored (${JSON.stringify(json)})`);
+        }
+
+        if (json.albumType !== undefined) {
+            const parsedType = Number.parseInt(json.albumType, 10);
+            if (!isNaN(parsedType) && (parsedType === AlbumType.ALBUM || parsedType === AlbumType.FOLDER)) {
+                newAlbum.albumType = json.albumType;
+            } else {
+                throw new Error(`Unable to construct album (${newAlbum.albumName}) from json: AlbumType has unexpected value ${json.albumType}`);
+            }
+        } else {
+            throw new Error(`Unable to construct album from json: AlbumType not found (${JSON.stringify(json)})`);
         }
 
         if (json.albumState) {
             newAlbum.albumState = json.albumState;
         } else {
-            throw new Error(`Unable to construct album from json: AlbumState not found (${json})`);
+            newAlbum.albumState = AlbumState.NEW;
         }
 
-        if (json.deleted) {
-            newAlbum.deleted = json.deleted;
+        if (json.deleted && (json.deleted === `true` || json.deleted === `false`)) {
+            newAlbum.deleted = json.deleted === `true`;
         } else {
             newAlbum.deleted = false;
         }
@@ -85,56 +90,21 @@ export class Album {
      * @param albumRecord - The album record from the http response body
      * @returns An build album (not persisted yet)
      */
-    static parseAlbumFromRequest(albumRecord: any): Album {
-        let recordName: string;
-        try {
-            recordName = albumRecord.recordName;
-        } catch (err) {
-            throw new Error(`Unable to find record name for album: ${JSON.stringify(albumRecord)}`);
+    static parseAlbumFromQuery(albumRecord: any): Album {
+        // Mapping request to JSON data for parsing
+        const json = {
+            recordName: albumRecord.recordName,
+            albumType: albumRecord.fields.albumType.value,
+            albumName: albumRecord.fields.albumNameEnc?.value,
+            deleted: albumRecord.deleted,
+            parentId: albumRecord.fields.parentId?.value,
+        };
+
+        if (json.albumName) {
+            // If album name was set, it is still Base64 encoded, decoding
+            json.albumName = Buffer.from(json.albumName, `base64`).toString(`utf8`);
         }
 
-        if ((recordName === `----Project-Root-Folder----` || recordName === `----Root-Folder----`)) {
-            throw new Error(`Ignoring special folders ('Project Root Folder' & 'Root Folder')`);
-        }
-
-        let albumName: string;
-        try {
-            albumName = albumRecord.fields.albumNameEnc.value;
-            albumName = Buffer.from(albumName, `base64`).toString(`utf8`);
-        } catch (err) {
-            throw new Error(`Unable to parse album name for album: ${JSON.stringify(albumRecord)}`);
-        }
-
-        let albumType: number;
-        try {
-            albumType = albumRecord.fields.albumType.value;
-        } catch (err) {
-            throw new Error(`Unable to find album type for album: ${albumName}`);
-        }
-
-        if (!(albumType === AlbumType.ALBUM || albumType === AlbumType.FOLDER)) {
-            throw new Error(`Ignoring special folder ${albumName} (type ${albumType})`);
-        }
-
-        let deletedString: string;
-        try {
-            deletedString = albumRecord.deleted;
-        } catch (err) {
-            throw new Error(`Unable to find delete state for album: ${albumName}`);
-        }
-
-        if (!deletedString && (deletedString === `true` || deletedString === `false`)) {
-            throw new Error(`Unable to parse deleted state for album: ${albumName}`);
-        }
-
-        const deleted = deletedString === `true`;
-
-        let parentId: string;
-        try {
-            parentId = albumRecord.fields.parentId.value;
-            return new Album(recordName, albumType, albumName, deleted, parentId);
-        } catch (err) {
-            return new Album(recordName, albumType, albumName, deleted);
-        }
+        return Album.parseAlbumFromJson(json);
     }
 }

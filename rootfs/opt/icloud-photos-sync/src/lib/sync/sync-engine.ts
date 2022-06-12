@@ -3,6 +3,7 @@ import {EventEmitter} from 'events';
 import {iCloud} from '../icloud/icloud.js';
 import {PhotosLibrary} from '../photos-library/photos-library.js';
 import {Album, AlbumType} from '../photos-library/model/album.js';
+import {MediaRecord} from '../photos-library/model/media-record.js';
 
 /**
  * This class handles the photos sync
@@ -25,24 +26,9 @@ export class SyncEngine extends EventEmitter {
 
     async fetchState() {
         this.logger.debug(`Fetching remote iCloud state`);
-        const iCloudFolderStructure = await this.fetchFolderStructure();
-        const iCloudPhotos = 
+        const library = await Promise.all([this.fetchAllPictures(), this.fetchFolderStructure()]);
+        console.log(`Succesfully fetched state!`);
     }
-/**
- * 
-
-    async syncFolderStructures() {
-        this.logger.debug(`Syncing folder structure`);
-        const iCloudFolderStructure = await this.fetchFolderStructure();
-        this.logger.debug(`Fetched folder structure from iCloud, comparing to folder structure in database`);
-        if (this.db.isEmpty) {
-            this.logger.debug(`Database currently empty, populating with iCloud state`);
-            this.db.library.albums = iCloudFolderStructure;
-        } else {
-            // ICloudFolderStructure.
-            // Diffk
-        }
-    } */
 
     /**
      * Fetching folder structure from iCloud
@@ -59,7 +45,7 @@ export class SyncEngine extends EventEmitter {
             const picturePromises: Promise<void | string[]>[] = [];
             while (folders.length > 0) {
                 try {
-                    const parsedFolder: Album = Album.parseAlbumFromRequest(folders.shift());
+                    const parsedFolder: Album = Album.parseAlbumFromQuery(folders.shift());
                     this.logger.debug(`Parsed folder: ${parsedFolder.albumName} (type ${parsedFolder.albumType})`);
                     parsedFolders.push(parsedFolder);
 
@@ -102,14 +88,19 @@ export class SyncEngine extends EventEmitter {
         }
     }
 
-    //async fetchAllPictures(): Promise<MediaRecord[]> {
-    //    try {
-    //        const pictureRecords = await this.iCloud.photos.fetchAllAlbumRecords();
-
-//        }
-
-    // Get all pictures count, query {"query":{"recordType":"HyperionIndexCountLookup","filterBy":{"fieldName":"indexCountID","comparator":"IN","fieldValue":{"value":["CPLAssetByAddedDate"],"type":"STRING_LIST"}}},"zoneID":{"zoneName":"PrimarySync","ownerRecordName":"_e8a2d278a868306ca55d7fc05a299b73","zoneType":"REGULAR_CUSTOM_ZONE"}}
-    // Get all pictures {"query":{"recordType":"CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted","filterBy":[{"fieldName":"startRank","comparator":"EQUALS","fieldValue":{"value":16,"type":"INT64"}},{"fieldName":"direction","comparator":"EQUALS","fieldValue":{"value":"DESCENDING","type":"STRING"}}]},"zoneID":{"zoneName":"PrimarySync","ownerRecordName":"_e8a2d278a868306ca55d7fc05a299b73","zoneType":"REGULAR_CUSTOM_ZONE"},"desiredKeys":["addedDate","adjustmentRenderType","adjustmentType","assetDate","assetHDRType","assetSubtype","assetSubtypeV2","burstFlags","burstFlagsExt","burstId","captionEnc","codec","customRenderedValue","dataClassType","dateExpunged","duration","filenameEnc","importedBy","isDeleted","isExpunged","isFavorite","isHidden","itemType","locationEnc","locationLatitude","locationLongitude","locationV2Enc","masterRef","mediaMetaDataEnc","mediaMetaDataType","orientation","originalOrientation","recordChangeTag","recordName","recordType","remappedRef","resJPEGFullFileType","resJPEGFullFingerprint","resJPEGFullHeight","resJPEGFullRes","resJPEGFullWidth","resJPEGLargeFileType","resJPEGLargeFingerprint","resJPEGLargeHeight","resJPEGLargeRes","resJPEGLargeWidth","resJPEGMedFileType","resJPEGMedFingerprint","resJPEGMedHeight","resJPEGMedRes","resJPEGMedWidth","resJPEGThumbFileType","resJPEGThumbFingerprint","resJPEGThumbHeight","resJPEGThumbRes","resJPEGThumbWidth","resOriginalAltFileType","resOriginalAltFingerprint","resOriginalAltHeight","resOriginalAltRes","resOriginalAltWidth","resOriginalFileType","resOriginalFingerprint","resOriginalHeight","resOriginalRes","resOriginalVidComplFileType","resOriginalVidComplFingerprint","resOriginalVidComplHeight","resOriginalVidComplRes","resOriginalVidComplWidth","resOriginalWidth","resSidecarFileType","resSidecarFingerprint","resSidecarHeight","resSidecarRes","resSidecarWidth","resVidFullFileType","resVidFullFingerprint","resVidFullHeight","resVidFullRes","resVidFullWidth","resVidHDRMedRes","resVidMedFileType","resVidMedFingerprint","resVidMedHeight","resVidMedRes","resVidMedWidth","resVidSmallFileType","resVidSmallFingerprint","resVidSmallHeight","resVidSmallRes","resVidSmallWidth","timeZoneOffset","vidComplDispScale","vidComplDispValue","vidComplDurScale","vidComplDurValue","vidComplVisibilityState","videoFrameRate","zoneID"],"resultsLimit":34}
-    // Filter for CPLMaster
-    // }
+    async fetchAllPictures(): Promise<MediaRecord[]> {
+        try {
+            const pictureRecords = await this.iCloud.photos.fetchAllPictureRecords();
+            return pictureRecords.map(record => {
+                try {
+                    return MediaRecord.parseMediaRecordFromQuery(record);
+                } catch (err) {
+                    this.logger.debug(`Unable to parse media record from query: ${err.message}`);
+                    return undefined;
+                }
+            });
+        } catch (err) {
+            throw new Error(`Unable to get all photos: ${err.message}`);
+        }
+    }
 }

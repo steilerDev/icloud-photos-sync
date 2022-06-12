@@ -227,9 +227,20 @@ export class iCloudPhotos extends EventEmitter {
             if (parentId === undefined) {
                 promiseQueries.push(this.performPromiseQuery(
                     QueryBuilder.RECORD_TYPES.ALL_PHOTOS,
-                    [startRank, directionFilter],
+                    [startRankFilter, directionFilter],
                     ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
-                    [QueryBuilder.DESIRED_KEYS.EDITED_JPEG_RESSOURCE, QueryBuilder.DESIRED_KEYS.EDITED_VIDEO_RESSOURCE, QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME, QueryBuilder.DESIRED_KEYS.IS_DELETED, QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE, QueryBuilder.DESIRED_KEYS.RECORD_NAME],
+                    [
+                        QueryBuilder.DESIRED_KEYS.RECORD_NAME,
+                        QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE,
+                        QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE_FILE_TYPE,
+                        QueryBuilder.DESIRED_KEYS.EDITED_JPEG_RESSOURCE,
+                        QueryBuilder.DESIRED_KEYS.EDITED_JPEG_RESSOURCE_FILE_TYPE,
+                        QueryBuilder.DESIRED_KEYS.EDITED_VIDEO_RESSOURCE,
+                        QueryBuilder.DESIRED_KEYS.EDITED_VIDEO_RESSOURCE_FILE_TYPE,
+                        QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME,
+                        QueryBuilder.DESIRED_KEYS.IS_DELETED,
+                        QueryBuilder.DESIRED_KEYS.FAVORITE,
+                    ],
                 ));
             } else {
                 const parentFilter = QueryBuilder.getParentFilterforParentId(parentId);
