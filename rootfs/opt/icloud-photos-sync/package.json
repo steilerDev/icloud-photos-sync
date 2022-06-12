@@ -12,7 +12,7 @@
   "scripts": {
     "build": "npm install && eslint --fix --ext .ts ./src && tsc",
     "docs": "npx typedoc",
-    "clean": "rm -rf bin/ docs/",
+    "clean": "rm -rf bin/ docs/ node_modules/",
     "test": "echo \"Currently no test specified\" && exit 0",
     "execute": "node bin/main.js",
     "start": "npm run build && npm run execute"
@@ -52,8 +52,6 @@
     "commander": "^9.0.0",
     "loglevel": "^1.8.0",
     "loglevel-plugin-prefix": "^0.8.4",
-    "sequelize": "^6.20.1",
-    "sqlite3": "^5.0.8",
     "tough-cookie": "^4.0.0"
   }
 }

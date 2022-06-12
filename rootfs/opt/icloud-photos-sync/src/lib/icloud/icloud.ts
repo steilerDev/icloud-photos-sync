@@ -45,6 +45,16 @@ export class iCloud extends EventEmitter {
     logger: log.Logger = log.getLogger(`I-Cloud`);
 
     /**
+     * Is the object ready?
+     */
+    ready: boolean = false;
+
+    /**
+     * Has the object experienced an error?
+     */
+    errored: boolean = false;
+
+    /**
      * Creates a new iCloud Object - Can only be acquired as singleton
      * @param cliOpts - The read CLI options containing username, password and MFA server port
      */
@@ -63,10 +73,14 @@ export class iCloud extends EventEmitter {
         this.on(ICLOUD.EVENTS.ACCOUNT_READY, this.getiCloudPhotosReady);
 
         this.on(ICLOUD.EVENTS.READY, () => {
+            this.ready = true;
+            this.errored = false;
             this.logger.info(`iCloud connection ready!`);
         });
 
         this.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
+            this.errored = true;
+            this.ready = false;
             this.logger.error(`Error ocurred: ${msg}`);
             // @todo Retry by calling authenticate()
         });
@@ -85,9 +99,15 @@ export class iCloud extends EventEmitter {
     }
 
     getReadyPromise() {
-        return new Promise((resolve, reject) => {
-            this.once(ICLOUD.EVENTS.READY, resolve);
-            this.once(ICLOUD.EVENTS.ERROR, reject);
+        return new Promise<void>((resolve, reject) => {
+            if (this.ready) {
+                resolve();
+            } else if (this.errored) {
+                reject();
+            } else {
+                this.on(ICLOUD.EVENTS.READY, resolve);
+                this.on(ICLOUD.EVENTS.ERROR, reject);
+            }
         });
     }
 

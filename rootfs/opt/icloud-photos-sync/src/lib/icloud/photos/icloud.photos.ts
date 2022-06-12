@@ -126,43 +126,134 @@ export class iCloudPhotos extends EventEmitter {
         }
     }
 
-    async performPromiseQuery(recordType: string, filterBy?: [any]): Promise<AxiosResponse<any, any>> {
+    /**
+     * Performs a query against the iCloud Photos Service
+     * @param recordType
+     * @param filterBy
+     * @param resultsLimit Results limit is maxed at 66 * 3 records (because every picture is returned three times)
+     * @param desiredKeys
+     * @returns
+     */
+    async performPromiseQuery(recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
         if (this.auth.validatePhotosAccount()) {
             const config: AxiosRequestConfig = {
                 headers: this.auth.getPhotosHeader(),
+                params: {
+                    remapEnums: `True`,
+                },
             };
 
-            const data = {
+            const data: any = {
                 query: {
                     recordType: `${recordType}`,
-                    filterBy,
                 },
                 zoneID: {
                     ownerRecordName: this.auth.iCloudPhotosAccount.ownerName,
                     zoneName: this.auth.iCloudPhotosAccount.zoneName,
                     zoneType: this.auth.iCloudPhotosAccount.zoneType,
                 },
+                //               ResultsLimit, // ResOriginalRes, filenameEnc / edited??
             };
+            if (filterBy) {
+                data.query.filterBy = filterBy;
+            }
 
-            return axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config);
+            if (desiredKeys) {
+                data.desiredKeys = desiredKeys;
+            }
+
+            if (resultsLimit) {
+                data.resultsLimit = resultsLimit;
+            }
+
+            const fetchedRecords = (await axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)).data.records;
+            if (fetchedRecords && Array.isArray(fetchedRecords)) {
+                return fetchedRecords;
+            }
+
+            throw new Error(`Fetched records are not in an array: ${JSON.stringify(fetchedRecords)}`);
         }
 
         throw (new Error(`Unable to perform query, because photos account validation failed`));
     }
 
-    async queryAllAlbums(): Promise<AxiosResponse<any, any>> {
+    async fetchAllAlbumRecords(): Promise<any[]> {
         return this.performPromiseQuery(`CPLAlbumByPositionLive`);
     }
 
-    async queryAllAlbumsByParentId(parentId: string): Promise<AxiosResponse<any, any>> {
+    async fetchAllAlbumRecordsByParentId(parentId: string): Promise<any[]> {
         const parentFilter = {
-            comparator: `EQUALS`,
             fieldName: `parentId`,
+            comparator: `EQUALS`,
             fieldValue: {
-                type: `STRING`,
                 value: parentId,
+                type: `STRING`,
             },
         };
         return this.performPromiseQuery(`CPLAlbumByPositionLive`, [parentFilter]);
+    }
+
+    async fetchAllPictureRecordsByParentId(parentId: string): Promise<any[]> {
+        const indexCountFilter = {
+            fieldName: `indexCountID`,
+            comparator: `IN`,
+            fieldValue: {
+                value: [`CPLContainerRelationNotDeletedByAssetDate:${parentId}`],
+                type: `STRING_LIST`,
+            },
+        };
+        let index = 0;
+        let totalCount = -1;
+        try {
+            const countData = await this.performPromiseQuery(`HyperionIndexCountLookup`, [indexCountFilter]);
+            totalCount = countData[0].fields.itemCount.value;
+            this.logger.debug(`Expecting ${totalCount} records for album ${parentId}`);
+        } catch (err) {
+            throw new Error(`Unable to extract count data: ${err.message}`);
+        }
+
+        const parentFilter = {
+            fieldName: `parentId`,
+            comparator: `EQUALS`,
+            fieldValue: {
+                value: parentId,
+                type: `STRING`,
+            },
+        };
+        const directionFilter = {
+            fieldName: `direction`,
+            comparator: `EQUALS`,
+            fieldValue: {
+                value: `ASCENDING`,
+                type: `STRING`,
+            },
+        };
+        const startRankFilter = {
+            fieldName: `startRank`,
+            comparator: `EQUALS`,
+            fieldValue: {
+                value: -1,
+                type: `INT64`,
+            },
+        };
+
+        const resultRecords: any[] = [];
+        do {
+            try {
+                startRankFilter.fieldValue.value = index;
+                this.logger.debug(`Fetching records from position ${index}`);
+                const fetchedRecords = await this.performPromiseQuery(`CPLContainerRelationLiveByPosition`, [startRankFilter, directionFilter, parentFilter], 150, [`recordName`]); // Every query returns three records per item
+                // const fetchedRecords = await this.performPromiseQuery(`CPLContainerRelationLiveByPosition`, [startRankFilter, directionFilter, parentFilter], 200, [`recordName`, `isDeleted`, `ResOriginalRes`, `resJPEGFullRes`, `resVidFullRes`, `filenameEnc`]); // Every query returns three records per item
+                index = resultRecords.push(...fetchedRecords.filter(record => record.recordType === `CPLMaster`)); // API returns three records per item, CPLMaster is the only one of interesst
+            } catch (err) {
+                throw new Error(`Unable to fetch records at position ${index} for album ${parentId}: ${err.message}`);
+            }
+        } while (index < totalCount);
+
+        if (resultRecords.length !== totalCount) {
+            this.logger.warn(`Expected ${totalCount} items for album ${parentId}, but got ${resultRecords.length}`);
+        }
+
+        return resultRecords;
     }
 }

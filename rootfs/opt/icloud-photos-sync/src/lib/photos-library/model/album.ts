@@ -1,12 +1,10 @@
-import {Model, Sequelize, DataTypes} from "sequelize";
-
 export enum AlbumType {
     FOLDER = 3,
     ALBUM = 0
 }
 
 export enum AlbumState {
-    EXISTING = 0,
+    STALE = 0,
     NEW = 1,
     CHANGED = 2,
     EXPIRED = 3,
@@ -16,33 +14,68 @@ export enum AlbumState {
 /**
  * This class represents a photo album within the library
  */
-export class Album extends Model {
-    declare recordName: string;
-    declare albumType: AlbumType;
-    declare albumName: string;
-    declare albumState: AlbumState;
-    declare deleted: boolean;
+export class Album {
+    recordName: string;
+    albumType: AlbumType;
+    albumName: string;
+    albumState: AlbumState;
+    deleted: boolean;
+    /**
+     * Record Names of media contained in this album
+     */
+    mediaRecords: string[];
 
-    static initAlbums(sequelize: Sequelize) {
-        Album.init({
-            recordName: {
-                type: DataTypes.STRING,
-                primaryKey: true,
-            },
-            albumType: DataTypes.INTEGER,
-            albumName: DataTypes.STRING,
-            deleted: DataTypes.BOOLEAN,
-        }, {sequelize});
+    /**
+     * Record name of parent folder
+     */
+    parentRecordName: string;
+
+    constructor(recordName?: string, albumType?: AlbumType, albumName?: string, deleted?: boolean, parentRecordName?: string, albumState: AlbumState = AlbumState.NEW) {
+        this.recordName = recordName;
+        this.albumType = albumType;
+        this.albumName = albumName;
+        this.albumState = albumState;
+        this.deleted = deleted;
+        this.parentRecordName = parentRecordName;
     }
 
-    static buildAlbumInstance(recordName: string, albumType: AlbumType, albumName: string, deleted: boolean, parentAlbum?: string): Album {
-        const newAlbum = Album.build({
-            recordName,
-            albumType,
-            albumName,
-            deleted,
-            parentAlbum,
-        });
+    static parseAlbumFromJson(json: any): Album {
+        const newAlbum = new Album();
+        if (json.recordName) {
+            newAlbum.recordName = json.recordName;
+        } else {
+            throw new Error(`Unable to construct album from json: RecordName not found (${json})`);
+        }
+
+        if (json.albumType) {
+            newAlbum.albumType = json.albumType;
+        } else {
+            throw new Error(`Unable to construct album from json: AlbumType not found (${json})`);
+        }
+
+        if (json.albumName) {
+            newAlbum.albumName = json.albumName;
+        } else {
+            throw new Error(`Unable to construct album from json: AlbumName not found (${json})`);
+        }
+
+        if (json.albumState) {
+            newAlbum.albumState = json.albumState;
+        } else {
+            throw new Error(`Unable to construct album from json: AlbumState not found (${json})`);
+        }
+
+        if (json.deleted) {
+            newAlbum.deleted = json.deleted;
+        } else {
+            newAlbum.deleted = false;
+        }
+
+        if (json.parentAlbum) {
+            newAlbum.parentRecordName = json.parentRecordName;
+        } else {
+            newAlbum.parentRecordName = undefined;
+        }
 
         return newAlbum;
     }
@@ -99,9 +132,9 @@ export class Album extends Model {
         let parentId: string;
         try {
             parentId = albumRecord.fields.parentId.value;
-            return Album.buildAlbumInstance(recordName, albumType, albumName, deleted, parentId);
+            return new Album(recordName, albumType, albumName, deleted, parentId);
         } catch (err) {
-            return Album.buildAlbumInstance(recordName, albumType, albumName, deleted);
+            return new Album(recordName, albumType, albumName, deleted);
         }
     }
 }

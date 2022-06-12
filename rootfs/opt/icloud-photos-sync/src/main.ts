@@ -15,9 +15,9 @@ setupLogger(opts.log_level);
 /**
  * Database setup
  */
-import {PhotosLibraryDB} from './lib/db/photos-library-db.js';
-const photosLibraryDB = new PhotosLibraryDB(opts.app_data_dir);
-photosLibraryDB.open();
+import {PhotosLibrary} from './lib/photos-library/photos-library.js';
+const photosLibrary = new PhotosLibrary(opts.app_data_dir);
+photosLibrary.load();
 
 /**
  * ICloud connection
@@ -30,10 +30,19 @@ icloud.authenticate();
 /**
  * Waiting for setup to complete
  */
-await photosLibraryDB.getReadyPromise();
-await icloud.getReadyPromise();
-
 import {SyncEngine} from './lib/sync/sync-engine.js';
+import {exit} from 'process';
 
-const syncEngine = new SyncEngine(icloud, photosLibraryDB);
-await syncEngine.sync();
+let syncEngine: SyncEngine;
+Promise.all([icloud.getReadyPromise(), photosLibrary.getReadyPromise()])
+    .then(() => {
+        syncEngine = new SyncEngine(icloud, photosLibrary);
+        return syncEngine.fetchState();
+    })
+    // .then(() => {
+    //    return SyncEngine.diffState();
+    // })
+    .catch(err => {
+        console.error(`Init failed: ${err.message}`);
+        exit(1);
+    });
