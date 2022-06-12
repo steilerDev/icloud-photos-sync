@@ -19,3 +19,5 @@ export const PATHS = {
         LIST: `/zones/list`,
     },
 };
+export const MAX_PICTURE_RECORDS_LIMIT = 66; // 66 seems to be max
+export const MAX_RECORDS_LIMIT = MAX_PICTURE_RECORDS_LIMIT * 3; // Pictures are always returned in pairs of three

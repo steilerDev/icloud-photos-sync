@@ -3,7 +3,9 @@ import log from 'loglevel';
 import {EventEmitter} from 'events';
 
 import * as ICLOUD_PHOTOS from './icloud.photos.constants.js';
+import * as QueryBuilder from './icloud.photos.query-builder.js';
 import {iCloudAuth} from '../icloud.auth.js';
+import {dir} from 'console';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -152,8 +154,8 @@ export class iCloudPhotos extends EventEmitter {
                     zoneName: this.auth.iCloudPhotosAccount.zoneName,
                     zoneType: this.auth.iCloudPhotosAccount.zoneType,
                 },
-                //               ResultsLimit, // ResOriginalRes, filenameEnc / edited??
             };
+
             if (filterBy) {
                 data.query.filterBy = filterBy;
             }
@@ -172,86 +174,90 @@ export class iCloudPhotos extends EventEmitter {
             }
 
             throw new Error(`Fetched records are not in an array: ${JSON.stringify(fetchedRecords)}`);
+        } else {
+            throw (new Error(`Unable to perform query, because photos account validation failed`));
         }
-
-        throw (new Error(`Unable to perform query, because photos account validation failed`));
     }
 
     async fetchAllAlbumRecords(): Promise<any[]> {
-        return this.performPromiseQuery(`CPLAlbumByPositionLive`);
+        return this.performPromiseQuery(QueryBuilder.RECORD_TYPES.ALBUM_RECORDS);
     }
 
     async fetchAllAlbumRecordsByParentId(parentId: string): Promise<any[]> {
-        const parentFilter = {
-            fieldName: `parentId`,
-            comparator: `EQUALS`,
-            fieldValue: {
-                value: parentId,
-                type: `STRING`,
-            },
-        };
-        return this.performPromiseQuery(`CPLAlbumByPositionLive`, [parentFilter]);
+        const parentFilter = QueryBuilder.getParentFilterforParentId(parentId);
+        return this.performPromiseQuery(
+            QueryBuilder.RECORD_TYPES.ALBUM_RECORDS,
+            [parentFilter],
+        );
     }
 
-    async fetchAllPictureRecordsByParentId(parentId: string): Promise<any[]> {
-        const indexCountFilter = {
-            fieldName: `indexCountID`,
-            comparator: `IN`,
-            fieldValue: {
-                value: [`CPLContainerRelationNotDeletedByAssetDate:${parentId}`],
-                type: `STRING_LIST`,
-            },
-        };
-        let index = 0;
+    /**
+     * Fetching all pictures associated to an album, identified by parentId
+     * @param parentId - The record name of the album, if undefined all pictures will be returned
+     * @returns An array of CPLMaster filtered records containing the RecordName
+     */
+    async fetchAllPictureRecords(parentId?: string): Promise<any[]> {
+        // Getting number of items in folder
         let totalCount = -1;
         try {
-            const countData = await this.performPromiseQuery(`HyperionIndexCountLookup`, [indexCountFilter]);
+            const indexCountFilter = parentId === undefined
+                ? QueryBuilder.getIndexCountForAllPhotos()
+                : QueryBuilder.getIndexCountFilterForParentId(parentId);
+            const countData = await this.performPromiseQuery(
+                QueryBuilder.RECORD_TYPES.INDEX_COUNT,
+                [indexCountFilter],
+            );
             totalCount = countData[0].fields.itemCount.value;
-            this.logger.debug(`Expecting ${totalCount} records for album ${parentId}`);
         } catch (err) {
             throw new Error(`Unable to extract count data: ${err.message}`);
         }
 
-        const parentFilter = {
-            fieldName: `parentId`,
-            comparator: `EQUALS`,
-            fieldValue: {
-                value: parentId,
-                type: `STRING`,
-            },
-        };
-        const directionFilter = {
-            fieldName: `direction`,
-            comparator: `EQUALS`,
-            fieldValue: {
-                value: `ASCENDING`,
-                type: `STRING`,
-            },
-        };
-        const startRankFilter = {
-            fieldName: `startRank`,
-            comparator: `EQUALS`,
-            fieldValue: {
-                value: -1,
-                type: `INT64`,
-            },
-        };
+        // Calculating number of concurrent requests, in order to execute in parallel
+        const numberOfRequests = Math.ceil(totalCount / ICLOUD_PHOTOS.MAX_PICTURE_RECORDS_LIMIT);
+        this.logger.debug(`Expecting ${totalCount} records for album ${parentId === undefined ? `All photos` : parentId}, executing ${numberOfRequests} queries`);
+        // Collecting all promise queries
+        const promiseQueries: Promise<any>[] = [];
+        for (let index = 0; index < numberOfRequests; index++) {
+            const startRank = index * ICLOUD_PHOTOS.MAX_PICTURE_RECORDS_LIMIT;
+            this.logger.debug(`Building query for records at index ${startRank}`);
+            const startRankFilter = QueryBuilder.getStartRankFilterForStartRank(startRank);
+            const directionFilter = QueryBuilder.getDirectionFilterForDirection();
 
-        const resultRecords: any[] = [];
-        do {
-            try {
-                startRankFilter.fieldValue.value = index;
-                this.logger.debug(`Fetching records from position ${index}`);
-                const fetchedRecords = await this.performPromiseQuery(`CPLContainerRelationLiveByPosition`, [startRankFilter, directionFilter, parentFilter], 150, [`recordName`]); // Every query returns three records per item
-                // const fetchedRecords = await this.performPromiseQuery(`CPLContainerRelationLiveByPosition`, [startRankFilter, directionFilter, parentFilter], 200, [`recordName`, `isDeleted`, `ResOriginalRes`, `resJPEGFullRes`, `resVidFullRes`, `filenameEnc`]); // Every query returns three records per item
-                index = resultRecords.push(...fetchedRecords.filter(record => record.recordType === `CPLMaster`)); // API returns three records per item, CPLMaster is the only one of interesst
-            } catch (err) {
-                throw new Error(`Unable to fetch records at position ${index} for album ${parentId}: ${err.message}`);
+            // Different queries for 'all pictures' than album pictures
+            if (parentId === undefined) {
+                promiseQueries.push(this.performPromiseQuery(
+                    QueryBuilder.RECORD_TYPES.ALL_PHOTOS,
+                    [startRank, directionFilter],
+                    ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
+                    [QueryBuilder.DESIRED_KEYS.EDITED_JPEG_RESSOURCE, QueryBuilder.DESIRED_KEYS.EDITED_VIDEO_RESSOURCE, QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME, QueryBuilder.DESIRED_KEYS.IS_DELETED, QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE, QueryBuilder.DESIRED_KEYS.RECORD_NAME],
+                ));
+            } else {
+                const parentFilter = QueryBuilder.getParentFilterforParentId(parentId);
+                promiseQueries.push(this.performPromiseQuery(
+                    QueryBuilder.RECORD_TYPES.PHOTO_RECORDS,
+                    [startRankFilter, directionFilter, parentFilter],
+                    ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
+                    [QueryBuilder.DESIRED_KEYS.RECORD_NAME],
+                ));
             }
-        } while (index < totalCount);
+        }
+
+        // Executing queries in parallel
+        let resultRecords: any[];
+        try {
+            const allRecords: any[] = [];
+            // Merging arrays of arrays
+            (await Promise.all(promiseQueries)).forEach(records => allRecords.push(...records));
+
+            resultRecords = allRecords.filter(record => record.recordType === QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD);
+        } catch (err) {
+            throw new Error(`Unable to fetch records for album ${parentId}: ${err.message}`);
+        }
 
         if (resultRecords.length !== totalCount) {
             this.logger.warn(`Expected ${totalCount} items for album ${parentId}, but got ${resultRecords.length}`);
+        } else {
+            this.logger.debug(`Got the expected amount of items for album ${parentId}: ${resultRecords.length} out of ${totalCount}`);
         }
 
         return resultRecords;

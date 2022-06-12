@@ -26,9 +26,12 @@ export class SyncEngine extends EventEmitter {
     async fetchState() {
         this.logger.debug(`Fetching remote iCloud state`);
         const iCloudFolderStructure = await this.fetchFolderStructure();
+        const iCloudPhotos = 
     }
+/**
+ * 
 
-    async syncFolderStructure() {
+    async syncFolderStructures() {
         this.logger.debug(`Syncing folder structure`);
         const iCloudFolderStructure = await this.fetchFolderStructure();
         this.logger.debug(`Fetched folder structure from iCloud, comparing to folder structure in database`);
@@ -39,7 +42,7 @@ export class SyncEngine extends EventEmitter {
             // ICloudFolderStructure.
             // Diffk
         }
-    }
+    } */
 
     /**
      * Fetching folder structure from iCloud
@@ -52,6 +55,8 @@ export class SyncEngine extends EventEmitter {
         try {
             // Getting root folders
             const folders = await this.iCloud.photos.fetchAllAlbumRecords();
+            // Storing picture sync requests for asynchronous completion
+            const picturePromises: Promise<void | string[]>[] = [];
             while (folders.length > 0) {
                 try {
                     const parsedFolder: Album = Album.parseAlbumFromRequest(folders.shift());
@@ -65,13 +70,20 @@ export class SyncEngine extends EventEmitter {
                         folders.push(...nestedFolders);
                     } else if (parsedFolder.albumType === AlbumType.ALBUM) {
                         this.logger.debug(`Adding pictures to folder ${parsedFolder.albumName}`);
-                        const pictures = await this.fetchPicturesForAlbum(parsedFolder.recordName);
-                        parsedFolder.mediaRecords = pictures;
+                        picturePromises.push(
+                            this.fetchPicturesForAlbum(parsedFolder.recordName)
+                                .then(pictures => {
+                                    parsedFolder.mediaRecords = pictures;
+                                }),
+                        );
                     }
                 } catch (err) {
                     this.logger.warn(err.message);
                 }
             }
+
+            this.logger.debug(`Folder sync completed, waiting for picture sync to complete`);
+            await Promise.all([...picturePromises]);
         } catch (err) {
             throw new Error(`Unable to fetch folder structure: ${err}`);
         }
@@ -80,20 +92,21 @@ export class SyncEngine extends EventEmitter {
     }
 
     async fetchPicturesForAlbum(parentId: string): Promise<string[]> {
-        const parsedPictures: string[] = [];
         try {
-            const pictureRecords = await this.iCloud.photos.fetchAllPictureRecordsByParentId(parentId);
+            const pictureRecords = await this.iCloud.photos.fetchAllPictureRecords(parentId);
             const pictureRecordNames = pictureRecords.map(picture => picture.recordName);
             this.logger.debug(`Got ${pictureRecordNames.length} picture records for ${parentId}`);
-            // {"query":{"recordType":"CPLContainerRelationLiveByPosition","filterBy":[{"fieldName":"startRank","comparator":"EQUALS","fieldValue":{"value":0,"type":"INT64"}},{"fieldName":"direction","comparator":"EQUALS","fieldValue":{"value":"ASCENDING","type":"STRING"}},{"fieldName":"parentId","comparator":"EQUALS","fieldValue":{"value":"D4F02F70-C805-499B-99D0-5E337710EF47","type":"STRING"}}]},"zoneID":{"zoneName":"PrimarySync","ownerRecordName":"_e8a2d278a868306ca55d7fc05a299b73","zoneType":"REGULAR_CUSTOM_ZONE"},"desiredKeys":["addedDate","adjustmentRenderType","adjustmentType","assetDate","assetHDRType","assetSubtype","assetSubtypeV2","burstFlags","burstFlagsExt","burstId","captionEnc","codec","containerId","customRenderedValue","dataClassType","dateExpunged","duration","filenameEnc","importedBy","isDeleted","isExpunged","isFavorite","isHidden","isKeyAsset","itemId","itemType","locationEnc","locationLatitude","locationLongitude","locationV2Enc","masterRef","mediaMetaDataEnc","mediaMetaDataType","orientation","originalOrientation","position","recordChangeTag","recordName","recordType","remappedRef","resJPEGFullFileType","resJPEGFullFingerprint","resJPEGFullHeight","resJPEGFullRes","resJPEGFullWidth","resJPEGLargeFileType","resJPEGLargeFingerprint","resJPEGLargeHeight","resJPEGLargeRes","resJPEGLargeWidth","resJPEGMedFileType","resJPEGMedFingerprint","resJPEGMedHeight","resJPEGMedRes","resJPEGMedWidth","resJPEGThumbFileType","resJPEGThumbFingerprint","resJPEGThumbHeight","resJPEGThumbRes","resJPEGThumbWidth","resOriginalAltFileType","resOriginalAltFingerprint","resOriginalAltHeight","resOriginalAltRes","resOriginalAltWidth","resOriginalFileType","resOriginalFingerprint","resOriginalHeight","resOriginalRes","resOriginalVidComplFileType","resOriginalVidComplFingerprint","resOriginalVidComplHeight","resOriginalVidComplRes","resOriginalVidComplWidth","resOriginalWidth","resSidecarFileType","resSidecarFingerprint","resSidecarHeight","resSidecarRes","resSidecarWidth","resVidFullFileType","resVidFullFingerprint","resVidFullHeight","resVidFullRes","resVidFullWidth","resVidHDRMedRes","resVidMedFileType","resVidMedFingerprint","resVidMedHeight","resVidMedRes","resVidMedWidth","resVidSmallFileType","resVidSmallFingerprint","resVidSmallHeight","resVidSmallRes","resVidSmallWidth","timeZoneOffset","vidComplDispScale","vidComplDispValue","vidComplDurScale","vidComplDurValue","vidComplVisibilityState","videoFrameRate","zoneID"],"resultsLimit":75}
+            return pictureRecordNames;
         } catch (err) {
             throw new Error(`Unable to get photos for album (${parentId}): ${err.message}`);
         }
-
-        return parsedPictures;
     }
 
-    // Async fetchAllPictures(): Promise<MediaRecord[]> {
+    //async fetchAllPictures(): Promise<MediaRecord[]> {
+    //    try {
+    //        const pictureRecords = await this.iCloud.photos.fetchAllAlbumRecords();
+
+//        }
 
     // Get all pictures count, query {"query":{"recordType":"HyperionIndexCountLookup","filterBy":{"fieldName":"indexCountID","comparator":"IN","fieldValue":{"value":["CPLAssetByAddedDate"],"type":"STRING_LIST"}}},"zoneID":{"zoneName":"PrimarySync","ownerRecordName":"_e8a2d278a868306ca55d7fc05a299b73","zoneType":"REGULAR_CUSTOM_ZONE"}}
     // Get all pictures {"query":{"recordType":"CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted","filterBy":[{"fieldName":"startRank","comparator":"EQUALS","fieldValue":{"value":16,"type":"INT64"}},{"fieldName":"direction","comparator":"EQUALS","fieldValue":{"value":"DESCENDING","type":"STRING"}}]},"zoneID":{"zoneName":"PrimarySync","ownerRecordName":"_e8a2d278a868306ca55d7fc05a299b73","zoneType":"REGULAR_CUSTOM_ZONE"},"desiredKeys":["addedDate","adjustmentRenderType","adjustmentType","assetDate","assetHDRType","assetSubtype","assetSubtypeV2","burstFlags","burstFlagsExt","burstId","captionEnc","codec","customRenderedValue","dataClassType","dateExpunged","duration","filenameEnc","importedBy","isDeleted","isExpunged","isFavorite","isHidden","itemType","locationEnc","locationLatitude","locationLongitude","locationV2Enc","masterRef","mediaMetaDataEnc","mediaMetaDataType","orientation","originalOrientation","recordChangeTag","recordName","recordType","remappedRef","resJPEGFullFileType","resJPEGFullFingerprint","resJPEGFullHeight","resJPEGFullRes","resJPEGFullWidth","resJPEGLargeFileType","resJPEGLargeFingerprint","resJPEGLargeHeight","resJPEGLargeRes","resJPEGLargeWidth","resJPEGMedFileType","resJPEGMedFingerprint","resJPEGMedHeight","resJPEGMedRes","resJPEGMedWidth","resJPEGThumbFileType","resJPEGThumbFingerprint","resJPEGThumbHeight","resJPEGThumbRes","resJPEGThumbWidth","resOriginalAltFileType","resOriginalAltFingerprint","resOriginalAltHeight","resOriginalAltRes","resOriginalAltWidth","resOriginalFileType","resOriginalFingerprint","resOriginalHeight","resOriginalRes","resOriginalVidComplFileType","resOriginalVidComplFingerprint","resOriginalVidComplHeight","resOriginalVidComplRes","resOriginalVidComplWidth","resOriginalWidth","resSidecarFileType","resSidecarFingerprint","resSidecarHeight","resSidecarRes","resSidecarWidth","resVidFullFileType","resVidFullFingerprint","resVidFullHeight","resVidFullRes","resVidFullWidth","resVidHDRMedRes","resVidMedFileType","resVidMedFingerprint","resVidMedHeight","resVidMedRes","resVidMedWidth","resVidSmallFileType","resVidSmallFingerprint","resVidSmallHeight","resVidSmallRes","resVidSmallWidth","timeZoneOffset","vidComplDispScale","vidComplDispValue","vidComplDurScale","vidComplDurValue","vidComplVisibilityState","videoFrameRate","zoneID"],"resultsLimit":34}
