@@ -198,6 +198,7 @@ export class iCloudPhotos extends EventEmitter {
      * @returns An array of CPLMaster filtered records containing the RecordName
      */
     async fetchAllPictureRecords(parentId?: string): Promise<any[]> {
+        this.logger.debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
         // Getting number of items in folder
         let totalCount = -1;
         try {
@@ -215,13 +216,17 @@ export class iCloudPhotos extends EventEmitter {
 
         // Calculating number of concurrent requests, in order to execute in parallel
         const numberOfRequests = parentId === undefined
-            ? Math.ceil((totalCount * 2) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT) // On all pictures CPLMaster & CPLAsset per picture is returned
-            : Math.ceil((totalCount * 3) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT); // On folders three records per photo are returned (CPLMaster, CPLAsset & CPLContainerRelation)
+            ? Math.ceil((totalCount * 2) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT) // On all pictures two records per photo are returned (CPLMaster & CPLAsset) which are counted against max
+            : Math.ceil((totalCount * 3) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT); // On folders three records per photo are returned (CPLMaster, CPLAsset & CPLContainerRelation) which are counted against max
+
         this.logger.debug(`Expecting ${totalCount} records for album ${parentId === undefined ? `All photos` : parentId}, executing ${numberOfRequests} queries`);
-        // Collecting all promise queries
+
+        // Collecting all promise queries for parallel execution
         const promiseQueries: Promise<any>[] = [];
         for (let index = 0; index < numberOfRequests; index++) {
-            const startRank = index * ICLOUD_PHOTOS.MAX_RECORDS_LIMIT;
+            const startRank = parentId === undefined // The start rank always refers to the touple/triple of records, therefore we need to adjust the start rank based on the amount of records returned
+                ? index * Math.floor(ICLOUD_PHOTOS.MAX_RECORDS_LIMIT / 2)
+                : index * Math.floor(ICLOUD_PHOTOS.MAX_RECORDS_LIMIT / 3);
             this.logger.debug(`Building query for records of album ${parentId === undefined ? `All photos` : parentId} at index ${startRank}`);
             const startRankFilter = QueryBuilder.getStartRankFilterForStartRank(startRank);
             const directionFilter = QueryBuilder.getDirectionFilterForDirection();
@@ -268,17 +273,17 @@ export class iCloudPhotos extends EventEmitter {
             // Merging arrays of arrays
             (await Promise.all(promiseQueries)).forEach(records => allRecords.push(...records));
 
-            this.logger.info(`Got ${allRecords.length} for album ${parentId === undefined ? `'All photos'` : parentId} before filtering (out of expected ${totalCount})`);
+            this.logger.debug(`Got ${allRecords.length} for album ${parentId === undefined ? `'All photos'` : parentId} before filtering (out of expected ${totalCount})`);
             // Post-processing response
             const seen = {};
             resultRecords = allRecords.filter(record => {
                 if (record.deleted === true) {
-                    this.logger.trace(`Filtering record ${record.recordName}: is deleted`);
+                    this.logger.debug(`Filtering record ${record.recordName}: is deleted`);
                     return false;
                 }
 
                 if (record.fields.isHidden?.value === 1) {
-                    this.logger.trace(`Filtering record ${record.recordName}: is hidden`);
+                    this.logger.debug(`Filtering record ${record.recordName}: is hidden`);
                     return false;
                 }
 
@@ -288,7 +293,7 @@ export class iCloudPhotos extends EventEmitter {
                 }
 
                 if (Object.prototype.hasOwnProperty.call(seen, record.recordName)) {
-                    this.logger.trace(`Filtering record ${record.recordName}: duplicate`);
+                    this.logger.warn(`Filtering record ${record.recordName}: duplicate`);
                     return false;
                 }
 

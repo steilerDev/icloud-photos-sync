@@ -3,9 +3,7 @@ export const RECORD_TYPES = {
     PHOTO_MASTER_RECORD: `CPLMaster`,
     ALBUM_RECORDS: `CPLAlbumByPositionLive`,
     INDEX_COUNT: `HyperionIndexCountLookup`,
-    //   ALL_PHOTOS_FOLDER: `CPLAssetByAssetDateWithoutHiddenOrDeleted`,
     ALL_PHOTOS: `CPLAssetAndMasterByAddedDate`,
-//    ALL_PHOTOS: `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted`,
 };
 
 export const DESIRED_KEYS = {
