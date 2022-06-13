@@ -14,7 +14,15 @@ export class FileType {
 
     constructor(descriptor: string) {
         this.descriptor = descriptor;
-        console.error(`Found filetype ${descriptor}`);
+        // Console.error(`Found filetype ${descriptor}`);
+        /**
+         * public.png
+         * public.mpeg-4
+         * public.jpeg
+         * com.apple.quicktime-movie
+         * public.heic
+         * com.sony.arw-raw-image
+         */
     }
 
     //    GetItemType(): ItemType {

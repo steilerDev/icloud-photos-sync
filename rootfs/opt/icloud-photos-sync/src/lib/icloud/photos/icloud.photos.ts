@@ -6,6 +6,7 @@ import * as ICLOUD_PHOTOS from './icloud.photos.constants.js';
 import * as QueryBuilder from './icloud.photos.query-builder.js';
 import {iCloudAuth} from '../icloud.auth.js';
 import {dir} from 'console';
+import {match} from 'assert';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -213,13 +214,15 @@ export class iCloudPhotos extends EventEmitter {
         }
 
         // Calculating number of concurrent requests, in order to execute in parallel
-        const numberOfRequests = Math.ceil(totalCount / ICLOUD_PHOTOS.MAX_PICTURE_RECORDS_LIMIT);
+        const numberOfRequests = parentId === undefined
+            ? Math.ceil((totalCount * 2) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT) // On all pictures CPLMaster & CPLAsset per picture is returned
+            : Math.ceil((totalCount * 3) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT); // On folders three records per photo are returned (CPLMaster, CPLAsset & CPLContainerRelation)
         this.logger.debug(`Expecting ${totalCount} records for album ${parentId === undefined ? `All photos` : parentId}, executing ${numberOfRequests} queries`);
         // Collecting all promise queries
         const promiseQueries: Promise<any>[] = [];
         for (let index = 0; index < numberOfRequests; index++) {
-            const startRank = index * ICLOUD_PHOTOS.MAX_PICTURE_RECORDS_LIMIT;
-            this.logger.debug(`Building query for records at index ${startRank}`);
+            const startRank = index * ICLOUD_PHOTOS.MAX_RECORDS_LIMIT;
+            this.logger.debug(`Building query for records of album ${parentId === undefined ? `All photos` : parentId} at index ${startRank}`);
             const startRankFilter = QueryBuilder.getStartRankFilterForStartRank(startRank);
             const directionFilter = QueryBuilder.getDirectionFilterForDirection();
 
@@ -240,6 +243,7 @@ export class iCloudPhotos extends EventEmitter {
                         QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME,
                         QueryBuilder.DESIRED_KEYS.IS_DELETED,
                         QueryBuilder.DESIRED_KEYS.FAVORITE,
+                        QueryBuilder.DESIRED_KEYS.IS_HIDDEN,
                     ],
                 ));
             } else {
@@ -248,7 +252,11 @@ export class iCloudPhotos extends EventEmitter {
                     QueryBuilder.RECORD_TYPES.PHOTO_RECORDS,
                     [startRankFilter, directionFilter, parentFilter],
                     ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
-                    [QueryBuilder.DESIRED_KEYS.RECORD_NAME],
+                    [
+                        QueryBuilder.DESIRED_KEYS.RECORD_NAME,
+                        QueryBuilder.DESIRED_KEYS.IS_HIDDEN,
+                        QueryBuilder.DESIRED_KEYS.IS_HIDDEN,
+                    ],
                 ));
             }
         }
@@ -260,15 +268,42 @@ export class iCloudPhotos extends EventEmitter {
             // Merging arrays of arrays
             (await Promise.all(promiseQueries)).forEach(records => allRecords.push(...records));
 
-            resultRecords = allRecords.filter(record => record.recordType === QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD);
+            this.logger.info(`Got ${allRecords.length} for album ${parentId === undefined ? `'All photos'` : parentId} before filtering (out of expected ${totalCount})`);
+            // Post-processing response
+            const seen = {};
+            resultRecords = allRecords.filter(record => {
+                if (record.deleted === true) {
+                    this.logger.trace(`Filtering record ${record.recordName}: is deleted`);
+                    return false;
+                }
+
+                if (record.fields.isHidden?.value === 1) {
+                    this.logger.trace(`Filtering record ${record.recordName}: is hidden`);
+                    return false;
+                }
+
+                if (record.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
+                    this.logger.trace(`Filtering record ${record.recordName}: is not CPLMaster`);
+                    return false;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(seen, record.recordName)) {
+                    this.logger.trace(`Filtering record ${record.recordName}: duplicate`);
+                    return false;
+                }
+
+                // Saving record name for future de-duplication
+                seen[record.recordName] = true;
+                return true;
+            });
         } catch (err) {
-            throw new Error(`Unable to fetch records for album ${parentId}: ${err.message}`);
+            throw new Error(`Unable to fetch records for album ${parentId === undefined ? `'All photos'` : parentId}: ${err.message}`);
         }
 
         if (resultRecords.length !== totalCount) {
-            this.logger.warn(`Expected ${totalCount} items for album ${parentId}, but got ${resultRecords.length}`);
+            this.logger.warn(`Expected ${totalCount} items for album ${parentId === undefined ? `'All photos'` : parentId}, but got ${resultRecords.length}`);
         } else {
-            this.logger.debug(`Got the expected amount of items for album ${parentId}: ${resultRecords.length} out of ${totalCount}`);
+            this.logger.info(`Got the expected amount of items for album ${parentId === undefined ? `'All photos'` : parentId}: ${resultRecords.length} out of ${totalCount}`);
         }
 
         return resultRecords;

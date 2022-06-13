@@ -26,7 +26,7 @@ export class SyncEngine extends EventEmitter {
 
     async fetchState() {
         this.logger.debug(`Fetching remote iCloud state`);
-        const library = await Promise.all([this.fetchAllPictures(), this.fetchFolderStructure()]);
+        const remoteLibrary = await Promise.all([this.fetchAllPictures(), this.fetchFolderStructure()]);
         console.log(`Succesfully fetched state!`);
     }
 

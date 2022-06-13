@@ -19,6 +19,7 @@ export const DESIRED_KEYS = {
     EDITED_VIDEO_RESSOURCE_FILE_TYPE: `resVidFullFileType`,
     ENCODED_FILE_NAME: `filenameEnc`,
     FAVORITE: `isFavorite`,
+    IS_HIDDEN: `isHidden`,
 //    ITEM_TYPE: `itemType`,
 };
 

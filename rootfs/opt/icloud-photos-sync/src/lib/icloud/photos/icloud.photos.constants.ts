@@ -19,5 +19,4 @@ export const PATHS = {
         LIST: `/zones/list`,
     },
 };
-export const MAX_PICTURE_RECORDS_LIMIT = 66; // 66 seems to be max
-export const MAX_RECORDS_LIMIT = MAX_PICTURE_RECORDS_LIMIT * 3; // Pictures are always returned in pairs of three
+export const MAX_RECORDS_LIMIT = 198; // It might be 200, but in order to divide by 3 (for albums) and 2 (for all pictures) this is more convenient
