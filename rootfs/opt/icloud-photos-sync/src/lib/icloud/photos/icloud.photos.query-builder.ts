@@ -1,3 +1,10 @@
+/**
+ * This file helps building queries for the iCloud Photos backend service
+ */
+
+/**
+ * All relevant record types for this application
+ */
 export const RECORD_TYPES = {
     PHOTO_RECORDS: `CPLContainerRelationLiveByPosition`, // Record
     PHOTO_MASTER_RECORD: `CPLMaster`,
@@ -6,6 +13,9 @@ export const RECORD_TYPES = {
     ALL_PHOTOS: `CPLAssetAndMasterByAddedDate`,
 };
 
+/**
+ * All relevant desired keys as provided to the backend
+ */
 export const DESIRED_KEYS = {
     RECORD_NAME: `recordName`,
     IS_DELETED: `isDeleted`,
@@ -21,6 +31,11 @@ export const DESIRED_KEYS = {
 //    ITEM_TYPE: `itemType`,
 };
 
+/**
+ * Builds a filter, that reduce the query based on the parentId
+ * @param parentId - The parentId (record name) of the parent album
+ * @returns The filter required to perform a query
+ */
 export function getParentFilterforParentId(parentId: string): any {
     return {
         fieldName: `parentId`,
@@ -32,6 +47,11 @@ export function getParentFilterforParentId(parentId: string): any {
     };
 }
 
+/**
+ * Builds a filter, that defines the sorting of the query
+ * @param direction - Optionally the direction of the filter ('ASCENDING' by default)
+ * @returns The filter required to perform a query
+ */
 export function getDirectionFilterForDirection(direction: string = `ASCENDING`): any {
     return {
         fieldName: `direction`,

@@ -5,8 +5,6 @@ import {EventEmitter} from 'events';
 import * as ICLOUD_PHOTOS from './icloud.photos.constants.js';
 import * as QueryBuilder from './icloud.photos.query-builder.js';
 import {iCloudAuth} from '../icloud.auth.js';
-import {dir} from 'console';
-import {match} from 'assert';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -24,10 +22,6 @@ export class iCloudPhotos extends EventEmitter {
         this.auth = auth;
 
         this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, this.checkingIndexingStatus);
-
-        // This.on(ICLOUD_PHOTOS.EVENTS.READY, () => {
-
-        // });
 
         // this.on(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, (progress: string) => {
         // @todo: Implement retry instead of failure
@@ -131,11 +125,11 @@ export class iCloudPhotos extends EventEmitter {
 
     /**
      * Performs a query against the iCloud Photos Service
-     * @param recordType
-     * @param filterBy
-     * @param resultsLimit Results limit is maxed at 66 * 3 records (because every picture is returned three times)
-     * @param desiredKeys
-     * @returns
+     * @param recordType - The requested record type
+     * @param filterBy - An array of filter instructions
+     * @param resultsLimit - Results limit is maxed at 66 * 3 records (because every picture is returned three times)
+     * @param desiredKeys - The fields requested from the backend
+     * @returns An array of records as returned by the backend
      */
     async performPromiseQuery(recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
         if (this.auth.validatePhotosAccount()) {
@@ -180,10 +174,19 @@ export class iCloudPhotos extends EventEmitter {
         }
     }
 
+    /**
+     * Fetching a list of all top level albums
+     * @returns An array of folder and album records without any parent
+     */
     async fetchAllAlbumRecords(): Promise<any[]> {
         return this.performPromiseQuery(QueryBuilder.RECORD_TYPES.ALBUM_RECORDS);
     }
 
+    /**
+     * Fetches a list of directors with the same parent record name
+     * @param parentId - The record name of the parent folder
+     * @returns An array of folder and album records that have the specified parent folder
+     */
     async fetchAllAlbumRecordsByParentId(parentId: string): Promise<any[]> {
         const parentFilter = QueryBuilder.getParentFilterforParentId(parentId);
         return this.performPromiseQuery(
