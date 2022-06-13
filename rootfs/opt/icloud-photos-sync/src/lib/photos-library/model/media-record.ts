@@ -3,6 +3,7 @@
  */
 
 import * as QueryBuilder from '../../icloud/photos/icloud.photos.query-builder.js';
+import {RecordState} from '../photos-library.js';
 
 // Export enum ItemType {
 //    VIDEO = `com.apple.quicktime-movie`,
@@ -37,6 +38,8 @@ export class Asset {
     referenceChecksum: string;
     downloadURL: string;
 
+    recordState: RecordState;
+
     static parseAssetFromJson(json: any): Asset {
         const newAsset = new Asset();
 
@@ -68,6 +71,12 @@ export class Asset {
             newAsset.downloadURL = json.downloadURL;
         } else {
             throw new Error(`Unable to construct asset from json: Download URL not found (${JSON.stringify(json)})`);
+        }
+
+        if (json.recordState) {
+            newAsset.recordState = json.recordState;
+        } else {
+            newAsset.recordState = RecordState.NEW;
         }
 
         return newAsset;

@@ -1,24 +1,19 @@
+import {RecordState} from "../photos-library.js";
+
 export enum AlbumType {
     FOLDER = 3,
     ALBUM = 0
-}
-
-export enum AlbumState {
-    STALE = 0,
-    NEW = 1,
-    CHANGED = 2,
-    EXPIRED = 3,
-    LOCKED = 4
 }
 
 /**
  * This class represents a photo album within the library
  */
 export class Album {
+    recordState: RecordState;
+
     recordName: string;
     albumType: AlbumType;
     albumName: string;
-    albumState: AlbumState;
     deleted: boolean;
     /**
      * Record Names of media contained in this album
@@ -29,15 +24,6 @@ export class Album {
      * Record name of parent folder
      */
     parentRecordName: string;
-
-    constructor(recordName?: string, albumType?: AlbumType, albumName?: string, deleted?: boolean, parentRecordName?: string, albumState: AlbumState = AlbumState.NEW) {
-        this.recordName = recordName;
-        this.albumType = albumType;
-        this.albumName = albumName;
-        this.albumState = albumState;
-        this.deleted = deleted;
-        this.parentRecordName = parentRecordName;
-    }
 
     static parseAlbumFromJson(json: any): Album {
         const newAlbum = new Album();
@@ -64,10 +50,10 @@ export class Album {
             throw new Error(`Unable to construct album from json: AlbumType not found (${JSON.stringify(json)})`);
         }
 
-        if (json.albumState) {
-            newAlbum.albumState = json.albumState;
+        if (json.recordState) {
+            newAlbum.recordState = json.recordState;
         } else {
-            newAlbum.albumState = AlbumState.NEW;
+            newAlbum.recordState = RecordState.NEW;
         }
 
         if (json.deleted && (json.deleted === `true` || json.deleted === `false`)) {

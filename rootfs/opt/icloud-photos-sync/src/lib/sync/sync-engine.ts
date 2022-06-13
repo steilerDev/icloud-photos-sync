@@ -1,7 +1,7 @@
 import log from 'loglevel';
 import {EventEmitter} from 'events';
 import {iCloud} from '../icloud/icloud.js';
-import {PhotosLibrary} from '../photos-library/photos-library.js';
+import {PhotosLibrary, Library} from '../photos-library/photos-library.js';
 import {Album, AlbumType} from '../photos-library/model/album.js';
 import {MediaRecord} from '../photos-library/model/media-record.js';
 
@@ -18,16 +18,57 @@ export class SyncEngine extends EventEmitter {
 
     db: PhotosLibrary;
 
-    constructor(iCloud: iCloud, db: PhotosLibrary) {
+    photoDataDir: string;
+
+    constructor(iCloud: iCloud, db: PhotosLibrary, photoDataDir: string) {
         super();
         this.iCloud = iCloud;
         this.db = db;
+        this.photoDataDir = photoDataDir;
     }
 
-    async fetchState() {
-        this.logger.debug(`Fetching remote iCloud state`);
-        const remoteLibrary = await Promise.all([this.fetchAllPictures(), this.fetchFolderStructure()]);
-        console.log(`Succesfully fetched state!`);
+    async sync() {
+        try {
+            this.logger.info(`Starting sync`);
+            const remoteState = await this.fetchState();
+            await this.diffState(remoteState);
+            await this.writeState();
+            this.logger.info(`Sync completed`);
+        } catch (err) {
+            throw new Error(`Sync failed: ${err.message}`);
+        }
+    }
+
+    async diffState(remoteLibrary: Library) {
+        if (this.db.isEmpty) {
+            this.logger.info(`Local database is empy, setting remote state to local state`);
+            this.db.library = remoteLibrary;
+        } else {
+            throw new Error(`Diff not implemented`);
+        }
+        return this.db.save();
+    }
+
+    async writeState() {
+        Object.values(this.db.library.mediaRecords).forEach(element => {
+            this.logger.debug(`Downloding element ${element.recordName}`);
+        });
+    }
+
+    async fetchState(): Promise<Library> {
+        this.logger.info(`Fetching remote iCloud state`);
+        return Promise.all([this.fetchFolderStructure(), this.fetchAllPictures()])
+            .then(result => {
+                this.logger.debug(`Indexing remote state`);
+                const library: Library = {
+                    albums: result[0],
+                    mediaRecords: {},
+                };
+                result[1].forEach(mediaRecord => {
+                    library.mediaRecords[mediaRecord.recordName] = mediaRecord;
+                });
+                return library;
+            });
     }
 
     /**

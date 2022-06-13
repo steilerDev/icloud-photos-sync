@@ -7,9 +7,19 @@ import {EventEmitter} from 'events';
 import * as fs from 'fs/promises';
 import * as fssync from 'fs';
 
-interface Library {
-    albums: Album[]
-    mediaRecords: MediaRecord[]
+export interface Library {
+    albums: Album[],
+    mediaRecords: {
+        [key: string]: MediaRecord
+    }
+}
+
+export enum RecordState {
+    STALE = 0,
+    NEW = 1,
+    CHANGED = 2,
+    EXPIRED = 3,
+    LOCKED = 4
 }
 
 /**
@@ -26,7 +36,7 @@ export class PhotosLibrary extends EventEmitter {
     /**
      * Default logger for the class
      */
-    logger: log.Logger = log.getLogger(`Photos-Library-DB`);
+    logger: log.Logger = log.getLogger(`Photos-Library`);
 
     /**
      * Is the object ready?
@@ -43,7 +53,7 @@ export class PhotosLibrary extends EventEmitter {
 
         this.library = {
             albums: [],
-            mediaRecords: [],
+            mediaRecords: {},
         };
 
         this.libraryFile = path.format({
@@ -113,11 +123,11 @@ export class PhotosLibrary extends EventEmitter {
         }
     }
 
-    save() {
+    async save(): Promise<void> {
         this.logger.debug(`Writing database...`);
 
         const tempFileName = `${this.libraryFile}-updated`;
-        fs.writeFile(tempFileName, JSON.stringify(this.library))
+        return fs.writeFile(tempFileName, JSON.stringify(this.library))
             .then(() => {
                 this.logger.debug(`Database written succesfully, removing lock`);
                 fs.rename(tempFileName, this.libraryFile);
@@ -129,6 +139,6 @@ export class PhotosLibrary extends EventEmitter {
     }
 
     isEmpty(): boolean {
-        return this.library.albums.length === 0 && this.library.mediaRecords.length === 0;
+        return this.library.albums.length === 0 && Object.keys(this.library.mediaRecords).length === 0;
     }
 }

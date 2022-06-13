@@ -23,7 +23,7 @@ export class iCloudPhotos extends EventEmitter {
 
         this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, this.checkingIndexingStatus);
 
-        // this.on(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, (progress: string) => {
+        // This.on(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, (progress: string) => {
         // @todo: Implement retry instead of failure
         // });
 

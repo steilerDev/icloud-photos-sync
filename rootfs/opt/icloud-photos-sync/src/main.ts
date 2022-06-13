@@ -33,16 +33,13 @@ icloud.authenticate();
 import {SyncEngine} from './lib/sync/sync-engine.js';
 import {exit} from 'process';
 
-let syncEngine: SyncEngine;
-Promise.all([icloud.getReadyPromise(), photosLibrary.getReadyPromise()])
-    .then(() => {
-        syncEngine = new SyncEngine(icloud, photosLibrary);
-        return syncEngine.fetchState();
-    })
-    // .then(() => {
-    //    return SyncEngine.diffState();
-    // })
+await Promise.all([icloud.getReadyPromise(), photosLibrary.getReadyPromise()])
     .catch(err => {
         console.error(`Init failed: ${err.message}`);
         exit(1);
     });
+const syncEngine: SyncEngine = new SyncEngine(icloud, photosLibrary, opts.photo_data_dir);
+await syncEngine.sync();
+// .then(() => {
+//    return SyncEngine.diffState();
+// })
