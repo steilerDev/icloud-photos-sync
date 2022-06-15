@@ -1,7 +1,7 @@
 export const FILE_NAME = `photos-library.db`;
 
 export enum EVENTS {
-    CLOSED = `closed`,
+    SAVED = `saved`,
     READY = `ready`,
     ERROR = `error`
 }

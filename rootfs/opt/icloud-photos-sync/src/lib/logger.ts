@@ -34,5 +34,5 @@ export function setupLogger(logLevel: log.LogLevelDesc): void {
     log.getLogger(`MFAServer`).setLevel(log.levels.INFO);
     log.getLogger(`Photos-Library`).setLevel(log.levels.DEBUG);
 
-    log.getLogger(`Sync-Engine`).setLevel(log.levels.DEBUG);
+    log.getLogger(`Sync-Engine`).setLevel(log.levels.INFO);
 }

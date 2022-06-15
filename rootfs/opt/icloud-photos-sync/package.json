@@ -44,11 +44,13 @@
     "typedoc": "^0.22.11",
     "typedoc-github-wiki-theme": "^1.0.0",
     "typedoc-plugin-markdown": "^3.11.13",
-    "typescript": "^4.5.5"
+    "typescript": "^4.5.5",
+    "@types/cli-progress": "^3.11.0"
   },
   "dependencies": {
     "axios": "^0.27.2",
     "chalk": "^5.0.0",
+    "cli-progress": "^3.11.1",
     "commander": "^9.0.0",
     "loglevel": "^1.8.0",
     "loglevel-plugin-prefix": "^0.8.4",

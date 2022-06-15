@@ -11,7 +11,11 @@ export interface Library {
     albums: Album[],
     mediaRecords: {
         [key: string]: MediaRecord
-    }
+    },
+    /**
+     * Last sync timestamp in milli seconds since epoch
+     */
+    lastSync: number
 }
 
 export enum RecordState {
@@ -54,6 +58,7 @@ export class PhotosLibrary extends EventEmitter {
         this.library = {
             albums: [],
             mediaRecords: {},
+            lastSync: 0,
         };
 
         this.libraryFile = path.format({
@@ -102,7 +107,19 @@ export class PhotosLibrary extends EventEmitter {
                                     this.logger.debug(`Adding album '${newAlbum.albumName}'`);
                                     this.library.albums.push(newAlbum);
                                 } catch (err) {
-                                    this.logger.warn(`Unable to read album from JSON: ${err}`);
+                                    throw new Error(`Unable to read album from JSON file: ${err}`);
+                                }
+                            });
+                        }
+
+                        if (jsonData.mediaRecords) {
+                            Object.keys(jsonData.mediaRecord).forEach(recordKey => {
+                                try {
+                                    const newRecord = MediaRecord.parseMediaRecordFromJson(jsonData[recordKey]);
+                                    this.logger.debug(`Adding media record '${newRecord.recordName}`);
+                                    this.library.mediaRecords[recordKey] = newRecord;
+                                } catch (err) {
+                                    throw new Error(`Unable to read media record from JSON file: ${err}`);
                                 }
                             });
                         }
@@ -131,7 +148,7 @@ export class PhotosLibrary extends EventEmitter {
             .then(() => {
                 this.logger.debug(`Database written succesfully, removing lock`);
                 fs.rename(tempFileName, this.libraryFile);
-                this.emit(PHOTOS_LIBRARY.EVENTS.CLOSED);
+                this.emit(PHOTOS_LIBRARY.EVENTS.SAVED);
             })
             .catch(err => {
                 this.emit(PHOTOS_LIBRARY.EVENTS.ERROR, `Unable to write database: ${err}`);

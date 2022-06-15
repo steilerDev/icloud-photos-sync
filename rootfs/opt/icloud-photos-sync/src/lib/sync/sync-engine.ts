@@ -4,6 +4,8 @@ import {iCloud} from '../icloud/icloud.js';
 import {PhotosLibrary, Library} from '../photos-library/photos-library.js';
 import {Album, AlbumType} from '../photos-library/model/album.js';
 import {MediaRecord} from '../photos-library/model/media-record.js';
+import {OptionValues} from 'commander';
+import * as SYNC_ENGINE from './sync-engine.constants.js';
 
 /**
  * This class handles the photos sync
@@ -20,11 +22,14 @@ export class SyncEngine extends EventEmitter {
 
     photoDataDir: string;
 
-    constructor(iCloud: iCloud, db: PhotosLibrary, photoDataDir: string) {
+    downloadThreads: number;
+
+    constructor(iCloud: iCloud, db: PhotosLibrary, cliOpts: OptionValues) {
         super();
         this.iCloud = iCloud;
         this.db = db;
-        this.photoDataDir = photoDataDir;
+        this.photoDataDir = cliOpts.photo_data_dir;
+        this.downloadThreads = cliOpts.download_threads;
     }
 
     async sync() {
@@ -40,22 +45,30 @@ export class SyncEngine extends EventEmitter {
     }
 
     async diffState(remoteLibrary: Library) {
+        this.emit(SYNC_ENGINE.EVENTS.DIFF);
         if (this.db.isEmpty) {
             this.logger.info(`Local database is empy, setting remote state to local state`);
             this.db.library = remoteLibrary;
         } else {
             throw new Error(`Diff not implemented`);
         }
+
         return this.db.save();
     }
 
     async writeState() {
+        this.emit(SYNC_ENGINE.EVENTS.DOWNLOAD, this.db.library.mediaRecords.length);
+        this.logger.debug(`Fetching ${this.db.library.mediaRecords.length} records`);
         Object.values(this.db.library.mediaRecords).forEach(element => {
             this.logger.debug(`Downloding element ${element.recordName}`);
+            this.emit(SYNC_ENGINE.EVENTS.RECORD_STARTED, element.recordName);
+
+            this.emit(SYNC_ENGINE.EVENTS.RECORD_COMPLETED, element.recordName);
         });
     }
 
     async fetchState(): Promise<Library> {
+        this.emit(SYNC_ENGINE.EVENTS.FETCH);
         this.logger.info(`Fetching remote iCloud state`);
         return Promise.all([this.fetchFolderStructure(), this.fetchAllPictures()])
             .then(result => {
@@ -63,6 +76,7 @@ export class SyncEngine extends EventEmitter {
                 const library: Library = {
                     albums: result[0],
                     mediaRecords: {},
+                    lastSync: new Date().getTime(),
                 };
                 result[1].forEach(mediaRecord => {
                     library.mediaRecords[mediaRecord.recordName] = mediaRecord;
