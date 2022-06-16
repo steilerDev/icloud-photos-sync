@@ -57,7 +57,13 @@ export class iCloud extends EventEmitter {
 
         this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.app_data_dir);
 
-        this.on(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.startServer);
+        this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
+            try {
+                this.mfaServer.startServer();
+            } catch (err) {
+                this.emit(ICLOUD.EVENTS.ERROR, err.message);
+            }
+        });
         this.on(ICLOUD.EVENTS.AUTHENTICATED, this.getTokens);
         this.on(ICLOUD.EVENTS.TRUSTED, this.getiCloudCookies);
         this.on(ICLOUD.EVENTS.ACCOUNT_READY, this.getiCloudPhotosReady);
@@ -139,7 +145,6 @@ export class iCloud extends EventEmitter {
      * @param mfa - The MFA code
      */
     mfaReceived(mfa: string) {
-        this.emit(ICLOUD.EVENTS.MFA_RECEIVED);
         this.mfaServer.stopServer();
 
         if (!this.auth.validateAuthSecrets()) {
