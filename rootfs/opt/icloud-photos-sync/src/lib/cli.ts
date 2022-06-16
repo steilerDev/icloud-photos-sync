@@ -20,8 +20,10 @@ export class CLIInterface {
         this.setupCLIPhotosLibraryInterface(photosLibrary);
         this.setupCLISyncEngineInterface(syncEngine);
 
-        process.on('SIGINT', () => {
-            console.log('Received SIGINT.');
+        process.on('SIGTERM', () => {
+            console.log('Received SIGTERM.');
+            // Save photos db
+            // stop sync engine
           });
 
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.name}, v.${PACKAGE_INFO.version}!`));
