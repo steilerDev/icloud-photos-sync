@@ -20,6 +20,10 @@ export class CLIInterface {
         this.setupCLIPhotosLibraryInterface(photosLibrary);
         this.setupCLISyncEngineInterface(syncEngine);
 
+        process.on('SIGINT', () => {
+            console.log('Received SIGINT.');
+          });
+
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.name}, v.${PACKAGE_INFO.version}!`));
         console.log(chalk.green(`Made with <3 by steilerDev`));
         console.log();
