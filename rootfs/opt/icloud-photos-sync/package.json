@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/steilerDev/icloud-photos-sync#readme",
   "engines": {
-    "node": ">=17.4.0"
+    "node": ">=17.9.0"
   },
   "devDependencies": {
     "@types/node": "^17.0.42",
