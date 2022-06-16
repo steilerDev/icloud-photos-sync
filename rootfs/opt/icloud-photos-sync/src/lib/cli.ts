@@ -6,7 +6,7 @@ import * as ICLOUD from './icloud/icloud.constants.js';
 import * as SYNC_ENGINE from './sync/sync-engine.constants.js';
 import * as PHOTOS_LIBRARY from './photos-library/photos-library.constants.js';
 import {SyncEngine} from './sync/sync-engine.js';
-import {SingleBar, Presets} from 'cli-progress';
+import {SingleBar} from 'cli-progress';
 import {PhotosLibrary} from './photos-library/photos-library.js';
 import {exit} from 'process';
 

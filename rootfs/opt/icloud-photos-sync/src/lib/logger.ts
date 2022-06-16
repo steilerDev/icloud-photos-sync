@@ -1,7 +1,5 @@
 import log from 'loglevel';
-import prefix from 'loglevel-plugin-prefix';
 import chalk from 'chalk';
-import {syncBuiltinESMExports} from 'module';
 import {OptionValues} from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
