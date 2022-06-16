@@ -95,7 +95,7 @@ export class SyncEngine extends EventEmitter {
         const parsedFolders: Album[] = [];
         try {
             // Getting root folders
-            const folders = await this.iCloud.photos.fetchAllAlbumRecords();
+            const folders = await this.iCloud.photos.fetchAlbumRecords();
             // Storing picture sync requests for asynchronous completion
             const picturePromises: Promise<void | string[]>[] = [];
             while (folders.length > 0) {
@@ -107,7 +107,7 @@ export class SyncEngine extends EventEmitter {
                     // If album is a folder, there is stuff in there, adding it to the queue
                     if (parsedFolder.albumType === AlbumType.FOLDER) {
                         this.logger.debug(`Adding child folders of ${parsedFolder.albumName} to the processing queue`);
-                        const nestedFolders = await this.iCloud.photos.fetchAllAlbumRecordsByParentId(parsedFolder.recordName);
+                        const nestedFolders = await this.iCloud.photos.fetchAlbumRecords(parsedFolder.recordName);
                         folders.push(...nestedFolders);
                     } else if (parsedFolder.albumType === AlbumType.ALBUM) {
                         this.logger.debug(`Adding pictures to folder ${parsedFolder.albumName}`);

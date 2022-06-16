@@ -8,9 +8,11 @@ import * as PHOTOS_LIBRARY from './photos-library/photos-library.constants.js';
 import {SyncEngine} from './sync/sync-engine.js';
 import {SingleBar, Presets} from 'cli-progress';
 import {PhotosLibrary} from './photos-library/photos-library.js';
+import {exit} from 'process';
 
 export class CLIInterface {
     progressBar: SingleBar;
+    static instance: CLIInterface;
 
     constructor(iCloud: iCloud, photosLibrary: PhotosLibrary, syncEngine: SyncEngine) {
         this.progressBar = new SingleBar({});
@@ -21,6 +23,18 @@ export class CLIInterface {
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.name}, v.${PACKAGE_INFO.version}!`));
         console.log(chalk.green(`Made with <3 by steilerDev`));
         console.log();
+    }
+
+    /**
+     * Initiates the CLI interface and connects it to the relevant components
+     * @param iCloud - The iCloud object
+     * @param photosLibrary - The Photos Library object
+     * @param syncEngine - The Sync Engine object
+     */
+    static createCLIInterface(iCloud: iCloud, photosLibrary: PhotosLibrary, syncEngine: SyncEngine) {
+        if (!this.instance) {
+            this.instance = new CLIInterface(iCloud, photosLibrary, syncEngine);
+        }
     }
 
     /**
@@ -45,6 +59,9 @@ export class CLIInterface {
                 .env(`LOG_LEVEL`)
                 .choices([`trace`, `debug`, `info`, `warn`, `error`])
                 .default(`debug`))
+            .addOption(new Option(`--log_to_cli`, `Disables logging to file and logs to the console`)
+                .env(`LOG_TO_CLI`)
+                .default(false))
             .addOption(new Option(`-u, --username <email>`, `AppleID username`)
                 .env(`APPLE_ID_USER`)
                 .makeOptionMandatory(true))
@@ -55,6 +72,11 @@ export class CLIInterface {
                 .env(`DOWNLOAD_THREADS`));
         program.parse();
         return program.opts();
+    }
+
+    static fatalError(err: string) {
+        console.log(chalk.red(`Experienced Fatal Error: ${err}`));
+        exit(1);
     }
 
     /**

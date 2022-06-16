@@ -5,6 +5,7 @@ import {EventEmitter} from 'events';
 import * as ICLOUD_PHOTOS from './icloud.photos.constants.js';
 import * as QueryBuilder from './icloud.photos.query-builder.js';
 import {iCloudAuth} from '../icloud.auth.js';
+import {AlbumType} from '../../photos-library/model/album.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -175,24 +176,36 @@ export class iCloudPhotos extends EventEmitter {
     }
 
     /**
-     * Fetching a list of all top level albums
-     * @returns An array of folder and album records without any parent
+     * Fetching a list of albums identified by their parent. If parent is undefined, all albums without parent will be returned
+     * @param parentId - The record name of the parent folder, or empty
+     * @returns An array of folder and album records. Unwanted folders and folder types are filtered out
      */
-    async fetchAllAlbumRecords(): Promise<any[]> {
-        return this.performPromiseQuery(QueryBuilder.RECORD_TYPES.ALBUM_RECORDS);
-    }
+    async fetchAlbumRecords(parentId?: string): Promise<any[]> {
+        let query: Promise<any[]>;
+        if (parentId === undefined) {
+            query = this.performPromiseQuery(QueryBuilder.RECORD_TYPES.ALBUM_RECORDS);
+        } else {
+            const parentFilter = QueryBuilder.getParentFilterforParentId(parentId);
+            query = this.performPromiseQuery(
+                QueryBuilder.RECORD_TYPES.ALBUM_RECORDS,
+                [parentFilter],
+            );
+        }
 
-    /**
-     * Fetches a list of directors with the same parent record name
-     * @param parentId - The record name of the parent folder
-     * @returns An array of folder and album records that have the specified parent folder
-     */
-    async fetchAllAlbumRecordsByParentId(parentId: string): Promise<any[]> {
-        const parentFilter = QueryBuilder.getParentFilterforParentId(parentId);
-        return this.performPromiseQuery(
-            QueryBuilder.RECORD_TYPES.ALBUM_RECORDS,
-            [parentFilter],
-        );
+        const allAlbumRecords = await query;
+
+        return allAlbumRecords.filter(record => {
+            try {
+                return record.recordName !== `----Project-Root-Folder----`
+                    && record.recordName !== `----Root-Folder----`
+                    && (
+                        record.fields.albumType.value === AlbumType.ALBUM || record.fields.albumType.value === AlbumType.FOLDER
+                    );
+            } catch (err) {
+                this.logger.warn(`Unable to filter record ${JSON.stringify(record)}: ${err.message}`);
+                return false;
+            }
+        });
     }
 
     /**

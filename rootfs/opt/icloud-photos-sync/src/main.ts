@@ -1,32 +1,27 @@
 #!/usr/bin/env node
-import {setupLogger} from './lib/logger.js';
+import * as Logger from './lib/logger.js';
 import {iCloud} from './lib/icloud/icloud.js';
 import {PhotosLibrary} from './lib/photos-library/photos-library.js';
 import {CLIInterface} from './lib/cli.js';
 import {SyncEngine} from './lib/sync/sync-engine.js';
-import {exit} from 'process';
 
-const opts = CLIInterface.getCLIOptions();
-setupLogger(opts.log_level);
+// Read CLI Options
+const cliOpts = CLIInterface.getCLIOptions();
 
 // Creating components of the application
-const icloud = iCloud.getInstance(opts);
-const photosLibrary = new PhotosLibrary(opts.app_data_dir);
-const syncEngine: SyncEngine = new SyncEngine(icloud, photosLibrary, opts);
+Logger.setupLogger(cliOpts);
+const icloud = new iCloud(cliOpts);
+const photosLibrary = new PhotosLibrary(cliOpts);
+const syncEngine: SyncEngine = new SyncEngine(icloud, photosLibrary, cliOpts);
 
-const cliInterface = new CLIInterface(icloud, photosLibrary, syncEngine);
-
-photosLibrary.load();
-icloud.authenticate();
+// Setting up CLI Interface
+CLIInterface.createCLIInterface(icloud, photosLibrary, syncEngine);
 
 /**
  * Waiting for setup to complete
  */
-await Promise.all([icloud.getReadyPromise(), photosLibrary.getReadyPromise()])
-    .catch(err => {
-        console.error(`Init failed: ${err.message}`);
-        exit(1);
-    });
+await Promise.all([icloud.authenticate(), photosLibrary.load()])
+    .catch(err => CLIInterface.fatalError(`Init failed: ${err.message}`));
 /**
  * Starting sync
  */

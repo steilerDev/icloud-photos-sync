@@ -6,6 +6,7 @@ import {MediaRecord} from './model/media-record.js';
 import {EventEmitter} from 'events';
 import * as fs from 'fs/promises';
 import * as fssync from 'fs';
+import {OptionValues} from 'commander';
 
 export interface Library {
     albums: Album[],
@@ -43,16 +44,11 @@ export class PhotosLibrary extends EventEmitter {
     logger: log.Logger = log.getLogger(`Photos-Library`);
 
     /**
-     * Is the object ready?
+     * A promise that will resolve, once the object is ready or reject, in case there is an error
      */
-    ready: boolean = false;
+    ready: Promise<void>;
 
-    /**
-      * Has the object experienced an error?
-      */
-    errored: boolean = false;
-
-    constructor(appDataDir: string) {
+    constructor(cliOpts: OptionValues) {
         super();
 
         this.library = {
@@ -62,37 +58,25 @@ export class PhotosLibrary extends EventEmitter {
         };
 
         this.libraryFile = path.format({
-            dir: appDataDir,
+            dir: cliOpts.app_data_dir,
             base: PHOTOS_LIBRARY.FILE_NAME,
         });
 
+        this.ready = new Promise<void>((resolve, reject) => {
+            this.on(PHOTOS_LIBRARY.EVENTS.READY, resolve);
+            this.on(PHOTOS_LIBRARY.EVENTS.ERROR, reject);
+        });
+
         this.on(PHOTOS_LIBRARY.EVENTS.READY, () => {
-            this.ready = true;
-            this.errored = false;
             this.logger.info(`Photo library ready!`);
         });
 
         this.on(PHOTOS_LIBRARY.EVENTS.ERROR, (msg: string) => {
-            this.errored = true;
-            this.ready = false;
             this.logger.error(`Error ocurred: ${msg}`);
         });
     }
 
-    getReadyPromise() {
-        return new Promise<void>((resolve, reject) => {
-            if (this.ready) {
-                resolve();
-            } else if (this.errored) {
-                reject();
-            } else {
-                this.on(PHOTOS_LIBRARY.EVENTS.READY, resolve);
-                this.on(PHOTOS_LIBRARY.EVENTS.ERROR, reject);
-            }
-        });
-    }
-
-    load() {
+    async load(): Promise<void> {
         this.logger.debug(`Opening database`);
         if (fssync.existsSync(this.libraryFile)) {
             fs.readFile(this.libraryFile, {encoding: `utf8`})
@@ -138,6 +122,8 @@ export class PhotosLibrary extends EventEmitter {
             this.logger.warn(`DB file does not exist, starting new`);
             this.emit(PHOTOS_LIBRARY.EVENTS.READY);
         }
+
+        return this.ready;
     }
 
     async save(): Promise<void> {
