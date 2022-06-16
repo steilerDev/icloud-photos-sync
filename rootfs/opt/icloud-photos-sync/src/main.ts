@@ -21,7 +21,7 @@ CLIInterface.createCLIInterface(icloud, photosLibrary, syncEngine);
  * Waiting for setup to complete
  */
 await Promise.all([icloud.authenticate(), photosLibrary.load()])
-    .catch(err => CLIInterface.fatalError(`Init failed: ${err.message}`));
+    .catch(err => CLIInterface.fatalError(`Init failed: ${err}`));
 /**
  * Starting sync
  */

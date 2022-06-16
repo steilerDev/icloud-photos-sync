@@ -68,7 +68,7 @@ export class PhotosLibrary extends EventEmitter {
         });
 
         this.on(PHOTOS_LIBRARY.EVENTS.READY, () => {
-            this.logger.info(`Photo library ready!`);
+            this.logger.info(`Photo library ready, loaded ${this.library.albums.length} albums and ${Object.keys(this.library.mediaRecords).length} records`);
         });
 
         this.on(PHOTOS_LIBRARY.EVENTS.ERROR, (msg: string) => {
@@ -91,32 +91,30 @@ export class PhotosLibrary extends EventEmitter {
                                     this.logger.debug(`Adding album '${newAlbum.albumName}'`);
                                     this.library.albums.push(newAlbum);
                                 } catch (err) {
-                                    throw new Error(`Unable to read album from JSON file: ${err}`);
+                                    throw new Error(`Unable to read album from JSON file: ${err.message}`);
                                 }
                             });
                         }
 
                         if (jsonData.mediaRecords) {
-                            Object.keys(jsonData.mediaRecord).forEach(recordKey => {
+                            Object.keys(jsonData.mediaRecords).forEach(recordKey => {
                                 try {
-                                    const newRecord = MediaRecord.parseMediaRecordFromJson(jsonData[recordKey]);
-                                    this.logger.debug(`Adding media record '${newRecord.recordName}`);
+                                    const newRecord = MediaRecord.parseMediaRecordFromJson(jsonData.mediaRecords[recordKey]);
+                                    this.logger.debug(`Adding media record '${newRecord.recordName}'`);
                                     this.library.mediaRecords[recordKey] = newRecord;
                                 } catch (err) {
-                                    throw new Error(`Unable to read media record from JSON file: ${err}`);
+                                    throw new Error(`Unable to read media record from JSON file: ${err.message}`);
                                 }
                             });
                         }
 
-                        // Also load media records
-
                         this.emit(PHOTOS_LIBRARY.EVENTS.READY);
                     } catch (err) {
-                        this.emit(PHOTOS_LIBRARY.EVENTS.ERROR, `Unable to read JSON: ${err}`);
+                        this.emit(PHOTOS_LIBRARY.EVENTS.ERROR, `Unable to read JSON: ${err.message}`);
                     }
                 })
                 .catch(err => {
-                    this.emit(PHOTOS_LIBRARY.EVENTS.ERROR, `Unable to read database: ${err}`);
+                    this.emit(PHOTOS_LIBRARY.EVENTS.ERROR, `Unable to read database: ${err.message}`);
                 });
         } else {
             this.logger.warn(`DB file does not exist, starting new`);

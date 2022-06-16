@@ -22,7 +22,6 @@ const LOG_FILE_NAME = `icloud-photos-sync.log`;
  * @param logLevel - The log level for this application
  */
 export function setupLogger(cliOpts: OptionValues): void {
-
     const logFile = path.format({
         dir: cliOpts.app_data_dir,
         base: LOG_FILE_NAME,

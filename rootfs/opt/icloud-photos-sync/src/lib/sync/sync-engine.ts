@@ -46,7 +46,7 @@ export class SyncEngine extends EventEmitter {
 
     async diffState(remoteLibrary: Library) {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
-        if (this.db.isEmpty) {
+        if (this.db.isEmpty()) {
             this.logger.info(`Local database is empy, setting remote state to local state`);
             this.db.library = remoteLibrary;
         } else {
