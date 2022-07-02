@@ -1,11 +1,16 @@
 import axios, {AxiosRequestConfig, AxiosResponse} from 'axios';
 import log from 'loglevel';
+
 import {EventEmitter} from 'events';
 
 import * as ICLOUD_PHOTOS from './icloud.photos.constants.js';
-import * as QueryBuilder from './icloud.photos.query-builder.js';
+import * as QueryBuilder from './query-builder.js';
 import {iCloudAuth} from '../icloud.auth.js';
 import {AlbumType} from '../../photos-library/model/album.js';
+import {Asset} from '../../photos-library/model/asset.js';
+import path from 'path';
+
+import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -86,7 +91,7 @@ export class iCloudPhotos extends EventEmitter {
                 if (progress) {
                     this.emit(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, progress);
                 } else {
-                    this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unknown state (${state}): ${res.data}`);
+                    this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unknown state (${state}): ${JSON.stringify(res.data)}`);
                 }
             }
         });
@@ -176,11 +181,41 @@ export class iCloudPhotos extends EventEmitter {
     }
 
     /**
+     * Fetches all album records, traversing the directory tree
+     * @returns
+     */
+    async fetchAllAlbumRecords(): Promise<CPLAlbum[]> {
+        try {
+            // Getting root folders as an initial set for the processing queue
+            const queue: CPLAlbum[] = await this.fetchAlbumRecords();
+            const albumRecords: CPLAlbum[] = [];
+            while (queue.length > 0) {
+                const next = queue.shift();
+                try {
+                    // If album is a folder, there is stuff in there, adding it to the queue
+                    if (next.albumType === AlbumType.FOLDER) {
+                        this.logger.debug(`Adding child elements of ${next.albumNameEnc} to the processing queue`);
+                        queue.push(...(await this.fetchAlbumRecords(next.recordName)));
+                    }
+
+                    albumRecords.push(next);
+                } catch (err) {
+                    this.logger.warn(`Unable to process ${next.albumNameEnc}: ${err.message}`);
+                }
+            }
+
+            return albumRecords;
+        } catch (err) {
+            throw new Error(`Unable to fetch folder structure: ${err}`);
+        }
+    }
+
+    /**
      * Fetching a list of albums identified by their parent. If parent is undefined, all albums without parent will be returned
      * @param parentId - The record name of the parent folder, or empty
-     * @returns An array of folder and album records. Unwanted folders and folder types are filtered out
+     * @returns An array of folder and album records. Unwanted folders and folder types are filtered out. Albums have their items included
      */
-    async fetchAlbumRecords(parentId?: string): Promise<any[]> {
+    async fetchAlbumRecords(parentId?: string): Promise<CPLAlbum[]> {
         let query: Promise<any[]>;
         if (parentId === undefined) {
             query = this.performPromiseQuery(QueryBuilder.RECORD_TYPES.ALBUM_RECORDS);
@@ -192,20 +227,38 @@ export class iCloudPhotos extends EventEmitter {
             );
         }
 
-        const allAlbumRecords = await query;
+        const cplAlbums: CPLAlbum[] = [];
 
-        return allAlbumRecords.filter(record => {
+        (await query).forEach(record => {
             try {
-                return record.recordName !== `----Project-Root-Folder----`
-                    && record.recordName !== `----Root-Folder----`
-                    && (
-                        record.fields.albumType.value === AlbumType.ALBUM || record.fields.albumType.value === AlbumType.FOLDER
-                    );
+                if (record.deleted === true) {
+                    this.logger.debug(`Filtering record ${record.recordName}: is deleted`);
+                    return;
+                }
+
+                if (record.recordName === `----Project-Root-Folder----` || record.recordName === `----Root-Folder----`) {
+                    this.logger.debug(`Filtering special folder ${record.recordName}`);
+                    return;
+                }
+
+                if (!(record.fields.albumType.value === AlbumType.FOLDER || record.fields.albumType.value === AlbumType.ALBUM)) {
+                    this.logger.warn(`Ignoring unknown album type ${record.fields.albumType.value}`);
+                    return;
+                }
+
+                // Getting associated media records for albums
+                let mediaRecords: Promise<string[]>;
+                if (record.fields.albumType.value === AlbumType.ALBUM) {
+                    mediaRecords = this.fetchAllPictureRecords(record.recordName)
+                        .then(result => result[0].map(picture => picture.recordName));
+                }
+
+                cplAlbums.push(CPLAlbum.parseFromQuery(record, mediaRecords));
             } catch (err) {
-                this.logger.warn(`Unable to filter record ${JSON.stringify(record)}: ${err.message}`);
-                return false;
+                this.logger.warn(`Error building CPLAlbum: ${err.message}`);
             }
         });
+        return cplAlbums;
     }
 
     /**
@@ -213,7 +266,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param parentId - The record name of the album, if undefined all pictures will be returned
      * @returns An array of CPLMaster filtered records containing the RecordName
      */
-    async fetchAllPictureRecords(parentId?: string): Promise<any[]> {
+    async fetchAllPictureRecords(parentId?: string): Promise<[CPLAsset[], CPLMaster[]]> {
         this.logger.debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
         // Getting number of items in folder
         let totalCount = -1;
@@ -247,25 +300,28 @@ export class iCloudPhotos extends EventEmitter {
             const startRankFilter = QueryBuilder.getStartRankFilterForStartRank(startRank);
             const directionFilter = QueryBuilder.getDirectionFilterForDirection();
 
+            const desiredKeys: string[] = [
+                QueryBuilder.DESIRED_KEYS.RECORD_NAME,
+                QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE,
+                QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE_FILE_TYPE,
+                QueryBuilder.DESIRED_KEYS.JPEG_RESSOURCE,
+                QueryBuilder.DESIRED_KEYS.JPEG_RESSOURCE_FILE_TYPE,
+                QueryBuilder.DESIRED_KEYS.VIDEO_RESSOURCE,
+                QueryBuilder.DESIRED_KEYS.VIDEO_RESSOURCE_FILE_TYPE,
+                QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME,
+                QueryBuilder.DESIRED_KEYS.IS_DELETED,
+                QueryBuilder.DESIRED_KEYS.FAVORITE,
+                QueryBuilder.DESIRED_KEYS.IS_HIDDEN,
+                QueryBuilder.DESIRED_KEYS.MASTER_REF,
+                QueryBuilder.DESIRED_KEYS.ADJUSTMENT_TYPE,
+            ];
             // Different queries for 'all pictures' than album pictures
             if (parentId === undefined) {
                 promiseQueries.push(this.performPromiseQuery(
                     QueryBuilder.RECORD_TYPES.ALL_PHOTOS,
                     [startRankFilter, directionFilter],
                     ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
-                    [
-                        QueryBuilder.DESIRED_KEYS.RECORD_NAME,
-                        QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE,
-                        QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE_FILE_TYPE,
-                        QueryBuilder.DESIRED_KEYS.EDITED_JPEG_RESSOURCE,
-                        QueryBuilder.DESIRED_KEYS.EDITED_JPEG_RESSOURCE_FILE_TYPE,
-                        QueryBuilder.DESIRED_KEYS.EDITED_VIDEO_RESSOURCE,
-                        QueryBuilder.DESIRED_KEYS.EDITED_VIDEO_RESSOURCE_FILE_TYPE,
-                        QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME,
-                        QueryBuilder.DESIRED_KEYS.IS_DELETED,
-                        QueryBuilder.DESIRED_KEYS.FAVORITE,
-                        QueryBuilder.DESIRED_KEYS.IS_HIDDEN,
-                    ],
+                    desiredKeys,
                 ));
             } else {
                 const parentFilter = QueryBuilder.getParentFilterforParentId(parentId);
@@ -273,60 +329,84 @@ export class iCloudPhotos extends EventEmitter {
                     QueryBuilder.RECORD_TYPES.PHOTO_RECORDS,
                     [startRankFilter, directionFilter, parentFilter],
                     ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
-                    [
-                        QueryBuilder.DESIRED_KEYS.RECORD_NAME,
-                        QueryBuilder.DESIRED_KEYS.IS_HIDDEN,
-                        QueryBuilder.DESIRED_KEYS.IS_HIDDEN,
-                    ],
+                    desiredKeys,
                 ));
             }
         }
 
-        // Executing queries in parallel
-        let resultRecords: any[];
+        // Executing queries in parallel and afterwards collecting parsed responses
+        const cplMasters: CPLMaster[] = [];
+        const cplAssets: CPLAsset[] = [];
         try {
             const allRecords: any[] = [];
             // Merging arrays of arrays
-            (await Promise.all(promiseQueries)).forEach(records => allRecords.push(...records));
+            (await Promise.all(promiseQueries)).forEach(records =>
+                allRecords.push(...records),
+            );
 
-            this.logger.debug(`Got ${allRecords.length} for album ${parentId === undefined ? `'All photos'` : parentId} before filtering (out of expected ${totalCount})`);
+            this.logger.debug(`Got ${allRecords.length} photos for album ${parentId === undefined ? `'All photos'` : parentId} before filtering (out of expected ${totalCount})`);
             // Post-processing response
             const seen = {};
-            resultRecords = allRecords.filter(record => {
-                if (record.deleted === true) {
-                    this.logger.debug(`Filtering record ${record.recordName}: is deleted`);
-                    return false;
-                }
+            allRecords.forEach(record => {
+                try {
+                    if (record.deleted === true) {
+                        this.logger.debug(`Filtering record ${record.recordName}: is deleted`);
+                        return;
+                    }
 
-                if (record.fields.isHidden?.value === 1) {
-                    this.logger.debug(`Filtering record ${record.recordName}: is hidden`);
-                    return false;
-                }
+                    if (record.fields.isHidden?.value === 1) {
+                        this.logger.debug(`Filtering record ${record.recordName}: is hidden`);
+                        return;
+                    }
 
-                if (record.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
-                    this.logger.trace(`Filtering record ${record.recordName}: is not CPLMaster`);
-                    return false;
-                }
+                    if (Object.prototype.hasOwnProperty.call(seen, record.recordName)) {
+                        this.logger.warn(`Filtering record ${record.recordName}: duplicate`);
+                        return;
+                    }
 
-                if (Object.prototype.hasOwnProperty.call(seen, record.recordName)) {
-                    this.logger.warn(`Filtering record ${record.recordName}: duplicate`);
-                    return false;
+                    if (record.recordType === QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
+                        cplMasters.push(CPLMaster.parseFromQuery(record));
+                        seen[record.recordName] = true;
+                    } else if (record.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
+                        cplAssets.push(CPLAsset.parseFromQuery(record));
+                        seen[record.recordName] = true;
+                    } else {
+                        this.logger.debug(`Filtering record ${record.recordName}: recordType is ${record.recordType}`);
+                        return;
+                    }
+                } catch (err) {
+                    this.logger.warn(`Error building CPLMaster/CPLAsset: ${err.message}`);
                 }
-
-                // Saving record name for future de-duplication
-                seen[record.recordName] = true;
-                return true;
             });
         } catch (err) {
             throw new Error(`Unable to fetch records for album ${parentId === undefined ? `'All photos'` : parentId}: ${err.message}`);
         }
 
-        if (resultRecords.length !== totalCount) {
-            this.logger.warn(`Expected ${totalCount} items for album ${parentId === undefined ? `'All photos'` : parentId}, but got ${resultRecords.length}`);
-        } else {
-            this.logger.info(`Got the expected amount of items for album ${parentId === undefined ? `'All photos'` : parentId}: ${resultRecords.length} out of ${totalCount}`);
+        if (cplMasters.length !== totalCount) {
+            this.logger.warn(`Expected ${totalCount} CPLMaster records, but got ${cplMasters.length} for album ${parentId === undefined ? `'All photos'` : parentId}`);
         }
 
-        return resultRecords;
+        if (cplAssets.length !== totalCount) {
+            this.logger.warn(`Expected ${totalCount} CPLAsset records, but got ${cplAssets.length} for album ${parentId === undefined ? `'All photos'` : parentId}`);
+        }
+
+        return [cplAssets, cplMasters];
+    }
+
+    /**
+     * Downloads an asset and writes it to the specified folder, using the assets filename
+     * @param asset - The asset to be downloaded
+     * @param targetFolder - The target folder where the file should be saved
+     * @returns A promise, that -once resolved-, contains the data from the axios response
+     */
+    async downloadAsset(asset: Asset): Promise<any> {
+        this.logger.debug(`Starting download of asset ${asset.assetName}`);
+
+        const config: AxiosRequestConfig = {
+            headers: this.auth.getPhotosHeader(),
+            responseType: `stream`,
+        };
+
+        return (await axios.get(asset.downloadURL, config)).data;
     }
 }

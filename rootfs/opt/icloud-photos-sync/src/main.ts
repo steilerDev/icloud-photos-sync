@@ -25,7 +25,5 @@ await Promise.all([icloud.authenticate(), photosLibrary.load()])
 /**
  * Starting sync
  */
-await syncEngine.sync();
-// .then(() => {
-//    return SyncEngine.diffState();
-// })
+await syncEngine.sync()
+    .catch(err => CLIInterface.fatalError(`Sync failed: ${err}`));

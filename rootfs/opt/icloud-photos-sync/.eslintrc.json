@@ -27,6 +27,7 @@
         "guard-for-in":  "off",
         "no-await-in-loop": "off",
         "max-params": "off",
-        "no-return-assign": ["error", "except-parens"]
+        "no-return-assign": ["error", "except-parens"],
+        "no-unreachable": "warn"
     }
 }

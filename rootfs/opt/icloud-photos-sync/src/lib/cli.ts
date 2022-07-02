@@ -20,11 +20,11 @@ export class CLIInterface {
         this.setupCLIPhotosLibraryInterface(photosLibrary);
         this.setupCLISyncEngineInterface(syncEngine);
 
-        process.on('SIGTERM', () => {
-            console.log('Received SIGTERM.');
+        process.on(`SIGTERM`, () => {
+            console.log(`Received SIGTERM.`);
             // Save photos db
             // stop sync engine
-          });
+        });
 
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.name}, v.${PACKAGE_INFO.version}!`));
         console.log(chalk.green(`Made with <3 by steilerDev`));
@@ -133,23 +133,24 @@ export class CLIInterface {
         //
         // })
         syncEngine.on(SYNC_ENGINE.EVENTS.RECORD_COMPLETED, recordName => {
+            console.log(`Completed ${recordName}`);
             this.progressBar.increment(1, recordName);
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
-            console.log(chalk.red(`Unexpected error: ${msg}`));
+            console.log(chalk.red(`Sync engine: Unexpected error: ${msg}`));
         });
     }
 
     setupCLIPhotosLibraryInterface(photosLibrary: PhotosLibrary) {
         photosLibrary.on(PHOTOS_LIBRARY.EVENTS.READY, () => {
-            console.log(chalk.green(`Database loaded`));
+            console.log(`Local Photos library ready - loaded ${photosLibrary.library.albums.length} albums and ${Object.keys(photosLibrary.library.mediaRecords).length} records`);
         });
         photosLibrary.on(PHOTOS_LIBRARY.EVENTS.SAVED, () => {
-            console.log(chalk.green(`Database saved`));
+            console.log(chalk.green(`Local Photos library saved`));
         });
         photosLibrary.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
-            console.log(chalk.red(`Unexpected error: ${msg}`));
+            console.log(chalk.red(`Local Photos library: Unexpected error: ${msg}`));
         });
     }
 }

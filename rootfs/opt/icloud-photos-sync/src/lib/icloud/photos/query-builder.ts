@@ -6,8 +6,10 @@
  * All relevant record types for this application
  */
 export const RECORD_TYPES = {
-    PHOTO_RECORDS: `CPLContainerRelationLiveByPosition`, // Record
     PHOTO_MASTER_RECORD: `CPLMaster`,
+    PHOTO_ASSET_RECORD: `CPLAsset`,
+    PHOTO_ALBUM_RECORD: `CPLAlbum`,
+    PHOTO_RECORDS: `CPLContainerRelationLiveByPosition`, // Record
     ALBUM_RECORDS: `CPLAlbumByPositionLive`,
     INDEX_COUNT: `HyperionIndexCountLookup`,
     ALL_PHOTOS: `CPLAssetAndMasterByAddedDate`,
@@ -21,14 +23,19 @@ export const DESIRED_KEYS = {
     IS_DELETED: `isDeleted`,
     ORIGINAL_RESSOURCE: `resOriginalRes`,
     ORIGINAL_RESSOURCE_FILE_TYPE: `resOriginalFileType`,
-    EDITED_JPEG_RESSOURCE: `resJPEGFullRes`,
-    EDITED_JPEG_RESSOURCE_FILE_TYPE: `resJPEGFullFileType`,
-    EDITED_VIDEO_RESSOURCE: `resVidFullRes`,
-    EDITED_VIDEO_RESSOURCE_FILE_TYPE: `resVidFullFileType`,
+    JPEG_RESSOURCE: `resJPEGFullRes`,
+    JPEG_RESSOURCE_FILE_TYPE: `resJPEGFullFileType`,
+    VIDEO_RESSOURCE: `resVidFullRes`,
+    VIDEO_RESSOURCE_FILE_TYPE: `resVidFullFileType`,
     ENCODED_FILE_NAME: `filenameEnc`,
     FAVORITE: `isFavorite`,
     IS_HIDDEN: `isHidden`,
-//    ITEM_TYPE: `itemType`,
+    ADJUSTMENT_TYPE: `adjustmentType`,
+    MASTER_REF: `masterRef`,
+    // Folder keys for parsing
+    ALBUM_TYPE: `albumType`,
+    ENCODED_ALBUM_NAME: `albumNameEnc`,
+    PARENT_ID: `parentId`,
 };
 
 /**

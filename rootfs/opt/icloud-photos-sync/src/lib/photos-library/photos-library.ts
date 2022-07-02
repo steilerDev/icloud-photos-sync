@@ -7,6 +7,8 @@ import {EventEmitter} from 'events';
 import * as fs from 'fs/promises';
 import * as fssync from 'fs';
 import {OptionValues} from 'commander';
+import {Asset} from './model/asset.js';
+import {CPLAlbum, CPLAsset, CPLMaster} from '../icloud/photos/query-parser.js';
 
 export interface Library {
     albums: Album[],
@@ -19,18 +21,13 @@ export interface Library {
     lastSync: number
 }
 
-export enum RecordState {
-    STALE = 0,
-    NEW = 1,
-    CHANGED = 2,
-    EXPIRED = 3,
-    LOCKED = 4
-}
-
 /**
  * This class holds the local data structure
  */
 export class PhotosLibrary extends EventEmitter {
+    /**
+     * Local data structure
+     */
     library: Library;
 
     /**
@@ -66,14 +63,6 @@ export class PhotosLibrary extends EventEmitter {
             this.on(PHOTOS_LIBRARY.EVENTS.READY, resolve);
             this.on(PHOTOS_LIBRARY.EVENTS.ERROR, reject);
         });
-
-        this.on(PHOTOS_LIBRARY.EVENTS.READY, () => {
-            this.logger.info(`Photo library ready, loaded ${this.library.albums.length} albums and ${Object.keys(this.library.mediaRecords).length} records`);
-        });
-
-        this.on(PHOTOS_LIBRARY.EVENTS.ERROR, (msg: string) => {
-            this.logger.error(`Error ocurred: ${msg}`);
-        });
     }
 
     async load(): Promise<void> {
@@ -100,7 +89,7 @@ export class PhotosLibrary extends EventEmitter {
                             Object.keys(jsonData.mediaRecords).forEach(recordKey => {
                                 try {
                                     const newRecord = MediaRecord.parseMediaRecordFromJson(jsonData.mediaRecords[recordKey]);
-                                    this.logger.debug(`Adding media record '${newRecord.recordName}'`);
+                                    this.logger.debug(`Adding media record '${newRecord.uuid}'`);
                                     this.library.mediaRecords[recordKey] = newRecord;
                                 } catch (err) {
                                     throw new Error(`Unable to read media record from JSON file: ${err.message}`);
@@ -131,8 +120,8 @@ export class PhotosLibrary extends EventEmitter {
         return fs.writeFile(tempFileName, JSON.stringify(this.library))
             .then(() => {
                 this.logger.debug(`Database written succesfully, removing lock`);
-                fs.rename(tempFileName, this.libraryFile);
                 this.emit(PHOTOS_LIBRARY.EVENTS.SAVED);
+                return fs.rename(tempFileName, this.libraryFile);
             })
             .catch(err => {
                 this.emit(PHOTOS_LIBRARY.EVENTS.ERROR, `Unable to write database: ${err}`);
@@ -141,5 +130,34 @@ export class PhotosLibrary extends EventEmitter {
 
     isEmpty(): boolean {
         return this.library.albums.length === 0 && Object.keys(this.library.mediaRecords).length === 0;
+    }
+
+    updateLibraryData(cplAssets: CPLAsset[], cplMasters: CPLMaster[]) {
+        // Mark current library STALE, unless marked as archived
+        // index cplMasters for later (quick lockup)
+        // For each CPLAsset -> .name in db?
+        //  No -> Find Master & create NEW
+        //  Yes -> Check 'modified' date && diff original asset (should not have changed, otherwise warn!)
+        //          Same/Older -> set SYNCED
+        //          Newer -> Set CHANGED & Update edited asset
+    }
+    // If SYNCED -> Do nothing
+    // If CHANGED -> Delete old
+    // If NEW -> Create
+
+    updateLibraryStructure(cplAlbums: CPLAlbum[]) {
+        // Go to current root album
+        // List content
+        // Filter cplAlbums by parentId === 
+    }
+
+    /**
+     *
+     * @returns All assets that needs to be downloaded or deleted (asset URL empty)
+     */
+    getPendingAssets(): Asset[] {
+        const pendingAssets: Asset[] = [];
+        // Go through db and check for CHANGED / NEW / DELETE
+        return pendingAssets;
     }
 }

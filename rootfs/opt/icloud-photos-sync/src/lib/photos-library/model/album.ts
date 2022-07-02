@@ -1,4 +1,4 @@
-import {RecordState} from "../photos-library.js";
+import {RecordState} from "../photos-library.constants.js";
 
 export enum AlbumType {
     FOLDER = 3,
