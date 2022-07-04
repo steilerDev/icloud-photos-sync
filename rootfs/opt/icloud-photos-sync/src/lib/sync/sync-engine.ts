@@ -38,7 +38,7 @@ export class SyncEngine extends EventEmitter {
             .then(([remoteData, remoteStructure]) => this.updateLibrary(remoteData, remoteStructure))
             .then(this.writeLibraryData)
             .then(this.writeLibraryStructure)
-            .then(this.photosLibrary.save) // Save state to db only once completed
+            .then(this.photosLibrary.save); // Save state to db only once completed
     }
 
     async fetchState(): Promise<[[CPLAsset[], CPLMaster[]], CPLAlbum[]]> {
@@ -60,7 +60,7 @@ export class SyncEngine extends EventEmitter {
     }
 
     async writeLibraryData() {
-        // Todo: Keep track of what is left to do & what has been done by writing out pending assets 
+        // Todo: Keep track of what is left to do & what has been done by writing out pending assets
         const pendingAssets = this.photosLibrary.getPendingAssets();
         pendingAssets.forEach((asset, index) => {
             if (asset.recordState === RecordState.STALE || asset.recordState === RecordState.CHANGED) {

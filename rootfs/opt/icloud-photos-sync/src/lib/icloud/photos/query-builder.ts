@@ -9,6 +9,7 @@ export const RECORD_TYPES = {
     PHOTO_MASTER_RECORD: `CPLMaster`,
     PHOTO_ASSET_RECORD: `CPLAsset`,
     PHOTO_ALBUM_RECORD: `CPLAlbum`,
+    CONTAINER_RELATION: `CPLContainerRelation`, // Useless at the moment
     PHOTO_RECORDS: `CPLContainerRelationLiveByPosition`, // Record
     ALBUM_RECORDS: `CPLAlbumByPositionLive`,
     INDEX_COUNT: `HyperionIndexCountLookup`,

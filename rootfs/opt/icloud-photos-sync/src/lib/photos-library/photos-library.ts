@@ -133,6 +133,14 @@ export class PhotosLibrary extends EventEmitter {
     }
 
     updateLibraryData(cplAssets: CPLAsset[], cplMasters: CPLMaster[]) {
+        this.logger.debug(`Marking media records as stale`);
+        Object.keys(this.library.mediaRecords).forEach(key => {
+            const record = this.library.mediaRecords[key];
+            if (record.recordState !== PHOTOS_LIBRARY.RecordState.ARCHIVED) {
+                record.recordState = PHOTOS_LIBRARY.RecordState.STALE;
+            }
+        });
+
         // Mark current library STALE, unless marked as archived
         // index cplMasters for later (quick lockup)
         // For each CPLAsset -> .name in db?
@@ -148,7 +156,7 @@ export class PhotosLibrary extends EventEmitter {
     updateLibraryStructure(cplAlbums: CPLAlbum[]) {
         // Go to current root album
         // List content
-        // Filter cplAlbums by parentId === 
+        // Filter cplAlbums by parentId ===
     }
 
     /**

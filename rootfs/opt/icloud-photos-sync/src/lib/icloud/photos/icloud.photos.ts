@@ -232,7 +232,7 @@ export class iCloudPhotos extends EventEmitter {
         (await query).forEach(record => {
             try {
                 if (record.deleted === true) {
-                    this.logger.debug(`Filtering record ${record.recordName}: is deleted`);
+                    this.logger.warn(`Filtering record ${record.recordName}: is deleted`);
                     return;
                 }
 
@@ -344,18 +344,17 @@ export class iCloudPhotos extends EventEmitter {
                 allRecords.push(...records),
             );
 
-            this.logger.debug(`Got ${allRecords.length} photos for album ${parentId === undefined ? `'All photos'` : parentId} before filtering (out of expected ${totalCount})`);
             // Post-processing response
             const seen = {};
             allRecords.forEach(record => {
                 try {
                     if (record.deleted === true) {
-                        this.logger.debug(`Filtering record ${record.recordName}: is deleted`);
+                        this.logger.warn(`Filtering record ${record.recordName}: is deleted`);
                         return;
                     }
 
                     if (record.fields.isHidden?.value === 1) {
-                        this.logger.debug(`Filtering record ${record.recordName}: is hidden`);
+                        this.logger.warn(`Filtering record ${record.recordName}: is hidden`);
                         return;
                     }
 
@@ -371,7 +370,10 @@ export class iCloudPhotos extends EventEmitter {
                         cplAssets.push(CPLAsset.parseFromQuery(record));
                         seen[record.recordName] = true;
                     } else {
-                        this.logger.debug(`Filtering record ${record.recordName}: recordType is ${record.recordType}`);
+                        if (record.recordType !== QueryBuilder.RECORD_TYPES.CONTAINER_RELATION) {
+                            this.logger.warn(`Filtering record ${record.recordName}: unknown recordType: ${record.recordType}`);
+                        }
+
                         return;
                     }
                 } catch (err) {
@@ -382,12 +384,10 @@ export class iCloudPhotos extends EventEmitter {
             throw new Error(`Unable to fetch records for album ${parentId === undefined ? `'All photos'` : parentId}: ${err.message}`);
         }
 
-        if (cplMasters.length !== totalCount) {
-            this.logger.warn(`Expected ${totalCount} CPLMaster records, but got ${cplMasters.length} for album ${parentId === undefined ? `'All photos'` : parentId}`);
-        }
-
-        if (cplAssets.length !== totalCount) {
-            this.logger.warn(`Expected ${totalCount} CPLAsset records, but got ${cplAssets.length} for album ${parentId === undefined ? `'All photos'` : parentId}`);
+        if (cplMasters.length !== totalCount || cplAssets.length !== totalCount) {
+            this.logger.warn(`Expected ${totalCount} CPLMaster & ${totalCount} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`);
+        } else {
+            this.logger.debug(`Received expected amount (${totalCount}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
         }
 
         return [cplAssets, cplMasters];
