@@ -1,8 +1,9 @@
 import path from 'path';
-import fs from 'fs';
+
 import crypto from 'crypto';
 import {RecordState} from '../photos-library.constants.js';
-import {pEvent} from 'p-event';
+import fs from 'fs';
+import {AssetID} from '../../icloud/photos/query-parser.js';
 
 const EXT = {
     'public.png': `png`,
@@ -31,6 +32,10 @@ export class FileType {
     toJSON(): string {
         return this.descriptor;
     }
+
+    equal(fileType: FileType) {
+        return fileType && this.descriptor === fileType.descriptor;
+    }
 }
 
 export class Asset {
@@ -42,18 +47,54 @@ export class Asset {
 
     fileType: FileType;
 
-    recordState: RecordState;
+    static fromCPL(asset: AssetID, assetType: string): Asset {
+        const newAsset = new Asset();
+        newAsset.fileChecksum = asset.fileChecksum;
+        newAsset.size = asset.size;
+        newAsset.wrappingKey = asset.wrappingKey;
+        newAsset.referenceChecksum = asset.referenceChecksum;
+        newAsset.downloadURL = asset.downloadURL;
+        newAsset.fileType = new FileType(assetType);
 
-    assetName: string;
+        return newAsset;
+    }
+
+    /**
+     * Diffes the two assets, with the remote asset taking precedence
+     * @param localAsset
+     * @param remoteAsset
+     * @returns A touple of assets: A list of assets that need to be deleted | A list of assets that need to be created
+     */
+    static getAssetDiff(localAsset: Asset, remoteAsset: Asset): [Asset[], Asset[]] {
+        const toBeDeleted: Asset[] = [];
+        const toBeAdded: Asset[] = [];
+
+        if (localAsset) { // Current asset exists locally
+            // localAsset.verify()
+            if (!localAsset.equal(remoteAsset)) {
+                // There has been a change, removing local copy and adding remote
+                toBeDeleted.push(localAsset);
+                toBeAdded.push(remoteAsset);
+            } // Else there has been no change, therefore no need to add / remove
+        } else if (remoteAsset) { // There is no local current asset, therefore adding it
+            toBeAdded.push(remoteAsset);
+        }
+
+        return [toBeDeleted, toBeAdded];
+    }
+
+    equal(asset: Asset): boolean {
+        return asset
+                && this.fileChecksum === asset.fileChecksum
+                && this.size === asset.size
+                && this.wrappingKey === asset.wrappingKey
+                && this.referenceChecksum === asset.referenceChecksum
+                && this.downloadURL === asset.downloadURL
+                && this.fileType.equal(asset.fileType);
+    }
 
     static parseAssetFromJson(json: any): Asset {
         const newAsset = new Asset();
-
-        if (json.assetName) {
-            newAsset.assetName = json.assetName;
-        } else {
-            throw new Error(`Unable to construct asset from json: AssetName not found (${JSON.stringify(json)})`);
-        }
 
         if (json.fileChecksum) {
             newAsset.fileChecksum = json.fileChecksum;
@@ -85,12 +126,6 @@ export class Asset {
             throw new Error(`Unable to construct asset from json: Download URL not found (${JSON.stringify(json)})`);
         }
 
-        if (json.recordState) {
-            newAsset.recordState = json.recordState;
-        } else {
-            newAsset.recordState = RecordState.NEW;
-        }
-
         if (json.fileType) {
             newAsset.fileType = new FileType(json.fileType);
         } else {
@@ -107,37 +142,11 @@ export class Asset {
         });
     }
 
-    getAssetFilename(edited: boolean = false): string {
+    getAssetFilename(): string {
         return path.format({
-            name: edited ? this.assetName + `.edited` : this.assetName,
+            name: Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
             ext: this.fileType.getExtension(),
         });
-    }
-
-    async write(targetFolder: string, data: any): Promise<void> {
-        const writeStream = fs.createWriteStream(this.getAssetFilePath(targetFolder));
-
-        data.pipe(writeStream);
-        return pEvent(writeStream, `close`);
-    }
-
-    /**
-     * Verifies a local file against this asset record
-     * @param folder - The storage folder of the file
-     * @returns True, if file
-     */
-    verify(folder: string): boolean {
-        try {
-            const location = this.getAssetFilePath(folder);
-            if (fs.existsSync(location)) {
-                const file = fs.readFileSync(location);
-                return this.verifySize(file) && this.verifyChecksum(file);
-            }
-
-            return false;
-        } catch (err) {
-            return false;
-        }
     }
 
     verifySize(file: Buffer): boolean {

@@ -6,6 +6,13 @@ import {OptionValues} from 'commander';
 import * as SYNC_ENGINE from './sync-engine.constants.js';
 import {RecordState} from '../photos-library/photos-library.constants.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from '../icloud/photos/query-parser.js';
+import {Asset} from '../photos-library/model/asset.js';
+import {Album} from '../photos-library/model/album.js';
+import fs from 'fs';
+import {pEvent} from 'p-event';
+
+type RemoteData = [CPLAsset[], CPLMaster[]]
+type RemoteAlbums = CPLAlbum[]
 
 /**
  * This class handles the photos sync
@@ -35,13 +42,16 @@ export class SyncEngine extends EventEmitter {
     async sync() {
         this.logger.info(`Starting sync`);
         return this.fetchState()
-            .then(([remoteData, remoteStructure]) => this.updateLibrary(remoteData, remoteStructure))
-            .then(this.writeLibraryData)
-            .then(this.writeLibraryStructure)
-            .then(this.photosLibrary.save); // Save state to db only once completed
+            .then(([remoteData, remoteStructure]) => Promise.all([
+                this.photosLibrary.updateLibraryData(remoteData[0], remoteData[1])
+                    .then(([toBeDeleted, toBeAdded]) => this.writeLibraryData(toBeDeleted, toBeAdded)),
+                this.photosLibrary.updateLibraryStructure(remoteStructure)
+                    .then(newAlbums => this.writeLibraryStructure(newAlbums)),
+            ]))
+            .then(() => this.photosLibrary.save()); // Save state to db only once completed
     }
 
-    async fetchState(): Promise<[[CPLAsset[], CPLMaster[]], CPLAlbum[]]> {
+    async fetchState(): Promise<[RemoteData, RemoteAlbums]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH);
         this.logger.info(`Fetching remote iCloud state`);
         return Promise.all([
@@ -50,60 +60,58 @@ export class SyncEngine extends EventEmitter {
         ]);
     }
 
-    async updateLibrary(data: [CPLAsset[], CPLMaster[]], structure: CPLAlbum[]): Promise<[void, void]> {
-        this.emit(SYNC_ENGINE.EVENTS.DIFF);
-        this.logger.info(`Updating local library and diffing state`);
+    async writeLibraryData(toBeDeleted: Asset[], toBeAdded: Asset[]) {
+        const test: Asset[] = toBeAdded.slice(0, 10);
         return Promise.all([
-            this.photosLibrary.updateLibraryData(data[0], data[1]),
-            this.photosLibrary.updateLibraryStructure(structure),
+            ...test.map(asset => this.addAsset(asset)), // Needing to bind object, in order to access required properties
+            // ...toBeAdded.map(this.addAsset),
+            // ...toBeDeleted.map(this.deleteAsset),
         ]);
     }
 
-    async writeLibraryData() {
-        // Todo: Keep track of what is left to do & what has been done by writing out pending assets
-        const pendingAssets = this.photosLibrary.getPendingAssets();
-        pendingAssets.forEach((asset, index) => {
-            if (asset.recordState === RecordState.STALE || asset.recordState === RecordState.CHANGED) {
-                // Delete asset
-            }
+    /**
+     * This function downloads and stores a given asset
+     * @param asset - The asset that needs to be downloaded
+     * @returns A promise that resolves, once the file has been sucesfully written to disc
+     */
+    async addAsset(asset: Asset): Promise<void> {
+        this.logger.debug(`Downloading asset ${asset.fileChecksum}`);
+        const location = asset.getAssetFilePath(this.photoDataDir);
+        return this.iCloud.photos.downloadAsset(asset)
+            .then(data => {
+                this.logger.debug(`Writing asset ${asset.fileChecksum}`);
+                const writeStream = fs.createWriteStream(location);
+                data.pipe(writeStream);
+                return pEvent(writeStream, `close`);
+            })
+            .then(() => {
+                this.logger.debug(`Verifying asset ${asset.fileChecksum}`);
+                if (fs.existsSync(location)) {
+                    const data = fs.readFileSync(location);
+                    if (!asset.verifySize(data)) {
+                        throw new Error(`Unable to verify size of asset ${asset.fileChecksum}`);
+                    }
 
-            if (asset.recordState === RecordState.ARCHIVED || asset.recordState === RecordState.SYNCED) {
-                // Leave alone
+                    if (!asset.verifyChecksum(data)) {
+                        throw new Error(`Unable to verify checksum of asset ${asset.fileChecksum}`);
+                    }
 
-            }
-
-            // Download asset & write to data dir
-        });
+                    this.logger.debug(`Asset ${asset.fileChecksum} sucesfully verified!`);
+                } else {
+                    throw new Error(`Unable to find asset ${asset.fileChecksum}`);
+                }
+            });
     }
 
-    async writeLibraryStructure() {
+    async deleteAsset(asset: Asset) {
+
+    }
+
+    async writeLibraryStructure(newAlbums: Album[]) {
+        this.logger.info(`Writing lib structure!`);
         // Get root folder & local root folder
         // compare content
         // repeate for every other folder
         // optionally: move data to
     }
-/**
-    WriteRecords(): Promise<PromiseSettledResult<void>[]> {
-        this.emit(SYNC_ENGINE.EVENTS.DOWNLOAD, this.db.library.mediaRecords.length);
-
-        if (!fs.existsSync(this.photoDataDir)) {
-            this.logger.debug(`Creating directory ${this.photoDataDir}`);
-            fs.mkdirSync(this.photoDataDir);
-        }
-
-        this.logger.debug(`Fetching ${this.db.library.mediaRecords.length} records`);
-        const writePromises: Promise<void>[] = [];
-        const limit = pLimit(10);
-        Object.values(this.db.library.mediaRecords).forEach(element => {
-            this.logger.debug(`Queuing element ${element.recordName}`);
-            this.emit(SYNC_ENGINE.EVENTS.RECORD_STARTED, element.recordName);
-            writePromises.push(
-                this.iCloud.photos.downloadRecordRessources(element, this.photoDataDir, limit)
-                    .then(() => {
-                        this.emit(SYNC_ENGINE.EVENTS.RECORD_COMPLETED, element.recordName);
-                    }),
-            );
-        });
-        return Promise.allSettled(writePromises);
-    } */
 }

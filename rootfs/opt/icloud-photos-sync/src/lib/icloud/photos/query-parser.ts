@@ -1,7 +1,7 @@
 import * as QueryBuilder from './query-builder.js';
 
 /**
- * Represents a ressources returned from the API, called 'asset id' as per API
+ * Represents a resources returned from the API, called 'asset id' as per API
  */
 export class AssetID {
     fileChecksum: string; // 28 chars, probably base64 - 21 bytes / 168 bit
@@ -26,14 +26,14 @@ export class AssetID {
 }
 
 /**
- * CPLAsset is a single asset shown in Photos.app. This asset is linked to a Master and might include a current ressource
+ * CPLAsset is a single asset shown in Photos.app. This asset is linked to a Master and might include a current resource
  */
 export class CPLAsset {
     recordName: string; // UUID
     adjustmentType?: string;
     masterRef: string; // RecordName of CPLMaster aka hash
-    ressource: AssetID;
-    ressourceType: string;
+    resource: AssetID;
+    resourceType: string;
     favorite: number; // 1 -> true
     modified: number;
 
@@ -58,14 +58,14 @@ export class CPLAsset {
 
             if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.ADJUSTMENT_TYPE]) {
                 asset.adjustmentType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ADJUSTMENT_TYPE].value;
-                if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESSOURCE]) {
-                    asset.ressource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESSOURCE]);
-                    asset.ressourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESSOURCE_FILE_TYPE].value;
-                } else if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESSOURCE]) {
-                    asset.ressource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESSOURCE]);
-                    asset.ressourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESSOURCE_FILE_TYPE].value;
+                if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE]) {
+                    asset.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE]);
+                    asset.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE_FILE_TYPE].value;
+                } else if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE]) {
+                    asset.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE]);
+                    asset.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE_FILE_TYPE].value;
                 } else if (asset.adjustmentType !== `com.apple.video.slomo`) {
-                    throw new Error(`Neither JPEG nor Video ressource found in CPL Asset even though adjustmentType is given ${asset.adjustmentType}`);
+                    throw new Error(`Neither JPEG nor Video resource found in CPL Asset even though adjustmentType is given ${asset.adjustmentType}`);
                 }
             }
 
@@ -78,7 +78,7 @@ export class CPLAsset {
 
 export class CPLMaster {
     recordName: string; // Hash
-    ressource: AssetID;
+    resource: AssetID;
     resourceType: string;
     filenameEnc: String;
     modified: number;
@@ -92,8 +92,8 @@ export class CPLMaster {
                 throw new Error(`recordName not found: ${JSON.stringify(cplRecord)}`);
             }
 
-            master.ressource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE]);
-            master.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE_FILE_TYPE].value; // Orig could also be JPEG to save storage
+            master.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.ORIGINAL_RESOURCE]);
+            master.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ORIGINAL_RESOURCE_FILE_TYPE].value; // Orig could also be JPEG to save storage
             master.filenameEnc = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME].value;
             master.modified = cplRecord.modified.timestamp;
             return master;

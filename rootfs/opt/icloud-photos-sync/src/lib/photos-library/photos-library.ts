@@ -5,6 +5,7 @@ import {Album} from './model/album.js';
 import {MediaRecord} from './model/media-record.js';
 import {EventEmitter} from 'events';
 import * as fs from 'fs/promises';
+import {pEvent} from 'p-event';
 import * as fssync from 'fs';
 import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
@@ -132,40 +133,78 @@ export class PhotosLibrary extends EventEmitter {
         return this.library.albums.length === 0 && Object.keys(this.library.mediaRecords).length === 0;
     }
 
-    updateLibraryData(cplAssets: CPLAsset[], cplMasters: CPLMaster[]) {
-        this.logger.debug(`Marking media records as stale`);
-        Object.keys(this.library.mediaRecords).forEach(key => {
-            const record = this.library.mediaRecords[key];
-            if (record.recordState !== PHOTOS_LIBRARY.RecordState.ARCHIVED) {
-                record.recordState = PHOTOS_LIBRARY.RecordState.STALE;
-            }
+    /**
+     *
+     * @param cplAssets
+     * @param cplMasters
+     * @returns A touple consisting of: An array that includes all local assets that need to be deleted | An array that includes all remote assets that need to be downloaded
+     */
+    async updateLibraryData(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Promise<[Asset[], Asset[]]> {
+        this.logger.debug(`Indexing ${cplMasters.length} CPLMaster records`);
+        const masterRecords = {};
+        cplMasters.forEach(masterRecord => {
+            masterRecords[masterRecord.recordName] = masterRecord;
         });
 
-        // Mark current library STALE, unless marked as archived
-        // index cplMasters for later (quick lockup)
-        // For each CPLAsset -> .name in db?
-        //  No -> Find Master & create NEW
-        //  Yes -> Check 'modified' date && diff original asset (should not have changed, otherwise warn!)
-        //          Same/Older -> set SYNCED
-        //          Newer -> Set CHANGED & Update edited asset
-    }
-    // If SYNCED -> Do nothing
-    // If CHANGED -> Delete old
-    // If NEW -> Create
+        // Creating new data structures / making existing easily accessible
+        const currentLibraryRecords = this.library.mediaRecords;
+        const nextLibraryRecords = {};
 
-    updateLibraryStructure(cplAlbums: CPLAlbum[]) {
+        const toBeDeleted: Asset[] = [];
+        const toBeAdded: Asset[] = [];
+
+        // Going over remote state and diffing
+        cplAssets.forEach(cplAsset => {
+            // Remote CPLAsset in local db?
+            const localRecord = currentLibraryRecords[cplAsset.recordName];
+
+            // Get CPLMaster for CPLAsset (if possible)
+            const cplMaster = cplAsset.masterRef ? masterRecords[cplAsset.masterRef] : undefined;
+
+            let message = `Processed remote asset ${cplAsset.recordName} (CPLMaster: ${cplMaster?.recordName}): `;
+
+            if (localRecord) { // Remote record is already in local db
+                // Diff remote with local state
+                const recordDiff = localRecord.getDiff(cplAsset, cplMaster);
+
+                // Store diffed assets
+                toBeDeleted.push(...recordDiff[0]);
+                toBeAdded.push(...recordDiff[1]);
+                // Store updated MediaRecord
+                nextLibraryRecords[recordDiff[2].uuid] = recordDiff[2];
+                // Delete processed local record
+                delete currentLibraryRecords[localRecord.uuid];
+
+                message += `Diffed with existing record ${localRecord.uuid}\n\t-> Deleting ${recordDiff[0].length} and adding ${recordDiff[1].length} assets`;
+            } else {
+                // Record is brand new
+                const newRecord = MediaRecord.fromCPL(cplAsset, cplMaster);
+                toBeAdded.push(...newRecord.getAllAssets());
+
+                nextLibraryRecords[newRecord.uuid] = newRecord;
+                message += `Creating new record ${newRecord.uuid}\n\t-> Adding ${newRecord.getAssetCount()} assets`;
+            }
+
+            this.logger.debug(message);
+        });
+
+        // The original library should only hold those records, that have not been referenced by the remote state, removing them
+        Object.values(currentLibraryRecords).forEach(staleRecord => {
+            toBeDeleted.push(...staleRecord.getAllAssets());
+            this.logger.debug(`Found stale record ${staleRecord.uuid}\n\t-> Deleting ${staleRecord.getAssetCount()} assets`);
+        });
+
+        // Locally saving updated state
+        this.library.mediaRecords = nextLibraryRecords;
+        return [toBeDeleted, toBeAdded];
+    }
+
+    async updateLibraryStructure(cplAlbums: CPLAlbum[]): Promise<Album[]> {
+        this.logger.info(`Updating library structure!`);
         // Go to current root album
         // List content
         // Filter cplAlbums by parentId ===
-    }
-
-    /**
-     *
-     * @returns All assets that needs to be downloaded or deleted (asset URL empty)
-     */
-    getPendingAssets(): Asset[] {
-        const pendingAssets: Asset[] = [];
-        // Go through db and check for CHANGED / NEW / DELETE
-        return pendingAssets;
+        const albums: Album[] = [];
+        return albums;
     }
 }

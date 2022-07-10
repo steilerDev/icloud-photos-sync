@@ -11,6 +11,7 @@ import {Asset} from '../../photos-library/model/asset.js';
 import path from 'path';
 
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
+import pLimit, {LimitFunction} from 'p-limit';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -21,12 +22,14 @@ export class iCloudPhotos extends EventEmitter {
      */
     auth: iCloudAuth;
 
+    concurrencyLimiter: LimitFunction;
+
     logger: log.Logger = log.getLogger(`I-Cloud-Photos`);
 
     constructor(auth: iCloudAuth) {
         super();
         this.auth = auth;
-
+        this.concurrencyLimiter = pLimit(5);
         this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, this.checkingIndexingStatus);
 
         // This.on(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, (progress: string) => {
@@ -302,12 +305,12 @@ export class iCloudPhotos extends EventEmitter {
 
             const desiredKeys: string[] = [
                 QueryBuilder.DESIRED_KEYS.RECORD_NAME,
-                QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE,
-                QueryBuilder.DESIRED_KEYS.ORIGINAL_RESSOURCE_FILE_TYPE,
-                QueryBuilder.DESIRED_KEYS.JPEG_RESSOURCE,
-                QueryBuilder.DESIRED_KEYS.JPEG_RESSOURCE_FILE_TYPE,
-                QueryBuilder.DESIRED_KEYS.VIDEO_RESSOURCE,
-                QueryBuilder.DESIRED_KEYS.VIDEO_RESSOURCE_FILE_TYPE,
+                QueryBuilder.DESIRED_KEYS.ORIGINAL_RESOURCE,
+                QueryBuilder.DESIRED_KEYS.ORIGINAL_RESOURCE_FILE_TYPE,
+                QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE,
+                QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE_FILE_TYPE,
+                QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE,
+                QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE_FILE_TYPE,
                 QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME,
                 QueryBuilder.DESIRED_KEYS.IS_DELETED,
                 QueryBuilder.DESIRED_KEYS.FAVORITE,
@@ -397,16 +400,20 @@ export class iCloudPhotos extends EventEmitter {
      * Downloads an asset and writes it to the specified folder, using the assets filename
      * @param asset - The asset to be downloaded
      * @param targetFolder - The target folder where the file should be saved
-     * @returns A promise, that -once resolved-, contains the data from the axios response
+     * @returns A promise, that -once resolved-, contains the data from the axios response (response was made using )
      */
     async downloadAsset(asset: Asset): Promise<any> {
-        this.logger.debug(`Starting download of asset ${asset.assetName}`);
+        this.logger.debug(`Starting download of asset ${asset.fileChecksum}`);
 
         const config: AxiosRequestConfig = {
             headers: this.auth.getPhotosHeader(),
             responseType: `stream`,
         };
 
-        return (await axios.get(asset.downloadURL, config)).data;
+        return (await this.concurrencyLimiter(
+            axios.get,
+            asset.downloadURL,
+            config,
+        )).data;
     }
 }
