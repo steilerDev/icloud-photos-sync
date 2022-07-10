@@ -7,7 +7,7 @@ import * as path from 'path';
 /**
  * Logger color definitions
  */
-export const colors = {
+const colors = {
     TRACE: chalk.magenta,
     DEBUG: chalk.cyan,
     INFO: chalk.blue,

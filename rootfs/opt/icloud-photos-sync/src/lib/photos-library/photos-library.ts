@@ -1,17 +1,16 @@
 import log from 'loglevel';
 import * as path from 'path';
-import * as PHOTOS_LIBRARY from './photos-library.constants.js';
+import * as PHOTOS_LIBRARY from './constants.js';
 import {Album} from './model/album.js';
 import {MediaRecord} from './model/media-record.js';
 import {EventEmitter} from 'events';
 import * as fs from 'fs/promises';
-import {pEvent} from 'p-event';
 import * as fssync from 'fs';
 import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
-import {CPLAlbum, CPLAsset, CPLMaster} from '../icloud/photos/query-parser.js';
+import {CPLAlbum, CPLAsset, CPLMaster} from '../icloud/icloud-photos/query-parser.js';
 
-export interface Library {
+interface Library {
     albums: Album[],
     mediaRecords: {
         [key: string]: MediaRecord
@@ -77,7 +76,7 @@ export class PhotosLibrary extends EventEmitter {
                         if (jsonData.albums && Array.isArray(jsonData.albums)) {
                             jsonData.albums.forEach(albumData => {
                                 try {
-                                    const newAlbum = Album.parseAlbumFromJson(albumData);
+                                    const newAlbum = Album.parseFromJson(albumData);
                                     this.logger.debug(`Adding album '${newAlbum.albumName}'`);
                                     this.library.albums.push(newAlbum);
                                 } catch (err) {
@@ -89,7 +88,7 @@ export class PhotosLibrary extends EventEmitter {
                         if (jsonData.mediaRecords) {
                             Object.keys(jsonData.mediaRecords).forEach(recordKey => {
                                 try {
-                                    const newRecord = MediaRecord.parseMediaRecordFromJson(jsonData.mediaRecords[recordKey]);
+                                    const newRecord = MediaRecord.parseFromJson(jsonData.mediaRecords[recordKey]);
                                     this.logger.debug(`Adding media record '${newRecord.uuid}'`);
                                     this.library.mediaRecords[recordKey] = newRecord;
                                 } catch (err) {
@@ -134,9 +133,9 @@ export class PhotosLibrary extends EventEmitter {
     }
 
     /**
-     *
-     * @param cplAssets
-     * @param cplMasters
+     * This function will update the local library data (mediaRecords) and provide a list instructions, on how to achieve the remote state in the local file system
+     * @param cplAssets - The remote CPLAsset records
+     * @param cplMasters - The remote CPLMaster recrods
      * @returns A touple consisting of: An array that includes all local assets that need to be deleted | An array that includes all remote assets that need to be downloaded
      */
     async updateLibraryData(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Promise<[Asset[], Asset[]]> {

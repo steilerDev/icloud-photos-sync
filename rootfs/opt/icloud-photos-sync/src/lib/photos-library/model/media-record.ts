@@ -2,16 +2,17 @@
  * This class represents a media record within the library
  */
 
-import {CPLAsset, CPLMaster} from '../../icloud/photos/query-parser.js';
+import {CPLAsset, CPLMaster} from '../../icloud/icloud-photos/query-parser.js';
 import {Asset} from './asset.js';
 
 export class MediaRecord {
     uuid: string;
-    original: Asset;
-    current: Asset;
     fileName: string;
     favorite: boolean;
     modified: number;
+
+    original: Asset;
+    current: Asset;
 
     static fromCPL(asset: CPLAsset, master: CPLMaster): MediaRecord {
         const newRecord = new MediaRecord();
@@ -56,10 +57,10 @@ export class MediaRecord {
         return [toBeDeleted, toBeAdded, remoteMediaRecord];
     }
 
-    static parseMediaRecordFromJson(json: any): MediaRecord {
+    static parseFromJson(json: any): MediaRecord {
         const newRecord = new MediaRecord();
         if (json.uuid) {
-            newRecord.uuid = json.recordName;
+            newRecord.uuid = json.uuid;
         } else {
             throw new Error(`Unable to construct record from json: RecordName not found (${JSON.stringify(json)})`);
         }
@@ -70,22 +71,28 @@ export class MediaRecord {
             throw new Error(`Unable to construct record from json: FileName not found (${JSON.stringify(json)})`);
         }
 
-        if (json.original) {
-            newRecord.original = Asset.parseAssetFromJson(json.original);
-        } else {
-            throw new Error(`Unable to construct record from json: Original Asset not found (${JSON.stringify(json)})`);
-        }
-
-        try {
-            newRecord.current = Asset.parseAssetFromJson(json.current);
-        } catch (err) {
-            newRecord.current = undefined;
-        }
-
         if (`${json.favorite}`) {
             newRecord.favorite = json.favorite;
         } else {
             newRecord.favorite = false;
+        }
+
+        if (json.modified && Number.parseInt(json.modified) !== NaN) {
+            newRecord.modified = Number.parseInt(json.modified)
+        } else {
+            throw new Error(`Unable to construct record from json: modified not found (${JSON.stringify(json)})`);
+        }
+
+        try {
+            newRecord.original = Asset.parseFromJson(json.original);
+        } catch (err) {
+            throw new Error(`Unable to construct record from json: ${err.message} (${JSON.stringify(json)})`);
+        }
+
+        try {
+            newRecord.current = Asset.parseFromJson(json.current);
+        } catch (err) {
+            newRecord.current = undefined;
         }
 
         return newRecord;

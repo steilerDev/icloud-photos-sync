@@ -1,4 +1,3 @@
-import {RecordState} from "../photos-library.constants.js";
 
 export enum AlbumType {
     FOLDER = 3,
@@ -9,8 +8,6 @@ export enum AlbumType {
  * This class represents a photo album within the library
  */
 export class Album {
-    recordState: RecordState;
-
     recordName: string;
     albumType: AlbumType;
     albumName: string;
@@ -25,7 +22,7 @@ export class Album {
      */
     parentRecordName: string;
 
-    static parseAlbumFromJson(json: any): Album {
+    static parseFromJson(json: any): Album {
         const newAlbum = new Album();
         if (json.recordName && json.recordName !== `----Project-Root-Folder----` && json.recordName !== `----Root-Folder----`) {
             newAlbum.recordName = json.recordName;
@@ -48,12 +45,6 @@ export class Album {
             }
         } else {
             throw new Error(`Unable to construct album from json: AlbumType not found (${JSON.stringify(json)})`);
-        }
-
-        if (json.recordState) {
-            newAlbum.recordState = json.recordState;
-        } else {
-            newAlbum.recordState = RecordState.NEW;
         }
 
         if (json.deleted && (json.deleted === `true` || json.deleted === `false`)) {
@@ -91,6 +82,6 @@ export class Album {
             json.albumName = Buffer.from(json.albumName, `base64`).toString(`utf8`);
         }
 
-        return Album.parseAlbumFromJson(json);
+        return Album.parseFromJson(json);
     }
 }

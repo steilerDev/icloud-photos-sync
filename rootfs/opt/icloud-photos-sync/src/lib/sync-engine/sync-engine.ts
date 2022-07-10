@@ -3,9 +3,8 @@ import {EventEmitter} from 'events';
 import {iCloud} from '../icloud/icloud.js';
 import {PhotosLibrary} from '../photos-library/photos-library.js';
 import {OptionValues} from 'commander';
-import * as SYNC_ENGINE from './sync-engine.constants.js';
-import {RecordState} from '../photos-library/photos-library.constants.js';
-import {CPLAlbum, CPLAsset, CPLMaster} from '../icloud/photos/query-parser.js';
+import * as SYNC_ENGINE from './constants.js';
+import {CPLAlbum, CPLAsset, CPLMaster} from '../icloud/icloud-photos/query-parser.js';
 import {Asset} from '../photos-library/model/asset.js';
 import {Album} from '../photos-library/model/album.js';
 import fs from 'fs';
@@ -63,7 +62,7 @@ export class SyncEngine extends EventEmitter {
     async writeLibraryData(toBeDeleted: Asset[], toBeAdded: Asset[]) {
         const test: Asset[] = toBeAdded.slice(0, 10);
         return Promise.all([
-            ...test.map(asset => this.addAsset(asset)), // Needing to bind object, in order to access required properties
+            ...test.map(asset => this.addAsset(asset)),
             // ...toBeAdded.map(this.addAsset),
             // ...toBeDeleted.map(this.deleteAsset),
         ]);

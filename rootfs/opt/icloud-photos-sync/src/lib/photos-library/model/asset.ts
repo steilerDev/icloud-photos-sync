@@ -1,42 +1,7 @@
 import path from 'path';
-
 import crypto from 'crypto';
-import {RecordState} from '../photos-library.constants.js';
-import fs from 'fs';
-import {AssetID} from '../../icloud/photos/query-parser.js';
-
-const EXT = {
-    'public.png': `png`,
-    'public.mpeg-4': `mp4`,
-    'public.jpeg': `jpeg`,
-    'com.apple.quicktime-movie': `mov`,
-    'public.heic': `heic`,
-    'com.sony.arw-raw-image': `arw`,
-};
-
-export class FileType {
-    descriptor: string;
-
-    constructor(descriptor: string) {
-        if (!EXT[descriptor]) {
-            throw new Error(`Unknown filetype descriptor: ${descriptor}`);
-        }
-
-        this.descriptor = descriptor;
-    }
-
-    getExtension(): string {
-        return `.` + EXT[this.descriptor];
-    }
-
-    toJSON(): string {
-        return this.descriptor;
-    }
-
-    equal(fileType: FileType) {
-        return fileType && this.descriptor === fileType.descriptor;
-    }
-}
+import {AssetID} from '../../icloud/icloud-photos/query-parser.js';
+import {FileType} from './file-type.js';
 
 export class Asset {
     fileChecksum: string;
@@ -61,8 +26,8 @@ export class Asset {
 
     /**
      * Diffes the two assets, with the remote asset taking precedence
-     * @param localAsset
-     * @param remoteAsset
+     * @param localAsset - The local asset
+     * @param remoteAsset - The asset acquired from the remote API
      * @returns A touple of assets: A list of assets that need to be deleted | A list of assets that need to be created
      */
     static getAssetDiff(localAsset: Asset, remoteAsset: Asset): [Asset[], Asset[]] {
@@ -93,7 +58,7 @@ export class Asset {
                 && this.fileType.equal(asset.fileType);
     }
 
-    static parseAssetFromJson(json: any): Asset {
+    static parseFromJson(json: any): Asset {
         const newAsset = new Asset();
 
         if (json.fileChecksum) {

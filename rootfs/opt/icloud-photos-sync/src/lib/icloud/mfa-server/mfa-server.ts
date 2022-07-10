@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import http from 'http';
 import log from 'loglevel';
-import * as MFA_SERVER from './mfa-server.constants.js';
+import * as MFA_SERVER from './constants.js';
 
 const MFA_ENDPOINT = `/mfa`;
 

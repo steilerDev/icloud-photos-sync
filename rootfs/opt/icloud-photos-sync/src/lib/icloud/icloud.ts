@@ -3,12 +3,12 @@ import log from 'loglevel';
 import axios, {AxiosRequestConfig, AxiosRequestHeaders} from 'axios';
 
 import EventEmitter from 'events';
-import {MFAServer} from '../mfa-server.js';
-import * as ICLOUD from './icloud.constants.js';
-import * as ICLOUD_PHOTOS from './photos/icloud.photos.constants.js';
-import * as MFA_SERVER from '../mfa-server.constants.js';
-import {iCloudPhotos} from './photos/icloud.photos.js';
-import {iCloudAuth} from './icloud.auth.js';
+import {MFAServer} from './mfa-server/mfa-server.js';
+import * as ICLOUD from './constants.js';
+import * as ICLOUD_PHOTOS from './icloud-photos/constants.js';
+import * as MFA_SERVER from './mfa-server/constants.js';
+import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
+import {iCloudAuth} from './auth.js';
 import {OptionValues} from 'commander';
 
 /**

@@ -1,15 +1,11 @@
 import axios, {AxiosRequestConfig, AxiosResponse} from 'axios';
 import log from 'loglevel';
-
 import {EventEmitter} from 'events';
-
-import * as ICLOUD_PHOTOS from './icloud.photos.constants.js';
+import * as ICLOUD_PHOTOS from './constants.js';
 import * as QueryBuilder from './query-builder.js';
-import {iCloudAuth} from '../icloud.auth.js';
+import {iCloudAuth} from '../auth.js';
 import {AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
-import path from 'path';
-
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import pLimit, {LimitFunction} from 'p-limit';
 

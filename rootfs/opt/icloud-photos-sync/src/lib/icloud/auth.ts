@@ -5,7 +5,7 @@ import * as path from 'path';
 import log from "loglevel";
 import {Cookie} from "tough-cookie";
 
-import * as ICLOUD from './icloud.constants.js';
+import * as ICLOUD from './constants.js';
 
 export interface AuthSecrets {
     /**

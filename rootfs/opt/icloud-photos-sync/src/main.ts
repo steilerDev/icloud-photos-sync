@@ -3,7 +3,7 @@ import * as Logger from './lib/logger.js';
 import {iCloud} from './lib/icloud/icloud.js';
 import {PhotosLibrary} from './lib/photos-library/photos-library.js';
 import {CLIInterface} from './lib/cli.js';
-import {SyncEngine} from './lib/sync/sync-engine.js';
+import {SyncEngine} from './lib/sync-engine/sync-engine.js';
 
 // Read CLI Options
 const cliOpts = CLIInterface.getCLIOptions();
