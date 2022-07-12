@@ -14,23 +14,34 @@ export class MediaRecord {
     original: Asset;
     current: Asset;
 
+    constructor(uuid: string, fileName: string, favorite: boolean, modified: number, original: Asset, current: Asset) {
+        this.uuid = uuid;
+        this.fileName = fileName;
+        this.favorite = favorite;
+        this.modified = modified;
+        this.original = original;
+        this.current = current;
+    }
+
     static fromCPL(asset: CPLAsset, master: CPLMaster): MediaRecord {
-        const newRecord = new MediaRecord();
-        newRecord.uuid = asset.recordName;
-
+        let original: Asset;
         if (master.resource && master.resourceType) {
-            newRecord.original = Asset.fromCPL(master.resource, master.resourceType);
+            original = Asset.fromCPL(master.resource, master.resourceType);
         }
 
+        let current: Asset;
         if (asset.resource && asset.resourceType) {
-            newRecord.current = Asset.fromCPL(asset.resource, asset.resourceType);
+            current = Asset.fromCPL(asset.resource, asset.resourceType);
         }
 
-        newRecord.fileName = Buffer.from(master.filenameEnc, `base64`).toString();
-        newRecord.favorite = asset.favorite === 1;
-        newRecord.modified = asset.modified > master.modified ? asset.modified : master.modified;
-
-        return newRecord;
+        return new MediaRecord(
+            asset.recordName,
+            Buffer.from(master.filenameEnc, `base64`).toString(),
+            asset.favorite === 1,
+            asset.modified > master.modified ? asset.modified : master.modified,
+            original,
+            current,
+        );
     }
 
     /**
@@ -57,47 +68,6 @@ export class MediaRecord {
         return [toBeDeleted, toBeAdded, remoteMediaRecord];
     }
 
-    static parseFromJson(json: any): MediaRecord {
-        const newRecord = new MediaRecord();
-        if (json.uuid) {
-            newRecord.uuid = json.uuid;
-        } else {
-            throw new Error(`Unable to construct record from json: RecordName not found (${JSON.stringify(json)})`);
-        }
-
-        if (json.fileName) {
-            newRecord.fileName = json.fileName;
-        } else {
-            throw new Error(`Unable to construct record from json: FileName not found (${JSON.stringify(json)})`);
-        }
-
-        if (`${json.favorite}`) {
-            newRecord.favorite = json.favorite;
-        } else {
-            newRecord.favorite = false;
-        }
-
-        if (json.modified && Number.parseInt(json.modified) !== NaN) {
-            newRecord.modified = Number.parseInt(json.modified)
-        } else {
-            throw new Error(`Unable to construct record from json: modified not found (${JSON.stringify(json)})`);
-        }
-
-        try {
-            newRecord.original = Asset.parseFromJson(json.original);
-        } catch (err) {
-            throw new Error(`Unable to construct record from json: ${err.message} (${JSON.stringify(json)})`);
-        }
-
-        try {
-            newRecord.current = Asset.parseFromJson(json.current);
-        } catch (err) {
-            newRecord.current = undefined;
-        }
-
-        return newRecord;
-    }
-
     getAllAssets(): Asset[] {
         const assets: Asset[] = [];
         if (this.current) {
@@ -113,5 +83,9 @@ export class MediaRecord {
 
     getAssetCount(): number {
         return (this.current ? 1 : 0) + (this.original ? 1 : 0);
+    }
+
+    getDisplayName(): string {
+        return this.uuid;
     }
 }

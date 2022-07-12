@@ -7,7 +7,6 @@ import {iCloudAuth} from '../auth.js';
 import {AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
-import pLimit, {LimitFunction} from 'p-limit';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -18,14 +17,11 @@ export class iCloudPhotos extends EventEmitter {
      */
     auth: iCloudAuth;
 
-    concurrencyLimiter: LimitFunction;
-
     logger: log.Logger = log.getLogger(`I-Cloud-Photos`);
 
     constructor(auth: iCloudAuth) {
         super();
         this.auth = auth;
-        this.concurrencyLimiter = pLimit(5);
         this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, this.checkingIndexingStatus);
 
         // This.on(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, (progress: string) => {
@@ -398,7 +394,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param targetFolder - The target folder where the file should be saved
      * @returns A promise, that -once resolved-, contains the data from the axios response (response was made using )
      */
-    async downloadAsset(asset: Asset): Promise<any> {
+    async downloadAsset(asset: Asset): Promise<AxiosResponse<any, any>> {
         this.logger.debug(`Starting download of asset ${asset.fileChecksum}`);
 
         const config: AxiosRequestConfig = {
@@ -406,10 +402,9 @@ export class iCloudPhotos extends EventEmitter {
             responseType: `stream`,
         };
 
-        return (await this.concurrencyLimiter(
-            axios.get,
+        return axios.get(
             asset.downloadURL,
             config,
-        )).data;
+        );
     }
 }

@@ -53,8 +53,9 @@
     "cli-progress": "^3.11.1",
     "commander": "^9.0.0",
     "loglevel": "^1.8.0",
+    "lowdb": "^3.0.0",
     "p-event": "^5.0.1",
-    "p-limit": "^4.0.0",
+    "p-queue": "^7.2.0",
     "tough-cookie": "^4.0.0"
   }
 }

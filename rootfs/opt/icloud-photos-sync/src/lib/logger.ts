@@ -4,16 +4,16 @@ import {OptionValues} from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
 
-/**
+/*
  * Logger color definitions
- */
+ *
 const colors = {
     TRACE: chalk.magenta,
     DEBUG: chalk.cyan,
     INFO: chalk.blue,
     WARN: chalk.yellow,
     ERROR: chalk.red,
-};
+}; **/
 
 const LOG_FILE_NAME = `icloud-photos-sync.log`;
 

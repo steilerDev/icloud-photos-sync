@@ -75,7 +75,8 @@ export class CLIInterface {
                 .env(`APPLE_ID_PWD`)
                 .makeOptionMandatory(true))
             .addOption(new Option(`-t, --download_threads <number>`, `Sets the number of download threads`)
-                .env(`DOWNLOAD_THREADS`));
+                .env(`DOWNLOAD_THREADS`)
+                .default(5));
         program.parse();
         return program.opts();
     }
@@ -125,7 +126,7 @@ export class CLIInterface {
         syncEngine.on(SYNC_ENGINE.EVENTS.DIFF, () => {
             console.log(chalk.white(`Diffing remote with local state`));
         });
-        syncEngine.on(SYNC_ENGINE.EVENTS.DOWNLOAD, totalValue => {
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, totalValue => {
             console.log(chalk.cyan(`Downloading records`));
             this.progressBar.start(totalValue, 0);
         });
@@ -144,7 +145,7 @@ export class CLIInterface {
 
     setupCLIPhotosLibraryInterface(photosLibrary: PhotosLibrary) {
         photosLibrary.on(PHOTOS_LIBRARY.EVENTS.READY, () => {
-            console.log(`Local Photos library ready - loaded ${photosLibrary.library.albums.length} albums and ${Object.keys(photosLibrary.library.mediaRecords).length} records`);
+            console.log(`Local Photos library ready - loaded ${photosLibrary.getAlbumCount()} albums and ${photosLibrary.getMediaRecordCount()} records`);
         });
         photosLibrary.on(PHOTOS_LIBRARY.EVENTS.SAVED, () => {
             console.log(chalk.green(`Local Photos library saved`));

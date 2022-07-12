@@ -12,16 +12,24 @@ export class Asset {
 
     fileType: FileType;
 
-    static fromCPL(asset: AssetID, assetType: string): Asset {
-        const newAsset = new Asset();
-        newAsset.fileChecksum = asset.fileChecksum;
-        newAsset.size = asset.size;
-        newAsset.wrappingKey = asset.wrappingKey;
-        newAsset.referenceChecksum = asset.referenceChecksum;
-        newAsset.downloadURL = asset.downloadURL;
-        newAsset.fileType = new FileType(assetType);
+    constructor(fileChecksum: string, size: number, wrappingKey: string, referenceChecksum: string, downloadURL: string, fileType: string) {
+        this.fileChecksum = fileChecksum;
+        this.size = size;
+        this.wrappingKey = wrappingKey;
+        this.referenceChecksum = referenceChecksum;
+        this.downloadURL = downloadURL;
+        this.fileType = new FileType(fileType);
+    }
 
-        return newAsset;
+    static fromCPL(asset: AssetID, assetType: string): Asset {
+        return new Asset(
+            asset.fileChecksum,
+            asset.size,
+            asset.wrappingKey,
+            asset.referenceChecksum,
+            asset.downloadURL,
+            assetType,
+        );
     }
 
     /**
@@ -48,6 +56,10 @@ export class Asset {
         return [toBeDeleted, toBeAdded];
     }
 
+    isObject(): boolean {
+        return true;
+    }
+
     equal(asset: Asset): boolean {
         return asset
                 && this.fileChecksum === asset.fileChecksum
@@ -56,48 +68,6 @@ export class Asset {
                 && this.referenceChecksum === asset.referenceChecksum
                 && this.downloadURL === asset.downloadURL
                 && this.fileType.equal(asset.fileType);
-    }
-
-    static parseFromJson(json: any): Asset {
-        const newAsset = new Asset();
-
-        if (json.fileChecksum) {
-            newAsset.fileChecksum = json.fileChecksum;
-        } else {
-            throw new Error(`Unable to construct asset from json: File Checksum not found (${JSON.stringify(json)})`);
-        }
-
-        if (`${json.size}` && !isNaN(parseInt(json.size, 10))) {
-            newAsset.size = parseInt(json.size, 10);
-        } else {
-            throw new Error(`Unable to construct asset from json: Size not found (${JSON.stringify(json)})`);
-        }
-
-        if (json.wrappingKey) {
-            newAsset.wrappingKey = json.wrappingKey;
-        } else {
-            throw new Error(`Unable to construct asset from json: Wrapping Key not found (${JSON.stringify(json)})`);
-        }
-
-        if (json.referenceChecksum) {
-            newAsset.referenceChecksum = json.referenceChecksum;
-        } else {
-            throw new Error(`Unable to construct asset from json: Reference Checksum not found (${JSON.stringify(json)})`);
-        }
-
-        if (json.downloadURL) {
-            newAsset.downloadURL = json.downloadURL;
-        } else {
-            throw new Error(`Unable to construct asset from json: Download URL not found (${JSON.stringify(json)})`);
-        }
-
-        if (json.fileType) {
-            newAsset.fileType = new FileType(json.fileType);
-        } else {
-            throw new Error(`Unable to construct asset from json: FileType not found (${JSON.stringify(json)})`);
-        }
-
-        return newAsset;
     }
 
     getAssetFilePath(folder: string) {
@@ -120,7 +90,8 @@ export class Asset {
 
     verifyChecksum(file: Buffer): boolean {
         return true;
-        const hashes = [
+        /*
+        Const hashes = [
             `BLAKE2b512`,
             `BLAKE2s256`,
             //          `MD4`,
@@ -188,6 +159,10 @@ export class Asset {
                     }
                 }
             });
-        });
+        }); */
+    }
+
+    getDisplayName(): string {
+        return this.fileChecksum;
     }
 }

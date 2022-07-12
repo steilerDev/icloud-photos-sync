@@ -26,6 +26,10 @@ export class FileType {
         return this.descriptor;
     }
 
+    toString(): string {
+        return this.descriptor;
+    }
+
     equal(fileType: FileType) {
         return fileType && this.descriptor === fileType.descriptor;
     }
