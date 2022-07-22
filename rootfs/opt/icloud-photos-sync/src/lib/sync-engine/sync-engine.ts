@@ -8,6 +8,7 @@ import {CPLAlbum, CPLAsset, CPLMaster} from '../icloud/icloud-photos/query-parse
 import {Asset} from '../photos-library/model/asset.js';
 import {Album} from '../photos-library/model/album.js';
 import fs from 'fs';
+import * as fsPromise from 'fs/promises';
 import {pEvent} from 'p-event';
 import PQueue from 'p-queue';
 
@@ -97,13 +98,13 @@ export class SyncEngine extends EventEmitter {
     async writeState(dataQueue: ProcessingDataQueue, albumQueue: ProcessingAlbumQueue) {
         this.emit(SYNC_ENGINE.EVENTS.WRITE);
         this.logger.info(`Writing state`);
-        await this.writeLibraryData(dataQueue[0], dataQueue[1])
+        await this.writeLibraryData(dataQueue[0], dataQueue[1]);
         return this.writeLibraryStructure(albumQueue);
     }
 
     async writeLibraryData(toBeDeleted: Asset[], toBeAdded: Asset[]) {
         this.syncQueue.on(`error`, err => {
-            this.logger.error(`${typeof err}`)
+            this.logger.error(`${typeof err}`);
             this.logger.error(`Processing queue experienced error (size: ${this.syncQueue.size} / pending: ${this.syncQueue.pending}): ${err.message}`);
             this.syncQueue.clear();
             this.logger.warn(`Cleared sync queue (size: ${this.syncQueue.size} / pending: ${this.syncQueue.pending})`);
@@ -132,6 +133,7 @@ export class SyncEngine extends EventEmitter {
                     response.data.pipe(writeStream);
                     return pEvent(writeStream, `close`);
                 })
+                .then(() => fsPromise.utimes(asset.getAssetFilePath(this.photoDataDir), asset.modified, asset.modified)) // Setting modified date on file
                 .then(() => {
                     if (!this.verifyAsset(asset)) {
                         throw new Error(`Unable to verify asset ${asset.getDisplayName()}`);
@@ -139,11 +141,6 @@ export class SyncEngine extends EventEmitter {
                         this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
                     }
                 });
-            // .catch(err => {
-            //    this.logger.error(err.message);
-            // Assets are not available very long :(
-            // asset resync neccesary
-            // });
         }
     }
 

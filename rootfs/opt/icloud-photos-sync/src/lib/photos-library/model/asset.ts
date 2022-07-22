@@ -1,5 +1,4 @@
 import path from 'path';
-import crypto from 'crypto';
 import {AssetID} from '../../icloud/icloud-photos/query-parser.js';
 import {FileType} from './file-type.js';
 
@@ -9,19 +8,28 @@ export class Asset {
     wrappingKey: string;
     referenceChecksum: string;
     downloadURL: string;
+    modified: number;
 
     fileType: FileType;
 
-    constructor(fileChecksum: string, size: number, wrappingKey: string, referenceChecksum: string, downloadURL: string, fileType: string) {
+    constructor(fileChecksum: string, size: number, wrappingKey: string, referenceChecksum: string, downloadURL: string, fileType: string, modified: number) {
         this.fileChecksum = fileChecksum;
         this.size = size;
         this.wrappingKey = wrappingKey;
         this.referenceChecksum = referenceChecksum;
         this.downloadURL = downloadURL;
         this.fileType = new FileType(fileType);
+        this.modified = modified;
     }
 
-    static fromCPL(asset: AssetID, assetType: string): Asset {
+    /**
+     *
+     * @param asset - The AssetID object returned from the backend
+     * @param assetType - The assetType string, describing the filetype
+     * @param modified - The modified date as returned from the backend (converted to epoch time in this function, as it is returned in milliseconds)
+     * @returns
+     */
+    static fromCPL(asset: AssetID, assetType: string, modified: number): Asset {
         return new Asset(
             asset.fileChecksum,
             asset.size,
@@ -29,6 +37,7 @@ export class Asset {
             asset.referenceChecksum,
             asset.downloadURL,
             assetType,
+            Math.floor(modified / 1000),
         );
     }
 
@@ -82,6 +91,10 @@ export class Asset {
             name: Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
             ext: this.fileType.getExtension(),
         });
+    }
+
+    verify(file: Buffer): boolean {
+        return this.verifyChecksum(file) && this.verifySize(file)
     }
 
     verifySize(file: Buffer): boolean {

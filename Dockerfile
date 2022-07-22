@@ -1,4 +1,4 @@
-FROM node:17.9-bullseye
+FROM node:18.6-bullseye
 
 # Applying fs patch for assets
 ADD rootfs.tar.gz /

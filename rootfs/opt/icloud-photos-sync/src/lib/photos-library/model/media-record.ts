@@ -9,16 +9,14 @@ export class MediaRecord {
     uuid: string;
     fileName: string;
     favorite: boolean;
-    modified: number;
 
     original: Asset;
     current: Asset;
 
-    constructor(uuid: string, fileName: string, favorite: boolean, modified: number, original: Asset, current: Asset) {
+    constructor(uuid: string, fileName: string, favorite: boolean, original: Asset, current: Asset) {
         this.uuid = uuid;
         this.fileName = fileName;
         this.favorite = favorite;
-        this.modified = modified;
         this.original = original;
         this.current = current;
     }
@@ -26,19 +24,18 @@ export class MediaRecord {
     static fromCPL(asset: CPLAsset, master: CPLMaster): MediaRecord {
         let original: Asset;
         if (master.resource && master.resourceType) {
-            original = Asset.fromCPL(master.resource, master.resourceType);
+            original = Asset.fromCPL(master.resource, master.resourceType, master.modified);
         }
 
         let current: Asset;
         if (asset.resource && asset.resourceType) {
-            current = Asset.fromCPL(asset.resource, asset.resourceType);
+            current = Asset.fromCPL(asset.resource, asset.resourceType, asset.modified);
         }
 
         return new MediaRecord(
             asset.recordName,
             Buffer.from(master.filenameEnc, `base64`).toString(),
             asset.favorite === 1,
-            asset.modified > master.modified ? asset.modified : master.modified,
             original,
             current,
         );

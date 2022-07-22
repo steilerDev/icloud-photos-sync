@@ -104,6 +104,7 @@ export class PhotosLibrary extends EventEmitter {
                                     this.db.data.lib.mediaRecords[key].original.referenceChecksum,
                                     this.db.data.lib.mediaRecords[key].original.downloadURL,
                                     this.db.data.lib.mediaRecords[key].original.fileType.toString(),
+                                    0,
                                 );
                             }
 
@@ -116,6 +117,7 @@ export class PhotosLibrary extends EventEmitter {
                                     this.db.data.lib.mediaRecords[key].current.referenceChecksum,
                                     this.db.data.lib.mediaRecords[key].current.downloadURL,
                                     this.db.data.lib.mediaRecords[key].current.fileType.toString(),
+                                    0,
                                 );
                             }
 
@@ -123,7 +125,6 @@ export class PhotosLibrary extends EventEmitter {
                                 this.db.data.lib.mediaRecords[key].uuid,
                                 this.db.data.lib.mediaRecords[key].fileName,
                                 this.db.data.lib.mediaRecords[key].favorite,
-                                this.db.data.lib.mediaRecords[key].modified,
                                 original,
                                 current,
                             );
@@ -139,7 +140,7 @@ export class PhotosLibrary extends EventEmitter {
                         };
                     } else {
                         this.logger.debug(`Mapping processing queue structure to object instances`);
-                        if(this.db.data.processingQueues.data !== null) {
+                        if (this.db.data.processingQueues.data !== null) {
                             this.db.data.processingQueues.data[0] = this.db.data.processingQueues.data[0].map(asset => new Asset(
                                 asset.fileChecksum,
                                 asset.size,
@@ -147,6 +148,7 @@ export class PhotosLibrary extends EventEmitter {
                                 asset.referenceChecksum,
                                 asset.downloadURL,
                                 asset.fileType.toString(),
+                                0,
                             ));
                             this.db.data.processingQueues.data[1] = this.db.data.processingQueues.data[1].map(asset => new Asset(
                                 asset.fileChecksum,
@@ -155,10 +157,11 @@ export class PhotosLibrary extends EventEmitter {
                                 asset.referenceChecksum,
                                 asset.downloadURL,
                                 asset.fileType.toString(),
+                                0,
                             ));
                         }
 
-                        if(this.db.data.processingQueues.album !== null) {
+                        if (this.db.data.processingQueues.album !== null) {
                             // For now
                             this.db.data.processingQueues.album = this.db.data.processingQueues.album.map(album => new Album(
                                 album.uuid,
@@ -227,10 +230,8 @@ export class PhotosLibrary extends EventEmitter {
      * @returns A touple consisting of: An array that includes all local assets that need to be deleted | An array that includes all remote assets that need to be downloaded
      */
     async updateLibraryData(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Promise<[Asset[], Asset[]]> {
-
-
         // List all files in fs using name instead of currentLibraryRecords
-        //fssync.readdirSync()
+        // fssync.readdirSync()
 
         this.logger.debug(`Indexing ${cplMasters.length} CPLMaster records`);
         const masterRecords = {};
