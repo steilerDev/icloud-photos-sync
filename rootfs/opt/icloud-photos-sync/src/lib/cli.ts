@@ -145,7 +145,7 @@ export class CLIInterface {
 
     setupCLIPhotosLibraryInterface(photosLibrary: PhotosLibrary) {
         photosLibrary.on(PHOTOS_LIBRARY.EVENTS.READY, () => {
-            console.log(`Local Photos library ready - loaded ${photosLibrary.getAlbumCount()} albums and ${photosLibrary.getMediaRecordCount()} records`);
+            console.log(`Local Photos library ready - loaded ${photosLibrary.getAlbumCount()} albums and ${photosLibrary.getAssetCount()} records`);
         });
         photosLibrary.on(PHOTOS_LIBRARY.EVENTS.SAVED, () => {
             console.log(chalk.green(`Local Photos library saved`));

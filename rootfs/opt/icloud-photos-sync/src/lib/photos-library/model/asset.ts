@@ -1,25 +1,25 @@
 import path from 'path';
 import {AssetID} from '../../icloud/icloud-photos/query-parser.js';
 import {FileType} from './file-type.js';
+import {stat, Stats} from 'fs';
 
 export class Asset {
     fileChecksum: string;
     size: number;
-    wrappingKey: string;
-    referenceChecksum: string;
-    downloadURL: string;
     modified: number;
-
     fileType: FileType;
+    wrappingKey?: string;
+    referenceChecksum?: string;
+    downloadURL?: string;
 
-    constructor(fileChecksum: string, size: number, wrappingKey: string, referenceChecksum: string, downloadURL: string, fileType: string, modified: number) {
+    private constructor(fileChecksum: string, size: number, fileType: FileType, modified: number, wrappingKey?: string, referenceChecksum?: string, downloadURL?: string) {
         this.fileChecksum = fileChecksum;
         this.size = size;
+        this.fileType = fileType;
+        this.modified = modified;
         this.wrappingKey = wrappingKey;
         this.referenceChecksum = referenceChecksum;
         this.downloadURL = downloadURL;
-        this.fileType = new FileType(fileType);
-        this.modified = modified;
     }
 
     /**
@@ -33,11 +33,20 @@ export class Asset {
         return new Asset(
             asset.fileChecksum,
             asset.size,
+            FileType.fromAssetType(assetType),
+            Math.floor(modified / 1000),
             asset.wrappingKey,
             asset.referenceChecksum,
             asset.downloadURL,
-            assetType,
-            Math.floor(modified / 1000),
+        );
+    }
+
+    static fromFile(fileName: string, stats: Stats): Asset {
+        return new Asset(
+            Buffer.from(path.basename(fileName, path.extname(fileName)), `base64url`).toString(`base64`),
+            stats.size,
+            FileType.fromExtension(path.extname(fileName)),
+            Math.floor(stats.mtimeMs / 1000),
         );
     }
 
@@ -47,19 +56,19 @@ export class Asset {
      * @param remoteAsset - The asset acquired from the remote API
      * @returns A touple of assets: A list of assets that need to be deleted | A list of assets that need to be created
      */
-    static getAssetDiff(localAsset: Asset, remoteAsset: Asset): [Asset[], Asset[]] {
-        const toBeDeleted: Asset[] = [];
-        const toBeAdded: Asset[] = [];
+    static getAssetDiff(localAsset: Asset, remoteAsset: Asset): [Asset, Asset] {
+        let toBeDeleted: Asset;
+        let toBeAdded: Asset;
 
         if (localAsset) { // Current asset exists locally
             // localAsset.verify()
             if (!localAsset.equal(remoteAsset)) {
                 // There has been a change, removing local copy and adding remote
-                toBeDeleted.push(localAsset);
-                toBeAdded.push(remoteAsset);
-            } // Else there has been no change, therefore no need to add / remove
+                toBeDeleted = localAsset;
+                toBeAdded = remoteAsset;
+            }
         } else if (remoteAsset) { // There is no local current asset, therefore adding it
-            toBeAdded.push(remoteAsset);
+            toBeAdded = remoteAsset;
         }
 
         return [toBeDeleted, toBeAdded];
@@ -72,16 +81,14 @@ export class Asset {
     equal(asset: Asset): boolean {
         return asset
                 && this.fileChecksum === asset.fileChecksum
+                && this.fileType.equal(asset.fileType)
                 && this.size === asset.size
-                && this.wrappingKey === asset.wrappingKey
-                && this.referenceChecksum === asset.referenceChecksum
-                && this.downloadURL === asset.downloadURL
-                && this.fileType.equal(asset.fileType);
+                && this.modified === asset.modified;
     }
 
-    getAssetFilePath(folder: string) {
+    getAssetFilePath(dir: string) {
         return path.format({
-            dir: folder,
+            dir,
             name: this.getAssetFilename(),
         });
     }
@@ -93,8 +100,12 @@ export class Asset {
         });
     }
 
+    getUUID(): string {
+        return this.fileChecksum;
+    }
+
     verify(file: Buffer): boolean {
-        return this.verifyChecksum(file) && this.verifySize(file)
+        return this.verifyChecksum(file) && this.verifySize(file);
     }
 
     verifySize(file: Buffer): boolean {

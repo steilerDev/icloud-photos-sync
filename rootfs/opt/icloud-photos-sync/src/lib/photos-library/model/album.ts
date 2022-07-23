@@ -1,7 +1,15 @@
 
 export enum AlbumType {
     FOLDER = 3,
-    ALBUM = 0
+    ALBUM = 0,
+    ARCHIVED = 99
+}
+
+/**
+ * Key -> UUID, Value -> Filename
+ */
+export type AlbumAsset = {
+    [key: string]: string
 }
 
 /**
@@ -11,27 +19,31 @@ export class Album {
     uuid: string;
     albumType: AlbumType;
     albumName: string;
-    deleted: boolean;
+    albumPath?: string;
     /**
-     * Record Names of media contained in this album
+     * Assets, where the key is the uuid & the value the filename
      */
-    mediaRecords: string[];
+    assets: AlbumAsset;
 
     /**
      * Record name of parent folder
      */
-    parentRecordName: string;
+    parentAlbumUUID: string;
 
-    constructor(uuid: string, albumType: AlbumType, albumName: string, deleted: boolean, mediaRecords: string[], parentRecordName: string) {
+    constructor(uuid: string, albumType: AlbumType, albumName: string, parentRecordName: string, albumPath?: string) {
         this.uuid = uuid;
         this.albumType = albumType;
         this.albumName = albumName;
-        this.deleted = deleted;
-        this.mediaRecords = mediaRecords;
-        this.parentRecordName = parentRecordName;
+        this.parentAlbumUUID = parentRecordName;
+        this.albumPath = albumPath;
+        this.assets = {};
     }
 
     getDisplayName(): string {
         return this.albumName;
+    }
+
+    getUUID(): string {
+        return this.uuid;
     }
 }

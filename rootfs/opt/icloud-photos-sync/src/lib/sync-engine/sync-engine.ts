@@ -17,7 +17,7 @@ type RemoteAlbums = CPLAlbum[]
 /**
  * [ToBeDeleted, ToBeAdded]
  */
-export type ProcessingDataQueue = [Asset[], Asset[]]
+export type ProcessingDataQueue = [toBeDeleted: Asset[], toBeAdded: Asset[]]
 export type ProcessingAlbumQueue = Album[]
 
 /**
@@ -33,48 +33,21 @@ export class SyncEngine extends EventEmitter {
 
     photosLibrary: PhotosLibrary;
 
-    photoDataDir: string;
-
     syncQueue: PQueue;
 
     constructor(iCloud: iCloud, photosLibrary: PhotosLibrary, cliOpts: OptionValues) {
         super();
         this.iCloud = iCloud;
         this.photosLibrary = photosLibrary;
-        this.photoDataDir = cliOpts.photo_data_dir;
         this.syncQueue = new PQueue({concurrency: cliOpts.download_threads});
     }
 
     async sync() {
         this.logger.info(`Starting sync`);
 
-        let processingQueues: [ProcessingDataQueue, ProcessingAlbumQueue];
-
-        if (this.photosLibrary.ongoingSync()) {
-            this.logger.info(`Recovering previously incompleted sync`);
-            processingQueues = this.photosLibrary.getProcessingQueues();
-        } else {
-            processingQueues = await this.fetchState()
-                .then(([remoteData, remoteStructure]) => this.diffState(remoteData, remoteStructure));
-            this.logger.debug(`Storing temp state, in order to recover future failures`);
-            await this.photosLibrary.save();
-        }
-
-        let tries = 0;
-        const maxTry = 5;
-        while (this.photosLibrary.ongoingSync()) {
-            if (tries < 5) {
-                try {
-                    await this.writeState(processingQueues[0], processingQueues[1]);
-                    return this.photosLibrary.completeSync();
-                } catch (err) {
-                    this.logger.warn(`Error while writing state (try ${tries} / ${maxTry}): ${err.message}`);
-                    tries++;
-                }
-            } else {
-                throw new Error(`Unable to complete sync after ${maxTry} tries`);
-            }
-        }
+        return this.fetchState()
+            .then(([remoteData, remoteStructure]) => this.diffState(remoteData, remoteStructure))
+            .then(([dataQueue, albumQueue]) => this.writeState(dataQueue, albumQueue));
     }
 
     async fetchState(): Promise<[RemoteData, RemoteAlbums]> {
@@ -90,29 +63,29 @@ export class SyncEngine extends EventEmitter {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
         this.logger.info(`Diffing state`);
         return Promise.all([
-            this.photosLibrary.updateLibraryData(remoteData[0], remoteData[1]),
-            this.photosLibrary.updateLibraryStructure(remoteAlbums),
+            this.photosLibrary.diffLibraryData(remoteData[0], remoteData[1]),
+            this.photosLibrary.diffLibraryStructure(remoteAlbums),
         ]);
     }
 
     async writeState(dataQueue: ProcessingDataQueue, albumQueue: ProcessingAlbumQueue) {
         this.emit(SYNC_ENGINE.EVENTS.WRITE);
         this.logger.info(`Writing state`);
-        await this.writeLibraryData(dataQueue[0], dataQueue[1]);
-        return this.writeLibraryStructure(albumQueue);
+        return this.writeLibraryData(dataQueue[0], dataQueue[1])
+            .then(() => this.writeLibraryStructure(albumQueue));
     }
 
     async writeLibraryData(toBeDeleted: Asset[], toBeAdded: Asset[]) {
+        this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
         this.syncQueue.on(`error`, err => {
             this.logger.error(`${typeof err}`);
             this.logger.error(`Processing queue experienced error (size: ${this.syncQueue.size} / pending: ${this.syncQueue.pending}): ${err.message}`);
             this.syncQueue.clear();
             this.logger.warn(`Cleared sync queue (size: ${this.syncQueue.size} / pending: ${this.syncQueue.pending})`);
         });
-        return Promise.all([
-            ...toBeAdded.map(asset => this.syncQueue.add(() => this.addAsset(asset))),
-            ...toBeDeleted.map(asset => this.syncQueue.add(() => this.deleteAsset(asset))),
-        ]);
+        // Deleting before downloading, in order to ensure no conflicts
+        return Promise.all(toBeDeleted.map(asset => this.deleteAsset(asset)))
+            .then(() => Promise.all(toBeAdded.map(asset => this.syncQueue.add(() => this.addAsset(asset)))));
     }
 
     /**
@@ -128,12 +101,12 @@ export class SyncEngine extends EventEmitter {
             return this.iCloud.photos.downloadAsset(asset)
                 .then(response => {
                     this.logger.debug(`Writing asset ${asset.getDisplayName()}`);
-                    const location = asset.getAssetFilePath(this.photoDataDir);
+                    const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
                     const writeStream = fs.createWriteStream(location);
                     response.data.pipe(writeStream);
                     return pEvent(writeStream, `close`);
                 })
-                .then(() => fsPromise.utimes(asset.getAssetFilePath(this.photoDataDir), asset.modified, asset.modified)) // Setting modified date on file
+                .then(() => fsPromise.utimes(asset.getAssetFilePath(this.photosLibrary.assetDir), asset.modified, asset.modified)) // Setting modified date on file
                 .then(() => {
                     if (!this.verifyAsset(asset)) {
                         throw new Error(`Unable to verify asset ${asset.getDisplayName()}`);
@@ -146,13 +119,13 @@ export class SyncEngine extends EventEmitter {
 
     async deleteAsset(asset: Asset): Promise<void> {
         this.logger.debug(`Deleting asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath(this.photoDataDir);
-        return fs.promises.rm(location, {force: true});
+        const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
+        return fsPromise.rm(location, {force: true});
     }
 
     verifyAsset(asset: Asset): boolean {
         this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath(this.photoDataDir);
+        const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
         if (fs.existsSync(location)) {
             const data = fs.readFileSync(location);
             const sizeVerfied = asset.verifySize(data);

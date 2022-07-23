@@ -1,3 +1,4 @@
+import {Asset} from '../../photos-library/model/asset.js';
 import * as QueryBuilder from './query-builder.js';
 
 /**
@@ -133,4 +134,24 @@ export class CPLAlbum {
 
         throw new Error(`Record type is not ${QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD}: ${cplRecord.recordType}`);
     }
+}
+
+/**
+ * Transforms a matching CPLAsset/CPLMaster pair to an array of associated assets
+ * @param asset
+ * @param master
+ * @returns
+ */
+export function cpl2Assets(asset?: CPLAsset, master?: CPLMaster): Asset[] {
+    const assets: Asset[] = [];
+
+    if (master?.resource && master?.resourceType) {
+        assets.push(Asset.fromCPL(master.resource, master.resourceType, master.modified));
+    }
+
+    if (asset?.resource && asset?.resourceType) {
+        assets.push(Asset.fromCPL(asset.resource, asset.resourceType, asset.modified));
+    }
+
+    return assets;
 }

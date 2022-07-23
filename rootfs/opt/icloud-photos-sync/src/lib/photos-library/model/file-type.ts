@@ -10,12 +10,29 @@ const EXT = {
 export class FileType {
     descriptor: string;
 
-    constructor(descriptor: string) {
+    private constructor(descriptor: string) {
+        this.descriptor = descriptor;
+    }
+
+    static fromAssetType(descriptor: string): FileType {
         if (!EXT[descriptor]) {
             throw new Error(`Unknown filetype descriptor: ${descriptor}`);
         }
 
-        this.descriptor = descriptor;
+        return new FileType(descriptor);
+    }
+
+    static fromExtension(ext: string): FileType {
+        if (ext.startsWith(`.`)) {
+            ext = ext.substring(1);
+        }
+
+        const descriptor = Object.keys(EXT).find(key => EXT[key] === ext);
+        if (!descriptor) {
+            throw new Error(`Unknown filetype extension: ${ext}`);
+        }
+
+        return new FileType(descriptor);
     }
 
     getExtension(): string {
