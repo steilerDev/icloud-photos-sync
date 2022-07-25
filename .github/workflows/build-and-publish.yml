@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 env:
   PKG_NAME: icloud-photos-sync
-  NODE_VERSION: 17
+  NODE_VERSION: 18
 
 jobs:
   build:
