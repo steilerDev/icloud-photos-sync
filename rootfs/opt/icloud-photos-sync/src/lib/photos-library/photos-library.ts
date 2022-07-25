@@ -7,7 +7,7 @@ import * as fs from 'fs/promises';
 import * as fssync from 'fs';
 import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
-import {CPLAlbum, CPLAsset, CPLMaster, cpl2Assets, cplArray2Assets} from '../icloud/icloud-photos/query-parser.js';
+import {CPLAlbum, CPLAsset, CPLMaster, cplArray2Assets} from '../icloud/icloud-photos/query-parser.js';
 import {ProcessingAlbumQueue, ProcessingDataQueue} from '../sync-engine/sync-engine.js';
 
 type LibraryAlbums = {
@@ -120,7 +120,7 @@ export class PhotosLibrary extends EventEmitter {
         // Ignoring dummy album
         if (album.getUUID().length > 0) {
             albums.push(album);
-        } 
+        }
 
         this.logger.info(`Loading album ${album.getDisplayName()}`);
 

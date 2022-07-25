@@ -1,5 +1,3 @@
-import {Dirent} from "fs";
-import path from "path";
 import {CPLAlbum} from "../../icloud/icloud-photos/query-parser";
 
 export enum AlbumType {
@@ -9,7 +7,7 @@ export enum AlbumType {
 }
 
 /**
- * Key -> UUID, Value -> Filename
+ * Key: getUUID, Value: Filename
  */
 export type AlbumAssets = {
     [key: string]: string

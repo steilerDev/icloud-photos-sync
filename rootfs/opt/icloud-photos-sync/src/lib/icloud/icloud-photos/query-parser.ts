@@ -139,9 +139,9 @@ export class CPLAlbum {
 
 /**
  * Transforms a matching CPLAsset/CPLMaster pair to an array of associated assets
- * @param asset
- * @param master
- * @returns
+ * @param asset - The given asset
+ * @param master - The given master
+ * @returns An array of all containing assets
  */
 export function cpl2Assets(asset?: CPLAsset, master?: CPLMaster): Asset[] {
     const assets: Asset[] = [];

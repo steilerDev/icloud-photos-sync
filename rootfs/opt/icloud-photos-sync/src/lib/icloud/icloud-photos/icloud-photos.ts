@@ -6,7 +6,7 @@ import * as QueryBuilder from './query-builder.js';
 import {iCloudAuth} from '../auth.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
-import {cpl2Assets, CPLAlbum, cplArray2Assets, CPLAsset, CPLMaster} from './query-parser.js';
+import {CPLAlbum, cplArray2Assets, CPLAsset, CPLMaster} from './query-parser.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
