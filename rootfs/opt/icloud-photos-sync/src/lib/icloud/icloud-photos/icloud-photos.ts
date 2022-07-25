@@ -4,9 +4,9 @@ import {EventEmitter} from 'events';
 import * as ICLOUD_PHOTOS from './constants.js';
 import * as QueryBuilder from './query-builder.js';
 import {iCloudAuth} from '../auth.js';
-import {AlbumType} from '../../photos-library/model/album.js';
+import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
-import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
+import {cpl2Assets, CPLAlbum, cplArray2Assets, CPLAsset, CPLMaster} from './query-parser.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -242,13 +242,20 @@ export class iCloudPhotos extends EventEmitter {
                 }
 
                 // Getting associated media records for albums
-                let mediaRecords: Promise<string[]>;
                 if (record.fields.albumType.value === AlbumType.ALBUM) {
-                    mediaRecords = this.fetchAllPictureRecords(record.recordName)
-                        .then(result => result[0].map(picture => picture.recordName));
+                    const albumAssets: Promise<AlbumAssets> = this.fetchAllPictureRecords(record.recordName)
+                        .then(cplResult => cplArray2Assets(cplResult[0], cplResult[1]))
+                        .then(assets => {
+                            const _albumAssets: AlbumAssets = {};
+                            assets.forEach(asset => {
+                                _albumAssets[asset.getUUID()] = asset.getAssetFilename();
+                            });
+                            return _albumAssets;
+                        });
+                    cplAlbums.push(CPLAlbum.parseFromQuery(record, albumAssets));
+                } else {
+                    cplAlbums.push(CPLAlbum.parseFromQuery(record));
                 }
-
-                cplAlbums.push(CPLAlbum.parseFromQuery(record, mediaRecords));
             } catch (err) {
                 this.logger.warn(`Error building CPLAlbum: ${err.message}`);
             }
@@ -316,7 +323,7 @@ export class iCloudPhotos extends EventEmitter {
                     QueryBuilder.RECORD_TYPES.ALL_PHOTOS,
                     [startRankFilter, directionFilter],
                     ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
-                    desiredKeys,
+                    QueryBuilder.QUERY_KEYS,
                 ));
             } else {
                 const parentFilter = QueryBuilder.getParentFilterforParentId(parentId);

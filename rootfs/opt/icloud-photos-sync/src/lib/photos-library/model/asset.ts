@@ -1,7 +1,7 @@
 import path from 'path';
 import {AssetID} from '../../icloud/icloud-photos/query-parser.js';
 import {FileType} from './file-type.js';
-import {stat, Stats} from 'fs';
+import {Stats} from 'fs';
 
 export class Asset {
     fileChecksum: string;

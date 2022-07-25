@@ -14,11 +14,9 @@ import PQueue from 'p-queue';
 
 type RemoteData = [CPLAsset[], CPLMaster[]]
 type RemoteAlbums = CPLAlbum[]
-/**
- * [ToBeDeleted, ToBeAdded]
- */
+
 export type ProcessingDataQueue = [toBeDeleted: Asset[], toBeAdded: Asset[]]
-export type ProcessingAlbumQueue = Album[]
+export type ProcessingAlbumQueue = [toBeDeleted: Album[], toBeMoved: Album[], toBeAdded: Album[]]
 
 /**
  * This class handles the photos sync
@@ -71,11 +69,13 @@ export class SyncEngine extends EventEmitter {
     async writeState(dataQueue: ProcessingDataQueue, albumQueue: ProcessingAlbumQueue) {
         this.emit(SYNC_ENGINE.EVENTS.WRITE);
         this.logger.info(`Writing state`);
-        return this.writeLibraryData(dataQueue[0], dataQueue[1])
+        return this.writeLibraryData(dataQueue)
             .then(() => this.writeLibraryStructure(albumQueue));
     }
 
-    async writeLibraryData(toBeDeleted: Asset[], toBeAdded: Asset[]) {
+    async writeLibraryData(processingQueue: ProcessingDataQueue) {
+        const toBeDeleted = processingQueue[0];
+        const toBeAdded = processingQueue[1];
         this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
         this.syncQueue.on(`error`, err => {
             this.logger.error(`${typeof err}`);
@@ -136,7 +136,7 @@ export class SyncEngine extends EventEmitter {
         return false;
     }
 
-    async writeLibraryStructure(newAlbums: Album[]) {
+    async writeLibraryStructure(processingQueue: ProcessingAlbumQueue) {
         this.logger.info(`Writing lib structure!`);
         // Get root folder & local root folder
         // compare content

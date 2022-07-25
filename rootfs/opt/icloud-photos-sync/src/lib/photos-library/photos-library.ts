@@ -7,13 +7,20 @@ import * as fs from 'fs/promises';
 import * as fssync from 'fs';
 import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
-import {CPLAlbum, CPLAsset, CPLMaster, cpl2Assets} from '../icloud/icloud-photos/query-parser.js';
+import {CPLAlbum, CPLAsset, CPLMaster, cpl2Assets, cplArray2Assets} from '../icloud/icloud-photos/query-parser.js';
+import {ProcessingAlbumQueue, ProcessingDataQueue} from '../sync-engine/sync-engine.js';
+
+type LibraryAlbums = {
+    [key: string]: Album // Keyed by getUUID
+}
+
+type LibraryAssets = {
+    [key: string]: Asset // Keyed by getUUID
+}
 
 type Library = {
-    albums: Album[],
-    assets: {
-        [key: string]: Asset // Keyed by filename
-    },
+    albums: LibraryAlbums,
+    assets: LibraryAssets
 }
 
 /**
@@ -41,7 +48,7 @@ export class PhotosLibrary extends EventEmitter {
     constructor(cliOpts: OptionValues) {
         super();
         this.lib = {
-            albums: [],
+            albums: {},
             assets: {},
         };
 
@@ -66,8 +73,19 @@ export class PhotosLibrary extends EventEmitter {
     async load() {
         this.logger.debug(`Loading library from disc`);
 
-        // Loading Assets
-        this.lib.assets = {};
+        return Promise.all([
+            this.loadAssets(),
+            this.loadAlbums(),
+        ]).then(loadedLibrary => {
+            this.lib.assets = loadedLibrary[0];
+            this.lib.albums = loadedLibrary[1];
+        }).then(() => {
+            this.emit(PHOTOS_LIBRARY.EVENTS.READY);
+        });
+    }
+
+    private async loadAssets(): Promise<LibraryAssets> {
+        const libAssets: LibraryAssets = {};
         (await fs.readdir(this.assetDir))
             .forEach(fileName => {
                 const fileStat = fssync.statSync(path.format({
@@ -75,18 +93,35 @@ export class PhotosLibrary extends EventEmitter {
                     base: fileName,
                 }));
                 const asset = Asset.fromFile(fileName, fileStat);
-                this.lib.assets[asset.getUUID()] = asset;
+                this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
+                libAssets[asset.getUUID()] = asset;
             });
-
-        // Loading folders
-        const rootAlbum = new Album(``, AlbumType.FOLDER, `All`, ``, this.photoDataDir);
-        this.lib.albums = await this.loadAlbum(rootAlbum);
-
-        this.emit(PHOTOS_LIBRARY.EVENTS.READY);
+        return libAssets;
     }
 
+    private async loadAlbums(): Promise<LibraryAlbums> {
+        // Loading folders
+        const libAlbums: LibraryAlbums = {};
+        (await this.loadAlbum(Album.getRootAlbum(this.photoDataDir)))
+            .forEach(album => {
+                libAlbums[album.getUUID()] = album;
+            });
+        return libAlbums;
+    }
+
+    /**
+     * Loads the content of a given album from disc
+     * @param album - The album that needs to be loaded, containing a filepath
+     * @returns An array of loaded albums, including the provided one and all its child items
+     */
     async loadAlbum(album: Album): Promise<Album[]> {
-        const albums: Album[] = [album];
+        const albums: Album[] = [];
+
+        // Ignoring dummy album
+        if (album.getUUID().length > 0) {
+            albums.push(album);
+        } 
+
         this.logger.info(`Loading album ${album.getDisplayName()}`);
 
         const symbolicLinks = (await fs.readdir(album.albumPath, {
@@ -111,8 +146,10 @@ export class PhotosLibrary extends EventEmitter {
                 albums[0].assets[uuid] = link.name;
             } else if (album.albumType === AlbumType.ARCHIVED) {
                 this.logger.info(`Treating ${album.albumType} as archived`);
+                // Ignoring assets on archived folders
             }
         }
+
         return albums;
     }
 
@@ -143,128 +180,12 @@ export class PhotosLibrary extends EventEmitter {
         return AlbumType.ALBUM;
     }
 
-    /**
-        Return this.db.read()
-            .then(() => {
-                if (!this.db.data) {
-                    this.logger.warn(`Database is empty, creating fresh`);
-                    this.db.data = {
-                        lib: {
-                            albums: [],
-                            mediaRecords: {},
-                        },
-                        processingQueues: {
-                            album: null,
-                            data: null,
-                        },
-                    };
-                } else { // Data structure is loaded as json only, no instance functions are available. Recreating instances below
-                    if (!this.db.data.lib) {
-                        this.logger.warn(`Library is empty, creating fresh`);
-                        this.db.data.lib = {
-                            albums: [],
-                            mediaRecords: {},
-                        };
-                    } else {
-                        this.logger.debug(`Mapping library structure to object instances`);
-                        // For now
-                        this.db.data.lib.albums = this.db.data.lib.albums.map(album => new Album(album.uuid, album.albumType, album.albumName, album.deleted, album.mediaRecords, album.parentRecordName));
-
-                        const mediaRecordInstances = {};
-                        Object.keys(this.db.data.lib.mediaRecords).forEach(key => {
-                            let original: Asset;
-                            if (this.db.data.lib.mediaRecords[key].original) {
-                                original = new Asset(
-                                    this.db.data.lib.mediaRecords[key].original.fileChecksum,
-                                    this.db.data.lib.mediaRecords[key].original.size,
-                                    this.db.data.lib.mediaRecords[key].original.wrappingKey,
-                                    this.db.data.lib.mediaRecords[key].original.referenceChecksum,
-                                    this.db.data.lib.mediaRecords[key].original.downloadURL,
-                                    this.db.data.lib.mediaRecords[key].original.fileType.toString(),
-                                    0,
-                                );
-                            }
-
-                            const current: Asset = undefined;
-                            if (this.db.data.lib.mediaRecords[key].current) {
-                                original = new Asset(
-                                    this.db.data.lib.mediaRecords[key].current.fileChecksum,
-                                    this.db.data.lib.mediaRecords[key].current.size,
-                                    this.db.data.lib.mediaRecords[key].current.wrappingKey,
-                                    this.db.data.lib.mediaRecords[key].current.referenceChecksum,
-                                    this.db.data.lib.mediaRecords[key].current.downloadURL,
-                                    this.db.data.lib.mediaRecords[key].current.fileType.toString(),
-                                    0,
-                                );
-                            }
-
-                            mediaRecordInstances[key] = new MediaRecord(
-                                this.db.data.lib.mediaRecords[key].uuid,
-                                this.db.data.lib.mediaRecords[key].fileName,
-                                this.db.data.lib.mediaRecords[key].favorite,
-                                original,
-                                current,
-                            );
-                        });
-                        this.db.data.lib.mediaRecords = mediaRecordInstances;
-                    }
-
-                    if (!this.db.data.processingQueues) {
-                        this.logger.info(`Processing queues are empty`);
-                        this.db.data.processingQueues = {
-                            album: null,
-                            data: null,
-                        };
-                    } else {
-                        this.logger.debug(`Mapping processing queue structure to object instances`);
-                        if (this.db.data.processingQueues.data !== null) {
-                            this.db.data.processingQueues.data[0] = this.db.data.processingQueues.data[0].map(asset => new Asset(
-                                asset.fileChecksum,
-                                asset.size,
-                                asset.wrappingKey,
-                                asset.referenceChecksum,
-                                asset.downloadURL,
-                                asset.fileType.toString(),
-                                0,
-                            ));
-                            this.db.data.processingQueues.data[1] = this.db.data.processingQueues.data[1].map(asset => new Asset(
-                                asset.fileChecksum,
-                                asset.size,
-                                asset.wrappingKey,
-                                asset.referenceChecksum,
-                                asset.downloadURL,
-                                asset.fileType.toString(),
-                                0,
-                            ));
-                        }
-
-                        if (this.db.data.processingQueues.album !== null) {
-                            // For now
-                            this.db.data.processingQueues.album = this.db.data.processingQueues.album.map(album => new Album(
-                                album.uuid,
-                                album.albumType,
-                                album.albumName,
-                                album.deleted,
-                                album.mediaRecords,
-                                album.parentRecordName,
-                            ));
-                        }
-                    }
-                }
-
-            })
-            .catch(err => {
-                this.logger.error(`Unable to load database: ${err.message}`);
-                this.emit(PHOTOS_LIBRARY.EVENTS.ERROR);
-            });
-            */
-
     isEmpty(): boolean {
         return this.getAlbumCount() === 0 && this.getAssetCount() === 0;
     }
 
     getAlbumCount(): number {
-        return this.lib.albums.length;
+        return Object.keys(this.lib.albums).length;
     }
 
     getAssetCount(): number {
@@ -277,46 +198,35 @@ export class PhotosLibrary extends EventEmitter {
      * @param cplMasters - The remote CPLMaster recrods
      * @returns A touple consisting of: An array that includes all local assets that need to be deleted | An array that includes all remote assets that need to be downloaded
      */
-    async diffLibraryData(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Promise<[Asset[], Asset[]]> {
+    async diffLibraryData(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Promise<ProcessingDataQueue> {
         // List all files in fs using name instead of currentLibraryRecords
         // fssync.readdirSync()
         this.logger.debug(`Diffing library data with remote data`);
-        // Indexing master records for easier retrieval later
-        const cplMasterRecords = {};
-        cplMasters.forEach(masterRecord => {
-            cplMasterRecords[masterRecord.recordName] = masterRecord;
-        });
 
         // 'loading' local library
         const toBeDeleted: Asset[] = [];
         const toBeAdded: Asset[] = [];
 
-        // Going over remote state and diffing
-        cplAssets.forEach(cplAsset => {
-            // Get CPLMaster for CPLAsset (if possible)
-            const remoteAssets = cpl2Assets(cplAsset, cplMasterRecords[cplAsset.masterRef]);
+        const remoteAssets = cplArray2Assets(cplAssets, cplMasters);
 
-            let message = `Processing remote asset ${cplAsset.recordName} (CPLMaster: ${cplAsset.masterRef}): `;
-            remoteAssets.forEach(remoteAsset => {
-                const localAsset = this.lib.assets[remoteAsset.getUUID()];
-                const assetDiff = Asset.getAssetDiff(localAsset, remoteAsset);
-                if (!assetDiff[0] && !assetDiff[1]) {
-                    // Local asset matches remote asset, therefore no diff
-                    delete this.lib.assets[remoteAsset.getUUID()];
-                } else {
-                    if (assetDiff[0]) { // Needs to be deleted
-                        message += `Deleting asset ${assetDiff[0].getUUID()}`;
-                        toBeDeleted.push(assetDiff[0]);
-                        delete this.lib.assets[assetDiff[0].getUUID()];
-                    }
-
-                    if (assetDiff[1]) { // Needs to be added
-                        message += `Adding asset ${assetDiff[1].getUUID()}`;
-                        toBeAdded.push(assetDiff[1]);
-                    }
+        remoteAssets.forEach(remoteAsset => {
+            const localAsset = this.lib.assets[remoteAsset.getUUID()];
+            const assetDiff = Asset.getAssetDiff(localAsset, remoteAsset);
+            if (!assetDiff[0] && !assetDiff[1]) {
+                // Local asset matches remote asset, therefore no diff
+                delete this.lib.assets[remoteAsset.getUUID()];
+            } else {
+                if (assetDiff[0]) { // Needs to be deleted
+                    this.logger.debug(`Deleting asset ${assetDiff[0].getUUID()}`);
+                    toBeDeleted.push(assetDiff[0]);
+                    delete this.lib.assets[assetDiff[0].getUUID()];
                 }
-            });
-            this.logger.debug(message);
+
+                if (assetDiff[1]) { // Needs to be added
+                    this.logger.debug(`Adding asset ${assetDiff[1].getUUID()}`);
+                    toBeAdded.push(assetDiff[1]);
+                }
+            }
         });
 
         // The original library should only hold those records, that have not been referenced by the remote state, removing them
@@ -328,15 +238,16 @@ export class PhotosLibrary extends EventEmitter {
         return [toBeDeleted, toBeAdded];
     }
 
-    async diffLibraryStructure(cplAlbums: CPLAlbum[]): Promise<Album[]> {
+    async diffLibraryStructure(cplAlbums: CPLAlbum[]): Promise<ProcessingAlbumQueue> {
         this.logger.info(`Diffing library structure!`);
+        // Match albums & diff
         // Go to current root album
         // List content
         // Filter cplAlbums by parentId ===
         const albums: Album[] = [];
 
         // Saving updated state and queue
-        this.lib.albums = albums;
-        return albums;
+        // this.lib.albums = albums;
+        return [undefined, undefined, albums];
     }
 }

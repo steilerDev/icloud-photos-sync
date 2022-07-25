@@ -1,3 +1,4 @@
+import {AlbumAssets} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import * as QueryBuilder from './query-builder.js';
 
@@ -112,9 +113,9 @@ export class CPLAlbum {
     parentId: string;
     modified: number;
 
-    records: Promise<string[]>;
+    assets: Promise<AlbumAssets>;
 
-    static parseFromQuery(cplRecord: any, records: Promise<string[]>): CPLAlbum {
+    static parseFromQuery(cplRecord: any, assets?: Promise<AlbumAssets>): CPLAlbum {
         if (cplRecord.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD) {
             const album = new CPLAlbum();
             if (cplRecord.recordName) {
@@ -127,7 +128,7 @@ export class CPLAlbum {
             album.albumNameEnc = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ENCODED_ALBUM_NAME].value;
             album.parentId = cplRecord.fields[QueryBuilder.DESIRED_KEYS.PARENT_ID]?.value;
             album.modified = cplRecord.modified.timestamp;
-            album.records = records;
+            album.assets = assets;
 
             return album;
         }
@@ -154,4 +155,18 @@ export function cpl2Assets(asset?: CPLAsset, master?: CPLMaster): Asset[] {
     }
 
     return assets;
+}
+
+export function cplArray2Assets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Asset[] {
+    // Indexing master records for easier retrieval later
+    const cplMasterRecords = {};
+    cplMasters.forEach(masterRecord => {
+        cplMasterRecords[masterRecord.recordName] = masterRecord;
+    });
+    const remoteAssets: Asset[] = [];
+    cplAssets.forEach(cplAsset => {
+        // Get CPLMaster for CPLAsset (if possible)
+        remoteAssets.push(...cpl2Assets(cplAsset, cplMasterRecords[cplAsset.masterRef]));
+    });
+    return remoteAssets;
 }
