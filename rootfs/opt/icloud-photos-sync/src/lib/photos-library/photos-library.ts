@@ -131,8 +131,12 @@ export class PhotosLibrary extends EventEmitter {
                 const fullPath = path.join(album.albumPath, target);
                 const folderType = await this.readAlbumTypeFromPath(fullPath);
 
-                const loadedAlbum = new Album(uuid, folderType, link.name, album.getUUID(), fullPath);
-                albums.push(...await this.loadAlbum(loadedAlbum));
+                if(folderType === AlbumType.ARCHIVED) {
+                    this.logger.warn(`Ignoring archived folder ${uuid}`)
+                } else {
+                    const loadedAlbum = new Album(uuid, folderType, link.name, album.getUUID(), fullPath);
+                    albums.push(...await this.loadAlbum(loadedAlbum));
+                }
             } else if (album.albumType === AlbumType.ALBUM) {
                 const uuid = path.parse(target).name;
                 albums[0].assets[uuid] = link.name;
