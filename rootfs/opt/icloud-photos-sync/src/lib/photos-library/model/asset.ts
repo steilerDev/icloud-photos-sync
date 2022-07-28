@@ -2,8 +2,10 @@ import path from 'path';
 import {AssetID} from '../../icloud/icloud-photos/query-parser.js';
 import {FileType} from './file-type.js';
 import {Stats} from 'fs';
+import {DiffFlag} from '../constants.js';
+import {PEntity} from './photos-entity.js';
 
-export class Asset {
+export class Asset implements PEntity<Asset> {
     fileChecksum: string;
     size: number;
     modified: number;
@@ -48,30 +50,6 @@ export class Asset {
             FileType.fromExtension(path.extname(fileName)),
             Math.floor(stats.mtimeMs / 1000),
         );
-    }
-
-    /**
-     * Diffes the two assets, with the remote asset taking precedence
-     * @param localAsset - The local asset
-     * @param remoteAsset - The asset acquired from the remote API
-     * @returns A touple of assets: A list of assets that need to be deleted | A list of assets that need to be created
-     */
-    static getAssetDiff(localAsset: Asset, remoteAsset: Asset): [Asset, Asset] {
-        let toBeDeleted: Asset;
-        let toBeAdded: Asset;
-
-        if (localAsset) { // Current asset exists locally
-            // localAsset.verify()
-            if (!localAsset.equal(remoteAsset)) {
-                // There has been a change, removing local copy and adding remote
-                toBeDeleted = localAsset;
-                toBeAdded = remoteAsset;
-            }
-        } else if (remoteAsset) { // There is no local current asset, therefore adding it
-            toBeAdded = remoteAsset;
-        }
-
-        return [toBeDeleted, toBeAdded];
     }
 
     isObject(): boolean {
@@ -188,5 +166,9 @@ export class Asset {
 
     getDisplayName(): string {
         return this.fileChecksum;
+    }
+
+    unpack(): Asset {
+        return this;
     }
 }

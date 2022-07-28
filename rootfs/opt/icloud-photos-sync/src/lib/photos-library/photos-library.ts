@@ -7,20 +7,12 @@ import * as fs from 'fs/promises';
 import * as fssync from 'fs';
 import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
-import {CPLAlbum, CPLAsset, CPLMaster, cplArray2Assets} from '../icloud/icloud-photos/query-parser.js';
-import {ProcessingAlbumQueue, ProcessingDataQueue} from '../sync-engine/sync-engine.js';
-
-type LibraryAlbums = {
-    [key: string]: Album // Keyed by getUUID
-}
-
-type LibraryAssets = {
-    [key: string]: Asset // Keyed by getUUID
-}
+import {CPLAlbum, CPLAsset, CPLMaster} from '../icloud/icloud-photos/query-parser.js';
+import {PEntity, PLibraryEntity, PLibraryProcessingQueues} from './model/photos-entity.js';
 
 type Library = {
-    albums: LibraryAlbums,
-    assets: LibraryAssets
+    albums: PLibraryEntity<Album>,
+    assets: PLibraryEntity<Asset>
 }
 
 /**
@@ -30,7 +22,7 @@ export class PhotosLibrary extends EventEmitter {
     /**
      * Local data structure
      */
-    private lib: Library;
+    lib: Library;
 
     /**
      * Default logger for the class
@@ -52,7 +44,7 @@ export class PhotosLibrary extends EventEmitter {
             assets: {},
         };
 
-        this.photoDataDir = cliOpts.photo_data_dir;
+        this.photoDataDir = cliOpts.data_dir;
         if (!fssync.existsSync(this.photoDataDir)) {
             this.logger.debug(`${this.photoDataDir} does not exist, creating`);
             fssync.mkdirSync(this.photoDataDir);
@@ -84,8 +76,8 @@ export class PhotosLibrary extends EventEmitter {
         });
     }
 
-    private async loadAssets(): Promise<LibraryAssets> {
-        const libAssets: LibraryAssets = {};
+    private async loadAssets(): Promise<PLibraryEntity<Asset>> {
+        const libAssets: PLibraryEntity<Asset> = {};
         (await fs.readdir(this.assetDir))
             .forEach(fileName => {
                 const fileStat = fssync.statSync(path.format({
@@ -99,9 +91,9 @@ export class PhotosLibrary extends EventEmitter {
         return libAssets;
     }
 
-    private async loadAlbums(): Promise<LibraryAlbums> {
+    private async loadAlbums(): Promise<PLibraryEntity<Album>> {
         // Loading folders
-        const libAlbums: LibraryAlbums = {};
+        const libAlbums: PLibraryEntity<Album> = {};
         (await this.loadAlbum(Album.getRootAlbum(this.photoDataDir)))
             .forEach(album => {
                 libAlbums[album.getUUID()] = album;
@@ -193,61 +185,28 @@ export class PhotosLibrary extends EventEmitter {
     }
 
     /**
-     * This function will update the local library data (mediaRecords) and provide a list instructions, on how to achieve the remote state in the local file system
-     * @param cplAssets - The remote CPLAsset records
-     * @param cplMasters - The remote CPLMaster recrods
-     * @returns A touple consisting of: An array that includes all local assets that need to be deleted | An array that includes all remote assets that need to be downloaded
+     * This function diffs two entity arrays (can be either albums or assets) and returns the corresponding processing queue
+     * @param remoteEnties - The entities fetched from a remote state
+     * @param localEntities - The local entity library
      */
-    async diffLibraryData(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Promise<ProcessingDataQueue> {
-        // List all files in fs using name instead of currentLibraryRecords
-        // fssync.readdirSync()
-        this.logger.debug(`Diffing library data with remote data`);
-
-        // 'loading' local library
-        const toBeDeleted: Asset[] = [];
-        const toBeAdded: Asset[] = [];
-
-        const remoteAssets = cplArray2Assets(cplAssets, cplMasters);
-
-        remoteAssets.forEach(remoteAsset => {
-            const localAsset = this.lib.assets[remoteAsset.getUUID()];
-            const assetDiff = Asset.getAssetDiff(localAsset, remoteAsset);
-            if (!assetDiff[0] && !assetDiff[1]) {
-                // Local asset matches remote asset, therefore no diff
-                delete this.lib.assets[remoteAsset.getUUID()];
+    getProcessingQueues<T>(remoteEnties: PEntity<T>[], localEntities: PLibraryEntity<T>): PLibraryProcessingQueues<T> {
+        this.logger.debug(`Getting processing queues`);
+        const toBeAdded: T[] = [];
+        remoteEnties.forEach(remoteEntity => {
+            const localEntity = localEntities[remoteEntity.getUUID()];
+            if (!localEntity || !remoteEntity.equal(localEntity)) {
+                // No local entity OR local entity does not match remote entity -> Remote asset will be added & local asset will not be removed from deletion queue
+                this.logger.debug(`Adding entity ${remoteEntity.getDisplayName()}`);
+                toBeAdded.push(remoteEntity.unpack());
             } else {
-                if (assetDiff[0]) { // Needs to be deleted
-                    this.logger.debug(`Deleting asset ${assetDiff[0].getUUID()}`);
-                    toBeDeleted.push(assetDiff[0]);
-                    delete this.lib.assets[assetDiff[0].getUUID()];
-                }
-
-                if (assetDiff[1]) { // Needs to be added
-                    this.logger.debug(`Adding asset ${assetDiff[1].getUUID()}`);
-                    toBeAdded.push(assetDiff[1]);
-                }
+                // Local asset matches remote asset, nothing to do, but preventing local asset to be deleted
+                this.logger.debug(`Keeping entity ${remoteEntity.getDisplayName()}`);
+                delete localEntities[remoteEntity.getUUID()];
             }
         });
-
         // The original library should only hold those records, that have not been referenced by the remote state, removing them
-        Object.values(this.lib.assets).forEach(staleAsset => {
-            this.logger.debug(`Found stale asset ${staleAsset.getUUID()}`);
-            toBeDeleted.push(staleAsset);
-        });
-
+        const toBeDeleted = Object.values(localEntities);
+        this.logger.debug(`Adding ${toBeAdded.length} remote entities, removing ${toBeDeleted.length} local entities`);
         return [toBeDeleted, toBeAdded];
-    }
-
-    async diffLibraryStructure(cplAlbums: CPLAlbum[]): Promise<ProcessingAlbumQueue> {
-        this.logger.info(`Diffing library structure!`);
-        // Match albums & diff
-        // Go to current root album
-        // List content
-        // Filter cplAlbums by parentId ===
-        const albums: Album[] = [];
-
-        // Saving updated state and queue
-        // this.lib.albums = albums;
-        return [undefined, undefined, albums];
     }
 }

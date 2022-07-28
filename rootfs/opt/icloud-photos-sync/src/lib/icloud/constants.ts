@@ -88,5 +88,5 @@ export const URL = {
 /**
  * Filename of persistent trust token file
  */
-export const TRUST_TOKEN_FILE_NAME = `trust-token.icloud`;
+export const TRUST_TOKEN_FILE_NAME = `.trust-token.icloud`;
 export const TRUST_TOKEN_FILE_ENCODING = `utf8`;

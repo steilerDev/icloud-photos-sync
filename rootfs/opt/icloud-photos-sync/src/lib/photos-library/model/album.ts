@@ -1,4 +1,6 @@
 import {CPLAlbum} from "../../icloud/icloud-photos/query-parser";
+import {DiffFlag} from "../constants";
+import {PEntity} from "./photos-entity";
 
 export enum AlbumType {
     FOLDER = 3,
@@ -13,12 +15,10 @@ export type AlbumAssets = {
     [key: string]: string
 }
 
-type FLAG = `deleted` | `moved` | `added`
-
 /**
  * This class represents a photo album within the library
  */
-export class Album {
+export class Album implements PEntity<Album> {
     uuid: string;
     albumType: AlbumType;
     albumName: string;
@@ -50,13 +50,15 @@ export class Album {
         return this.uuid;
     }
 
-    static fromCPL(cplAlbum: CPLAlbum): Album {
-        return new Album(
+    static async fromCPL(cplAlbum: CPLAlbum): Promise<Album> {
+        const album = new Album(
             cplAlbum.recordName,
             cplAlbum.albumType,
             Buffer.from(cplAlbum.albumNameEnc, `base64`).toString(`utf8`),
             cplAlbum.parentId,
         );
+        album.assets = await cplAlbum.assets;
+        return album;
     }
 
     /**
@@ -68,7 +70,20 @@ export class Album {
         return new Album(``, AlbumType.FOLDER, `iCloud Photos Library`, ``, photoDataDir);
     }
 
-    static getAlbumDiff(localAlbum: Album, remoteAlbum: Album): FLAG {
+    static getAlbumDiff(localAlbum: Album, remoteAlbum: Album): DiffFlag {
         return `deleted`;
+    }
+
+    equal(album: Album): boolean {
+        return album
+            && this.uuid === album.uuid
+            && this.albumType === album.albumType
+            && this.albumName === album.albumName
+            && this.parentAlbumUUID === album.parentAlbumUUID
+            && JSON.stringify(Object.keys(this.assets).sort()) === JSON.stringify(Object.keys(album.assets).sort());
+    }
+
+    unpack(): Album {
+        return this;
     }
 }

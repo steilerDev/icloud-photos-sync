@@ -11,12 +11,7 @@ import fs from 'fs';
 import * as fsPromise from 'fs/promises';
 import {pEvent} from 'p-event';
 import PQueue from 'p-queue';
-
-type RemoteData = [CPLAsset[], CPLMaster[]]
-type RemoteAlbums = CPLAlbum[]
-
-export type ProcessingDataQueue = [toBeDeleted: Asset[], toBeAdded: Asset[]]
-export type ProcessingAlbumQueue = [toBeDeleted: Album[], toBeMoved: Album[], toBeAdded: Album[]]
+import {PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
 
 /**
  * This class handles the photos sync
@@ -44,36 +39,77 @@ export class SyncEngine extends EventEmitter {
         this.logger.info(`Starting sync`);
 
         return this.fetchState()
-            .then(([remoteData, remoteStructure]) => this.diffState(remoteData, remoteStructure))
-            .then(([dataQueue, albumQueue]) => this.writeState(dataQueue, albumQueue));
+            .then(([remoteAssets, remoteAlbums]) => this.diffState(remoteAssets, remoteAlbums))
+            .then(([assetQueue, albumQueue]) => this.writeState(assetQueue, albumQueue));
     }
 
-    async fetchState(): Promise<[RemoteData, RemoteAlbums]> {
+    async fetchState(): Promise<[Asset[], Album[]]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH);
         this.logger.info(`Fetching remote iCloud state`);
         return Promise.all([
-            this.iCloud.photos.fetchAllPictureRecords(),
-            this.iCloud.photos.fetchAllAlbumRecords(),
+            this.iCloud.photos.fetchAllPictureRecords()
+                .then(([cplAssets, cplMasters]) => SyncEngine.convertCPLAssets(cplAssets, cplMasters)),
+            this.iCloud.photos.fetchAllAlbumRecords()
+                .then(cplAlbums => SyncEngine.convertCPLAlbums(cplAlbums)),
         ]);
     }
 
-    async diffState(remoteData: RemoteData, remoteAlbums: RemoteAlbums): Promise<[ProcessingDataQueue, ProcessingAlbumQueue]> {
+    async diffState(remoteAssets: Asset[], remoteAlbums: Album[]): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
         this.logger.info(`Diffing state`);
         return Promise.all([
-            this.photosLibrary.diffLibraryData(remoteData[0], remoteData[1]),
-            this.photosLibrary.diffLibraryStructure(remoteAlbums),
+            this.photosLibrary.getProcessingQueues(remoteAssets, this.photosLibrary.lib.assets),
+            this.photosLibrary.getProcessingQueues(remoteAlbums, this.photosLibrary.lib.albums),
         ]);
     }
 
-    async writeState(dataQueue: ProcessingDataQueue, albumQueue: ProcessingAlbumQueue) {
-        this.emit(SYNC_ENGINE.EVENTS.WRITE);
-        this.logger.info(`Writing state`);
-        return this.writeLibraryData(dataQueue)
-            .then(() => this.writeLibraryStructure(albumQueue));
+    /**
+     * Transforms a matching CPLAsset/CPLMaster pair to an array of associated assets
+     * @param asset - The given asset
+     * @param master - The given master
+     * @returns An array of all containing assets
+     */
+    static convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Asset[] {
+        const cplMasterRecords = {};
+        cplMasters.forEach(masterRecord => {
+            cplMasterRecords[masterRecord.recordName] = masterRecord;
+        });
+        const remoteAssets: Asset[] = [];
+        cplAssets.forEach(asset => {
+            const master = cplMasterRecords[asset.masterRef];
+            if (master?.resource && master?.resourceType) {
+                remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, master.modified));
+            }
+
+            if (asset?.resource && asset?.resourceType) {
+                remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, asset.modified));
+            }
+        });
+        return remoteAssets;
     }
 
-    async writeLibraryData(processingQueue: ProcessingDataQueue) {
+    /**
+     * Transforms a CPLAlbum into an array of Albums
+     * @param cplAlbums - The given CPL Album
+     * @returns Once settled, a completely populated Album array
+     */
+    static async convertCPLAlbums(cplAlbums: CPLAlbum[]) : Promise<Album[]> {
+        const remoteAlbums: Album[] = [];
+        for (const cplAlbum of cplAlbums) {
+            remoteAlbums.push(await Album.fromCPL(cplAlbum));
+        }
+
+        return remoteAlbums;
+    }
+
+    async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
+        this.emit(SYNC_ENGINE.EVENTS.WRITE);
+        this.logger.info(`Writing state`);
+        return this.writeAssets(assetQueue)
+            .then(() => this.writeAlbums(albumQueue));
+    }
+
+    async writeAssets(processingQueue: PLibraryProcessingQueues<Asset>) {
         const toBeDeleted = processingQueue[0];
         const toBeAdded = processingQueue[1];
         this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
@@ -136,7 +172,7 @@ export class SyncEngine extends EventEmitter {
         return false;
     }
 
-    async writeLibraryStructure(processingQueue: ProcessingAlbumQueue) {
+    async writeAlbums(processingQueue: PLibraryProcessingQueues<Album>) {
         this.logger.info(`Writing lib structure!`);
         // Get root folder & local root folder
         // compare content

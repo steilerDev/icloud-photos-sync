@@ -5,3 +5,5 @@ export enum EVENTS {
     READY = `ready`,
     ERROR = `error`
 }
+
+export type DiffFlag = `deleted` | `moved` | `added`

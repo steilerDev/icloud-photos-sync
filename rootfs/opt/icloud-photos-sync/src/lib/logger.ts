@@ -23,7 +23,7 @@ const LOG_FILE_NAME = `icloud-photos-sync.log`;
  */
 export function setupLogger(cliOpts: OptionValues): void {
     const logFile = path.format({
-        dir: cliOpts.app_data_dir,
+        dir: cliOpts.data_dir,
         base: LOG_FILE_NAME,
     });
 
