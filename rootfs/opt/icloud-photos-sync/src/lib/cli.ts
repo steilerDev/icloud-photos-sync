@@ -13,7 +13,13 @@ export class CLIInterface {
     static instance: CLIInterface;
 
     constructor(iCloud: iCloud, syncEngine: SyncEngine) {
-        this.progressBar = new SingleBar({}, Presets.rect);
+        this.progressBar = new SingleBar({
+            etaAsynchronousUpdate: true,
+            etaBuffer: 20,
+            format: ' {bar} {percentage}% | Elapsed: {duration_formatted} | ETA: {eta_formatted} | {value}/{total}',
+            barCompleteChar: '\u25A0',
+            barIncompleteChar: ' '
+        });
         this.setupCLIiCloudInterface(iCloud);
         this.setupCLISyncEngineInterface(syncEngine);
 
@@ -114,16 +120,26 @@ export class CLIInterface {
             console.log(chalk.red(`Unexpected error: ${msg}`));
         });
 
-        
+
     }
 
     setupCLISyncEngineInterface(syncEngine: SyncEngine) {
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH, () => {
-            console.log(chalk.white(`Fetching remote iCloud Library state`));
+            console.log(chalk.white(`Loading local state & fetching remote iCloud Library state`));
         });
         syncEngine.on(SYNC_ENGINE.EVENTS.DIFF, () => {
             console.log(chalk.white(`Diffing remote with local state`));
         });
+
+        syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_COMPLETED, (localAssetCount, localAlbumCount, remoteAssetCount, remoteAlbumCount) => {
+            console.log(chalk.white(`Local state:`));
+            console.log(chalk.gray(`    ${localAssetCount} local assets`))
+            console.log(chalk.gray(`    ${localAlbumCount} local albums`))
+            console.log(chalk.white(`Remote state:`));
+            console.log(chalk.gray(`    ${remoteAssetCount} remote assets`))
+            console.log(chalk.gray(`    ${remoteAlbumCount} remote albums`))
+        });
+
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, (toBeDeletedCount, toBeAddedCount) => {
             console.log(chalk.cyan(`Downloading ${toBeAddedCount} remote assets, removing ${toBeDeletedCount} local assets`));
             this.progressBar.start(toBeAddedCount, 0);

@@ -51,7 +51,10 @@ export class SyncEngine extends EventEmitter {
             this.logger.info(`Performing sync, try #${retryCount}`);
 
             const [remoteAssets, remoteAlbums] = await this.fetchState();
+            this.emit(SYNC_ENGINE.EVENTS.FETCH_COMPLETED, this.photosLibrary.getAssetCount(), this.photosLibrary.getAlbumCount(), remoteAssets.length, remoteAlbums.length)
+
             const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums);
+
             try {
                 await this.writeState(assetQueue, albumQueue);
             } catch (err) {
