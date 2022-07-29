@@ -232,7 +232,7 @@ export class SyncEngine extends EventEmitter {
 
     async writeAlbums(processingQueue: PLibraryProcessingQueues<Album>) {
         this.logger.info(`Writing lib structure!`);
-        this.emit(SYNC_ENGINE.EVENTS.APPLY_STRUCTURE);
+        this.emit(SYNC_ENGINE.EVENTS.APPLY_STRUCTURE, processingQueue[0].length, processingQueue[1].length);
         // Get root folder & local root folder
         // compare content
         // repeate for every other folder

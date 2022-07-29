@@ -5,7 +5,7 @@ import {iCloud} from './icloud/icloud.js';
 import * as ICLOUD from './icloud/constants.js';
 import * as SYNC_ENGINE from './sync-engine/constants.js';
 import {SyncEngine} from './sync-engine/sync-engine.js';
-import {Presets, SingleBar} from 'cli-progress';
+import {SingleBar} from 'cli-progress';
 import {exit} from 'process';
 
 export class CLIInterface {
@@ -23,6 +23,17 @@ export class CLIInterface {
         this.setupCLIiCloudInterface(iCloud);
         this.setupCLISyncEngineInterface(syncEngine);
 
+        process.on(`SIGTERM`, () => {
+            console.log(`Received SIGTERM.`);
+            process.exit(1)
+            // Save photos db
+            // stop sync engine
+        });
+
+        process.on("SIGINT", () => {
+            console.log(`Received SIGINT`)
+            process.exit(1)
+        })
 
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.name}, v.${PACKAGE_INFO.version}!`));
         console.log(chalk.green(`Made with <3 by steilerDev`));
@@ -132,12 +143,8 @@ export class CLIInterface {
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_COMPLETED, (localAssetCount, localAlbumCount, remoteAssetCount, remoteAlbumCount) => {
-            console.log(chalk.white(`Local state:`));
-            console.log(chalk.gray(`    ${localAssetCount} local assets`))
-            console.log(chalk.gray(`    ${localAlbumCount} local albums`))
-            console.log(chalk.white(`Remote state:`));
-            console.log(chalk.gray(`    ${remoteAssetCount} remote assets`))
-            console.log(chalk.gray(`    ${remoteAlbumCount} remote albums`))
+            console.log(chalk.green(`Loaded Local state: ${localAssetCount} assets & ${localAlbumCount} albums`))
+            console.log(chalk.green(`Fetched Remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`))
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, (toBeDeletedCount, toBeAddedCount) => {
@@ -150,8 +157,8 @@ export class CLIInterface {
             this.progressBar.increment(1, recordName);
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.APPLY_STRUCTURE, () => {
-            console.log(chalk.cyan(`Applying remote structure to local file system`));
+        syncEngine.on(SYNC_ENGINE.EVENTS.APPLY_STRUCTURE, (toBeDeletedCount, toBeAddedCount) => {
+            console.log(chalk.cyan(`Applying remote structure to local file system, by adding ${toBeAddedCount} and deleting ${toBeDeletedCount} albums`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {

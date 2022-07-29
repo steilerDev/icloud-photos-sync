@@ -14,15 +14,6 @@ const icloud = new iCloud(cliOpts);
 const photosLibrary = new PhotosLibrary(cliOpts);
 const syncEngine: SyncEngine = new SyncEngine(icloud, photosLibrary, cliOpts);
 
-process.on(`SIGTERM`, () => {
-    console.log(`Received SIGTERM.`);
-    // Save photos db
-    // stop sync engine
-});
-
-process.on("SIGINT", () => {
-    console.log(`Received SIGINT`)
-})
 
 // Setting up CLI Interface
 CLIInterface.createCLIInterface(icloud, syncEngine);
