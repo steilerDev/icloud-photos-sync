@@ -159,7 +159,7 @@ export class SyncEngine extends EventEmitter {
     }
 
     async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
-        this.emit(SYNC_ENGINE.EVENTS.WRITE, assetQueue[1].length);
+        this.emit(SYNC_ENGINE.EVENTS.WRITE, assetQueue[0].length, assetQueue[1].length);
         this.logger.info(`Writing state`);
         return this.writeAssets(assetQueue)
             .then(() => this.writeAlbums(albumQueue));

@@ -17,11 +17,6 @@ export class CLIInterface {
         this.setupCLIiCloudInterface(iCloud);
         this.setupCLISyncEngineInterface(syncEngine);
 
-        process.on(`SIGTERM`, () => {
-            console.log(`Received SIGTERM.`);
-            // Save photos db
-            // stop sync engine
-        });
 
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.name}, v.${PACKAGE_INFO.version}!`));
         console.log(chalk.green(`Made with <3 by steilerDev`));
@@ -123,13 +118,11 @@ export class CLIInterface {
         syncEngine.on(SYNC_ENGINE.EVENTS.DIFF, () => {
             console.log(chalk.white(`Diffing remote with local state`));
         });
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, totalValue => {
-            console.log(chalk.cyan(`Downloading ${totalValue} records`));
-            this.progressBar.start(totalValue, 0);
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, (toBeDeletedCount, toBeAddedCount) => {
+            console.log(chalk.cyan(`Downloading ${toBeAddedCount} remote assets, removing ${toBeDeletedCount} local assets`));
+            this.progressBar.start(toBeAddedCount, 0);
         });
-        // SyncEngine.on(SYNC_ENGINE.EVENTS.RECORD_STARTED, (recordName) => {
-        //
-        // })
+
         syncEngine.on(SYNC_ENGINE.EVENTS.RECORD_COMPLETED, recordName => {
             //console.log(`Completed ${recordName}`);
             this.progressBar.increment(1, recordName);
