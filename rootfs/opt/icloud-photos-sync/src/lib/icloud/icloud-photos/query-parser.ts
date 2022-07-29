@@ -41,7 +41,6 @@ export class CPLAsset {
     /**
      * Parses from a record sourced through the API
      * @param cplRecord - The plain JSON object, as returned by the API
-     * @throws An exception that tries to indicate the source of error
      */
     static parseFromQuery(cplRecord: any): CPLAsset {
         if (cplRecord.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
@@ -77,6 +76,9 @@ export class CPLAsset {
     }
 }
 
+/**
+ * CPLMaster is the original file associated to a CPLAsset. This contains the original filename of the file and an unmodified version of the BLOB
+ */
 export class CPLMaster {
     recordName: string; // Hash
     resource: AssetID;
@@ -84,6 +86,10 @@ export class CPLMaster {
     filenameEnc: String;
     modified: number;
 
+    /**
+     * Parses from a record sourced through the API
+     * @param cplRecord - The plain JSON object, as returned by the API
+     */
     static parseFromQuery(cplRecord: any): CPLMaster {
         if (cplRecord.recordType === QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
             const master = new CPLMaster();

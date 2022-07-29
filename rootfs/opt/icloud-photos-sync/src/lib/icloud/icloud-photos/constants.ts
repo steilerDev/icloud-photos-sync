@@ -2,6 +2,9 @@
  * File holding constant values for the iCloud class
  */
 
+/**
+ * Events lifecycle of iCloud-Photos class
+ */
 export enum EVENTS {
     SETUP_COMPLETE = `setup_complete`,
     INDEX_IN_PROGRESS = `index_in_progress`,
@@ -9,6 +12,9 @@ export enum EVENTS {
     ERROR = `error`,
 }
 
+/**
+ * URL paths required to perofrm queries
+ */
 export const PATHS = {
     /**
      * Base Path (between Domain & EXT)
@@ -19,4 +25,9 @@ export const PATHS = {
         LIST: `/zones/list`,
     },
 };
-export const MAX_RECORDS_LIMIT = 198; // It might be 200, but in order to divide by 3 (for albums) and 2 (for all pictures) this is more convenient
+
+/**
+ * The max record limit, requested & returned by iCloud.
+ * Should be 200, but in order to divide by 3 (for albums) and 2 (for all pictures) 198 is more convenient
+ */
+export const MAX_RECORDS_LIMIT = 198;

@@ -2,12 +2,10 @@ import log from 'loglevel';
 import * as path from 'path';
 import * as PHOTOS_LIBRARY from './constants.js';
 import {Album, AlbumType} from './model/album.js';
-import {EventEmitter} from 'events';
 import * as fs from 'fs/promises';
 import * as fssync from 'fs';
 import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
-import {CPLAlbum, CPLAsset, CPLMaster} from '../icloud/icloud-photos/query-parser.js';
 import {PEntity, PLibraryEntity, PLibraryProcessingQueues} from './model/photos-entity.js';
 
 type Library = {
@@ -18,7 +16,7 @@ type Library = {
 /**
  * This class holds the local data structure
  */
-export class PhotosLibrary extends EventEmitter {
+export class PhotosLibrary {
     /**
      * Local data structure
      */
@@ -38,7 +36,6 @@ export class PhotosLibrary extends EventEmitter {
     ready: Promise<void>;
 
     constructor(cliOpts: OptionValues) {
-        super();
         this.lib = {
             albums: {},
             assets: {},
@@ -55,24 +52,16 @@ export class PhotosLibrary extends EventEmitter {
             this.logger.debug(`${this.assetDir} does not exist, creating`);
             fssync.mkdirSync(this.assetDir);
         }
-
-        this.ready = new Promise<void>((resolve, reject) => {
-            this.on(PHOTOS_LIBRARY.EVENTS.READY, resolve);
-            this.on(PHOTOS_LIBRARY.EVENTS.ERROR, reject);
-        });
     }
 
     async load() {
         this.logger.debug(`Loading library from disc`);
-
         return Promise.all([
             this.loadAssets(),
             this.loadAlbums(),
         ]).then(loadedLibrary => {
             this.lib.assets = loadedLibrary[0];
             this.lib.albums = loadedLibrary[1];
-        }).then(() => {
-            this.emit(PHOTOS_LIBRARY.EVENTS.READY);
         });
     }
 
@@ -131,8 +120,8 @@ export class PhotosLibrary extends EventEmitter {
                 const fullPath = path.join(album.albumPath, target);
                 const folderType = await this.readAlbumTypeFromPath(fullPath);
 
-                if(folderType === AlbumType.ARCHIVED) {
-                    this.logger.warn(`Ignoring archived folder ${uuid}`)
+                if (folderType === AlbumType.ARCHIVED) {
+                    this.logger.warn(`Ignoring archived folder ${uuid}`);
                 } else {
                     const loadedAlbum = new Album(uuid, folderType, link.name, album.getUUID(), fullPath);
                     albums.push(...await this.loadAlbum(loadedAlbum));

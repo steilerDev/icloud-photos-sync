@@ -3,10 +3,9 @@ import http from 'http';
 import log from 'loglevel';
 import * as MFA_SERVER from './constants.js';
 
-const MFA_ENDPOINT = `/mfa`;
-
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
+ * @todo - Implement re-request of MFA code
  */
 export class MFAServer extends EventEmitter {
     /**
@@ -43,7 +42,7 @@ export class MFAServer extends EventEmitter {
         });
 
         this.server.listen(this.port, () => {
-            this.logger.info(`MFA server listening on port ${this.port}, awaiting POST request on ${MFA_ENDPOINT}`);
+            this.logger.info(`MFA server listening on port ${this.port}, awaiting POST request on ${MFA_SERVER.MFA_ENDPOINT}`);
         });
     }
 
@@ -53,7 +52,7 @@ export class MFAServer extends EventEmitter {
      * @param res - The HTTP response object
      */
     handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        if (req.url.startsWith(MFA_ENDPOINT) && req.url.match(/\?code=\d{6}$/) && req.method === `POST`) {
+        if (req.url.startsWith(MFA_SERVER.MFA_ENDPOINT) && req.url.match(/\?code=\d{6}$/) && req.method === `POST`) {
             this.logger.debug(`Received MFA: ${req.url}`);
             const mfa: string = req.url.slice(-6);
 

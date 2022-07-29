@@ -15,12 +15,12 @@ const photosLibrary = new PhotosLibrary(cliOpts);
 const syncEngine: SyncEngine = new SyncEngine(icloud, photosLibrary, cliOpts);
 
 // Setting up CLI Interface
-CLIInterface.createCLIInterface(icloud, photosLibrary, syncEngine);
+CLIInterface.createCLIInterface(icloud, syncEngine);
 
 /**
  * Waiting for setup to complete
  */
-await Promise.all([icloud.authenticate(), photosLibrary.load()])
+await icloud.authenticate()
     .catch(err => CLIInterface.fatalError(`Init failed: ${err}`));
 /**
  * Starting sync

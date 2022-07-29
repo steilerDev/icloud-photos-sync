@@ -13,11 +13,7 @@ import {OptionValues} from 'commander';
 
 /**
  * This class holds the iCloud connection
- *
- * Emits:
- *   * 'ready' when the instance is authenticated and ready to process requests
- *
- */
+ * */
 export class iCloud extends EventEmitter {
     /**
      * Authentication object of the current iCloud session

@@ -24,14 +24,6 @@ export class iCloudPhotos extends EventEmitter {
         super();
         this.auth = auth;
         this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, this.checkingIndexingStatus);
-
-        // This.on(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, (progress: string) => {
-        // @todo: Implement retry instead of failure
-        // });
-
-        // this.on(ICLOUD_PHOTOS.EVENTS.ERROR, (msg: string) => {
-
-        // });
     }
 
     /**
@@ -44,6 +36,7 @@ export class iCloudPhotos extends EventEmitter {
 
     /**
      * Starting iCloud Photos service, acquiring all necessary account information stored in iCloudAuth.iCloudPhotosAccount
+     * Will emit SETUP_COMPLETE or ERROR
      */
     setup() {
         this.logger.debug(`Getting iCloud Photos account information`);
@@ -72,6 +65,7 @@ export class iCloudPhotos extends EventEmitter {
 
     /**
      * Checking indexing state of photos service (sync should only safely be performed, after indexing is completed)
+     * Will emit READY, INDEX_IN_PROGRESS or ERROR
      */
     checkingIndexingStatus() {
         this.logger.debug(`Checking Indexing Status of iCloud Photos Account`);
@@ -178,7 +172,7 @@ export class iCloudPhotos extends EventEmitter {
 
     /**
      * Fetches all album records, traversing the directory tree
-     * @returns
+     * @returns An array of all album records in the account
      */
     async fetchAllAlbumRecords(): Promise<CPLAlbum[]> {
         try {
@@ -196,7 +190,7 @@ export class iCloudPhotos extends EventEmitter {
 
                     albumRecords.push(next);
                 } catch (err) {
-                    this.logger.warn(`Unable to process ${next.albumNameEnc}: ${err.message}`);
+                    throw new Error(`Unable to process ${next.albumNameEnc}: ${err.message}`);
                 }
             }
 
@@ -209,7 +203,7 @@ export class iCloudPhotos extends EventEmitter {
     /**
      * Fetching a list of albums identified by their parent. If parent is undefined, all albums without parent will be returned
      * @param parentId - The record name of the parent folder, or empty
-     * @returns An array of folder and album records. Unwanted folders and folder types are filtered out. Albums have their items included
+     * @returns An array of folder and album records. Unwanted folders and folder types are filtered out. Albums have their items included (as a promise)
      */
     async fetchAlbumRecords(parentId?: string): Promise<CPLAlbum[]> {
         let query: Promise<any[]>;
@@ -242,7 +236,7 @@ export class iCloudPhotos extends EventEmitter {
                     return;
                 }
 
-                // Getting associated media records for albums
+                // Getting associated assets for albums
                 if (record.fields.albumType.value === AlbumType.ALBUM) {
                     const albumAssets: Promise<AlbumAssets> = this.fetchAllPictureRecords(record.recordName)
                         .then(cplResult => SyncEngine.convertCPLAssets(cplResult[0], cplResult[1]))
@@ -267,16 +261,14 @@ export class iCloudPhotos extends EventEmitter {
     /**
      * Fetching all pictures associated to an album, identified by parentId
      * @param parentId - The record name of the album, if undefined all pictures will be returned
-     * @returns An array of CPLMaster filtered records containing the RecordName
+     * @returns An array of CPLMaster and CPLAsset records
      */
     async fetchAllPictureRecords(parentId?: string): Promise<[CPLAsset[], CPLMaster[]]> {
         this.logger.debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
         // Getting number of items in folder
         let totalCount = -1;
         try {
-            const indexCountFilter = parentId === undefined
-                ? QueryBuilder.getIndexCountForAllPhotos()
-                : QueryBuilder.getIndexCountFilterForParentId(parentId);
+            const indexCountFilter = QueryBuilder.getIndexCountFilter(parentId);
             const countData = await this.performPromiseQuery(
                 QueryBuilder.RECORD_TYPES.INDEX_COUNT,
                 [indexCountFilter],
@@ -397,10 +389,9 @@ export class iCloudPhotos extends EventEmitter {
     }
 
     /**
-     * Downloads an asset and writes it to the specified folder, using the assets filename
+     * Downloads an asset using the 'stream' method
      * @param asset - The asset to be downloaded
-     * @param targetFolder - The target folder where the file should be saved
-     * @returns A promise, that -once resolved-, contains the data from the axios response (response was made using )
+     * @returns A promise, that -once resolved-, contains the Axios response
      */
     async downloadAsset(asset: Asset): Promise<AxiosResponse<any, any>> {
         this.logger.debug(`Starting download of asset ${asset.fileChecksum}`);

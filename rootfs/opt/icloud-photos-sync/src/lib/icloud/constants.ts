@@ -51,6 +51,9 @@ export enum AUTH_RESPONSE_HEADER {
     AASP_COOKIE = `aasp`
 }
 
+/**
+ * Events lifecycle of the iCloud class
+ */
 export enum EVENTS {
     MFA_REQUIRED = `mfa_req`,
     MFA_RECEIVED = `mfa_rec`,
@@ -61,6 +64,9 @@ export enum EVENTS {
     ERROR = `error`
 }
 
+/**
+ * List of endpoints, required by the iCloud class
+ */
 export const ENPOINT = {
     AUTH: {
         BASE: `https://idmsa.apple.com/appleauth/auth`,
@@ -78,6 +84,9 @@ export const ENPOINT = {
     },
 };
 
+/**
+ * Pre-composing URLs, required by iCloud class
+ */
 export const URL = {
     SIGNIN: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.SIGNIN}`,
     MFA: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA}`,

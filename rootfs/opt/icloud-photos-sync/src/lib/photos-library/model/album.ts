@@ -1,5 +1,4 @@
 import {CPLAlbum} from "../../icloud/icloud-photos/query-parser";
-import {DiffFlag} from "../constants";
 import {PEntity} from "./photos-entity";
 
 export enum AlbumType {
@@ -68,10 +67,6 @@ export class Album implements PEntity<Album> {
      */
     static getRootAlbum(photoDataDir: string): Album {
         return new Album(``, AlbumType.FOLDER, `iCloud Photos Library`, ``, photoDataDir);
-    }
-
-    static getAlbumDiff(localAlbum: Album, remoteAlbum: Album): DiffFlag {
-        return `deleted`;
     }
 
     equal(album: Album): boolean {

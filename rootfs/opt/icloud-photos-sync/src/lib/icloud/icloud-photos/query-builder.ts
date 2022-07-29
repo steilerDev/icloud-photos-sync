@@ -38,6 +38,10 @@ export const DESIRED_KEYS = {
     ENCODED_ALBUM_NAME: `albumNameEnc`,
     PARENT_ID: `parentId`,
 };
+
+/**
+ * Desired keys, requested in queries in order for this application to be functioning
+ */
 export const QUERY_KEYS = [
     DESIRED_KEYS.RECORD_NAME,
     DESIRED_KEYS.ORIGINAL_RESOURCE,
@@ -86,6 +90,11 @@ export function getDirectionFilterForDirection(direction: string = `ASCENDING`):
     };
 }
 
+/**
+ * Builds a filter, that will define the start rank of the query
+ * @param startRank - The startRank/index of the query
+ * @returns The filter object
+ */
 export function getStartRankFilterForStartRank(startRank: number): any {
     return {
         fieldName: `startRank`,
@@ -97,18 +106,23 @@ export function getStartRankFilterForStartRank(startRank: number): any {
     };
 }
 
-export function getIndexCountFilterForParentId(parentId: string): any {
-    return {
-        fieldName: `indexCountID`,
-        comparator: `IN`,
-        fieldValue: {
-            value: [`CPLContainerRelationNotDeletedByAssetDate:${parentId}`],
-            type: `STRING_LIST`,
-        },
-    };
-}
+/**
+ * Builds a filter, that will request the index count of a given folder, if parentId is undefined, all photos will be queried
+ * @param parentId - The parentId of the folder
+ * @returns The filter object
+ */
+export function getIndexCountFilter(parentId?: string): any {
+    if (parentId) {
+        return {
+            fieldName: `indexCountID`,
+            comparator: `IN`,
+            fieldValue: {
+                value: [`CPLContainerRelationNotDeletedByAssetDate:${parentId}`],
+                type: `STRING_LIST`,
+            },
+        };
+    }
 
-export function getIndexCountForAllPhotos(): any {
     return {
         fieldName: `indexCountID`,
         comparator: `IN`,

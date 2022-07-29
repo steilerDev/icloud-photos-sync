@@ -2,7 +2,6 @@ import path from 'path';
 import {AssetID} from '../../icloud/icloud-photos/query-parser.js';
 import {FileType} from './file-type.js';
 import {Stats} from 'fs';
-import {DiffFlag} from '../constants.js';
 import {PEntity} from './photos-entity.js';
 
 export class Asset implements PEntity<Asset> {
@@ -86,11 +85,11 @@ export class Asset implements PEntity<Asset> {
         return this.verifyChecksum(file) && this.verifySize(file);
     }
 
-    verifySize(file: Buffer): boolean {
+    private verifySize(file: Buffer): boolean {
         return file.byteLength === this.size;
     }
 
-    verifyChecksum(file: Buffer): boolean {
+    private verifyChecksum(file: Buffer): boolean {
         return true;
         /*
         Const hashes = [

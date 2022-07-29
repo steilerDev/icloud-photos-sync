@@ -4,20 +4,17 @@ import {PACKAGE_INFO} from './package.js';
 import {iCloud} from './icloud/icloud.js';
 import * as ICLOUD from './icloud/constants.js';
 import * as SYNC_ENGINE from './sync-engine/constants.js';
-import * as PHOTOS_LIBRARY from './photos-library/constants.js';
 import {SyncEngine} from './sync-engine/sync-engine.js';
 import {SingleBar} from 'cli-progress';
-import {PhotosLibrary} from './photos-library/photos-library.js';
 import {exit} from 'process';
 
 export class CLIInterface {
     progressBar: SingleBar;
     static instance: CLIInterface;
 
-    constructor(iCloud: iCloud, photosLibrary: PhotosLibrary, syncEngine: SyncEngine) {
+    constructor(iCloud: iCloud, syncEngine: SyncEngine) {
         this.progressBar = new SingleBar({});
         this.setupCLIiCloudInterface(iCloud);
-        this.setupCLIPhotosLibraryInterface(photosLibrary);
         this.setupCLISyncEngineInterface(syncEngine);
 
         process.on(`SIGTERM`, () => {
@@ -37,9 +34,9 @@ export class CLIInterface {
      * @param photosLibrary - The Photos Library object
      * @param syncEngine - The Sync Engine object
      */
-    static createCLIInterface(iCloud: iCloud, photosLibrary: PhotosLibrary, syncEngine: SyncEngine) {
+    static createCLIInterface(iCloud: iCloud, syncEngine: SyncEngine) {
         if (!this.instance) {
-            this.instance = new CLIInterface(iCloud, photosLibrary, syncEngine);
+            this.instance = new CLIInterface(iCloud, syncEngine);
         }
     }
 
@@ -137,18 +134,6 @@ export class CLIInterface {
 
         syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
             console.log(chalk.red(`Sync engine: Unexpected error: ${msg}`));
-        });
-    }
-
-    setupCLIPhotosLibraryInterface(photosLibrary: PhotosLibrary) {
-        photosLibrary.on(PHOTOS_LIBRARY.EVENTS.READY, () => {
-            console.log(`Local Photos library ready - loaded ${photosLibrary.getAlbumCount()} albums and ${photosLibrary.getAssetCount()} records`);
-        });
-        photosLibrary.on(PHOTOS_LIBRARY.EVENTS.SAVED, () => {
-            console.log(chalk.green(`Local Photos library saved`));
-        });
-        photosLibrary.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
-            console.log(chalk.red(`Local Photos library: Unexpected error: ${msg}`));
         });
     }
 }
