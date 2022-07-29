@@ -90,7 +90,7 @@ export class Asset implements PEntity<Asset> {
     }
 
     private verifyChecksum(file: Buffer): boolean {
-        return true;
+        return file !== undefined;
         /*
         Const hashes = [
             `BLAKE2b512`,

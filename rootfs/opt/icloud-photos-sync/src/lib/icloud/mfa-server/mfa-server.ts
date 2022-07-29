@@ -5,7 +5,7 @@ import * as MFA_SERVER from './constants.js';
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
- * @todo - Implement re-request of MFA code
+ * todo - Implement re-request of MFA code
  */
 export class MFAServer extends EventEmitter {
     /**

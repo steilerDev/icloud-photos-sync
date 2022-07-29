@@ -65,9 +65,9 @@ export class SyncEngine extends EventEmitter {
                 if (!retrySync) {
                     throw err;
                 }
-                
-                if(this.maxRetry !== -1 && this.maxRetry <= retryCount) {
-                    throw new Error(`Maximum amount of re-tries reached (${this.maxRetry}), aborting!`)
+
+                if (this.maxRetry !== -1 && this.maxRetry <= retryCount) {
+                    throw new Error(`Maximum amount of re-tries reached (${this.maxRetry}), aborting!`);
                 }
             }
         }
