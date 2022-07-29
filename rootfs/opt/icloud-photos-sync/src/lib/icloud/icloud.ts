@@ -85,6 +85,7 @@ export class iCloud extends EventEmitter {
      */
     async authenticate(): Promise<void> {
         this.logger.info(`Authenticating user`);
+        this.emit(ICLOUD.EVENTS.AUTHENTICATION_STARTED)
 
         const config: AxiosRequestConfig = {
             headers: ICLOUD.DEFAULT_AUTH_HEADER,

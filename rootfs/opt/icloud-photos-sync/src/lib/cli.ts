@@ -82,12 +82,16 @@ export class CLIInterface {
      * Listen to iCloud events and provide CLI output
      */
     setupCLIiCloudInterface(iCloud: iCloud) {
+        iCloud.on(ICLOUD.EVENTS.AUTHENTICATION_STARTED, () => {
+            console.log(chalk.white(`Authenticating user...`));
+        });
+
         iCloud.on(ICLOUD.EVENTS.AUTHENTICATED, () => {
             console.log(chalk.white(`User authenticated`));
         });
 
         iCloud.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
-            console.log(chalk.yellowBright(`MFA code required`));
+            console.log(chalk.yellowBright(`MFA code required, waiting for input`));
         });
 
         iCloud.on(ICLOUD.EVENTS.MFA_RECEIVED, () => {
@@ -99,7 +103,7 @@ export class CLIInterface {
         });
 
         iCloud.on(ICLOUD.EVENTS.ACCOUNT_READY, () => {
-            console.log(chalk.whiteBright(`Sign in successful`));
+            console.log(chalk.whiteBright(`Sign in successful!`));
         });
 
         iCloud.on(ICLOUD.EVENTS.READY, () => {
@@ -109,6 +113,8 @@ export class CLIInterface {
         iCloud.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
             console.log(chalk.red(`Unexpected error: ${msg}`));
         });
+
+        
     }
 
     setupCLISyncEngineInterface(syncEngine: SyncEngine) {

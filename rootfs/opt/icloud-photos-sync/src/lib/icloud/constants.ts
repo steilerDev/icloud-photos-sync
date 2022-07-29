@@ -55,6 +55,7 @@ export enum AUTH_RESPONSE_HEADER {
  * Events lifecycle of the iCloud class
  */
 export enum EVENTS {
+    AUTHENTICATION_STARTED = `auth_started`,
     MFA_REQUIRED = `mfa_req`,
     MFA_RECEIVED = `mfa_rec`,
     AUTHENTICATED = `auth`,
