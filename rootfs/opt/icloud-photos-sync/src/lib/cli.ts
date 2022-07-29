@@ -5,7 +5,7 @@ import {iCloud} from './icloud/icloud.js';
 import * as ICLOUD from './icloud/constants.js';
 import * as SYNC_ENGINE from './sync-engine/constants.js';
 import {SyncEngine} from './sync-engine/sync-engine.js';
-import {SingleBar} from 'cli-progress';
+import {Presets, SingleBar} from 'cli-progress';
 import {exit} from 'process';
 
 export class CLIInterface {
@@ -13,7 +13,7 @@ export class CLIInterface {
     static instance: CLIInterface;
 
     constructor(iCloud: iCloud, syncEngine: SyncEngine) {
-        this.progressBar = new SingleBar({});
+        this.progressBar = new SingleBar({}, Presets.rect);
         this.setupCLIiCloudInterface(iCloud);
         this.setupCLISyncEngineInterface(syncEngine);
 

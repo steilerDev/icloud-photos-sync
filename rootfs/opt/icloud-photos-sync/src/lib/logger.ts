@@ -28,10 +28,11 @@ export function setupLogger(cliOpts: OptionValues): void {
     });
 
     if (!cliOpts.log_to_cli && fs.existsSync(logFile)) {
-        fs.rmSync(logFile);
+        fs.truncateSync(logFile)
     }
 
     const originalFactory = log.methodFactory;
+
     log.methodFactory = function (methodName, logLevel, loggerName) {
         return function (message) {
             if (cliOpts.log_to_cli) {
