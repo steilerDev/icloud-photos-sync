@@ -30,11 +30,15 @@ export class SyncEngine extends EventEmitter {
     syncQueue: PQueue;
     syncQueueCCY: number;
 
+    maxRetry: number;
+
     constructor(iCloud: iCloud, photosLibrary: PhotosLibrary, cliOpts: OptionValues) {
         super();
         this.iCloud = iCloud;
         this.photosLibrary = photosLibrary;
         this.syncQueueCCY = cliOpts.download_threads;
+
+        this.maxRetry = cliOpts.max_retries;
     }
 
     async sync() {
@@ -60,6 +64,10 @@ export class SyncEngine extends EventEmitter {
                 retrySync = this.checkError(err);
                 if (!retrySync) {
                     throw err;
+                }
+                
+                if(this.maxRetry !== -1 && this.maxRetry <= retryCount) {
+                    throw new Error(`Maximum amount of re-tries reached (${this.maxRetry}), aborting!`)
                 }
             }
         }

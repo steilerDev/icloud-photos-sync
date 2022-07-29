@@ -70,7 +70,10 @@ export class CLIInterface {
                 .makeOptionMandatory(true))
             .addOption(new Option(`-t, --download_threads <number>`, `Sets the number of download threads`)
                 .env(`DOWNLOAD_THREADS`)
-                .default(5));
+                .default(5))
+            .addOption(new Option(`-r, --max_retries <number>`, `Sets the number of maximum retries upon an error (-1 means that it will always retry)`)
+                .env(`DOWNLOAD_THREADS`)
+                .default(-1));
         program.parse();
         return program.opts();
     }
