@@ -43,10 +43,10 @@ export class SyncEngine extends EventEmitter {
 
     async sync() {
         this.logger.info(`Starting sync`);
-        let retrySync = true;
+        let syncInProgress = true;
         let retryCount = 0;
-        while (retrySync) {
-            retrySync = false;
+        while (syncInProgress) {
+            syncInProgress = false;
             retryCount++;
             this.logger.info(`Performing sync, try #${retryCount}`);
 
@@ -61,8 +61,8 @@ export class SyncEngine extends EventEmitter {
                     this.syncQueue.clear();
                 }
 
-                retrySync = this.checkError(err);
-                if (!retrySync) {
+                syncInProgress = this.checkError(err);
+                if (!syncInProgress) {
                     throw err;
                 }
 
@@ -71,6 +71,8 @@ export class SyncEngine extends EventEmitter {
                 }
             }
         }
+        this.logger.info(`Completed sync!`)
+        this.emit(SYNC_ENGINE.EVENTS.DONE)
     }
 
     /**
@@ -146,7 +148,7 @@ export class SyncEngine extends EventEmitter {
     }
 
     async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
-        this.emit(SYNC_ENGINE.EVENTS.WRITE);
+        this.emit(SYNC_ENGINE.EVENTS.WRITE, assetQueue[1].length);
         this.logger.info(`Writing state`);
         return this.writeAssets(assetQueue)
             .then(() => this.writeAlbums(albumQueue));
@@ -188,6 +190,7 @@ export class SyncEngine extends EventEmitter {
                         throw new Error(`Unable to verify asset ${asset.getDisplayName()}`);
                     } else {
                         this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
+                        this.emit(SYNC_ENGINE.EVENTS.RECORD_COMPLETED, asset.getDisplayName())
                     }
                 });
         }
@@ -208,6 +211,7 @@ export class SyncEngine extends EventEmitter {
 
     async writeAlbums(processingQueue: PLibraryProcessingQueues<Album>) {
         this.logger.info(`Writing lib structure!`);
+        this.emit(SYNC_ENGINE.EVENTS.APPLY_STRUCTURE);
         // Get root folder & local root folder
         // compare content
         // repeate for every other folder

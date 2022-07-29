@@ -124,15 +124,23 @@ export class CLIInterface {
             console.log(chalk.white(`Diffing remote with local state`));
         });
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, totalValue => {
-            console.log(chalk.cyan(`Downloading records`));
+            console.log(chalk.cyan(`Downloading ${totalValue} records`));
             this.progressBar.start(totalValue, 0);
         });
         // SyncEngine.on(SYNC_ENGINE.EVENTS.RECORD_STARTED, (recordName) => {
         //
         // })
         syncEngine.on(SYNC_ENGINE.EVENTS.RECORD_COMPLETED, recordName => {
-            console.log(`Completed ${recordName}`);
+            //console.log(`Completed ${recordName}`);
             this.progressBar.increment(1, recordName);
+        });
+
+        syncEngine.on(SYNC_ENGINE.EVENTS.APPLY_STRUCTURE, () => {
+            console.log(chalk.cyan(`Applying remote structure to local file system`));
+        });
+
+        syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
+            console.log(chalk.green.bold(`Sync completed!`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {

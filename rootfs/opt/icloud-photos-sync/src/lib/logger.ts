@@ -15,7 +15,7 @@ const colors = {
     ERROR: chalk.red,
 }; **/
 
-const LOG_FILE_NAME = `icloud-photos-sync.log`;
+const LOG_FILE_NAME = `.icloud-photos-sync.log`;
 
 /**
  * Logger setup including the configuration of logger prefix
