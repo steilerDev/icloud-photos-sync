@@ -186,7 +186,6 @@ export class SyncEngine extends EventEmitter {
         if (this.verifyAsset(asset)) {
             this.logger.info(`Asset ${asset.getDisplayName()} already downloaded`);
         } else {
-            this.logger.debug(`Downloading asset ${asset.getDisplayName()}`);
             return this.iCloud.photos.downloadAsset(asset)
                 .then(response => {
                     this.logger.debug(`Writing asset ${asset.getDisplayName()}`);
