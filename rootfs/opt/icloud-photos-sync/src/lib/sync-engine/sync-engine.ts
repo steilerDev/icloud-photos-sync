@@ -55,6 +55,7 @@ export class SyncEngine extends EventEmitter {
             try {
                 await this.writeState(assetQueue, albumQueue);
             } catch (err) {
+                this.emit(SYNC_ENGINE.EVENTS.ERROR, err.message)
                 this.logger.warn(`Error while writing state: ${err.message}`);
                 if (this.syncQueue && this.syncQueue.size > 0) {
                     this.logger.debug(`Error occured with ${this.syncQueue.size} out of ${assetQueue[1].length} assets in download queue`);
@@ -81,9 +82,19 @@ export class SyncEngine extends EventEmitter {
      * @returns - True if a retry should happen
      */
     checkError(err: any): boolean {
-        if (err.name === `AxiosError` && err.code === `ERR_BAD_RESPONSE`) {
-            this.logger.debug(`Axios error with status code 503`);
-            return true;
+        if (err.name === `AxiosError`) {
+            this.logger.debug(`Detected Axios error`)
+
+            if(err.code === `ERR_BAD_RESPONSE`) {
+                this.logger.debug(`Bad server response, retrying...`);
+                return true
+            } else {
+                this.logger.warn(`Unknown Axios error (${err.code}), aborting!`)
+                return false
+            }
+        } else {
+            this.logger.warn(`Unknown error (${JSON.stringify(err)}), aborting!`)
+            return false
         }
     }
 
