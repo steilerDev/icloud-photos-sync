@@ -18,7 +18,8 @@ export class CLIInterface {
             etaBuffer: 20,
             format: ' {bar} {percentage}% | Elapsed: {duration_formatted} | ETA: {eta_formatted} | {value}/{total}',
             barCompleteChar: '\u25A0',
-            barIncompleteChar: ' '
+            barIncompleteChar: ' ',
+            linewrap: true
         });
         this.setupCLIiCloudInterface(iCloud);
         this.setupCLISyncEngineInterface(syncEngine);
@@ -157,6 +158,11 @@ export class CLIInterface {
             this.progressBar.increment(1, recordName);
         });
 
+        syncEngine.on(SYNC_ENGINE.EVENTS.RETRY, () => {
+            this.progressBar.stop()
+            console.log(chalk.grey.bold(`Detected recoverable error, retrying...`));
+        });
+
         syncEngine.on(SYNC_ENGINE.EVENTS.APPLY_STRUCTURE, (toBeDeletedCount, toBeAddedCount) => {
             console.log(chalk.cyan(`Applying remote structure to local file system, by adding ${toBeAddedCount} and deleting ${toBeDeletedCount} albums`));
         });
@@ -165,7 +171,7 @@ export class CLIInterface {
             console.log(chalk.green.bold(`Sync completed!`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
+        syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, (msg) => {
             console.log(chalk.red(`Sync engine: Unexpected error: ${msg}`));
         });
     }

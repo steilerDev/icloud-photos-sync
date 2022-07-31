@@ -8,5 +8,6 @@ export enum EVENTS {
     RECORD_COMPLETED = `record-completed`,
     APPLY_STRUCTURE = `structure`,
     DONE = `done`,
+    RETRY = `retry`,
     ERROR = `error`
 }

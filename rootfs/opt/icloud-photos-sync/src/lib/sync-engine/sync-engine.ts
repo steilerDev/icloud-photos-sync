@@ -42,73 +42,84 @@ export class SyncEngine extends EventEmitter {
     }
 
     async sync() {
-        this.logger.info(`Starting sync`);
-        let syncInProgress = true;
-        let retryCount = 0;
-        while (syncInProgress) {
-            syncInProgress = false;
-            retryCount++;
-            this.logger.info(`Performing sync, try #${retryCount}`);
+        try {
+            this.logger.info(`Starting sync`);
+            let syncFinished = false;
+            let retryCount = 0;
+            while (!syncFinished && (this.maxRetry === -1 || this.maxRetry > retryCount)) {
+                retryCount++;
+                this.logger.info(`Performing sync, try #${retryCount}`);
 
-            const [remoteAssets, remoteAlbums] = await this.fetchState();
-            this.emit(SYNC_ENGINE.EVENTS.FETCH_COMPLETED, this.photosLibrary.getAssetCount(), this.photosLibrary.getAlbumCount(), remoteAssets.length, remoteAlbums.length)
+                const [remoteAssets, remoteAlbums] = await this.fetchState();
+                this.emit(SYNC_ENGINE.EVENTS.FETCH_COMPLETED, this.photosLibrary.getAssetCount(), this.photosLibrary.getAlbumCount(), remoteAssets.length, remoteAlbums.length)
 
-            const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums);
+                const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums);
 
-            try {
-                await this.writeState(assetQueue, albumQueue);
-            } catch (err) {
-                this.emit(SYNC_ENGINE.EVENTS.ERROR, err.message)
-                this.logger.warn(`Error while writing state: ${err.message}`);
-                if (this.syncQueue && this.syncQueue.size > 0) {
-                    this.logger.debug(`Error occured with ${this.syncQueue.size} out of ${assetQueue[1].length} assets in download queue`);
-                    this.syncQueue.clear();
-                }
+                try {
+                    await this.writeState(assetQueue, albumQueue)
+                    syncFinished = true
+                } catch (err) {
+                    this.logger.warn(`Error while writing state: ${err.message}`);
+                    if (this.syncQueue && this.syncQueue.size > 0) {
+                        this.logger.debug(`Error occured with ${this.syncQueue.size} out of ${assetQueue[1].length} assets in download queue`);
+                        this.syncQueue.clear();
+                    }
 
-                syncInProgress = this.checkError(err);
-                if (!syncInProgress) {
-                    throw err;
-                }
-
-                if (this.maxRetry !== -1 && this.maxRetry <= retryCount) {
-                    throw new Error(`Maximum amount of re-tries reached (${this.maxRetry}), aborting!`);
+                    if (this.checkFatalError(err)) {
+                        throw err;
+                    } else {
+                        this.emit(SYNC_ENGINE.EVENTS.RETRY)
+                    }
                 }
             }
+
+            if(syncFinished) {
+                this.logger.info(`Completed sync!`)
+                this.emit(SYNC_ENGINE.EVENTS.DONE)
+            } else {
+                throw new Error(`Sync did not complete succesfull within ${retryCount} tries`)
+            }
+
+        } catch(err) {
+            this.logger.warn(`Unrecoverable sync error: ${err.message}`)
+            this.emit(SYNC_ENGINE.EVENTS.ERROR, err.message)
         }
-        this.logger.info(`Completed sync!`)
-        this.emit(SYNC_ENGINE.EVENTS.DONE)
     }
 
     /**
      * Checks if a retry should happen
      * @param err - An error that was thrown during 'writeState()'
-     * @returns - True if a retry should happen
+     * @returns - True if a fatal error occured that should NOT be retried
      */
-    checkError(err: any): boolean {
+    checkFatalError(err: any): boolean {
         if (err.name === `AxiosError`) {
             this.logger.debug(`Detected Axios error`)
 
             if(err.code === `ERR_BAD_RESPONSE`) {
                 this.logger.debug(`Bad server response, retrying...`);
-                return true
+                return false
             } else if(err.code === 'ERR_BAD_REQUEST') {
                 if(err.response?.status === 410) {
                     this.logger.debug(`Remote ressources have changed location, retrying...`)
-                    return true
+                    return false
                 } else {
                     this.logger.warn(`Unknown bad request (${JSON.stringify(err)}), aborting!`)
-                    return false
+                    return true
                 }
             } else {
                 this.logger.warn(`Unknown Axios error (${err.code}), aborting!`)
-                return false
+                return true
             }
         } else {
             this.logger.warn(`Unknown error (${JSON.stringify(err)}), aborting!`)
-            return false
+            return true
         }
     }
 
+    /**
+     * This function fetches the remote state and updates the local state
+     * @returns A promise that resolve once the fetch was completed, containing the remote state
+     */
     async fetchState(): Promise<[Asset[], Album[], void]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH);
         this.logger.info(`Fetching remote iCloud state`);
