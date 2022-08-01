@@ -28,7 +28,6 @@ export class PhotosLibrary {
     assetDir: string;
 
     constructor(cliOpts: OptionValues) {
-
         this.photoDataDir = cliOpts.data_dir;
         if (!fssync.existsSync(this.photoDataDir)) {
             this.logger.debug(`${this.photoDataDir} does not exist, creating`);

@@ -62,13 +62,13 @@ export class SyncEngine extends EventEmitter {
                     if (this.checkFatalError(err)) {
                         throw err;
                     } else {
-                        await this.prepareRetry()
+                        await this.prepareRetry();
                         this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
                     }
                 }
             }
 
-            if (!syncFinished) { //if sync is not set to true
+            if (!syncFinished) { // If sync is not set to true
                 throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
             }
 
@@ -116,16 +116,17 @@ export class SyncEngine extends EventEmitter {
      * Prepares the sync engine for a retry
      */
     private async prepareRetry() {
-        this.logger.debug(`Preparing retry...`)
+        this.logger.debug(`Preparing retry...`);
         if (this.downloadQueue) {
-            if(this.downloadQueue.size > 0) {
+            if (this.downloadQueue.size > 0) {
                 this.logger.info(`Error occured with ${this.downloadQueue.size} asset(s) left in the download queue, clearing queue...`);
                 this.downloadQueue.clear();
             }
-            if(this.downloadQueue.pending > 0) {
-                this.logger.info(`Error occured with ${this.downloadQueue.pending} pending job(s), waiting for queue to settle...`)
-                await this.downloadQueue.onIdle()
-                this.logger.debug(`Queue has settled!`)
+
+            if (this.downloadQueue.pending > 0) {
+                this.logger.info(`Error occured with ${this.downloadQueue.pending} pending job(s), waiting for queue to settle...`);
+                await this.downloadQueue.onIdle();
+                this.logger.debug(`Queue has settled!`);
             }
         }
     }
@@ -142,9 +143,13 @@ export class SyncEngine extends EventEmitter {
             this.iCloud.photos.fetchAllAlbumRecords()
                 .then(cplAlbums => SyncEngine.convertCPLAlbums(cplAlbums)),
             this.photosLibrary.loadAssets(),
-            this.photosLibrary.loadAlbums()
+            this.photosLibrary.loadAlbums(),
         ]).then(result => {
-            this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, result[0].length, result[1].length, Object.keys(result[2]).length, Object.keys(result[3].length));
+            const remoteAssetCount = result[0].length;
+            const remoteAlbumCount = result[1].length;
+            const localAssetCount = Object.keys(result[2]).length;
+            const localAlbumCount = Object.keys(result[3]).length;
+            this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, remoteAssetCount, remoteAlbumCount, localAssetCount, localAlbumCount);
             return result;
         });
     }
