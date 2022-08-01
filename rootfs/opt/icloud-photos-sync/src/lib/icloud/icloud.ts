@@ -72,7 +72,15 @@ export class iCloud extends EventEmitter {
             // @todo Retry by calling authenticate()
         });
 
-        this.ready = new Promise<void>((resolve, reject) => {
+        this.ready = this.getReady()
+    }
+
+    /**
+     * 
+     * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR' 
+     */
+    getReady(): Promise<void> {
+        return  new Promise<void>((resolve, reject) => {
             this.on(ICLOUD.EVENTS.READY, resolve);
             this.on(ICLOUD.EVENTS.ERROR, reject);
         });

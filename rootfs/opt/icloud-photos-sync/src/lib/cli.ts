@@ -135,7 +135,7 @@ export class CLIInterface {
 
     setupCLISyncEngineInterface(syncEngine: SyncEngine) { 
         syncEngine.on(SYNC_ENGINE.EVENTS.START, () => {
-            console.log(chalk.white.bold(`Starting sync at ${new Date().toISOString}`));
+            console.log(chalk.white.bold(`Starting sync at ${new Date().toISOString()}`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD, () => {
@@ -188,7 +188,7 @@ export class CLIInterface {
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
             console.log();
-            console.log(chalk.green.bold(`Succesfully completed sync!`));
+            console.log(chalk.green.bold(`Succesfully completed sync at ${new Date().toISOString()}`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.RETRY, retryCount => {

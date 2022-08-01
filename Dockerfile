@@ -12,6 +12,8 @@ RUN apt-get update \
         && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN chmod +x /root/enter_mfa.sh && \
-    chmod +x /opt/icloud-photos-sync/bin/main.js
+    ln -s /root/enter_mfa.sh /usr/local/bin/enter_mfa && \
+    chmod +x /opt/icloud-photos-sync/bin/main.js && \
+    ln -s /opt/icloud-photos-sync/bin/main.js /usr/local/bin/icloud-photos-sync
 
 ENTRYPOINT ["node", "/opt/icloud-photos-sync/bin/main.js"]

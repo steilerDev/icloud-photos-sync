@@ -63,8 +63,8 @@ export class SyncEngine extends EventEmitter {
                     if (this.checkFatalError(err)) {
                         throw err;
                     } else {
-                        await this.prepareRetry();
                         this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
+                        await this.prepareRetry();
                     }
                 }
             }
@@ -116,7 +116,7 @@ export class SyncEngine extends EventEmitter {
     /**
      * Prepares the sync engine for a retry
      */
-    private async prepareRetry() {
+    private async prepareRetry(): Promise<void> {
         this.logger.debug(`Preparing retry...`);
         if (this.downloadQueue) {
             if (this.downloadQueue.size > 0) {
@@ -130,6 +130,10 @@ export class SyncEngine extends EventEmitter {
                 this.logger.debug(`Queue has settled!`);
             }
         }
+        this.logger.debug(`Refreshing iCloud connection`)
+        const iCloudReady = this.iCloud.getReady()
+        this.iCloud.getiCloudCookies()
+        return iCloudReady
     }
 
     /**
