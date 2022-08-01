@@ -59,8 +59,10 @@ export class SyncEngine extends EventEmitter {
                 } catch (err) {
                     this.logger.warn(`Error while writing state: ${err.message}`);
                     if (this.syncQueue && this.syncQueue.size > 0) {
-                        this.logger.debug(`Error occured with ${this.syncQueue.size} out of ${assetQueue[1].length} assets in download queue`);
+                        this.logger.debug(`Error occured with ${this.syncQueue.size} out of ${assetQueue[1].length} assets remaining in download queue, waiting for pending items to clear...`);
                         this.syncQueue.clear();
+                        await this.syncQueue.onIdle()
+                        this.logger.debug(`Queue has settled!`)
                     }
 
                     if (this.checkFatalError(err)) {

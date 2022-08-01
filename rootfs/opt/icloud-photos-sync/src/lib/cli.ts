@@ -151,11 +151,11 @@ export class CLIInterface {
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, () => {
-            console.log(chalk.white(`Writing remote state to disk...`));
+            console.log(chalk.white(`Writing diff to disk...`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS, (toBeDeletedCount, toBeAddedCount) => {
-            console.log(chalk.cyan(`Removing ${toBeDeletedCount} local assets & downloading ${toBeAddedCount} remote assets...`));
+            console.log(chalk.cyan(`Syncing assets, by removing ${toBeDeletedCount} local assets & downloading ${toBeAddedCount} remote assets...`));
             this.progressBar.start(toBeAddedCount, 0);
         });
 
@@ -178,7 +178,7 @@ export class CLIInterface {
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_COMPLETED, () => {
-            console.log(chalk.green(`Succesfully wrote remote state to disk!`));
+            console.log(chalk.green(`Succesfully wrote diff to disk!`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
