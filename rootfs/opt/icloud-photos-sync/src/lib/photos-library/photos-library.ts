@@ -1,4 +1,3 @@
-import log from 'loglevel';
 import * as path from 'path';
 import * as PHOTOS_LIBRARY from './constants.js';
 import {Album, AlbumType} from './model/album.js';
@@ -7,6 +6,7 @@ import * as fssync from 'fs';
 import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
 import {PEntity, PLibraryEntity, PLibraryProcessingQueues} from './model/photos-entity.js';
+import {getLogger} from '../logger.js';
 
 type Library = {
     albums: PLibraryEntity<Album>,
@@ -18,22 +18,24 @@ type Library = {
  */
 export class PhotosLibrary {
     /**
+     * Default logger for the class
+     */
+    private logger = getLogger(this);
+
+    /**
      * Local data structure
      */
     lib: Library;
 
     /**
-     * Default logger for the class
+     * The full path to the data dir, where all information & data is persisted
      */
-    private logger: log.Logger = log.getLogger(`Photos-Library`);
-
     photoDataDir: string;
-    assetDir: string;
 
     /**
-     * A promise that will resolve, once the object is ready or reject, in case there is an error
+     * The full path to the sub-dir within 'photoDataDir', containing all assets
      */
-    ready: Promise<void>;
+    assetDir: string;
 
     constructor(cliOpts: OptionValues) {
         this.lib = {
@@ -95,7 +97,7 @@ export class PhotosLibrary {
      * @param album - The album that needs to be loaded, containing a filepath
      * @returns An array of loaded albums, including the provided one and all its child items
      */
-    async loadAlbum(album: Album): Promise<Album[]> {
+    private async loadAlbum(album: Album): Promise<Album[]> {
         const albums: Album[] = [];
 
         // Ignoring dummy album
@@ -138,7 +140,7 @@ export class PhotosLibrary {
         return albums;
     }
 
-    async readAlbumTypeFromPath(path: string): Promise<AlbumType> {
+    private async readAlbumTypeFromPath(path: string): Promise<AlbumType> {
         // If the folder contains other folders, it will be of AlbumType.Folder
         const directoryPresent = (await fs.readdir(path, {
             withFileTypes: true,

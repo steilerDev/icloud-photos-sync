@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import http from 'http';
-import log from 'loglevel';
 import * as MFA_SERVER from './constants.js';
+import {getLogger} from '../../logger.js';
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
@@ -9,16 +9,19 @@ import * as MFA_SERVER from './constants.js';
  */
 export class MFAServer extends EventEmitter {
     /**
+     * Default logger for this class
+     */
+    private logger = getLogger(this);
+
+    /**
      * The server object
      */
-    server: http.Server;
+    private server: http.Server;
 
     /**
      * Port to start server on
      */
-    port: number;
-
-    logger: log.Logger = log.getLogger(`MFAServer`);
+    private port: number;
 
     /**
      * Creates the server object

@@ -1,5 +1,4 @@
 import axios, {AxiosRequestConfig, AxiosResponse} from 'axios';
-import log from 'loglevel';
 import {EventEmitter} from 'events';
 import * as ICLOUD_PHOTOS from './constants.js';
 import * as QueryBuilder from './query-builder.js';
@@ -8,17 +7,21 @@ import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import {SyncEngine} from '../../sync-engine/sync-engine.js';
+import {getLogger} from '../../logger.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
  */
 export class iCloudPhotos extends EventEmitter {
     /**
+     * Default logger for this class
+     */
+    private logger = getLogger(this);
+
+    /**
      * Cookie required to authenticate against the iCloud Services
      */
-    auth: iCloudAuth;
-
-    logger: log.Logger = log.getLogger(`I-Cloud-Photos`);
+    private auth: iCloudAuth;
 
     constructor(auth: iCloudAuth) {
         super();

@@ -2,8 +2,8 @@ import {AxiosResponse} from "axios";
 import {writeFile, mkdir} from 'fs/promises';
 import {readFileSync} from 'fs';
 import * as path from 'path';
-import log from "loglevel";
 import {Cookie} from "tough-cookie";
+import {getLogger} from "../logger.js";
 
 import * as ICLOUD from './constants.js';
 
@@ -62,7 +62,10 @@ export interface PhotosAccount {
  * This class holds all iCloud related authentication information
  */
 export class iCloudAuth {
-    logger: log.Logger = log.getLogger(`I-Cloud-Auth`);
+    /**
+     * Default logger for this class
+     */
+    private logger = getLogger(this);
 
     /**
      * Cookies required to access iCloud services

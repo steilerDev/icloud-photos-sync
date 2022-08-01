@@ -16,25 +16,24 @@ export class CLIInterface {
         this.progressBar = new SingleBar({
             etaAsynchronousUpdate: true,
             etaBuffer: 20,
-            format: ' {bar} {percentage}% | Elapsed: {duration_formatted} | ETA: {eta_formatted} | {value}/{total}',
-            barCompleteChar: '\u25A0',
-            barIncompleteChar: ' ',
-            linewrap: true
+            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | ETA: {eta_formatted} | {value}/{total}`,
+            barCompleteChar: `\u25A0`,
+            barIncompleteChar: ` `,
         });
         this.setupCLIiCloudInterface(iCloud);
         this.setupCLISyncEngineInterface(syncEngine);
 
         process.on(`SIGTERM`, () => {
             console.log(`Received SIGTERM.`);
-            process.exit(1)
+            process.exit(1);
             // Save photos db
             // stop sync engine
         });
 
-        process.on("SIGINT", () => {
-            console.log(`Received SIGINT`)
-            process.exit(1)
-        })
+        process.on(`SIGINT`, () => {
+            console.log(`Received SIGINT`);
+            process.exit(1);
+        });
 
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.name}, v.${PACKAGE_INFO.version}!`));
         console.log(chalk.green(`Made with <3 by steilerDev`));
@@ -73,11 +72,11 @@ export class CLIInterface {
                 .default(`/opt/icloud-photos-library`))
             .addOption(new Option(`-p, --port <number>`, `port number for MFA server (Awaiting MFA code when necessary)`)
                 .env(`PORT`)
-                .default(8080))
+                .default(80))
             .addOption(new Option(`-l, --log_level <level>`, `Set the log level`)
                 .env(`LOG_LEVEL`)
                 .choices([`trace`, `debug`, `info`, `warn`, `error`])
-                .default(`debug`))
+                .default(`info`))
             .addOption(new Option(`--log_to_cli`, `Disables logging to file and logs to the console`)
                 .env(`LOG_TO_CLI`)
                 .default(false))
@@ -109,7 +108,7 @@ export class CLIInterface {
         });
 
         iCloud.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
-            console.log(chalk.yellowBright(`MFA code required, waiting for input`));
+            console.log(chalk.yellowBright(`MFA code required, waiting for input...`));
         });
 
         iCloud.on(ICLOUD.EVENTS.MFA_RECEIVED, () => {
@@ -131,47 +130,69 @@ export class CLIInterface {
         iCloud.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
             console.log(chalk.red(`Unexpected error: ${msg}`));
         });
-
-
     }
 
     setupCLISyncEngineInterface(syncEngine: SyncEngine) {
-        syncEngine.on(SYNC_ENGINE.EVENTS.FETCH, () => {
-            console.log(chalk.white(`Loading local state & fetching remote iCloud Library state`));
+        syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD, () => {
+            console.log(chalk.white(`Loading local state & fetching remote iCloud Library state...`));
         });
+
+        syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, (localAssetCount, localAlbumCount, remoteAssetCount, remoteAlbumCount) => {
+            console.log(chalk.green(`Loaded Local state: ${localAssetCount} assets & ${localAlbumCount} albums`));
+            console.log(chalk.green(`Fetched Remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
+        });
+
         syncEngine.on(SYNC_ENGINE.EVENTS.DIFF, () => {
-            console.log(chalk.white(`Diffing remote with local state`));
+            console.log(chalk.white(`Diffing remote with local state...`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_COMPLETED, (localAssetCount, localAlbumCount, remoteAssetCount, remoteAlbumCount) => {
-            console.log(chalk.green(`Loaded Local state: ${localAssetCount} assets & ${localAlbumCount} albums`))
-            console.log(chalk.green(`Fetched Remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`))
+        syncEngine.on(SYNC_ENGINE.EVENTS.DIFF_COMPLETED, () => {
+            console.log(chalk.green(`Diffing completed!`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, (toBeDeletedCount, toBeAddedCount) => {
-            console.log(chalk.cyan(`Downloading ${toBeAddedCount} remote assets, removing ${toBeDeletedCount} local assets`));
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, () => {
+            console.log(chalk.white(`Writing remote state to disk...`));
+        });
+
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS, (toBeDeletedCount, toBeAddedCount) => {
+            console.log(chalk.cyan(`Removing ${toBeDeletedCount} local assets & downloading ${toBeAddedCount} remote assets...`));
             this.progressBar.start(toBeAddedCount, 0);
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.RECORD_COMPLETED, recordName => {
-            //console.log(`Completed ${recordName}`);
-            this.progressBar.increment(1, recordName);
+        // recordName would be available
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, () => {
+            this.progressBar.increment();
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.RETRY, () => {
-            this.progressBar.stop()
-            console.log(chalk.grey.bold(`Detected recoverable error, retrying...`));
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED, () => {
+            this.progressBar.stop();
+            console.log(chalk.greenBright(`Succesfully synced assets!`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.APPLY_STRUCTURE, (toBeDeletedCount, toBeAddedCount) => {
-            console.log(chalk.cyan(`Applying remote structure to local file system, by adding ${toBeAddedCount} and deleting ${toBeDeletedCount} albums`));
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, (toBeDeletedCount, toBeAddedCount) => {
+            console.log(chalk.cyan(`Linking albums, by removing ${toBeDeletedCount} local albums & adding ${toBeAddedCount} remote albums...`));
+        });
+
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED, () => {
+            console.log(chalk.greenBright(`Succesfully synced albums!`));
+        });
+
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_COMPLETED, () => {
+            console.log(chalk.green(`Succesfully wrote remote state to disk!`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
-            console.log(chalk.green.bold(`Sync completed!`));
+            console.log();
+            console.log(chalk.green.bold(`Succesfully completed sync!`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, (msg) => {
+        syncEngine.on(SYNC_ENGINE.EVENTS.RETRY, retryCount => {
+            this.progressBar.stop();
+            console.log(chalk.grey.bold(`Detected recoverable error, retry #${retryCount}...`));
+        });
+
+        syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
+            this.progressBar.stop();
             console.log(chalk.red(`Sync engine: Unexpected error: ${msg}`));
         });
     }

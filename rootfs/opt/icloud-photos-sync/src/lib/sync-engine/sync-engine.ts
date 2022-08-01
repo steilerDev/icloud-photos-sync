@@ -1,4 +1,3 @@
-import log from 'loglevel';
 import {EventEmitter} from 'events';
 import {iCloud} from '../icloud/icloud.js';
 import {PhotosLibrary} from '../photos-library/photos-library.js';
@@ -12,6 +11,7 @@ import * as fsPromise from 'fs/promises';
 import {pEvent} from 'p-event';
 import PQueue from 'p-queue';
 import {PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
+import {getLogger} from '../logger.js';
 
 /**
  * This class handles the photos sync
@@ -20,7 +20,7 @@ export class SyncEngine extends EventEmitter {
     /**
      * Default logger for the class
      */
-    logger: log.Logger = log.getLogger(`Sync-Engine`);
+    private logger = getLogger(this);
 
     iCloud: iCloud;
 
@@ -50,14 +50,12 @@ export class SyncEngine extends EventEmitter {
                 retryCount++;
                 this.logger.info(`Performing sync, try #${retryCount}`);
 
-                const [remoteAssets, remoteAlbums] = await this.fetchState();
-                this.emit(SYNC_ENGINE.EVENTS.FETCH_COMPLETED, this.photosLibrary.getAssetCount(), this.photosLibrary.getAlbumCount(), remoteAssets.length, remoteAlbums.length)
-
+                const [remoteAssets, remoteAlbums] = await this.fetchAndLoadState();
                 const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums);
 
                 try {
-                    await this.writeState(assetQueue, albumQueue)
-                    syncFinished = true
+                    await this.writeState(assetQueue, albumQueue);
+                    syncFinished = true;
                 } catch (err) {
                     this.logger.warn(`Error while writing state: ${err.message}`);
                     if (this.syncQueue && this.syncQueue.size > 0) {
@@ -68,21 +66,20 @@ export class SyncEngine extends EventEmitter {
                     if (this.checkFatalError(err)) {
                         throw err;
                     } else {
-                        this.emit(SYNC_ENGINE.EVENTS.RETRY)
+                        this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
                     }
                 }
             }
 
-            if(syncFinished) {
-                this.logger.info(`Completed sync!`)
-                this.emit(SYNC_ENGINE.EVENTS.DONE)
-            } else {
-                throw new Error(`Sync did not complete succesfull within ${retryCount} tries`)
+            if (!syncFinished) {
+                throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
             }
 
-        } catch(err) {
-            this.logger.warn(`Unrecoverable sync error: ${err.message}`)
-            this.emit(SYNC_ENGINE.EVENTS.ERROR, err.message)
+            this.logger.info(`Completed sync!`);
+            this.emit(SYNC_ENGINE.EVENTS.DONE);
+        } catch (err) {
+            this.logger.warn(`Unrecoverable sync error: ${err.message}`);
+            this.emit(SYNC_ENGINE.EVENTS.ERROR, err.message);
         }
     }
 
@@ -91,45 +88,49 @@ export class SyncEngine extends EventEmitter {
      * @param err - An error that was thrown during 'writeState()'
      * @returns - True if a fatal error occured that should NOT be retried
      */
-    checkFatalError(err: any): boolean {
+    private checkFatalError(err: any): boolean {
         if (err.name === `AxiosError`) {
-            this.logger.debug(`Detected Axios error`)
+            this.logger.debug(`Detected Axios error`);
 
-            if(err.code === `ERR_BAD_RESPONSE`) {
+            if (err.code === `ERR_BAD_RESPONSE`) {
                 this.logger.debug(`Bad server response (${err.response?.status}), retrying...`);
-                return false
-            } else if(err.code === 'ERR_BAD_REQUEST') {
-                if(err.response?.status === 410 || err.response?.status === 421) {
-                    this.logger.debug(`Remote ressources have changed location, updating URLs by retrying...`)
-                    return false
-                } else {
-                    this.logger.warn(`Unknown bad request (${JSON.stringify(err)}), aborting!`)
-                    return true
-                }
-            } else {
-                this.logger.warn(`Unknown Axios error (${JSON.stringify(err)}), aborting!`)
-                return true
+                return false;
             }
-        } else {
-            this.logger.warn(`Unknown error (${JSON.stringify(err)}), aborting!`)
-            return true
+
+            if (err.code === `ERR_BAD_REQUEST`) {
+                if (err.response?.status === 410 || err.response?.status === 421) {
+                    this.logger.debug(`Remote ressources have changed location, updating URLs by retrying...`);
+                    return false;
+                }
+
+                this.logger.warn(`Unknown bad request (${JSON.stringify(err)}), aborting!`);
+                return true;
+            }
+
+            this.logger.warn(`Unknown Axios error (${JSON.stringify(err)}), aborting!`);
+            return true;
         }
+
+        this.logger.warn(`Unknown error (${JSON.stringify(err)}), aborting!`);
+        return true;
     }
 
     /**
      * This function fetches the remote state and updates the local state
      * @returns A promise that resolve once the fetch was completed, containing the remote state
      */
-    async fetchState(): Promise<[Asset[], Album[], void]> {
-        this.emit(SYNC_ENGINE.EVENTS.FETCH);
-        this.logger.info(`Fetching remote iCloud state`);
+    private async fetchAndLoadState(): Promise<[Asset[], Album[], void]> {
+        this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
         return Promise.all([
             this.iCloud.photos.fetchAllPictureRecords()
                 .then(([cplAssets, cplMasters]) => SyncEngine.convertCPLAssets(cplAssets, cplMasters)),
             this.iCloud.photos.fetchAllAlbumRecords()
                 .then(cplAlbums => SyncEngine.convertCPLAlbums(cplAlbums)),
             this.photosLibrary.load(),
-        ]);
+        ]).then(result => {
+            this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, this.photosLibrary.getAssetCount(), this.photosLibrary.getAlbumCount(), result[0].length, result[1].length);
+            return result;
+        });
     }
 
     /**
@@ -138,13 +139,16 @@ export class SyncEngine extends EventEmitter {
      * @param remoteAlbums - An array of all remote albums
      * @returns A promise that, once resolved, will contain processing queues that can be used in order to sync the remote state.
      */
-    async diffState(remoteAssets: Asset[], remoteAlbums: Album[]): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
+    private async diffState(remoteAssets: Asset[], remoteAlbums: Album[]): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
         this.logger.info(`Diffing state`);
         return Promise.all([
             this.photosLibrary.getProcessingQueues(remoteAssets, this.photosLibrary.lib.assets),
             this.photosLibrary.getProcessingQueues(remoteAlbums, this.photosLibrary.lib.albums),
-        ]);
+        ]).then(result => {
+            this.emit(SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
+            return result;
+        });
     }
 
     /**
@@ -186,23 +190,27 @@ export class SyncEngine extends EventEmitter {
         return remoteAlbums;
     }
 
-    async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
-        this.emit(SYNC_ENGINE.EVENTS.WRITE, assetQueue[0].length, assetQueue[1].length);
+    private async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
+        this.emit(SYNC_ENGINE.EVENTS.WRITE);
         this.logger.info(`Writing state`);
         return this.writeAssets(assetQueue)
-            .then(() => this.writeAlbums(albumQueue));
+            .then(() => this.writeAlbums(albumQueue))
+            .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_COMPLETED));
     }
 
-    async writeAssets(processingQueue: PLibraryProcessingQueues<Asset>) {
+    private async writeAssets(processingQueue: PLibraryProcessingQueues<Asset>) {
         const toBeDeleted = processingQueue[0];
         const toBeAdded = processingQueue[1];
         // Initializing sync queue
         this.syncQueue = new PQueue({concurrency: this.syncQueueCCY});
+
         this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, toBeDeleted.length, toBeAdded.length);
 
         // Deleting before downloading, in order to ensure no conflicts
         return Promise.all(toBeDeleted.map(asset => this.deleteAsset(asset)))
-            .then(() => Promise.all(toBeAdded.map(asset => this.syncQueue.add(() => this.addAsset(asset)))));
+            .then(() => Promise.all(toBeAdded.map(asset => this.syncQueue.add(() => this.addAsset(asset)))))
+            .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED));
     }
 
     /**
@@ -210,7 +218,7 @@ export class SyncEngine extends EventEmitter {
      * @param asset - The asset that needs to be downloaded
      * @returns A promise that resolves, once the file has been sucesfully written to disc
      */
-    async addAsset(asset: Asset): Promise<void> {
+    private async addAsset(asset: Asset): Promise<void> {
         if (this.verifyAsset(asset)) {
             this.logger.info(`Asset ${asset.getDisplayName()} already downloaded`);
         } else {
@@ -228,39 +236,43 @@ export class SyncEngine extends EventEmitter {
                         throw new Error(`Unable to verify asset ${asset.getDisplayName()}`);
                     } else {
                         this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
-                        this.emit(SYNC_ENGINE.EVENTS.RECORD_COMPLETED, asset.getDisplayName())
+                        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
                     }
                 });
         }
     }
 
-    async deleteAsset(asset: Asset): Promise<void> {
+    private async deleteAsset(asset: Asset): Promise<void> {
         this.logger.debug(`Deleting asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
         return fsPromise.rm(location, {force: true});
     }
 
-    verifyAsset(asset: Asset): boolean {
+    private verifyAsset(asset: Asset): boolean {
         this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
         return fs.existsSync(location)
             && asset.verify(fs.readFileSync(location));
     }
 
-    async writeAlbums(processingQueue: PLibraryProcessingQueues<Album>) {
+    private async writeAlbums(processingQueue: PLibraryProcessingQueues<Album>) {
+        const toBeDeleted = processingQueue[0];
+        const toBeAdded = processingQueue[1];
+
         this.logger.info(`Writing lib structure!`);
-        this.emit(SYNC_ENGINE.EVENTS.APPLY_STRUCTURE, processingQueue[0].length, processingQueue[1].length);
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, toBeDeleted.length, toBeAdded.length);
         // Get root folder & local root folder
         // compare content
         // repeate for every other folder
         // optionally: move data to
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED);
     }
 
-    addAlbum(album: Album) {
+    private addAlbum(album: Album) {
         // Find parent
     }
 
-    deleteAlbum(album: Album) {
+    private deleteAlbum(album: Album) {
         // Only delete albums that have only symlinks in them
         // if they have files -> ignore!
         // if they have folders -> check if those folders will also be removed

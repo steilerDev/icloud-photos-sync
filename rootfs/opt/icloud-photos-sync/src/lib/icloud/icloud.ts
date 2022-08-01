@@ -1,5 +1,3 @@
-import log from 'loglevel';
-
 import axios, {AxiosRequestConfig, AxiosRequestHeaders} from 'axios';
 
 import EventEmitter from 'events';
@@ -10,11 +8,17 @@ import * as MFA_SERVER from './mfa-server/constants.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {iCloudAuth} from './auth.js';
 import {OptionValues} from 'commander';
+import {getLogger} from '../logger.js';
 
 /**
  * This class holds the iCloud connection
  * */
 export class iCloud extends EventEmitter {
+    /**
+     * Default logger for the class
+     */
+    private logger = getLogger(this);
+
     /**
      * Authentication object of the current iCloud session
      */
@@ -29,11 +33,6 @@ export class iCloud extends EventEmitter {
      * Access to the iCloud Photos service
      */
     photos: iCloudPhotos = null;
-
-    /**
-     * Default logger for the class
-     */
-    logger: log.Logger = log.getLogger(`I-Cloud`);
 
     /**
      * A promise that will resolve, once the object is ready or reject, in case there is an error
@@ -85,7 +84,7 @@ export class iCloud extends EventEmitter {
      */
     async authenticate(): Promise<void> {
         this.logger.info(`Authenticating user`);
-        this.emit(ICLOUD.EVENTS.AUTHENTICATION_STARTED)
+        this.emit(ICLOUD.EVENTS.AUTHENTICATION_STARTED);
 
         const config: AxiosRequestConfig = {
             headers: ICLOUD.DEFAULT_AUTH_HEADER,
@@ -240,7 +239,7 @@ export class iCloud extends EventEmitter {
      * Creating iCloud Photos sub-class and linking it
     */
     getiCloudPhotosReady() {
-        if (this.photos && this.photos.auth.validateCloudCookies()) {
+        if (this.photos && this.auth.validateCloudCookies()) {
             this.logger.info(`Getting iCloud Photos Service ready`);
 
             this.photos.on(ICLOUD_PHOTOS.EVENTS.READY, () => {
