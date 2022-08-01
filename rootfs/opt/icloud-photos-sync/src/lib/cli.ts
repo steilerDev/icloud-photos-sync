@@ -115,15 +115,15 @@ export class CLIInterface {
         });
 
         iCloud.on(ICLOUD.EVENTS.TRUSTED, () => {
-            console.log(chalk.whiteBright(`Device trusted`));
+            console.log(chalk.white(`Device trusted`));
         });
 
         iCloud.on(ICLOUD.EVENTS.ACCOUNT_READY, () => {
-            console.log(chalk.whiteBright(`Sign in successful!`));
+            console.log(chalk.white(`Sign in successful!`));
         });
 
         iCloud.on(ICLOUD.EVENTS.READY, () => {
-            console.log(chalk.green(`iCloud connection established!`));
+            console.log(chalk.greenBright(`iCloud connection established!`));
             console.log()
         });
 
@@ -193,7 +193,7 @@ export class CLIInterface {
 
         syncEngine.on(SYNC_ENGINE.EVENTS.RETRY, retryCount => {
             this.progressBar.stop();
-            console.log(chalk.grey.bold(`Detected recoverable error, retry #${retryCount}...`));
+            console.log(chalk.magenta(`Detected recoverable error, retry #${retryCount}...`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
