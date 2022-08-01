@@ -11,4 +11,6 @@ RUN apt-get update \
             apt-utils vim \
         && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+RUN chmod +x /root/mfa-helper.sh
+
 ENTRYPOINT ["node", "/opt/icloud-photos-sync/bin/main.js"]

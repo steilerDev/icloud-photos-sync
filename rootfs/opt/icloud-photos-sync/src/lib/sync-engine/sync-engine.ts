@@ -107,7 +107,7 @@ export class SyncEngine extends EventEmitter {
                     return true
                 }
             } else {
-                this.logger.warn(`Unknown Axios error (${err.code}), aborting!`)
+                this.logger.warn(`Unknown Axios error (${JSON.stringify(err)}), aborting!`)
                 return true
             }
         } else {
@@ -132,6 +132,12 @@ export class SyncEngine extends EventEmitter {
         ]);
     }
 
+    /**
+     * This function diffes the local state (stored in the local Photos Library) with the given remote state
+     * @param remoteAssets - An array of all remote assets
+     * @param remoteAlbums - An array of all remote albums
+     * @returns A promise that, once resolved, will contain processing queues that can be used in order to sync the remote state.
+     */
     async diffState(remoteAssets: Asset[], remoteAlbums: Album[]): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
         this.logger.info(`Diffing state`);
@@ -142,7 +148,7 @@ export class SyncEngine extends EventEmitter {
     }
 
     /**
-     * Transforms a matching CPLAsset/CPLMaster pair to an array of associated assets
+     * Matches CPLAsset/CPLMaster pairs and parses their associated Asset(s)
      * @param asset - The given asset
      * @param master - The given master
      * @returns An array of all containing assets
