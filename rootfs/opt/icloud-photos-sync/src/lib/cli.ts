@@ -24,15 +24,15 @@ export class CLIInterface {
         this.setupCLISyncEngineInterface(syncEngine);
 
         process.on(`SIGTERM`, () => {
-            console.log(`Received SIGTERM.`);
-            process.exit(1);
+            console.log(`Received SIGTERM`);
+            //process.exit(1);
             // Save photos db
             // stop sync engine
         });
 
         process.on(`SIGINT`, () => {
             console.log(`Received SIGINT`);
-            process.exit(1);
+            //process.exit(1);
         });
 
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.name}, v.${PACKAGE_INFO.version}!`));

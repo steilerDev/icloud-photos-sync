@@ -27,8 +27,8 @@ export class SyncEngine extends EventEmitter {
     photosLibrary: PhotosLibrary;
 
     // Initialized in writeAssets()
-    syncQueue: PQueue;
-    syncQueueCCY: number;
+    downloadQueue: PQueue;
+    downloadCCY: number;
 
     maxRetry: number;
 
@@ -36,7 +36,7 @@ export class SyncEngine extends EventEmitter {
         super();
         this.iCloud = iCloud;
         this.photosLibrary = photosLibrary;
-        this.syncQueueCCY = cliOpts.download_threads;
+        this.downloadCCY = cliOpts.download_threads;
 
         this.maxRetry = cliOpts.max_retries;
     }
@@ -58,13 +58,19 @@ export class SyncEngine extends EventEmitter {
                     syncFinished = true;
                 } catch (err) {
                     this.logger.warn(`Error while writing state: ${err.message}`);
-                    if (this.syncQueue && this.syncQueue.size > 0) {
-                        this.logger.debug(`Error occured with ${this.syncQueue.size} out of ${assetQueue[1].length} assets remaining in download queue, waiting for pending items to clear...`);
-                        this.syncQueue.clear();
-                        await this.syncQueue.onIdle()
-                        this.logger.debug(`Queue has settled!`)
+                    if (this.downloadQueue && this.downloadQueue.size > 0) {
+                        if(this.downloadQueue.size > 0) {
+                            this.logger.debug(`Error occured with ${this.downloadQueue.size} out of ${assetQueue[1].length} assets left in the download queue, clearing queue...`);
+                            this.downloadQueue.clear();
+                        }
+                        if(this.downloadQueue.pending > 0) {
+                            this.logger.debug(`Error occured with ${this.downloadQueue.pending} pending job(s), waiting for queue to settle...`)
+                            await this.downloadQueue.onIdle()
+                            this.logger.debug(`Queue has settled!`)
+                        }
                     }
 
+                    // Checking if we should retry
                     if (this.checkFatalError(err)) {
                         throw err;
                     } else {
@@ -73,7 +79,7 @@ export class SyncEngine extends EventEmitter {
                 }
             }
 
-            if (!syncFinished) {
+            if (!syncFinished) { //if sync is not set to true
                 throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
             }
 
@@ -204,14 +210,14 @@ export class SyncEngine extends EventEmitter {
         const toBeDeleted = processingQueue[0];
         const toBeAdded = processingQueue[1];
         // Initializing sync queue
-        this.syncQueue = new PQueue({concurrency: this.syncQueueCCY});
+        this.downloadQueue = new PQueue({concurrency: this.downloadCCY});
 
         this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, toBeDeleted.length, toBeAdded.length);
 
         // Deleting before downloading, in order to ensure no conflicts
         return Promise.all(toBeDeleted.map(asset => this.deleteAsset(asset)))
-            .then(() => Promise.all(toBeAdded.map(asset => this.syncQueue.add(() => this.addAsset(asset)))))
+            .then(() => Promise.all(toBeAdded.map(asset => this.downloadQueue.add(() => this.addAsset(asset)))))
             .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED));
     }
 
