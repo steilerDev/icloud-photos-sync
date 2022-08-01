@@ -44,6 +44,7 @@ export class SyncEngine extends EventEmitter {
     async sync() {
         try {
             this.logger.info(`Starting sync`);
+            this.emit(SYNC_ENGINE.EVENTS.START)
             let syncFinished = false;
             let retryCount = 0;
             while (!syncFinished && (this.maxRetry === -1 || this.maxRetry > retryCount)) {
@@ -240,8 +241,9 @@ export class SyncEngine extends EventEmitter {
      * @returns A promise that resolves, once the file has been sucesfully written to disc
      */
     private async addAsset(asset: Asset): Promise<void> {
+        this.logger.info(`Processing asset ${asset.getDisplayName()}`)
         if (this.verifyAsset(asset)) {
-            this.logger.info(`Asset ${asset.getDisplayName()} already downloaded`);
+            this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
         } else {
             return this.iCloud.photos.downloadAsset(asset)
                 .then(response => {
@@ -264,7 +266,7 @@ export class SyncEngine extends EventEmitter {
     }
 
     private async deleteAsset(asset: Asset): Promise<void> {
-        this.logger.debug(`Deleting asset ${asset.getDisplayName()}`);
+        this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
         return fsPromise.rm(location, {force: true});
     }

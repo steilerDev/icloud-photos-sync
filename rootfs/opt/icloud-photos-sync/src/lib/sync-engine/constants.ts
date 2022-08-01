@@ -1,6 +1,7 @@
 export const FILE_NAME = `photos-library.db`;
 
 export enum EVENTS {
+    START = `start`,
     FETCH_N_LOAD = `fetch-n-load`, // No arg
     FETCH_N_LOAD_COMPLETED = `fetch-n-load-completed`, // RemoteAssetCount, remoteAlbumCount, LocalAssetCount, localAlbumCount
     DIFF = `diff`, // No arg

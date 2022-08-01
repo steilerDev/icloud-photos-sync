@@ -15,8 +15,9 @@ export class CLIInterface {
     constructor(iCloud: iCloud, syncEngine: SyncEngine) {
         this.progressBar = new SingleBar({
             etaAsynchronousUpdate: true,
-            etaBuffer: 20,
-            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | ETA: {eta_formatted} | {value}/{total}`,
+          //  etaBuffer: 20,
+          //  format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | ETA: {eta_formatted} | {value}/{total}`,
+            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total}`,
             barCompleteChar: `\u25A0`,
             barIncompleteChar: ` `,
         });
@@ -132,7 +133,11 @@ export class CLIInterface {
         });
     }
 
-    setupCLISyncEngineInterface(syncEngine: SyncEngine) {
+    setupCLISyncEngineInterface(syncEngine: SyncEngine) { 
+        syncEngine.on(SYNC_ENGINE.EVENTS.START, () => {
+            console.log(chalk.white.bold(`Starting sync at ${new Date().toISOString}`));
+        });
+
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD, () => {
             console.log(chalk.white(`Loading local state & fetching remote iCloud Library state...`));
         });
