@@ -35,3 +35,10 @@ services:
       - <conf+data-dir>:/icloud-data
       - <photos-dir>:/icloud-photos
 ```
+
+### Enter MFA
+Once requested by the tool, enter the MFA Code with
+```
+docker exec photo-sync enter_mfa <6-digit-code>
+```
+There is currently no way to re-request it, besides quiting the application and re-running it
