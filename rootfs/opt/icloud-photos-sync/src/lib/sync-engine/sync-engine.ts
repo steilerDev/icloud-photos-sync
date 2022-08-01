@@ -58,22 +58,11 @@ export class SyncEngine extends EventEmitter {
                     syncFinished = true;
                 } catch (err) {
                     this.logger.warn(`Error while writing state: ${err.message}`);
-                    if (this.downloadQueue && this.downloadQueue.size > 0) {
-                        if(this.downloadQueue.size > 0) {
-                            this.logger.debug(`Error occured with ${this.downloadQueue.size} out of ${assetQueue[1].length} assets left in the download queue, clearing queue...`);
-                            this.downloadQueue.clear();
-                        }
-                        if(this.downloadQueue.pending > 0) {
-                            this.logger.debug(`Error occured with ${this.downloadQueue.pending} pending job(s), waiting for queue to settle...`)
-                            await this.downloadQueue.onIdle()
-                            this.logger.debug(`Queue has settled!`)
-                        }
-                    }
-
                     // Checking if we should retry
                     if (this.checkFatalError(err)) {
                         throw err;
                     } else {
+                        await this.prepareRetry()
                         this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
                     }
                 }
@@ -121,6 +110,24 @@ export class SyncEngine extends EventEmitter {
 
         this.logger.warn(`Unknown error (${JSON.stringify(err)}), aborting!`);
         return true;
+    }
+
+    /**
+     * Prepares the sync engine for a retry
+     */
+    private async prepareRetry() {
+        this.logger.debug(`Preparing retry...`)
+        if (this.downloadQueue) {
+            if(this.downloadQueue.size > 0) {
+                this.logger.info(`Error occured with ${this.downloadQueue.size} asset(s) left in the download queue, clearing queue...`);
+                this.downloadQueue.clear();
+            }
+            if(this.downloadQueue.pending > 0) {
+                this.logger.info(`Error occured with ${this.downloadQueue.pending} pending job(s), waiting for queue to settle...`)
+                await this.downloadQueue.onIdle()
+                this.logger.debug(`Queue has settled!`)
+            }
+        }
     }
 
     /**
