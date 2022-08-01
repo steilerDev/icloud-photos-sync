@@ -5,13 +5,8 @@ import * as fs from 'fs/promises';
 import * as fssync from 'fs';
 import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
-import {PEntity, PLibraryEntity, PLibraryProcessingQueues} from './model/photos-entity.js';
+import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from './model/photos-entity.js';
 import {getLogger} from '../logger.js';
-
-type Library = {
-    albums: PLibraryEntity<Album>,
-    assets: PLibraryEntity<Asset>
-}
 
 /**
  * This class holds the local data structure
@@ -21,11 +16,6 @@ export class PhotosLibrary {
      * Default logger for the class
      */
     private logger = getLogger(this);
-
-    /**
-     * Local data structure
-     */
-    lib: Library;
 
     /**
      * The full path to the data dir, where all information & data is persisted
@@ -38,10 +28,6 @@ export class PhotosLibrary {
     assetDir: string;
 
     constructor(cliOpts: OptionValues) {
-        this.lib = {
-            albums: {},
-            assets: {},
-        };
 
         this.photoDataDir = cliOpts.data_dir;
         if (!fssync.existsSync(this.photoDataDir)) {
@@ -56,19 +42,8 @@ export class PhotosLibrary {
         }
     }
 
-    async load() {
-        this.logger.debug(`Loading library from disc`);
-        return Promise.all([
-            this.loadAssets(),
-            this.loadAlbums(),
-        ]).then(loadedLibrary => {
-            this.lib.assets = loadedLibrary[0];
-            this.lib.albums = loadedLibrary[1];
-        });
-    }
-
-    private async loadAssets(): Promise<PLibraryEntity<Asset>> {
-        const libAssets: PLibraryEntity<Asset> = {};
+    async loadAssets(): Promise<PLibraryEntities<Asset>> {
+        const libAssets: PLibraryEntities<Asset> = {};
         (await fs.readdir(this.assetDir))
             .forEach(fileName => {
                 const fileStat = fssync.statSync(path.format({
@@ -82,9 +57,9 @@ export class PhotosLibrary {
         return libAssets;
     }
 
-    private async loadAlbums(): Promise<PLibraryEntity<Album>> {
+    async loadAlbums(): Promise<PLibraryEntities<Album>> {
         // Loading folders
-        const libAlbums: PLibraryEntity<Album> = {};
+        const libAlbums: PLibraryEntities<Album> = {};
         (await this.loadAlbum(Album.getRootAlbum(this.photoDataDir)))
             .forEach(album => {
                 libAlbums[album.getUUID()] = album;
@@ -167,24 +142,12 @@ export class PhotosLibrary {
         return AlbumType.ALBUM;
     }
 
-    isEmpty(): boolean {
-        return this.getAlbumCount() === 0 && this.getAssetCount() === 0;
-    }
-
-    getAlbumCount(): number {
-        return Object.keys(this.lib.albums).length;
-    }
-
-    getAssetCount(): number {
-        return Object.keys(this.lib.assets).length;
-    }
-
     /**
      * This function diffs two entity arrays (can be either albums or assets) and returns the corresponding processing queue
      * @param remoteEnties - The entities fetched from a remote state
      * @param localEntities - The local entity library
      */
-    getProcessingQueues<T>(remoteEnties: PEntity<T>[], localEntities: PLibraryEntity<T>): PLibraryProcessingQueues<T> {
+    getProcessingQueues<T>(remoteEnties: PEntity<T>[], localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
         this.logger.debug(`Getting processing queues`);
         const toBeAdded: T[] = [];
         remoteEnties.forEach(remoteEntity => {

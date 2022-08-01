@@ -137,7 +137,7 @@ export class CLIInterface {
             console.log(chalk.white(`Loading local state & fetching remote iCloud Library state...`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, (localAssetCount, localAlbumCount, remoteAssetCount, remoteAlbumCount) => {
+        syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, (remoteAssetCount, remoteAlbumCount, localAssetCount, localAlbumCount) => {
             console.log(chalk.green(`Loaded Local state: ${localAssetCount} assets & ${localAlbumCount} albums`));
             console.log(chalk.green(`Fetched Remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
         });

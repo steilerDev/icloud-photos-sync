@@ -5,7 +5,7 @@ export interface PEntity<T> {
     unpack(): T
 }
 
-export type PLibraryEntity<T> = {
+export type PLibraryEntities<T> = {
     [key: string]: T // Keyed by getUUID
 }
 

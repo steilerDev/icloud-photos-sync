@@ -10,7 +10,7 @@ import fs from 'fs';
 import * as fsPromise from 'fs/promises';
 import {pEvent} from 'p-event';
 import PQueue from 'p-queue';
-import {PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
+import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
 import {getLogger} from '../logger.js';
 
 /**
@@ -50,8 +50,8 @@ export class SyncEngine extends EventEmitter {
                 retryCount++;
                 this.logger.info(`Performing sync, try #${retryCount}`);
 
-                const [remoteAssets, remoteAlbums] = await this.fetchAndLoadState();
-                const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums);
+                const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await this.fetchAndLoadState();
+                const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums, localAssets, localAlbums);
 
                 try {
                     await this.writeState(assetQueue, albumQueue);
@@ -134,16 +134,17 @@ export class SyncEngine extends EventEmitter {
      * This function fetches the remote state and updates the local state
      * @returns A promise that resolve once the fetch was completed, containing the remote state
      */
-    private async fetchAndLoadState(): Promise<[Asset[], Album[], void]> {
+    private async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
         return Promise.all([
             this.iCloud.photos.fetchAllPictureRecords()
                 .then(([cplAssets, cplMasters]) => SyncEngine.convertCPLAssets(cplAssets, cplMasters)),
             this.iCloud.photos.fetchAllAlbumRecords()
                 .then(cplAlbums => SyncEngine.convertCPLAlbums(cplAlbums)),
-            this.photosLibrary.load(),
+            this.photosLibrary.loadAssets(),
+            this.photosLibrary.loadAlbums()
         ]).then(result => {
-            this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, this.photosLibrary.getAssetCount(), this.photosLibrary.getAlbumCount(), result[0].length, result[1].length);
+            this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, result[0].length, result[1].length, Object.keys(result[2]).length, Object.keys(result[3].length));
             return result;
         });
     }
@@ -154,12 +155,12 @@ export class SyncEngine extends EventEmitter {
      * @param remoteAlbums - An array of all remote albums
      * @returns A promise that, once resolved, will contain processing queues that can be used in order to sync the remote state.
      */
-    private async diffState(remoteAssets: Asset[], remoteAlbums: Album[]): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
+    private async diffState(remoteAssets: Asset[], remoteAlbums: Album[], localAssets: PLibraryEntities<Asset>, localAlbums: PLibraryEntities<Album>): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
         this.logger.info(`Diffing state`);
         return Promise.all([
-            this.photosLibrary.getProcessingQueues(remoteAssets, this.photosLibrary.lib.assets),
-            this.photosLibrary.getProcessingQueues(remoteAlbums, this.photosLibrary.lib.albums),
+            this.photosLibrary.getProcessingQueues(remoteAssets, localAssets),
+            this.photosLibrary.getProcessingQueues(remoteAlbums, localAlbums),
         ]).then(result => {
             this.emit(SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
             return result;
