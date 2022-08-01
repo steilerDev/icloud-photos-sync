@@ -96,11 +96,11 @@ export class SyncEngine extends EventEmitter {
             this.logger.debug(`Detected Axios error`)
 
             if(err.code === `ERR_BAD_RESPONSE`) {
-                this.logger.debug(`Bad server response, retrying...`);
+                this.logger.debug(`Bad server response (${err.response?.status}), retrying...`);
                 return false
             } else if(err.code === 'ERR_BAD_REQUEST') {
-                if(err.response?.status === 410) {
-                    this.logger.debug(`Remote ressources have changed location, retrying...`)
+                if(err.response?.status === 410 || err.response?.status === 421) {
+                    this.logger.debug(`Remote ressources have changed location, updating URLs by retrying...`)
                     return false
                 } else {
                     this.logger.warn(`Unknown bad request (${JSON.stringify(err)}), aborting!`)
