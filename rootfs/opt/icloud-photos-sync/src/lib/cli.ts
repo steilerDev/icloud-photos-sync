@@ -124,6 +124,7 @@ export class CLIInterface {
 
         iCloud.on(ICLOUD.EVENTS.READY, () => {
             console.log(chalk.green(`iCloud connection established!`));
+            console.log()
         });
 
         iCloud.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
@@ -187,6 +188,7 @@ export class CLIInterface {
         syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
             console.log();
             console.log(chalk.green.bold(`Succesfully completed sync at ${new Date().toISOString()}`));
+            console.log()
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.RETRY, retryCount => {
