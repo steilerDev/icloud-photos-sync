@@ -44,7 +44,7 @@ export class SyncEngine extends EventEmitter {
     async sync() {
         try {
             this.logger.info(`Starting sync`);
-            this.emit(SYNC_ENGINE.EVENTS.START)
+            this.emit(SYNC_ENGINE.EVENTS.START);
             let syncFinished = false;
             let retryCount = 0;
             while (!syncFinished && (this.maxRetry === -1 || this.maxRetry > retryCount)) {
@@ -130,10 +130,11 @@ export class SyncEngine extends EventEmitter {
                 this.logger.debug(`Queue has settled!`);
             }
         }
-        this.logger.debug(`Refreshing iCloud connection`)
-        const iCloudReady = this.iCloud.getReady()
-        this.iCloud.getiCloudCookies()
-        return iCloudReady
+
+        this.logger.debug(`Refreshing iCloud connection`);
+        const iCloudReady = this.iCloud.getReady();
+        this.iCloud.getiCloudCookies();
+        return iCloudReady;
     }
 
     /**
@@ -245,7 +246,7 @@ export class SyncEngine extends EventEmitter {
      * @returns A promise that resolves, once the file has been sucesfully written to disc
      */
     private async addAsset(asset: Asset): Promise<void> {
-        this.logger.info(`Processing asset ${asset.getDisplayName()}`)
+        this.logger.info(`Processing asset ${asset.getDisplayName()}`);
         if (this.verifyAsset(asset)) {
             this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
         } else {

@@ -210,6 +210,7 @@ export class iCloudAuth {
         this.logger.debug(`Processing iCloud setup response`);
         const cookieHeaders = response.headers[`set-cookie`];
         if (cookieHeaders && Array.isArray(cookieHeaders) && cookieHeaders.length > 0) {
+            this.iCloudCookies = [];
             cookieHeaders.forEach(cookieString => {
                 const cookie = Cookie.parse(cookieString);
                 this.logger.debug(`Adding cookie: ${cookie}`);

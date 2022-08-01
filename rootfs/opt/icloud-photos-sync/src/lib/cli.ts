@@ -15,9 +15,7 @@ export class CLIInterface {
     constructor(iCloud: iCloud, syncEngine: SyncEngine) {
         this.progressBar = new SingleBar({
             etaAsynchronousUpdate: true,
-          //  etaBuffer: 20,
-          //  format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | ETA: {eta_formatted} | {value}/{total}`,
-            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total}`,
+            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
             barCompleteChar: `\u25A0`,
             barIncompleteChar: ` `,
         });
@@ -133,7 +131,7 @@ export class CLIInterface {
         });
     }
 
-    setupCLISyncEngineInterface(syncEngine: SyncEngine) { 
+    setupCLISyncEngineInterface(syncEngine: SyncEngine) {
         syncEngine.on(SYNC_ENGINE.EVENTS.START, () => {
             console.log(chalk.white.bold(`Starting sync at ${new Date().toISOString()}`));
         });

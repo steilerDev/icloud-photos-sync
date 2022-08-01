@@ -21,7 +21,6 @@ CLIInterface.createCLIInterface(icloud, syncEngine);
  * Waiting for setup to complete
  */
 await icloud.authenticate()
-
     .catch(err => CLIInterface.fatalError(`Init failed: ${err}`));
 /**
  * Starting sync
