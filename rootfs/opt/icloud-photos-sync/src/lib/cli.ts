@@ -150,13 +150,12 @@ export class CLIInterface {
         });
 
         iCloud.on(ICLOUD.EVENTS.READY, () => {
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
             console.log(chalk.greenBright(`iCloud connection established!`));
         });
 
         iCloud.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
             console.log(chalk.red(`Unexpected error: ${msg}`));
+            console.log(chalk.white(CLIInterface.getHorizontalLine()));
         });
     }
 
@@ -170,6 +169,7 @@ export class CLIInterface {
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD, () => {
+            console.log(chalk.white(CLIInterface.getHorizontalLine()));
             console.log(chalk.white(`Loading local state & fetching remote iCloud Library state...`));
         });
 

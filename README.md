@@ -11,7 +11,7 @@ Upon archiving an album the following will happen:
 - Future syncs will ignore the folder (so those assets will not be changed/deleted)
 - All photos from the archived folder will be deleted from the iCloud Photos Library, unless they are *Favorites*
 
-My personal use case / workflow is documented [below](#workflow-example), providing a real life example of this application.
+My personal use case / workflow is documented [below](#motivation), providing a real life example of this application.
 
 # Usage
 
@@ -68,7 +68,7 @@ docker exec photo-sync enter_mfa <6-digit-code>
 There is currently no way to re-request it, besides quiting the application and re-running it.
 
 # Milestone Plan
-As I'm currently actively developing this tool, I'm looking for any and all feedback! Especially since the iCloud API was reverse engineered using my personal account, there might be edge cases, that I have not considered yet.
+As I'm currently actively developing this tool, I'm looking for any and all feedback! Especially since the iCloud API was reverse engineered using my personal account, there might be edge cases, that I have not considered yet (especially the non-standard file types returned by Apple are limited to the file types I am using)
 
 The tool is not yet 'production ready', however I would like to ask the community to test the functionality and open issues, so we can get it there (please attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`).
 
@@ -94,6 +94,25 @@ The tool is not yet 'production ready', however I would like to ask the communit
 10. :x: Provide WebUI
     - :x: Archive folders through UI
     - :x: Explore all pictures through UI
+11. :x: Figure out checksum algorithm to (properly) verify downloaded files
 
-# Workflow example
-TBC
+# Motivation
+In this section, I want to provide some background on the intention for developing this tool and the use case it is adressing, as well as the workflow it is used in.
+
+## Problem Statement
+Currently there is no way, to backup the iCloud Photos Library and easily access it's organized content. The only solution is Apple's *Photos.app*, which will create a `.photoslibrary` file, which is not easily accessible. Additionally, a Mac needs to run sufficiently often and have 'Keep originals' turned on, in order to make sure the data is actually synced.
+
+I am a hobby photographer, who has been using Lightroom for quite a while. However I want to move to a full mobile workflow, leveraging iCloud Photos Library for cross device sync and the interoperability of cross platform editing tools.
+
+However I am not comfortable storing the only copy of my pictures on a third party cloud provider. Therefore I need a mechanism to sync those files to a local machine that can be backed up using any mechanism.
+
+Additionally, I am going to import pictures from my SLT camera, shot in raw format. Those will take up large amounts of cloud storage, however I do not want to fully remove them, in case they will be necessary in the future. Therefore I need a mechanism to move pictures from the iCloud Photos Library to my local system for 'long term storage', while keeping the most important ones in the iCloud Photos Library for easy access.
+
+## Workflow
+1. Pictures are taken on an iOS device or imported through an iOS device into the iCloud Photos Library
+2. Pictures are sorted into a dedicated album for this event
+3. Unwanted pictures are deleted, best pictures are edited (I'm currently using [Darkroom](https://darkroom.co/) for this)
+4. Pictures are exported/released
+5. Favorite pictures are marked as 'Favorites'
+6. `icloud-photos-sync` tool is run to have all pictures downloaded (or is running constantly in the background)
+7. Folder is marked as archived through `icloud-photos-sync`, which will persist them locally and remove non-favorite photos from the iCloud Photos Library
