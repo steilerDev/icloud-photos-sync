@@ -1,14 +1,36 @@
+/**
+ * This file contains various helper classes, that help parsing responses from the iCloud API
+ */
+
 import {AlbumAssets} from '../../photos-library/model/album.js';
 import * as QueryBuilder from './query-builder.js';
 
 /**
- * Represents a resources returned from the API, called 'asset id' as per API
+ * Represents a resources returned from the API, called 'asset id' as per API. Can be found as a record on a CPLAsset or CPLMaster
  */
 export class AssetID {
-    fileChecksum: string; // 28 chars, probably base64 - 21 bytes / 168 bit
-    size: number; // In byte
-    wrappingKey: string; // Probably base64
-    referenceChecksum: string; // Different from fileChecksum
+    /**
+     * Checksum of the file:
+     * 28 chars, probably base64 encoded (21 bytes / 168 bit)
+     * Unsure how this is computed
+     */
+    fileChecksum: string;
+    /**
+     * Filesize in bytes
+     */
+    size: number;
+    /**
+     * Probably base64 encoded
+     */
+    wrappingKey: string;
+    /**
+     * An unknown checksum, different form fileChecksum.
+     * Probably base64 encoded
+     */
+    referenceChecksum: string;
+    /**
+     * The backend URL for this asset
+     */
     downloadURL: string;
 
     static parseFromQuery(assetId: any): AssetID {
@@ -30,12 +52,33 @@ export class AssetID {
  * CPLAsset is a single asset shown in Photos.app. This asset is linked to a Master and might include a current resource
  */
 export class CPLAsset {
-    recordName: string; // UUID
+    /**
+     * UUID of the asset
+     */
+    recordName: string;
+    /**
+     * Name of the application that made changes to the file
+     */
     adjustmentType?: string;
-    masterRef: string; // RecordName of CPLMaster aka hash
+    /**
+     * The hash of a CPLMaster record
+     */
+    masterRef: string;
+    /**
+     * The 'current' ressource
+     */
     resource: AssetID;
+    /**
+     * The type of ressource
+     */
     resourceType: string;
-    favorite: number; // 1 -> true
+    /**
+     * If the ressource is faved, '1' if 'true'
+     */
+    favorite: number;
+    /**
+     * Timestamp in nanoseconds since epoch
+     */
     modified: number;
 
     /**
@@ -80,10 +123,25 @@ export class CPLAsset {
  * CPLMaster is the original file associated to a CPLAsset. This contains the original filename of the file and an unmodified version of the BLOB
  */
 export class CPLMaster {
-    recordName: string; // Hash
+    /**
+     * (Unique?) hash of the file
+     */
+    recordName: string;
+    /**
+     *  The master asset attached to this record
+     */
     resource: AssetID;
+    /**
+     * The type of asset attached to this record
+     */
     resourceType: string;
+    /**
+     * Base64 encoded filename
+     */
     filenameEnc: String;
+    /**
+     * Timestamp in nanoseconds since epoch
+     */
     modified: number;
 
     /**
@@ -110,14 +168,33 @@ export class CPLMaster {
     }
 }
 
+/**
+ * CPLAlbum is the represantation of either a folder or an album. It might contains a list of assets.
+ */
 export class CPLAlbum {
-    recordName: string; // UUID
-
+    /**
+     * UUID of the album
+     */
+    recordName: string;
+    /**
+     * AlbumType represantion (e.g. Album or Folder)
+     */
     albumType: number;
+    /**
+     * Base64 encoded album name
+     */
     albumNameEnc: string;
+    /**
+     * The UUID of the parent folder
+     */
     parentId: string;
+    /**
+     * Timestamp in nanoseconds since epoch
+     */
     modified: number;
-
+    /**
+     * A list of assets contained in this album
+     */
     assets: Promise<AlbumAssets>;
 
     static parseFromQuery(cplRecord: any, assets?: Promise<AlbumAssets>): CPLAlbum {

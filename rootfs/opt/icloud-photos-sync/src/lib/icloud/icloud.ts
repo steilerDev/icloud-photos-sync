@@ -210,7 +210,7 @@ export class iCloud extends EventEmitter {
     }
 
     /**
-     * Acquiring necessary cookies from trust and auth token for further processing
+     * Acquiring necessary cookies from trust and auth token for further processing & gets the user specific domain to interact with the Photos backend
      */
     getiCloudCookies() {
         if (!this.auth.validateAccountTokens()) {

@@ -1,6 +1,6 @@
 {
   "name": "icloud-photos-sync",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "One-way sync engine for iCloud Photos library within the native file system",
   "preferGlobal": true,
   "type": "module",
@@ -10,6 +10,11 @@
     "icloud-photos-sync": "bin/main.js"
   },
   "scripts": {
+    "prebuild-clean": "echo \"// File created during pre-build, to expose package metadata to the application\" > src/lib/package.ts",
+    "prebuild-name": "node -p \"'export const VERSION = ' + JSON.stringify(require('./package.json').version) + ';'\" >> src/lib/package.ts",
+    "prebuild-version": "node -p \"'export const NAME = ' + JSON.stringify(require('./package.json').name) + ';'\" >> src/lib/package.ts",
+    "prebuild-description": "node -p \"'export const DESC = ' + JSON.stringify(require('./package.json').description) + ';'\" >> src/lib/package.ts",
+    "prebuild": "npm run prebuild-clean && npm run prebuild-name && npm run prebuild-version && npm run prebuild-description",
     "build": "npm install && eslint --fix --ext .ts ./src && tsc",
     "docs": "npx typedoc",
     "clean": "rm -rf bin/ docs/ node_modules/",
@@ -53,7 +58,6 @@
     "chalk": "^5.0.0",
     "cli-progress": "^3.11.2",
     "commander": "^9.0.0",
-    "log-rotate": "^0.2.8",
     "loglevel": "^1.8.0",
     "p-event": "^5.0.1",
     "p-queue": "^7.2.0",

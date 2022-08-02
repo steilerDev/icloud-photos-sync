@@ -4,15 +4,49 @@ import {FileType} from './file-type.js';
 import {Stats} from 'fs';
 import {PEntity} from './photos-entity.js';
 
+/**
+ * This class represents an Asset in the Photo Library
+ */
 export class Asset implements PEntity<Asset> {
+    /**
+     * Checksum of the asset
+     */
     fileChecksum: string;
+    /**
+     * Filesize in bytes of this asset
+     */
     size: number;
+    /**
+     * Modified timestamp as epoch timestamp
+     */
     modified: number;
+    /**
+     * The file type of this asset
+     */
     fileType: FileType;
+    /**
+     * The wrapping key of this asset (unknown usage, taken from backend, only present if fetched from CPL)
+     */
     wrappingKey?: string;
+    /**
+     * The reference checksum of this asset (unknown usage, taken from backend, only present if fetched from CPL)
+     */
     referenceChecksum?: string;
+    /**
+     * The download URL of this asset (only present if fetched from CPL)
+     */
     downloadURL?: string;
 
+    /**
+     * Creates a new Asset object
+     * @param fileChecksum -
+     * @param size -
+     * @param fileType -
+     * @param modified -
+     * @param wrappingKey -
+     * @param referenceChecksum -
+     * @param downloadURL -
+     */
     private constructor(fileChecksum: string, size: number, fileType: FileType, modified: number, wrappingKey?: string, referenceChecksum?: string, downloadURL?: string) {
         this.fileChecksum = fileChecksum;
         this.size = size;
@@ -24,11 +58,11 @@ export class Asset implements PEntity<Asset> {
     }
 
     /**
-     *
+     * Creates an Asset from the information provided by the backend
      * @param asset - The AssetID object returned from the backend
      * @param assetType - The assetType string, describing the filetype
      * @param modified - The modified date as returned from the backend (converted to epoch time in this function, as it is returned in milliseconds)
-     * @returns
+     * @returns An Asset based on the backend objects
      */
     static fromCPL(asset: AssetID, assetType: string, modified: number): Asset {
         return new Asset(
@@ -42,6 +76,12 @@ export class Asset implements PEntity<Asset> {
         );
     }
 
+    /**
+     * Creates an Asset from a given file
+     * @param fileName - The file name of the file
+     * @param stats - The metadata associated with the file
+     * @returns An Asset based on the file information
+     */
     static fromFile(fileName: string, stats: Stats): Asset {
         return new Asset(
             Buffer.from(path.basename(fileName, path.extname(fileName)), `base64url`).toString(`base64`),
@@ -51,10 +91,11 @@ export class Asset implements PEntity<Asset> {
         );
     }
 
-    isObject(): boolean {
-        return true;
-    }
-
+    /**
+     * Compares the provided asset to this asset instance
+     * @param asset - The asset to compare to
+     * @returns True if provided asset matches this instance (based on fileChecksum, fileType, size and modified timestamp)
+     */
     equal(asset: Asset): boolean {
         return asset
                 && this.fileChecksum === asset.fileChecksum
@@ -63,6 +104,11 @@ export class Asset implements PEntity<Asset> {
                 && this.modified === asset.modified;
     }
 
+    /**
+     *
+     * @param dir - The directory, where the file path should be based on
+     * @returns The full asset file path under the provided directory
+     */
     getAssetFilePath(dir: string) {
         return path.format({
             dir,
@@ -70,6 +116,10 @@ export class Asset implements PEntity<Asset> {
         });
     }
 
+    /**
+     *
+     * @returns A filename safe-encoded UUID of this instance with the correct file extension
+     */
     getAssetFilename(): string {
         return path.format({
             name: Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
@@ -77,18 +127,38 @@ export class Asset implements PEntity<Asset> {
         });
     }
 
+    /**
+     *
+     * @returns The UUID of this instance
+     */
     getUUID(): string {
         return this.fileChecksum;
     }
 
+    /**
+     * Verifies that the object representation matches the given file
+     * @param file - The read file
+     * @returns True if the provided file matches this object representation
+     */
     verify(file: Buffer): boolean {
         return this.verifyChecksum(file) && this.verifySize(file);
     }
 
+    /**
+     * Compares the size of the file on disk with the size in this object
+     * @param file - The read file
+     * @returns True if the size matches
+     */
     private verifySize(file: Buffer): boolean {
         return file.byteLength === this.size;
     }
 
+    /**
+     * Verifies the checksum of this file against the checksum stored in this object
+     * This is currently NOT implemented, as the checksum algorithm is unknown.
+     * @param file - The read file
+     * @returns True if checksum matches
+     */
     private verifyChecksum(file: Buffer): boolean {
         return file !== undefined;
         /*
@@ -163,10 +233,18 @@ export class Asset implements PEntity<Asset> {
         }); */
     }
 
+    /**
+     *
+     * @returns A display name for this instance
+     */
     getDisplayName(): string {
         return this.fileChecksum;
     }
 
+    /**
+     * Function to extract a plain Asset from the PEntity interface
+     * @returns - The plain Asset object
+     */
     unpack(): Asset {
         return this;
     }

@@ -22,25 +22,49 @@ export class SyncEngine extends EventEmitter {
      */
     private logger = getLogger(this);
 
+    /**
+     * The iCloud connection
+     */
     iCloud: iCloud;
 
+    /**
+     * The local PhotosLibrary
+     */
     photosLibrary: PhotosLibrary;
 
-    // Initialized in writeAssets()
+    /**
+     * A queue containing all pending asset downloads, in order to limit download threads
+     * Initialized in writeAssets()
+     */
     downloadQueue: PQueue;
+    /**
+     * The number of concurent download threads
+     */
     downloadCCY: number;
 
+    /**
+     * If the sync experiences an expected / recoverable error (e.g. after 1hr the cookies need to be refreshed), how often should the tool retry
+     * Set this to -1 if retry should happen infinitely
+     */
     maxRetry: number;
 
+    /**
+     * Creates a new sync engine from the previously created objects and CLI options
+     * @param iCloud - The authenticated and 'ready' iCloud connection
+     * @param photosLibrary - The PhotosLibrary
+     * @param cliOpts - The CLI options
+     */
     constructor(iCloud: iCloud, photosLibrary: PhotosLibrary, cliOpts: OptionValues) {
         super();
         this.iCloud = iCloud;
         this.photosLibrary = photosLibrary;
         this.downloadCCY = cliOpts.download_threads;
-
         this.maxRetry = cliOpts.max_retries;
     }
 
+    /**
+     * Performs the sync and handles all connections
+     */
     async sync() {
         try {
             this.logger.info(`Starting sync`);
@@ -115,7 +139,7 @@ export class SyncEngine extends EventEmitter {
     }
 
     /**
-     * Prepares the sync engine for a retry
+     * Prepares the sync engine for a retry, by emptying the queue and refreshing iCloud cookies
      */
     private async prepareRetry(): Promise<void> {
         this.logger.debug(`Preparing retry...`);
@@ -139,8 +163,8 @@ export class SyncEngine extends EventEmitter {
     }
 
     /**
-     * This function fetches the remote state and updates the local state
-     * @returns A promise that resolve once the fetch was completed, containing the remote state
+     * This function fetches the remote state and loads the local state from disk
+     * @returns A promise that resolve once the fetch was completed, containing the remote & local state
      */
     private async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
@@ -162,9 +186,11 @@ export class SyncEngine extends EventEmitter {
     }
 
     /**
-     * This function diffes the local state (stored in the local Photos Library) with the given remote state
+     * This function diffs the provided local state with the given remote state
      * @param remoteAssets - An array of all remote assets
      * @param remoteAlbums - An array of all remote albums
+     * @param localAssets - A list of local assets
+     * @param localAlbums - A list of local albums
      * @returns A promise that, once resolved, will contain processing queues that can be used in order to sync the remote state.
      */
     private async diffState(remoteAssets: Asset[], remoteAlbums: Album[], localAssets: PLibraryEntities<Asset>, localAlbums: PLibraryEntities<Album>): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
@@ -181,8 +207,8 @@ export class SyncEngine extends EventEmitter {
 
     /**
      * Matches CPLAsset/CPLMaster pairs and parses their associated Asset(s)
-     * @param asset - The given asset
-     * @param master - The given master
+     * @param cplAssets - The given asset
+     * @param cplMasters - The given master
      * @returns An array of all containing assets
      */
     static convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Asset[] {
@@ -218,6 +244,12 @@ export class SyncEngine extends EventEmitter {
         return remoteAlbums;
     }
 
+    /**
+     * Takes the processing queues and performs the necessary actions to write them to disk
+     * @param assetQueue - The queue containing assets that need to be written to, or deleted from disk
+     * @param albumQueue - The queue containing albums that need to be written to, or deleted from disk
+     * @returns A promise that will settle, once the state has been written to disk
+     */
     private async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
         this.emit(SYNC_ENGINE.EVENTS.WRITE);
         this.logger.info(`Writing state`);
@@ -226,6 +258,11 @@ export class SyncEngine extends EventEmitter {
             .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_COMPLETED));
     }
 
+    /**
+     * Writes the asset changes defined in the processing queue to to disk (by downloading the asset or deleting it)
+     * @param processingQueue - The asset processing queue
+     * @returns A promise that settles, once all asset changes have been written to disk
+     */
     private async writeAssets(processingQueue: PLibraryProcessingQueues<Asset>) {
         const toBeDeleted = processingQueue[0];
         const toBeAdded = processingQueue[1];
@@ -242,9 +279,9 @@ export class SyncEngine extends EventEmitter {
     }
 
     /**
-     * This function downloads and stores a given asset, unless file is already present on disc
+     * Downloads and stores a given asset, unless file is already present on disk
      * @param asset - The asset that needs to be downloaded
-     * @returns A promise that resolves, once the file has been sucesfully written to disc
+     * @returns A promise that resolves, once the file has been sucesfully written to disk
      */
     private async addAsset(asset: Asset): Promise<void> {
         this.logger.info(`Processing asset ${asset.getDisplayName()}`);
@@ -271,12 +308,22 @@ export class SyncEngine extends EventEmitter {
         }
     }
 
+    /**
+     * Deletes a given asset
+     * @param asset - The asset that needs to be deleted
+     * @returns A promise that resolves, once the file has been deleted
+     */
     private async deleteAsset(asset: Asset): Promise<void> {
         this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
         return fsPromise.rm(location, {force: true});
     }
 
+    /**
+     * Verifies if a given Asset object is present on disk
+     * @param asset - The asset to verify
+     * @returns True, if the Asset object is present on disk
+     */
     private verifyAsset(asset: Asset): boolean {
         this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
@@ -284,6 +331,11 @@ export class SyncEngine extends EventEmitter {
             && asset.verify(fs.readFileSync(location));
     }
 
+    /**
+     * Writes the album changes defined in the processing queue to to disk
+     * @param processingQueue - The album processing queue
+     * @returns A promise that settles, once all album changes have been written to disk
+     */
     private async writeAlbums(processingQueue: PLibraryProcessingQueues<Album>) {
         const toBeDeleted = processingQueue[0];
         const toBeAdded = processingQueue[1];

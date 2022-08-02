@@ -1,22 +1,20 @@
-Currently resetting this project and working on NodeJS version of this.
+**Work in progress, [current state and upcoming milestones below](#milestone-plan).**
 
-## Build
+This project provides a one-way sync engine for the iCloud Photos Library. The intention behind the project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem (only tested on Linux Debian 10/buster). Currently, this can only be achived, by having a Mac continously run the Photos.app (with 'Keep originals' enabled). With this method the files cannot be easily viewed without the Photos.app.
 
-To build and run the npm project directly, navigate to `rootfs/opt/icloud-photos-sync` and run
-```
-npm build
-npm execute
-```
+Albums can be archived ([currently an open milestone](#milestone-plan)). This will enable users to keep their favorite pictures in the iCloud Photos Library, while reducing iCloud storage needs. Upon archiving an album the following will happen:
+- All assets currently in the album will be persisted in the respective folder on the machine running icloud-photos-sync
+- Future syncs will ignore this folder (so those assets will not be changed/deleted)
+- All photos from the archived folder will be deleted from the iCloud Photos Library, unless they are 'Favorites'
 
-Make sure the following environmental variables are present:
- - `APPLE_ID_USER`
- - `APPLE_ID_PWD`
- - `PORT` (for listening on MFA code)
+My personal use case / workflow is documented [below](#workflow-example), providing a real life example of this application.
 
-## Run
+# Usage
 
-This is my `docker-compose.yml` started through `docker-compose up && docker attach photo-sync`
+## Docker
+I recommend using the provided docker image to run the script.
 
+Using `docker-compose.yml`:
 ```
 version: '2'
 services:
@@ -24,21 +22,71 @@ services:
     image: icloud-photos-sync:latest
     container_name: photo-sync
     restart: unless-stopped
-    stdin_open: true
-    tty: true
     environment:
        APPLE_ID_USER: "<iCloud Username>"
        APPLE_ID_PWD: "<iCloud Password>"
-#      The cron schedule for syncs: min   hour    day     month   weekday
-#       CRON_SCHEDULE: "0 4 * * 0,3"
     volumes:
-      - <conf+data-dir>:/icloud-data
-      - <photos-dir>:/icloud-photos
+      - <photos-dir>:/opt/icloud-photos-library
 ```
 
-### Enter MFA
-Once requested by the tool, enter the MFA Code with
+A full list of configuration options (through environment variables) can be found by executing `docker run icloud-photos-sync:latest icloud-photos-sync --help`.
+
+## CLI from npm
+The application can be installed from npm using:
+```
+npm install -g icloud-photos-sync
+```
+
+A list of configuration options and how to run the application can be found by executing `icloud-photos-sync --help`.
+
+## Build from source
+To build the application from source, clone this repository, go to `rootfs/opt/icloud-photos-sync` and run
+```
+npm run build
+```
+
+Executing the program can be done through
+```
+npm run execute
+```
+
+A list of configuration options and how to run the application can be found by executing `npm run execute -- --help`.
+
+# Enter MFA
+Once the MFA code is required, the tool will open up a webserver, listening on a specified port. Provide the code by `POST`ing it to `/mfa` with parameter `code`. E.g. using `curl`:
+```
+curl -X POST localhost:80/mfa?code=123456
+```
+
+When using docker, you can use the following helper script:
 ```
 docker exec photo-sync enter_mfa <6-digit-code>
 ```
-There is currently no way to re-request it, besides quiting the application and re-running it
+There is currently no way to re-request it, besides quiting the application and re-running it.
+
+# Milestone Plan
+1. :white_check_mark:iCloud Authentication 
+2. :white_check_mark: State fetched from iCloud
+   - :white_check_mark: Asset state ('All photos')
+   - :white_check_mark: Album state (List of Albums)
+3. :white_check_mark: Parsing fetched state
+   - :white_check_mark:Parsing assets
+   - :white_check_mark:Parsing albums
+4. :white_check_mark:Loading local state
+   - :white_check_mark:Asset state
+   - :white_check_mark:Album state
+5. :white_check_mark:Diffing local / remote state
+6. :white_check_mark:Applying diff
+   - :white_check_mark:Asset diff
+   - :white_check_mark:Album diff
+7. :white_check_mark:Writing diff to disk
+   - :white_check_mark:Writing asset diff
+   - :x:Writing album diff
+8. :x:Enable archiving
+9. :x:Improve MFA workflow (re-request code/send code through other means)
+10.:x: Provide WebUI
+   - :x:Archive folders through UI
+   - :x:Explore all pictures through UI
+
+# Workflow example
+TBC

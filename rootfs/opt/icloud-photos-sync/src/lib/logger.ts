@@ -20,7 +20,7 @@ const LOGGER = {
 
 /**
  * Logger setup including the configuration of logger prefix
- * @param logLevel - The log level for this application
+ * @param cliOpts - The configuration options, read from the CLI
  */
 export function setupLogger(cliOpts: OptionValues): void {
     const logFile = path.format({
@@ -60,6 +60,11 @@ export function setupLogger(cliOpts: OptionValues): void {
     */
 }
 
+/**
+ * Returns the class specific logger
+ * @param instance - The instance asking for a logger
+ * @returns The class specific logger, unless it cannot be found, then the root logger is returned
+ */
 export function getLogger(instance: any): log.Logger {
     const className = instance.constructor.name;
     const loggerName = LOGGER[className];

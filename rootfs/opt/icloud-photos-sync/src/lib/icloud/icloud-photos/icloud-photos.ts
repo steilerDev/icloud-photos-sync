@@ -23,6 +23,10 @@ export class iCloudPhotos extends EventEmitter {
      */
     private auth: iCloudAuth;
 
+    /**
+     * Creates a new iCloud Photos Class
+     * @param auth - The populated authentication object
+     */
     constructor(auth: iCloudAuth) {
         super();
         this.auth = auth;

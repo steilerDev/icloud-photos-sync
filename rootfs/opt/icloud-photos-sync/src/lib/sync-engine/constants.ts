@@ -1,5 +1,6 @@
-export const FILE_NAME = `photos-library.db`;
-
+/**
+ * Event lifecycle of Sync Engine class
+ */
 export enum EVENTS {
     START = `start`,
     FETCH_N_LOAD = `fetch-n-load`, // No arg

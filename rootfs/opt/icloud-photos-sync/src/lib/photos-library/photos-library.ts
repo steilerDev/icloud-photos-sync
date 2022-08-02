@@ -27,6 +27,10 @@ export class PhotosLibrary {
      */
     assetDir: string;
 
+    /**
+     * Creates the local PhotoLibrary, based on the provided CLI options
+     * @param cliOpts - The read CLI options
+     */
     constructor(cliOpts: OptionValues) {
         this.photoDataDir = cliOpts.data_dir;
         if (!fssync.existsSync(this.photoDataDir)) {
@@ -41,6 +45,10 @@ export class PhotosLibrary {
         }
     }
 
+    /**
+     * Loads all assets from disk
+     * @returns A structured list of assets, as they are currently present on disk
+     */
     async loadAssets(): Promise<PLibraryEntities<Asset>> {
         const libAssets: PLibraryEntities<Asset> = {};
         (await fs.readdir(this.assetDir))
@@ -56,6 +64,10 @@ export class PhotosLibrary {
         return libAssets;
     }
 
+    /**
+     * Recursively loads all albums from disk
+     * @returns A structured list of albums, as they are currently present on disk
+     */
     async loadAlbums(): Promise<PLibraryEntities<Album>> {
         // Loading folders
         const libAlbums: PLibraryEntities<Album> = {};
@@ -67,7 +79,7 @@ export class PhotosLibrary {
     }
 
     /**
-     * Loads the content of a given album from disc
+     * Loads the content of a given album from disc (and recursively does that for all child items)
      * @param album - The album that needs to be loaded, containing a filepath
      * @returns An array of loaded albums, including the provided one and all its child items
      */
@@ -114,6 +126,11 @@ export class PhotosLibrary {
         return albums;
     }
 
+    /**
+     * Derives the album type of a given folder, based on its content
+     * @param path - The path to the folder on disk
+     * @returns The album type of the folder
+     */
     private async readAlbumTypeFromPath(path: string): Promise<AlbumType> {
         // If the folder contains other folders, it will be of AlbumType.Folder
         const directoryPresent = (await fs.readdir(path, {
@@ -142,9 +159,9 @@ export class PhotosLibrary {
     }
 
     /**
-     * This function diffs two entity arrays (can be either albums or assets) and returns the corresponding processing queue
+     * This function diffs two entity arrays (can be either Albums or Assets) and returns the corresponding processing queue
      * @param remoteEnties - The entities fetched from a remote state
-     * @param localEntities - The local entity library
+     * @param localEntities - The local entities as read from disk
      */
     getProcessingQueues<T>(remoteEnties: PEntity<T>[], localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
         this.logger.debug(`Getting processing queues`);

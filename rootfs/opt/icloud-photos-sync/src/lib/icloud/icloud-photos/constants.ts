@@ -3,7 +3,7 @@
  */
 
 /**
- * Events lifecycle of iCloud-Photos class
+ * Event lifecycle of iCloud-Photos class
  */
 export enum EVENTS {
     SETUP_COMPLETE = `setup_complete`,

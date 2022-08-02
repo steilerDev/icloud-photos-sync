@@ -7,6 +7,9 @@ import {getLogger} from "../logger.js";
 
 import * as ICLOUD from './constants.js';
 
+/**
+ * Secrets, required to track authentication request across the MFA process
+ */
 export interface AuthSecrets {
     /**
      * X-Apple-ID-Session-Id / X-Apple-Session-Token
@@ -50,6 +53,9 @@ export interface AccountTokens {
     trustToken?: string
 }
 
+/**
+ * Authentication information required to interact with the iCloud Photos backend
+ */
 export interface PhotosAccount {
     photosDomain?: string,
     zoneName?: string,
@@ -97,6 +103,12 @@ export class iCloudAuth {
      */
     trustTokenFile: string;
 
+    /**
+     *
+     * @param username - The AppleID username
+     * @param password - The AppleID password
+     * @param appDataDir - The directory to store authentication tokens for future re-authentication without MFA
+     */
     constructor(username: string, password: string, appDataDir: string) {
         this.iCloudAccountSecrets.username = username;
         this.iCloudAccountSecrets.password = password;
@@ -249,7 +261,7 @@ export class iCloudAuth {
                     cookieString = `${cookieString}; ${cookie.cookieString()}`;
                 }
             });
-            this.logger.debug(`Build cookie string: ${cookieString}`);
+            this.logger.trace(`Build cookie string: ${cookieString}`);
         } else {
             this.logger.warn(`Unable to parse cookies, because object is empty: ${this.iCloudCookies})`);
         }
