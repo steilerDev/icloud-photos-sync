@@ -68,6 +68,8 @@ docker exec photo-sync enter_mfa <6-digit-code>
 There is currently no way to re-request it, besides quiting the application and re-running it.
 
 # Milestone Plan
+As I'm currently actively developing this tool, I'm looking for any and all feedback! Especially since the iCloud API was reverse engineered using my personal account, there might be edge cases, that I have not considered yet. I would not use this "in production", however I would like to ask the community to test the functionality and open issues, in case you are facing any issues (please attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`)
+
 1. :white_check_mark: iCloud Authentication 
 2. :white_check_mark: State fetched from iCloud
    - :white_check_mark: Asset state ('All photos')
