@@ -87,7 +87,7 @@ There is currently no way to re-request it, besides quiting the application and 
    - :x: Writing album diff
 8. :x: Enable archiving
 9. :x: Improve MFA workflow (re-request code/send code through other means)
-10. :x:Provide WebUI
+10. :x: Provide WebUI
    - :x: Archive folders through UI
    - :x: Explore all pictures through UI
 
