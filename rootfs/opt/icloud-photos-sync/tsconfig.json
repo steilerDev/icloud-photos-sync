@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "module": "ES6",
+    "module": "es2022",
     "esModuleInterop": true,
-    "target": "ES6",
+    "target": "es2022",
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "bin",

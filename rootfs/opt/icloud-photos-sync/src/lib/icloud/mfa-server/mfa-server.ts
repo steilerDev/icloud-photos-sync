@@ -1,38 +1,34 @@
+import EventEmitter from 'events';
 import http from 'http';
-import log from 'loglevel';
-import {iCloud} from './icloud/icloud.js';
-import * as ICLOUD from './icloud/icloud.constants.js';
-
-const MFA_ENDPOINT = `/mfa`;
+import * as MFA_SERVER from './constants.js';
+import {getLogger} from '../../logger.js';
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
+ * todo - Implement re-request of MFA code
  */
-export class MFAServer {
+export class MFAServer extends EventEmitter {
+    /**
+     * Default logger for this class
+     */
+    private logger = getLogger(this);
+
     /**
      * The server object
      */
-    server: http.Server;
-
-    /**
-     * Link to parent object
-     */
-    iCloud: iCloud;
+    private server: http.Server;
 
     /**
      * Port to start server on
      */
     port: number;
 
-    logger: log.Logger = log.getLogger(`MFAServer`);
-
     /**
      * Creates the server object
      * @param port - The port to listen on
-     * @param iCloud - The parent object currently performing authentication
      */
-    constructor(port: number, iCloud: iCloud) {
-        this.iCloud = iCloud;
+    constructor(port: number) {
+        super();
         this.port = port;
     }
 
@@ -49,7 +45,7 @@ export class MFAServer {
         });
 
         this.server.listen(this.port, () => {
-            this.logger.info(`MFA server listening on port ${this.port}, awaiting POST request on ${MFA_ENDPOINT}`);
+            this.logger.info(`MFA server listening on port ${this.port}, awaiting POST request on ${MFA_SERVER.MFA_ENDPOINT}`);
         });
     }
 
@@ -59,7 +55,7 @@ export class MFAServer {
      * @param res - The HTTP response object
      */
     handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        if (req.url.startsWith(MFA_ENDPOINT) && req.url.match(/\?code=\d{6}$/) && req.method === `POST`) {
+        if (req.url.startsWith(MFA_SERVER.MFA_ENDPOINT) && req.url.match(/\?code=\d{6}$/) && req.method === `POST`) {
             this.logger.debug(`Received MFA: ${req.url}`);
             const mfa: string = req.url.slice(-6);
 
@@ -67,7 +63,7 @@ export class MFAServer {
             res.write(`Read MFA code: ${mfa}`);
             res.end();
 
-            this.iCloud.emit(ICLOUD.EVENTS.MFA_RECEIVED, mfa);
+            this.emit(MFA_SERVER.EVENTS.MFA_RECEIVED, mfa);
         } else {
             // @todo Implement resend codes via phone or text
             this.logger.warn(`Received unknown request to endpoint ${req.url}`);

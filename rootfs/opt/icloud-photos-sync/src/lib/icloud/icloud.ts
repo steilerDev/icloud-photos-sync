@@ -1,26 +1,23 @@
-import log from 'loglevel';
-
-import axios from 'axios';
+import axios, {AxiosRequestConfig, AxiosRequestHeaders} from 'axios';
 
 import EventEmitter from 'events';
-import {MFAServer} from '../mfa-server.js';
-import * as ICLOUD from './icloud.constants.js';
-import * as ICLOUD_PHOTOS from './photos/icloud.photos.constants.js';
-import {iCloudPhotos} from './photos/icloud.photos.js';
-import {iCloudAuth} from './icloud.auth.js';
+import {MFAServer} from './mfa-server/mfa-server.js';
+import * as ICLOUD from './constants.js';
+import * as ICLOUD_PHOTOS from './icloud-photos/constants.js';
+import * as MFA_SERVER from './mfa-server/constants.js';
+import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
+import {iCloudAuth} from './auth.js';
+import {OptionValues} from 'commander';
+import {getLogger} from '../logger.js';
 
 /**
  * This class holds the iCloud connection
- *
- * Emits:
- *   * 'ready' when the instance is authenticated and ready to process requests
- *
- */
+ * */
 export class iCloud extends EventEmitter {
     /**
-     * Singleton
+     * Default logger for the class
      */
-    private static _instance: iCloud;
+    private logger = getLogger(this);
 
     /**
      * Authentication object of the current iCloud session
@@ -38,27 +35,30 @@ export class iCloud extends EventEmitter {
     photos: iCloudPhotos = null;
 
     /**
-     * Default logger for the class
+     * A promise that will resolve, once the object is ready or reject, in case there is an error
      */
-    logger: log.Logger = log.getLogger(`I-Cloud`);
+    ready: Promise<void>;
 
     /**
-     * Creates a new iCloud Object - Can only be acquired as singleton
-     * @param username - The iCloud username
-     * @param password - The iCloud password
-     * @param mfaPort - The port to start the MFA server on
+     * Creates a new iCloud Object
+     * @param cliOpts - The read CLI options containing username, password and MFA server port
      */
-    private constructor(username: string, password: string, mfaPort: number) {
+    constructor(cliOpts: OptionValues) {
         super();
-        this.logger.info(`Initiating iCloud connection for ${username}`);
+        this.logger.info(`Initiating iCloud connection for ${cliOpts.username}`);
 
-        this.mfaServer = new MFAServer(mfaPort, this);
-        this.auth = new iCloudAuth(username, password);
+        this.mfaServer = new MFAServer(cliOpts.port);
+        this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.mfaReceived.bind(this));
+
+        this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.data_dir);
 
         this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
-            this.mfaServer.startServer();
+            try {
+                this.mfaServer.startServer();
+            } catch (err) {
+                this.emit(ICLOUD.EVENTS.ERROR, err.message);
+            }
         });
-        this.on(ICLOUD.EVENTS.MFA_RECEIVED, this.mfaReceived);
         this.on(ICLOUD.EVENTS.AUTHENTICATED, this.getTokens);
         this.on(ICLOUD.EVENTS.TRUSTED, this.getiCloudCookies);
         this.on(ICLOUD.EVENTS.ACCOUNT_READY, this.getiCloudPhotosReady);
@@ -71,31 +71,34 @@ export class iCloud extends EventEmitter {
             this.logger.error(`Error ocurred: ${msg}`);
             // @todo Retry by calling authenticate()
         });
+
+        this.ready = this.getReady();
     }
 
     /**
-     * Facilitator function for iCloud
-     * @param mfaPort - The port for the MFA receiving server
-     * @param username - The iCloud username
-     * @param password - The iCloud password
+     *
+     * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR'
      */
-    public static getInstance(username: string, password: string, mfaPort: number) {
-        if (!this._instance) {
-            this._instance = new this(username, password, mfaPort);
-        }
-
-        return this._instance;
+    getReady(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.on(ICLOUD.EVENTS.READY, resolve);
+            this.on(ICLOUD.EVENTS.ERROR, reject);
+        });
     }
 
     /**
      * Initiatiates authentication flow
      * Tries to directly login using trustToken, otherwise starts MFA flow
      */
-    authenticate() {
+    async authenticate(): Promise<void> {
         this.logger.info(`Authenticating user`);
+        this.emit(ICLOUD.EVENTS.AUTHENTICATION_STARTED);
 
-        const config = {
+        const config: AxiosRequestConfig = {
             headers: ICLOUD.DEFAULT_AUTH_HEADER,
+            params: {
+                isRememberMeEnabled: true,
+            },
         };
 
         const data = {
@@ -126,7 +129,7 @@ export class iCloud extends EventEmitter {
                     if (res.status === 409) {
                         if (this.auth.processAuthSecrets(res)) {
                             this.logger.debug(`Acquired secrets, requiring MFA: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
-                            this.emit(ICLOUD.EVENTS.MFA_REQUIRED);
+                            this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
                         } else {
                             this.emit(ICLOUD.EVENTS.ERROR, `Unable to process auth response and extract necessary secrets: ${this.auth.iCloudAuthSecrets}`);
                         }
@@ -137,6 +140,8 @@ export class iCloud extends EventEmitter {
                     this.emit(ICLOUD.EVENTS.ERROR, `Error during sign-in ${err}`);
                 }
             });
+
+        return this.ready;
     }
 
     /**
@@ -151,7 +156,7 @@ export class iCloud extends EventEmitter {
         } else {
             this.logger.info(`Authenticating MFA with code ${mfa}`);
 
-            const config = {
+            const config: AxiosRequestHeaders = {
                 headers: this.auth.getMFAHeaders(),
             };
 
@@ -185,7 +190,7 @@ export class iCloud extends EventEmitter {
         } else {
             this.logger.info(`Trusting device and acquiring trust tokens`);
 
-            const config = {
+            const config: AxiosRequestConfig = {
                 headers: this.auth.getMFAHeaders(),
             };
 
@@ -205,14 +210,14 @@ export class iCloud extends EventEmitter {
     }
 
     /**
-     * Acquiring necessary cookies from trust and auth token for further processing
+     * Acquiring necessary cookies from trust and auth token for further processing & gets the user specific domain to interact with the Photos backend
      */
     getiCloudCookies() {
         if (!this.auth.validateAccountTokens()) {
             this.emit(ICLOUD.EVENTS.ERROR, `Unable to setup iCloud, because tokens are missing: ${JSON.stringify(this.auth.iCloudAccountTokens)}!`);
         } else {
             this.logger.info(`Setting up iCloud connection`);
-            const config = {
+            const config: AxiosRequestConfig = {
                 headers: ICLOUD.DEFAULT_HEADER,
             };
 
@@ -242,7 +247,7 @@ export class iCloud extends EventEmitter {
      * Creating iCloud Photos sub-class and linking it
     */
     getiCloudPhotosReady() {
-        if (this.photos && this.photos.auth.validateCloudCookies()) {
+        if (this.photos && this.auth.validateCloudCookies()) {
             this.logger.info(`Getting iCloud Photos Service ready`);
 
             this.photos.on(ICLOUD_PHOTOS.EVENTS.READY, () => {

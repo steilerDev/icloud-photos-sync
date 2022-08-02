@@ -1,21 +1,4 @@
-/**
- *
- */
-export const PACKAGE_INFO: {
-    /**
-     * The current version string
-     */
-    version: string,
-    /**
-     * Name of the package
-     */
-    name: string,
-    /**
-     * Short description of the package
-     */
-    description: string
-} = {
-    version: `0.0.5`,
-    name: `icloud-photos-sync`,
-    description: `One-way Sync engine for iCloud Photos library within the native file system`,
-};
+// File created during pre-build, to expose package metadata to the application
+export const VERSION = `0.1.0`;
+export const NAME = `icloud-photos-sync`;
+export const DESC = `One-way sync engine for iCloud Photos library within the native file system`;

@@ -1,9 +1,15 @@
 import {AxiosResponse} from "axios";
-import log from "loglevel";
+import {writeFile, mkdir} from 'fs/promises';
+import {readFileSync} from 'fs';
+import * as path from 'path';
 import {Cookie} from "tough-cookie";
+import {getLogger} from "../logger.js";
 
-import * as ICLOUD from './icloud.constants.js';
+import * as ICLOUD from './constants.js';
 
+/**
+ * Secrets, required to track authentication request across the MFA process
+ */
 export interface AuthSecrets {
     /**
      * X-Apple-ID-Session-Id / X-Apple-Session-Token
@@ -47,6 +53,9 @@ export interface AccountTokens {
     trustToken?: string
 }
 
+/**
+ * Authentication information required to interact with the iCloud Photos backend
+ */
 export interface PhotosAccount {
     photosDomain?: string,
     zoneName?: string,
@@ -55,8 +64,14 @@ export interface PhotosAccount {
     syncToken?: string
 }
 
+/**
+ * This class holds all iCloud related authentication information
+ */
 export class iCloudAuth {
-    logger: log.Logger = log.getLogger(`I-Cloud-Auth`);
+    /**
+     * Default logger for this class
+     */
+    private logger = getLogger(this);
 
     /**
      * Cookies required to access iCloud services
@@ -83,10 +98,57 @@ export class iCloudAuth {
      */
     iCloudPhotosAccount: PhotosAccount = {};
 
-    constructor(username: string, password: string, trustToken?: string) {
+    /**
+     * File path to the location, where the trust token is persisted on disk to circumvent future MFA requests
+     */
+    trustTokenFile: string;
+
+    /**
+     *
+     * @param username - The AppleID username
+     * @param password - The AppleID password
+     * @param appDataDir - The directory to store authentication tokens for future re-authentication without MFA
+     */
+    constructor(username: string, password: string, appDataDir: string) {
         this.iCloudAccountSecrets.username = username;
         this.iCloudAccountSecrets.password = password;
-        this.iCloudAccountTokens.trustToken = trustToken;
+        this.trustTokenFile = path.format({
+            dir: appDataDir,
+            base: ICLOUD.TRUST_TOKEN_FILE_NAME,
+        });
+        this.loadTrustToken();
+    }
+
+    /**
+     * Tries loading the trust token from disk. Loading is done synchronously in order to avoid race conditions, where authentication is attempted before token is loaded
+     */
+    loadTrustToken() {
+        this.logger.debug(`Trying to load trust token from disk`);
+        try {
+            const trustToken = readFileSync(this.trustTokenFile, {encoding: ICLOUD.TRUST_TOKEN_FILE_ENCODING});
+            this.logger.debug(`Acquired trust token from file: ${trustToken}`);
+            this.iCloudAccountTokens.trustToken = trustToken;
+        } catch (err) {
+            this.logger.warn(`Unable to acquire trust token from file: ${err}`);
+        }
+    }
+
+    /**
+     * Tries to write the trust token to disk
+     */
+    storeTrustToken() {
+        this.logger.debug(`Trying to persist trust token to disk`);
+
+        const trustTokenPath = path.dirname(this.trustTokenFile);
+        mkdir(trustTokenPath, {recursive: true})
+            .catch(err => {
+                this.logger.warn(`Unable to create trust token directory (${trustTokenPath}): ${err}`);
+            });
+
+        writeFile(this.trustTokenFile, this.iCloudAccountTokens.trustToken, {encoding: ICLOUD.TRUST_TOKEN_FILE_ENCODING})
+            .catch(err => {
+                this.logger.warn(`Unable to persist trust token to disk: ${err}`);
+            });
     }
 
     /**
@@ -117,7 +179,7 @@ export class iCloudAuth {
 
     /**
      * Headers required for MFA authentication flow (Enter 2-FA + get tokens)
-     * @returns
+     * @returns The header object for the request
      */
     getMFAHeaders(): any {
         return {...ICLOUD.DEFAULT_AUTH_HEADER,
@@ -128,13 +190,15 @@ export class iCloudAuth {
     }
 
     /**
-     * Processing the response from acquiring the necessary trust tokens
+     * Processing the response from acquiring the necessary trust tokens. This method is automatically storing the trust token on disk
      * @param response - The response from the trust token endpoint
+     * @returns True if acquied account tokens were sucesfully validated
      */
     processAccountTokens(response: AxiosResponse): boolean {
         this.logger.debug(`Processing trust token response`);
         this.iCloudAccountTokens.sessionToken = response.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()];
         this.iCloudAccountTokens.trustToken = response.headers[ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN.toLowerCase()];
+        this.storeTrustToken();
         return this.validateAccountTokens();
     }
 
@@ -158,6 +222,7 @@ export class iCloudAuth {
         this.logger.debug(`Processing iCloud setup response`);
         const cookieHeaders = response.headers[`set-cookie`];
         if (cookieHeaders && Array.isArray(cookieHeaders) && cookieHeaders.length > 0) {
+            this.iCloudCookies = [];
             cookieHeaders.forEach(cookieString => {
                 const cookie = Cookie.parse(cookieString);
                 this.logger.debug(`Adding cookie: ${cookie}`);
@@ -196,7 +261,7 @@ export class iCloudAuth {
                     cookieString = `${cookieString}; ${cookie.cookieString()}`;
                 }
             });
-            this.logger.debug(`Build cookie string: ${cookieString}`);
+            this.logger.trace(`Build cookie string: ${cookieString}`);
         } else {
             this.logger.warn(`Unable to parse cookies, because object is empty: ${this.iCloudCookies})`);
         }
@@ -241,19 +306,27 @@ export class iCloudAuth {
 
     /**
      * Validates that the objects holds all account secrets
-     * @returns
+     * @returns True if acount secrets are present
      */
     validateAccountSecrets(): boolean {
         return this.iCloudAccountSecrets.username && this.iCloudAccountSecrets.username.length > 0
             && this.iCloudAccountSecrets.password && this.iCloudAccountSecrets.password.length > 0;
     }
 
+    /**
+     * Validates the authentication secrets
+     * @returns True if authentication secrets are present
+     */
     validateAuthSecrets(): boolean {
         return this.iCloudAuthSecrets.aasp && this.iCloudAuthSecrets.aasp.length > 0
             && this.iCloudAuthSecrets.scnt && this.iCloudAuthSecrets.scnt.length > 0
             && this.iCloudAuthSecrets.sessionId && this.iCloudAuthSecrets.sessionId.length > 0;
     }
 
+    /**
+     * Validates the account tokens
+     * @returns True if account tokens are present
+     */
     validateAccountTokens(): boolean {
         return this.iCloudAccountTokens.sessionToken && this.iCloudAccountTokens.sessionToken.length > 0
             && this.iCloudAccountTokens.trustToken && this.iCloudAccountTokens.trustToken.length > 0;

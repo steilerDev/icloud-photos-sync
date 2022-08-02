@@ -2,8 +2,17 @@
  * File holding constant values for the iCloud class
  */
 
+/**
+ * Hard coded client id, extracted from previous requests
+ */
 export const CLIENT_ID = `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d`;
+/**
+ * User Agent this CLI is using. Emulating a Firefox Browser
+ */
 export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`;
+/**
+ * Client information shared with the iCloud backend
+ */
 export const CLIENT_INFO = JSON.stringify({
     U: USER_AGENT,
     L: `en-US`,
@@ -51,8 +60,12 @@ export enum AUTH_RESPONSE_HEADER {
     AASP_COOKIE = `aasp`
 }
 
+/**
+ * Events lifecycle of the iCloud class
+ */
 export enum EVENTS {
-    MFA_REQUIRED = `mfa_req`,
+    AUTHENTICATION_STARTED = `auth_started`,
+    MFA_REQUIRED = `mfa_req`, // Will provide port as arg
     MFA_RECEIVED = `mfa_rec`,
     AUTHENTICATED = `auth`,
     TRUSTED = `trusted`,
@@ -61,6 +74,9 @@ export enum EVENTS {
     ERROR = `error`
 }
 
+/**
+ * List of endpoints, required by the iCloud class
+ */
 export const ENPOINT = {
     AUTH: {
         BASE: `https://idmsa.apple.com/appleauth/auth`,
@@ -78,9 +94,18 @@ export const ENPOINT = {
     },
 };
 
+/**
+ * Pre-composing URLs, required by iCloud class
+ */
 export const URL = {
     SIGNIN: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.SIGNIN}`,
     MFA: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA}`,
     TRUST: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.TRUST}`,
     SETUP: `${ENPOINT.SETUP.BASE}${ENPOINT.SETUP.PATH.ACCOUNT}`,
 };
+
+/**
+ * Filename of persistent trust token file
+ */
+export const TRUST_TOKEN_FILE_NAME = `.trust-token.icloud`;
+export const TRUST_TOKEN_FILE_ENCODING = `utf8`;
