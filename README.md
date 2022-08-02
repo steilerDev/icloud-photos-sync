@@ -1,6 +1,8 @@
 # iCloud Photos Sync
 
-**Work in progress, [current state and upcoming milestones below](#milestone-plan).**
+**Work in progress, [current state and upcoming milestones below](#milestone-plan)**
+
+[![NPM](https://nodei.co/npm/icloud-photos-sync.png)](https://www.npmjs.com/package/icloud-photos-sync)
 
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem (only tested on Linux Debian 10/buster).
 
