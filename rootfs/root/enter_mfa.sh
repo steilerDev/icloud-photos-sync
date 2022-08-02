@@ -1,2 +1,3 @@
 #!/bin/bash
-curl -X POST localhost:80/mfa?code=$1
+MFA_PORT="${PORT:-80}"
+curl -X POST localhost:${MFA_PORT}/mfa?code=$1
