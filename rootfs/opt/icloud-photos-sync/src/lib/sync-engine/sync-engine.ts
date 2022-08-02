@@ -54,7 +54,7 @@ export class SyncEngine extends EventEmitter {
      * @param photosLibrary - The PhotosLibrary
      * @param cliOpts - The CLI options
      */
-    constructor(iCloud: iCloud, photosLibrary: PhotosLibrary, cliOpts: OptionValues) {
+    constructor(cliOpts: OptionValues, iCloud: iCloud, photosLibrary: PhotosLibrary) {
         super();
         this.iCloud = iCloud;
         this.photosLibrary = photosLibrary;

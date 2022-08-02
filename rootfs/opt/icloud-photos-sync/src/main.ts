@@ -18,18 +18,17 @@ if (!fs.existsSync(cliOpts.data_dir)) {
 Logger.setupLogger(cliOpts);
 const icloud = new iCloud(cliOpts);
 const photosLibrary = new PhotosLibrary(cliOpts);
-const syncEngine: SyncEngine = new SyncEngine(icloud, photosLibrary, cliOpts);
-
+const syncEngine: SyncEngine = new SyncEngine(cliOpts, icloud, photosLibrary);
 // Setting up CLI Interface
-CLIInterface.createCLIInterface(icloud, syncEngine);
+const cliInterface = new CLIInterface(cliOpts, icloud, syncEngine);
 
 /**
  * Waiting for setup to complete
  */
 await icloud.authenticate()
-    .catch(err => CLIInterface.fatalError(`Init failed: ${err}`));
+    .catch(err => cliInterface.fatalError(`Init failed: ${err}`));
 /**
  * Starting sync
  */
 await syncEngine.sync()
-    .catch(err => CLIInterface.fatalError(`Sync failed: ${err}`));
+    .catch(err => cliInterface.fatalError(`Sync failed: ${err}`));
