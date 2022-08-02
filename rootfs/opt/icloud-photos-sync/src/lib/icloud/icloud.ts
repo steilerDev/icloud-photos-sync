@@ -129,7 +129,7 @@ export class iCloud extends EventEmitter {
                     if (res.status === 409) {
                         if (this.auth.processAuthSecrets(res)) {
                             this.logger.debug(`Acquired secrets, requiring MFA: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
-                            this.emit(ICLOUD.EVENTS.MFA_REQUIRED);
+                            this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
                         } else {
                             this.emit(ICLOUD.EVENTS.ERROR, `Unable to process auth response and extract necessary secrets: ${this.auth.iCloudAuthSecrets}`);
                         }

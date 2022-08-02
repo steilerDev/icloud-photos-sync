@@ -65,7 +65,7 @@ export enum AUTH_RESPONSE_HEADER {
  */
 export enum EVENTS {
     AUTHENTICATION_STARTED = `auth_started`,
-    MFA_REQUIRED = `mfa_req`,
+    MFA_REQUIRED = `mfa_req`, // Will provide port as arg
     MFA_RECEIVED = `mfa_rec`,
     AUTHENTICATED = `auth`,
     TRUSTED = `trusted`,

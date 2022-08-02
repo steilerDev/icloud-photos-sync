@@ -21,7 +21,7 @@ export class MFAServer extends EventEmitter {
     /**
      * Port to start server on
      */
-    private port: number;
+    port: number;
 
     /**
      * Creates the server object

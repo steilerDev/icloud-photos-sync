@@ -134,8 +134,8 @@ export class CLIInterface {
             console.log(chalk.white(`User authenticated`));
         });
 
-        iCloud.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
-            console.log(chalk.yellowBright(`MFA code required, waiting for input...`));
+        iCloud.on(ICLOUD.EVENTS.MFA_REQUIRED, (port) => {
+            console.log(chalk.yellowBright(`MFA code required, listening for input on port ${port}...`));
         });
 
         iCloud.on(ICLOUD.EVENTS.MFA_RECEIVED, () => {
