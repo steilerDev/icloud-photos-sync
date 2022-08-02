@@ -98,6 +98,7 @@ export class SyncEngine extends EventEmitter {
             if (err.code === `ERR_BAD_REQUEST`) {
                 if (err.response?.status === 410 || err.response?.status === 421) {
                     this.logger.debug(`Remote ressources have changed location, updating URLs by retrying...`);
+                    // This seems to happen ever 60mins
                     return false;
                 }
 

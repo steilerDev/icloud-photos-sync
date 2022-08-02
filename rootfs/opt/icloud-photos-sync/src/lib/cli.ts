@@ -23,20 +23,19 @@ export class CLIInterface {
         this.setupCLISyncEngineInterface(syncEngine);
 
         process.on(`SIGTERM`, () => {
-            console.log(`\nReceived SIGTERM`);
-            // Process.exit(1);
-            // Save photos db
-            // stop sync engine
+            // Issued by docker compose down
+            CLIInterface.fatalError(`Received SIGTERM, aborting!`)
         });
 
         process.on(`SIGINT`, () => {
-            console.log(`\nReceived SIGINT`);
-            // Process.exit(1);
+            // Received from ctrl-c
+            CLIInterface.fatalError(`Received SIGINT, aborting!`)
         });
 
+        console.log(chalk.white(CLIInterface.getHorizontalLine()))
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.name}, v.${PACKAGE_INFO.version}!`));
         console.log(chalk.green(`Made with <3 by steilerDev`));
-        console.log();
+        console.log(chalk.white(CLIInterface.getHorizontalLine()))
     }
 
     /**
@@ -90,8 +89,19 @@ export class CLIInterface {
     }
 
     static fatalError(err: string) {
-        console.log(chalk.red(`Experienced Fatal Error: ${err}`));
+        console.log()
+        console.log(chalk.red(CLIInterface.getHorizontalLine()))
+        console.log(chalk.red(`Experienced fatal error at ${CLIInterface.getDateTime()}: ${err}`));
+        console.log(chalk.red(CLIInterface.getHorizontalLine()))
         exit(1);
+    }
+
+    static getHorizontalLine(): string {
+        return '-'.repeat(process.stdout.columns)
+    }
+
+    static getDateTime(): string {
+        return new Date().toLocaleString()
     }
 
     /**
@@ -99,6 +109,7 @@ export class CLIInterface {
      */
     setupCLIiCloudInterface(iCloud: iCloud) {
         iCloud.on(ICLOUD.EVENTS.AUTHENTICATION_STARTED, () => {
+            console.log(chalk.white(CLIInterface.getHorizontalLine()))
             console.log(chalk.white(`Authenticating user...`));
         });
 
@@ -124,17 +135,20 @@ export class CLIInterface {
 
         iCloud.on(ICLOUD.EVENTS.READY, () => {
             console.log(chalk.greenBright(`iCloud connection established!`));
-            console.log()
+            console.log(chalk.white(CLIInterface.getHorizontalLine()))
         });
 
         iCloud.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
             console.log(chalk.red(`Unexpected error: ${msg}`));
+            console.log(chalk.white(CLIInterface.getHorizontalLine()))
         });
     }
 
     setupCLISyncEngineInterface(syncEngine: SyncEngine) {
         syncEngine.on(SYNC_ENGINE.EVENTS.START, () => {
-            console.log(chalk.white.bold(`Starting sync at ${new Date().toISOString()}`));
+            console.log(chalk.white(CLIInterface.getHorizontalLine()))
+            console.log(chalk.white.bold(`Starting sync at ${CLIInterface.getDateTime()}`));
+            console.log(chalk.white(CLIInterface.getHorizontalLine()))
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD, () => {
@@ -186,19 +200,21 @@ export class CLIInterface {
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
-            console.log();
-            console.log(chalk.green.bold(`Succesfully completed sync at ${new Date().toISOString()}`));
-            console.log()
+            console.log(chalk.white(CLIInterface.getHorizontalLine()))
+            console.log(chalk.green.bold(`Succesfully completed sync at ${CLIInterface.getDateTime()}`));
+            console.log(chalk.white(CLIInterface.getHorizontalLine()))
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.RETRY, retryCount => {
             this.progressBar.stop();
-            console.log(chalk.magenta(`Detected recoverable error, retry #${retryCount}...`));
+            console.log(chalk.magenta(`Detected recoverable error, refreshing iCloud connection & retrying (#${retryCount})...`));
+            console.log(chalk.white(CLIInterface.getHorizontalLine()))
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
             this.progressBar.stop();
             console.log(chalk.red(`Sync engine: Unexpected error: ${msg}`));
+            console.log(chalk.white(CLIInterface.getHorizontalLine()))
         });
     }
 }
