@@ -40,7 +40,6 @@ export class CLIInterface {
         console.log(chalk.white(CLIInterface.getHorizontalLine()));
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
         console.log(chalk.green(`Made with <3 by steilerDev`));
-        console.log(chalk.white(CLIInterface.getHorizontalLine()));
     }
 
     /**
@@ -134,7 +133,7 @@ export class CLIInterface {
             console.log(chalk.white(`User authenticated`));
         });
 
-        iCloud.on(ICLOUD.EVENTS.MFA_REQUIRED, (port) => {
+        iCloud.on(ICLOUD.EVENTS.MFA_REQUIRED, port => {
             console.log(chalk.yellowBright(`MFA code required, listening for input on port ${port}...`));
         });
 
@@ -151,13 +150,13 @@ export class CLIInterface {
         });
 
         iCloud.on(ICLOUD.EVENTS.READY, () => {
-            console.log(chalk.greenBright(`iCloud connection established!`));
             console.log(chalk.white(CLIInterface.getHorizontalLine()));
+            console.log(chalk.greenBright(`iCloud connection established!`));
         });
 
         iCloud.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
-            console.log(chalk.red(`Unexpected error: ${msg}`));
             console.log(chalk.white(CLIInterface.getHorizontalLine()));
+            console.log(chalk.red(`Unexpected error: ${msg}`));
         });
     }
 
@@ -168,7 +167,6 @@ export class CLIInterface {
         syncEngine.on(SYNC_ENGINE.EVENTS.START, () => {
             console.log(chalk.white(CLIInterface.getHorizontalLine()));
             console.log(chalk.white.bold(`Starting sync at ${CLIInterface.getDateTime()}`));
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD, () => {
@@ -220,7 +218,6 @@ export class CLIInterface {
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
             console.log(chalk.green.bold(`Succesfully completed sync at ${CLIInterface.getDateTime()}`));
             console.log(chalk.white(CLIInterface.getHorizontalLine()));
         });
