@@ -37,6 +37,7 @@ export class CLIInterface {
             CLIInterface.fatalError(`Received SIGINT, aborting!`);
         });
 
+        console.clear()
         console.log(chalk.white(CLIInterface.getHorizontalLine()));
         console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
         console.log(chalk.green(`Made with <3 by steilerDev`));
