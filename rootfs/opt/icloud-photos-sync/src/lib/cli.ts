@@ -170,12 +170,12 @@ export class CLIInterface {
 
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD, () => {
             console.log(chalk.white(CLIInterface.getHorizontalLine()));
-            console.log(chalk.white(`Loading local state & fetching remote iCloud Library state...`));
+            console.log(chalk.white(`Loading local & fetching remote iCloud Library state...`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, (remoteAssetCount, remoteAlbumCount, localAssetCount, localAlbumCount) => {
-            console.log(chalk.green(`Loaded Local state: ${localAssetCount} assets & ${localAlbumCount} albums`));
-            console.log(chalk.green(`Fetched Remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
+            console.log(chalk.green(`Loaded local state: ${localAssetCount} assets & ${localAlbumCount} albums`));
+            console.log(chalk.green(`Fetched remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DIFF, () => {
@@ -206,7 +206,7 @@ export class CLIInterface {
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, (toBeDeletedCount, toBeAddedCount) => {
-            console.log(chalk.cyan(`Linking albums, by removing ${toBeDeletedCount} local albums & adding ${toBeAddedCount} remote albums...`));
+            console.log(chalk.cyan(`Syncing albums, by removing ${toBeDeletedCount} local albums & adding ${toBeAddedCount} remote albums...`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED, () => {
@@ -218,6 +218,7 @@ export class CLIInterface {
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
+            console.log(chalk.white(CLIInterface.getHorizontalLine()));
             console.log(chalk.green.bold(`Succesfully completed sync at ${CLIInterface.getDateTime()}`));
             console.log(chalk.white(CLIInterface.getHorizontalLine()));
         });

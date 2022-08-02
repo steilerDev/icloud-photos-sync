@@ -170,11 +170,11 @@ export class PhotosLibrary {
             const localEntity = localEntities[remoteEntity.getUUID()];
             if (!localEntity || !remoteEntity.equal(localEntity)) {
                 // No local entity OR local entity does not match remote entity -> Remote asset will be added & local asset will not be removed from deletion queue
-                this.logger.debug(`Adding entity ${remoteEntity.getDisplayName()}`);
+                this.logger.debug(`Adding new remote entity ${remoteEntity.getDisplayName()}`);
                 toBeAdded.push(remoteEntity.unpack());
             } else {
                 // Local asset matches remote asset, nothing to do, but preventing local asset to be deleted
-                this.logger.debug(`Keeping entity ${remoteEntity.getDisplayName()}`);
+                this.logger.debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
                 delete localEntities[remoteEntity.getUUID()];
             }
         });
