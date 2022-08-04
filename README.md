@@ -2,12 +2,10 @@
 
 **Work in progress, [current state and upcoming milestones below](#milestone-plan)**
 
-![Build Status](https://img.shields.io/github/workflow/status/steilerdev/icloud-photos-sync/build-and-publish.yml)
-[![App Version](https://img.shields.io/npm/v/icloud-photos-sync)](https://github.com/steilerDev/icloud-photos-sync/releases)
-
-[![Node Version](https://img.shields.io/node/v/icloud-photos-sync)](https://www.npmjs.com/package/icloud-photos-sync)
-[![Node Downloads](https://img.shields.io/npm/dt/icloud-photos-sync?label=npm%20downloads)](https://www.npmjs.com/package/icloud-photos-sync)
-[![Docker Pulls](https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync)](https://hub.docker.com/r/steilerdev/icloud-photos-sync)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/steilerdev/icloud-photos-sync/Build%20&%20Publish?label=GH%20Actions&style=for-the-badge)
+[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/releases)
+[![npm](https://img.shields.io/npm/dm/icloud-photos-sync?label=npm%20downloads&style=for-the-badge)](https://www.npmjs.com/package/icloud-photos-sync)
+[![Docker Pulls](https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync?style=for-the-badge)](https://hub.docker.com/r/steilerdev/icloud-photos-sync)
 
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem (only tested on Linux Debian 10/buster).
 
