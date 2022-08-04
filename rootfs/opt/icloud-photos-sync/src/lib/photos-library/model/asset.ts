@@ -4,6 +4,10 @@ import {FileType} from './file-type.js';
 import {Stats} from 'fs';
 import {PEntity} from './photos-entity.js';
 
+export enum AssetType {
+    ORIG = 0,
+    EDIT = 1
+}
 /**
  * This class represents an Asset in the Photo Library
  */
@@ -24,6 +28,14 @@ export class Asset implements PEntity<Asset> {
      * The file type of this asset
      */
     fileType: FileType;
+    /**
+     * Shows which version of the asset this is
+     */
+    assetType: AssetType;
+    /**
+     * The original filename of this asset
+     */
+    origFilename: string;
     /**
      * The wrapping key of this asset (unknown usage, taken from backend, only present if fetched from CPL)
      */
@@ -47,11 +59,13 @@ export class Asset implements PEntity<Asset> {
      * @param referenceChecksum -
      * @param downloadURL -
      */
-    private constructor(fileChecksum: string, size: number, fileType: FileType, modified: number, wrappingKey?: string, referenceChecksum?: string, downloadURL?: string) {
+    private constructor(fileChecksum: string, size: number, fileType: FileType, modified: number, assetType?: AssetType, origFilename?: string, wrappingKey?: string, referenceChecksum?: string, downloadURL?: string) {
         this.fileChecksum = fileChecksum;
         this.size = size;
         this.fileType = fileType;
         this.modified = modified;
+        this.assetType = assetType;
+        this.origFilename = origFilename;
         this.wrappingKey = wrappingKey;
         this.referenceChecksum = referenceChecksum;
         this.downloadURL = downloadURL;
@@ -62,14 +76,18 @@ export class Asset implements PEntity<Asset> {
      * @param asset - The AssetID object returned from the backend
      * @param assetType - The assetType string, describing the filetype
      * @param modified - The modified date as returned from the backend (converted to epoch time in this function, as it is returned in milliseconds)
+     * @param origFilename
+     * @param assetType
      * @returns An Asset based on the backend objects
      */
-    static fromCPL(asset: AssetID, assetType: string, modified: number): Asset {
+    static fromCPL(asset: AssetID, fileTypeDescriptor: string, modified: number, origFilename: string, assetType: AssetType): Asset {
         return new Asset(
             asset.fileChecksum,
             asset.size,
-            FileType.fromAssetType(assetType),
+            FileType.fromAssetType(fileTypeDescriptor),
             Math.floor(modified / 1000),
+            assetType,
+            origFilename,
             asset.wrappingKey,
             asset.referenceChecksum,
             asset.downloadURL,
@@ -123,6 +141,17 @@ export class Asset implements PEntity<Asset> {
     getAssetFilename(): string {
         return path.format({
             name: Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
+            ext: this.fileType.getExtension(),
+        });
+    }
+
+    /**
+     *
+     * @returns The human readable / pretty printed filename of this asset, based on the filename of the original file imported.
+     */
+    getPrettyFilename(): string {
+        return path.format({
+            name: this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``),
             ext: this.fileType.getExtension(),
         });
     }

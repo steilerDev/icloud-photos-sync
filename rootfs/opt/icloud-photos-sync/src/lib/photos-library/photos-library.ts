@@ -162,10 +162,12 @@ export class PhotosLibrary {
      * This function diffs two entity arrays (can be either Albums or Assets) and returns the corresponding processing queue
      * @param remoteEnties - The entities fetched from a remote state
      * @param localEntities - The local entities as read from disk
+     * @returns A processing queue, containing the entities that needs to be deleted & added. In the case of albums, this will not take hierarchical dependencies into consideration
      */
     getProcessingQueues<T>(remoteEnties: PEntity<T>[], localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
         this.logger.debug(`Getting processing queues`);
         const toBeAdded: T[] = [];
+        const toBeKept: T[] = [];
         remoteEnties.forEach(remoteEntity => {
             const localEntity = localEntities[remoteEntity.getUUID()];
             if (!localEntity || !remoteEntity.equal(localEntity)) {
@@ -175,12 +177,13 @@ export class PhotosLibrary {
             } else {
                 // Local asset matches remote asset, nothing to do, but preventing local asset to be deleted
                 this.logger.debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
+                toBeKept.push(remoteEntity.unpack());
                 delete localEntities[remoteEntity.getUUID()];
             }
         });
         // The original library should only hold those records, that have not been referenced by the remote state, removing them
         const toBeDeleted = Object.values(localEntities);
-        this.logger.debug(`Adding ${toBeAdded.length} remote entities, removing ${toBeDeleted.length} local entities`);
-        return [toBeDeleted, toBeAdded];
+        this.logger.debug(`Adding ${toBeAdded.length} remote entities, removing ${toBeDeleted.length} local entities, keeping ${toBeKept.length} local entities`);
+        return [toBeDeleted, toBeAdded, toBeKept];
     }
 }

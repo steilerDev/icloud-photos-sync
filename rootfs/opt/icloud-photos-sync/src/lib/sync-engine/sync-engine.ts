@@ -3,15 +3,17 @@ import {iCloud} from '../icloud/icloud.js';
 import {PhotosLibrary} from '../photos-library/photos-library.js';
 import {OptionValues} from 'commander';
 import * as SYNC_ENGINE from './constants.js';
-import {CPLAlbum, CPLAsset, CPLMaster} from '../icloud/icloud-photos/query-parser.js';
 import {Asset} from '../photos-library/model/asset.js';
 import {Album} from '../photos-library/model/album.js';
-import fs from 'fs';
-import * as fsPromise from 'fs/promises';
-import {pEvent} from 'p-event';
 import PQueue from 'p-queue';
 import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
 import {getLogger} from '../logger.js';
+
+// Helpers extending this class
+import {resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
+import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
+import {addAsset, deleteAsset, verifyAsset, writeAssets} from './helpers/write-assets-helpers.js';
+import {addAlbum, deleteAlbum, findAlbumInPath, queueIsSorted, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 
 /**
  * This class handles the photos sync
@@ -20,7 +22,7 @@ export class SyncEngine extends EventEmitter {
     /**
      * Default logger for the class
      */
-    private logger = getLogger(this);
+    protected logger = getLogger(this);
 
     /**
      * The iCloud connection
@@ -164,7 +166,7 @@ export class SyncEngine extends EventEmitter {
 
     /**
      * This function fetches the remote state and loads the local state from disk
-     * @returns A promise that resolve once the fetch was completed, containing the remote & local state
+     * @returns A promise that resolve once the fetch was completed, containing the remote & local state - remote album state is in order
      */
     private async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
@@ -185,6 +187,10 @@ export class SyncEngine extends EventEmitter {
         });
     }
 
+    // From ./helpers/fetchAndLoad-helpters.ts
+    static convertCPLAlbums = convertCPLAlbums;
+    static convertCPLAssets = convertCPLAssets;
+
     /**
      * This function diffs the provided local state with the given remote state
      * @param remoteAssets - An array of all remote assets
@@ -199,50 +205,15 @@ export class SyncEngine extends EventEmitter {
         return Promise.all([
             this.photosLibrary.getProcessingQueues(remoteAssets, localAssets),
             this.photosLibrary.getProcessingQueues(remoteAlbums, localAlbums),
-        ]).then(result => {
+        ]).then(([assetQueue, albumQueue]) => {
+            const resolvedAlbumQueue = this.resolveHierarchicalDependencies(albumQueue, localAlbums);
             this.emit(SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
-            return result;
+            return [assetQueue, resolvedAlbumQueue];
         });
     }
 
-    /**
-     * Matches CPLAsset/CPLMaster pairs and parses their associated Asset(s)
-     * @param cplAssets - The given asset
-     * @param cplMasters - The given master
-     * @returns An array of all containing assets
-     */
-    static convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Asset[] {
-        const cplMasterRecords = {};
-        cplMasters.forEach(masterRecord => {
-            cplMasterRecords[masterRecord.recordName] = masterRecord;
-        });
-        const remoteAssets: Asset[] = [];
-        cplAssets.forEach(asset => {
-            const master = cplMasterRecords[asset.masterRef];
-            if (master?.resource && master?.resourceType) {
-                remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, master.modified));
-            }
-
-            if (asset?.resource && asset?.resourceType) {
-                remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, asset.modified));
-            }
-        });
-        return remoteAssets;
-    }
-
-    /**
-     * Transforms a CPLAlbum into an array of Albums
-     * @param cplAlbums - The given CPL Album
-     * @returns Once settled, a completely populated Album array
-     */
-    static async convertCPLAlbums(cplAlbums: CPLAlbum[]) : Promise<Album[]> {
-        const remoteAlbums: Album[] = [];
-        for (const cplAlbum of cplAlbums) {
-            remoteAlbums.push(await Album.fromCPL(cplAlbum));
-        }
-
-        return remoteAlbums;
-    }
+    // From ./helpers/diff-helpers.ts
+    private resolveHierarchicalDependencies = resolveHierarchicalDependencies;
 
     /**
      * Takes the processing queues and performs the necessary actions to write them to disk
@@ -253,109 +224,28 @@ export class SyncEngine extends EventEmitter {
     private async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
         this.emit(SYNC_ENGINE.EVENTS.WRITE);
         this.logger.info(`Writing state`);
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);
         return this.writeAssets(assetQueue)
-            .then(() => this.writeAlbums(albumQueue))
+            .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED))
+            .then(() => {
+                this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, albumQueue[0].length, albumQueue[1].length, albumQueue[2].length);
+                return this.writeAlbums(albumQueue);
+            })
+            .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED))
             .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_COMPLETED));
     }
 
-    /**
-     * Writes the asset changes defined in the processing queue to to disk (by downloading the asset or deleting it)
-     * @param processingQueue - The asset processing queue
-     * @returns A promise that settles, once all asset changes have been written to disk
-     */
-    private async writeAssets(processingQueue: PLibraryProcessingQueues<Asset>) {
-        const toBeDeleted = processingQueue[0];
-        const toBeAdded = processingQueue[1];
-        // Initializing sync queue
-        this.downloadQueue = new PQueue({concurrency: this.downloadCCY});
+    // From ./helpers/write-assets-helpers.ts
+    private writeAssets = writeAssets;
+    protected addAsset = addAsset;
+    protected deleteAsset = deleteAsset;
+    protected verifyAsset = verifyAsset;
 
-        this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, toBeDeleted.length, toBeAdded.length);
-
-        // Deleting before downloading, in order to ensure no conflicts
-        return Promise.all(toBeDeleted.map(asset => this.deleteAsset(asset)))
-            .then(() => Promise.all(toBeAdded.map(asset => this.downloadQueue.add(() => this.addAsset(asset)))))
-            .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED));
-    }
-
-    /**
-     * Downloads and stores a given asset, unless file is already present on disk
-     * @param asset - The asset that needs to be downloaded
-     * @returns A promise that resolves, once the file has been sucesfully written to disk
-     */
-    private async addAsset(asset: Asset): Promise<void> {
-        this.logger.info(`Processing asset ${asset.getDisplayName()}`);
-        if (this.verifyAsset(asset)) {
-            this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
-        } else {
-            return this.iCloud.photos.downloadAsset(asset)
-                .then(response => {
-                    this.logger.debug(`Writing asset ${asset.getDisplayName()}`);
-                    const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
-                    const writeStream = fs.createWriteStream(location);
-                    response.data.pipe(writeStream);
-                    return pEvent(writeStream, `close`);
-                })
-                .then(() => fsPromise.utimes(asset.getAssetFilePath(this.photosLibrary.assetDir), asset.modified, asset.modified)) // Setting modified date on file
-                .then(() => {
-                    if (!this.verifyAsset(asset)) {
-                        throw new Error(`Unable to verify asset ${asset.getDisplayName()}`);
-                    } else {
-                        this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
-                        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
-                    }
-                });
-        }
-    }
-
-    /**
-     * Deletes a given asset
-     * @param asset - The asset that needs to be deleted
-     * @returns A promise that resolves, once the file has been deleted
-     */
-    private async deleteAsset(asset: Asset): Promise<void> {
-        this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
-        return fsPromise.rm(location, {force: true});
-    }
-
-    /**
-     * Verifies if a given Asset object is present on disk
-     * @param asset - The asset to verify
-     * @returns True, if the Asset object is present on disk
-     */
-    private verifyAsset(asset: Asset): boolean {
-        this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
-        return fs.existsSync(location)
-            && asset.verify(fs.readFileSync(location));
-    }
-
-    /**
-     * Writes the album changes defined in the processing queue to to disk
-     * @param processingQueue - The album processing queue
-     * @returns A promise that settles, once all album changes have been written to disk
-     */
-    private async writeAlbums(processingQueue: PLibraryProcessingQueues<Album>) {
-        const toBeDeleted = processingQueue[0];
-        const toBeAdded = processingQueue[1];
-
-        this.logger.info(`Writing lib structure!`);
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, toBeDeleted.length, toBeAdded.length);
-        // Get root folder & local root folder
-        // compare content
-        // repeate for every other folder
-        // optionally: move data to
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED);
-    }
-
-    private addAlbum(album: Album) {
-        // Find parent
-    }
-
-    private deleteAlbum(album: Album) {
-        // Only delete albums that have only symlinks in them
-        // if they have files -> ignore!
-        // if they have folders -> check if those folders will also be removed
-    }
+    // From ./helpers/write-albums-helpers.ts
+    private writeAlbums = writeAlbums;
+    protected queueIsSorted = queueIsSorted;
+    protected sortQueue = sortQueue;
+    protected addAlbum = addAlbum;
+    protected findAlbumInPath = findAlbumInPath;
+    protected deleteAlbum = deleteAlbum;
 }

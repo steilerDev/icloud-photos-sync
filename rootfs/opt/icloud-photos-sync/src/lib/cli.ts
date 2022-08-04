@@ -214,8 +214,8 @@ export class CLIInterface {
             this.print(chalk.white(`Writing diff to disk...`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS, (toBeDeletedCount, toBeAddedCount) => {
-            this.print(chalk.cyan(`Syncing assets, by removing ${toBeDeletedCount} local assets & downloading ${toBeAddedCount} remote assets...`));
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS, (toBeDeletedCount, toBeAddedCount, toBeKept) => {
+            this.print(chalk.cyan(`Syncing assets, by keeping ${toBeKept} and removing ${toBeDeletedCount} local assets, as well as adding ${toBeAddedCount} remote assets...`));
             this.progressBar.start(toBeAddedCount, 0);
         });
 
@@ -229,8 +229,8 @@ export class CLIInterface {
             this.print(chalk.greenBright(`Succesfully synced assets!`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, (toBeDeletedCount, toBeAddedCount) => {
-            this.print(chalk.cyan(`Syncing albums, by removing ${toBeDeletedCount} local albums & adding ${toBeAddedCount} remote albums...`));
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, (toBeDeletedCount, toBeAddedCount, toBeKept) => {
+            this.print(chalk.cyan(`Syncing albums, by keeping ${toBeKept} and removing ${toBeDeletedCount} local albums, as well as adding ${toBeAddedCount} remote albums...`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED, () => {

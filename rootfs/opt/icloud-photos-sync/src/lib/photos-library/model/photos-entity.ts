@@ -32,4 +32,4 @@ export type PLibraryEntities<T> = {
 /**
  * A list of entities that need to be added or removed as part of the sync
  */
-export type PLibraryProcessingQueues<T> = [toBeDeleted: T[], toBeAdded: T[]]
+export type PLibraryProcessingQueues<T> = [toBeDeleted: T[], toBeAdded: T[], toBeKept: T[]]

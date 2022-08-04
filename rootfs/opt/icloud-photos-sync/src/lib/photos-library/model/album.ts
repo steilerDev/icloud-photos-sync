@@ -11,7 +11,8 @@ export enum AlbumType {
 }
 
 /**
- * Key: getUUID, Value: Filename
+ * This type is mapping the filename in the asset folder, to the filename how the asset should be presented to the user
+ * Key: Asset.getAssetFilename, Value: Asset.getPrettyFilename
  */
 export type AlbumAssets = {
     [key: string]: string
@@ -124,5 +125,30 @@ export class Album implements PEntity<Album> {
      */
     unpack(): Album {
         return this;
+    }
+
+    /**
+     * Check if a given album is in the chain of ancestors
+     * @param potentialAncestor - The potential ancesotr for the given album
+     * @param fullQueue - Basing this on the provided queue. If the linked list has gaps, the albums are seen as independent
+     * @returns
+     */
+    hasAncestor(potentialAncestor: Album, fullQueue: Album[]): boolean {
+        if (this.parentAlbumUUID === ``) { // If this is a root album, the potentialAncestor cannot be a ancestor
+            return false;
+        }
+
+        if (potentialAncestor.getUUID() === this.parentAlbumUUID) { // If the ancestor is the parent, return true
+            return true;
+        }
+
+        // Find actual parent
+        const parent = fullQueue.find(album => album.getUUID() === this.parentAlbumUUID);
+        // If there is a parent, check if it has the ancestor
+        if (parent) {
+            return parent.hasAncestor(potentialAncestor, fullQueue);
+        }
+
+        return false;
     }
 }
