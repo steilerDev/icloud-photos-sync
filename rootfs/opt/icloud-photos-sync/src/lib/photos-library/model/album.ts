@@ -74,6 +74,14 @@ export class Album implements PEntity<Album> {
 
     /**
      *
+     * @returns A valid filename, that will be used to store the album on disk
+     */
+    getSanitizedFilename(): string {
+        return this.albumName.replaceAll(`/`, `_`);
+    }
+
+    /**
+     *
      * @returns The UUID of this album instance
      */
     getUUID(): string {
@@ -114,7 +122,7 @@ export class Album implements PEntity<Album> {
         return album
             && this.uuid === album.uuid
             && this.albumType === album.albumType
-            && this.albumName === album.albumName
+            && this.getSanitizedFilename() === album.getSanitizedFilename()
             && this.parentAlbumUUID === album.parentAlbumUUID
             && JSON.stringify(Object.keys(this.assets).sort()) === JSON.stringify(Object.keys(album.assets).sort());
     }

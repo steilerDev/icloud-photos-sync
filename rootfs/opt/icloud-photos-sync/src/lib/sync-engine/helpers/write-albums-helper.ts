@@ -31,10 +31,10 @@ export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryPro
 export function addAlbum(this: SyncEngine, album: Album) {
     this.logger.debug(`Creating album ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
     const parentPath = album.parentAlbumUUID // If UUID is undefined -> Folder is in root
-        ? this.findAlbumInPath(album.parentAlbumUUID, this.photosLibrary.photoDataDir)
+        ? path.join(this.photosLibrary.photoDataDir, this.findAlbumInPath(album.parentAlbumUUID, this.photosLibrary.photoDataDir))
         : this.photosLibrary.photoDataDir;
     // LinkedAlbum will be the visible album, with the correct name
-    const linkedAlbum = path.join(parentPath, `${album.albumName}`);
+    const linkedAlbum = path.join(parentPath, album.getSanitizedFilename());
     // AlbumPath will be the actual directory, having the UUID as foldername
     const albumPath = path.join(parentPath, `.${album.getUUID()}`);
     // Relative album path is relative to parent, not linkedAlbum
@@ -56,10 +56,17 @@ export function addAlbum(this: SyncEngine, album: Album) {
                     dir: this.photosLibrary.assetDir,
                     base: assetUUID,
                 });
+                // Getting asset time, in order to update link as well
+                const assetTime = fs.statSync(assetPath).mtime;
                 // Relative asset path is relativ to album, not the linkedAsset
                 const relativeAssetPath = path.relative(albumPath, assetPath);
                 this.logger.debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
-                fs.symlinkSync(relativeAssetPath, linkedAsset);
+                try {
+                    fs.symlinkSync(relativeAssetPath, linkedAsset);
+                    fs.lutimesSync(linkedAsset, assetTime, assetTime);
+                } catch (err) {
+                    this.logger.warn(`Not linking ${relativeAlbumPath} to ${linkedAsset} in album ${album.getDisplayName()}: ${err.message}`);
+                }
             });
         }
     } catch (err) {
@@ -89,7 +96,7 @@ export function findAlbumInPath(this: SyncEngine, albumUUID: string, rootPath: s
     // See if the searched folder is in the path
     const filteredFolder = foldersInPath.filter(folder => folder.name === `.${albumUUID}`); // Since the folder is hidden, a dot is prefacing it
     if (filteredFolder.length === 1) {
-        return `.${filteredFolder[0].name}`;
+        return filteredFolder[0].name;
     }
 
     if (filteredFolder.length > 1) {
