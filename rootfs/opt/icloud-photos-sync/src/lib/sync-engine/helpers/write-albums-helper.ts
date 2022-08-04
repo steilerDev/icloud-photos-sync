@@ -3,6 +3,7 @@ import {PLibraryProcessingQueues} from "../../photos-library/model/photos-entity
 import {SyncEngine} from "../sync-engine.js";
 import path from 'path';
 import fs from 'fs';
+import * as SYNC_ENGINE from '../constants.js';
 
 /**
  * Writes the album changes defined in the processing queue to to disk
@@ -65,12 +66,16 @@ export function addAlbum(this: SyncEngine, album: Album) {
                     fs.symlinkSync(relativeAssetPath, linkedAsset);
                     fs.lutimesSync(linkedAsset, assetTime, assetTime);
                 } catch (err) {
-                    this.logger.warn(`Not linking ${relativeAlbumPath} to ${linkedAsset} in album ${album.getDisplayName()}: ${err.message}`);
+                    const msg = `Not linking ${relativeAlbumPath} to ${linkedAsset} in album ${album.getDisplayName()}: ${err.message}`;
+                    this.emit(SYNC_ENGINE.EVENTS.ERROR, msg);
+                    this.logger.warn(msg);
                 }
             });
         }
     } catch (err) {
-        this.logger.warn(`Unable to add album ${album.getDisplayName()}: ${err.message}`);
+        const msg = `Unable to add album ${album.getDisplayName()}: ${err.message}`;
+        this.emit(SYNC_ENGINE.EVENTS.ERROR, msg);
+        this.logger.warn(msg);
     }
 
     // Find parent

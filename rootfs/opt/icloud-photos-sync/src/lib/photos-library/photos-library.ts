@@ -115,8 +115,8 @@ export class PhotosLibrary {
                     albums.push(...await this.loadAlbum(loadedAlbum));
                 }
             } else if (album.albumType === AlbumType.ALBUM) {
-                const uuid = path.parse(target).name;
-                albums[0].assets[uuid] = link.name;
+                const uuidFile = path.parse(target).base;
+                albums[0].assets[uuidFile] = link.name;
             } else if (album.albumType === AlbumType.ARCHIVED) {
                 this.logger.info(`Treating ${album.albumType} as archived`);
                 // Ignoring assets on archived folders

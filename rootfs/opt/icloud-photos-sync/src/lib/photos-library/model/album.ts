@@ -98,7 +98,7 @@ export class Album implements PEntity<Album> {
             cplAlbum.recordName,
             cplAlbum.albumType,
             Buffer.from(cplAlbum.albumNameEnc, `base64`).toString(`utf8`),
-            cplAlbum.parentId,
+            cplAlbum.parentId ? cplAlbum.parentId : ``,
         );
         album.assets = await cplAlbum.assets;
         return album;
@@ -124,7 +124,14 @@ export class Album implements PEntity<Album> {
             && this.albumType === album.albumType
             && this.getSanitizedFilename() === album.getSanitizedFilename()
             && this.parentAlbumUUID === album.parentAlbumUUID
-            && JSON.stringify(Object.keys(this.assets).sort()) === JSON.stringify(Object.keys(album.assets).sort());
+            && this.assetsEqual(album.assets);
+    }
+
+    assetsEqual(assets: AlbumAssets) {
+        // Assets might be undefined
+        const thisAssets = this.assets ? this.assets : {};
+        const otherAssets = assets ? assets : {};
+        return JSON.stringify(Object.keys(thisAssets).sort()) === JSON.stringify(Object.keys(otherAssets).sort());
     }
 
     /**
