@@ -2,8 +2,7 @@ import {Album, AlbumType} from "../../photos-library/model/album.js";
 import {PLibraryProcessingQueues} from "../../photos-library/model/photos-entity.js";
 import {SyncEngine} from "../sync-engine.js";
 import path from 'path';
-import fs, {rmSync} from 'fs';
-import * as SYNC_ENGINE from '../constants.js';
+import fs from 'fs';
 import * as PHOTOS_LIBRARY from '../../photos-library/constants.js';
 
 /**
@@ -85,15 +84,14 @@ export function addAlbum(this: SyncEngine, album: Album) {
 /**
  * This will delete an album from disk and remove all associated symlinks
  * Deletion will only happen if the album is 'empty'. This means it only contains symlinks or 'safe' files. Any other folder or file will result in the folder not being deleted.
- * @param album The album that needs to be deleted
+ * @param album - The album that needs to be deleted
  */
 export function deleteAlbum(this: SyncEngine, album: Album) {
     this.logger.debug(`Deleting folder ${album.getDisplayName()}`);
     const albumPath = this.findAlbum(album.getUUID());
     const linkedPath = path.normalize(`${albumPath}/../${album.getSanitizedFilename()}`); // The linked folder is one layer below
     const pathContent = fs.readdirSync(albumPath, {withFileTypes: true})
-
-    const hasFiles = pathContent.filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
+        .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
     if (pathContent.length > 0) {
         this.logger.warn(`Unable to delete album ${album.getDisplayName()}: Album in path ${path} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
     } else if (!fs.existsSync(linkedPath)) {
@@ -105,6 +103,7 @@ export function deleteAlbum(this: SyncEngine, album: Album) {
         } catch (err) {
             this.logger.warn(`Unable to delete album ${album.getDisplayName()}: ${err}`);
         }
+
         this.logger.debug(`Sucesfully deleted album ${album.getDisplayName} at ${path} & ${linkedPath}`);
     }
 }
@@ -115,9 +114,9 @@ export function deleteAlbum(this: SyncEngine, album: Album) {
  * @returns The full path to the album, or the empty string, if the album was not found
  */
 export function findAlbum(this: SyncEngine, albumUUID: string) {
-    const relativeFolderPath = this.findAlbumInPath(albumUUID, this.photosLibrary.photoDataDir)
-    return relativeFolderPath === "" ? "" :
-        path.join(this.photosLibrary.photoDataDir, relativeFolderPath);
+    const relativeFolderPath = this.findAlbumInPath(albumUUID, this.photosLibrary.photoDataDir);
+    return relativeFolderPath === `` ? ``
+        : path.join(this.photosLibrary.photoDataDir, relativeFolderPath);
 }
 
 /**
@@ -166,7 +165,6 @@ export function findAlbumInPath(this: SyncEngine, albumUUID: string, rootPath: s
     // No match in this folder hierachy
     return ``;
 }
-
 
 /**
  * This function will sort a given queue

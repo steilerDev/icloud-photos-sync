@@ -8,8 +8,8 @@ import {SyncEngine} from "../sync-engine.js";
 
 /**
  * If an ancestor (not parent) of an Album is marked for deletion, the album needs to be moved (aka deleted & added), since it did not change from a diffing perspective (same parent)
- * @param queues The album processing queue for the albums
- * @param localAlbumEntities The local state
+ * @param queues - The album processing queue for the albums
+ * @param localAlbumEntities - The local state
  * @returns Updated processing queues with resolved hierarchical dependencies, ready for processing
  */
 export function resolveHierarchicalDependencies(this: SyncEngine, queues: PLibraryProcessingQueues<Album>, localAlbumEntities: PLibraryEntities<Album>): PLibraryProcessingQueues<Album> {

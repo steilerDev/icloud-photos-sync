@@ -8,7 +8,6 @@ import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import {SyncEngine} from '../../sync-engine/sync-engine.js';
 import {getLogger} from '../../logger.js';
-import path from 'path';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there

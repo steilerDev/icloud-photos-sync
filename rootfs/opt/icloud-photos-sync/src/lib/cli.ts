@@ -1,5 +1,5 @@
 import {Command, Option, OptionValues} from 'commander';
-import chalk, {ChalkInstance} from 'chalk';
+import chalk from 'chalk';
 import * as PACKAGE_INFO from './package.js';
 import {iCloud} from './icloud/icloud.js';
 import * as ICLOUD from './icloud/constants.js';
