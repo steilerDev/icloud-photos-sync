@@ -65,16 +65,12 @@ export function addAlbum(this: SyncEngine, album: Album) {
                     fs.symlinkSync(relativeAssetPath, linkedAsset);
                     fs.lutimesSync(linkedAsset, assetTime, assetTime);
                 } catch (err) {
-                    const msg = `Not linking ${relativeAlbumPath} to ${linkedAsset} in album ${album.getDisplayName()}: ${err.message}`;
-                    this.emit(SYNC_ENGINE.EVENTS.ERROR, msg);
-                    this.logger.warn(msg);
+                    this.logger.warn(`Not linking ${relativeAlbumPath} to ${linkedAsset} in album ${album.getDisplayName()}: ${err.message}`);
                 }
             });
         }
     } catch (err) {
-        const msg = `Unable to add album ${album.getDisplayName()}: ${err.message}`;
-        this.emit(SYNC_ENGINE.EVENTS.ERROR, msg);
-        this.logger.warn(msg);
+        this.logger.warn(`Unable to add album ${album.getDisplayName()}: ${err.message}`);
     }
 
     // Find parent
@@ -87,21 +83,15 @@ export function deleteAlbum(this: SyncEngine, album: Album) {
     const pathContent = fs.readdirSync(albumPath, {withFileTypes: true})
         .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
     if (pathContent.length > 0) {
-        const msg = `Unable to delete album ${album.getDisplayName()}: Album in path ${path} not empty (${JSON.stringify(pathContent.map(item => item.name))})`;
-        this.emit(SYNC_ENGINE.EVENTS.ERROR, msg);
-        this.logger.warn(msg);
+        this.logger.warn(`Unable to delete album ${album.getDisplayName()}: Album in path ${path} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
     } else if (!fs.existsSync(linkedPath)) {
-        const msg = `Unable to delete album ${album.getDisplayName()}: Unable to find linked file, expected ${linkedPath}`;
-        this.emit(SYNC_ENGINE.EVENTS.ERROR, msg);
-        this.logger.warn(msg);
+        this.logger.warn(`Unable to delete album ${album.getDisplayName()}: Unable to find linked file, expected ${linkedPath}`);
     } else {
         try {
             fs.rmSync(albumPath, {recursive: true});
             fs.unlinkSync(linkedPath);
         } catch (err) {
-            const msg = `Unable to delete album ${album.getDisplayName()}: ${err}`;
-            this.emit(SYNC_ENGINE.EVENTS.ERROR, msg);
-            this.logger.warn(msg);
+            this.logger.warn(`Unable to delete album ${album.getDisplayName()}: ${err}`);
         }
 
         this.logger.debug(`Sucesfully deleted album ${album.getDisplayName} at ${path} & ${linkedPath}`);
