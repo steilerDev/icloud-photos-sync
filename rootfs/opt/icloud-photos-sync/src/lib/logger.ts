@@ -45,9 +45,9 @@ export function setupLogger(cliOpts: OptionValues): void {
                 const prefixedMessage = `[${new Date().toISOString()}] ${methodName.toUpperCase()} ${String(loggerName)}: ${message}\n`;
                 fs.appendFileSync(logFile, prefixedMessage);
                 if (!cliOpts.silent) {
-                    if (logLevel === 3) {
+                    if (methodName === `warn`) {
                         console.warn(prefixedMessage);
-                    } else if (logLevel === 4) {
+                    } else if (methodName === `error`) {
                         console.error(prefixedMessage);
                     }
                 }
