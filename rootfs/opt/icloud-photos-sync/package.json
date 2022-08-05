@@ -1,7 +1,7 @@
 {
   "name": "icloud-photos-sync",
-  "version": "0.1.1",
-  "description": "One-way sync engine for iCloud Photos library within the native file system",
+  "version": "0.2.0",
+  "description": "One-way sync engine for iCloud Photos Library within the native file system",
   "preferGlobal": true,
   "type": "module",
   "main": "bin/main.js",
@@ -28,6 +28,7 @@
   },
   "keywords": [
     "icloud",
+    "icloud-sync",
     "icloud-photos"
   ],
   "author": "Frank Steiler",

@@ -1,6 +1,11 @@
 # iCloud Photos Sync
 
-**Work in progress, [current state and upcoming milestones below](#milestone-plan).**
+**Work in progress, [current state and upcoming milestones below](#milestone-plan)**
+
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/steilerdev/icloud-photos-sync/Build%20&%20Publish?label=GH%20Actions&style=for-the-badge)
+[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/releases)
+[![npm](https://img.shields.io/npm/dm/icloud-photos-sync?label=npm%20downloads&style=for-the-badge)](https://www.npmjs.com/package/icloud-photos-sync)
+[![Docker Pulls](https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync?style=for-the-badge)](https://hub.docker.com/r/steilerdev/icloud-photos-sync)
 
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem (only tested on Linux Debian 10/buster).
 
@@ -90,7 +95,7 @@ The tool is not yet 'production ready', however I would like to ask the communit
    - :white_check_mark: Album diff
 7. :white_check_mark: Writing diff to disk
    - :white_check_mark: Writing asset diff
-   - :x: Writing album diff
+   - :white_check_mark: Writing album diff
 8. :x: Enable archiving
 9. :x: Improve MFA workflow (re-request code/send code through other means)
 10. :x: Provide WebUI

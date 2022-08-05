@@ -115,8 +115,8 @@ export class PhotosLibrary {
                     albums.push(...await this.loadAlbum(loadedAlbum));
                 }
             } else if (album.albumType === AlbumType.ALBUM) {
-                const uuid = path.parse(target).name;
-                albums[0].assets[uuid] = link.name;
+                const uuidFile = path.parse(target).base;
+                albums[0].assets[uuidFile] = link.name;
             } else if (album.albumType === AlbumType.ARCHIVED) {
                 this.logger.info(`Treating ${album.albumType} as archived`);
                 // Ignoring assets on archived folders
@@ -140,7 +140,8 @@ export class PhotosLibrary {
         // If there are files in the folders, the folder is treated as archived
         const filePresent = (await fs.readdir(path, {
             withFileTypes: true,
-        })).some(file => file.isFile());
+        })).filter(file => !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name)) // Filter out files that are safe to ignore
+            .some(file => file.isFile());
 
         if (directoryPresent) {
             // AlbumType.Folder cannot be archived!
@@ -162,10 +163,12 @@ export class PhotosLibrary {
      * This function diffs two entity arrays (can be either Albums or Assets) and returns the corresponding processing queue
      * @param remoteEnties - The entities fetched from a remote state
      * @param localEntities - The local entities as read from disk
+     * @returns A processing queue, containing the entities that needs to be deleted, added and kept. In the case of albums, this will not take hierarchical dependencies into consideration
      */
     getProcessingQueues<T>(remoteEnties: PEntity<T>[], localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
         this.logger.debug(`Getting processing queues`);
         const toBeAdded: T[] = [];
+        const toBeKept: T[] = [];
         remoteEnties.forEach(remoteEntity => {
             const localEntity = localEntities[remoteEntity.getUUID()];
             if (!localEntity || !remoteEntity.equal(localEntity)) {
@@ -175,12 +178,13 @@ export class PhotosLibrary {
             } else {
                 // Local asset matches remote asset, nothing to do, but preventing local asset to be deleted
                 this.logger.debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
+                toBeKept.push(remoteEntity.unpack());
                 delete localEntities[remoteEntity.getUUID()];
             }
         });
         // The original library should only hold those records, that have not been referenced by the remote state, removing them
         const toBeDeleted = Object.values(localEntities);
-        this.logger.debug(`Adding ${toBeAdded.length} remote entities, removing ${toBeDeleted.length} local entities`);
-        return [toBeDeleted, toBeAdded];
+        this.logger.debug(`Adding ${toBeAdded.length} remote entities, removing ${toBeDeleted.length} local entities, keeping ${toBeKept.length} local entities`);
+        return [toBeDeleted, toBeAdded, toBeKept];
     }
 }

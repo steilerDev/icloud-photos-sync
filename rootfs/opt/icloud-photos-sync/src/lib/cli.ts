@@ -7,53 +7,67 @@ import * as SYNC_ENGINE from './sync-engine/constants.js';
 import {SyncEngine} from './sync-engine/sync-engine.js';
 import {SingleBar} from 'cli-progress';
 import {exit} from 'process';
+import {getLogger} from './logger.js';
 
 export class CLIInterface {
+    /**
+     * Default logger for the class
+     */
+    private logger = getLogger(this);
+
+    /**
+     * The progress bar, shown while fetching remote assets
+     */
     progressBar: SingleBar;
-    static instance: CLIInterface;
+    /**
+     * Indicates if this class should write to the console or the log file
+     */
+    enableCLIOutput: boolean;
 
     /**
      * Creates a new CLI interface based on the provided components
+     * @param cliOpts - The options read from the interface
      * @param iCloud - The iCloud connection
      * @param syncEngine - The Sync Engine
      */
-    constructor(iCloud: iCloud, syncEngine: SyncEngine) {
+    constructor(cliOpts: OptionValues, iCloud: iCloud, syncEngine: SyncEngine) {
         this.progressBar = new SingleBar({
             etaAsynchronousUpdate: true,
             format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
             barCompleteChar: `\u25A0`,
             barIncompleteChar: ` `,
         });
+
+        // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on log_to_cli)
+        this.enableCLIOutput = !cliOpts.log_to_cli && !cliOpts.silent;
+
         this.setupCLIiCloudInterface(iCloud);
         this.setupCLISyncEngineInterface(syncEngine);
 
         process.on(`SIGTERM`, () => {
             // Issued by docker compose down
-            CLIInterface.fatalError(`Received SIGTERM, aborting!`);
+            this.fatalError(`Received SIGTERM, aborting!`);
         });
 
         process.on(`SIGINT`, () => {
             // Received from ctrl-c
-            CLIInterface.fatalError(`Received SIGINT, aborting!`);
+            this.fatalError(`Received SIGINT, aborting!`);
         });
 
-        console.log(chalk.white(CLIInterface.getHorizontalLine()));
-        console.log(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
-        console.log(chalk.green(`Made with <3 by steilerDev`));
-    }
-
-    /**
-     * Initiates the CLI interface and connects it to the relevant components
-     * @param iCloud - The iCloud object
-     * @param photosLibrary - The Photos Library object
-     * @param syncEngine - The Sync Engine object
-     */
-    static createCLIInterface(iCloud: iCloud, syncEngine: SyncEngine) {
-        if (!this.instance) {
-            this.instance = new CLIInterface(iCloud, syncEngine);
+        if (this.enableCLIOutput) {
+            console.clear();
         }
+
+        this.print(chalk.white(this.getHorizontalLine()));
+        this.print(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
+        this.print(chalk.green(`Made with <3 by steilerDev`));
     }
 
+    // Clear Structure
+    //       Assets
+    // Sync
+    //      Dry Run
+    // Archive <folder>
     /**
      * Processing CLI arguments
      * @returns The parsed values from the commandline/environment variables
@@ -79,8 +93,11 @@ export class CLIInterface {
                 .env(`LOG_LEVEL`)
                 .choices([`trace`, `debug`, `info`, `warn`, `error`])
                 .default(`info`))
-            .addOption(new Option(`--log_to_cli`, `Disables logging to file and logs to the console`)
+            .addOption(new Option(`--log_to_cli`, `Disables logging to file and logs everything to the console. This will be ignored if '--silent' is set`)
                 .env(`LOG_TO_CLI`)
+                .default(false))
+            .addOption(new Option(`-s, --silent`, `Disables logging to the console and forces logs to go to the log file.`)
+                .env(`SILENT`)
                 .default(false))
             .addOption(new Option(`-t, --download_threads <number>`, `Sets the number of download threads`)
                 .env(`DOWNLOAD_THREADS`)
@@ -93,14 +110,27 @@ export class CLIInterface {
     }
 
     /**
+     * Will print the message to the correct target (console or log file)
+     * @param msg - The message to be printed, or 'undefined' if message should be ignored
+     */
+    print(msg: string) {
+        if (msg !== `undefined`) {
+            if (this.enableCLIOutput) {
+                console.log(msg);
+            } else {
+                this.logger.info(chalk.reset(msg));
+            }
+        }
+    }
+
+    /**
      * Logs a fatal error and exits the application
      * @param err - The error message to display
      */
-    static fatalError(err: string) {
-        console.log();
-        console.log(chalk.red(CLIInterface.getHorizontalLine()));
-        console.log(chalk.red(`Experienced fatal error at ${CLIInterface.getDateTime()}: ${err}`));
-        console.log(chalk.red(CLIInterface.getHorizontalLine()));
+    fatalError(err: string) {
+        this.print(chalk.red(this.getHorizontalLine()));
+        this.print(chalk.red(`Experienced fatal error at ${this.getDateTime()}: ${err}`));
+        this.print(chalk.red(this.getHorizontalLine()));
         exit(1);
     }
 
@@ -108,15 +138,15 @@ export class CLIInterface {
      *
      * @returns A horizontal line
      */
-    static getHorizontalLine(): string {
-        return `-`.repeat(process.stdout.columns);
+    getHorizontalLine(): string {
+        return this.enableCLIOutput ? `-`.repeat(process.stdout.columns) : `undefined`;
     }
 
     /**
      *
      * @returns A local date time string
      */
-    static getDateTime(): string {
+    getDateTime(): string {
         return new Date().toLocaleString();
     }
 
@@ -125,37 +155,37 @@ export class CLIInterface {
      */
     setupCLIiCloudInterface(iCloud: iCloud) {
         iCloud.on(ICLOUD.EVENTS.AUTHENTICATION_STARTED, () => {
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
-            console.log(chalk.white(`Authenticating user...`));
+            this.print(chalk.white(this.getHorizontalLine()));
+            this.print(chalk.white(`Authenticating user...`));
         });
 
         iCloud.on(ICLOUD.EVENTS.AUTHENTICATED, () => {
-            console.log(chalk.white(`User authenticated`));
+            this.print(chalk.white(`User authenticated`));
         });
 
         iCloud.on(ICLOUD.EVENTS.MFA_REQUIRED, port => {
-            console.log(chalk.yellowBright(`MFA code required, listening for input on port ${port}...`));
+            this.print(chalk.yellowBright(`MFA code required, listening for input on port ${port}...`));
         });
 
         iCloud.on(ICLOUD.EVENTS.MFA_RECEIVED, () => {
-            console.log(chalk.white(`MFA code received`));
+            this.print(chalk.white(`MFA code received`));
         });
 
         iCloud.on(ICLOUD.EVENTS.TRUSTED, () => {
-            console.log(chalk.white(`Device trusted`));
+            this.print(chalk.white(`Device trusted`));
         });
 
         iCloud.on(ICLOUD.EVENTS.ACCOUNT_READY, () => {
-            console.log(chalk.white(`Sign in successful!`));
+            this.print(chalk.white(`Sign in successful!`));
         });
 
         iCloud.on(ICLOUD.EVENTS.READY, () => {
-            console.log(chalk.greenBright(`iCloud connection established!`));
+            this.print(chalk.greenBright(`iCloud connection established!`));
         });
 
         iCloud.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
-            console.log(chalk.red(`Unexpected error: ${msg}`));
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
+            this.print(chalk.red(`Unexpected error: ${msg}`));
+            this.print(chalk.white(this.getHorizontalLine()));
         });
     }
 
@@ -164,34 +194,34 @@ export class CLIInterface {
      */
     setupCLISyncEngineInterface(syncEngine: SyncEngine) {
         syncEngine.on(SYNC_ENGINE.EVENTS.START, () => {
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
-            console.log(chalk.white.bold(`Starting sync at ${CLIInterface.getDateTime()}`));
+            this.print(chalk.white(this.getHorizontalLine()));
+            this.print(chalk.white.bold(`Starting sync at ${this.getDateTime()}`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD, () => {
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
-            console.log(chalk.white(`Loading local & fetching remote iCloud Library state...`));
+            this.print(chalk.white(this.getHorizontalLine()));
+            this.print(chalk.white(`Loading local & fetching remote iCloud Library state...`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, (remoteAssetCount, remoteAlbumCount, localAssetCount, localAlbumCount) => {
-            console.log(chalk.green(`Loaded local state: ${localAssetCount} assets & ${localAlbumCount} albums`));
-            console.log(chalk.green(`Fetched remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
+            this.print(chalk.green(`Loaded local state: ${localAssetCount} assets & ${localAlbumCount} albums`));
+            this.print(chalk.green(`Fetched remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DIFF, () => {
-            console.log(chalk.white(`Diffing remote with local state...`));
+            this.print(chalk.white(`Diffing remote with local state...`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DIFF_COMPLETED, () => {
-            console.log(chalk.green(`Diffing completed!`));
+            this.print(chalk.green(`Diffing completed!`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, () => {
-            console.log(chalk.white(`Writing diff to disk...`));
+            this.print(chalk.white(`Writing diff to disk...`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS, (toBeDeletedCount, toBeAddedCount) => {
-            console.log(chalk.cyan(`Syncing assets, by removing ${toBeDeletedCount} local assets & downloading ${toBeAddedCount} remote assets...`));
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS, (toBeDeletedCount, toBeAddedCount, toBeKept) => {
+            this.print(chalk.cyan(`Syncing assets, by keeping ${toBeKept} and removing ${toBeDeletedCount} local assets, as well as adding ${toBeAddedCount} remote assets...`));
             this.progressBar.start(toBeAddedCount, 0);
         });
 
@@ -202,37 +232,37 @@ export class CLIInterface {
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED, () => {
             this.progressBar.stop();
-            console.log(chalk.greenBright(`Succesfully synced assets!`));
+            this.print(chalk.greenBright(`Succesfully synced assets!`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, (toBeDeletedCount, toBeAddedCount) => {
-            console.log(chalk.cyan(`Syncing albums, by removing ${toBeDeletedCount} local albums & adding ${toBeAddedCount} remote albums...`));
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, (toBeDeletedCount, toBeAddedCount, toBeKept) => {
+            this.print(chalk.cyan(`Syncing albums, by keeping ${toBeKept} and removing ${toBeDeletedCount} local albums, as well as adding ${toBeAddedCount} remote albums...`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED, () => {
-            console.log(chalk.greenBright(`Succesfully synced albums!`));
+            this.print(chalk.greenBright(`Succesfully synced albums!`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_COMPLETED, () => {
-            console.log(chalk.green(`Succesfully wrote diff to disk!`));
+            this.print(chalk.green(`Succesfully wrote diff to disk!`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
-            console.log(chalk.green.bold(`Succesfully completed sync at ${CLIInterface.getDateTime()}`));
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
+            this.print(chalk.white(this.getHorizontalLine()));
+            this.print(chalk.green.bold(`Succesfully completed sync at ${this.getDateTime()}`));
+            this.print(chalk.white(this.getHorizontalLine()));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.RETRY, retryCount => {
             this.progressBar.stop();
-            console.log(chalk.magenta(`Detected recoverable error, refreshing iCloud connection & retrying (#${retryCount})...`));
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
+            this.print(chalk.magenta(`Detected recoverable error, refreshing iCloud connection & retrying (#${retryCount})...`));
+            this.print(chalk.white(this.getHorizontalLine()));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
             this.progressBar.stop();
-            console.log(chalk.red(`Sync engine: Unexpected error: ${msg}`));
-            console.log(chalk.white(CLIInterface.getHorizontalLine()));
+            this.print(chalk.red(`Sync engine: Unexpected error: ${msg}`));
+            this.print(chalk.white(this.getHorizontalLine()));
         });
     }
 }

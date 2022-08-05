@@ -11,7 +11,8 @@ export enum AlbumType {
 }
 
 /**
- * Key: getUUID, Value: Filename
+ * This type is mapping the filename in the asset folder, to the filename how the asset should be presented to the user
+ * Key: Asset.getAssetFilename, Value: Asset.getPrettyFilename
  */
 export type AlbumAssets = {
     [key: string]: string
@@ -73,6 +74,14 @@ export class Album implements PEntity<Album> {
 
     /**
      *
+     * @returns A valid filename, that will be used to store the album on disk
+     */
+    getSanitizedFilename(): string {
+        return this.albumName.replaceAll(`/`, `_`);
+    }
+
+    /**
+     *
      * @returns The UUID of this album instance
      */
     getUUID(): string {
@@ -89,7 +98,7 @@ export class Album implements PEntity<Album> {
             cplAlbum.recordName,
             cplAlbum.albumType,
             Buffer.from(cplAlbum.albumNameEnc, `base64`).toString(`utf8`),
-            cplAlbum.parentId,
+            cplAlbum.parentId ? cplAlbum.parentId : ``,
         );
         album.assets = await cplAlbum.assets;
         return album;
@@ -113,9 +122,21 @@ export class Album implements PEntity<Album> {
         return album
             && this.uuid === album.uuid
             && this.albumType === album.albumType
-            && this.albumName === album.albumName
+            && this.getSanitizedFilename() === album.getSanitizedFilename()
             && this.parentAlbumUUID === album.parentAlbumUUID
-            && JSON.stringify(Object.keys(this.assets).sort()) === JSON.stringify(Object.keys(album.assets).sort());
+            && this.assetsEqual(album.assets);
+    }
+
+    /**
+     * Checks of the assets, attached to this album are equal to the provided assets
+     * @param assets - The list of assets to compare to
+     * @returns True, if the assets are equal (order does not matter)
+     */
+    assetsEqual(assets: AlbumAssets) {
+        // Assets might be undefined
+        const thisAssets = this.assets ? this.assets : {};
+        const otherAssets = assets ? assets : {};
+        return JSON.stringify(Object.keys(thisAssets).sort()) === JSON.stringify(Object.keys(otherAssets).sort());
     }
 
     /**
@@ -124,5 +145,30 @@ export class Album implements PEntity<Album> {
      */
     unpack(): Album {
         return this;
+    }
+
+    /**
+     * Check if a given album is in the chain of ancestors
+     * @param potentialAncestor - The potential ancesotr for the given album
+     * @param fullState - The full directory state
+     * @returns True if potentialAncestor is part of this album's directory tree
+     */
+    hasAncestor(potentialAncestor: Album, fullQueue: Album[]): boolean {
+        if (this.parentAlbumUUID === ``) { // If this is a root album, the potentialAncestor cannot be a ancestor
+            return false;
+        }
+
+        if (potentialAncestor.getUUID() === this.parentAlbumUUID) { // If the ancestor is the parent, return true
+            return true;
+        }
+
+        // Find actual parent
+        const parent = fullQueue.find(album => album.getUUID() === this.parentAlbumUUID);
+        // If there is a parent, check if it has the ancestor
+        if (parent) {
+            return parent.hasAncestor(potentialAncestor, fullQueue);
+        }
+
+        return false;
     }
 }

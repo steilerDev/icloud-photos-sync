@@ -16,6 +16,7 @@ const LOGGER = {
     MFAServer: `MFA-Server`,
     PhotosLibrary: `Photos-Library`,
     SyncEngine: `Sync-Engine`,
+    CLIInterface: `CLI-Interface`,
 };
 
 /**
@@ -28,7 +29,7 @@ export function setupLogger(cliOpts: OptionValues): void {
         base: LOG_FILE_NAME,
     });
 
-    if (!cliOpts.log_to_cli && fs.existsSync(logFile)) {
+    if (fs.existsSync(logFile)) {
         // Clearing file if it exists
         fs.truncateSync(logFile);
     }
@@ -37,12 +38,19 @@ export function setupLogger(cliOpts: OptionValues): void {
 
     log.methodFactory = function (methodName, logLevel, loggerName) {
         return function (message) {
-            if (cliOpts.log_to_cli) {
+            if (cliOpts.log_to_cli && !cliOpts.silent) {
                 const prefixedMessage = `${chalk.gray(`[${new Date().toLocaleString()}]`)} ${methodName.toUpperCase()} ${chalk.green(`${String(loggerName)}: ${message}`)}`;
                 originalFactory(methodName, logLevel, loggerName)(prefixedMessage);
             } else {
                 const prefixedMessage = `[${new Date().toISOString()}] ${methodName.toUpperCase()} ${String(loggerName)}: ${message}\n`;
                 fs.appendFileSync(logFile, prefixedMessage);
+                if (!cliOpts.silent) {
+                    if (methodName === `warn`) {
+                        console.warn(prefixedMessage);
+                    } else if (methodName === `error`) {
+                        console.error(prefixedMessage);
+                    }
+                }
             }
         };
     };

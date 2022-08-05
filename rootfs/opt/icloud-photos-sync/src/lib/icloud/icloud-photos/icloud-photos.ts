@@ -180,6 +180,7 @@ export class iCloudPhotos extends EventEmitter {
     /**
      * Fetches all album records, traversing the directory tree
      * @returns An array of all album records in the account
+     * Since we are requesting them based on parent folder and are starting from the root folder the results array should yield: If folder A is closer to the root than folder B, the index of A is smaller than the index of B
      */
     async fetchAllAlbumRecords(): Promise<CPLAlbum[]> {
         try {
@@ -250,7 +251,7 @@ export class iCloudPhotos extends EventEmitter {
                         .then(assets => {
                             const _albumAssets: AlbumAssets = {};
                             assets.forEach(asset => {
-                                _albumAssets[asset.getUUID()] = asset.getAssetFilename();
+                                _albumAssets[asset.getAssetFilename()] = asset.getPrettyFilename();
                             });
                             return _albumAssets;
                         });
