@@ -127,6 +127,11 @@ export class Album implements PEntity<Album> {
             && this.assetsEqual(album.assets);
     }
 
+    /**
+     * Checks of the assets, attached to this album are equal to the provided assets
+     * @param assets - The list of assets to compare to
+     * @returns True, if the assets are equal (order does not matter)
+     */
     assetsEqual(assets: AlbumAssets) {
         // Assets might be undefined
         const thisAssets = this.assets ? this.assets : {};

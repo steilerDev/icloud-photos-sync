@@ -26,6 +26,7 @@ export class CLIInterface {
 
     /**
      * Creates a new CLI interface based on the provided components
+     * @param cliOpts - The options read from the interface
      * @param iCloud - The iCloud connection
      * @param syncEngine - The Sync Engine
      */
