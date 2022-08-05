@@ -163,7 +163,7 @@ export class PhotosLibrary {
      * This function diffs two entity arrays (can be either Albums or Assets) and returns the corresponding processing queue
      * @param remoteEnties - The entities fetched from a remote state
      * @param localEntities - The local entities as read from disk
-     * @returns A processing queue, containing the entities that needs to be deleted & added. In the case of albums, this will not take hierarchical dependencies into consideration
+     * @returns A processing queue, containing the entities that needs to be deleted, added and kept. In the case of albums, this will not take hierarchical dependencies into consideration
      */
     getProcessingQueues<T>(remoteEnties: PEntity<T>[], localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
         this.logger.debug(`Getting processing queues`);

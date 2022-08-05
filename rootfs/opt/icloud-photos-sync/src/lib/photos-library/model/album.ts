@@ -145,8 +145,8 @@ export class Album implements PEntity<Album> {
     /**
      * Check if a given album is in the chain of ancestors
      * @param potentialAncestor - The potential ancesotr for the given album
-     * @param fullQueue - Basing this on the provided queue. If the linked list has gaps, the albums are seen as independent
-     * @returns
+     * @param fullState - The full directory state
+     * @returns True if potentialAncestor is part of this album's directory tree
      */
     hasAncestor(potentialAncestor: Album, fullQueue: Album[]): boolean {
         if (this.parentAlbumUUID === ``) { // If this is a root album, the potentialAncestor cannot be a ancestor

@@ -4,8 +4,17 @@ import {FileType} from './file-type.js';
 import {Stats} from 'fs';
 import {PEntity} from './photos-entity.js';
 
+/**
+ * Representing the possible asset types
+ */
 export enum AssetType {
+    /**
+     * Shows that this is the original file
+     */
     ORIG = 0,
+    /**
+     * Shows that this is the latest edit
+     */
     EDIT = 1
 }
 /**
@@ -55,6 +64,8 @@ export class Asset implements PEntity<Asset> {
      * @param size -
      * @param fileType -
      * @param modified -
+     * @param assetType - If this asset is the original or an edit
+     * @param origFilename - The original filename, extracted from the parent object
      * @param wrappingKey -
      * @param referenceChecksum -
      * @param downloadURL -
@@ -76,8 +87,8 @@ export class Asset implements PEntity<Asset> {
      * @param asset - The AssetID object returned from the backend
      * @param assetType - The assetType string, describing the filetype
      * @param modified - The modified date as returned from the backend (converted to epoch time in this function, as it is returned in milliseconds)
-     * @param origFilename
-     * @param assetType
+     * @param origFilename - The original filename, extracted from the parent object
+     * @param assetType - If this asset is the original or an edit
      * @returns An Asset based on the backend objects
      */
     static fromCPL(asset: AssetID, fileTypeDescriptor: string, modified: number, origFilename: string, assetType: AssetType): Asset {

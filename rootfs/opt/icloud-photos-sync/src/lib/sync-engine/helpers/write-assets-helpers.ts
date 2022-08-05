@@ -8,10 +8,10 @@ import {SyncEngine} from "../sync-engine.js";
 import * as SYNC_ENGINE from '../constants.js';
 
 /**
-     * Writes the asset changes defined in the processing queue to to disk (by downloading the asset or deleting it)
-     * @param processingQueue - The asset processing queue
-     * @returns A promise that settles, once all asset changes have been written to disk
-     */
+ * Writes the asset changes defined in the processing queue to to disk (by downloading the asset or deleting it)
+ * @param processingQueue - The asset processing queue
+ * @returns A promise that settles, once all asset changes have been written to disk
+ */
 export async function writeAssets(this: SyncEngine, processingQueue: PLibraryProcessingQueues<Asset>) {
     const toBeDeleted = processingQueue[0];
     const toBeAdded = processingQueue[1];

@@ -8,7 +8,7 @@ import * as PHOTOS_LIBRARY from '../../photos-library/constants.js';
 
 /**
  * Writes the album changes defined in the processing queue to to disk
- * @param processingQueue - The album processing queue
+ * @param processingQueue - The album processing queue, expected to have resolved all hierarchical dependencies
  * @returns A promise that settles, once all album changes have been written to disk
  */
 export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryProcessingQueues<Album>) {
@@ -19,6 +19,7 @@ export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryPro
     const toBeAdded: Album[] = this.queueIsSorted(processingQueue[1]) ? processingQueue[1] : this.sortQueue(processingQueue[1]);
 
     // Deletion before addition, in order to avoid duplicate folders
+    // Reversing processing order, since we need to remove nested folders first
     toBeDeleted.reverse().forEach(album => {
         this.deleteAlbum(album);
     });
@@ -28,6 +29,13 @@ export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryPro
     });
 }
 
+/**
+ * Writes the data structure of an album to disk. This includes:
+ *   * Create a hidden folder containing the UUID
+ *   * Create a link to the hidden folder, containing the real name of the album
+ *   * (If possible) link correct pictures from the assetFolder to the newly created album
+ * @param album - The album, that should be written to disk
+ */
 export function addAlbum(this: SyncEngine, album: Album) {
     this.logger.debug(`Creating album ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
     const parentPath = album.parentAlbumUUID // If UUID is undefined -> Folder is in root
@@ -72,16 +80,20 @@ export function addAlbum(this: SyncEngine, album: Album) {
     } catch (err) {
         this.logger.warn(`Unable to add album ${album.getDisplayName()}: ${err.message}`);
     }
-
-    // Find parent
 }
 
+/**
+ * This will delete an album from disk and remove all associated symlinks
+ * Deletion will only happen if the album is 'empty'. This means it only contains symlinks or 'safe' files. Any other folder or file will result in the folder not being deleted.
+ * @param album The album that needs to be deleted
+ */
 export function deleteAlbum(this: SyncEngine, album: Album) {
     this.logger.debug(`Deleting folder ${album.getDisplayName()}`);
     const albumPath = this.findAlbum(album.getUUID());
     const linkedPath = path.normalize(`${albumPath}/../${album.getSanitizedFilename()}`); // The linked folder is one layer below
     const pathContent = fs.readdirSync(albumPath, {withFileTypes: true})
-        .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
+
+    const hasFiles = pathContent.filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
     if (pathContent.length > 0) {
         this.logger.warn(`Unable to delete album ${album.getDisplayName()}: Album in path ${path} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
     } else if (!fs.existsSync(linkedPath)) {
@@ -93,15 +105,25 @@ export function deleteAlbum(this: SyncEngine, album: Album) {
         } catch (err) {
             this.logger.warn(`Unable to delete album ${album.getDisplayName()}: ${err}`);
         }
-
         this.logger.debug(`Sucesfully deleted album ${album.getDisplayName} at ${path} & ${linkedPath}`);
     }
 }
 
 /**
+ * Finds a given album within the photoDataDir
+ * @param albumUUID - The UUID of the album
+ * @returns The full path to the album, or the empty string, if the album was not found
+ */
+export function findAlbum(this: SyncEngine, albumUUID: string) {
+    const relativeFolderPath = this.findAlbumInPath(albumUUID, this.photosLibrary.photoDataDir)
+    return relativeFolderPath === "" ? "" :
+        path.join(this.photosLibrary.photoDataDir, relativeFolderPath);
+}
+
+/**
  * Finds a given album in a given path (as long as it is within the directory tree)
  * @param albumUUID - The UUID of the album
- * @param _rootPath  - The path in which the album should be searched, if ommited the search will start at photoDataDir
+ * @param rootPath  - The path in which the album should be searched
  * @returns The path to the album, relative to the provided path, or the empty string if the album could not be found, or the full path including photoDataDir, if _rootPath was undefined
  */
 export function findAlbumInPath(this: SyncEngine, albumUUID: string, rootPath: string): string {
@@ -145,9 +167,6 @@ export function findAlbumInPath(this: SyncEngine, albumUUID: string, rootPath: s
     return ``;
 }
 
-export function findAlbum(this: SyncEngine, albumUUID: string) {
-    return path.join(this.photosLibrary.photoDataDir, this.findAlbumInPath(albumUUID, this.photosLibrary.photoDataDir));
-}
 
 /**
  * This function will sort a given queue

@@ -13,7 +13,7 @@ export enum EVENTS {
 }
 
 /**
- * URL paths required to perofrm queries
+ * URL paths required to perform queries
  */
 export const PATHS = {
     /**
