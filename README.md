@@ -95,7 +95,7 @@ The tool is not yet 'production ready', however I would like to ask the communit
    - :white_check_mark: Album diff
 7. :white_check_mark: Writing diff to disk
    - :white_check_mark: Writing asset diff
-   - :x: Writing album diff
+   - :white_check_mark: Writing album diff
 8. :x: Enable archiving
 9. :x: Improve MFA workflow (re-request code/send code through other means)
 10. :x: Provide WebUI

@@ -62,6 +62,11 @@ export class CLIInterface {
         this.print(chalk.green(`Made with <3 by steilerDev`));
     }
 
+    // Clear Structure
+    //       Assets
+    // Sync
+    //      Dry Run
+    // Archive <folder>
     /**
      * Processing CLI arguments
      * @returns The parsed values from the commandline/environment variables

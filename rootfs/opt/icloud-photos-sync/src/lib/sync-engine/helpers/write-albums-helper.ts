@@ -4,6 +4,7 @@ import {SyncEngine} from "../sync-engine.js";
 import path from 'path';
 import fs, {rmSync} from 'fs';
 import * as SYNC_ENGINE from '../constants.js';
+import * as PHOTOS_LIBRARY from '../../photos-library/constants.js';
 
 /**
  * Writes the album changes defined in the processing queue to to disk
@@ -84,8 +85,7 @@ export function deleteAlbum(this: SyncEngine, album: Album) {
     const albumPath = this.findAlbum(album.getUUID());
     const linkedPath = path.normalize(`${albumPath}/../${album.getSanitizedFilename()}`); // The linked folder is one layer below
     const pathContent = fs.readdirSync(albumPath, {withFileTypes: true})
-        .filter(item => !item.isSymbolicLink()); // Filter out symbolic links, we are fine with deleting those
-
+        .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
     if (pathContent.length > 0) {
         const msg = `Unable to delete album ${album.getDisplayName()}: Album in path ${path} not empty (${JSON.stringify(pathContent.map(item => item.name))})`;
         this.emit(SYNC_ENGINE.EVENTS.ERROR, msg);

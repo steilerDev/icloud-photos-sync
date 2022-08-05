@@ -34,6 +34,6 @@ export function resolveHierarchicalDependencies(this: SyncEngine, queues: PLibra
             removeIndexesFromKept.push(index);
         }
     });
-    toBeKept = toBeKept.filter((_album, index) => removeIndexesFromKept.indexOf(index) !== -1);
+    toBeKept = toBeKept.filter((_album, index) => removeIndexesFromKept.indexOf(index) === -1);
     return [toBeDeleted, toBeAdded, toBeKept];
 }

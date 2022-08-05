@@ -140,7 +140,8 @@ export class PhotosLibrary {
         // If there are files in the folders, the folder is treated as archived
         const filePresent = (await fs.readdir(path, {
             withFileTypes: true,
-        })).some(file => file.isFile());
+        })).filter(file => !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name)) // Filter out files that are safe to ignore
+            .some(file => file.isFile());
 
         if (directoryPresent) {
             // AlbumType.Folder cannot be archived!
