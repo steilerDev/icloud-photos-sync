@@ -60,8 +60,8 @@ export class SyncEngine extends EventEmitter {
         super();
         this.iCloud = iCloud;
         this.photosLibrary = photosLibrary;
-        this.downloadCCY = cliOpts.download_threads;
-        this.maxRetry = cliOpts.max_retries;
+        this.downloadCCY = cliOpts.downloadThreads;
+        this.maxRetry = cliOpts.maxRetries;
     }
 
     /**

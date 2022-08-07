@@ -32,7 +32,7 @@ export class PhotosLibrary {
      * @param cliOpts - The read CLI options
      */
     constructor(cliOpts: OptionValues) {
-        this.photoDataDir = cliOpts.data_dir;
+        this.photoDataDir = cliOpts.dataDir;
         if (!fssync.existsSync(this.photoDataDir)) {
             this.logger.debug(`${this.photoDataDir} does not exist, creating`);
             fssync.mkdirSync(this.photoDataDir);

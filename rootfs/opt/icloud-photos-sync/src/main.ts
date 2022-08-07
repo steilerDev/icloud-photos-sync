@@ -10,8 +10,8 @@ import * as fs from 'fs';
 const cliOpts = CLIInterface.getCLIOptions();
 
 // It's crucial for the data dir to exist, create if it doesn't
-if (!fs.existsSync(cliOpts.data_dir)) {
-    fs.mkdirSync(cliOpts.data_dir, {recursive: true});
+if (!fs.existsSync(cliOpts.dataDir)) {
+    fs.mkdirSync(cliOpts.dataDir, {recursive: true});
 }
 
 // Creating components of the application

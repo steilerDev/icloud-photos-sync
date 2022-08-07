@@ -25,7 +25,7 @@ const LOGGER = {
  */
 export function setupLogger(cliOpts: OptionValues): void {
     const logFile = path.format({
-        dir: cliOpts.data_dir,
+        dir: cliOpts.dataDir,
         base: LOG_FILE_NAME,
     });
 
@@ -38,7 +38,7 @@ export function setupLogger(cliOpts: OptionValues): void {
 
     log.methodFactory = function (methodName, logLevel, loggerName) {
         return function (message) {
-            if (cliOpts.log_to_cli && !cliOpts.silent) {
+            if (cliOpts.logToCli && !cliOpts.silent) {
                 const prefixedMessage = `${chalk.gray(`[${new Date().toLocaleString()}]`)} ${methodName.toUpperCase()} ${chalk.green(`${String(loggerName)}: ${message}`)}`;
                 originalFactory(methodName, logLevel, loggerName)(prefixedMessage);
             } else {
@@ -55,7 +55,7 @@ export function setupLogger(cliOpts: OptionValues): void {
         };
     };
 
-    log.setLevel(cliOpts.log_level);
+    log.setLevel(cliOpts.logLevel);
 
     // Set specific loggers to levels to reduce verbosity during development
     /**

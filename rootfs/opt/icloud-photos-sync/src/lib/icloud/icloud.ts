@@ -50,7 +50,7 @@ export class iCloud extends EventEmitter {
         this.mfaServer = new MFAServer(cliOpts.port);
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.mfaReceived.bind(this));
 
-        this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.data_dir);
+        this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.dataDir);
 
         this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
             try {

@@ -38,8 +38,8 @@ export class CLIInterface {
             barIncompleteChar: ` `,
         });
 
-        // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on log_to_cli)
-        this.enableCLIOutput = !cliOpts.log_to_cli && !cliOpts.silent;
+        // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on logToCli)
+        this.enableCLIOutput = !cliOpts.logToCli && !cliOpts.silent;
 
         this.setupCLIiCloudInterface(iCloud);
         this.setupCLISyncEngineInterface(syncEngine);
@@ -83,26 +83,26 @@ export class CLIInterface {
             .addOption(new Option(`-p, --password <email>`, `AppleID password`)
                 .env(`APPLE_ID_PWD`)
                 .makeOptionMandatory(true))
-            .addOption(new Option(`-d, --data_dir <string>`, `Directory to store local copy of library`)
+            .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library`)
                 .env(`DATA_DIR`)
                 .default(`/opt/icloud-photos-library`))
             .addOption(new Option(`-p, --port <number>`, `port number for MFA server (Awaiting MFA code when necessary)`)
                 .env(`PORT`)
                 .default(80))
-            .addOption(new Option(`-l, --log_level <level>`, `Set the log level`)
+            .addOption(new Option(`-l, --log-level <level>`, `Set the log level`)
                 .env(`LOG_LEVEL`)
                 .choices([`trace`, `debug`, `info`, `warn`, `error`])
                 .default(`info`))
-            .addOption(new Option(`--log_to_cli`, `Disables logging to file and logs everything to the console. This will be ignored if '--silent' is set`)
+            .addOption(new Option(`--log-to-cli`, `Disables logging to file and logs everything to the console. This will be ignored if '--silent' is set`)
                 .env(`LOG_TO_CLI`)
                 .default(false))
             .addOption(new Option(`-s, --silent`, `Disables logging to the console and forces logs to go to the log file.`)
                 .env(`SILENT`)
                 .default(false))
-            .addOption(new Option(`-t, --download_threads <number>`, `Sets the number of download threads`)
+            .addOption(new Option(`-t, --download-threads <number>`, `Sets the number of download threads`)
                 .env(`DOWNLOAD_THREADS`)
                 .default(5))
-            .addOption(new Option(`-r, --max_retries <number>`, `Sets the number of maximum retries upon an error (-1 means that it will always retry)`)
+            .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon an error (-1 means that it will always retry)`)
                 .env(`MAX_RETRIES`)
                 .default(-1));
         program.parse();
