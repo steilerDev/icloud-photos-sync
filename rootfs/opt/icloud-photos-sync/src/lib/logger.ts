@@ -46,9 +46,9 @@ export function setupLogger(cliOpts: OptionValues): void {
                 fs.appendFileSync(logFile, prefixedMessage);
                 if (!cliOpts.silent) {
                     if (methodName === `warn`) {
-                        console.warn(prefixedMessage);
+                        console.warn(`Warning: ${message}`);
                     } else if (methodName === `error`) {
-                        console.error(prefixedMessage);
+                        console.error(`Error: ${message}`);
                     }
                 }
             }

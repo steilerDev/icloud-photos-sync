@@ -31,9 +31,12 @@ export async function writeAssets(this: SyncEngine, processingQueue: PLibraryPro
  * @returns A promise that resolves, once the file has been sucesfully written to disk
  */
 export async function addAsset(this: SyncEngine, asset: Asset): Promise<void> {
-    this.logger.info(`Processing asset ${asset.getDisplayName()}`);
+    this.logger.info(`Adding asset ${asset.getDisplayName()}`);
     if (this.verifyAsset(asset)) {
         this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
+    } else if (this.dryRun) {
+        this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Adding asset ${asset.getDisplayName()} from ${asset.downloadURL}`);
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
     } else {
         return this.iCloud.photos.downloadAsset(asset)
             .then(response => {
@@ -63,7 +66,11 @@ export async function addAsset(this: SyncEngine, asset: Asset): Promise<void> {
 export async function deleteAsset(this: SyncEngine, asset: Asset): Promise<void> {
     this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
     const location = asset.getAssetFilePath(this.photosLibrary.assetDir);
-    return fsPromise.rm(location, {force: true});
+    if (this.dryRun) {
+        this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Deleting asset ${asset.getDisplayName()} from ${location}`);
+    } else {
+        return fsPromise.rm(location, {force: true});
+    }
 }
 
 /**

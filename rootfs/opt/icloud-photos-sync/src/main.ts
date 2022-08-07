@@ -7,7 +7,7 @@ import {SyncEngine} from './lib/sync-engine/sync-engine.js';
 import * as fs from 'fs';
 
 // Read CLI Options
-const cliOpts = CLIInterface.getCLIOptions();
+const [cliOpts, cliCommand] = CLIInterface.getCLIOptions();
 
 // It's crucial for the data dir to exist, create if it doesn't
 if (!fs.existsSync(cliOpts.dataDir)) {

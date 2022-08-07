@@ -16,5 +16,6 @@ export enum EVENTS {
     WRITE_COMPLETED = `write-completed`, // No arg
     DONE = `done`, // No arg
     RETRY = `retry`, // RetryCount
-    ERROR = `error` // ErrorMessage
+    ERROR = `error`, // ErrorMessage
+    DRY_RUN = `dry-run` // DryRunMsg
 }

@@ -72,7 +72,7 @@ export class CLIInterface {
      * Processing CLI arguments
      * @returns The parsed values from the commandline/environment variables
      */
-    static getCLIOptions(): OptionValues {
+    static getCLIOptions(): [OptionValues, string[]] {
         const program = new Command();
         program.name(PACKAGE_INFO.NAME)
             .description(PACKAGE_INFO.DESC)
@@ -104,9 +104,23 @@ export class CLIInterface {
                 .default(5))
             .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon an error (-1 means that it will always retry)`)
                 .env(`MAX_RETRIES`)
-                .default(-1));
+                .default(-1))
+            .addOption(new Option(`--dry-run`, `Do not perform any write actions. Only print out changes that would be performed`)
+                .env(`DRY_RUN`)
+                .default(false));
+
+        program.command(`sync`)
+            .description(`This command will fetch the remote state and persist it to the local disk`);
+
+        program.command(`archive`)
+            .description(`Archives a given folder`)
+            .argument(`<path>`, `Path to the folder that should be archived`)
+            .addOption(new Option(`--no-remote-delete`, `Do not delete any remote assets upon archiving`)
+                .env(`NO_REMOTE_DELETE`)
+                .default(false));
+
         program.parse();
-        return program.opts();
+        return [program.opts(), program.args];
     }
 
     /**
@@ -262,6 +276,11 @@ export class CLIInterface {
         syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
             this.progressBar.stop();
             this.print(chalk.red(`Sync engine: Unexpected error: ${msg}`));
+            this.print(chalk.white(this.getHorizontalLine()));
+        });
+
+        syncEngine.on(SYNC_ENGINE.EVENTS.DRY_RUN, msg => {
+            this.print(chalk.red(`!!Dry run!! Would perform action: ${msg}`));
             this.print(chalk.white(this.getHorizontalLine()));
         });
     }

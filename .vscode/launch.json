@@ -7,12 +7,13 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Launch Sync",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "preLaunchTask": "build-app",
             "program": "${workspaceFolder}/rootfs/opt/icloud-photos-sync/src/main.ts",
+            "args": ["sync"],
             "outFiles": [
                 "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
             ],

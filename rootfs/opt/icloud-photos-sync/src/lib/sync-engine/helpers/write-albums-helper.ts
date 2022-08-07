@@ -4,6 +4,7 @@ import {SyncEngine} from "../sync-engine.js";
 import path from 'path';
 import fs from 'fs';
 import * as PHOTOS_LIBRARY from '../../photos-library/constants.js';
+import * as SYNC_ENGINE from '../constants.js';
 
 /**
  * Writes the album changes defined in the processing queue to to disk
@@ -47,12 +48,17 @@ export function addAlbum(this: SyncEngine, album: Album) {
     // Relative album path is relative to parent, not linkedAlbum
     const relativeAlbumPath = path.relative(parentPath, albumPath);
     try {
-        // Creating album
-        this.logger.debug(`Creating folder ${albumPath}`);
-        fs.mkdirSync(albumPath, {recursive: true});
-        // Symlinking to correctly named album
-        this.logger.debug(`Linking ${relativeAlbumPath} to ${linkedAlbum}`);
-        fs.symlinkSync(relativeAlbumPath, linkedAlbum);
+        if (this.dryRun) {
+            this.emit(`Creating folder ${albumPath} and linking ${linkedAlbum}`);
+        } else {
+            // Creating album
+            this.logger.debug(`Creating folder ${albumPath}`);
+            fs.mkdirSync(albumPath, {recursive: true});
+            // Symlinking to correctly named album
+            this.logger.debug(`Linking ${relativeAlbumPath} to ${linkedAlbum}`);
+            fs.symlinkSync(relativeAlbumPath, linkedAlbum);
+        }
+
         if (album.albumType === AlbumType.ALBUM) { // Only need to link assets, if we are in an album!
             Object.keys(album.assets).forEach(assetUUID => {
                 const linkedAsset = path.format({
@@ -69,8 +75,12 @@ export function addAlbum(this: SyncEngine, album: Album) {
                 const relativeAssetPath = path.relative(albumPath, assetPath);
                 this.logger.debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
                 try {
-                    fs.symlinkSync(relativeAssetPath, linkedAsset);
-                    fs.lutimesSync(linkedAsset, assetTime, assetTime);
+                    if (this.dryRun) {
+                        this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Linking asset ${assetPath} to ${linkedAsset}`);
+                    } else {
+                        fs.symlinkSync(relativeAssetPath, linkedAsset);
+                        fs.lutimesSync(linkedAsset, assetTime, assetTime);
+                    }
                 } catch (err) {
                     this.logger.warn(`Not linking ${relativeAlbumPath} to ${linkedAsset} in album ${album.getDisplayName()}: ${err.message}`);
                 }
@@ -98,13 +108,17 @@ export function deleteAlbum(this: SyncEngine, album: Album) {
         this.logger.warn(`Unable to delete album ${album.getDisplayName()}: Unable to find linked file, expected ${linkedPath}`);
     } else {
         try {
-            fs.rmSync(albumPath, {recursive: true});
-            fs.unlinkSync(linkedPath);
+            if (this.dryRun) {
+                this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Deleting folder ${albumPath} & link ${linkedPath}`);
+            } else {
+                fs.rmSync(albumPath, {recursive: true});
+                fs.unlinkSync(linkedPath);
+            }
         } catch (err) {
             this.logger.warn(`Unable to delete album ${album.getDisplayName()}: ${err}`);
         }
 
-        this.logger.debug(`Sucesfully deleted album ${album.getDisplayName} at ${path} & ${linkedPath}`);
+        this.logger.debug(`Sucesfully deleted album ${album.getDisplayName()} at ${path} & ${linkedPath}`);
     }
 }
 
