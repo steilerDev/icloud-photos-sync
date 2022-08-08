@@ -83,7 +83,7 @@ export class PhotosLibrary {
      * @param album - The album that needs to be loaded, containing a filepath
      * @returns An array of loaded albums, including the provided one and all its child items
      */
-    private async loadAlbum(album: Album): Promise<Album[]> {
+    async loadAlbum(album: Album): Promise<Album[]> {
         const albums: Album[] = [];
 
         // Ignoring dummy album
@@ -131,7 +131,7 @@ export class PhotosLibrary {
      * @param path - The path to the folder on disk
      * @returns The album type of the folder
      */
-    private async readAlbumTypeFromPath(path: string): Promise<AlbumType> {
+    async readAlbumTypeFromPath(path: string): Promise<AlbumType> {
         // If the folder contains other folders, it will be of AlbumType.Folder
         const directoryPresent = (await fs.readdir(path, {
             withFileTypes: true,
@@ -165,7 +165,8 @@ export class PhotosLibrary {
      * @param localEntities - The local entities as read from disk
      * @returns A processing queue, containing the entities that needs to be deleted, added and kept. In the case of albums, this will not take hierarchical dependencies into consideration
      */
-    getProcessingQueues<T>(remoteEnties: PEntity<T>[], localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
+    getProcessingQueues<T>(remoteEnties: PEntity<T>[], _localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
+        const localEntities = {..._localEntities};
         this.logger.debug(`Getting processing queues`);
         const toBeAdded: T[] = [];
         const toBeKept: T[] = [];

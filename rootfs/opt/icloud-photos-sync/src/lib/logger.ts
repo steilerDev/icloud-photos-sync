@@ -17,6 +17,7 @@ const LOGGER = {
     PhotosLibrary: `Photos-Library`,
     SyncEngine: `Sync-Engine`,
     CLIInterface: `CLI-Interface`,
+    ArchiveEngine: `Archive-Engine`,
 };
 
 /**

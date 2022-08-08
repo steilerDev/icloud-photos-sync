@@ -72,14 +72,14 @@ export class SyncEngine extends EventEmitter {
 
     /**
      * Performs the sync and handles all connections
+     * @returns A list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync)
      */
-    async sync() {
+    async sync(): Promise<[Asset[], Album[]]> {
         try {
             this.logger.info(`Starting sync`);
             this.emit(SYNC_ENGINE.EVENTS.START);
-            let syncFinished = false;
             let retryCount = 0;
-            while (!syncFinished && (this.maxRetry === -1 || this.maxRetry > retryCount)) {
+            while (this.maxRetry === -1 || this.maxRetry > retryCount) {
                 retryCount++;
                 this.logger.info(`Performing sync, try #${retryCount}`);
 
@@ -88,7 +88,9 @@ export class SyncEngine extends EventEmitter {
 
                 try {
                     await this.writeState(assetQueue, albumQueue);
-                    syncFinished = true;
+                    this.logger.info(`Completed sync!`);
+                    this.emit(SYNC_ENGINE.EVENTS.DONE);
+                    return [remoteAssets, remoteAlbums];
                 } catch (err) {
                     this.logger.warn(`Error while writing state: ${err.message}`);
                     // Checking if we should retry
@@ -101,12 +103,8 @@ export class SyncEngine extends EventEmitter {
                 }
             }
 
-            if (!syncFinished) { // If sync is not set to true
-                throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
-            }
-
-            this.logger.info(`Completed sync!`);
-            this.emit(SYNC_ENGINE.EVENTS.DONE);
+            // We'll only reach this, if we exceeded retryCount
+            throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
         } catch (err) {
             this.logger.warn(`Unrecoverable sync error: ${err.message}`);
             this.emit(SYNC_ENGINE.EVENTS.ERROR, err.message);

@@ -132,3 +132,11 @@ export function getIndexCountFilter(parentId?: string): any {
         },
     };
 }
+
+export function getIsDeletedField(_value: number = 1): any {
+    return {
+        isDeleted: {
+            value: _value,
+        },
+    };
+}

@@ -18,6 +18,20 @@
                 "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
             ],
             "envFile": "${workspaceFolder}/.vscode/debug.env"
+        }, {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Archive",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "preLaunchTask": "build-app",
+            "program": "${workspaceFolder}/rootfs/opt/icloud-photos-sync/src/main.ts",
+            "args": ["archive", "/media/files/Documents/Frank/icloud-photos/Test"],
+            "outFiles": [
+                "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
+            ],
+            "envFile": "${workspaceFolder}/.vscode/debug.env"
         }
     ]
 }

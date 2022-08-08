@@ -8,6 +8,12 @@ import {SyncEngine} from './sync-engine/sync-engine.js';
 import {SingleBar} from 'cli-progress';
 import {exit} from 'process';
 import {getLogger} from './logger.js';
+import {ArchiveEngine} from './archive-engine/archive-engine.js';
+
+export const CLIInterfaceCommand = {
+    archive: `archive`,
+    sync: `sync`,
+};
 
 export class CLIInterface {
     /**
@@ -109,11 +115,11 @@ export class CLIInterface {
                 .env(`DRY_RUN`)
                 .default(false));
 
-        program.command(`sync`)
-            .description(`This command will fetch the remote state and persist it to the local disk`);
+        program.command(CLIInterfaceCommand.sync)
+            .description(`This command will fetch the remote state and persist it to the local disk.`);
 
-        program.command(`archive`)
-            .description(`Archives a given folder`)
+        program.command(CLIInterfaceCommand.archive)
+            .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)
             .argument(`<path>`, `Path to the folder that should be archived`)
             .addOption(new Option(`--no-remote-delete`, `Do not delete any remote assets upon archiving`)
                 .env(`NO_REMOTE_DELETE`)
@@ -283,5 +289,9 @@ export class CLIInterface {
             this.print(chalk.red(`!!Dry run!! Would perform action: ${msg}`));
             this.print(chalk.white(this.getHorizontalLine()));
         });
+    }
+
+    setupCLIArchiveEngineInterface(archiveEngine: ArchiveEngine) {
+
     }
 }

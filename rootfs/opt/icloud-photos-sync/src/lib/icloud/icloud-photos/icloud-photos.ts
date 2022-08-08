@@ -177,6 +177,44 @@ export class iCloudPhotos extends EventEmitter {
         }
     }
 
+    async performPromiseOperation(operationType: string, recordName: string, _fields: any) {
+        if (this.auth.validatePhotosAccount()) {
+            const config: AxiosRequestConfig = {
+                headers: this.auth.getPhotosHeader(),
+                params: {
+                    remapEnums: `True`,
+                },
+            };
+
+            const data: any = {
+                operations: [
+                    {
+                        operationType: `${operationType}`,
+                        record: {
+                            recordName: `${recordName}`,
+                            recordType: `CPLAsset`,
+                            fields: _fields,
+                        },
+                    },
+                ],
+                zoneID: {
+                    ownerRecordName: this.auth.iCloudPhotosAccount.ownerName,
+                    zoneName: this.auth.iCloudPhotosAccount.zoneName,
+                    zoneType: this.auth.iCloudPhotosAccount.zoneType,
+                },
+                atomic: true,
+            };
+            const deletedRecords = (await axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config)).data.records;
+            if (deletedRecords && Array.isArray(deletedRecords)) {
+                return deletedRecords;
+            }
+
+            throw new Error(`Fetched records are not in an array: ${JSON.stringify(deletedRecords)}`);
+        } else {
+            throw (new Error(`Unable to perform operation, because photos account validation failed`));
+        }
+    }
+
     /**
      * Fetches all album records, traversing the directory tree
      * @returns An array of all album records in the account
@@ -413,5 +451,10 @@ export class iCloudPhotos extends EventEmitter {
             asset.downloadURL,
             config,
         );
+    }
+
+    async deleteAsset(recordName: string) {
+        this.logger.debug(`Deleting asset ${recordName}`);
+        return this.performPromiseOperation(`update`, recordName, QueryBuilder.getIsDeletedField());
     }
 }
