@@ -1,3 +1,3 @@
 .DS_Store
-.vscode/debug.env
-debug-fs/
+.vscode/*.env
+docs/Test Environment/pictures.zip

@@ -1,8 +1,10 @@
 describe('Synchronization E2E tests', () => {
+
     describe('Fresh synchronization scenario', () => {
         test.todo('Mock SyncEngine, in order to run full sync scenario')
         test.todo('Mock iCloud-Photos object to provide data / mock download')
         test.todo('Measure calls to logger.warn / logger.error')
+        test.todo('Handle re-authentication')
     })
     describe('Existing local state', () => {
         test.todo('Loading state from disk')

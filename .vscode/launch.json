@@ -7,7 +7,7 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Sync",
+            "name": "Launch Sync - Frank",
             "skipFiles": [
                 "<node_internals>/**"
             ],
@@ -18,6 +18,21 @@
                 "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
             ],
             "envFile": "${workspaceFolder}/.vscode/debug.env"
+        },{
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Sync - Test",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "preLaunchTask": "build-app",
+            "program": "${workspaceFolder}/rootfs/opt/icloud-photos-sync/src/main.ts",
+            "args": ["sync"],
+            "outFiles": [
+                "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
+            ],
+            "envFile": "${workspaceFolder}/.vscode/debug-test.env"
+        }, {
         }, {
             "type": "node",
             "request": "launch",
