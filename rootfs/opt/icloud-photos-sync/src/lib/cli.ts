@@ -125,6 +125,8 @@ export class CLIInterface {
                 .env(`NO_REMOTE_DELETE`)
                 .default(false));
 
+        // Implement 'token' command, that will print out the current / a fresh trust token
+
         program.parse();
         return [program.opts(), program.args];
     }
