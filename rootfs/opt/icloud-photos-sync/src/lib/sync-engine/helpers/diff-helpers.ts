@@ -3,8 +3,38 @@
  */
 
 import {Album} from "../../photos-library/model/album.js";
-import {PLibraryEntities, PLibraryProcessingQueues} from "../../photos-library/model/photos-entity.js";
+import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../../photos-library/model/photos-entity.js";
 import {SyncEngine} from "../sync-engine.js";
+
+/**
+ * This function diffs two entity arrays (can be either Albums or Assets) and returns the corresponding processing queue
+ * @param remoteEnties - The entities fetched from a remote state
+ * @param _localEntities - The local entities as read from disk
+ * @returns A processing queue, containing the entities that needs to be deleted, added and kept. In the case of albums, this will not take hierarchical dependencies into consideration
+ */
+ export function getProcessingQueues<T>(this: SyncEngine, remoteEnties: PEntity<T>[], _localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
+    const localEntities = {..._localEntities};
+    this.logger.debug(`Getting processing queues`);
+    const toBeAdded: T[] = [];
+    const toBeKept: T[] = [];
+    remoteEnties.forEach(remoteEntity => {
+        const localEntity = localEntities[remoteEntity.getUUID()];
+        if (!localEntity || !remoteEntity.equal(localEntity)) {
+            // No local entity OR local entity does not match remote entity -> Remote asset will be added & local asset will not be removed from deletion queue
+            this.logger.debug(`Adding new remote entity ${remoteEntity.getDisplayName()}`);
+            toBeAdded.push(remoteEntity.unpack());
+        } else {
+            // Local asset matches remote asset, nothing to do, but preventing local asset to be deleted
+            this.logger.debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
+            toBeKept.push(remoteEntity.unpack());
+            delete localEntities[remoteEntity.getUUID()];
+        }
+    });
+    // The original library should only hold those records, that have not been referenced by the remote state, removing them
+    const toBeDeleted = Object.values(localEntities);
+    this.logger.debug(`Adding ${toBeAdded.length} remote entities, removing ${toBeDeleted.length} local entities, keeping ${toBeKept.length} local entities`);
+    return [toBeDeleted, toBeAdded, toBeKept];
+}
 
 /**
  * If an ancestor (not parent) of an Album is marked for deletion, the album needs to be moved (aka deleted & added), since it did not change from a diffing perspective (same parent)

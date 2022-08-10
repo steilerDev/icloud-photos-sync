@@ -34,17 +34,16 @@ export class AssetID {
     downloadURL: string;
 
     static parseFromQuery(assetId: any): AssetID {
-        if (assetId.type === `ASSETID`) {
-            const asset = new AssetID();
-            asset.fileChecksum = assetId.value.fileChecksum;
-            asset.size = assetId.value.size;
-            asset.wrappingKey = assetId.value.wrappingKey;
-            asset.referenceChecksum = assetId.value.referenceChecksum;
-            asset.downloadURL = assetId.value.downloadURL;
-            return asset;
+        if (assetId.type !== `ASSETID`) {
+            throw new Error(`Unknown type, expected 'ASSETID': ${JSON.stringify(assetId)}`);
         }
-
-        throw new Error(`Unknown type, expected 'ASSETID': ${JSON.stringify(assetId)}`);
+        const asset = new AssetID();
+        asset.fileChecksum = assetId.value.fileChecksum;
+        asset.size = assetId.value.size;
+        asset.wrappingKey = assetId.value.wrappingKey;
+        asset.referenceChecksum = assetId.value.referenceChecksum;
+        asset.downloadURL = assetId.value.downloadURL;
+        return asset;
     }
 }
 
@@ -86,36 +85,35 @@ export class CPLAsset {
      * @param cplRecord - The plain JSON object, as returned by the API
      */
     static parseFromQuery(cplRecord: any): CPLAsset {
-        if (cplRecord.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
-            const asset = new CPLAsset();
-            if (cplRecord.recordName) {
-                asset.recordName = cplRecord.recordName;
-            } else {
-                throw new Error(`recordName not found: ${JSON.stringify(cplRecord)}`);
-            }
-
-            // Will all throw an access error if not present
-            asset.masterRef = cplRecord.fields[QueryBuilder.DESIRED_KEYS.MASTER_REF].value.recordName;
-            asset.favorite = cplRecord.fields[QueryBuilder.DESIRED_KEYS.FAVORITE].value;
-            asset.modified = cplRecord.modified.timestamp;
-
-            if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.ADJUSTMENT_TYPE]) {
-                asset.adjustmentType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ADJUSTMENT_TYPE].value;
-                if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE]) {
-                    asset.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE]);
-                    asset.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE_FILE_TYPE].value;
-                } else if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE]) {
-                    asset.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE]);
-                    asset.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE_FILE_TYPE].value;
-                } else if (asset.adjustmentType !== `com.apple.video.slomo`) {
-                    throw new Error(`Neither JPEG nor Video resource found in CPL Asset even though adjustmentType is given ${asset.adjustmentType}`);
-                }
-            }
-
-            return asset;
+        if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
+            throw new Error(`Record type is not ${QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD}: ${cplRecord.recordType}`);
+        }
+        if (!cplRecord.recordName) {
+            throw new Error(`recordName not found: ${JSON.stringify(cplRecord)}`);
         }
 
-        throw new Error(`Record type is not ${QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD}: ${cplRecord.recordType}`);
+        const asset = new CPLAsset();
+        asset.recordName = cplRecord.recordName;
+
+        // Will all throw an access error if not present
+        asset.masterRef = cplRecord.fields[QueryBuilder.DESIRED_KEYS.MASTER_REF].value.recordName;
+        asset.favorite = cplRecord.fields[QueryBuilder.DESIRED_KEYS.FAVORITE].value;
+        asset.modified = cplRecord.modified.timestamp;
+
+        if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.ADJUSTMENT_TYPE]) {
+            asset.adjustmentType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ADJUSTMENT_TYPE].value;
+            if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE]) {
+                asset.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE]);
+                asset.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE_FILE_TYPE].value;
+            } else if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE]) {
+                asset.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE]);
+                asset.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE_FILE_TYPE].value;
+            } else if (asset.adjustmentType !== `com.apple.video.slomo`) {
+                throw new Error(`Neither JPEG nor Video resource found in CPL Asset even though adjustmentType is given ${asset.adjustmentType}`);
+            }
+        }
+
+        return asset;
     }
 }
 
@@ -149,22 +147,20 @@ export class CPLMaster {
      * @param cplRecord - The plain JSON object, as returned by the API
      */
     static parseFromQuery(cplRecord: any): CPLMaster {
-        if (cplRecord.recordType === QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
-            const master = new CPLMaster();
-            if (cplRecord.recordName) {
-                master.recordName = cplRecord.recordName;
-            } else {
-                throw new Error(`recordName not found: ${JSON.stringify(cplRecord)}`);
-            }
-
-            master.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.ORIGINAL_RESOURCE]);
-            master.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ORIGINAL_RESOURCE_FILE_TYPE].value; // Orig could also be JPEG to save storage
-            master.filenameEnc = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME].value;
-            master.modified = cplRecord.modified.timestamp;
-            return master;
+        if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
+            throw new Error(`Record type is not ${QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD}: ${cplRecord.recordType}`);
+        }
+        if (!cplRecord.recordName) {
+            throw new Error(`recordName not found: ${JSON.stringify(cplRecord)}`);
         }
 
-        throw new Error(`Record type is not ${QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD}: ${cplRecord.recordType}`);
+        const master = new CPLMaster();
+        master.recordName = cplRecord.recordName;
+        master.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.ORIGINAL_RESOURCE]);
+        master.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ORIGINAL_RESOURCE_FILE_TYPE].value; // Orig could also be JPEG to save storage
+        master.filenameEnc = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME].value;
+        master.modified = cplRecord.modified.timestamp;
+        return master;
     }
 }
 
@@ -198,23 +194,21 @@ export class CPLAlbum {
     assets: Promise<AlbumAssets>;
 
     static parseFromQuery(cplRecord: any, assets?: Promise<AlbumAssets>): CPLAlbum {
-        if (cplRecord.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD) {
-            const album = new CPLAlbum();
-            if (cplRecord.recordName) {
-                album.recordName = cplRecord.recordName;
-            } else {
-                throw new Error(`recordName not found: ${JSON.stringify(cplRecord)}`);
-            }
-
-            album.albumType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ALBUM_TYPE].value;
-            album.albumNameEnc = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ENCODED_ALBUM_NAME].value;
-            album.parentId = cplRecord.fields[QueryBuilder.DESIRED_KEYS.PARENT_ID]?.value;
-            album.modified = cplRecord.modified.timestamp;
-            album.assets = assets;
-
-            return album;
+        if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD) {
+            throw new Error(`Record type is not ${QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD}: ${cplRecord.recordType}`);
+        }
+        if (!cplRecord.recordName) {
+            throw new Error(`recordName not found: ${JSON.stringify(cplRecord)}`);
         }
 
-        throw new Error(`Record type is not ${QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD}: ${cplRecord.recordType}`);
+        const album = new CPLAlbum();
+        album.recordName = cplRecord.recordName;
+        album.albumType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ALBUM_TYPE].value;
+        album.albumNameEnc = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ENCODED_ALBUM_NAME].value;
+        album.parentId = cplRecord.fields[QueryBuilder.DESIRED_KEYS.PARENT_ID]?.value;
+        album.modified = cplRecord.modified.timestamp;
+        album.assets = assets;
+
+        return album;
     }
 }

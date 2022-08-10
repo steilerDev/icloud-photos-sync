@@ -10,7 +10,7 @@ import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/mode
 import {getLogger} from '../logger.js';
 
 // Helpers extending this class
-import {resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
+import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
 import {addAsset, deleteAsset, verifyAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, deleteAlbum, findAlbumInPath, findAlbum, queueIsSorted, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
@@ -207,8 +207,8 @@ export class SyncEngine extends EventEmitter {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
         this.logger.info(`Diffing state`);
         return Promise.all([
-            this.photosLibrary.getProcessingQueues(remoteAssets, localAssets),
-            this.photosLibrary.getProcessingQueues(remoteAlbums, localAlbums),
+            this.getProcessingQueues(remoteAssets, localAssets),
+            this.getProcessingQueues(remoteAlbums, localAlbums),
         ]).then(([assetQueue, albumQueue]) => {
             const resolvedAlbumQueue = this.resolveHierarchicalDependencies(albumQueue, localAlbums);
             this.emit(SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
@@ -218,6 +218,7 @@ export class SyncEngine extends EventEmitter {
 
     // From ./helpers/diff-helpers.ts
     private resolveHierarchicalDependencies = resolveHierarchicalDependencies;
+    private getProcessingQueues = getProcessingQueues;
 
     /**
      * Takes the processing queues and performs the necessary actions to write them to disk
