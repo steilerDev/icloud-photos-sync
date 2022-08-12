@@ -158,6 +158,4 @@ export class PhotosLibrary {
 
         return AlbumType.ALBUM;
     }
-
-    
 }

@@ -12,7 +12,7 @@ import {SyncEngine} from "../sync-engine.js";
  * @param _localEntities - The local entities as read from disk
  * @returns A processing queue, containing the entities that needs to be deleted, added and kept. In the case of albums, this will not take hierarchical dependencies into consideration
  */
- export function getProcessingQueues<T>(this: SyncEngine, remoteEnties: PEntity<T>[], _localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
+export function getProcessingQueues<T>(this: SyncEngine, remoteEnties: PEntity<T>[], _localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
     const localEntities = {..._localEntities};
     this.logger.debug(`Getting processing queues`);
     const toBeAdded: T[] = [];

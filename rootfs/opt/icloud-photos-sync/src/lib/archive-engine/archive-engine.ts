@@ -45,9 +45,8 @@ export class ArchiveEngine {
             return fs.readlink(itemPath) // Checking where the asset file is located
                 .then(assetPath => this.persistRemoteAsset(assetPath, itemPath)) // Persisting the asset from the asset folder
                 .then(assetPath => this.deleteRemoteAsset(assetPath, assetList))
-                .catch(err => this.logger.warn(`Unable to archive item: ${err.message}`))
+                .catch(err => this.logger.warn(`Unable to archive item: ${err.message}`));
         }));
-
     }
 
     async persistRemoteAsset(assetPath: string, targetItemPath: string): Promise<string> {
@@ -57,14 +56,25 @@ export class ArchiveEngine {
     }
 
     async deleteRemoteAsset(assetPath: string, assetList: Asset[]) {
-        if (this.noRemoteDelete) return
-        //Get asset UUID to find record name from assetList
+        if (this.noRemoteDelete) {
+            return;
+        }
+
+        // Get asset UUID to find record name from assetList
         const assetUUID = path.parse(assetPath).name;
         const asset = assetList.find(asset => asset.getUUID() === assetUUID);
 
-        if(!asset) throw new Error(`Unable to find asset with UUID ${assetUUID}`)
-        if(!asset.recordName) throw new Error(`Unable to get record name for asset ${asset.getDisplayName()}`)
-        if(asset.isFavorite) return this.logger.debug(`Not deleting fav'ed asset ${asset.getDisplayName()}`)
+        if (!asset) {
+            throw new Error(`Unable to find asset with UUID ${assetUUID}`);
+        }
+
+        if (!asset.recordName) {
+            throw new Error(`Unable to get record name for asset ${asset.getDisplayName()}`);
+        }
+
+        if (asset.isFavorite) {
+            return this.logger.debug(`Not deleting fav'ed asset ${asset.getDisplayName()}`);
+        }
 
         this.logger.debug(`Deleting asset ${asset.recordName}`);
         return this.icloud.photos.deleteAsset(asset.recordName);

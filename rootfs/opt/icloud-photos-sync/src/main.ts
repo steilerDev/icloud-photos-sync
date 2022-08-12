@@ -29,8 +29,15 @@ const cliInterface = new CLIInterface(cliOpts, icloud, syncEngine);
 await icloud.authenticate()
     .catch(err => cliInterface.fatalError(`Init failed: ${err}`));
 
-// Sync will happen archive and sync
-if (cliCommand[0] === CLIInterfaceCommand.archive || cliCommand[0] === CLIInterfaceCommand.sync) {
+if (cliCommand[0] === CLIInterfaceCommand.token) {
+    if (icloud.auth.validateAccountTokens()) {
+        cliInterface.print(`Validated trust token:`);
+        cliInterface.print(icloud.auth.iCloudAccountTokens.trustToken);
+    } else {
+        cliInterface.fatalError(`Unable to validate trust token!`);
+    }
+} else if (cliCommand[0] === CLIInterfaceCommand.archive || cliCommand[0] === CLIInterfaceCommand.sync) {
+    // Sync will happen archive and sync
     try {
         const [remoteAssets, remoteAlbums] = await syncEngine.sync();
         // If we are in archive mode, proceed with operation

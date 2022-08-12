@@ -107,16 +107,21 @@ export class iCloudAuth {
      *
      * @param username - The AppleID username
      * @param password - The AppleID password
+     * @param trustToken - The trust token in string format. Will take presedence over any stored file
      * @param appDataDir - The directory to store authentication tokens for future re-authentication without MFA
      */
-    constructor(username: string, password: string, appDataDir: string) {
+    constructor(username: string, password: string, trustToken: string, appDataDir: string) {
         this.iCloudAccountSecrets.username = username;
         this.iCloudAccountSecrets.password = password;
         this.trustTokenFile = path.format({
             dir: appDataDir,
             base: ICLOUD.TRUST_TOKEN_FILE_NAME,
         });
-        this.loadTrustToken();
+        if (trustToken) {
+            this.loadTrustToken();
+        } else {
+            this.iCloudAccountTokens.trustToken = trustToken;
+        }
     }
 
     /**

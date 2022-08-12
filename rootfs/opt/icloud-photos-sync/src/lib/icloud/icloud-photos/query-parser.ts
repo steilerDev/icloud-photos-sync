@@ -37,6 +37,7 @@ export class AssetID {
         if (assetId.type !== `ASSETID`) {
             throw new Error(`Unknown type, expected 'ASSETID': ${JSON.stringify(assetId)}`);
         }
+
         const asset = new AssetID();
         asset.fileChecksum = assetId.value.fileChecksum;
         asset.size = assetId.value.size;
@@ -88,6 +89,7 @@ export class CPLAsset {
         if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
             throw new Error(`Record type is not ${QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD}: ${cplRecord.recordType}`);
         }
+
         if (!cplRecord.recordName) {
             throw new Error(`recordName not found: ${JSON.stringify(cplRecord)}`);
         }
@@ -150,6 +152,7 @@ export class CPLMaster {
         if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
             throw new Error(`Record type is not ${QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD}: ${cplRecord.recordType}`);
         }
+
         if (!cplRecord.recordName) {
             throw new Error(`recordName not found: ${JSON.stringify(cplRecord)}`);
         }
@@ -197,6 +200,7 @@ export class CPLAlbum {
         if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD) {
             throw new Error(`Record type is not ${QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD}: ${cplRecord.recordType}`);
         }
+
         if (!cplRecord.recordName) {
             throw new Error(`recordName not found: ${JSON.stringify(cplRecord)}`);
         }

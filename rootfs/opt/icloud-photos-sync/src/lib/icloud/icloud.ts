@@ -50,7 +50,11 @@ export class iCloud extends EventEmitter {
         this.mfaServer = new MFAServer(cliOpts.port);
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.mfaReceived.bind(this));
 
-        this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.dataDir);
+        this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.trustToken, cliOpts.dataDir);
+        if (cliOpts.refreshToken) {
+            this.logger.info(`Clearing token due to refresh token flag`);
+            this.auth.iCloudAccountTokens.trustToken = ``;
+        }
 
         this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
             try {

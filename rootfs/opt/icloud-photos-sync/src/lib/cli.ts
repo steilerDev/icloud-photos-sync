@@ -13,6 +13,7 @@ import {ArchiveEngine} from './archive-engine/archive-engine.js';
 export const CLIInterfaceCommand = {
     archive: `archive`,
     sync: `sync`,
+    token: `token`,
 };
 
 export class CLIInterface {
@@ -89,6 +90,8 @@ export class CLIInterface {
             .addOption(new Option(`-p, --password <email>`, `AppleID password`)
                 .env(`APPLE_ID_PWD`)
                 .makeOptionMandatory(true))
+            .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, '.trust-token.icloud' in data dir is tried to be read. If all fails, a new trust token will be acquired, requiring the input of an MFA code.`)
+                .env(`TRUST_TOKEN`))
             .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library`)
                 .env(`DATA_DIR`)
                 .default(`/opt/icloud-photos-library`))
@@ -123,6 +126,12 @@ export class CLIInterface {
             .argument(`<path>`, `Path to the folder that should be archived`)
             .addOption(new Option(`--no-remote-delete`, `Do not delete any remote assets upon archiving`)
                 .env(`NO_REMOTE_DELETE`)
+                .default(false));
+
+        program.command(CLIInterfaceCommand.token)
+            .description(`Validates the current trust token and prints it to the command line`)
+            .addOption(new Option(`--refresh-token`, `Ignore any stored token and always refresh it`)
+                .env(`REFRESH_TOKEN`)
                 .default(false));
 
         // Implement 'token' command, that will print out the current / a fresh trust token
