@@ -9,6 +9,13 @@
 			"problemMatcher": [],
 			"label": "build-app",
 			"detail": "npm run build"
+		},{
+			"type": "npm",
+			"script": "test",
+			"path": "rootfs/opt/icloud-photos-sync/",
+			"group": "test",
+			"label": "test-app",
+			"detail": "npm run test"
 		}
 	]
 }

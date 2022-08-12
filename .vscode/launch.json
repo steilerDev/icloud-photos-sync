@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "type": "node",
             "request": "launch",
@@ -18,35 +19,19 @@
                 "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
             ],
             "envFile": "${workspaceFolder}/.vscode/debug.env"
-        },{
+        }, {
+            "name": "Debug Jest Tests",
             "type": "node",
             "request": "launch",
-            "name": "Launch Sync - Test",
-            "skipFiles": [
-                "<node_internals>/**"
+            "runtimeArgs": [
+              "--inspect-brk",
+              "${workspaceRoot}/rootfs/opt/icloud-photos-sync/node_modules/.bin/jest",
+              "--runInBand",
             ],
-            "preLaunchTask": "build-app",
-            "program": "${workspaceFolder}/rootfs/opt/icloud-photos-sync/src/main.ts",
-            "args": ["sync"],
-            "outFiles": [
-                "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
-            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "${workspaceFolder}/rootfs/opt/icloud-photos-sync",
             "envFile": "${workspaceFolder}/.vscode/debug-test.env"
-        }, {
-        }, {
-            "type": "node",
-            "request": "launch",
-            "name": "Launch Archive",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "preLaunchTask": "build-app",
-            "program": "${workspaceFolder}/rootfs/opt/icloud-photos-sync/src/main.ts",
-            "args": ["archive", "/media/files/Documents/Frank/icloud-photos/Test"],
-            "outFiles": [
-                "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
-            ],
-            "envFile": "${workspaceFolder}/.vscode/debug.env"
-        }
+          }
     ]
 }

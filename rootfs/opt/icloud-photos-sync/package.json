@@ -41,6 +41,8 @@
     "node": ">=18.6.0"
   },
   "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
     "clearMocks": true,
     "collectCoverage": true,
     "coverageProvider": "v8",
