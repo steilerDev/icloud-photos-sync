@@ -15,7 +15,7 @@
     "prebuild-version": "node -p \"'export const NAME = ' + JSON.stringify(require('./package.json').name) + ';'\" >> src/lib/package.ts",
     "prebuild-description": "node -p \"'export const DESC = ' + JSON.stringify(require('./package.json').description) + ';'\" >> src/lib/package.ts",
     "prebuild": "npm run prebuild-clean && npm run prebuild-name && npm run prebuild-version && npm run prebuild-description",
-    "build": "npm install && eslint --fix --ext .ts ./src && tsc",
+    "build": "eslint --fix --ext .ts ./src && tsc",
     "docs": "npx typedoc",
     "clean": "rm -rf bin/ docs/ node_modules/",
     "test": "./node_modules/.bin/jest",

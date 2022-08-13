@@ -19,10 +19,10 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
     - name: Install dependencies & build app
       run: |
-        npm install && \
         npm run clean && \
-        npm run test && \
+        npm install && \
         npm run build && \
+        npm run test && \
         npm run docs
       working-directory: rootfs/opt/icloud-photos-sync/
     - name: Package npm artifacts
