@@ -9,7 +9,8 @@ import { filterVariableData, sortByRecordName } from './helpers/helpers.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
-let tmpDir
+let tmpDir: string
+
 beforeAll(() => {
     tmpDir = fs.mkdtempSync(`icloud-photos-sync-test`);
 })

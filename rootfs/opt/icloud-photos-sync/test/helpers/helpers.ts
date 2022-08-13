@@ -1,4 +1,4 @@
-import { AssetID, CPLMaster } from "../../src/lib/icloud/icloud-photos/query-parser";
+import { CPLMaster } from "../../src/lib/icloud/icloud-photos/query-parser";
 
 /**
  * Helper to compare objects, that have string property 'recordName'
