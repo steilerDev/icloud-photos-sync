@@ -58,23 +58,31 @@ export class iCloud extends EventEmitter {
         super();
         this.logger.info(`Initiating iCloud connection for ${cliOpts.username}`);
 
+        // MFA Server & lifecycle management
         this.mfaServer = new MFAServer(cliOpts.port);
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.mfaReceived.bind(this));
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RESEND, this.resendMFA.bind(this));
 
+        // ICloud Auth object
         this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.trustToken, cliOpts.dataDir);
         if (cliOpts.refreshToken) {
             this.logger.info(`Clearing token due to refresh token flag`);
             this.auth.iCloudAccountTokens.trustToken = ``;
         }
 
-        this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
-            try {
-                this.mfaServer.startServer();
-            } catch (err) {
-                this.emit(ICLOUD.EVENTS.ERROR, err.message);
-            }
-        });
+        // ICloud lifecycle management
+        if (cliOpts.failOnMfa) {
+            this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => this.emit(ICLOUD.EVENTS.ERROR, `MFA code required, failing due to failOnMfa flag`));
+        } else {
+            this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
+                try {
+                    this.mfaServer.startServer();
+                } catch (err) {
+                    this.emit(ICLOUD.EVENTS.ERROR, err.message);
+                }
+            });
+        }
+
         this.on(ICLOUD.EVENTS.AUTHENTICATED, this.getTokens);
         this.on(ICLOUD.EVENTS.TRUSTED, this.getiCloudCookies);
         this.on(ICLOUD.EVENTS.ACCOUNT_READY, this.getiCloudPhotosReady);
@@ -85,7 +93,6 @@ export class iCloud extends EventEmitter {
 
         this.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
             this.logger.error(`Error ocurred: ${msg}`);
-            // @todo Retry by calling authenticate()
         });
 
         this.ready = this.getReady();
@@ -97,8 +104,8 @@ export class iCloud extends EventEmitter {
      */
     getReady(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this.on(ICLOUD.EVENTS.READY, resolve);
-            this.on(ICLOUD.EVENTS.ERROR, reject);
+            this.once(ICLOUD.EVENTS.READY, resolve);
+            this.once(ICLOUD.EVENTS.ERROR, reject);
         });
     }
 
