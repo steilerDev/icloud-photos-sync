@@ -1,15 +1,15 @@
 import {describe, expect, test} from '@jest/globals';
 
 describe(`API E2E Tests`, () => {
-    const username = process.env.APPLE_ID_USER;
-    const password = process.env.APPLE_ID_PWD;
-    const token = process.env.TRUST_TOKEN;
+    const username = process.env.APPLE_ID_USER || process.env.TEST_APPLE_ID_USER;
+    const password = process.env.APPLE_ID_PWD || process.env.TEST_APPLE_ID_PWD;
+    const token = process.env.TRUST_TOKEN || process.env.TEST_TRUST_TOKEN;
 
     test.todo(`Only run if trust token is available and valid`);
     test.todo(`Setup test icloud account`);
     test.todo(`Keep iCloud Account in state and check if calls continue to work as expected`);
     test.todo(`We need the remote assets + folder state`);
-    console.log(`test`);
+    console.log(`${JSON.stringify(process.env)}`);
 
     if (token) {
         describe(`Login flow`, () => {
