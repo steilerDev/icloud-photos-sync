@@ -99,7 +99,7 @@ export class CPLAsset {
 
         // Will all throw an access error if not present
         asset.masterRef = cplRecord.fields[QueryBuilder.DESIRED_KEYS.MASTER_REF].value.recordName;
-        asset.favorite = cplRecord.fields[QueryBuilder.DESIRED_KEYS.FAVORITE].value;
+        asset.favorite = cplRecord.fields[QueryBuilder.DESIRED_KEYS.FAVORITE]?.value ?? 0;
         asset.modified = cplRecord.modified.timestamp;
 
         if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.ADJUSTMENT_TYPE]) {
