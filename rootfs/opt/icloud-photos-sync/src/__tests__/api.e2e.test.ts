@@ -2,8 +2,11 @@ import {describe, expect, test} from '@jest/globals';
 
 describe(`API E2E Tests`, () => {
     const username = process.env.APPLE_ID_USER;
+    expect(username).not.toBeUndefined();
     const password = process.env.APPLE_ID_PWD;
+    expect(password).not.toBeUndefined();
     const token = process.env.TRUST_TOKEN;
+    expect(token).not.toBeUndefined();
 
     test.todo(`Only run if trust token is available and valid`);
     test.todo(`Setup test icloud account`);
