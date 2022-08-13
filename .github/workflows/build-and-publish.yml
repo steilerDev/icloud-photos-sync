@@ -25,6 +25,14 @@ jobs:
         npm run test && \
         npm run docs
       working-directory: rootfs/opt/icloud-photos-sync/
+    - name: Test app
+      run: |
+        npm run test
+      env:
+        APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
+        APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
+        TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
+      working-directory: rootfs/opt/icloud-photos-sync/
     - name: Package npm artifacts
       run: |
         cp README.md LICENSE rootfs/opt/icloud-photos-sync/ && \
