@@ -7,32 +7,34 @@ import expectedAssets from "./data/api.expected.cpl-assets.json"
 import expectedMasters from "./data/api.expected.cpl-masters.json"
 import { filterVariableData, sortByRecordName } from './helpers/helpers.js';
 
-// Not run this on github for now, as the MFA token is not portable
-if(!process.env.CI) {
-    // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
-    jest.setTimeout(20 * 1000);
-    let tmpDir: string
 
-    beforeAll(() => {
-        tmpDir = fs.mkdtempSync(`icloud-photos-sync-test`);
-    })
+// Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
+jest.setTimeout(20 * 1000);
+let tmpDir: string
 
-    afterAll(() => {
-        fs.rmdirSync(tmpDir)
-    })
+beforeAll(() => {
+    tmpDir = fs.mkdtempSync(`icloud-photos-sync-test`);
+})
 
-    describe(`API E2E Tests`, () => {
-        const username = process.env.APPLE_ID_USER;
-        const password = process.env.APPLE_ID_PWD;
-        const token = process.env.TRUST_TOKEN;
-        
-        let icloud: iCloud;
+afterAll(() => {
+    fs.rmdirSync(tmpDir)
+})
 
-        test(`API variables present`, () => {
-            expect(username).toBeDefined();
-            expect(password).toBeDefined();
-            expect(token).toBeDefined();
-        });
+describe(`API E2E Tests`, () => {
+    const username = process.env.APPLE_ID_USER;
+    const password = process.env.APPLE_ID_PWD;
+    const token = process.env.TRUST_TOKEN;
+    
+    let icloud: iCloud;
+
+    test(`API variables present`, () => {
+        expect(username).toBeDefined();
+        expect(password).toBeDefined();
+        expect(token).toBeDefined();
+    });
+
+    // Not running API tests on github for now, as the MFA token is not portable
+    if(!process.env.CI) {
 
         describe(`Login flow`, () => {
             test(`Login flow`, async () => {
@@ -75,5 +77,5 @@ if(!process.env.CI) {
         describe(`Deleting records`, () => {
             test.todo(`Delete a record - How to restore state afterwards??`);
         });
-    });
-}
+    }
+});
