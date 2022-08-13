@@ -6,7 +6,6 @@ import {CLIInterface, CLIInterfaceCommand} from './lib/cli.js';
 import {SyncEngine} from './lib/sync-engine/sync-engine.js';
 import * as fs from 'fs';
 import {ArchiveEngine} from './lib/archive-engine/archive-engine.js';
-import {exit} from 'process';
 
 // Read CLI Options
 const [cliOpts, cliCommand] = CLIInterface.getCLIOptions();

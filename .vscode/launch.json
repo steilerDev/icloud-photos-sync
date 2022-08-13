@@ -24,11 +24,12 @@
             "type": "node",
             "request": "launch",
             "runtimeArgs": [
+              "--experimental-vm-modules",
               "--inspect-brk",
               "${workspaceRoot}/rootfs/opt/icloud-photos-sync/node_modules/.bin/jest",
               "--runInBand",
+              "--coverage=false"
             ],
-            "preLaunchTask": "build-app",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/rootfs/opt/icloud-photos-sync",

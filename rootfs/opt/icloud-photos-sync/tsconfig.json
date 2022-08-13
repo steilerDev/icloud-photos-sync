@@ -7,7 +7,7 @@
     "sourceMap": true,
     "outDir": "bin",
     "declaration": true,
-    "rootDir": "src",
+    "allowJs": true
   },
   "typedocOptions": {
     "entryPoints": ["src/"],
@@ -18,9 +18,11 @@
   },
   "exclude": [
       "node_modules",
-      "bin"
+      "bin",
+      "test/**/*"
   ],
+  "include": ["src/**/*"],
   "lib": [
-    "es2017"
+    "es2021"
   ]
 }
