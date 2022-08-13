@@ -151,7 +151,6 @@ export class iCloud extends EventEmitter {
                     const res = err.response;
                     if (res.status === 409) {
                         if (this.auth.processAuthSecrets(res)) {
-                            console.warn(JSON.stringify(res.data))
                             this.logger.debug(`Acquired secrets, requiring MFA: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
                             // Per default, the trusted device is pinged
                             this.mfaMethod = ICLOUD.MFAMethod.DEVICE;

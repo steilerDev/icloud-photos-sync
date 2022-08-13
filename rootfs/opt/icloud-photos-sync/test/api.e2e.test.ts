@@ -8,7 +8,7 @@ import expectedMasters from "./data/api.expected.cpl-masters.json"
 import { filterVariableData, sortByRecordName } from './helpers/helpers.js';
 
 // Not run this on github for now, as the MFA token is not portable
-if(!process.env.github) {
+if(!process.env.CI) {
     // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
     jest.setTimeout(20 * 1000);
     let tmpDir: string
