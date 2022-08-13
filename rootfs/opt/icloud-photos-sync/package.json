@@ -18,7 +18,7 @@
     "build": "npm install && eslint --fix --ext .ts ./src && tsc",
     "docs": "npx typedoc",
     "clean": "rm -rf bin/ docs/ node_modules/",
-    "test": "jest",
+    "test": "./node_modules/.bin/jest",
     "execute": "node bin/main.js",
     "start": "npm run build && npm run execute"
   },
