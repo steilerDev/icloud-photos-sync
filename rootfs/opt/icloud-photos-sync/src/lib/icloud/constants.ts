@@ -82,7 +82,10 @@ export const ENPOINT = {
         BASE: `https://idmsa.apple.com/appleauth/auth`,
         PATH: {
             SIGNIN: `/signin`,
-            MFA: `/verify/trusteddevice/securitycode`,
+            MFA: {
+                DEVICE: `/verify/trusteddevice`,
+                PHONE: `/verify/phone`,
+            },
             TRUST: `/2sv/trust`,
         },
     },
@@ -99,10 +102,19 @@ export const ENPOINT = {
  */
 export const URL = {
     SIGNIN: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.SIGNIN}`,
-    MFA: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA}`,
+    MFA_DEVICE: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.DEVICE}/securitycode`, // Maybe??
+    MFA_DEVICE_ENTER: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.DEVICE}/securitycode`,
+    MFA_PHONE: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.PHONE}`,
+    MFA_PHONE_ENTER: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.PHONE}/securitycode`,
     TRUST: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.TRUST}`,
     SETUP: `${ENPOINT.SETUP.BASE}${ENPOINT.SETUP.PATH.ACCOUNT}`,
 };
+
+export enum MFAMethod {
+    DEVICE = 1,
+    SMS = 2,
+    VOICE = 3
+}
 
 /**
  * Filename of persistent trust token file

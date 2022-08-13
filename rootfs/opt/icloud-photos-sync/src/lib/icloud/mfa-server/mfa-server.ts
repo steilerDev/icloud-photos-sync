@@ -2,6 +2,7 @@ import EventEmitter from 'events';
 import http from 'http';
 import * as MFA_SERVER from './constants.js';
 import {getLogger} from '../../logger.js';
+import {MFAMethod} from '../constants.js';
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
@@ -45,7 +46,7 @@ export class MFAServer extends EventEmitter {
         });
 
         this.server.listen(this.port, () => {
-            this.logger.info(`MFA server listening on port ${this.port}, awaiting POST request on ${MFA_SERVER.MFA_ENDPOINT}`);
+            this.logger.info(`Exposing endpoints: ${JSON.stringify(MFA_SERVER.ENDPOINT)}`);
         });
     }
 
@@ -55,21 +56,85 @@ export class MFAServer extends EventEmitter {
      * @param res - The HTTP response object
      */
     handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        if (req.url.startsWith(MFA_SERVER.MFA_ENDPOINT) && req.url.match(/\?code=\d{6}$/) && req.method === `POST`) {
-            this.logger.debug(`Received MFA: ${req.url}`);
-            const mfa: string = req.url.slice(-6);
-
-            res.writeHead(200, {"Content-Type": `application/json`});
-            res.write(`Read MFA code: ${mfa}`);
-            res.end();
-
-            this.emit(MFA_SERVER.EVENTS.MFA_RECEIVED, mfa);
-        } else {
-            // @todo Implement resend codes via phone or text
-            this.logger.warn(`Received unknown request to endpoint ${req.url}`);
-            res.writeHead(404, {"Content-Type": `application/json`});
-            res.end(JSON.stringify({message: `Route not found`}));
+        if (req.method !== `POST`) {
+            this.logger.warn(`Received unknown method to endpoint ${req.url}: ${req.method}`);
+            this.sendResponse(res, 400, `Method not supported: ${req.method}`);
+            return;
         }
+
+        if (req.url.startsWith(MFA_SERVER.ENDPOINT.CODE_INPUT)) {
+            this.handleMFACode(req, res);
+        } else if (req.url.startsWith(MFA_SERVER.ENDPOINT.RESEND_CODE)) {
+            this.handleMFAResend(req, res);
+        } else {
+            this.logger.warn(`Received request to unknown endpoint ${req.url}`);
+            this.sendResponse(res, 404, `Route not found, available endpoints: ${JSON.stringify(MFA_SERVER.ENDPOINT)}`);
+        }
+    }
+
+    /**
+     * This function will handle requests send to the MFA Code Input Endpoint
+     * @param req - The HTTP request object
+     * @param res - The HTTP response object
+     */
+    handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
+        if (!req.url.match(/\?code=\d{6}$/)) {
+            this.sendResponse(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
+            return;
+        }
+
+        const mfa: string = req.url.slice(-6);
+
+        this.logger.debug(`Received MFA: ${mfa}`);
+        this.sendResponse(res, 200, `Read MFA code: ${mfa}`);
+        this.emit(MFA_SERVER.EVENTS.MFA_RECEIVED, mfa);
+    }
+
+    /**
+     * This function will handle the request send to the MFA Code Resend Endpoint
+     * @param req - The HTTP request object
+     * @param res - The HTTP response object
+     */
+    handleMFAResend(req: http.IncomingMessage, res: http.ServerResponse) {
+        const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
+        if (!methodMatch) {
+            this.sendResponse(res, 400, `Unable to match resend method`);
+            return;
+        }
+
+        const methodString = methodMatch[0].slice(7);
+        let method: MFAMethod;
+        switch (methodString) {
+        case `sms`:
+            method = MFAMethod.SMS;
+            break;
+        case `voice`:
+            method = MFAMethod.VOICE;
+            break;
+        default:
+        case `device`:
+            method = MFAMethod.DEVICE;
+            break;
+        }
+
+        const phoneNumberIdMatch = req.url.match(/phoneNumberId=\d+/);
+        if (phoneNumberIdMatch) {
+            const phoneNumberId = phoneNumberIdMatch[0].slice(14);
+            this.emit(MFA_SERVER.EVENTS.MFA_RESEND, method, phoneNumberId);
+        } else {
+            this.emit(MFA_SERVER.EVENTS.MFA_RESEND, method);
+        }
+    }
+
+    /**
+     * This function will send a response, based on its input variables
+     * @param res - The response object, to send the response to
+     * @param code - The status code for the response
+     * @param msg - The message included in the response
+     */
+    sendResponse(res: http.ServerResponse, code: number, msg: string) {
+        res.writeHead(code, {"Content-Type": `application/json`});
+        res.end(JSON.stringify({message: msg}));
     }
 
     /**

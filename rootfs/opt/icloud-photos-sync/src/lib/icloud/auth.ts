@@ -117,7 +117,7 @@ export class iCloudAuth {
             dir: appDataDir,
             base: ICLOUD.TRUST_TOKEN_FILE_NAME,
         });
-        if (trustToken) {
+        if (!trustToken) {
             this.loadTrustToken();
         } else {
             this.iCloudAccountTokens.trustToken = trustToken;

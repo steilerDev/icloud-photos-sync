@@ -40,6 +40,17 @@ export class iCloud extends EventEmitter {
     ready: Promise<void>;
 
     /**
+     * Holds information, which mfa method was last used, in order to validate code using the right endpoint
+     * Per default, this should be 'device'
+     */
+    mfaMethod: ICLOUD.MFAMethod;
+
+    /**
+     * Holds information, which trusted phone number (id of number) was last used, in order to validate code using right endpoint
+     */
+    mfaPhoneNumberId: number;
+
+    /**
      * Creates a new iCloud Object
      * @param cliOpts - The read CLI options containing username, password and MFA server port
      */
@@ -49,6 +60,7 @@ export class iCloud extends EventEmitter {
 
         this.mfaServer = new MFAServer(cliOpts.port);
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.mfaReceived.bind(this));
+        this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RESEND, this.resendMFA.bind(this));
 
         this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.trustToken, cliOpts.dataDir);
         if (cliOpts.refreshToken) {
@@ -133,6 +145,8 @@ export class iCloud extends EventEmitter {
                     if (res.status === 409) {
                         if (this.auth.processAuthSecrets(res)) {
                             this.logger.debug(`Acquired secrets, requiring MFA: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
+                            // Per default, the trusted device is pinged
+                            this.mfaMethod = ICLOUD.MFAMethod.DEVICE;
                             this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
                         } else {
                             this.emit(ICLOUD.EVENTS.ERROR, `Unable to process auth response and extract necessary secrets: ${this.auth.iCloudAuthSecrets}`);
@@ -148,6 +162,63 @@ export class iCloud extends EventEmitter {
         return this.ready;
     }
 
+    resendMFA(method: ICLOUD.MFAMethod, phoneNumberId?: number) {
+        this.mfaMethod = method;
+        this.mfaPhoneNumberId = phoneNumberId ? phoneNumberId : 1; // 1 is the primary registered phone number id
+        this.logger.info(`Resending MFA code with ${this.mfaMethod} and phone number id ${this.mfaPhoneNumberId}`);
+
+        const config: AxiosRequestHeaders = {
+            headers: this.auth.getMFAHeaders(),
+        };
+
+        let data = {};
+        let url = ``;
+        switch (this.mfaMethod) {
+        case ICLOUD.MFAMethod.VOICE:
+            data = {
+                phoneNumber: {
+                    id: this.mfaPhoneNumberId,
+                },
+                mode: `voice`,
+            };
+            url = ICLOUD.URL.MFA_PHONE;
+            break;
+        case ICLOUD.MFAMethod.SMS:
+            data = {
+                phoneNumber: {
+                    id: this.mfaPhoneNumberId,
+                },
+                mode: `sms`,
+            };
+            url = ICLOUD.URL.MFA_PHONE;
+            break;
+        default:
+        case ICLOUD.MFAMethod.DEVICE:
+            url = ICLOUD.URL.MFA_DEVICE;
+            data = undefined;
+            break;
+        }
+
+        this.logger.debug(`Requesting MFA code via URL ${url} with data ${JSON.stringify(data)}`);
+        axios.put(url, data, config)
+            .then(res => { // Weird difference in response code, depending on endpoint
+                if ((this.mfaMethod === ICLOUD.MFAMethod.DEVICE && res.status !== 202)
+                || ((this.mfaMethod === ICLOUD.MFAMethod.SMS || this.mfaMethod === ICLOUD.MFAMethod.VOICE) && res.status !== 200)) {
+                    this.emit(ICLOUD.EVENTS.ERROR, `Unable to request new MFA code: ${JSON.stringify(res)}`);
+                    return;
+                }
+
+                if (this.mfaMethod === ICLOUD.MFAMethod.SMS || this.mfaMethod === ICLOUD.MFAMethod.VOICE) {
+                    this.logger.info(`Sucesfully requested new MFA code using phone ${res.data.trustedPhoneNumber.numberWithDialCode}`);
+                } else {
+                    this.logger.info(`Sucesfully requested new MFA code using ${res.data.trustedDeviceCount} trusted device(s)`);
+                }
+            })
+            .catch(err => {
+                this.emit(ICLOUD.EVENTS.ERROR, `Received error while trying to resend MFA code: ${err}`);
+            });
+    }
+
     /**
      * Enters and validates the MFA code in order to acquire necessary account tokens
      * @param mfa - The MFA code
@@ -157,32 +228,67 @@ export class iCloud extends EventEmitter {
 
         if (!this.auth.validateAuthSecrets()) {
             this.emit(ICLOUD.EVENTS.ERROR, `Unable to process MFA, because auth secrets are missing: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
-        } else {
-            this.logger.info(`Authenticating MFA with code ${mfa}`);
+            return;
+        }
 
-            const config: AxiosRequestHeaders = {
-                headers: this.auth.getMFAHeaders(),
+        this.logger.info(`Authenticating MFA with code ${mfa}`);
+
+        const config: AxiosRequestHeaders = {
+            headers: this.auth.getMFAHeaders(),
+        };
+
+        let data = {};
+        let url = ``;
+        switch (this.mfaMethod) {
+        case ICLOUD.MFAMethod.VOICE:
+            data = {
+                securityCode: {
+                    code: `${mfa}`,
+                },
+                phoneNumber: {
+                    id: this.mfaPhoneNumberId,
+                },
+                mode: `voice`,
             };
-
-            const data = {
+            url = ICLOUD.URL.MFA_PHONE_ENTER;
+            break;
+        case ICLOUD.MFAMethod.SMS:
+            data = {
+                securityCode: {
+                    code: `${mfa}`,
+                },
+                phoneNumber: {
+                    id: this.mfaPhoneNumberId,
+                },
+                mode: `sms`,
+            };
+            url = ICLOUD.URL.MFA_PHONE_ENTER;
+            break;
+        default:
+        case ICLOUD.MFAMethod.DEVICE:
+            url = ICLOUD.URL.MFA_DEVICE_ENTER;
+            data = {
                 securityCode: {
                     code: `${mfa}`,
                 },
             };
-
-            axios.post(ICLOUD.URL.MFA, data, config)
-                .then(res => {
-                    if (res.status === 204) {
-                        this.logger.info(`MFA code correct!`);
-                        this.emit(ICLOUD.EVENTS.AUTHENTICATED);
-                    } else {
-                        this.emit(ICLOUD.EVENTS.ERROR, `Received unexpected response code during MFA validation: ${res.status} (${res.statusText})`);
-                    }
-                })
-                .catch(err => {
-                    this.emit(ICLOUD.EVENTS.ERROR, `Received error during MFA validation: ${err}`);
-                });
+            break;
         }
+
+        axios.post(url, data, config)
+            .then(res => { // Weird difference in response code, depending on endpoint
+                if ((this.mfaMethod === ICLOUD.MFAMethod.DEVICE && res.status !== 204)
+                   || ((this.mfaMethod === ICLOUD.MFAMethod.SMS || this.mfaMethod === ICLOUD.MFAMethod.VOICE) && res.status !== 200)) {
+                    this.emit(ICLOUD.EVENTS.ERROR, `Received unexpected response code during MFA validation: ${res.status} (${res.statusText})`);
+                    return;
+                }
+
+                this.logger.info(`MFA code correct!`);
+                this.emit(ICLOUD.EVENTS.AUTHENTICATED);
+            })
+            .catch(err => {
+                this.emit(ICLOUD.EVENTS.ERROR, `Received error during MFA validation: ${err}`);
+            });
     }
 
     /**

@@ -8,13 +8,13 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Sync - Frank",
+            "name": "Launch Sync",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "preLaunchTask": "build-app",
             "program": "${workspaceFolder}/rootfs/opt/icloud-photos-sync/src/main.ts",
-            "args": ["sync"],
+            "args": ["token"],
             "outFiles": [
                 "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
             ],
@@ -28,6 +28,7 @@
               "${workspaceRoot}/rootfs/opt/icloud-photos-sync/node_modules/.bin/jest",
               "--runInBand",
             ],
+            "preLaunchTask": "build-app",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/rootfs/opt/icloud-photos-sync",

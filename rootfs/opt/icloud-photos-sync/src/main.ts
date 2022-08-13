@@ -6,6 +6,7 @@ import {CLIInterface, CLIInterfaceCommand} from './lib/cli.js';
 import {SyncEngine} from './lib/sync-engine/sync-engine.js';
 import * as fs from 'fs';
 import {ArchiveEngine} from './lib/archive-engine/archive-engine.js';
+import {exit} from 'process';
 
 // Read CLI Options
 const [cliOpts, cliCommand] = CLIInterface.getCLIOptions();
@@ -33,13 +34,14 @@ if (cliCommand[0] === CLIInterfaceCommand.token) {
     if (icloud.auth.validateAccountTokens()) {
         cliInterface.print(`Validated trust token:`);
         cliInterface.print(icloud.auth.iCloudAccountTokens.trustToken);
+        process.exit(0);
     } else {
         cliInterface.fatalError(`Unable to validate trust token!`);
     }
 } else if (cliCommand[0] === CLIInterfaceCommand.archive || cliCommand[0] === CLIInterfaceCommand.sync) {
     // Sync will happen archive and sync
     try {
-        const [remoteAssets, remoteAlbums] = await syncEngine.sync();
+        const [remoteAssets] = await syncEngine.sync();
         // If we are in archive mode, proceed with operation
         if (cliCommand[0] === CLIInterfaceCommand.archive) {
             const archiveEngine = new ArchiveEngine(cliOpts, photosLibrary, icloud);

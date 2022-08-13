@@ -46,7 +46,10 @@
     "clearMocks": true,
     "collectCoverage": true,
     "coverageProvider": "v8",
-    "coverageReporters": ["text"]
+    "coverageReporters": ["text"],
+    "roots": [
+      "./src/"
+    ]
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.0",

@@ -62,8 +62,10 @@ npm run execute
 
 How to run the application and a full list of configuration options can be found by executing `npm run execute -- --help`.
 
-## Enter MFA
-Once the MFA code is required, the tool will open up a webserver and listen on the specified port (Default: `80`). Provide the code by `POST`ing it to `/mfa` with parameter `code`. E.g. using `curl`:
+## MFA
+Once the MFA code is required, the tool will open up a webserver and listen on the specified port (Default: `80`).
+### Enter MFA
+Provide the MFA code by `POST`ing it to `/mfa` with parameter `code`. E.g. using `curl`:
 ```
 curl -X POST localhost:80/mfa?code=<6-digit-code>
 ```
@@ -72,7 +74,17 @@ When using docker, you can use the following helper script:
 ```
 docker exec photo-sync enter_mfa <6-digit-code>
 ```
-There is currently no way to re-request it, besides quiting the application and re-running it.
+
+### Re-requesting MFA
+Re-request the MFA code by `POST`ing to `/resend_mfa` with parameter `method` (either `sms`, `voice` or `device`). If you have registered multiple phone numbers, specify their id through the optional parameter `phoneNumberId` (number > 0 expected). E.g. using `curl`:
+```
+curl -X POST localhost:80/resend_mfa?method=sms&phoneNumberId=1
+```
+
+When using docker, you can use the following helper script:
+```
+docker exec photo-sync resend_mfa <method> <phoneNumberId>
+```
 
 ## Milestone Plan
 As I'm currently actively developing this tool, I'm looking for any and all feedback! Especially since the iCloud API was reverse engineered using my personal account, there might be edge cases, that I have not considered yet (especially the non-standard file types returned by Apple are limited to the file types I am using)
@@ -97,7 +109,7 @@ The tool is not yet 'production ready', however I would like to ask the communit
    - :white_check_mark: Writing asset diff
    - :white_check_mark: Writing album diff
 8. :x: Enable archiving
-9. :x: Improve MFA workflow (re-request code/send code through other means)
+9. :white_check_mark: Improve MFA workflow (re-request code/send code through other means)
 10. :x: Provide WebUI
     - :x: Archive folders through UI
     - :x: Explore all pictures through UI

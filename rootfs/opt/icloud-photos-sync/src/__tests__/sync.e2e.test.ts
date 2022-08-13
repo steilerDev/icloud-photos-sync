@@ -1,3 +1,5 @@
+import {describe, expect, test} from '@jest/globals';
+
 describe(`Synchronization E2E tests`, () => {
     describe(`Fresh synchronization scenario`, () => {
         test.todo(`Mock SyncEngine, in order to run full sync scenario`);
