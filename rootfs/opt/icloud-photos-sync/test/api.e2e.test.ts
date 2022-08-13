@@ -22,7 +22,7 @@ afterAll(() => {
 describe(`API E2E Tests`, () => {
     const username = process.env.APPLE_ID_USER;
     const password = process.env.APPLE_ID_PWD;
-    const token = process.env.TRUST_TOKEN;
+    const token = "HSARMTKNSRVXWFlaje+0/1mNJmE+hfNguQGSn7KqxCHcGvaB09Bt3RDLzf9sSv8QyRH7fZVnxiTYF5r7F6j8wHHiWaZRlWkUFNJjSHIZk9vinFOsemu+g2U4kWCsjQUvEsv3C//DrFvld/cA9ZGpbshwkVErwD5/cH5N+Ek69ufbIS0Oh26AGAh+NEP0eA==SRVX";
     
     let icloud: iCloud;
 
