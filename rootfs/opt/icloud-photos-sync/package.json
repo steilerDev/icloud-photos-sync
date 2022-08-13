@@ -17,7 +17,7 @@
     "prebuild": "npm run prebuild-clean && npm run prebuild-name && npm run prebuild-version && npm run prebuild-description && npm run prebuild-lint",
     "build": "npx tsc",
     "docs": "npx typedoc",
-    "clean": "rm -rf bin/ docs/ node_modules/",
+    "clean": "rm -rf bin/ docs/ node_modules/ src/lib/package.ts",
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --coverage=false",
     "full-test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
     "execute": "node bin/main.js",
@@ -45,6 +45,9 @@
     "preset": "ts-jest/presets/default-esm",
     "testEnvironment": "node",
     "collectCoverage": true,
+    "collectCoverageFrom": [
+      "src/**/*.ts"
+    ],
     "coverageThreshold": {
       "global": {
         "branches": 80,

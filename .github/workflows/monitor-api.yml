@@ -1,0 +1,37 @@
+name: Run API Tests
+
+on:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '30 5,17 * * *'
+  workflow_dispatch:
+
+env:
+  PKG_NAME: icloud-photos-sync
+  NODE_VERSION: 18
+
+jobs:
+  build:
+    name: Run API Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Setup node
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    - name: Build
+      run: |
+        npm run clean && \
+        npm install && \
+        npm run build
+      working-directory: rootfs/opt/icloud-photos-sync/
+    - name: Test
+      run: |
+        npm run test -- test/api.e2e.test.ts
+      env:
+        APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
+        APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
+        TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
+      working-directory: rootfs/opt/icloud-photos-sync/

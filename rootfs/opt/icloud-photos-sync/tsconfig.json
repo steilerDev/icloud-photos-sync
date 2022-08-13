@@ -16,11 +16,6 @@
     "entryPointStrategy": "expand",
     "theme": "github-wiki"
   },
-  "exclude": [
-      "node_modules",
-      "bin",
-      "test/**/*"
-  ],
   "include": ["src/**/*"],
   "lib": [
     "es2021"

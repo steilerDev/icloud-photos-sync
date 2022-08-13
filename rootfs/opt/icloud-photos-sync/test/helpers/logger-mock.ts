@@ -21,7 +21,7 @@ export function getLogger(instance: any): log.Logger {
             if (methodName === `warn`) {
                 console.warn(`Warning: ${message}`);
             } else if (methodName === `error`) {
-                console.error(`Error: ${message}`);
+                console.warn(`Error: ${message}`);
             } else {
                 console.log(message)
             }
