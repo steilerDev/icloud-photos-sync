@@ -21,8 +21,8 @@
         "eol-last": ["error", "never"],
         "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudPhotos", "iCloudAuth"] }],
         "tsdoc/syntax": "warn",
-        "no-unused-vars": "off",
         "no-negated-condition": "off",
+        "no-unused-vars": "off",
         "@typescript-eslint/no-unused-vars": ["warn", // or "error"
         { 
             "argsIgnorePattern": "^_",

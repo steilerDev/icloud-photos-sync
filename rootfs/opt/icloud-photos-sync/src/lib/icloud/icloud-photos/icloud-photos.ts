@@ -6,8 +6,8 @@ import {iCloudAuth} from '../auth.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
-import {SyncEngine} from '../../sync-engine/sync-engine.js';
 import {getLogger} from '../../logger.js';
+import {convertCPLAssets} from '../../sync-engine/helpers/fetchAndLoad-helpers.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -285,7 +285,7 @@ export class iCloudPhotos extends EventEmitter {
                 // Getting associated assets for albums
                 if (record.fields.albumType.value === AlbumType.ALBUM) {
                     const albumAssets: Promise<AlbumAssets> = this.fetchAllPictureRecords(record.recordName)
-                        .then(cplResult => SyncEngine.convertCPLAssets(cplResult[0], cplResult[1]))
+                        .then(cplResult => convertCPLAssets(cplResult[0], cplResult[1]))
                         .then(assets => {
                             const _albumAssets: AlbumAssets = {};
                             assets.forEach(asset => {

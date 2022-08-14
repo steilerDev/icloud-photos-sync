@@ -1,13 +1,13 @@
 import {describe, expect, test, jest, beforeAll, afterAll} from '@jest/globals';
 import * as fs from 'fs';
-import {iCloud} from '../src/lib/icloud/icloud.js';
+import {iCloud} from '../../src/lib/icloud/icloud.js';
 
-import expectedAssetsAll from "./data/api.expected.all-cpl-assets.json";
-import expectedMastersAll from "./data/api.expected.all-cpl-masters.json";
-import expectedMastersAlbum from "./data/api.expected.album-cpl-masters.json";
-import expectedAssetsAlbum from "./data/api.expected.album-cpl-assets.json";
-import expectedAlbumsAll from "./data/api.expected.all-cpl-albums.json";
-import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from './helpers/helpers.js';
+import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
+import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
+import expectedMastersAlbum from "../_data/api.expected.album-cpl-masters.json";
+import expectedAssetsAlbum from "../_data/api.expected.album-cpl-assets.json";
+import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
+import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/helpers.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
@@ -65,8 +65,8 @@ describe(`API E2E Tests`, () => {
             test(`Fetch all records`, async () => {
                 await icloud.ready;
                 const [assets, masters] = await icloud.photos.fetchAllPictureRecords();
-                // WriteTestData(assets.map(postProcessAssetData), "all-assets-data")
-                // writeTestData(masters.map(postProcessMasterData), "all-master-data")
+                // _writeTestData(assets.map(postProcessAssetData), "all-assets-data")
+                // _writeTestData(masters.map(postProcessMasterData), "all-master-data")
 
                 // Expecting assets, with ressource to have a download url (as this is variable)
                 assets.forEach(asset => {
@@ -90,8 +90,8 @@ describe(`API E2E Tests`, () => {
                 const albumRecordName = `311f9778-1f40-4762-9e57-569ebf5fb070`;
                 const [assets, masters] = await icloud.photos.fetchAllPictureRecords(albumRecordName);
 
-                // WriteTestData(assets.map(postProcessAssetData), "album-assets-data")
-                // writeTestData(masters.map(postProcessMasterData), "album-master-data")
+                // _writeTestData(assets.map(postProcessAssetData), "album-assets-data")
+                // _writeTestData(masters.map(postProcessMasterData), "album-master-data")
                 expect(assets.map(postProcessAssetData).sort(sortByRecordName)).toEqual(expectedAssetsAlbum.sort(sortByRecordName));
                 expect(masters.map(postProcessMasterData).sort(sortByRecordName)).toEqual(expectedMastersAlbum.sort(sortByRecordName));
             });
@@ -107,12 +107,14 @@ describe(`API E2E Tests`, () => {
                     processedAlbums.push(await postProcessAlbumData(fetchedAlbum));
                 }
 
-                // WriteTestData(processedAlbums, `all-album-data`);
+                // _writeTestData(processedAlbums, `all-album-data`);
                 expect(processedAlbums.sort(sortByRecordName)).toEqual(expectedAlbumsAll.sort(sortByRecordName));
             });
             test.todo(`Fetch one album`);
         });
-        describe(`Deleting records`, () => {
+
+        describe(`Assets & Records`, () => {
+            test.todo(`Download an asset`);
             test.todo(`Delete a record - How to restore state afterwards??`);
         });
     }

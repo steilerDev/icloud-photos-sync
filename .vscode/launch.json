@@ -8,7 +8,7 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Sync",
+            "name": "Launch App",
             "skipFiles": [
                 "<node_internals>/**"
             ],
@@ -20,7 +20,7 @@
             ],
             "envFile": "${workspaceFolder}/.vscode/debug.env"
         }, {
-            "name": "Debug Jest Tests",
+            "name": "Debug Tests",
             "type": "node",
             "request": "launch",
             "runtimeArgs": [
@@ -28,7 +28,7 @@
               "--inspect-brk",
               "${workspaceRoot}/rootfs/opt/icloud-photos-sync/node_modules/.bin/jest",
               "--runInBand",
-              "--coverage=false"
+              "--coverage=true"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

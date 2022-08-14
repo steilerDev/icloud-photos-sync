@@ -117,6 +117,11 @@ export class iCloud extends EventEmitter {
         this.logger.info(`Authenticating user`);
         this.emit(ICLOUD.EVENTS.AUTHENTICATION_STARTED);
 
+        if (!this.auth.validateAccountSecrets()) {
+            this.emit(ICLOUD.EVENTS.ERROR, `Unable to authenticate user, required account secrets are not valid: ${this.auth.iCloudAccountSecrets}`);
+            return;
+        }
+
         const config: AxiosRequestConfig = {
             headers: ICLOUD.DEFAULT_AUTH_HEADER,
             params: {
@@ -169,6 +174,8 @@ export class iCloud extends EventEmitter {
         return this.ready;
     }
 
+    /* MFA flow not testable in automation */
+    /* c8 ignore start */
     /**
      * This function will ask the iCloud backend, to re-send the MFA token, using the provided method and number
      * @param method - The method to be used
@@ -230,7 +237,10 @@ export class iCloud extends EventEmitter {
                 this.emit(ICLOUD.EVENTS.ERROR, `Received error while trying to resend MFA code: ${err}`);
             });
     }
+    /* c8 ignore stop */
 
+    /* MFA flow not testable in automation */
+    /* c8 ignore start */
     /**
      * Enters and validates the MFA code in order to acquire necessary account tokens
      * @param mfa - The MFA code
@@ -302,7 +312,10 @@ export class iCloud extends EventEmitter {
                 this.emit(ICLOUD.EVENTS.ERROR, `Received error during MFA validation: ${err}`);
             });
     }
+    /* c8 ignore stop */
 
+    /* This is only called as part of non-testable MFA flow */
+    /* c8 ignore start */
     /**
      * Acquires sessionToken and two factor trust token after succesfull authentication
      */
@@ -330,6 +343,7 @@ export class iCloud extends EventEmitter {
                 });
         }
     }
+    /* c8 ignore stop */
 
     /**
      * Acquiring necessary cookies from trust and auth token for further processing & gets the user specific domain to interact with the Photos backend

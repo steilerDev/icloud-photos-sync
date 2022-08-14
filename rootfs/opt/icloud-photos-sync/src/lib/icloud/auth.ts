@@ -182,6 +182,8 @@ export class iCloudAuth {
         return false;
     }
 
+    /* MFA flow not testable in automation */
+    /* c8 ignore start */
     /**
      * Headers required for MFA authentication flow (Enter 2-FA + get tokens)
      * @returns The header object for the request
@@ -193,7 +195,10 @@ export class iCloudAuth {
             Cookie: `aasp=${this.iCloudAuthSecrets.aasp}`,
         };
     }
+    /* c8 ignore stop */
 
+    /* MFA flow not testable in automation */
+    /* c8 ignore start */
     /**
      * Processing the response from acquiring the necessary trust tokens. This method is automatically storing the trust token on disk
      * @param response - The response from the trust token endpoint
@@ -206,6 +211,7 @@ export class iCloudAuth {
         this.storeTrustToken();
         return this.validateAccountTokens();
     }
+    /* c8 ignore stop */
 
     /**
      *

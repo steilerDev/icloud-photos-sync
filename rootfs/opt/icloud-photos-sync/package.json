@@ -17,9 +17,9 @@
     "prebuild": "npm run prebuild-clean && npm run prebuild-name && npm run prebuild-version && npm run prebuild-description && npm run prebuild-lint",
     "build": "npx tsc",
     "docs": "npx typedoc",
-    "clean": "rm -rf bin/ docs/ node_modules/ src/lib/package.ts",
+    "clean": "rm -rf bin/ coverage/ docs/ node_modules/ src/lib/package.ts",
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
-    "text-coverage": "npm run test -- --coverage=true",
+    "test-coverage": "npm run test -- --coverage=true",
     "execute": "node bin/main.js",
     "start": "npm run build && npm run execute"
   },
@@ -45,11 +45,16 @@
     "preset": "ts-jest/presets/default-esm",
     "testEnvironment": "node",
     "collectCoverageFrom": [
-      "src/**/*.ts"
+      "src/**/*.ts",
+      "!src/main.ts",
+      "!src/lib/package.ts",
+      "!src/lib/cli.ts",
+      "!src/lib/logger.ts"
     ],
     "coverageProvider": "v8",
     "coverageReporters": [
-      "text"
+      "text-summary",
+      "html"
     ],
     "globals": {
       "ts-jest": {
@@ -57,9 +62,12 @@
       }
     },
     "moduleNameMapper": {
-      ".*/logger.js": "<rootDir>/test/helpers/mock_logger.ts",
+      ".*/logger.js": "<rootDir>/test/_helpers/mock_logger.ts",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     }
+  },
+  "c8": {
+    "all": true
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.0",
