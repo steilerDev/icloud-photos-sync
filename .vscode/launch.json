@@ -28,7 +28,8 @@
               "--inspect-brk",
               "${workspaceRoot}/rootfs/opt/icloud-photos-sync/node_modules/.bin/jest",
               "--runInBand",
-              "--coverage=true"
+              "--coverage=true",
+              "--config", "jest.config.json"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

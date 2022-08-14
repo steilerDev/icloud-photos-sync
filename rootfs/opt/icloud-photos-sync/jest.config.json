@@ -1,0 +1,25 @@
+{
+    "preset": "ts-jest/presets/default-esm",
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!src/main.ts",
+      "!src/lib/package.ts",
+      "!src/lib/cli.ts",
+      "!src/lib/logger.ts"
+    ],
+    "coverageProvider": "v8",
+    "coverageReporters": [
+      "text-summary",
+      "html"
+    ],
+    "globals": {
+      "ts-jest": {
+        "useESM": true
+      }
+    },
+    "moduleNameMapper": {
+      ".*/logger.js": "<rootDir>/test/_helpers/mock_logger.ts",
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    }
+  }

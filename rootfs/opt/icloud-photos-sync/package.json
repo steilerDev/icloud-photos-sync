@@ -13,12 +13,12 @@
     "prebuild-name": "node -p \"'export const VERSION = ' + JSON.stringify(require('./package.json').version) + ';'\" >> src/lib/package.ts",
     "prebuild-version": "node -p \"'export const NAME = ' + JSON.stringify(require('./package.json').name) + ';'\" >> src/lib/package.ts",
     "prebuild-description": "node -p \"'export const DESC = ' + JSON.stringify(require('./package.json').description) + ';'\" >> src/lib/package.ts",
-    "prebuild-lint": "npx eslint --fix --ext .ts ./src ./test",
+    "prebuild-lint": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
     "prebuild": "npm run prebuild-clean && npm run prebuild-name && npm run prebuild-version && npm run prebuild-description && npm run prebuild-lint",
     "build": "npx tsc",
     "docs": "npx typedoc",
     "clean": "rm -rf bin/ coverage/ docs/ node_modules/ src/lib/package.ts",
-    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json",
     "test-coverage": "npm run test -- --coverage=true",
     "execute": "node bin/main.js",
     "start": "npm run build && npm run execute"
@@ -40,34 +40,6 @@
   "homepage": "https://github.com/steilerDev/icloud-photos-sync#readme",
   "engines": {
     "node": ">=18.6.0"
-  },
-  "jest": {
-    "preset": "ts-jest/presets/default-esm",
-    "testEnvironment": "node",
-    "collectCoverageFrom": [
-      "src/**/*.ts",
-      "!src/main.ts",
-      "!src/lib/package.ts",
-      "!src/lib/cli.ts",
-      "!src/lib/logger.ts"
-    ],
-    "coverageProvider": "v8",
-    "coverageReporters": [
-      "text-summary",
-      "html"
-    ],
-    "globals": {
-      "ts-jest": {
-        "useESM": true
-      }
-    },
-    "moduleNameMapper": {
-      ".*/logger.js": "<rootDir>/test/_helpers/mock_logger.ts",
-      "^(\\.{1,2}/.*)\\.js$": "$1"
-    }
-  },
-  "c8": {
-    "all": true
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.0",
