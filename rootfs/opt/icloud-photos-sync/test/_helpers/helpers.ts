@@ -3,6 +3,11 @@ import * as fs from 'fs';
 import path from "path";
 
 /**
+ * The data dir path, to be used in the tests
+ */
+export const appDataDir = '/opt/icloud-photos-library'
+
+/**
  * Helper to compare objects, that have string property 'recordName'
  * Function used to determine the order of the elements, based on the property 'recordName'.
  * @param a - One object

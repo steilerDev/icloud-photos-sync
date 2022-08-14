@@ -29,7 +29,8 @@
               "${workspaceRoot}/rootfs/opt/icloud-photos-sync/node_modules/.bin/jest",
               "--runInBand",
               "--coverage=true",
-              "--config", "jest.config.json"
+              "--config", "jest.config.json",
+             // "test/unit/icloud.unit.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

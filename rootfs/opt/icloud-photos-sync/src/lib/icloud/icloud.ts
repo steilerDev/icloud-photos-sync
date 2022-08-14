@@ -330,8 +330,9 @@ export class iCloud extends EventEmitter {
             };
 
             axios.get(ICLOUD.URL.TRUST, config)
-                .then(res => {
-                    if (this.auth.processAccountTokens(res)) {
+                .then((res) => this.auth.processAccountTokens(res))
+                .then(success => {
+                    if (success) {
                         this.logger.debug(`Acquired account tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`);
                         this.emit(ICLOUD.EVENTS.TRUSTED);
                     } else {

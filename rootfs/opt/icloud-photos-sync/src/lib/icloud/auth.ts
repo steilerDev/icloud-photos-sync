@@ -141,16 +141,15 @@ export class iCloudAuth {
     /**
      * Tries to write the trust token to disk
      */
-    storeTrustToken() {
+    storeTrustToken(): Promise<void>{
         this.logger.debug(`Trying to persist trust token to disk`);
 
         const trustTokenPath = path.dirname(this.trustTokenFile);
-        mkdir(trustTokenPath, {recursive: true})
+        return mkdir(trustTokenPath, {recursive: true})
             .catch(err => {
                 this.logger.warn(`Unable to create trust token directory (${trustTokenPath}): ${err}`);
-            });
-
-        writeFile(this.trustTokenFile, this.iCloudAccountTokens.trustToken, {encoding: ICLOUD.TRUST_TOKEN_FILE_ENCODING})
+            })
+            .then(() => writeFile(this.trustTokenFile, this.iCloudAccountTokens.trustToken, {encoding: ICLOUD.TRUST_TOKEN_FILE_ENCODING}))
             .catch(err => {
                 this.logger.warn(`Unable to persist trust token to disk: ${err}`);
             });
@@ -204,12 +203,16 @@ export class iCloudAuth {
      * @param response - The response from the trust token endpoint
      * @returns True if acquied account tokens were sucesfully validated
      */
-    processAccountTokens(response: AxiosResponse): boolean {
+    async processAccountTokens(response: AxiosResponse): Promise<boolean> {
         this.logger.debug(`Processing trust token response`);
-        this.iCloudAccountTokens.sessionToken = response.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()];
-        this.iCloudAccountTokens.trustToken = response.headers[ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN.toLowerCase()];
-        this.storeTrustToken();
-        return this.validateAccountTokens();
+        this.iCloudAccountTokens.sessionToken = response?.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()];
+        this.iCloudAccountTokens.trustToken = response?.headers[ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN.toLowerCase()];
+        if(this.validateAccountTokens()) {
+            await this.storeTrustToken();
+            return true
+        } else {
+            return false
+        }
     }
     /* c8 ignore stop */
 

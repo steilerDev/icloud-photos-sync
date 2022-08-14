@@ -58,11 +58,13 @@
     "typescript": "^4.5.5"
   },
   "dependencies": {
+    "@types/mock-fs": "^4.13.1",
     "axios": "^0.27.2",
     "chalk": "^5.0.0",
     "cli-progress": "^3.11.2",
     "commander": "^9.0.0",
     "loglevel": "^1.8.0",
+    "mock-fs": "^5.1.4",
     "p-event": "^5.0.1",
     "p-queue": "^7.2.0",
     "tough-cookie": "^4.0.0"

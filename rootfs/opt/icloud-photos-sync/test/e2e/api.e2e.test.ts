@@ -1,3 +1,4 @@
+import mockfs from 'mock-fs'
 import {describe, expect, test, jest, beforeAll, afterAll} from '@jest/globals';
 import * as fs from 'fs';
 import {iCloud} from '../../src/lib/icloud/icloud.js';
@@ -7,18 +8,20 @@ import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
 import expectedMastersAlbum from "../_data/api.expected.album-cpl-masters.json";
 import expectedAssetsAlbum from "../_data/api.expected.album-cpl-assets.json";
 import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
-import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/helpers.js';
+import {appDataDir, postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/helpers.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
 let tmpDir: string;
 
 beforeAll(() => {
-    tmpDir = fs.mkdtempSync(`icloud-photos-sync-test`);
+    mockfs({
+        [appDataDir]: {}
+    })
 });
 
 afterAll(() => {
-    fs.rmdirSync(tmpDir);
+    mockfs.restore()
 });
 
 describe(`API E2E Tests`, () => {
