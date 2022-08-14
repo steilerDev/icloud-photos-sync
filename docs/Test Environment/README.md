@@ -226,3 +226,6 @@ The following folder structure was created. Underscores indicate that this entry
 
  ## Favorites
  The first 10 pictures are marked as 'Favorite'
+
+ ## Edits
+ The first two and last two pictures will be cropped and

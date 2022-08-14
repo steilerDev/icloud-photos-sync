@@ -129,7 +129,7 @@ export class iCloud extends EventEmitter {
             password: this.auth.iCloudAccountSecrets.password,
             trustTokens: [
                 this.auth.iCloudAccountTokens.trustToken,
-            ]
+            ],
         };
 
         axios.post(ICLOUD.URL.SIGNIN, data, config)

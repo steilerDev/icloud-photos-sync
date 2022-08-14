@@ -13,7 +13,7 @@
     "prebuild-name": "node -p \"'export const VERSION = ' + JSON.stringify(require('./package.json').version) + ';'\" >> src/lib/package.ts",
     "prebuild-version": "node -p \"'export const NAME = ' + JSON.stringify(require('./package.json').name) + ';'\" >> src/lib/package.ts",
     "prebuild-description": "node -p \"'export const DESC = ' + JSON.stringify(require('./package.json').description) + ';'\" >> src/lib/package.ts",
-    "prebuild-lint": "npx eslint --fix --ext .ts ./src",
+    "prebuild-lint": "npx eslint --fix --ext .ts ./src ./test",
     "prebuild": "npm run prebuild-clean && npm run prebuild-name && npm run prebuild-version && npm run prebuild-description && npm run prebuild-lint",
     "build": "npx tsc",
     "docs": "npx typedoc",
@@ -43,28 +43,23 @@
   },
   "jest": {
     "preset": "ts-jest/presets/default-esm",
+    "setupFilesAfterEnv": ["jest-extended/all"],
     "testEnvironment": "node",
     "collectCoverage": true,
     "collectCoverageFrom": [
       "src/**/*.ts"
     ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": -10
-      }
-    },
     "coverageProvider": "v8",
-    "coverageReporters": ["text"],
+    "coverageReporters": [
+      "text"
+    ],
     "globals": {
       "ts-jest": {
         "useESM": true
       }
     },
     "moduleNameMapper": {
-      ".*/logger.js": "<rootDir>/test/helpers/logger-mock.ts",
+      ".*/logger.js": "<rootDir>/test/helpers/mock_logger.ts",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     }
   },
@@ -96,5 +91,4 @@
     "tough-cookie": "^4.0.0",
     "ts-node": "^10.9.1"
   }
-  
 }
