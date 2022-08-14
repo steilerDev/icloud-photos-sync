@@ -4,10 +4,10 @@ import {iCloud} from '../src/lib/icloud/icloud.js';
 
 import expectedAssetsAll from "./data/api.expected.all-cpl-assets.json";
 import expectedMastersAll from "./data/api.expected.all-cpl-masters.json";
-import expectedMastersAlbum from "./data/api.expected.album-cpl-masters.json"
-import expectedAssetsAlbum from "./data/api.expected.album-cpl-assets.json"
-import expectedAlbumsAll from "./data/api.expected.all-cpl-albums.json"
-import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData} from './helpers/helpers.js';
+import expectedMastersAlbum from "./data/api.expected.album-cpl-masters.json";
+import expectedAssetsAlbum from "./data/api.expected.album-cpl-assets.json";
+import expectedAlbumsAll from "./data/api.expected.all-cpl-albums.json";
+import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from './helpers/helpers.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
@@ -65,8 +65,8 @@ describe(`API E2E Tests`, () => {
             test(`Fetch all records`, async () => {
                 await icloud.ready;
                 const [assets, masters] = await icloud.photos.fetchAllPictureRecords();
-                //writeTestData(assets.map(postProcessAssetData), "all-assets-data")
-                //writeTestData(masters.map(postProcessMasterData), "all-master-data")
+                // WriteTestData(assets.map(postProcessAssetData), "all-assets-data")
+                // writeTestData(masters.map(postProcessMasterData), "all-master-data")
 
                 // Expecting assets, with ressource to have a download url (as this is variable)
                 assets.forEach(asset => {
@@ -86,14 +86,14 @@ describe(`API E2E Tests`, () => {
             });
 
             test(`Fetch all records of one album`, async () => {
-                await icloud.ready
-                const albumRecordName = `311f9778-1f40-4762-9e57-569ebf5fb070`
-                const [assets, masters] = await icloud.photos.fetchAllPictureRecords(albumRecordName)
+                await icloud.ready;
+                const albumRecordName = `311f9778-1f40-4762-9e57-569ebf5fb070`;
+                const [assets, masters] = await icloud.photos.fetchAllPictureRecords(albumRecordName);
 
-                //writeTestData(assets.map(postProcessAssetData), "album-assets-data")
-                //writeTestData(masters.map(postProcessMasterData), "album-master-data")
-                expect(assets.map(postProcessAssetData).sort(sortByRecordName)).toEqual(expectedAssetsAlbum.sort(sortByRecordName))
-                expect(masters.map(postProcessMasterData).sort(sortByRecordName)).toEqual(expectedMastersAlbum.sort(sortByRecordName))
+                // WriteTestData(assets.map(postProcessAssetData), "album-assets-data")
+                // writeTestData(masters.map(postProcessMasterData), "album-master-data")
+                expect(assets.map(postProcessAssetData).sort(sortByRecordName)).toEqual(expectedAssetsAlbum.sort(sortByRecordName));
+                expect(masters.map(postProcessMasterData).sort(sortByRecordName)).toEqual(expectedMastersAlbum.sort(sortByRecordName));
             });
         });
         describe(`Fetching albums`, () => {
@@ -102,13 +102,13 @@ describe(`API E2E Tests`, () => {
                 const fetchedAlbums = await icloud.photos.fetchAllAlbumRecords();
 
                 // Needing to wait until all promises for the album assets have settled
-                const processedAlbums: any[] = []
+                const processedAlbums: any[] = [];
                 for (const fetchedAlbum of fetchedAlbums) {
-                    processedAlbums.push(await postProcessAlbumData(fetchedAlbum))
+                    processedAlbums.push(await postProcessAlbumData(fetchedAlbum));
                 }
 
-                //writeTestData(processedAlbums, `all-album-data`);
-                expect(processedAlbums.sort(sortByRecordName)).toEqual(expectedAlbumsAll.sort(sortByRecordName))
+                // WriteTestData(processedAlbums, `all-album-data`);
+                expect(processedAlbums.sort(sortByRecordName)).toEqual(expectedAlbumsAll.sort(sortByRecordName));
             });
             test.todo(`Fetch one album`);
         });

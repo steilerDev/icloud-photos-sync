@@ -23,7 +23,12 @@
         "tsdoc/syntax": "warn",
         "no-unused-vars": "off",
         "no-negated-condition": "off",
-        "@typescript-eslint/no-unused-vars": ["warn"],
+        "@typescript-eslint/no-unused-vars": ["warn", // or "error"
+        { 
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_"
+        }],
         "guard-for-in":  "off",
         "no-await-in-loop": "off",
         "max-params": "off",

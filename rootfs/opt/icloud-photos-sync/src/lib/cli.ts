@@ -305,7 +305,7 @@ export class CLIInterface {
         });
     }
 
-    setupCLIArchiveEngineInterface(archiveEngine: ArchiveEngine) {
+    setupCLIArchiveEngineInterface(_archiveEngine: ArchiveEngine) {
 
     }
 }

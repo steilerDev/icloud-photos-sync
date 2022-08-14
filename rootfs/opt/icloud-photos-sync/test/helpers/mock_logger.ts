@@ -6,7 +6,7 @@ import {OptionValues} from 'commander';
  * @param cliOpts - Ignored
  */
 export function setupLogger(_cliOpts: OptionValues): void {
-    log.setLevel("INFO");
+    log.setLevel(`INFO`);
 }
 
 /**
@@ -15,7 +15,7 @@ export function setupLogger(_cliOpts: OptionValues): void {
  * @returns A logger object
  */
 export function getLogger(_instance: any): log.Logger {
-    const _logger = log.default
+    const _logger = log.default;
     _logger.methodFactory = function (methodName, _logLevel, _loggerName) {
         return function (message) {
             if (methodName === `warn`) {
@@ -23,10 +23,11 @@ export function getLogger(_instance: any): log.Logger {
             } else if (methodName === `error`) {
                 console.warn(`Error: ${message}`);
             } else {
-                console.log(message)
+                console.log(message);
             }
         };
     };
-    _logger.setLevel("INFO");
-    return _logger
+
+    _logger.setLevel(`INFO`);
+    return _logger;
 }

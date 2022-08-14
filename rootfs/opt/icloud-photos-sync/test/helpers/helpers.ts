@@ -4,18 +4,20 @@ import path from "path";
 
 /**
  * Helper to compare objects, that have string property 'recordName'
- * @param a
- * @param b
- * @returns
+ * Function used to determine the order of the elements, based on the property 'recordName'.
+ * @param a - One object
+ * @param b - Other object
+ * @returns  Returns a negative value if the first argument is less than the second argument, zero if they're equal, and a positive value otherwise.
  */
 export function sortByRecordName(a: any, b: any): number {
+    [].sort();
     return a.recordName.localeCompare(b.recordName);
 }
 
 /**
- * This function will filter variable data (that we cannot test), in order to make test possible
- * @param a
- * @returns
+ * Post processes the CPLMaster data returned from the iCloud API. Removes all non-testable data.
+ * @param a - The object received from the API
+ * @returns The post-processed object
  */
 export function postProcessMasterData(a: CPLMaster): any {
     return {
@@ -32,6 +34,11 @@ export function postProcessMasterData(a: CPLMaster): any {
     };
 }
 
+/**
+ * Post processes the CPLAsset data returned from the iCloud API. Removes all non-testable data.
+ * @param a - The object received from the API
+ * @returns The post-processed object
+ */
 export function postProcessAssetData(a: CPLAsset): any {
     const asset = {
         adjustmentType: a.adjustmentType,
@@ -55,9 +62,9 @@ export function postProcessAssetData(a: CPLAsset): any {
 }
 
 /**
- * Post processes data received from the backend, waiting for all promises to settle
- * @param a - The object to post-process
- * @returns Processed object
+ * Post processes the CPLAlbum data returned from the iCloud API. Removes all non-testable data and waits for all promises to settle.
+ * @param a - The object received from the API
+ * @returns The post-processed object
  */
 export async function postProcessAlbumData(a: CPLAlbum): Promise<any> {
     return {
@@ -67,7 +74,7 @@ export async function postProcessAlbumData(a: CPLAlbum): Promise<any> {
         modified: a.modified,
         parentId: a.parentId,
         recordName: a.recordName,
-    }
+    };
 }
 
 /**
