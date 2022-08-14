@@ -169,6 +169,11 @@ export class iCloud extends EventEmitter {
         return this.ready;
     }
 
+    /**
+     * This function will ask the iCloud backend, to re-send the MFA token, using the provided method and number
+     * @param method - The method to be used
+     * @param phoneNumberId - Optionally, the phoneNumberId. Will use ID 1 (first number) per default.
+     */
     resendMFA(method: ICLOUD.MFAMethod, phoneNumberId?: number) {
         this.mfaMethod = method;
         this.mfaPhoneNumberId = phoneNumberId ? phoneNumberId : 1; // 1 is the primary registered phone number id

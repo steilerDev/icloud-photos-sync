@@ -26,7 +26,7 @@ jobs:
       working-directory: rootfs/opt/icloud-photos-sync/
     - name: Test
       run: |
-        npm run full-test
+        npm run test
       env:
         APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
         APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}

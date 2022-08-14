@@ -18,8 +18,8 @@
     "build": "npx tsc",
     "docs": "npx typedoc",
     "clean": "rm -rf bin/ docs/ node_modules/ src/lib/package.ts",
-    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --coverage=false",
-    "full-test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "text-coverage": "npm run test -- --coverage=true",
     "execute": "node bin/main.js",
     "start": "npm run build && npm run execute"
   },
@@ -45,7 +45,6 @@
     "preset": "ts-jest/presets/default-esm",
     "setupFilesAfterEnv": ["jest-extended/all"],
     "testEnvironment": "node",
-    "collectCoverage": true,
     "collectCoverageFrom": [
       "src/**/*.ts"
     ],

@@ -110,6 +110,9 @@ export const URL = {
     SETUP: `${ENPOINT.SETUP.BASE}${ENPOINT.SETUP.PATH.ACCOUNT}`,
 };
 
+/**
+ * Indicating, which MFA method should be used
+ */
 export enum MFAMethod {
     DEVICE = 1,
     SMS = 2,
