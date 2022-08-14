@@ -43,7 +43,6 @@
   },
   "jest": {
     "preset": "ts-jest/presets/default-esm",
-    "setupFilesAfterEnv": ["jest-extended/all"],
     "testEnvironment": "node",
     "collectCoverageFrom": [
       "src/**/*.ts"
