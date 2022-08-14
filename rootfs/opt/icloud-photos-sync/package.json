@@ -20,8 +20,7 @@
     "clean": "rm -rf bin/ coverage/ docs/ node_modules/ src/lib/package.ts",
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json",
     "test-coverage": "npm run test -- --coverage=true",
-    "execute": "node bin/main.js",
-    "start": "npm run build && npm run execute"
+    "execute": "node bin/main.js"
   },
   "repository": {
     "type": "git",
@@ -66,7 +65,6 @@
     "loglevel": "^1.8.0",
     "p-event": "^5.0.1",
     "p-queue": "^7.2.0",
-    "tough-cookie": "^4.0.0",
-    "ts-node": "^10.9.1"
+    "tough-cookie": "^4.0.0"
   }
 }
