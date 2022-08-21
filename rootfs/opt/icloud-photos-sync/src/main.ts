@@ -27,15 +27,16 @@ const cliInterface = new CLIInterface(cliOpts, icloud, syncEngine);
  * Waiting for setup to complete
  */
 await icloud.authenticate()
-    .catch(err => cliInterface.fatalError(`Init failed: ${err}`));
+    .catch(err => cliInterface.fatalError(`Init failed: ${err.message}`));
 
 if (cliCommand[0] === CLIInterfaceCommand.token) {
-    if (icloud.auth.validateAccountTokens()) {
+    try {
+        icloud.auth.validateAccountTokens();
         cliInterface.print(`Validated trust token:`);
         cliInterface.print(icloud.auth.iCloudAccountTokens.trustToken);
         process.exit(0);
-    } else {
-        cliInterface.fatalError(`Unable to validate trust token!`);
+    } catch (err) {
+        cliInterface.fatalError(`Getting validated trust token failed: ${err.message}`);
     }
 } else if (cliCommand[0] === CLIInterfaceCommand.archive || cliCommand[0] === CLIInterfaceCommand.sync) {
     // Sync will happen archive and sync
@@ -48,6 +49,6 @@ if (cliCommand[0] === CLIInterfaceCommand.token) {
             await archiveEngine.archivePath(cliCommand[1], remoteAssets);
         }
     } catch (err) {
-        cliInterface.fatalError(`Sync failed: ${err}`);
+        cliInterface.fatalError(`Sync failed: ${err.message}`);
     }
 }

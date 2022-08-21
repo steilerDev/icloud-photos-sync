@@ -1,7 +1,7 @@
-import mockfs from 'mock-fs'
+import mockfs from 'mock-fs';
 import {describe, expect, test, jest, beforeAll, afterAll} from '@jest/globals';
-import * as fs from 'fs';
 import {iCloud} from '../../src/lib/icloud/icloud.js';
+import crypto from 'crypto'
 
 import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
 import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
@@ -9,19 +9,20 @@ import expectedMastersAlbum from "../_data/api.expected.album-cpl-masters.json";
 import expectedAssetsAlbum from "../_data/api.expected.album-cpl-assets.json";
 import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
 import {appDataDir, postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/helpers.js';
+import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
+import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
-let tmpDir: string;
 
 beforeAll(() => {
     mockfs({
-        [appDataDir]: {}
-    })
+        [appDataDir]: {},
+    });
 });
 
 afterAll(() => {
-    mockfs.restore()
+    mockfs.restore();
 });
 
 describe(`API E2E Tests`, () => {
@@ -45,7 +46,7 @@ describe(`API E2E Tests`, () => {
                     username,
                     password,
                     trustToken: token,
-                    dataDir: tmpDir,
+                    dataDir: appDataDir,
                     failOnMfa: true,
                 };
                 icloud = new iCloud(cliOpts);
@@ -56,7 +57,7 @@ describe(`API E2E Tests`, () => {
                 const cliOpts = {
                     username,
                     password,
-                    dataDir: tmpDir,
+                    dataDir: appDataDir,
                     failOnMfa: true,
                 };
                 const _icloud = new iCloud(cliOpts);
@@ -77,6 +78,8 @@ describe(`API E2E Tests`, () => {
                         expect(asset.resource.downloadURL).toBeDefined();
                     }
                 });
+                // Expecting a total of 202 assets
+                expect(assets.length).toEqual(202);
                 // This matches the non-variable part of the data
                 expect(assets.map(postProcessAssetData).sort(sortByRecordName)).toEqual(expectedAssetsAll.sort(sortByRecordName));
 
@@ -84,6 +87,8 @@ describe(`API E2E Tests`, () => {
                 masters.forEach(master => {
                     expect(master?.resource.downloadURL).toBeDefined();
                 });
+                // Expecting a total of 202 masters
+                expect(masters.length).toEqual(202);
                 // This matches the non-variable part of the data
                 expect(masters.map(postProcessMasterData).sort(sortByRecordName)).toEqual(expectedMastersAll.sort(sortByRecordName));
             });
@@ -95,14 +100,25 @@ describe(`API E2E Tests`, () => {
 
                 // _writeTestData(assets.map(postProcessAssetData), "album-assets-data")
                 // _writeTestData(masters.map(postProcessMasterData), "album-master-data")
+                expect(assets.length).toEqual(202);
+                expect(masters.length).toEqual(202);
                 expect(assets.map(postProcessAssetData).sort(sortByRecordName)).toEqual(expectedAssetsAlbum.sort(sortByRecordName));
                 expect(masters.map(postProcessMasterData).sort(sortByRecordName)).toEqual(expectedMastersAlbum.sort(sortByRecordName));
             });
+
+            test(`Fetch records of empty album`, async () => {
+                await icloud.ready;
+                const albumRecordName = `6dcb67d9-a073-40ba-9441-3a792da34cf5`
+                const [assets, masters] = await icloud.photos.fetchAllPictureRecords(albumRecordName);
+                expect(assets.length).toEqual(0)
+                expect(masters.length).toEqual(0)
+            })
         });
         describe(`Fetching albums`, () => {
             test(`Fetch all albums`, async () => {
                 await icloud.ready;
                 const fetchedAlbums = await icloud.photos.fetchAllAlbumRecords();
+                expect(fetchedAlbums.length).toEqual(8);
 
                 // Needing to wait until all promises for the album assets have settled
                 const processedAlbums: any[] = [];
@@ -113,12 +129,65 @@ describe(`API E2E Tests`, () => {
                 // _writeTestData(processedAlbums, `all-album-data`);
                 expect(processedAlbums.sort(sortByRecordName)).toEqual(expectedAlbumsAll.sort(sortByRecordName));
             });
-            test.todo(`Fetch one album`);
+
+            test(`Fetch empty folder`, async () => {
+                await icloud.ready;
+                const recordName = `7198a6a0-27fe-4fb6-961b-74231e425858`; // 'Stuff' folder 
+                const fetchedAlbum = await icloud.photos.fetchAlbumRecords(recordName);
+                // Verifying only structure, not content, as content was validated in the all case
+                expect(fetchedAlbum.length).toEqual(0);
+            });
+
+            test(`Fetch folder with multiple albums`, async () => {
+                await icloud.ready;
+                const recordName = `6e7f4f44-445a-41ee-a87e-844a9109069d`; // '2022' folder
+                const fetchedAlbums = await icloud.photos.fetchAlbumRecords(recordName);
+                // Verifying only structure, not content, as content was validated in the all case
+                expect(fetchedAlbums.length).toEqual(3);
+            });
         });
 
         describe(`Assets & Records`, () => {
-            test.todo(`Download an asset`);
-            test.todo(`Delete a record - How to restore state afterwards??`);
+            test(`Download an asset`, async () => {
+                await icloud.ready;
+                // Defining the asset
+                const assetRecordName = "ARN5w7b2LvDDhsZ8DnbU3RuZeShX"
+                const assetHash = 'tplrgnWiXEttU0xmKPzRWhUMrtE='
+                const asset = new Asset(assetRecordName,
+                                        170384, 
+                                        FileType.fromAssetType("public.jpeg"), 
+                                        1660139199098, 
+                                        AssetType.ORIG, 
+                                        'test', 
+                                        "NQtpvztdVKKNfrb8lf482g==", 
+                                        "AS/OBaLJzK8dRs8QM97ikJQfJEGI", 
+                                        "", 
+                                        "ARN5w7b2LvDDhsZ8DnbU3RuZeShX", 
+                                        false)
+                
+                // Need to get current download URL of above defined asset
+                const masters = (await icloud.photos.fetchAllPictureRecords())[1];
+                const thisMaster = masters.find(master => master.recordName === assetRecordName)
+                asset.downloadURL = thisMaster?.resource?.downloadURL
+
+                expect(asset.downloadURL).toBeDefined()
+                expect(asset.downloadURL?.length).toBeGreaterThan(0)
+
+                // Actually downloading the file
+                const stream = (await icloud.photos.downloadAsset(asset)).data
+                const chunks: any[] = []
+                const file: Buffer = await new Promise((resolve, reject) => {
+                    stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+                    stream.on('error', (err) => reject(err));
+                    stream.on('end', () => resolve(Buffer.concat(chunks)));
+                  })
+                const fileHash = crypto.createHash('sha1').update(file).digest('base64').toString()
+
+                expect(file.length).toBe(asset.size)
+                expect(fileHash).toEqual(assetHash)
+            });
+
+            // Cant really do this: test.todo(`Delete a record - How to restore state afterwards??`);
         });
     }
 });

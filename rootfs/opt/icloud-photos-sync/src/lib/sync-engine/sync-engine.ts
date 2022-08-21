@@ -12,7 +12,7 @@ import {getLogger} from '../logger.js';
 // Helpers extending this class
 import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
-import {addAsset, deleteAsset, verifyAsset, writeAssets} from './helpers/write-assets-helpers.js';
+import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, deleteAlbum, findAlbumInPath, findAlbum, queueIsSorted, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 
 /**
@@ -243,8 +243,7 @@ export class SyncEngine extends EventEmitter {
     // From ./helpers/write-assets-helpers.ts
     private writeAssets = writeAssets;
     protected addAsset = addAsset;
-    protected deleteAsset = deleteAsset;
-    protected verifyAsset = verifyAsset;
+    protected removeAsset = removeAsset;
 
     // From ./helpers/write-albums-helpers.ts
     private writeAlbums = writeAlbums;

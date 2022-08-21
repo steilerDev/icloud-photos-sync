@@ -117,10 +117,7 @@ export class iCloud extends EventEmitter {
         this.logger.info(`Authenticating user`);
         this.emit(ICLOUD.EVENTS.AUTHENTICATION_STARTED);
 
-        if (!this.auth.validateAccountSecrets()) {
-            this.emit(ICLOUD.EVENTS.ERROR, `Unable to authenticate user, required account secrets are not valid: ${this.auth.iCloudAccountSecrets}`);
-            return;
-        }
+        this.auth.validateAccountSecrets();
 
         const config: AxiosRequestConfig = {
             headers: ICLOUD.DEFAULT_AUTH_HEADER,
@@ -139,36 +136,33 @@ export class iCloud extends EventEmitter {
 
         axios.post(ICLOUD.URL.SIGNIN, data, config)
             .then(res => {
-                if (res.status === 200) {
-                    this.logger.info(`Authentication successfull`);
-                    if (this.auth.processAuthSecrets(res)) {
-                        this.logger.debug(`Acquired secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
-                        this.emit(ICLOUD.EVENTS.TRUSTED);
-                    } else {
-                        this.emit(ICLOUD.EVENTS.ERROR, `Unable to process auth response and extract necessary secrets: ${this.auth.iCloudAuthSecrets}`);
-                    }
-                } else {
+                if (res.status !== 200) {
                     this.emit(ICLOUD.EVENTS.ERROR, `Unexpected HTTP code: ${res.status}`);
+                    return;
                 }
+
+                this.logger.info(`Authentication successfull`);
+                this.auth.processAuthSecrets(res);
+                this.logger.debug(`Acquired secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
+                this.emit(ICLOUD.EVENTS.TRUSTED);
             })
             .catch(err => {
-                if (err.response) {
-                    const res = err.response;
-                    if (res.status === 409) {
-                        if (this.auth.processAuthSecrets(res)) {
-                            this.logger.debug(`Acquired secrets, requiring MFA: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
-                            // Per default, the trusted device is pinged
-                            this.mfaMethod = ICLOUD.MFAMethod.DEVICE;
-                            this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
-                        } else {
-                            this.emit(ICLOUD.EVENTS.ERROR, `Unable to process auth response and extract necessary secrets: ${this.auth.iCloudAuthSecrets}`);
-                        }
-                    } else {
-                        this.emit(ICLOUD.EVENTS.ERROR, `Unexpected HTTP code: ${res.status}, ${res.statusText}`);
-                    }
-                } else {
+                const res = err.response;
+                if (!res) {
                     this.emit(ICLOUD.EVENTS.ERROR, `Error during sign-in ${err}`);
+                    return;
                 }
+
+                if (res.status !== 409) {
+                    this.emit(ICLOUD.EVENTS.ERROR, `Unexpected HTTP code: ${res.status}, ${res.statusText}`);
+                    return;
+                }
+
+                this.auth.processAuthSecrets(res);
+                this.logger.debug(`Acquired secrets, requiring MFA: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
+                // Per default, the trusted device is pinged
+                this.mfaMethod = ICLOUD.MFAMethod.DEVICE;
+                this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
             });
 
         return this.ready;
@@ -247,12 +241,7 @@ export class iCloud extends EventEmitter {
      */
     mfaReceived(mfa: string) {
         this.mfaServer.stopServer();
-
-        if (!this.auth.validateAuthSecrets()) {
-            this.emit(ICLOUD.EVENTS.ERROR, `Unable to process MFA, because auth secrets are missing: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
-            return;
-        }
-
+        this.auth.validateAuthSecrets();
         this.logger.info(`Authenticating MFA with code ${mfa}`);
 
         const config: AxiosRequestHeaders = {
@@ -320,29 +309,22 @@ export class iCloud extends EventEmitter {
      * Acquires sessionToken and two factor trust token after succesfull authentication
      */
     getTokens() {
-        if (!this.auth.validateAuthSecrets()) {
-            this.emit(ICLOUD.EVENTS.ERROR, `Unable to get trust tokens, because auth secrets are missing: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
-        } else {
-            this.logger.info(`Trusting device and acquiring trust tokens`);
+        this.auth.validateAuthSecrets();
+        this.logger.info(`Trusting device and acquiring trust tokens`);
 
-            const config: AxiosRequestConfig = {
-                headers: this.auth.getMFAHeaders(),
-            };
+        const config: AxiosRequestConfig = {
+            headers: this.auth.getMFAHeaders(),
+        };
 
-            axios.get(ICLOUD.URL.TRUST, config)
-                .then((res) => this.auth.processAccountTokens(res))
-                .then(success => {
-                    if (success) {
-                        this.logger.debug(`Acquired account tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`);
-                        this.emit(ICLOUD.EVENTS.TRUSTED);
-                    } else {
-                        this.emit(ICLOUD.EVENTS.ERROR, `Unable to process token response and extract necessary secrets: ${JSON.stringify(this.auth.iCloudAccountTokens)}`);
-                    }
-                })
-                .catch(err => {
-                    this.emit(ICLOUD.EVENTS.ERROR, `Received error while acquiring trust tokens: ${err}`);
-                });
-        }
+        axios.get(ICLOUD.URL.TRUST, config)
+            .then(res => this.auth.processAccountTokens(res))
+            .then(() => {
+                this.logger.debug(`Acquired account tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`);
+                this.emit(ICLOUD.EVENTS.TRUSTED);
+            })
+            .catch(err => {
+                this.emit(ICLOUD.EVENTS.ERROR, `Received error while acquiring trust tokens: ${err}`);
+            });
     }
     /* c8 ignore stop */
 
@@ -350,56 +332,52 @@ export class iCloud extends EventEmitter {
      * Acquiring necessary cookies from trust and auth token for further processing & gets the user specific domain to interact with the Photos backend
      */
     getiCloudCookies() {
-        if (!this.auth.validateAccountTokens()) {
-            this.emit(ICLOUD.EVENTS.ERROR, `Unable to setup iCloud, because tokens are missing: ${JSON.stringify(this.auth.iCloudAccountTokens)}!`);
-        } else {
-            this.logger.info(`Setting up iCloud connection`);
-            const config: AxiosRequestConfig = {
-                headers: ICLOUD.DEFAULT_HEADER,
-            };
+        this.auth.validateAccountTokens();
+        this.logger.info(`Setting up iCloud connection`);
+        const config: AxiosRequestConfig = {
+            headers: ICLOUD.DEFAULT_HEADER,
+        };
 
-            const data = this.auth.getSetupData();
+        const data = this.auth.getSetupData();
 
-            axios.post(ICLOUD.URL.SETUP, data, config)
-                .then(res => {
-                    if (res.status === 200) {
-                        if (this.auth.processCloudSetupResponse(res)) {
-                            this.photos = new iCloudPhotos(this.auth);
-                            this.logger.debug(`Account ready`);
-                            this.emit(ICLOUD.EVENTS.ACCOUNT_READY);
-                        } else {
-                            this.emit(ICLOUD.EVENTS.ERROR, `Unable to get iCloud Auth Object: ${res.headers[`set-cookie`]}`);
-                        }
-                    } else {
-                        this.emit(ICLOUD.EVENTS.ERROR, `Received unexpected response code during iCloud Setup: ${res.status} (${res.statusText})`);
-                    }
-                })
-                .catch(err => {
-                    this.emit(ICLOUD.EVENTS.ERROR, `Received error during iCloud Setup: ${err}`);
-                });
-        }
+        axios.post(ICLOUD.URL.SETUP, data, config)
+            .then(res => {
+                if (res.status !== 200) {
+                    this.emit(ICLOUD.EVENTS.ERROR, `Received unexpected response code during iCloud Setup: ${res.status} (${res.statusText})`);
+                    return;
+                }
+
+                this.auth.processCloudSetupResponse(res);
+                this.photos = new iCloudPhotos(this.auth);
+                this.logger.debug(`Account ready`);
+                this.emit(ICLOUD.EVENTS.ACCOUNT_READY);
+            })
+            .catch(err => {
+                this.emit(ICLOUD.EVENTS.ERROR, `Received error during iCloud Setup: ${err}`);
+            });
     }
 
     /**
      * Creating iCloud Photos sub-class and linking it
     */
     getiCloudPhotosReady() {
-        if (this.photos && this.auth.validateCloudCookies()) {
-            this.logger.info(`Getting iCloud Photos Service ready`);
-
-            this.photos.on(ICLOUD_PHOTOS.EVENTS.READY, () => {
-                this.emit(ICLOUD.EVENTS.READY);
-            });
-            this.photos.on(ICLOUD_PHOTOS.EVENTS.ERROR, msg => {
-                this.emit(ICLOUD.EVENTS.ERROR, `Error from iCloud Photos: ${msg}`);
-            });
-            this.photos.on(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, () => {
-                this.emit(ICLOUD.EVENTS.ERROR, `iCloud Photos indexing in progress`);
-            });
-
-            this.photos.setup();
-        } else {
+        this.auth.validateCloudCookies();
+        if (!this.photos) {
             this.emit(ICLOUD.EVENTS.ERROR, `Unable to setup iCloud Photos, object does not exist!`);
         }
+
+        this.logger.info(`Getting iCloud Photos Service ready`);
+
+        this.photos.on(ICLOUD_PHOTOS.EVENTS.READY, () => {
+            this.emit(ICLOUD.EVENTS.READY);
+        });
+        this.photos.on(ICLOUD_PHOTOS.EVENTS.ERROR, msg => {
+            this.emit(ICLOUD.EVENTS.ERROR, `Error from iCloud Photos: ${msg}`);
+        });
+        this.photos.on(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, () => {
+            this.emit(ICLOUD.EVENTS.ERROR, `iCloud Photos indexing in progress`);
+        });
+
+        this.photos.setup();
     }
 }

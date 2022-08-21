@@ -18,12 +18,14 @@ export function getLogger(_instance: any): log.Logger {
     const _logger = log.default;
     _logger.methodFactory = function (methodName, _logLevel, _loggerName) {
         return function (message) {
-            if (methodName === `warn`) {
-                console.warn(`Warning: ${message}`);
-            } else if (methodName === `error`) {
-                console.warn(`Error: ${message}`);
-            } else {
-                console.log(message);
+            if (process.env?.DEBUG === `true`) {
+                if (methodName === `warn`) {
+                    console.warn(`Warning: ${message}`);
+                } else if (methodName === `error`) {
+                    console.warn(`Error: ${message}`);
+                } else {
+                    console.log(message);
+                }
             }
         };
     };

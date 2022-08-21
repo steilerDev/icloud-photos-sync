@@ -14,11 +14,11 @@
             ],
             "preLaunchTask": "build-app",
             "program": "${workspaceFolder}/rootfs/opt/icloud-photos-sync/src/main.ts",
-            "args": ["token"],
+            "args": ["sync"],
             "outFiles": [
                 "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
             ],
-            "envFile": "${workspaceFolder}/.vscode/debug.env"
+            "envFile": "${workspaceFolder}/.vscode/debug-test.env"
         }, {
             "name": "Debug Tests",
             "type": "node",

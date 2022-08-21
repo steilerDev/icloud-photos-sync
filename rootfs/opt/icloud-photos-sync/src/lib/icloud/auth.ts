@@ -141,7 +141,7 @@ export class iCloudAuth {
     /**
      * Tries to write the trust token to disk
      */
-    storeTrustToken(): Promise<void>{
+    async storeTrustToken(): Promise<void> {
         this.logger.debug(`Trying to persist trust token to disk`);
 
         const trustTokenPath = path.dirname(this.trustTokenFile);
@@ -160,25 +160,24 @@ export class iCloudAuth {
      * Trying to extract X-Apple-Session-Token, scnt Header and aasp Cookie
      * @param response - The response from the initial authentication request
      */
-    processAuthSecrets(response: AxiosResponse): boolean {
+    processAuthSecrets(response: AxiosResponse) {
         this.logger.debug(`Processing iCloud authentication response`);
         this.iCloudAuthSecrets.sessionId = response.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()];
         this.iCloudAccountTokens.sessionToken = this.iCloudAuthSecrets.sessionId;
         this.iCloudAuthSecrets.scnt = response.headers[ICLOUD.AUTH_RESPONSE_HEADER.SCNT.toLowerCase()];
 
         const cookieHeaders = response.headers[`set-cookie`];
-        if (cookieHeaders && Array.isArray(cookieHeaders) && cookieHeaders.length > 0) {
-            const extractedHeader:string = cookieHeaders.find(el => el.startsWith(`${ICLOUD.AUTH_RESPONSE_HEADER.AASP_COOKIE}=`));
-            const removedKey: string = extractedHeader.substring(ICLOUD.AUTH_RESPONSE_HEADER.AASP_COOKIE.length + 1);
-            const removedMetadata: string = removedKey.split(`;`)[0];
-            this.iCloudAuthSecrets.aasp = removedMetadata;
-
-            this.logger.debug(`Authentication processed, auth secrets populated: ${JSON.stringify(this.iCloudAuthSecrets)}`);
-            return this.validateAuthSecrets();
+        if (!cookieHeaders || !Array.isArray(cookieHeaders) || cookieHeaders.length === 0) {
+            throw new Error(`Unable to process auth response: No set-cookie directive found`);
         }
 
-        this.logger.error(`Unable to process auth response: No set-cookie directive found`);
-        return false;
+        const extractedHeader:string = cookieHeaders.find(el => el.startsWith(`${ICLOUD.AUTH_RESPONSE_HEADER.AASP_COOKIE}=`));
+        const removedKey: string = extractedHeader.substring(ICLOUD.AUTH_RESPONSE_HEADER.AASP_COOKIE.length + 1);
+        const removedMetadata: string = removedKey.split(`;`)[0];
+        this.iCloudAuthSecrets.aasp = removedMetadata;
+
+        this.validateAuthSecrets();
+        this.logger.debug(`Authentication processed, auth secrets populated: ${JSON.stringify(this.iCloudAuthSecrets)}`);
     }
 
     /* MFA flow not testable in automation */
@@ -188,6 +187,7 @@ export class iCloudAuth {
      * @returns The header object for the request
      */
     getMFAHeaders(): any {
+        this.validateAuthSecrets();
         return {...ICLOUD.DEFAULT_AUTH_HEADER,
             scnt: this.iCloudAuthSecrets.scnt,
             'X-Apple-ID-Session-Id': this.iCloudAuthSecrets.sessionId,
@@ -203,16 +203,12 @@ export class iCloudAuth {
      * @param response - The response from the trust token endpoint
      * @returns True if acquied account tokens were sucesfully validated
      */
-    async processAccountTokens(response: AxiosResponse): Promise<boolean> {
+    async processAccountTokens(response: AxiosResponse) {
         this.logger.debug(`Processing trust token response`);
         this.iCloudAccountTokens.sessionToken = response?.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()];
         this.iCloudAccountTokens.trustToken = response?.headers[ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN.toLowerCase()];
-        if(this.validateAccountTokens()) {
-            await this.storeTrustToken();
-            return true
-        } else {
-            return false
-        }
+        this.validateAccountTokens();
+        await this.storeTrustToken();
     }
     /* c8 ignore stop */
 
@@ -232,23 +228,24 @@ export class iCloudAuth {
      * @param response - The succesfull response during iCloud Setup
      * @Returns True if successful processing, false otherwise
      */
-    processCloudSetupResponse(response: AxiosResponse): boolean {
+    processCloudSetupResponse(response: AxiosResponse) {
         this.logger.debug(`Processing iCloud setup response`);
         const cookieHeaders = response.headers[`set-cookie`];
-        if (cookieHeaders && Array.isArray(cookieHeaders) && cookieHeaders.length > 0) {
-            this.iCloudCookies = [];
-            cookieHeaders.forEach(cookieString => {
-                const cookie = Cookie.parse(cookieString);
-                this.logger.debug(`Adding cookie: ${cookie}`);
-                this.iCloudCookies.push(cookie);
-            });
-        } else {
-            this.logger.error(`Unable to store cookies from response header, no 'set-cookie' directive found: ${JSON.stringify(response.headers)}`);
-            return false;
+        if (!cookieHeaders || !Array.isArray(cookieHeaders) || cookieHeaders.length === 0) {
+            throw new Error(`Unable to store cookies from response header, no 'set-cookie' directive found: ${JSON.stringify(response.headers)}`);
         }
 
+        this.iCloudCookies = [];
+
+        cookieHeaders.forEach(cookieString => {
+            const cookie = Cookie.parse(cookieString);
+            this.logger.debug(`Adding cookie: ${cookie}`);
+            this.iCloudCookies.push(cookie);
+        });
+
         this.iCloudPhotosAccount.photosDomain = response.data.webservices.ckdatabasews.url;
-        return this.validateCloudCookies();
+
+        this.validateCloudCookies();
     }
 
     /**
@@ -267,19 +264,15 @@ export class iCloudAuth {
      */
     getCookiesHeaderString(): string {
         let cookieString: string = ``;
-        if (this.validateCloudCookies()) {
-            this.iCloudCookies.forEach(cookie => {
-                if (cookieString.length === 0) {
-                    cookieString = cookie.cookieString();
-                } else {
-                    cookieString = `${cookieString}; ${cookie.cookieString()}`;
-                }
-            });
-            this.logger.trace(`Build cookie string: ${cookieString}`);
-        } else {
-            this.logger.warn(`Unable to parse cookies, because object is empty: ${this.iCloudCookies})`);
-        }
-
+        this.validateCloudCookies();
+        this.iCloudCookies.forEach(cookie => {
+            if (cookieString.length === 0) {
+                cookieString = cookie.cookieString();
+            } else {
+                cookieString = `${cookieString}; ${cookie.cookieString()}`;
+            }
+        });
+        this.logger.trace(`Build cookie string: ${cookieString}`);
         return cookieString;
     }
 
@@ -287,62 +280,71 @@ export class iCloudAuth {
      * Processing setup response to acquire PhotosAccount
      * @param response - The Photos Setup response
      */
-    processPhotosSetupResponse(response: AxiosResponse): boolean {
+    processPhotosSetupResponse(response: AxiosResponse) {
         this.logger.debug(`Processing Photos setup request`);
         this.iCloudPhotosAccount.ownerName = response.data.zones[0].zoneID.ownerRecordName;
         this.iCloudPhotosAccount.zoneName = response.data.zones[0].zoneID.zoneName;
         this.iCloudPhotosAccount.zoneType = response.data.zones[0].zoneID.zoneType;
         this.iCloudPhotosAccount.syncToken = response.data.zones[0].syncToken;
-        return this.validatePhotosAccount();
+        this.validatePhotosAccount();
     }
 
     /**
      * Validates that the object is in a authenticated iCloud state
-     * @Returns true if there are cookies stored and they are valid
+     * @throws An error, if the cloud cookies are no longer valid
      */
-    validateCloudCookies(): boolean {
-        // @todo Check if cookies are still valid
-        return this.iCloudCookies && this.iCloudCookies.length > 0
-            && this.iCloudPhotosAccount.photosDomain && this.iCloudPhotosAccount.photosDomain.length > 0;
+    validateCloudCookies() {
+        if (!(this.iCloudCookies && this.iCloudCookies.length > 0 && this.iCloudCookies.some(cookie => cookie.TTL() > 0))) {
+            throw new Error(`Unable to validate cloud cookies: ${JSON.stringify(this.iCloudCookies)}`);
+        }
     }
 
     /**
      * Validates that the object holds all information required to perform actions against the photos service
-     * @returns
+     * @throws An error, if the photos account cannot be validated
      */
-    validatePhotosAccount(): boolean {
-        return this.validateCloudCookies()
-            && this.iCloudPhotosAccount.zoneName && this.iCloudPhotosAccount.zoneName.length > 0
+    validatePhotosAccount() {
+        this.validateCloudCookies();
+        if (!(this.iCloudPhotosAccount.zoneName && this.iCloudPhotosAccount.zoneName.length > 0
+            && this.iCloudPhotosAccount.photosDomain && this.iCloudPhotosAccount.photosDomain.length > 0
             && this.iCloudPhotosAccount.zoneType && this.iCloudPhotosAccount.zoneType.length > 0
             && this.iCloudPhotosAccount.ownerName && this.iCloudPhotosAccount.ownerName.length > 0
-            && this.iCloudPhotosAccount.syncToken && this.iCloudPhotosAccount.syncToken.length > 0;
+            && this.iCloudPhotosAccount.syncToken && this.iCloudPhotosAccount.syncToken.length > 0)) {
+            throw new Error(`Unable to validate Photos account: ${JSON.stringify(this.iCloudPhotosAccount)}`);
+        }
     }
 
     /**
      * Validates that the objects holds all account secrets
-     * @returns True if acount secrets are present
+     * @throws An error, if the account secrets cannot be validated
      */
-    validateAccountSecrets(): boolean {
-        return this.iCloudAccountSecrets.username && this.iCloudAccountSecrets.username.length > 0
-            && this.iCloudAccountSecrets.password && this.iCloudAccountSecrets.password.length > 0;
+    validateAccountSecrets() {
+        if (!(this.iCloudAccountSecrets.username && this.iCloudAccountSecrets.username.length > 0
+            && this.iCloudAccountSecrets.password && this.iCloudAccountSecrets.password.length > 0)) {
+            throw new Error(`Unable to validate account secrets: ${JSON.stringify(this.iCloudAccountSecrets)}`);
+        }
     }
 
     /**
      * Validates the authentication secrets
-     * @returns True if authentication secrets are present
+     * @throws An error, if authentication secrets cannot be validated
      */
-    validateAuthSecrets(): boolean {
-        return this.iCloudAuthSecrets.aasp && this.iCloudAuthSecrets.aasp.length > 0
+    validateAuthSecrets() {
+        if (!(this.iCloudAuthSecrets.aasp && this.iCloudAuthSecrets.aasp.length > 0
             && this.iCloudAuthSecrets.scnt && this.iCloudAuthSecrets.scnt.length > 0
-            && this.iCloudAuthSecrets.sessionId && this.iCloudAuthSecrets.sessionId.length > 0;
+            && this.iCloudAuthSecrets.sessionId && this.iCloudAuthSecrets.sessionId.length > 0)) {
+            throw new Error(`Unable to validate auth secrets: ${JSON.stringify(this.iCloudAuthSecrets)}`);
+        }
     }
 
     /**
      * Validates the account tokens
-     * @returns True if account tokens are present
+     * @throws An error, if account tokens cannot be validated
      */
-    validateAccountTokens(): boolean {
-        return this.iCloudAccountTokens.sessionToken && this.iCloudAccountTokens.sessionToken.length > 0
-            && this.iCloudAccountTokens.trustToken && this.iCloudAccountTokens.trustToken.length > 0;
+    validateAccountTokens() {
+        if (!(this.iCloudAccountTokens.sessionToken && this.iCloudAccountTokens.sessionToken.length > 0
+            && this.iCloudAccountTokens.trustToken && this.iCloudAccountTokens.trustToken.length > 0)) {
+            throw new Error(`Unable to validate account tokens: ${JSON.stringify(this.iCloudAccountTokens)}`);
+        }
     }
 }

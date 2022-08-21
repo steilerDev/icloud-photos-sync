@@ -1,12 +1,13 @@
 import * as path from 'path';
 import * as PHOTOS_LIBRARY from './constants.js';
 import {Album, AlbumType} from './model/album.js';
-import * as fs from 'fs/promises';
-import * as fssync from 'fs';
+import fs from 'fs';
 import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
 import {PLibraryEntities} from './model/photos-entity.js';
 import {getLogger} from '../logger.js';
+import {AxiosResponse} from 'axios';
+import {pEvent} from 'p-event';
 
 /**
  * This class holds the local data structure
@@ -33,15 +34,15 @@ export class PhotosLibrary {
      */
     constructor(cliOpts: OptionValues) {
         this.photoDataDir = cliOpts.dataDir;
-        if (!fssync.existsSync(this.photoDataDir)) {
+        if (!fs.existsSync(this.photoDataDir)) {
             this.logger.debug(`${this.photoDataDir} does not exist, creating`);
-            fssync.mkdirSync(this.photoDataDir);
+            fs.mkdirSync(this.photoDataDir);
         }
 
         this.assetDir = path.join(this.photoDataDir, PHOTOS_LIBRARY.ASSET_DIR);
-        if (!fssync.existsSync(this.assetDir)) {
+        if (!fs.existsSync(this.assetDir)) {
             this.logger.debug(`${this.assetDir} does not exist, creating`);
-            fssync.mkdirSync(this.assetDir);
+            fs.mkdirSync(this.assetDir);
         }
     }
 
@@ -51,9 +52,9 @@ export class PhotosLibrary {
      */
     async loadAssets(): Promise<PLibraryEntities<Asset>> {
         const libAssets: PLibraryEntities<Asset> = {};
-        (await fs.readdir(this.assetDir))
+        (await fs.promises.readdir(this.assetDir))
             .forEach(fileName => {
-                const fileStat = fssync.statSync(path.format({
+                const fileStat = fs.statSync(path.format({
                     dir: this.assetDir,
                     base: fileName,
                 }));
@@ -93,7 +94,7 @@ export class PhotosLibrary {
 
         this.logger.info(`Loading album ${album.getDisplayName()}`);
 
-        const symbolicLinks = (await fs.readdir(album.albumPath, {
+        const symbolicLinks = (await fs.promises.readdir(album.albumPath, {
             withFileTypes: true,
         })).filter(file => file.isSymbolicLink());
 
@@ -101,7 +102,7 @@ export class PhotosLibrary {
 
         for (const link of symbolicLinks) {
             // The target's basename contains the UUID
-            const target = await fs.readlink(path.join(album.albumPath, link.name));
+            const target = await fs.promises.readlink(path.join(album.albumPath, link.name));
 
             if (album.albumType === AlbumType.FOLDER) {
                 const uuid = path.basename(target).substring(1); // Removing leading '.'
@@ -133,12 +134,12 @@ export class PhotosLibrary {
      */
     async readAlbumTypeFromPath(path: string): Promise<AlbumType> {
         // If the folder contains other folders, it will be of AlbumType.Folder
-        const directoryPresent = (await fs.readdir(path, {
+        const directoryPresent = (await fs.promises.readdir(path, {
             withFileTypes: true,
         })).some(file => file.isDirectory());
 
         // If there are files in the folders, the folder is treated as archived
-        const filePresent = (await fs.readdir(path, {
+        const filePresent = (await fs.promises.readdir(path, {
             withFileTypes: true,
         })).filter(file => !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name)) // Filter out files that are safe to ignore
             .some(file => file.isFile());
@@ -157,5 +158,38 @@ export class PhotosLibrary {
         }
 
         return AlbumType.ALBUM;
+    }
+
+    async writeAsset(asset: Asset, response: AxiosResponse<any, any>): Promise<void> {
+        this.logger.debug(`Writing asset ${asset.getDisplayName()}`);
+        const location = asset.getAssetFilePath(this.assetDir);
+        const writeStream = fs.createWriteStream(location);
+        response.data.pipe(writeStream);
+        return pEvent(writeStream, `close`)
+            .then(() => fs.promises.utimes(asset.getAssetFilePath(this.assetDir), asset.modified, asset.modified)) // Setting modified date on file
+            .then(() => {
+                if (!this.verifyAsset(asset)) {
+                    throw new Error(`Unable to verify asset ${asset.getDisplayName()}`);
+                }
+
+                this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
+            });
+    }
+
+    async deleteAsset(asset: Asset): Promise<void> {
+        this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
+        return fs.promises.rm(asset.getAssetFilePath(this.assetDir), {force: true});
+    }
+
+    /**
+     * Verifies if a given Asset object is present on disk
+     * @param asset - The asset to verify
+     * @returns True, if the Asset object is present on disk
+     */
+    verifyAsset(asset: Asset): boolean {
+        this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
+        const location = asset.getAssetFilePath(this.assetDir);
+        return fs.existsSync(location)
+            && asset.verify(fs.readFileSync(location));
     }
 }

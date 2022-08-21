@@ -19,7 +19,7 @@
         "quotes": ["error", "backtick"],
         "indent": ["error", 4],
         "eol-last": ["error", "never"],
-        "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudPhotos", "iCloudAuth"] }],
+        "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudPhotos", "iCloudAuth"], "capIsNewExceptions": ["TTL"] }],
         "tsdoc/syntax": "warn",
         "no-negated-condition": "off",
         "no-unused-vars": "off",

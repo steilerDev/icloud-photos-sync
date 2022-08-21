@@ -5,7 +5,7 @@ import path from "path";
 /**
  * The data dir path, to be used in the tests
  */
-export const appDataDir = '/opt/icloud-photos-library'
+export const appDataDir = `/opt/icloud-photos-library`;
 
 /**
  * Helper to compare objects, that have string property 'recordName'
@@ -45,16 +45,15 @@ export function postProcessMasterData(a: CPLMaster): any {
  * @returns The post-processed object
  */
 export function postProcessAssetData(a: CPLAsset): any {
-    const asset = {
-        adjustmentType: a.adjustmentType,
+    const asset: any = {
         favorite: a.favorite,
         masterRef: a.masterRef,
         modified: a.modified,
         recordName: a.recordName,
-        resourceType: a.resourceType,
-        resource: {},
     };
     if (a.resource) {
+        asset.adjustmentType = a.adjustmentType,
+        asset.resourceType = a.resourceType,
         asset.resource = {
             fileChecksum: a.resource.fileChecksum,
             referenceChecksum: a.resource.referenceChecksum,

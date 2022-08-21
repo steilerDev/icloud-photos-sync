@@ -78,7 +78,7 @@ export class Asset implements PEntity<Asset> {
      * @param referenceChecksum -
      * @param downloadURL -
      */
-    private constructor(fileChecksum: string, size: number, fileType: FileType, modified: number, assetType?: AssetType, origFilename?: string, wrappingKey?: string, referenceChecksum?: string, downloadURL?: string, recordName?: string, isFavorite?: boolean) {
+    constructor(fileChecksum: string, size: number, fileType: FileType, modified: number, assetType?: AssetType, origFilename?: string, wrappingKey?: string, referenceChecksum?: string, downloadURL?: string, recordName?: string, isFavorite?: boolean) {
         this.fileChecksum = fileChecksum;
         this.size = size;
         this.fileType = fileType;
