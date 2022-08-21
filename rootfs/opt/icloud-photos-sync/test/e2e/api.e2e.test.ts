@@ -1,7 +1,7 @@
 import mockfs from 'mock-fs';
 import {describe, expect, test, jest, beforeAll, afterAll} from '@jest/globals';
 import {iCloud} from '../../src/lib/icloud/icloud.js';
-import crypto from 'crypto'
+import crypto from 'crypto';
 
 import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
 import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
@@ -108,11 +108,11 @@ describe(`API E2E Tests`, () => {
 
             test(`Fetch records of empty album`, async () => {
                 await icloud.ready;
-                const albumRecordName = `6dcb67d9-a073-40ba-9441-3a792da34cf5`
+                const albumRecordName = `6dcb67d9-a073-40ba-9441-3a792da34cf5`;
                 const [assets, masters] = await icloud.photos.fetchAllPictureRecords(albumRecordName);
-                expect(assets.length).toEqual(0)
-                expect(masters.length).toEqual(0)
-            })
+                expect(assets.length).toEqual(0);
+                expect(masters.length).toEqual(0);
+            });
         });
         describe(`Fetching albums`, () => {
             test(`Fetch all albums`, async () => {
@@ -132,7 +132,7 @@ describe(`API E2E Tests`, () => {
 
             test(`Fetch empty folder`, async () => {
                 await icloud.ready;
-                const recordName = `7198a6a0-27fe-4fb6-961b-74231e425858`; // 'Stuff' folder 
+                const recordName = `7198a6a0-27fe-4fb6-961b-74231e425858`; // 'Stuff' folder
                 const fetchedAlbum = await icloud.photos.fetchAlbumRecords(recordName);
                 // Verifying only structure, not content, as content was validated in the all case
                 expect(fetchedAlbum.length).toEqual(0);
@@ -151,40 +151,40 @@ describe(`API E2E Tests`, () => {
             test(`Download an asset`, async () => {
                 await icloud.ready;
                 // Defining the asset
-                const assetRecordName = "ARN5w7b2LvDDhsZ8DnbU3RuZeShX"
-                const assetHash = 'tplrgnWiXEttU0xmKPzRWhUMrtE='
+                const assetRecordName = `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`;
+                const assetHash = `tplrgnWiXEttU0xmKPzRWhUMrtE=`;
                 const asset = new Asset(assetRecordName,
-                                        170384, 
-                                        FileType.fromAssetType("public.jpeg"), 
-                                        1660139199098, 
-                                        AssetType.ORIG, 
-                                        'test', 
-                                        "NQtpvztdVKKNfrb8lf482g==", 
-                                        "AS/OBaLJzK8dRs8QM97ikJQfJEGI", 
-                                        "", 
-                                        "ARN5w7b2LvDDhsZ8DnbU3RuZeShX", 
-                                        false)
-                
+                    170384,
+                    FileType.fromAssetType(`public.jpeg`),
+                    1660139199098,
+                    AssetType.ORIG,
+                    `test`,
+                    `NQtpvztdVKKNfrb8lf482g==`,
+                    `AS/OBaLJzK8dRs8QM97ikJQfJEGI`,
+                    ``,
+                    `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
+                    false);
+
                 // Need to get current download URL of above defined asset
                 const masters = (await icloud.photos.fetchAllPictureRecords())[1];
-                const thisMaster = masters.find(master => master.recordName === assetRecordName)
-                asset.downloadURL = thisMaster?.resource?.downloadURL
+                const thisMaster = masters.find(master => master.recordName === assetRecordName);
+                asset.downloadURL = thisMaster?.resource?.downloadURL;
 
-                expect(asset.downloadURL).toBeDefined()
-                expect(asset.downloadURL?.length).toBeGreaterThan(0)
+                expect(asset.downloadURL).toBeDefined();
+                expect(asset.downloadURL?.length).toBeGreaterThan(0);
 
                 // Actually downloading the file
-                const stream = (await icloud.photos.downloadAsset(asset)).data
-                const chunks: any[] = []
+                const stream = (await icloud.photos.downloadAsset(asset)).data;
+                const chunks: any[] = [];
                 const file: Buffer = await new Promise((resolve, reject) => {
-                    stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
-                    stream.on('error', (err) => reject(err));
-                    stream.on('end', () => resolve(Buffer.concat(chunks)));
-                  })
-                const fileHash = crypto.createHash('sha1').update(file).digest('base64').toString()
+                    stream.on(`data`, chunk => chunks.push(Buffer.from(chunk)));
+                    stream.on(`error`, err => reject(err));
+                    stream.on(`end`, () => resolve(Buffer.concat(chunks)));
+                });
+                const fileHash = crypto.createHash(`sha1`).update(file).digest(`base64`).toString();
 
-                expect(file.length).toBe(asset.size)
-                expect(fileHash).toEqual(assetHash)
+                expect(file.length).toBe(asset.size);
+                expect(fileHash).toEqual(assetHash);
             });
 
             // Cant really do this: test.todo(`Delete a record - How to restore state afterwards??`);

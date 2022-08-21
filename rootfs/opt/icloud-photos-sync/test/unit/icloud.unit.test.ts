@@ -1,5 +1,5 @@
 import mockfs from 'mock-fs';
-import {describe, test, beforeAll, beforeEach, afterAll, afterEach, expect} from '@jest/globals';
+import {describe, test, beforeEach, afterEach, expect} from '@jest/globals';
 import path from 'path';
 import * as ICLOUD from '../../src/lib/icloud/constants';
 import {appDataDir} from '../_helpers/helpers';
@@ -58,9 +58,9 @@ describe(`Unit Tests - iCloud (not covered by API tests)`, () => {
             headers: {},
         };
         const icloudAuth = new iCloudAuth(`testuser@steilerdev.de`, `testpassword`, testTrustToken1, appDataDir);
-        expect.assertions(2)
+        expect.assertions(2);
         await icloudAuth.processAccountTokens(response)
-                .catch(err => expect(err.message).toMatch(/^Unable to validate account tokens/))
+            .catch(err => expect(err.message).toMatch(/^Unable to validate account tokens/));
         const writtenFile = fs.readFileSync(path.join(appDataDir, ICLOUD.TRUST_TOKEN_FILE_NAME)).toString();
         expect(writtenFile).toEqual(testTrustToken1);
     });

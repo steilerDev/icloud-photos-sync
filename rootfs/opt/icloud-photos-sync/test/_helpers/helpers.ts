@@ -52,8 +52,8 @@ export function postProcessAssetData(a: CPLAsset): any {
         recordName: a.recordName,
     };
     if (a.resource) {
-        asset.adjustmentType = a.adjustmentType,
-        asset.resourceType = a.resourceType,
+        asset.adjustmentType = a.adjustmentType;
+        asset.resourceType = a.resourceType;
         asset.resource = {
             fileChecksum: a.resource.fileChecksum,
             referenceChecksum: a.resource.referenceChecksum,
