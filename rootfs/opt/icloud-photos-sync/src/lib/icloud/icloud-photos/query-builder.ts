@@ -6,37 +6,37 @@
  * All relevant record types for this application
  */
 export const RECORD_TYPES = {
-    PHOTO_MASTER_RECORD: `CPLMaster`,
-    PHOTO_ASSET_RECORD: `CPLAsset`,
-    PHOTO_ALBUM_RECORD: `CPLAlbum`,
-    CONTAINER_RELATION: `CPLContainerRelation`, // Useless at the moment
-    PHOTO_RECORDS: `CPLContainerRelationLiveByPosition`, // Record
-    ALBUM_RECORDS: `CPLAlbumByPositionLive`,
-    INDEX_COUNT: `HyperionIndexCountLookup`,
-    ALL_PHOTOS: `CPLAssetAndMasterByAddedDate`,
+    "PHOTO_MASTER_RECORD": `CPLMaster`,
+    "PHOTO_ASSET_RECORD": `CPLAsset`,
+    "PHOTO_ALBUM_RECORD": `CPLAlbum`,
+    "CONTAINER_RELATION": `CPLContainerRelation`, // Useless at the moment
+    "PHOTO_RECORDS": `CPLContainerRelationLiveByPosition`, // Record
+    "ALBUM_RECORDS": `CPLAlbumByPositionLive`,
+    "INDEX_COUNT": `HyperionIndexCountLookup`,
+    "ALL_PHOTOS": `CPLAssetAndMasterByAddedDate`,
 };
 
 /**
  * All relevant desired keys as provided to the backend
  */
 export const DESIRED_KEYS = {
-    RECORD_NAME: `recordName`,
-    IS_DELETED: `isDeleted`,
-    ORIGINAL_RESOURCE: `resOriginalRes`,
-    ORIGINAL_RESOURCE_FILE_TYPE: `resOriginalFileType`,
-    JPEG_RESOURCE: `resJPEGFullRes`,
-    JPEG_RESOURCE_FILE_TYPE: `resJPEGFullFileType`,
-    VIDEO_RESOURCE: `resVidFullRes`,
-    VIDEO_RESOURCE_FILE_TYPE: `resVidFullFileType`,
-    ENCODED_FILE_NAME: `filenameEnc`,
-    FAVORITE: `isFavorite`,
-    IS_HIDDEN: `isHidden`,
-    ADJUSTMENT_TYPE: `adjustmentType`,
-    MASTER_REF: `masterRef`,
+    "RECORD_NAME": `recordName`,
+    "IS_DELETED": `isDeleted`,
+    "ORIGINAL_RESOURCE": `resOriginalRes`,
+    "ORIGINAL_RESOURCE_FILE_TYPE": `resOriginalFileType`,
+    "JPEG_RESOURCE": `resJPEGFullRes`,
+    "JPEG_RESOURCE_FILE_TYPE": `resJPEGFullFileType`,
+    "VIDEO_RESOURCE": `resVidFullRes`,
+    "VIDEO_RESOURCE_FILE_TYPE": `resVidFullFileType`,
+    "ENCODED_FILE_NAME": `filenameEnc`,
+    "FAVORITE": `isFavorite`,
+    "IS_HIDDEN": `isHidden`,
+    "ADJUSTMENT_TYPE": `adjustmentType`,
+    "MASTER_REF": `masterRef`,
     // Folder keys for parsing
-    ALBUM_TYPE: `albumType`,
-    ENCODED_ALBUM_NAME: `albumNameEnc`,
-    PARENT_ID: `parentId`,
+    "ALBUM_TYPE": `albumType`,
+    "ENCODED_ALBUM_NAME": `albumNameEnc`,
+    "PARENT_ID": `parentId`,
 };
 
 /**
@@ -65,11 +65,11 @@ export const QUERY_KEYS = [
  */
 export function getParentFilterforParentId(parentId: string): any {
     return {
-        fieldName: `parentId`,
-        comparator: `EQUALS`,
-        fieldValue: {
-            value: parentId,
-            type: `STRING`,
+        "fieldName": `parentId`,
+        "comparator": `EQUALS`,
+        "fieldValue": {
+            "value": parentId,
+            "type": `STRING`,
         },
     };
 }
@@ -81,11 +81,11 @@ export function getParentFilterforParentId(parentId: string): any {
  */
 export function getDirectionFilterForDirection(direction: string = `ASCENDING`): any {
     return {
-        fieldName: `direction`,
-        comparator: `EQUALS`,
-        fieldValue: {
-            value: direction,
-            type: `STRING`,
+        "fieldName": `direction`,
+        "comparator": `EQUALS`,
+        "fieldValue": {
+            "value": direction,
+            "type": `STRING`,
         },
     };
 }
@@ -97,11 +97,11 @@ export function getDirectionFilterForDirection(direction: string = `ASCENDING`):
  */
 export function getStartRankFilterForStartRank(startRank: number): any {
     return {
-        fieldName: `startRank`,
-        comparator: `EQUALS`,
-        fieldValue: {
-            value: startRank,
-            type: `INT64`,
+        "fieldName": `startRank`,
+        "comparator": `EQUALS`,
+        "fieldValue": {
+            "value": startRank,
+            "type": `INT64`,
         },
     };
 }
@@ -114,29 +114,29 @@ export function getStartRankFilterForStartRank(startRank: number): any {
 export function getIndexCountFilter(parentId?: string): any {
     if (parentId) {
         return {
-            fieldName: `indexCountID`,
-            comparator: `IN`,
-            fieldValue: {
-                value: [`CPLContainerRelationNotDeletedByAssetDate:${parentId}`],
-                type: `STRING_LIST`,
+            "fieldName": `indexCountID`,
+            "comparator": `IN`,
+            "fieldValue": {
+                "value": [`CPLContainerRelationNotDeletedByAssetDate:${parentId}`],
+                "type": `STRING_LIST`,
             },
         };
     }
 
     return {
-        fieldName: `indexCountID`,
-        comparator: `IN`,
-        fieldValue: {
-            value: [`CPLAssetByAssetDateWithoutHiddenOrDeleted`],
-            type: `STRING_LIST`,
+        "fieldName": `indexCountID`,
+        "comparator": `IN`,
+        "fieldValue": {
+            "value": [`CPLAssetByAssetDateWithoutHiddenOrDeleted`],
+            "type": `STRING_LIST`,
         },
     };
 }
 
 export function getIsDeletedField(_value: number = 1): any {
     return {
-        isDeleted: {
-            value: _value,
+        "isDeleted": {
+            "value": _value,
         },
     };
 }

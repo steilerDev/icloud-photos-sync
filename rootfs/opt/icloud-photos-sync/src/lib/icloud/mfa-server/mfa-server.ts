@@ -134,7 +134,7 @@ export class MFAServer extends EventEmitter {
      */
     sendResponse(res: http.ServerResponse, code: number, msg: string) {
         res.writeHead(code, {"Content-Type": `application/json`});
-        res.end(JSON.stringify({message: msg}));
+        res.end(JSON.stringify({"message": msg}));
     }
 
     /**

@@ -36,13 +36,13 @@ export class PhotosLibrary {
         this.photoDataDir = cliOpts.dataDir;
         if (!fs.existsSync(this.photoDataDir)) {
             this.logger.debug(`${this.photoDataDir} does not exist, creating`);
-            fs.mkdirSync(this.photoDataDir, {recursive: true});
+            fs.mkdirSync(this.photoDataDir, {"recursive": true});
         }
 
         this.assetDir = path.join(this.photoDataDir, PHOTOS_LIBRARY.ASSET_DIR);
         if (!fs.existsSync(this.assetDir)) {
             this.logger.debug(`${this.assetDir} does not exist, creating`);
-            fs.mkdirSync(this.assetDir, {recursive: true});
+            fs.mkdirSync(this.assetDir, {"recursive": true});
         }
     }
 
@@ -56,14 +56,14 @@ export class PhotosLibrary {
             .forEach(fileName => {
                 try {
                     const fileStat = fs.statSync(path.format({
-                        dir: this.assetDir,
-                        base: fileName,
+                        "dir": this.assetDir,
+                        "base": fileName,
                     }));
                     const asset = Asset.fromFile(fileName, fileStat);
                     libAssets[asset.getUUID()] = asset;
                     this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
-                } catch(err) {
-                    this.logger.warn(`Ignoring invalid file: ${fileName} (${err.message})`)
+                } catch (err) {
+                    this.logger.warn(`Ignoring invalid file: ${fileName} (${err.message})`);
                 }
             });
         return libAssets;
@@ -99,7 +99,7 @@ export class PhotosLibrary {
         this.logger.info(`Loading album ${album.getDisplayName()}`);
 
         const symbolicLinks = (await fs.promises.readdir(album.albumPath, {
-            withFileTypes: true,
+            "withFileTypes": true,
         })).filter(file => file.isSymbolicLink());
 
         this.logger.debug(`Found ${symbolicLinks.length} symbolic links in ${album.getDisplayName()}`);
@@ -139,12 +139,12 @@ export class PhotosLibrary {
     async readAlbumTypeFromPath(path: string): Promise<AlbumType> {
         // If the folder contains other folders, it will be of AlbumType.Folder
         const directoryPresent = (await fs.promises.readdir(path, {
-            withFileTypes: true,
+            "withFileTypes": true,
         })).some(file => file.isDirectory());
 
         // If there are files in the folders, the folder is treated as archived
         const filePresent = (await fs.promises.readdir(path, {
-            withFileTypes: true,
+            "withFileTypes": true,
         })).filter(file => !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name)) // Filter out files that are safe to ignore
             .some(file => file.isFile());
 
@@ -182,7 +182,7 @@ export class PhotosLibrary {
 
     async deleteAsset(asset: Asset): Promise<void> {
         this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
-        return fs.promises.rm(asset.getAssetFilePath(this.assetDir), {force: true});
+        return fs.promises.rm(asset.getAssetFilePath(this.assetDir), {"force": true});
     }
 
     /**

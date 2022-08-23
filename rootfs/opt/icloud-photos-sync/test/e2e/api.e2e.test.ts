@@ -1,5 +1,5 @@
 import mockfs from 'mock-fs';
-import {describe, expect, test, jest, beforeAll, afterAll} from '@jest/globals';
+import {describe, expect, test, jest, beforeEach, afterEach} from '@jest/globals';
 import {iCloud} from '../../src/lib/icloud/icloud.js';
 import crypto from 'crypto';
 
@@ -15,39 +15,36 @@ import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
 
-beforeAll(() => {
-    mockfs({
-        [appDataDir]: {},
-    });
-});
 
-afterAll(() => {
-    mockfs.restore();
-});
+
+const username = process.env.APPLE_ID_USER;
+const password = process.env.APPLE_ID_PWD;
+const token = process.env.TRUST_TOKEN;
+
+let icloud: iCloud;
 
 describe(`API E2E Tests`, () => {
-    const username = process.env.APPLE_ID_USER;
-    const password = process.env.APPLE_ID_PWD;
-    const token = process.env.TRUST_TOKEN;
 
-    let icloud: iCloud;
+    beforeEach(() => {
+        mockfs({
+            [appDataDir]: {},
+        });
+    });
 
-    test(`API variables present`, () => {
-        expect(username).toBeDefined();
-        expect(password).toBeDefined();
-        expect(token).toBeDefined();
+    afterEach(() => {
+        mockfs.restore();
     });
 
     // Not running API tests on github for now, as the MFA token is not portable
-    if (!process.env.CI) {
+    if (!process.env.CI && username && password && token) {
         describe(`Login flow`, () => {
             test(`Login flow`, async () => {
                 const cliOpts = {
                     username,
                     password,
-                    trustToken: token,
-                    dataDir: appDataDir,
-                    failOnMfa: true,
+                    "trustToken": token,
+                    "dataDir": appDataDir,
+                    "failOnMfa": true,
                 };
                 icloud = new iCloud(cliOpts);
                 await expect(icloud.authenticate()).resolves.not.toThrow();
@@ -57,8 +54,8 @@ describe(`API E2E Tests`, () => {
                 const cliOpts = {
                     username,
                     password,
-                    dataDir: appDataDir,
-                    failOnMfa: true,
+                    "dataDir": appDataDir,
+                    "failOnMfa": true,
                 };
                 const _icloud = new iCloud(cliOpts);
                 await expect(_icloud.authenticate()).rejects.toMatch(`MFA code required, failing due to failOnMfa flag`);
@@ -152,7 +149,7 @@ describe(`API E2E Tests`, () => {
                 await icloud.ready;
                 // Defining the asset
                 const assetRecordName = `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`;
-                const assetHash = `tplrgnWiXEttU0xmKPzRWhUMrtE=`;
+                const assetHash = `tplrgnWiXEttU0xmKPzRWhUMrtE=`; // pre-calculated
                 const asset = new Asset(assetRecordName,
                     170384,
                     FileType.fromAssetType(`public.jpeg`),
@@ -189,5 +186,9 @@ describe(`API E2E Tests`, () => {
 
             // Cant really do this: test.todo(`Delete a record - How to restore state afterwards??`);
         });
+    } else {
+        test(`Not executing API test, due to automated run`, () => {
+            expect(true).toBe(true)
+        })
     }
 });

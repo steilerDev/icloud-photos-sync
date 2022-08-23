@@ -14,11 +14,11 @@ export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0
  * Client information shared with the iCloud backend
  */
 export const CLIENT_INFO = JSON.stringify({
-    U: USER_AGENT,
-    L: `en-US`,
-    Z: `GMT+01:00`,
-    V: `1.1`,
-    F: ``,
+    "U": USER_AGENT,
+    "L": `en-US`,
+    "Z": `GMT+01:00`,
+    "V": `1.1`,
+    "F": ``,
 });
 
 /**
@@ -26,10 +26,10 @@ export const CLIENT_INFO = JSON.stringify({
  */
 export const DEFAULT_AUTH_HEADER = {
     'User-Agent': USER_AGENT,
-    Accept: `application/json`,
-    Connection: `keep-alive`,
-    Origin: `https://idmsa.apple.com`,
-    Referer: `https://idmsa.apple.com/`,
+    "Accept": `application/json`,
+    "Connection": `keep-alive`,
+    "Origin": `https://idmsa.apple.com`,
+    "Referer": `https://idmsa.apple.com/`,
     'Accept-Encoding': `gzip, deflate, br`,
     'Content-Type': `application/json`,
     'X-Apple-Widget-Key': CLIENT_ID,
@@ -45,9 +45,9 @@ export const DEFAULT_AUTH_HEADER = {
  */
 export const DEFAULT_HEADER = {
     'User-Agent': USER_AGENT,
-    Accept: `application/json`,
+    "Accept": `application/json`,
     'Content-Type': `application/json`,
-    Origin: `https://www.icloud.com`,
+    "Origin": `https://www.icloud.com`,
 };
 
 /**
@@ -78,21 +78,21 @@ export enum EVENTS {
  * List of endpoints, required by the iCloud class
  */
 export const ENPOINT = {
-    AUTH: {
-        BASE: `https://idmsa.apple.com/appleauth/auth`,
-        PATH: {
-            SIGNIN: `/signin`,
-            MFA: {
-                DEVICE: `/verify/trusteddevice`,
-                PHONE: `/verify/phone`,
+    "AUTH": {
+        "BASE": `https://idmsa.apple.com/appleauth/auth`,
+        "PATH": {
+            "SIGNIN": `/signin`,
+            "MFA": {
+                "DEVICE": `/verify/trusteddevice`,
+                "PHONE": `/verify/phone`,
             },
-            TRUST: `/2sv/trust`,
+            "TRUST": `/2sv/trust`,
         },
     },
-    SETUP: {
-        BASE: `https://setup.icloud.com`,
-        PATH: {
-            ACCOUNT: `/setup/ws/1/accountLogin`,
+    "SETUP": {
+        "BASE": `https://setup.icloud.com`,
+        "PATH": {
+            "ACCOUNT": `/setup/ws/1/accountLogin`,
         },
     },
 };
@@ -101,13 +101,13 @@ export const ENPOINT = {
  * Pre-composing URLs, required by iCloud class
  */
 export const URL = {
-    SIGNIN: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.SIGNIN}`,
-    MFA_DEVICE: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.DEVICE}/securitycode`, // Maybe??
-    MFA_DEVICE_ENTER: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.DEVICE}/securitycode`,
-    MFA_PHONE: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.PHONE}`,
-    MFA_PHONE_ENTER: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.PHONE}/securitycode`,
-    TRUST: `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.TRUST}`,
-    SETUP: `${ENPOINT.SETUP.BASE}${ENPOINT.SETUP.PATH.ACCOUNT}`,
+    "SIGNIN": `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.SIGNIN}`,
+    "MFA_DEVICE": `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.DEVICE}/securitycode`, // Maybe??
+    "MFA_DEVICE_ENTER": `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.DEVICE}/securitycode`,
+    "MFA_PHONE": `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.PHONE}`,
+    "MFA_PHONE_ENTER": `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.MFA.PHONE}/securitycode`,
+    "TRUST": `${ENPOINT.AUTH.BASE}${ENPOINT.AUTH.PATH.TRUST}`,
+    "SETUP": `${ENPOINT.SETUP.BASE}${ENPOINT.SETUP.PATH.ACCOUNT}`,
 };
 
 /**

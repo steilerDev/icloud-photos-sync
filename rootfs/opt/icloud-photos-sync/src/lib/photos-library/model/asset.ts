@@ -153,7 +153,7 @@ export class Asset implements PEntity<Asset> {
     getAssetFilePath(dir: string) {
         return path.format({
             dir,
-            name: this.getAssetFilename(),
+            "name": this.getAssetFilename(),
         });
     }
 
@@ -163,8 +163,8 @@ export class Asset implements PEntity<Asset> {
      */
     getAssetFilename(): string {
         return path.format({
-            name: Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
-            ext: this.fileType.getExtension(),
+            "name": Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
+            "ext": this.fileType.getExtension(),
         });
     }
 
@@ -174,8 +174,8 @@ export class Asset implements PEntity<Asset> {
      */
     getPrettyFilename(): string {
         return path.format({
-            name: this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``),
-            ext: this.fileType.getExtension(),
+            "name": this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``),
+            "ext": this.fileType.getExtension(),
         });
     }
 

@@ -13,7 +13,7 @@ export async function writeAssets(this: SyncEngine, processingQueue: PLibraryPro
     const toBeDeleted = processingQueue[0];
     const toBeAdded = processingQueue[1];
     // Initializing sync queue
-    this.downloadQueue = new PQueue({concurrency: this.downloadCCY});
+    this.downloadQueue = new PQueue({"concurrency": this.downloadCCY});
 
     this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
 

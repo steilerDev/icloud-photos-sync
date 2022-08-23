@@ -114,8 +114,8 @@ export class iCloudAuth {
         this.iCloudAccountSecrets.username = username;
         this.iCloudAccountSecrets.password = password;
         this.trustTokenFile = path.format({
-            dir: appDataDir,
-            base: ICLOUD.TRUST_TOKEN_FILE_NAME,
+            "dir": appDataDir,
+            "base": ICLOUD.TRUST_TOKEN_FILE_NAME,
         });
         if (!trustToken) {
             this.loadTrustToken();
@@ -130,7 +130,7 @@ export class iCloudAuth {
     loadTrustToken() {
         this.logger.debug(`Trying to load trust token from disk`);
         try {
-            const trustToken = readFileSync(this.trustTokenFile, {encoding: ICLOUD.TRUST_TOKEN_FILE_ENCODING});
+            const trustToken = readFileSync(this.trustTokenFile, {"encoding": ICLOUD.TRUST_TOKEN_FILE_ENCODING});
             this.logger.debug(`Acquired trust token from file: ${trustToken}`);
             this.iCloudAccountTokens.trustToken = trustToken;
         } catch (err) {
@@ -145,11 +145,11 @@ export class iCloudAuth {
         this.logger.debug(`Trying to persist trust token to disk`);
 
         const trustTokenPath = path.dirname(this.trustTokenFile);
-        return mkdir(trustTokenPath, {recursive: true})
+        return mkdir(trustTokenPath, {"recursive": true})
             .catch(err => {
                 this.logger.warn(`Unable to create trust token directory (${trustTokenPath}): ${err}`);
             })
-            .then(() => writeFile(this.trustTokenFile, this.iCloudAccountTokens.trustToken, {encoding: ICLOUD.TRUST_TOKEN_FILE_ENCODING}))
+            .then(() => writeFile(this.trustTokenFile, this.iCloudAccountTokens.trustToken, {"encoding": ICLOUD.TRUST_TOKEN_FILE_ENCODING}))
             .catch(err => {
                 this.logger.warn(`Unable to persist trust token to disk: ${err}`);
             });
@@ -189,9 +189,9 @@ export class iCloudAuth {
     getMFAHeaders(): any {
         this.validateAuthSecrets();
         return {...ICLOUD.DEFAULT_AUTH_HEADER,
-            scnt: this.iCloudAuthSecrets.scnt,
+            "scnt": this.iCloudAuthSecrets.scnt,
             'X-Apple-ID-Session-Id': this.iCloudAuthSecrets.sessionId,
-            Cookie: `aasp=${this.iCloudAuthSecrets.aasp}`,
+            "Cookie": `aasp=${this.iCloudAuthSecrets.aasp}`,
         };
     }
     /* c8 ignore stop */
@@ -218,8 +218,8 @@ export class iCloudAuth {
      */
     getSetupData(): any {
         return {
-            dsWebAuthToken: this.iCloudAccountTokens.sessionToken,
-            trustToken: this.iCloudAccountTokens.trustToken,
+            "dsWebAuthToken": this.iCloudAccountTokens.sessionToken,
+            "trustToken": this.iCloudAccountTokens.trustToken,
         };
     }
 
@@ -254,7 +254,7 @@ export class iCloudAuth {
      */
     getPhotosHeader(): any {
         return {...ICLOUD.DEFAULT_HEADER,
-            Cookie: this.getCookiesHeaderString(),
+            "Cookie": this.getCookiesHeaderString(),
         };
     }
 

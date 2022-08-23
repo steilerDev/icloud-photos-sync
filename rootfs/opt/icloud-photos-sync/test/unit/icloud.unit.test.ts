@@ -34,11 +34,11 @@ describe(`Unit Tests - iCloud (not covered by API tests)`, () => {
 
     test(`Process valid request & write new token to file`, async () => {
         const response = {
-            data: {},
-            status: 0,
-            statusText: ``,
-            config: {},
-            headers: {
+            "data": {},
+            "status": 0,
+            "statusText": ``,
+            "config": {},
+            "headers": {
                 [ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()]: testSessionToken,
                 [ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN.toLowerCase()]: testTrustToken2,
             },
@@ -51,11 +51,11 @@ describe(`Unit Tests - iCloud (not covered by API tests)`, () => {
 
     test(`Process invalid request & don't update file`, async () => {
         const response = {
-            data: {},
-            status: 0,
-            statusText: ``,
-            config: {},
-            headers: {},
+            "data": {},
+            "status": 0,
+            "statusText": ``,
+            "config": {},
+            "headers": {},
         };
         const icloudAuth = new iCloudAuth(`testuser@steilerdev.de`, `testpassword`, testTrustToken1, appDataDir);
         expect.assertions(2);

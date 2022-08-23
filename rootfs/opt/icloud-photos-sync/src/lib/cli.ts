@@ -11,9 +11,9 @@ import {getLogger} from './logger.js';
 import {ArchiveEngine} from './archive-engine/archive-engine.js';
 
 export const CLIInterfaceCommand = {
-    archive: `archive`,
-    sync: `sync`,
-    token: `token`,
+    "archive": `archive`,
+    "sync": `sync`,
+    "token": `token`,
 };
 
 export class CLIInterface {
@@ -39,10 +39,10 @@ export class CLIInterface {
      */
     constructor(cliOpts: OptionValues, iCloud: iCloud, syncEngine: SyncEngine) {
         this.progressBar = new SingleBar({
-            etaAsynchronousUpdate: true,
-            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
-            barCompleteChar: `\u25A0`,
-            barIncompleteChar: ` `,
+            "etaAsynchronousUpdate": true,
+            "format": ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
+            "barCompleteChar": `\u25A0`,
+            "barIncompleteChar": ` `,
         });
 
         // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on logToCli)

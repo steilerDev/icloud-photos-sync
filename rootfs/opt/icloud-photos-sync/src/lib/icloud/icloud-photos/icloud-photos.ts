@@ -49,10 +49,10 @@ export class iCloudPhotos extends EventEmitter {
         this.logger.debug(`Getting iCloud Photos account information`);
 
         const config: AxiosRequestConfig = {
-            headers: this.auth.getPhotosHeader(),
-            params: {
-                getCurrentSyncToken: `True`,
-                remapEnums: `True`,
+            "headers": this.auth.getPhotosHeader(),
+            "params": {
+                "getCurrentSyncToken": `True`,
+                "remapEnums": `True`,
             },
         };
 
@@ -104,17 +104,17 @@ export class iCloudPhotos extends EventEmitter {
     performQuery(recordType: string, callback: (res: AxiosResponse<any, any>) => void) {
         this.auth.validatePhotosAccount();
         const config: AxiosRequestConfig = {
-            headers: this.auth.getPhotosHeader(),
+            "headers": this.auth.getPhotosHeader(),
         };
 
         const data = {
-            query: {
-                recordType: `${recordType}`,
+            "query": {
+                "recordType": `${recordType}`,
             },
-            zoneID: {
-                ownerRecordName: this.auth.iCloudPhotosAccount.ownerName,
-                zoneName: this.auth.iCloudPhotosAccount.zoneName,
-                zoneType: this.auth.iCloudPhotosAccount.zoneType,
+            "zoneID": {
+                "ownerRecordName": this.auth.iCloudPhotosAccount.ownerName,
+                "zoneName": this.auth.iCloudPhotosAccount.zoneName,
+                "zoneType": this.auth.iCloudPhotosAccount.zoneType,
             },
         };
 
@@ -136,20 +136,20 @@ export class iCloudPhotos extends EventEmitter {
     async performPromiseQuery(recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
         this.auth.validatePhotosAccount();
         const config: AxiosRequestConfig = {
-            headers: this.auth.getPhotosHeader(),
-            params: {
-                remapEnums: `True`,
+            "headers": this.auth.getPhotosHeader(),
+            "params": {
+                "remapEnums": `True`,
             },
         };
 
         const data: any = {
-            query: {
-                recordType: `${recordType}`,
+            "query": {
+                "recordType": `${recordType}`,
             },
-            zoneID: {
-                ownerRecordName: this.auth.iCloudPhotosAccount.ownerName,
-                zoneName: this.auth.iCloudPhotosAccount.zoneName,
-                zoneType: this.auth.iCloudPhotosAccount.zoneType,
+            "zoneID": {
+                "ownerRecordName": this.auth.iCloudPhotosAccount.ownerName,
+                "zoneName": this.auth.iCloudPhotosAccount.zoneName,
+                "zoneType": this.auth.iCloudPhotosAccount.zoneType,
             },
         };
 
@@ -176,29 +176,29 @@ export class iCloudPhotos extends EventEmitter {
     async performPromiseOperation(operationType: string, recordName: string, _fields: any) {
         this.auth.validatePhotosAccount();
         const config: AxiosRequestConfig = {
-            headers: this.auth.getPhotosHeader(),
-            params: {
-                remapEnums: `True`,
+            "headers": this.auth.getPhotosHeader(),
+            "params": {
+                "remapEnums": `True`,
             },
         };
 
         const data: any = {
-            operations: [
+            "operations": [
                 {
-                    operationType: `${operationType}`,
-                    record: {
-                        recordName: `${recordName}`,
-                        recordType: `CPLAsset`,
-                        fields: _fields,
+                    "operationType": `${operationType}`,
+                    "record": {
+                        "recordName": `${recordName}`,
+                        "recordType": `CPLAsset`,
+                        "fields": _fields,
                     },
                 },
             ],
-            zoneID: {
-                ownerRecordName: this.auth.iCloudPhotosAccount.ownerName,
-                zoneName: this.auth.iCloudPhotosAccount.zoneName,
-                zoneType: this.auth.iCloudPhotosAccount.zoneType,
+            "zoneID": {
+                "ownerRecordName": this.auth.iCloudPhotosAccount.ownerName,
+                "zoneName": this.auth.iCloudPhotosAccount.zoneName,
+                "zoneType": this.auth.iCloudPhotosAccount.zoneType,
             },
-            atomic: true,
+            "atomic": true,
         };
         const deletedRecords = (await axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config)).data.records;
         if (!deletedRecords || !Array.isArray(deletedRecords)) {
@@ -438,8 +438,8 @@ export class iCloudPhotos extends EventEmitter {
         this.logger.debug(`Starting download of asset ${asset.fileChecksum}`);
 
         const config: AxiosRequestConfig = {
-            headers: this.auth.getPhotosHeader(),
-            responseType: `stream`,
+            "headers": this.auth.getPhotosHeader(),
+            "responseType": `stream`,
         };
 
         return axios.get(

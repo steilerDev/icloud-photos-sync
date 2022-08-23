@@ -19,11 +19,11 @@ export const PATHS = {
     /**
      * Base Path (between Domain & EXT)
      */
-    BASE_PATH: `/database/1/com.apple.photos.cloud/production/private`,
-    EXT: {
-        QUERY: `/records/query`,
-        MODIFY: `/records/modify`,
-        LIST: `/zones/list`,
+    "BASE_PATH": `/database/1/com.apple.photos.cloud/production/private`,
+    "EXT": {
+        "QUERY": `/records/query`,
+        "MODIFY": `/records/modify`,
+        "LIST": `/zones/list`,
     },
 };
 

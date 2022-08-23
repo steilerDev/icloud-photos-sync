@@ -26,15 +26,15 @@ export function sortByRecordName(a: any, b: any): number {
  */
 export function postProcessMasterData(a: CPLMaster): any {
     return {
-        filenameEnc: a.filenameEnc,
-        modified: a.modified,
-        recordName: a.recordName,
-        resource: {
-            fileChecksum: a.resource.fileChecksum,
-            referenceChecksum: a.resource.referenceChecksum,
-            size: a.resource.size,
-            wrappingKey: a.resource.wrappingKey,
-            resourceType: a.resourceType,
+        "filenameEnc": a.filenameEnc,
+        "modified": a.modified,
+        "recordName": a.recordName,
+        "resource": {
+            "fileChecksum": a.resource.fileChecksum,
+            "referenceChecksum": a.resource.referenceChecksum,
+            "size": a.resource.size,
+            "wrappingKey": a.resource.wrappingKey,
+            "resourceType": a.resourceType,
         },
     };
 }
@@ -46,19 +46,19 @@ export function postProcessMasterData(a: CPLMaster): any {
  */
 export function postProcessAssetData(a: CPLAsset): any {
     const asset: any = {
-        favorite: a.favorite,
-        masterRef: a.masterRef,
-        modified: a.modified,
-        recordName: a.recordName,
+        "favorite": a.favorite,
+        "masterRef": a.masterRef,
+        "modified": a.modified,
+        "recordName": a.recordName,
     };
     if (a.resource) {
         asset.adjustmentType = a.adjustmentType;
         asset.resourceType = a.resourceType;
         asset.resource = {
-            fileChecksum: a.resource.fileChecksum,
-            referenceChecksum: a.resource.referenceChecksum,
-            size: a.resource.size,
-            wrappingKey: a.resource.wrappingKey,
+            "fileChecksum": a.resource.fileChecksum,
+            "referenceChecksum": a.resource.referenceChecksum,
+            "size": a.resource.size,
+            "wrappingKey": a.resource.wrappingKey,
         };
     }
 
@@ -72,12 +72,12 @@ export function postProcessAssetData(a: CPLAsset): any {
  */
 export async function postProcessAlbumData(a: CPLAlbum): Promise<any> {
     return {
-        albumNameEnc: a.albumNameEnc,
-        albumType: a.albumType,
-        assets: await a?.assets,
-        modified: a.modified,
-        parentId: a.parentId,
-        recordName: a.recordName,
+        "albumNameEnc": a.albumNameEnc,
+        "albumType": a.albumType,
+        "assets": await a?.assets,
+        "modified": a.modified,
+        "parentId": a.parentId,
+        "recordName": a.recordName,
     };
 }
 

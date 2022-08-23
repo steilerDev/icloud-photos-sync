@@ -53,7 +53,7 @@ export function addAlbum(this: SyncEngine, album: Album) {
         } else {
             // Creating album
             this.logger.debug(`Creating folder ${albumPath}`);
-            fs.mkdirSync(albumPath, {recursive: true});
+            fs.mkdirSync(albumPath, {"recursive": true});
             // Symlinking to correctly named album
             this.logger.debug(`Linking ${relativeAlbumPath} to ${linkedAlbum}`);
             fs.symlinkSync(relativeAlbumPath, linkedAlbum);
@@ -62,12 +62,12 @@ export function addAlbum(this: SyncEngine, album: Album) {
         if (album.albumType === AlbumType.ALBUM) { // Only need to link assets, if we are in an album!
             Object.keys(album.assets).forEach(assetUUID => {
                 const linkedAsset = path.format({
-                    dir: albumPath,
-                    base: album.assets[assetUUID],
+                    "dir": albumPath,
+                    "base": album.assets[assetUUID],
                 });
                 const assetPath = path.format({
-                    dir: this.photosLibrary.assetDir,
-                    base: assetUUID,
+                    "dir": this.photosLibrary.assetDir,
+                    "base": assetUUID,
                 });
                 // Getting asset time, in order to update link as well
                 const assetTime = fs.statSync(assetPath).mtime;
@@ -100,7 +100,7 @@ export function deleteAlbum(this: SyncEngine, album: Album) {
     this.logger.debug(`Deleting folder ${album.getDisplayName()}`);
     const albumPath = this.findAlbum(album.getUUID());
     const linkedPath = path.normalize(`${albumPath}/../${album.getSanitizedFilename()}`); // The linked folder is one layer below
-    const pathContent = fs.readdirSync(albumPath, {withFileTypes: true})
+    const pathContent = fs.readdirSync(albumPath, {"withFileTypes": true})
         .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
     if (pathContent.length > 0) {
         this.logger.warn(`Unable to delete album ${album.getDisplayName()}: Album in path ${path} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
@@ -111,7 +111,7 @@ export function deleteAlbum(this: SyncEngine, album: Album) {
             if (this.dryRun) {
                 this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Deleting folder ${albumPath} & link ${linkedPath}`);
             } else {
-                fs.rmSync(albumPath, {recursive: true});
+                fs.rmSync(albumPath, {"recursive": true});
                 fs.unlinkSync(linkedPath);
             }
         } catch (err) {
@@ -142,7 +142,7 @@ export function findAlbum(this: SyncEngine, albumUUID: string) {
 export function findAlbumInPath(this: SyncEngine, albumUUID: string, rootPath: string): string {
     this.logger.trace(`Checking ${rootPath} for folder ${albumUUID}`);
     // Get all folders in the path
-    const foldersInPath = fs.readdirSync(rootPath, {withFileTypes: true}).filter(dirent => dirent.isDirectory());
+    const foldersInPath = fs.readdirSync(rootPath, {"withFileTypes": true}).filter(dirent => dirent.isDirectory());
 
     // See if the searched folder is in the path
     const filteredFolder = foldersInPath.filter(folder => folder.name === `.${albumUUID}`); // Since the folder is hidden, a dot is prefacing it

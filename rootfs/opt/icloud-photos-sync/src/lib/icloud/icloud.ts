@@ -120,16 +120,16 @@ export class iCloud extends EventEmitter {
         this.auth.validateAccountSecrets();
 
         const config: AxiosRequestConfig = {
-            headers: ICLOUD.DEFAULT_AUTH_HEADER,
-            params: {
-                isRememberMeEnabled: true,
+            "headers": ICLOUD.DEFAULT_AUTH_HEADER,
+            "params": {
+                "isRememberMeEnabled": true,
             },
         };
 
         const data = {
-            accountName: this.auth.iCloudAccountSecrets.username,
-            password: this.auth.iCloudAccountSecrets.password,
-            trustTokens: [
+            "accountName": this.auth.iCloudAccountSecrets.username,
+            "password": this.auth.iCloudAccountSecrets.password,
+            "trustTokens": [
                 this.auth.iCloudAccountTokens.trustToken,
             ],
         };
@@ -181,7 +181,7 @@ export class iCloud extends EventEmitter {
         this.logger.info(`Resending MFA code with ${this.mfaMethod} and phone number id ${this.mfaPhoneNumberId}`);
 
         const config: AxiosRequestHeaders = {
-            headers: this.auth.getMFAHeaders(),
+            "headers": this.auth.getMFAHeaders(),
         };
 
         let data = {};
@@ -189,19 +189,19 @@ export class iCloud extends EventEmitter {
         switch (this.mfaMethod) {
         case ICLOUD.MFAMethod.VOICE:
             data = {
-                phoneNumber: {
-                    id: this.mfaPhoneNumberId,
+                "phoneNumber": {
+                    "id": this.mfaPhoneNumberId,
                 },
-                mode: `voice`,
+                "mode": `voice`,
             };
             url = ICLOUD.URL.MFA_PHONE;
             break;
         case ICLOUD.MFAMethod.SMS:
             data = {
-                phoneNumber: {
-                    id: this.mfaPhoneNumberId,
+                "phoneNumber": {
+                    "id": this.mfaPhoneNumberId,
                 },
-                mode: `sms`,
+                "mode": `sms`,
             };
             url = ICLOUD.URL.MFA_PHONE;
             break;
@@ -245,7 +245,7 @@ export class iCloud extends EventEmitter {
         this.logger.info(`Authenticating MFA with code ${mfa}`);
 
         const config: AxiosRequestHeaders = {
-            headers: this.auth.getMFAHeaders(),
+            "headers": this.auth.getMFAHeaders(),
         };
 
         let data = {};
@@ -253,25 +253,25 @@ export class iCloud extends EventEmitter {
         switch (this.mfaMethod) {
         case ICLOUD.MFAMethod.VOICE:
             data = {
-                securityCode: {
-                    code: `${mfa}`,
+                "securityCode": {
+                    "code": `${mfa}`,
                 },
-                phoneNumber: {
-                    id: this.mfaPhoneNumberId,
+                "phoneNumber": {
+                    "id": this.mfaPhoneNumberId,
                 },
-                mode: `voice`,
+                "mode": `voice`,
             };
             url = ICLOUD.URL.MFA_PHONE_ENTER;
             break;
         case ICLOUD.MFAMethod.SMS:
             data = {
-                securityCode: {
-                    code: `${mfa}`,
+                "securityCode": {
+                    "code": `${mfa}`,
                 },
-                phoneNumber: {
-                    id: this.mfaPhoneNumberId,
+                "phoneNumber": {
+                    "id": this.mfaPhoneNumberId,
                 },
-                mode: `sms`,
+                "mode": `sms`,
             };
             url = ICLOUD.URL.MFA_PHONE_ENTER;
             break;
@@ -279,8 +279,8 @@ export class iCloud extends EventEmitter {
         case ICLOUD.MFAMethod.DEVICE:
             url = ICLOUD.URL.MFA_DEVICE_ENTER;
             data = {
-                securityCode: {
-                    code: `${mfa}`,
+                "securityCode": {
+                    "code": `${mfa}`,
                 },
             };
             break;
@@ -313,7 +313,7 @@ export class iCloud extends EventEmitter {
         this.logger.info(`Trusting device and acquiring trust tokens`);
 
         const config: AxiosRequestConfig = {
-            headers: this.auth.getMFAHeaders(),
+            "headers": this.auth.getMFAHeaders(),
         };
 
         axios.get(ICLOUD.URL.TRUST, config)
@@ -335,7 +335,7 @@ export class iCloud extends EventEmitter {
         this.auth.validateAccountTokens();
         this.logger.info(`Setting up iCloud connection`);
         const config: AxiosRequestConfig = {
-            headers: ICLOUD.DEFAULT_HEADER,
+            "headers": ICLOUD.DEFAULT_HEADER,
         };
 
         const data = this.auth.getSetupData();

@@ -10,14 +10,14 @@ const LOG_FILE_NAME = `.icloud-photos-sync.log`;
  * The list of loggers and their respective names
  */
 const LOGGER = {
-    iCloud: `i-Cloud`,
-    iCloudPhotos: `i-Cloud-Photos`,
-    iCloudAuth: `i-Cloud-Auth`,
-    MFAServer: `MFA-Server`,
-    PhotosLibrary: `Photos-Library`,
-    SyncEngine: `Sync-Engine`,
-    CLIInterface: `CLI-Interface`,
-    ArchiveEngine: `Archive-Engine`,
+    "iCloud": `i-Cloud`,
+    "iCloudPhotos": `i-Cloud-Photos`,
+    "iCloudAuth": `i-Cloud-Auth`,
+    "MFAServer": `MFA-Server`,
+    "PhotosLibrary": `Photos-Library`,
+    "SyncEngine": `Sync-Engine`,
+    "CLIInterface": `CLI-Interface`,
+    "ArchiveEngine": `Archive-Engine`,
 };
 
 /**
@@ -26,8 +26,8 @@ const LOGGER = {
  */
 export function setupLogger(cliOpts: OptionValues): void {
     const logFile = path.format({
-        dir: cliOpts.dataDir,
-        base: LOG_FILE_NAME,
+        "dir": cliOpts.dataDir,
+        "base": LOG_FILE_NAME,
     });
 
     if (fs.existsSync(logFile)) {

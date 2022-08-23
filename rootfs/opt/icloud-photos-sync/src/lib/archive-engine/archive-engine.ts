@@ -31,7 +31,7 @@ export class ArchiveEngine {
         }
 
         // Getting all items within the album
-        const albumItems = (await fs.readdir(archivePath, {withFileTypes: true}))
+        const albumItems = (await fs.readdir(archivePath, {"withFileTypes": true}))
             .filter(item => item.isSymbolicLink());
         // There should be more then one item in the album
         if (albumItems.length === 0) {
