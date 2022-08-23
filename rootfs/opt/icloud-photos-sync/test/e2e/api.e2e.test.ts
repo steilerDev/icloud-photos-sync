@@ -15,8 +15,6 @@ import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
 
-
-
 const username = process.env.APPLE_ID_USER;
 const password = process.env.APPLE_ID_PWD;
 const token = process.env.TRUST_TOKEN;
@@ -24,7 +22,6 @@ const token = process.env.TRUST_TOKEN;
 let icloud: iCloud;
 
 describe(`API E2E Tests`, () => {
-
     beforeEach(() => {
         mockfs({
             [appDataDir]: {},
@@ -149,7 +146,7 @@ describe(`API E2E Tests`, () => {
                 await icloud.ready;
                 // Defining the asset
                 const assetRecordName = `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`;
-                const assetHash = `tplrgnWiXEttU0xmKPzRWhUMrtE=`; // pre-calculated
+                const assetHash = `tplrgnWiXEttU0xmKPzRWhUMrtE=`; // Pre-calculated
                 const asset = new Asset(assetRecordName,
                     170384,
                     FileType.fromAssetType(`public.jpeg`),
@@ -188,7 +185,7 @@ describe(`API E2E Tests`, () => {
         });
     } else {
         test(`Not executing API test, due to automated run`, () => {
-            expect(true).toBe(true)
-        })
+            expect(true).toBe(true);
+        });
     }
 });
