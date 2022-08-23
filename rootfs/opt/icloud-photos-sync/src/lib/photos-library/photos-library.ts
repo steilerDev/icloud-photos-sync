@@ -36,13 +36,13 @@ export class PhotosLibrary {
         this.photoDataDir = cliOpts.dataDir;
         if (!fs.existsSync(this.photoDataDir)) {
             this.logger.debug(`${this.photoDataDir} does not exist, creating`);
-            fs.mkdirSync(this.photoDataDir);
+            fs.mkdirSync(this.photoDataDir, {recursive: true});
         }
 
         this.assetDir = path.join(this.photoDataDir, PHOTOS_LIBRARY.ASSET_DIR);
         if (!fs.existsSync(this.assetDir)) {
             this.logger.debug(`${this.assetDir} does not exist, creating`);
-            fs.mkdirSync(this.assetDir);
+            fs.mkdirSync(this.assetDir, {recursive: true});
         }
     }
 
@@ -54,13 +54,17 @@ export class PhotosLibrary {
         const libAssets: PLibraryEntities<Asset> = {};
         (await fs.promises.readdir(this.assetDir))
             .forEach(fileName => {
-                const fileStat = fs.statSync(path.format({
-                    dir: this.assetDir,
-                    base: fileName,
-                }));
-                const asset = Asset.fromFile(fileName, fileStat);
-                this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
-                libAssets[asset.getUUID()] = asset;
+                try {
+                    const fileStat = fs.statSync(path.format({
+                        dir: this.assetDir,
+                        base: fileName,
+                    }));
+                    const asset = Asset.fromFile(fileName, fileStat);
+                    libAssets[asset.getUUID()] = asset;
+                    this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
+                } catch(err) {
+                    this.logger.warn(`Ignoring invalid file: ${fileName} (${err.message})`)
+                }
             });
         return libAssets;
     }
