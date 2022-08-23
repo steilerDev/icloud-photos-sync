@@ -32,6 +32,21 @@ describe(`API E2E Tests`, () => {
         mockfs.restore();
     });
 
+    test(`Login flow without token & failOnMfa`, async () => {
+        const cliOpts = {
+            "username": username ?? `testuser@apple.com`,
+            "password": password ?? `test123`,
+            "dataDir": appDataDir,
+            "failOnMfa": true,
+        };
+        const _icloud = new iCloud(cliOpts);
+        if(username && password) {
+            await expect(_icloud.authenticate()).rejects.toMatch(`MFA code required, failing due to failOnMfa flag`);
+        } else {
+            await expect(_icloud.authenticate()).rejects.toMatch(`Unexpected HTTP code: 403`);
+        }
+    });
+
     // Not running API tests on github for now, as the MFA token is not portable
     if (!process.env.CI && username && password && token) {
         describe(`Login flow`, () => {
@@ -45,17 +60,6 @@ describe(`API E2E Tests`, () => {
                 };
                 icloud = new iCloud(cliOpts);
                 await expect(icloud.authenticate()).resolves.not.toThrow();
-            });
-
-            test(`Login flow without token & failOnMfa`, async () => {
-                const cliOpts = {
-                    username,
-                    password,
-                    "dataDir": appDataDir,
-                    "failOnMfa": true,
-                };
-                const _icloud = new iCloud(cliOpts);
-                await expect(_icloud.authenticate()).rejects.toMatch(`MFA code required, failing due to failOnMfa flag`);
             });
         });
 

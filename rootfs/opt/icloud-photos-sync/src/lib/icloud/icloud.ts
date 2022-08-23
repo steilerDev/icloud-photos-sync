@@ -154,7 +154,7 @@ export class iCloud extends EventEmitter {
                 }
 
                 if (res.status !== 409) {
-                    this.emit(ICLOUD.EVENTS.ERROR, `Unexpected HTTP code: ${res.status}, ${res.statusText}`);
+                    this.emit(ICLOUD.EVENTS.ERROR, `Unexpected HTTP code: ${res.status}`);
                     return;
                 }
 
