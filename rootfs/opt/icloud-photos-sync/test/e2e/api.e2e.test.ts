@@ -40,7 +40,7 @@ describe(`API E2E Tests`, () => {
             "failOnMfa": true,
         };
         const _icloud = new iCloud(cliOpts);
-        if(username && password) {
+        if (username && password) {
             await expect(_icloud.authenticate()).rejects.toMatch(`MFA code required, failing due to failOnMfa flag`);
         } else {
             await expect(_icloud.authenticate()).rejects.toMatch(`Unexpected HTTP code: 403`);
