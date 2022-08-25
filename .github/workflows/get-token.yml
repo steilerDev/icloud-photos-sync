@@ -1,0 +1,31 @@
+name: Get Token
+
+on: [workflow_dispatch]
+
+env:
+  PKG_NAME: icloud-photos-sync
+  NODE_VERSION: 18
+
+jobs:
+  build:
+    name: Build Project & Start SSH
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Setup node
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    - name: Build
+      run: |
+        npm run clean && \
+        npm install && \
+        npm run build
+      working-directory: rootfs/opt/icloud-photos-sync/
+    - name: Setup upterm session
+      uses: lhotari/action-upterm@v1
+      with:
+        limit-access-to-users: 'steilerDev'
+        upterm-server: ssh://uptermd.upterm.dev:22
+      working-directory: rootfs/opt/icloud-photos-sync/
