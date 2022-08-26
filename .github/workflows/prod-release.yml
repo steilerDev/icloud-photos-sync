@@ -1,0 +1,114 @@
+#Input: version
+#Build & Test
+#Create GH release with (https://github.com/ncipollo/release-action)
+
+
+name: Production Release
+# A manually triggered workflow to create a new release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Bump Version
+        default: v1.0.0
+        required: true
+
+env:
+  PKG_NAME: icloud-photos-sync
+  NODE_VERSION: 18
+
+jobs:
+  prepare-repo:
+    name: Prepares the repository for the version bump and commits a new version
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Version bump
+      run: |
+        echo "Using version ${{ inputs.version }}"
+#Get CHANGELOG.md & append it to CHANGELOG.history.md
+# Change package.json & src/package.ts
+    - name: Commit & Tag
+      uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: Version bump to ${{ inputs.version }}
+        commit_user_name: steilerDev # defaults to "github-actions[bot]"
+        commit_user_email: frank@steilerdev.de
+        tagging_message: ${{ inputs.version }}
+
+  build-workflow:
+    uses: ./.github/workflows/build.yml
+    with:
+      nodeVersion: ${{ env.NODE_VERSION }} 
+
+  publish-dockerhub:
+      name: Publish Project to Docker
+      needs: build-workflow
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: rootfs
+      - name: Login to DockerHub
+        run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
+      - name: Build the Docker image
+        run: docker build . --file Dockerfile --tag $PKG_NAME
+      - name: Tag the Docker image
+        run: |
+          docker image tag $PKG_NAME ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:latest && \
+          docker image tag $PKG_NAME ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:${{ inputs.version }} && \
+          docker image ls
+      - name: Push to DockerHub
+        run: docker image push --all-tags ${{secrets.DOCKER_USERNAME}}/$PKG_NAME
+      - name: Update DockerHub readme
+        uses: peter-evans/dockerhub-description@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PWD }}
+          repository: ${{secrets.DOCKER_USERNAME}}/${{env.PKG_NAME}}
+          readme-filepath: ./README.md
+
+    publish-npm:
+      name: Publish Project to npm
+      needs: build-workflow
+      runs-on: ubuntu-latest
+      steps:
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: npm-artifacts
+      - name: Prepare artifacts
+        run: |
+          tar -xzf npm.tar.gz && \
+          rm npm.tar.gz && \
+          npm install
+      - uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+    
+    publish-wiki:
+      name: Publish documentation to GitHub publish-wiki
+      needs: build-workflow
+      runs-on: ubuntu-latest
+      steps:
+        - name: Download artifacts
+          uses: actions/download-artifact@v2
+          with:
+            name: docs-artifacts
+        - name: Prepare artifacts
+          run: tar -xzf docs.tar.gz
+        - name: Upload Documentation to Wiki
+          uses: SwiftDocOrg/github-wiki-publish-action@v1
+          with:
+            path: "docs"
+          env:
+            GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}

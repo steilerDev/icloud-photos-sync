@@ -1,4 +1,6 @@
-name: Get Token
+name: API Test
+# This workflow continously runs the API Tests for this projects, to validate that the undocumented API used does not change
+# Should the provided token expire, the job will wait for a refresh of the token or timeout
 
 on: [workflow_dispatch]
 
@@ -7,7 +9,7 @@ env:
   NODE_VERSION: 18
 
 jobs:
-  build:
+  run-test:
     name: Build Project & Start SSH
     runs-on: ubuntu-latest
     steps:
