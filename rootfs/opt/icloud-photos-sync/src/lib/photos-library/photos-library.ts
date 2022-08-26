@@ -29,21 +29,28 @@ export class PhotosLibrary {
     assetDir: string;
 
     /**
+     * The full path to the sub-dir within 'photoDataDir', containing all archived folders, who have been deleted on the backend
+     */
+    archiveDir: string;
+
+    /**
      * Creates the local PhotoLibrary, based on the provided CLI options
      * @param cliOpts - The read CLI options
      */
     constructor(cliOpts: OptionValues) {
-        this.photoDataDir = cliOpts.dataDir;
-        if (!fs.existsSync(this.photoDataDir)) {
-            this.logger.debug(`${this.photoDataDir} does not exist, creating`);
-            fs.mkdirSync(this.photoDataDir, {"recursive": true});
+        this.photoDataDir = this.getFullPathAndCreate(cliOpts.dataDir);
+        this.assetDir = this.getFullPathAndCreate(PHOTOS_LIBRARY.ASSET_DIR);
+        this.archiveDir = this.getFullPathAndCreate(PHOTOS_LIBRARY.ARCHIVE_DIR);
+    }
+
+    getFullPathAndCreate(subpath: string) {
+        const thisDir = this.photoDataDir ? path.join(this.photoDataDir, subpath) : subpath;
+        if (!fs.existsSync(thisDir)) {
+            this.logger.debug(`${thisDir} does not exist, creating`);
+            fs.mkdirSync(thisDir, {"recursive": true});
         }
 
-        this.assetDir = path.join(this.photoDataDir, PHOTOS_LIBRARY.ASSET_DIR);
-        if (!fs.existsSync(this.assetDir)) {
-            this.logger.debug(`${this.assetDir} does not exist, creating`);
-            fs.mkdirSync(this.assetDir, {"recursive": true});
-        }
+        return thisDir;
     }
 
     /**
@@ -89,9 +96,14 @@ export class PhotosLibrary {
      * @returns An array of loaded albums, including the provided one and all its child items
      */
     async loadAlbum(album: Album): Promise<Album[]> {
+        // If we are loading an archived folder, we can ignore the content and add it to the queue
+        if (album.albumType === AlbumType.ARCHIVED) {
+            return [album];
+        }
+
         const albums: Album[] = [];
 
-        // Ignoring dummy album
+        // Not adding dummy album
         if (album.getUUID().length > 0) {
             albums.push(album);
         }
@@ -112,19 +124,14 @@ export class PhotosLibrary {
                 const uuid = path.basename(target).substring(1); // Removing leading '.'
                 const fullPath = path.join(album.albumPath, target);
                 const folderType = await this.readAlbumTypeFromPath(fullPath);
+                const folderName = link.name;
+                const parentFolderUUID = album.getUUID();
 
-                if (folderType === AlbumType.ARCHIVED) {
-                    this.logger.warn(`Ignoring archived folder ${uuid}`);
-                } else {
-                    const loadedAlbum = new Album(uuid, folderType, link.name, album.getUUID(), fullPath);
-                    albums.push(...await this.loadAlbum(loadedAlbum));
-                }
+                const loadedAlbum = new Album(uuid, folderType, folderName, parentFolderUUID, fullPath);
+                albums.push(...await this.loadAlbum(loadedAlbum));
             } else if (album.albumType === AlbumType.ALBUM) {
                 const uuidFile = path.parse(target).base;
                 albums[0].assets[uuidFile] = link.name;
-            } else if (album.albumType === AlbumType.ARCHIVED) {
-                this.logger.info(`Treating ${album.albumType} as archived`);
-                // Ignoring assets on archived folders
             }
         }
 

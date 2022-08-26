@@ -1,6 +1,10 @@
 {
     "preset": "ts-jest/presets/default-esm",
     "testEnvironment": "node",
+    "reporters": [
+      "default",
+      "jest-summarizing-reporter"
+    ],
     "collectCoverageFrom": [
       "src/**/*.ts",
       "!src/main.ts",

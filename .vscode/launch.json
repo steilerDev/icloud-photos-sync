@@ -29,7 +29,7 @@
               "--runInBand",
               "--coverage=true",
               "--config", "jest.config.json",
-             // "test/unit/icloud.unit.test.ts"
+              //"test/unit/photos-library.unit.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

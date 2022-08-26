@@ -37,6 +37,7 @@ export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryPro
  * @param album - The album, that should be written to disk
  */
 export function addAlbum(this: SyncEngine, album: Album) {
+    // If albumType == Archive -> Check in 'archivedFolder' and move
     this.logger.debug(`Creating album ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
     const parentPath = album.parentAlbumUUID // If UUID is undefined -> Folder is in root
         ? this.findAlbum(album.parentAlbumUUID)
@@ -97,6 +98,7 @@ export function addAlbum(this: SyncEngine, album: Album) {
  * @param album - The album that needs to be deleted
  */
 export function deleteAlbum(this: SyncEngine, album: Album) {
+    // If albumType == Archived -> Move folder to archived folder
     this.logger.debug(`Deleting folder ${album.getDisplayName()}`);
     const albumPath = this.findAlbum(album.getUUID());
     const linkedPath = path.normalize(`${albumPath}/../${album.getSanitizedFilename()}`); // The linked folder is one layer below
