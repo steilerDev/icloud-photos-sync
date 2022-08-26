@@ -40,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: prepare-repo
     steps:
+    - name: Checkout
+      uses: actions/checkout@v2
     - uses: ./.github/workflows/build.yml
       with:
         nodeVersion: ${{ env.NODE_VERSION }} 
