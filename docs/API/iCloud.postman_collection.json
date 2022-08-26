@@ -192,6 +192,161 @@
 					"response": []
 				},
 				{
+					"name": "01-- Get list of devices",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive"
+							},
+							{
+								"key": "Origin",
+								"value": "https://idmsa.apple.com"
+							},
+							{
+								"key": "Referer",
+								"value": "https://idmsa.apple.com/"
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "gzip, deflate, br"
+							},
+							{
+								"key": "Content-Type",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "scnt",
+								"value": "{{scnt}}"
+							},
+							{
+								"key": "X-Apple-Widget-Key",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Id",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-I-FD-Client-Info",
+								"value": "{{clientInfo}}"
+							},
+							{
+								"key": "X-Apple-ID-Session-Id",
+								"value": "{{X-Apple-ID-Session-Id}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Type",
+								"value": "code"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Mode",
+								"value": "web_message"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Type",
+								"value": "firstPartyAuth"
+							},
+							{
+								"key": "Accept-Language",
+								"value": "en-US,en;q=0.5",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Auth-Attributes",
+								"value": "KppHjelP6wTMN0ksprJDcFuGEAZI402Vd/YLmrKgzfN5tV3ulGZRXrXpb3sL3LABqt3ACaxQmpJtP0/mAS6KahM07vrBYKpLOabXZnSnbvICB9iqFiCYNSbQ7tQ7gSi/IaL+RmZSuVgv1LEAEo5z2+mYhg==",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Frame-Id",
+								"value": "auth-an9qxkwo-ento-kwxy-0pve-pb4efg9r",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-State",
+								"value": "auth-an9qxkwo-ento-kwxy-0pve-pb4efg9r",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Redirect-URI",
+								"value": "https://www.icloud.com",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Require-Grant-Code",
+								"value": "true",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Domain-Id",
+								"value": "3",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Locale",
+								"value": "en_US",
+								"disabled": true
+							},
+							{
+								"key": "X-Requested-With",
+								"value": "XMLHttpRequest",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "dslang=US-EN; site=USA; aasp=CF72548FBDF94295601A18DF46AB499B2B19F483477C72841391D8FD699A490EDA4CA9B5B3D673023BB06BA5782D4E755D344C49CAEF2BAA2BFE072CF7B2033493DA4D7EAA0366BFD5E65E52E261E801654AE975511BE5B423E55FDA5D87DA9E269AABB03811401DF330151CCEAD158D537BA25A6B943E57; geo=DE; aa=4D2D6DDF06C7D4C21A62E183ED181BA5; acn01=OfOw8dN/dJ4CnYQYixdKkSspPvFr/SX3ABKOc7fsql4=; DES59973e73492bce297965944710bf0bd88=HSARMTKNSRVXWFlaypSSUAUFTo67eRMPzYl2EDOq1CN2xlR7jQcWxE67E8JEx8N5nfe7jXwXFLyr+Qe3ARyCIxsUDXq+u0yNW+3esW33z+SEfnTy/DPnZSrdWoSTMFiEYWExP+Y2Zhe8ExSqSo5QcB6HtX7LU+Y/hVFUeipguNSLATGH6GyA1ohMe6Z6SRVX",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-origin",
+								"disabled": true
+							},
+							{
+								"key": "Content-Length",
+								"value": "0",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
+							"protocol": "https",
+							"host": [
+								"idmsa",
+								"apple",
+								"com"
+							],
+							"path": [
+								"appleauth",
+								"auth",
+								"verify",
+								"trusteddevice",
+								"securitycode"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "01-- Resend 2FA In-App",
 					"request": {
 						"method": "PUT",
