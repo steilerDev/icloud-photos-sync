@@ -1,6 +1,3 @@
-#Input: version
-#Build & Test
-#Create GH release with (https://github.com/ncipollo/release-action)
 
 
 name: Production Release
@@ -10,9 +7,10 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Bump Version
+        description: Version string for release
         default: v1.0.0
         required: true
+
 
 env:
   PKG_NAME: icloud-photos-sync
@@ -39,9 +37,12 @@ jobs:
         tagging_message: ${{ inputs.version }}
 
   build-workflow:
-    uses: ./.github/workflows/build.yml
-    with:
-      nodeVersion: ${{ env.NODE_VERSION }} 
+    runs-on: ubuntu-latest
+    needs: prepare-repo
+    steps:
+    - uses: ./.github/workflows/build.yml
+      with:
+        nodeVersion: ${{ env.NODE_VERSION }} 
 
   publish-dockerhub:
       name: Publish Project to Docker
@@ -100,15 +101,30 @@ jobs:
       needs: build-workflow
       runs-on: ubuntu-latest
       steps:
-        - name: Download artifacts
-          uses: actions/download-artifact@v2
-          with:
-            name: docs-artifacts
-        - name: Prepare artifacts
-          run: tar -xzf docs.tar.gz
-        - name: Upload Documentation to Wiki
-          uses: SwiftDocOrg/github-wiki-publish-action@v1
-          with:
-            path: "docs"
-          env:
-            GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: docs-artifacts
+      - name: Prepare artifacts
+        run: tar -xzf docs.tar.gz
+      - name: Upload Documentation to Wiki
+        uses: SwiftDocOrg/github-wiki-publish-action@v1
+        with:
+          path: "docs"
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+
+    create-gh-release:
+      name: Create GH Release
+      needs: build-workflow
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          bodyFile: "CHANGELOG.md"
+          token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          tag: $${{ inputs.version }}
+          prerelease: true

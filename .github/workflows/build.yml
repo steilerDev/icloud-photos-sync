@@ -9,8 +9,9 @@ on:
   workflow_call:
     inputs:
       nodeVersion:
+        default: 18
         required: true
-        type: string
+        type: number
 
 jobs:
   build:

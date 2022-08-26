@@ -9,9 +9,11 @@ env:
 
 jobs:
   build-workflow:
-    uses: ./.github/workflows/build.yml
-    with:
-      nodeVersion: ${{ env.NODE_VERSION }} 
+    runs-on: ubuntu-latest
+    steps:
+    - uses: ./.github/workflows/build.yml
+      with:
+        nodeVersion: ${{ env.NODE_VERSION }} 
   
   publish-docker-dev:
     name: Publish Project to steilerGroup-Docker

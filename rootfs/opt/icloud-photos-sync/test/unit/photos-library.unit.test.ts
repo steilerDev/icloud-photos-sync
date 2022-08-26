@@ -329,7 +329,6 @@ describe(`Unit Tests - Photos Library`, () => {
             });
 
             test.todo(`Ignore safe files in folder`);
-            test.todo();
         });
     });
     describe(`Write state`, () => {
