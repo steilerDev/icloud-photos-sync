@@ -26,7 +26,7 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
-        name: rootfs
+        name: docker-rootfs
     - name: Login to Docker Registry
       run: docker login ${{secrets.DOCKER_DEV_HOST}} -u ${{secrets.DOCKER_DEV_USERNAME}} -p ${{secrets.DOCKER_DEV_PWD}}
     - name: Build the Docker image

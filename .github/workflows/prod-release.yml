@@ -9,6 +9,11 @@ on:
         default: 'v1.0.0'
         required: true
         type: string
+      pre-release:
+        description: 'Flags release as pre-release'
+        default: true
+        required: true
+        type: boolean
 
 env:
   PKG_NAME: 'icloud-photos-sync'
@@ -23,9 +28,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Version bump
         run: |
-          sed -i '/^## Nightly Changes/c\<!-- ## Nightly Changes-->\n\n## '"$VERSION" CHANGELOG.md
-        env:
-          VERSION: ${{ inputs.version }}
+          sed -i '/^## Nightly Changes/c\<!-- ## Nightly Changes-->\n\n## ${{ github.event.inputs.version }}' CHANGELOG.md
       - name: Commit & Tag
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
@@ -62,7 +65,7 @@ jobs:
       - name: Tag the Docker image
         run: |
           docker image tag $PKG_NAME ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:latest && \
-          docker image tag $PKG_NAME ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:${{ inputs.version }} && \
+          docker image tag $PKG_NAME ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:${{ github.event.inputs.version }} && \
           docker image ls
       - name: Push to DockerHub
         run: docker image push --all-tags ${{secrets.DOCKER_USERNAME}}/$PKG_NAME
@@ -128,7 +131,7 @@ jobs:
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          bodyFile: "CHANGELOG.md"
+          bodyFile: "CHANGELOG.latest.md"
           token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-          tag: $${{ inputs.version }}
-          prerelease: true
+          tag: ${{ inputs.version }}
+          prerelease: ${{ inputs.pre-release }}
