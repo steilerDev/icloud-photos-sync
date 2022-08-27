@@ -16,7 +16,7 @@ on:
 
 jobs:
   build:
-      name: Build Project
+      name: Build & Test Project
       runs-on: ubuntu-latest
       steps:
       - name: Checkout
