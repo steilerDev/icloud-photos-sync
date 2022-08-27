@@ -1,5 +1,6 @@
 name: Development Release
-# This workflow will run on every 
+# This workflow will run on every push
+# If the app builds and passes tests, it will release the development channels (private DockerHub)
 
 on: [push, pull_request]
 
@@ -11,9 +12,7 @@ jobs:
   build-workflow:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-    - uses: ./.github/workflows/build.yml@dev
+    - uses: ./.github/workflows/build.yml
       with:
         nodeVersion: ${{ env.NODE_VERSION }}
   
