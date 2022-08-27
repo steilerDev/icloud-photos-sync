@@ -8,6 +8,13 @@ import {SyncEngine} from './sync-engine/sync-engine.js';
 import {SingleBar} from 'cli-progress';
 import {exit} from 'process';
 import {getLogger} from './logger.js';
+import {ArchiveEngine} from './archive-engine/archive-engine.js';
+
+export const CLIInterfaceCommand = {
+    "archive": `archive`,
+    "sync": `sync`,
+    "token": `token`,
+};
 
 export class CLIInterface {
     /**
@@ -32,14 +39,14 @@ export class CLIInterface {
      */
     constructor(cliOpts: OptionValues, iCloud: iCloud, syncEngine: SyncEngine) {
         this.progressBar = new SingleBar({
-            etaAsynchronousUpdate: true,
-            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
-            barCompleteChar: `\u25A0`,
-            barIncompleteChar: ` `,
+            "etaAsynchronousUpdate": true,
+            "format": ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
+            "barCompleteChar": `\u25A0`,
+            "barIncompleteChar": ` `,
         });
 
-        // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on log_to_cli)
-        this.enableCLIOutput = !cliOpts.log_to_cli && !cliOpts.silent;
+        // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on logToCli)
+        this.enableCLIOutput = !cliOpts.logToCli && !cliOpts.silent;
 
         this.setupCLIiCloudInterface(iCloud);
         this.setupCLISyncEngineInterface(syncEngine);
@@ -72,7 +79,7 @@ export class CLIInterface {
      * Processing CLI arguments
      * @returns The parsed values from the commandline/environment variables
      */
-    static getCLIOptions(): OptionValues {
+    static getCLIOptions(): [OptionValues, string[]] {
         const program = new Command();
         program.name(PACKAGE_INFO.NAME)
             .description(PACKAGE_INFO.DESC)
@@ -83,30 +90,57 @@ export class CLIInterface {
             .addOption(new Option(`-p, --password <email>`, `AppleID password`)
                 .env(`APPLE_ID_PWD`)
                 .makeOptionMandatory(true))
-            .addOption(new Option(`-d, --data_dir <string>`, `Directory to store local copy of library`)
+            .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, '.trust-token.icloud' in data dir is tried to be read. If all fails, a new trust token will be acquired, requiring the input of an MFA code.`)
+                .env(`TRUST_TOKEN`))
+            .addOption(new Option(`--fail-on-mfa`, `If a MFA is necessary, exit the program. (This is usefull in test scenarios)`)
+                .env(`FAIL_ON_MFA`)
+                .default(false))
+            .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library`)
                 .env(`DATA_DIR`)
                 .default(`/opt/icloud-photos-library`))
             .addOption(new Option(`-p, --port <number>`, `port number for MFA server (Awaiting MFA code when necessary)`)
                 .env(`PORT`)
                 .default(80))
-            .addOption(new Option(`-l, --log_level <level>`, `Set the log level`)
+            .addOption(new Option(`-l, --log-level <level>`, `Set the log level`)
                 .env(`LOG_LEVEL`)
                 .choices([`trace`, `debug`, `info`, `warn`, `error`])
                 .default(`info`))
-            .addOption(new Option(`--log_to_cli`, `Disables logging to file and logs everything to the console. This will be ignored if '--silent' is set`)
+            .addOption(new Option(`--log-to-cli`, `Disables logging to file and logs everything to the console. This will be ignored if '--silent' is set`)
                 .env(`LOG_TO_CLI`)
                 .default(false))
             .addOption(new Option(`-s, --silent`, `Disables logging to the console and forces logs to go to the log file.`)
                 .env(`SILENT`)
                 .default(false))
-            .addOption(new Option(`-t, --download_threads <number>`, `Sets the number of download threads`)
+            .addOption(new Option(`-t, --download-threads <number>`, `Sets the number of download threads`)
                 .env(`DOWNLOAD_THREADS`)
                 .default(5))
-            .addOption(new Option(`-r, --max_retries <number>`, `Sets the number of maximum retries upon an error (-1 means that it will always retry)`)
+            .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon an error (-1 means that it will always retry)`)
                 .env(`MAX_RETRIES`)
-                .default(-1));
+                .default(-1))
+            .addOption(new Option(`--dry-run`, `Do not perform any write actions. Only print out changes that would be performed`)
+                .env(`DRY_RUN`)
+                .default(false));
+
+        program.command(CLIInterfaceCommand.sync)
+            .description(`This command will fetch the remote state and persist it to the local disk.`);
+
+        program.command(CLIInterfaceCommand.archive)
+            .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)
+            .argument(`<path>`, `Path to the folder that should be archived`)
+            .addOption(new Option(`--no-remote-delete`, `Do not delete any remote assets upon archiving`)
+                .env(`NO_REMOTE_DELETE`)
+                .default(false));
+
+        program.command(CLIInterfaceCommand.token)
+            .description(`Validates the current trust token and prints it to the command line`)
+            .addOption(new Option(`--refresh-token`, `Ignore any stored token and always refresh it`)
+                .env(`REFRESH_TOKEN`)
+                .default(false));
+
+        // Implement 'token' command, that will print out the current / a fresh trust token
+
         program.parse();
-        return program.opts();
+        return [program.opts(), program.args];
     }
 
     /**
@@ -264,5 +298,14 @@ export class CLIInterface {
             this.print(chalk.red(`Sync engine: Unexpected error: ${msg}`));
             this.print(chalk.white(this.getHorizontalLine()));
         });
+
+        syncEngine.on(SYNC_ENGINE.EVENTS.DRY_RUN, msg => {
+            this.print(chalk.red(`!!Dry run!! Would perform action: ${msg}`));
+            this.print(chalk.white(this.getHorizontalLine()));
+        });
+    }
+
+    setupCLIArchiveEngineInterface(_archiveEngine: ArchiveEngine) {
+
     }
 }

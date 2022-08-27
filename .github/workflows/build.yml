@@ -1,0 +1,60 @@
+name: Build & Test
+# This reusable workflow will test and build the application. All assets will be packaged and uploaded
+# Creates the following artifacts:
+#  - rootfs.tar.gz (Docker RootFS)
+#  - npm.tar.gz (NPM Uplaod)
+#  - docs.tar.gz (Documentation for GH Wiki)
+
+on:
+  workflow_call:
+    inputs:
+      nodeVersion:
+        default: 18
+        required: true
+        type: number
+
+jobs:
+  build:
+      name: Build Project
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ inputs.nodeVersion }}
+      - name: Build
+        run: |
+          npm run clean && \
+          npm install && \
+          npm run build && \
+          npm run docs
+        working-directory: rootfs/opt/icloud-photos-sync/
+      - name: Test
+        run: |
+          npm run test-unit
+        working-directory: rootfs/opt/icloud-photos-sync/
+      - name: Package npm artifacts
+        run: |
+          cp README.md LICENSE rootfs/opt/icloud-photos-sync/ && \
+          tar -C rootfs/opt/icloud-photos-sync/ -czf ./npm.tar.gz README.md LICENSE package.json bin/
+      - name: Upload npm artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: npm-artifacts
+          path: ./npm.tar.gz
+      - name: Package docker artifacts
+        run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
+      - name: Upload docker artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: rootfs
+          path: ./rootfs.tar.gz
+      - name: Package docs
+        run: tar -C rootfs/opt/icloud-photos-sync/ -czf ./docs.tar.gz docs/
+      - name: Upload docs artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: docs-artifacts
+          path: ./docs.tar.gz

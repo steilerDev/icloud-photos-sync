@@ -10,9 +10,9 @@ import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/mode
 import {getLogger} from '../logger.js';
 
 // Helpers extending this class
-import {resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
+import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
-import {addAsset, deleteAsset, verifyAsset, writeAssets} from './helpers/write-assets-helpers.js';
+import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, deleteAlbum, findAlbumInPath, findAlbum, queueIsSorted, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 
 /**
@@ -51,6 +51,11 @@ export class SyncEngine extends EventEmitter {
     maxRetry: number;
 
     /**
+     * Flag indicating, that the app should not perform any writes, but simply print out the action
+     */
+    dryRun: boolean;
+
+    /**
      * Creates a new sync engine from the previously created objects and CLI options
      * @param iCloud - The authenticated and 'ready' iCloud connection
      * @param photosLibrary - The PhotosLibrary
@@ -60,20 +65,21 @@ export class SyncEngine extends EventEmitter {
         super();
         this.iCloud = iCloud;
         this.photosLibrary = photosLibrary;
-        this.downloadCCY = cliOpts.download_threads;
-        this.maxRetry = cliOpts.max_retries;
+        this.downloadCCY = cliOpts.downloadThreads;
+        this.maxRetry = cliOpts.maxRetries;
+        this.dryRun = cliOpts.dryRun;
     }
 
     /**
      * Performs the sync and handles all connections
+     * @returns A list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync)
      */
-    async sync() {
+    async sync(): Promise<[Asset[], Album[]]> {
         try {
             this.logger.info(`Starting sync`);
             this.emit(SYNC_ENGINE.EVENTS.START);
-            let syncFinished = false;
             let retryCount = 0;
-            while (!syncFinished && (this.maxRetry === -1 || this.maxRetry > retryCount)) {
+            while (this.maxRetry === -1 || this.maxRetry > retryCount) {
                 retryCount++;
                 this.logger.info(`Performing sync, try #${retryCount}`);
 
@@ -82,7 +88,9 @@ export class SyncEngine extends EventEmitter {
 
                 try {
                     await this.writeState(assetQueue, albumQueue);
-                    syncFinished = true;
+                    this.logger.info(`Completed sync!`);
+                    this.emit(SYNC_ENGINE.EVENTS.DONE);
+                    return [remoteAssets, remoteAlbums];
                 } catch (err) {
                     this.logger.warn(`Error while writing state: ${err.message}`);
                     // Checking if we should retry
@@ -95,12 +103,8 @@ export class SyncEngine extends EventEmitter {
                 }
             }
 
-            if (!syncFinished) { // If sync is not set to true
-                throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
-            }
-
-            this.logger.info(`Completed sync!`);
-            this.emit(SYNC_ENGINE.EVENTS.DONE);
+            // We'll only reach this, if we exceeded retryCount
+            throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
         } catch (err) {
             this.logger.warn(`Unrecoverable sync error: ${err.message}`);
             this.emit(SYNC_ENGINE.EVENTS.ERROR, err.message);
@@ -203,8 +207,8 @@ export class SyncEngine extends EventEmitter {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
         this.logger.info(`Diffing state`);
         return Promise.all([
-            this.photosLibrary.getProcessingQueues(remoteAssets, localAssets),
-            this.photosLibrary.getProcessingQueues(remoteAlbums, localAlbums),
+            this.getProcessingQueues(remoteAssets, localAssets),
+            this.getProcessingQueues(remoteAlbums, localAlbums),
         ]).then(([assetQueue, albumQueue]) => {
             const resolvedAlbumQueue = this.resolveHierarchicalDependencies(albumQueue, localAlbums);
             this.emit(SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
@@ -214,6 +218,7 @@ export class SyncEngine extends EventEmitter {
 
     // From ./helpers/diff-helpers.ts
     private resolveHierarchicalDependencies = resolveHierarchicalDependencies;
+    private getProcessingQueues = getProcessingQueues;
 
     /**
      * Takes the processing queues and performs the necessary actions to write them to disk
@@ -238,8 +243,7 @@ export class SyncEngine extends EventEmitter {
     // From ./helpers/write-assets-helpers.ts
     private writeAssets = writeAssets;
     protected addAsset = addAsset;
-    protected deleteAsset = deleteAsset;
-    protected verifyAsset = verifyAsset;
+    protected removeAsset = removeAsset;
 
     // From ./helpers/write-albums-helpers.ts
     private writeAlbums = writeAlbums;

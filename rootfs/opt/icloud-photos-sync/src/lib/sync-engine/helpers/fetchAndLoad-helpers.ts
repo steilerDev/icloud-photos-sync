@@ -20,11 +20,11 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
         const origFilenameWithExt = Buffer.from(master.filenameEnc, `base64`).toString();
         const origFilename = path.parse(origFilenameWithExt).name;
         if (master?.resource && master?.resourceType) {
-            remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, master.modified, origFilename, AssetType.ORIG));
+            remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, master.modified, origFilename, AssetType.ORIG, asset.recordName, asset.favorite === 1));
         }
 
         if (asset?.resource && asset?.resourceType) {
-            remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, asset.modified, origFilename, AssetType.EDIT));
+            remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite === 1));
         }
     });
     return remoteAssets;

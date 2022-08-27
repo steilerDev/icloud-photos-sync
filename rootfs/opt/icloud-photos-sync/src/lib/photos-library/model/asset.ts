@@ -57,6 +57,14 @@ export class Asset implements PEntity<Asset> {
      * The download URL of this asset (only present if fetched from CPL)
      */
     downloadURL?: string;
+    /**
+     * Record name of the associated CPL Asset
+     */
+    recordName?: string;
+    /**
+     * Flag, if this asset is favorited by the user
+     */
+    isFavorite?: boolean;
 
     /**
      * Creates a new Asset object
@@ -70,7 +78,7 @@ export class Asset implements PEntity<Asset> {
      * @param referenceChecksum -
      * @param downloadURL -
      */
-    private constructor(fileChecksum: string, size: number, fileType: FileType, modified: number, assetType?: AssetType, origFilename?: string, wrappingKey?: string, referenceChecksum?: string, downloadURL?: string) {
+    constructor(fileChecksum: string, size: number, fileType: FileType, modified: number, assetType?: AssetType, origFilename?: string, wrappingKey?: string, referenceChecksum?: string, downloadURL?: string, recordName?: string, isFavorite?: boolean) {
         this.fileChecksum = fileChecksum;
         this.size = size;
         this.fileType = fileType;
@@ -80,6 +88,8 @@ export class Asset implements PEntity<Asset> {
         this.wrappingKey = wrappingKey;
         this.referenceChecksum = referenceChecksum;
         this.downloadURL = downloadURL;
+        this.recordName = recordName;
+        this.isFavorite = isFavorite;
     }
 
     /**
@@ -91,7 +101,7 @@ export class Asset implements PEntity<Asset> {
      * @param assetType - If this asset is the original or an edit
      * @returns An Asset based on the backend objects
      */
-    static fromCPL(asset: AssetID, fileTypeDescriptor: string, modified: number, origFilename: string, assetType: AssetType): Asset {
+    static fromCPL(asset: AssetID, fileTypeDescriptor: string, modified: number, origFilename: string, assetType: AssetType, recordName: string, isFavorite: boolean): Asset {
         return new Asset(
             asset.fileChecksum,
             asset.size,
@@ -102,6 +112,8 @@ export class Asset implements PEntity<Asset> {
             asset.wrappingKey,
             asset.referenceChecksum,
             asset.downloadURL,
+            recordName,
+            isFavorite,
         );
     }
 
@@ -141,7 +153,7 @@ export class Asset implements PEntity<Asset> {
     getAssetFilePath(dir: string) {
         return path.format({
             dir,
-            name: this.getAssetFilename(),
+            "name": this.getAssetFilename(),
         });
     }
 
@@ -151,8 +163,8 @@ export class Asset implements PEntity<Asset> {
      */
     getAssetFilename(): string {
         return path.format({
-            name: Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
-            ext: this.fileType.getExtension(),
+            "name": Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
+            "ext": this.fileType.getExtension(),
         });
     }
 
@@ -162,8 +174,8 @@ export class Asset implements PEntity<Asset> {
      */
     getPrettyFilename(): string {
         return path.format({
-            name: this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``),
-            ext: this.fileType.getExtension(),
+            "name": this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``),
+            "ext": this.fileType.getExtension(),
         });
     }
 

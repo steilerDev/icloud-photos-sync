@@ -10,13 +10,14 @@ const LOG_FILE_NAME = `.icloud-photos-sync.log`;
  * The list of loggers and their respective names
  */
 const LOGGER = {
-    iCloud: `i-Cloud`,
-    iCloudPhotos: `i-Cloud-Photos`,
-    iCloudAuth: `i-Cloud-Auth`,
-    MFAServer: `MFA-Server`,
-    PhotosLibrary: `Photos-Library`,
-    SyncEngine: `Sync-Engine`,
-    CLIInterface: `CLI-Interface`,
+    "iCloud": `i-Cloud`,
+    "iCloudPhotos": `i-Cloud-Photos`,
+    "iCloudAuth": `i-Cloud-Auth`,
+    "MFAServer": `MFA-Server`,
+    "PhotosLibrary": `Photos-Library`,
+    "SyncEngine": `Sync-Engine`,
+    "CLIInterface": `CLI-Interface`,
+    "ArchiveEngine": `Archive-Engine`,
 };
 
 /**
@@ -25,8 +26,8 @@ const LOGGER = {
  */
 export function setupLogger(cliOpts: OptionValues): void {
     const logFile = path.format({
-        dir: cliOpts.data_dir,
-        base: LOG_FILE_NAME,
+        "dir": cliOpts.dataDir,
+        "base": LOG_FILE_NAME,
     });
 
     if (fs.existsSync(logFile)) {
@@ -38,7 +39,7 @@ export function setupLogger(cliOpts: OptionValues): void {
 
     log.methodFactory = function (methodName, logLevel, loggerName) {
         return function (message) {
-            if (cliOpts.log_to_cli && !cliOpts.silent) {
+            if (cliOpts.logToCli && !cliOpts.silent) {
                 const prefixedMessage = `${chalk.gray(`[${new Date().toLocaleString()}]`)} ${methodName.toUpperCase()} ${chalk.green(`${String(loggerName)}: ${message}`)}`;
                 originalFactory(methodName, logLevel, loggerName)(prefixedMessage);
             } else {
@@ -46,16 +47,16 @@ export function setupLogger(cliOpts: OptionValues): void {
                 fs.appendFileSync(logFile, prefixedMessage);
                 if (!cliOpts.silent) {
                     if (methodName === `warn`) {
-                        console.warn(prefixedMessage);
+                        console.warn(`Warning: ${message}`);
                     } else if (methodName === `error`) {
-                        console.error(prefixedMessage);
+                        console.error(`Error: ${message}`);
                     }
                 }
             }
         };
     };
 
-    log.setLevel(cliOpts.log_level);
+    log.setLevel(cliOpts.logLevel);
 
     // Set specific loggers to levels to reduce verbosity during development
     /**

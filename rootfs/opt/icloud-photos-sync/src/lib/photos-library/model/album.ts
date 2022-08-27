@@ -1,5 +1,5 @@
-import {CPLAlbum} from "../../icloud/icloud-photos/query-parser";
-import {PEntity} from "./photos-entity";
+import {CPLAlbum} from "../../icloud/icloud-photos/query-parser.js";
+import {PEntity} from "./photos-entity.js";
 
 /**
  * Potential AlbumTypes

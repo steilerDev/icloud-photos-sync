@@ -7,7 +7,8 @@
     "sourceMap": true,
     "outDir": "bin",
     "declaration": true,
-    "rootDir": "src",
+    "allowJs": true,
+    "resolveJsonModule": true
   },
   "typedocOptions": {
     "entryPoints": ["src/"],
@@ -16,11 +17,8 @@
     "entryPointStrategy": "expand",
     "theme": "github-wiki"
   },
-  "exclude": [
-      "node_modules",
-      "bin"
-  ],
+  "include": ["src/**/*"],
   "lib": [
-    "es2017"
+    "es2021"
   ]
 }

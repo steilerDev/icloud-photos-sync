@@ -1,4 +1,5 @@
 bin/
 node_modules/
 docs/
+coverage/
 package-lock.json

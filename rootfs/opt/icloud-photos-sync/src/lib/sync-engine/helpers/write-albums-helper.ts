@@ -4,6 +4,7 @@ import {SyncEngine} from "../sync-engine.js";
 import path from 'path';
 import fs from 'fs';
 import * as PHOTOS_LIBRARY from '../../photos-library/constants.js';
+import * as SYNC_ENGINE from '../constants.js';
 
 /**
  * Writes the album changes defined in the processing queue to to disk
@@ -36,6 +37,7 @@ export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryPro
  * @param album - The album, that should be written to disk
  */
 export function addAlbum(this: SyncEngine, album: Album) {
+    // If albumType == Archive -> Check in 'archivedFolder' and move
     this.logger.debug(`Creating album ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
     const parentPath = album.parentAlbumUUID // If UUID is undefined -> Folder is in root
         ? this.findAlbum(album.parentAlbumUUID)
@@ -47,21 +49,26 @@ export function addAlbum(this: SyncEngine, album: Album) {
     // Relative album path is relative to parent, not linkedAlbum
     const relativeAlbumPath = path.relative(parentPath, albumPath);
     try {
-        // Creating album
-        this.logger.debug(`Creating folder ${albumPath}`);
-        fs.mkdirSync(albumPath, {recursive: true});
-        // Symlinking to correctly named album
-        this.logger.debug(`Linking ${relativeAlbumPath} to ${linkedAlbum}`);
-        fs.symlinkSync(relativeAlbumPath, linkedAlbum);
+        if (this.dryRun) {
+            this.emit(`Creating folder ${albumPath} and linking ${linkedAlbum}`);
+        } else {
+            // Creating album
+            this.logger.debug(`Creating folder ${albumPath}`);
+            fs.mkdirSync(albumPath, {"recursive": true});
+            // Symlinking to correctly named album
+            this.logger.debug(`Linking ${relativeAlbumPath} to ${linkedAlbum}`);
+            fs.symlinkSync(relativeAlbumPath, linkedAlbum);
+        }
+
         if (album.albumType === AlbumType.ALBUM) { // Only need to link assets, if we are in an album!
             Object.keys(album.assets).forEach(assetUUID => {
                 const linkedAsset = path.format({
-                    dir: albumPath,
-                    base: album.assets[assetUUID],
+                    "dir": albumPath,
+                    "base": album.assets[assetUUID],
                 });
                 const assetPath = path.format({
-                    dir: this.photosLibrary.assetDir,
-                    base: assetUUID,
+                    "dir": this.photosLibrary.assetDir,
+                    "base": assetUUID,
                 });
                 // Getting asset time, in order to update link as well
                 const assetTime = fs.statSync(assetPath).mtime;
@@ -69,8 +76,12 @@ export function addAlbum(this: SyncEngine, album: Album) {
                 const relativeAssetPath = path.relative(albumPath, assetPath);
                 this.logger.debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
                 try {
-                    fs.symlinkSync(relativeAssetPath, linkedAsset);
-                    fs.lutimesSync(linkedAsset, assetTime, assetTime);
+                    if (this.dryRun) {
+                        this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Linking asset ${assetPath} to ${linkedAsset}`);
+                    } else {
+                        fs.symlinkSync(relativeAssetPath, linkedAsset);
+                        fs.lutimesSync(linkedAsset, assetTime, assetTime);
+                    }
                 } catch (err) {
                     this.logger.warn(`Not linking ${relativeAlbumPath} to ${linkedAsset} in album ${album.getDisplayName()}: ${err.message}`);
                 }
@@ -87,10 +98,11 @@ export function addAlbum(this: SyncEngine, album: Album) {
  * @param album - The album that needs to be deleted
  */
 export function deleteAlbum(this: SyncEngine, album: Album) {
+    // If albumType == Archived -> Move folder to archived folder
     this.logger.debug(`Deleting folder ${album.getDisplayName()}`);
     const albumPath = this.findAlbum(album.getUUID());
     const linkedPath = path.normalize(`${albumPath}/../${album.getSanitizedFilename()}`); // The linked folder is one layer below
-    const pathContent = fs.readdirSync(albumPath, {withFileTypes: true})
+    const pathContent = fs.readdirSync(albumPath, {"withFileTypes": true})
         .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
     if (pathContent.length > 0) {
         this.logger.warn(`Unable to delete album ${album.getDisplayName()}: Album in path ${path} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
@@ -98,13 +110,17 @@ export function deleteAlbum(this: SyncEngine, album: Album) {
         this.logger.warn(`Unable to delete album ${album.getDisplayName()}: Unable to find linked file, expected ${linkedPath}`);
     } else {
         try {
-            fs.rmSync(albumPath, {recursive: true});
-            fs.unlinkSync(linkedPath);
+            if (this.dryRun) {
+                this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Deleting folder ${albumPath} & link ${linkedPath}`);
+            } else {
+                fs.rmSync(albumPath, {"recursive": true});
+                fs.unlinkSync(linkedPath);
+            }
         } catch (err) {
             this.logger.warn(`Unable to delete album ${album.getDisplayName()}: ${err}`);
         }
 
-        this.logger.debug(`Sucesfully deleted album ${album.getDisplayName} at ${path} & ${linkedPath}`);
+        this.logger.debug(`Sucesfully deleted album ${album.getDisplayName()} at ${path} & ${linkedPath}`);
     }
 }
 
@@ -128,7 +144,7 @@ export function findAlbum(this: SyncEngine, albumUUID: string) {
 export function findAlbumInPath(this: SyncEngine, albumUUID: string, rootPath: string): string {
     this.logger.trace(`Checking ${rootPath} for folder ${albumUUID}`);
     // Get all folders in the path
-    const foldersInPath = fs.readdirSync(rootPath, {withFileTypes: true}).filter(dirent => dirent.isDirectory());
+    const foldersInPath = fs.readdirSync(rootPath, {"withFileTypes": true}).filter(dirent => dirent.isDirectory());
 
     // See if the searched folder is in the path
     const filteredFolder = foldersInPath.filter(folder => folder.name === `.${albumUUID}`); // Since the folder is hidden, a dot is prefacing it

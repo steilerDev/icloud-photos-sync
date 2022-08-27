@@ -1,12 +1,13 @@
 import * as path from 'path';
 import * as PHOTOS_LIBRARY from './constants.js';
 import {Album, AlbumType} from './model/album.js';
-import * as fs from 'fs/promises';
-import * as fssync from 'fs';
+import fs from 'fs';
 import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
-import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from './model/photos-entity.js';
+import {PLibraryEntities} from './model/photos-entity.js';
 import {getLogger} from '../logger.js';
+import {AxiosResponse} from 'axios';
+import {pEvent} from 'p-event';
 
 /**
  * This class holds the local data structure
@@ -28,21 +29,28 @@ export class PhotosLibrary {
     assetDir: string;
 
     /**
+     * The full path to the sub-dir within 'photoDataDir', containing all archived folders, who have been deleted on the backend
+     */
+    archiveDir: string;
+
+    /**
      * Creates the local PhotoLibrary, based on the provided CLI options
      * @param cliOpts - The read CLI options
      */
     constructor(cliOpts: OptionValues) {
-        this.photoDataDir = cliOpts.data_dir;
-        if (!fssync.existsSync(this.photoDataDir)) {
-            this.logger.debug(`${this.photoDataDir} does not exist, creating`);
-            fssync.mkdirSync(this.photoDataDir);
+        this.photoDataDir = this.getFullPathAndCreate(cliOpts.dataDir);
+        this.assetDir = this.getFullPathAndCreate(PHOTOS_LIBRARY.ASSET_DIR);
+        this.archiveDir = this.getFullPathAndCreate(PHOTOS_LIBRARY.ARCHIVE_DIR);
+    }
+
+    getFullPathAndCreate(subpath: string) {
+        const thisDir = this.photoDataDir ? path.join(this.photoDataDir, subpath) : subpath;
+        if (!fs.existsSync(thisDir)) {
+            this.logger.debug(`${thisDir} does not exist, creating`);
+            fs.mkdirSync(thisDir, {"recursive": true});
         }
 
-        this.assetDir = path.join(this.photoDataDir, PHOTOS_LIBRARY.ASSET_DIR);
-        if (!fssync.existsSync(this.assetDir)) {
-            this.logger.debug(`${this.assetDir} does not exist, creating`);
-            fssync.mkdirSync(this.assetDir);
-        }
+        return thisDir;
     }
 
     /**
@@ -51,15 +59,19 @@ export class PhotosLibrary {
      */
     async loadAssets(): Promise<PLibraryEntities<Asset>> {
         const libAssets: PLibraryEntities<Asset> = {};
-        (await fs.readdir(this.assetDir))
+        (await fs.promises.readdir(this.assetDir))
             .forEach(fileName => {
-                const fileStat = fssync.statSync(path.format({
-                    dir: this.assetDir,
-                    base: fileName,
-                }));
-                const asset = Asset.fromFile(fileName, fileStat);
-                this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
-                libAssets[asset.getUUID()] = asset;
+                try {
+                    const fileStat = fs.statSync(path.format({
+                        "dir": this.assetDir,
+                        "base": fileName,
+                    }));
+                    const asset = Asset.fromFile(fileName, fileStat);
+                    libAssets[asset.getUUID()] = asset;
+                    this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
+                } catch (err) {
+                    this.logger.warn(`Ignoring invalid file: ${fileName} (${err.message})`);
+                }
             });
         return libAssets;
     }
@@ -83,43 +95,43 @@ export class PhotosLibrary {
      * @param album - The album that needs to be loaded, containing a filepath
      * @returns An array of loaded albums, including the provided one and all its child items
      */
-    private async loadAlbum(album: Album): Promise<Album[]> {
+    async loadAlbum(album: Album): Promise<Album[]> {
+        // If we are loading an archived folder, we can ignore the content and add it to the queue
+        if (album.albumType === AlbumType.ARCHIVED) {
+            return [album];
+        }
+
         const albums: Album[] = [];
 
-        // Ignoring dummy album
+        // Not adding dummy album
         if (album.getUUID().length > 0) {
             albums.push(album);
         }
 
         this.logger.info(`Loading album ${album.getDisplayName()}`);
 
-        const symbolicLinks = (await fs.readdir(album.albumPath, {
-            withFileTypes: true,
+        const symbolicLinks = (await fs.promises.readdir(album.albumPath, {
+            "withFileTypes": true,
         })).filter(file => file.isSymbolicLink());
 
         this.logger.debug(`Found ${symbolicLinks.length} symbolic links in ${album.getDisplayName()}`);
 
         for (const link of symbolicLinks) {
             // The target's basename contains the UUID
-            const target = await fs.readlink(path.join(album.albumPath, link.name));
+            const target = await fs.promises.readlink(path.join(album.albumPath, link.name));
 
             if (album.albumType === AlbumType.FOLDER) {
                 const uuid = path.basename(target).substring(1); // Removing leading '.'
                 const fullPath = path.join(album.albumPath, target);
                 const folderType = await this.readAlbumTypeFromPath(fullPath);
+                const folderName = link.name;
+                const parentFolderUUID = album.getUUID();
 
-                if (folderType === AlbumType.ARCHIVED) {
-                    this.logger.warn(`Ignoring archived folder ${uuid}`);
-                } else {
-                    const loadedAlbum = new Album(uuid, folderType, link.name, album.getUUID(), fullPath);
-                    albums.push(...await this.loadAlbum(loadedAlbum));
-                }
+                const loadedAlbum = new Album(uuid, folderType, folderName, parentFolderUUID, fullPath);
+                albums.push(...await this.loadAlbum(loadedAlbum));
             } else if (album.albumType === AlbumType.ALBUM) {
                 const uuidFile = path.parse(target).base;
                 albums[0].assets[uuidFile] = link.name;
-            } else if (album.albumType === AlbumType.ARCHIVED) {
-                this.logger.info(`Treating ${album.albumType} as archived`);
-                // Ignoring assets on archived folders
             }
         }
 
@@ -131,15 +143,15 @@ export class PhotosLibrary {
      * @param path - The path to the folder on disk
      * @returns The album type of the folder
      */
-    private async readAlbumTypeFromPath(path: string): Promise<AlbumType> {
+    async readAlbumTypeFromPath(path: string): Promise<AlbumType> {
         // If the folder contains other folders, it will be of AlbumType.Folder
-        const directoryPresent = (await fs.readdir(path, {
-            withFileTypes: true,
+        const directoryPresent = (await fs.promises.readdir(path, {
+            "withFileTypes": true,
         })).some(file => file.isDirectory());
 
         // If there are files in the folders, the folder is treated as archived
-        const filePresent = (await fs.readdir(path, {
-            withFileTypes: true,
+        const filePresent = (await fs.promises.readdir(path, {
+            "withFileTypes": true,
         })).filter(file => !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name)) // Filter out files that are safe to ignore
             .some(file => file.isFile());
 
@@ -159,32 +171,36 @@ export class PhotosLibrary {
         return AlbumType.ALBUM;
     }
 
+    async writeAsset(asset: Asset, response: AxiosResponse<any, any>): Promise<void> {
+        this.logger.debug(`Writing asset ${asset.getDisplayName()}`);
+        const location = asset.getAssetFilePath(this.assetDir);
+        const writeStream = fs.createWriteStream(location);
+        response.data.pipe(writeStream);
+        return pEvent(writeStream, `close`)
+            .then(() => fs.promises.utimes(asset.getAssetFilePath(this.assetDir), asset.modified, asset.modified)) // Setting modified date on file
+            .then(() => {
+                if (!this.verifyAsset(asset)) {
+                    throw new Error(`Unable to verify asset ${asset.getDisplayName()}`);
+                }
+
+                this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
+            });
+    }
+
+    async deleteAsset(asset: Asset): Promise<void> {
+        this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
+        return fs.promises.rm(asset.getAssetFilePath(this.assetDir), {"force": true});
+    }
+
     /**
-     * This function diffs two entity arrays (can be either Albums or Assets) and returns the corresponding processing queue
-     * @param remoteEnties - The entities fetched from a remote state
-     * @param localEntities - The local entities as read from disk
-     * @returns A processing queue, containing the entities that needs to be deleted, added and kept. In the case of albums, this will not take hierarchical dependencies into consideration
+     * Verifies if a given Asset object is present on disk
+     * @param asset - The asset to verify
+     * @returns True, if the Asset object is present on disk
      */
-    getProcessingQueues<T>(remoteEnties: PEntity<T>[], localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
-        this.logger.debug(`Getting processing queues`);
-        const toBeAdded: T[] = [];
-        const toBeKept: T[] = [];
-        remoteEnties.forEach(remoteEntity => {
-            const localEntity = localEntities[remoteEntity.getUUID()];
-            if (!localEntity || !remoteEntity.equal(localEntity)) {
-                // No local entity OR local entity does not match remote entity -> Remote asset will be added & local asset will not be removed from deletion queue
-                this.logger.debug(`Adding new remote entity ${remoteEntity.getDisplayName()}`);
-                toBeAdded.push(remoteEntity.unpack());
-            } else {
-                // Local asset matches remote asset, nothing to do, but preventing local asset to be deleted
-                this.logger.debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
-                toBeKept.push(remoteEntity.unpack());
-                delete localEntities[remoteEntity.getUUID()];
-            }
-        });
-        // The original library should only hold those records, that have not been referenced by the remote state, removing them
-        const toBeDeleted = Object.values(localEntities);
-        this.logger.debug(`Adding ${toBeAdded.length} remote entities, removing ${toBeDeleted.length} local entities, keeping ${toBeKept.length} local entities`);
-        return [toBeDeleted, toBeAdded, toBeKept];
+    verifyAsset(asset: Asset): boolean {
+        this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
+        const location = asset.getAssetFilePath(this.assetDir);
+        return fs.existsSync(location)
+            && asset.verify(fs.readFileSync(location));
     }
 }

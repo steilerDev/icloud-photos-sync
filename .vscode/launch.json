@@ -7,16 +7,34 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Launch App",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "preLaunchTask": "build-app",
             "program": "${workspaceFolder}/rootfs/opt/icloud-photos-sync/src/main.ts",
+            "args": ["sync"],
             "outFiles": [
                 "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
             ],
-            "envFile": "${workspaceFolder}/.vscode/debug.env"
-        }
+            "envFile": "${workspaceFolder}/.vscode/debug-test.env"
+        }, {
+            "name": "Debug Tests",
+            "type": "node",
+            "request": "launch",
+            "runtimeArgs": [
+              "--experimental-vm-modules",
+              "--inspect-brk",
+              "${workspaceRoot}/rootfs/opt/icloud-photos-sync/node_modules/.bin/jest",
+              "--runInBand",
+              "--coverage=true",
+              "--config", "jest.config.json",
+              //"test/unit/photos-library.unit.test.ts"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "${workspaceFolder}/rootfs/opt/icloud-photos-sync",
+            "envFile": "${workspaceFolder}/.vscode/debug-test.env"
+          }
     ]
 }

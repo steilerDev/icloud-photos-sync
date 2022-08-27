@@ -1,0 +1,2012 @@
+{
+	"info": {
+		"_postman_id": "af87bfbd-b213-4a6d-ae25-f7f5c2578b1c",
+		"name": "iCloud",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "22961780"
+	},
+	"item": [
+		{
+			"name": "Login & Setup",
+			"item": [
+				{
+					"name": "01-Enter Pwd",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if(pm.response.code == 200) {",
+									"    // No 2FA needed, straigt to Setup iCloud",
+									"    pm.collectionVariables.set(\"X-Apple-Session-Token\", pm.response.headers.get(\"X-Apple-Session-Token\"))",
+									"} else if (pm.response.code == 409) {",
+									"    // 2FA",
+									"    pm.collectionVariables.set(\"X-Apple-ID-Session-Id\", pm.response.headers.get(\"X-Apple-ID-Session-Id\"));",
+									"    pm.collectionVariables.set(\"scnt\", pm.response.headers.get(\"scnt\"));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.cookies.clear()"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive"
+							},
+							{
+								"key": "Origin",
+								"value": "https://idmsa.apple.com"
+							},
+							{
+								"key": "Referer",
+								"value": "https://idmsa.apple.com/"
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "gzip, deflate, br"
+							},
+							{
+								"key": "Content-Type",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "X-Apple-Widget-Key",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Id",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-I-FD-Client-Info",
+								"value": "{{clientInfo}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Type",
+								"value": "code"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Mode",
+								"value": "web_message"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Type",
+								"value": "firstPartyAuth"
+							},
+							{
+								"key": "scnt",
+								"value": "{{scnt}}",
+								"disabled": true
+							},
+							{
+								"key": "Accept-Language",
+								"value": "en-US,en;q=0.5",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Frame-Id",
+								"value": "auth-aza68kt5-0q1z-fu01-whfy-axndwd5n",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-State",
+								"value": "auth-aza68kt5-0q1z-fu01-whfy-axndwd5n",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Redirect-URI",
+								"value": "https://www.icloud.com",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Require-Grant-Code",
+								"value": "true",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Domain-Id",
+								"value": "3",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Locale",
+								"value": "en_US",
+								"disabled": true
+							},
+							{
+								"key": "X-Requested-With",
+								"value": "XMLHttpRequest",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "dslang=US-EN; site=USA; aasp=CF72548FBDF94295601A18DF46AB499B2B19F483477C72841391D8FD699A490EDA4CA9B5B3D673023BB06BA5782D4E755D344C49CAEF2BAA2BFE072CF7B2033493DA4D7EAA0366BFD5E65E52E261E801654AE975511BE5B423E55FDA5D87DA9E269AABB03811401DF330151CCEAD158D537BA25A6B943E57; geo=DE; aa=E07643B4DA1803AE7020C5E8CF8942C0",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-origin",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"accountName\": \"{{username}}\",\n    \"password\": \"{{password}}\",\n    \"trustTokens\": [\n        \"{{X-Apple-TwoSV-Trust-Token}}\"\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://idmsa.apple.com/appleauth/auth/signin?isRememberMeEnabled=true",
+							"protocol": "https",
+							"host": [
+								"idmsa",
+								"apple",
+								"com"
+							],
+							"path": [
+								"appleauth",
+								"auth",
+								"signin"
+							],
+							"query": [
+								{
+									"key": "isRememberMeEnabled",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "01-- Get list of devices",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive"
+							},
+							{
+								"key": "Origin",
+								"value": "https://idmsa.apple.com"
+							},
+							{
+								"key": "Referer",
+								"value": "https://idmsa.apple.com/"
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "gzip, deflate, br"
+							},
+							{
+								"key": "Content-Type",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "scnt",
+								"value": "{{scnt}}"
+							},
+							{
+								"key": "X-Apple-Widget-Key",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Id",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-I-FD-Client-Info",
+								"value": "{{clientInfo}}"
+							},
+							{
+								"key": "X-Apple-ID-Session-Id",
+								"value": "{{X-Apple-ID-Session-Id}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Type",
+								"value": "code"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Mode",
+								"value": "web_message"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Type",
+								"value": "firstPartyAuth"
+							},
+							{
+								"key": "Accept-Language",
+								"value": "en-US,en;q=0.5",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Auth-Attributes",
+								"value": "KppHjelP6wTMN0ksprJDcFuGEAZI402Vd/YLmrKgzfN5tV3ulGZRXrXpb3sL3LABqt3ACaxQmpJtP0/mAS6KahM07vrBYKpLOabXZnSnbvICB9iqFiCYNSbQ7tQ7gSi/IaL+RmZSuVgv1LEAEo5z2+mYhg==",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Frame-Id",
+								"value": "auth-an9qxkwo-ento-kwxy-0pve-pb4efg9r",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-State",
+								"value": "auth-an9qxkwo-ento-kwxy-0pve-pb4efg9r",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Redirect-URI",
+								"value": "https://www.icloud.com",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Require-Grant-Code",
+								"value": "true",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Domain-Id",
+								"value": "3",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Locale",
+								"value": "en_US",
+								"disabled": true
+							},
+							{
+								"key": "X-Requested-With",
+								"value": "XMLHttpRequest",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "dslang=US-EN; site=USA; aasp=CF72548FBDF94295601A18DF46AB499B2B19F483477C72841391D8FD699A490EDA4CA9B5B3D673023BB06BA5782D4E755D344C49CAEF2BAA2BFE072CF7B2033493DA4D7EAA0366BFD5E65E52E261E801654AE975511BE5B423E55FDA5D87DA9E269AABB03811401DF330151CCEAD158D537BA25A6B943E57; geo=DE; aa=4D2D6DDF06C7D4C21A62E183ED181BA5; acn01=OfOw8dN/dJ4CnYQYixdKkSspPvFr/SX3ABKOc7fsql4=; DES59973e73492bce297965944710bf0bd88=HSARMTKNSRVXWFlaypSSUAUFTo67eRMPzYl2EDOq1CN2xlR7jQcWxE67E8JEx8N5nfe7jXwXFLyr+Qe3ARyCIxsUDXq+u0yNW+3esW33z+SEfnTy/DPnZSrdWoSTMFiEYWExP+Y2Zhe8ExSqSo5QcB6HtX7LU+Y/hVFUeipguNSLATGH6GyA1ohMe6Z6SRVX",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-origin",
+								"disabled": true
+							},
+							{
+								"key": "Content-Length",
+								"value": "0",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
+							"protocol": "https",
+							"host": [
+								"idmsa",
+								"apple",
+								"com"
+							],
+							"path": [
+								"appleauth",
+								"auth",
+								"verify",
+								"trusteddevice",
+								"securitycode"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "01-- Resend 2FA In-App",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive"
+							},
+							{
+								"key": "Origin",
+								"value": "https://idmsa.apple.com"
+							},
+							{
+								"key": "Referer",
+								"value": "https://idmsa.apple.com/"
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "gzip, deflate, br"
+							},
+							{
+								"key": "Content-Type",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "scnt",
+								"value": "{{scnt}}"
+							},
+							{
+								"key": "X-Apple-Widget-Key",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Id",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-I-FD-Client-Info",
+								"value": "{{clientInfo}}"
+							},
+							{
+								"key": "X-Apple-ID-Session-Id",
+								"value": "{{X-Apple-ID-Session-Id}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Type",
+								"value": "code"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Mode",
+								"value": "web_message"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Type",
+								"value": "firstPartyAuth"
+							},
+							{
+								"key": "Accept-Language",
+								"value": "en-US,en;q=0.5",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Auth-Attributes",
+								"value": "KppHjelP6wTMN0ksprJDcFuGEAZI402Vd/YLmrKgzfN5tV3ulGZRXrXpb3sL3LABqt3ACaxQmpJtP0/mAS6KahM07vrBYKpLOabXZnSnbvICB9iqFiCYNSbQ7tQ7gSi/IaL+RmZSuVgv1LEAEo5z2+mYhg==",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Frame-Id",
+								"value": "auth-an9qxkwo-ento-kwxy-0pve-pb4efg9r",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-State",
+								"value": "auth-an9qxkwo-ento-kwxy-0pve-pb4efg9r",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Redirect-URI",
+								"value": "https://www.icloud.com",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Require-Grant-Code",
+								"value": "true",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Domain-Id",
+								"value": "3",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Locale",
+								"value": "en_US",
+								"disabled": true
+							},
+							{
+								"key": "X-Requested-With",
+								"value": "XMLHttpRequest",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "dslang=US-EN; site=USA; aasp=CF72548FBDF94295601A18DF46AB499B2B19F483477C72841391D8FD699A490EDA4CA9B5B3D673023BB06BA5782D4E755D344C49CAEF2BAA2BFE072CF7B2033493DA4D7EAA0366BFD5E65E52E261E801654AE975511BE5B423E55FDA5D87DA9E269AABB03811401DF330151CCEAD158D537BA25A6B943E57; geo=DE; aa=4D2D6DDF06C7D4C21A62E183ED181BA5; acn01=OfOw8dN/dJ4CnYQYixdKkSspPvFr/SX3ABKOc7fsql4=; DES59973e73492bce297965944710bf0bd88=HSARMTKNSRVXWFlaypSSUAUFTo67eRMPzYl2EDOq1CN2xlR7jQcWxE67E8JEx8N5nfe7jXwXFLyr+Qe3ARyCIxsUDXq+u0yNW+3esW33z+SEfnTy/DPnZSrdWoSTMFiEYWExP+Y2Zhe8ExSqSo5QcB6HtX7LU+Y/hVFUeipguNSLATGH6GyA1ohMe6Z6SRVX",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-origin",
+								"disabled": true
+							},
+							{
+								"key": "Content-Length",
+								"value": "0",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
+							"protocol": "https",
+							"host": [
+								"idmsa",
+								"apple",
+								"com"
+							],
+							"path": [
+								"appleauth",
+								"auth",
+								"verify",
+								"trusteddevice",
+								"securitycode"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "01-- Resend 2FA Phone",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive"
+							},
+							{
+								"key": "Origin",
+								"value": "https://idmsa.apple.com"
+							},
+							{
+								"key": "Referer",
+								"value": "https://idmsa.apple.com/"
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "gzip, deflate, br"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "scnt",
+								"value": "{{scnt}}"
+							},
+							{
+								"key": "X-Apple-Widget-Key",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Id",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-I-FD-Client-Info",
+								"value": "{{clientInfo}}"
+							},
+							{
+								"key": "X-Apple-ID-Session-Id",
+								"value": "{{X-Apple-ID-Session-Id}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Type",
+								"value": "code"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Mode",
+								"value": "web_message"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Type",
+								"value": "firstPartyAuth"
+							},
+							{
+								"key": "Accept-Language",
+								"value": "en-US,en;q=0.5",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Auth-Attributes",
+								"value": "yec/SqB0jGaZD9dsYTORnHMEiUqsYRhNgVp6XupJRusXjwc/5WEzdqdKbeuXJq0DgESkOXjdtwE1WSHC/FpPqLAzY7ow5gPsNEAstfAs0d+We7kJngHvLjUzwdDVXPNdbBvUqbDyxxpRMaIAEo55zM56Ag==",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Frame-Id",
+								"value": "auth-an9qxkwo-ento-kwxy-0pve-pb4efg9r",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-State",
+								"value": "auth-an9qxkwo-ento-kwxy-0pve-pb4efg9r",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Redirect-URI",
+								"value": "https://www.icloud.com",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Require-Grant-Code",
+								"value": "true",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Domain-Id",
+								"value": "3",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Locale",
+								"value": "en_US",
+								"disabled": true
+							},
+							{
+								"key": "X-Requested-With",
+								"value": "XMLHttpRequest",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "dslang=US-EN; site=USA; aasp=CF72548FBDF94295601A18DF46AB499B2B19F483477C72841391D8FD699A490EDA4CA9B5B3D673023BB06BA5782D4E755D344C49CAEF2BAA2BFE072CF7B2033493DA4D7EAA0366BFD5E65E52E261E801654AE975511BE5B423E55FDA5D87DA9E269AABB03811401DF330151CCEAD158D537BA25A6B943E57; geo=DE; aa=4D2D6DDF06C7D4C21A62E183ED181BA5; acn01=OfOw8dN/dJ4CnYQYixdKkSspPvFr/SX3ABKOc7fsql4=; DES59973e73492bce297965944710bf0bd88=HSARMTKNSRVXWFlaypSSUAUFTo67eRMPzYl2EDOq1CN2xlR7jQcWxE67E8JEx8N5nfe7jXwXFLyr+Qe3ARyCIxsUDXq+u0yNW+3esW33z+SEfnTy/DPnZSrdWoSTMFiEYWExP+Y2Zhe8ExSqSo5QcB6HtX7LU+Y/hVFUeipguNSLATGH6GyA1ohMe6Z6SRVX",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-origin",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"phoneNumber\":{\"id\":1},\"mode\":\"sms\"}"
+						},
+						"url": {
+							"raw": "https://idmsa.apple.com/appleauth/auth/verify/phone",
+							"protocol": "https",
+							"host": [
+								"idmsa",
+								"apple",
+								"com"
+							],
+							"path": [
+								"appleauth",
+								"auth",
+								"verify",
+								"phone"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "02-Enter 2FA",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.cookies.clear()"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive"
+							},
+							{
+								"key": "Origin",
+								"value": "https://idmsa.apple.com"
+							},
+							{
+								"key": "Referer",
+								"value": "https://idmsa.apple.com/"
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "gzip, deflate, br"
+							},
+							{
+								"key": "Content-Type",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "scnt",
+								"value": "{{scnt}}"
+							},
+							{
+								"key": "X-Apple-Widget-Key",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Id",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-I-FD-Client-Info",
+								"value": "{{clientInfo}}"
+							},
+							{
+								"key": "X-Apple-ID-Session-Id",
+								"value": "{{X-Apple-ID-Session-Id}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Type",
+								"value": "code"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Mode",
+								"value": "web_message"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Type",
+								"value": "firstPartyAuth"
+							},
+							{
+								"key": "Accept-Language",
+								"value": "en-US,en;q=0.5",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Auth-Attributes",
+								"value": "",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Frame-Id",
+								"value": "auth-cqqt5f7q-txpl-fihd-dc1n-t38s4wph",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-State",
+								"value": "auth-cqqt5f7q-txpl-fihd-dc1n-t38s4wph",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Redirect-URI",
+								"value": "https://www.icloud.com",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Require-Grant-Code",
+								"value": "true",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Domain-Id",
+								"value": "3",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Locale",
+								"value": "en_US",
+								"disabled": true
+							},
+							{
+								"key": "X-Requested-With",
+								"value": "XMLHttpRequest",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "dslang=US-EN; site=USA; aasp=CF72548FBDF94295601A18DF46AB499B2B19F483477C72841391D8FD699A490EDA4CA9B5B3D673023BB06BA5782D4E755D344C49CAEF2BAA2BFE072CF7B2033493DA4D7EAA0366BFD5E65E52E261E801654AE975511BE5B423E55FDA5D87DA9E269AABB03811401DF330151CCEAD158D537BA25A6B943E57; geo=DE; aa=06A76DC50B9602217FE6AED4AB3802DD; acn01=nE5Xj0GPRGG6NQ5H0Dv/nn3stCNLm+5uABDFki0sDN4=",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-origin",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"securityCode\": {\n        \"code\": \"271366\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
+							"protocol": "https",
+							"host": [
+								"idmsa",
+								"apple",
+								"com"
+							],
+							"path": [
+								"appleauth",
+								"auth",
+								"verify",
+								"trusteddevice",
+								"securitycode"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "03-Trust Device",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"X-Apple-TwoSV-Trust-Token\", pm.response.headers.get(\"X-Apple-TwoSV-Trust-Token\"))",
+									"pm.collectionVariables.set(\"X-Apple-Session-Token\", pm.response.headers.get(\"X-Apple-Session-Token\"))"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.cookies.clear()"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive"
+							},
+							{
+								"key": "Referer",
+								"value": "https://idmsa.apple.com/"
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "gzip, deflate, br"
+							},
+							{
+								"key": "Content-Type",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "scnt",
+								"value": "{{scnt}}"
+							},
+							{
+								"key": "X-Apple-Widget-Key",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Id",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-I-FD-Client-Info",
+								"value": "{{clientInfo}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Type",
+								"value": "code"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Mode",
+								"value": "web_message"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Type",
+								"value": "firstPartyAuth"
+							},
+							{
+								"key": "Accept-Language",
+								"value": "en-US,en;q=0.5",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-ID-Session-Id",
+								"value": "{{X-Apple-ID-Session-Id}}",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Auth-Attributes",
+								"value": "",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Frame-Id",
+								"value": "auth-cqqt5f7q-txpl-fihd-dc1n-t38s4wph",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-State",
+								"value": "auth-cqqt5f7q-txpl-fihd-dc1n-t38s4wph",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Redirect-URI",
+								"value": "https://www.icloud.com",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Require-Grant-Code",
+								"value": "true",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Domain-Id",
+								"value": "3",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Locale",
+								"value": "en_US",
+								"disabled": true
+							},
+							{
+								"key": "X-Requested-With",
+								"value": "XMLHttpRequest",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "dslang=US-EN; site=USA; aasp=CF72548FBDF94295601A18DF46AB499B2B19F483477C72841391D8FD699A490EDA4CA9B5B3D673023BB06BA5782D4E755D344C49CAEF2BAA2BFE072CF7B2033493DA4D7EAA0366BFD5E65E52E261E801654AE975511BE5B423E55FDA5D87DA9E269AABB03811401DF330151CCEAD158D537BA25A6B943E57; geo=DE; aa=06A76DC50B9602217FE6AED4AB3802DD; acn01=nE5Xj0GPRGG6NQ5H0Dv/nn3stCNLm+5uABDFki0sDN4=",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-origin",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "https://idmsa.apple.com/appleauth/auth/2sv/trust",
+							"protocol": "https",
+							"host": [
+								"idmsa",
+								"apple",
+								"com"
+							],
+							"path": [
+								"appleauth",
+								"auth",
+								"2sv",
+								"trust"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "04-Setup iCloud",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"Photos_URL\", pm.response.json().webservices.ckdatabasews.url)",
+									"pm.collectionVariables.set(\"dsid\", pm.response.json().dsInfo.dsid)"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.cookies.clear()"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com"
+							},
+							{
+								"key": "Accept-Language",
+								"value": "en-US,en;q=0.5",
+								"disabled": true
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "gzip, deflate, br",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "text/plain;charset=UTF-8",
+								"disabled": true
+							},
+							{
+								"key": "DNT",
+								"value": "1",
+								"disabled": true
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive",
+								"disabled": true
+							},
+							{
+								"key": "Referer",
+								"value": "https://www.icloud.com/",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "X_APPLE_WEB_KB-MQV7YLMQMH6N7BH7WFCZ3VBGEXU=\"v=1:t=CQ==BST_IAAAAAAABLwIAAAAAGH_u7oRDmdzLmljbG91ZC5hdXRovQBgitlpxWWtFYJs9itrzyAt5pqRG-Wd5QMD3R4HW6xiaFTGmVElzttIf3w_YxbE3v2Yo35-kot_gMlJEZvtCqJT3-2XDzyr4eiXqjomseDQLzO70UBsIEZLUcm2PDwjgVBe4aiyDCkd06OT1XyJ6zl0bOw3Kg~~\"; X-APPLE-WEBAUTH-HSA-TRUST=\"d5d112d62799de83efbc38fef3448db91af4e332b7927227a264abbb96094ded_HSARMTKNSRVXWFlanLRC005KVm2q/QkLkVaoI87+kR35cqRY7P04mVA4XRykR1fFDq522W9ay9x6metKIcutxjBC4bbE/+slgnUoNIc+tCgpqUz1z9udfMe170DSpLQoJseQnXCX4Pga6AAfwbGJGxCVKu8ezI6eohTJFBaH/2HB+AKc430GqVIwTmWESRVX\"; NSC_q09-tfuvqtfswjdf=14b5a3d9a919b78d7668a3cd5fb65288e400605abae25628ff45442fb0e7e20cd2c19c8c",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-site",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dsWebAuthToken\": \"{{X-Apple-Session-Token}}\",\n    \"accountCountryCode\": \"DEU\",\n    \"extended_login\": false,\n    \"trustToken\": \"{{X-Apple-TwoSV-Trust-Token}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://setup.icloud.com/setup/ws/1/accountLogin?clientId={{clientID}}",
+							"protocol": "https",
+							"host": [
+								"setup",
+								"icloud",
+								"com"
+							],
+							"path": [
+								"setup",
+								"ws",
+								"1",
+								"accountLogin"
+							],
+							"query": [
+								{
+									"key": "clientBuildNumber",
+									"value": "2207Project40",
+									"disabled": true
+								},
+								{
+									"key": "clientMasteringNumber",
+									"value": "2207B37",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "{{clientID}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "05-Check indexing State",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}",
+								"type": "default"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}",
+								"type": "default"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com",
+								"type": "default"
+							},
+							{
+								"key": "Content-Type",
+								"value": "text/plain",
+								"type": "default",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\": {\n        \"recordType\":\"CheckIndexingState\"\n    },\n    \"zoneID\":{\n        \"zoneName\":\"PrimarySync\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query?getCurrentSyncToken=True",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"query"
+							],
+							"query": [
+								{
+									"key": "getCurrentSyncToken",
+									"value": "True"
+								},
+								{
+									"key": "remapEnums",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "dsid",
+									"value": "{{dsid}}",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "{{clientID}}",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "iCloud Photos Library",
+			"item": [
+				{
+					"name": "List Zones",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}",
+								"type": "default"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}",
+								"type": "default"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com",
+								"type": "default"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "default"
+							}
+						],
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/zones/list?remapEnums=True&getCurrentSyncToken=True",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"zones",
+								"list"
+							],
+							"query": [
+								{
+									"key": "remapEnums",
+									"value": "True"
+								},
+								{
+									"key": "getCurrentSyncToken",
+									"value": "True"
+								},
+								{
+									"key": "clientId",
+									"value": "61fed521-b3e2-4ca0-9e32-511d48c936bf",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Photos by Album & Date",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}",
+								"type": "default"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}",
+								"type": "default"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com",
+								"type": "default"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLContainerRelationLiveByAssetDate\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"startDate\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 9007199254740991,\n                    \"type\": \"TIMESTAMP\"\n                }\n            },\n            {\n                \"fieldName\": \"endDate\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 0,\n                    \"type\": \"TIMESTAMP\"\n                }\n            },\n            {\n                \"fieldName\": \"parentId\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"E54C41AD-5E1A-4768-8E89-4B39E60FD954\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"desiredKeys\": [\n        \"addedDate\",\n        \"adjustmentRenderType\",\n        \"adjustmentType\",\n        \"assetDate\",\n        \"assetHDRType\",\n        \"assetSubtype\",\n        \"assetSubtypeV2\",\n        \"burstFlags\",\n        \"burstFlagsExt\",\n        \"burstId\",\n        \"captionEnc\",\n        \"codec\",\n        \"containerId\",\n        \"customRenderedValue\",\n        \"dataClassType\",\n        \"dateExpunged\",\n        \"duration\",\n        \"filenameEnc\",\n        \"importedBy\",\n        \"isDeleted\",\n        \"isExpunged\",\n        \"isFavorite\",\n        \"isHidden\",\n        \"isKeyAsset\",\n        \"itemId\",\n        \"itemType\",\n        \"locationEnc\",\n        \"locationLatitude\",\n        \"locationLongitude\",\n        \"locationV2Enc\",\n        \"masterRef\",\n        \"mediaMetaDataEnc\",\n        \"mediaMetaDataType\",\n        \"orientation\",\n        \"originalOrientation\",\n        \"position\",\n        \"recordChangeTag\",\n        \"recordName\",\n        \"recordType\",\n        \"remappedRef\",\n        \"resJPEGFullFileType\",\n        \"resJPEGFullFingerprint\",\n        \"resJPEGFullHeight\",\n        \"resJPEGFullRes\",\n        \"resJPEGFullWidth\",\n        \"resJPEGLargeFileType\",\n        \"resJPEGLargeFingerprint\",\n        \"resJPEGLargeHeight\",\n        \"resJPEGLargeRes\",\n        \"resJPEGLargeWidth\",\n        \"resJPEGMedFileType\",\n        \"resJPEGMedFingerprint\",\n        \"resJPEGMedHeight\",\n        \"resJPEGMedRes\",\n        \"resJPEGMedWidth\",\n        \"resJPEGThumbFileType\",\n        \"resJPEGThumbFingerprint\",\n        \"resJPEGThumbHeight\",\n        \"resJPEGThumbRes\",\n        \"resJPEGThumbWidth\",\n        \"resOriginalAltFileType\",\n        \"resOriginalAltFingerprint\",\n        \"resOriginalAltHeight\",\n        \"resOriginalAltRes\",\n        \"resOriginalAltWidth\",\n        \"resOriginalFileType\",\n        \"resOriginalFingerprint\",\n        \"resOriginalHeight\",\n        \"resOriginalRes\",\n        \"resOriginalVidComplFileType\",\n        \"resOriginalVidComplFingerprint\",\n        \"resOriginalVidComplHeight\",\n        \"resOriginalVidComplRes\",\n        \"resOriginalVidComplWidth\",\n        \"resOriginalWidth\",\n        \"resSidecarFileType\",\n        \"resSidecarFingerprint\",\n        \"resSidecarHeight\",\n        \"resSidecarRes\",\n        \"resSidecarWidth\",\n        \"resVidFullFileType\",\n        \"resVidFullFingerprint\",\n        \"resVidFullHeight\",\n        \"resVidFullRes\",\n        \"resVidFullWidth\",\n        \"resVidHDRMedRes\",\n        \"resVidMedFileType\",\n        \"resVidMedFingerprint\",\n        \"resVidMedHeight\",\n        \"resVidMedRes\",\n        \"resVidMedWidth\",\n        \"resVidSmallFileType\",\n        \"resVidSmallFingerprint\",\n        \"resVidSmallHeight\",\n        \"resVidSmallRes\",\n        \"resVidSmallWidth\",\n        \"timeZoneOffset\",\n        \"vidComplDispScale\",\n        \"vidComplDispValue\",\n        \"vidComplDurScale\",\n        \"vidComplDurValue\",\n        \"vidComplVisibilityState\",\n        \"videoFrameRate\",\n        \"zoneID\"\n    ],\n    \"resultsLimit\": 3\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"query"
+							],
+							"query": [
+								{
+									"key": "remapEnums",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "getCurrentSyncToken",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "dsid",
+									"value": "{{dsid}}",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "61fed521-b3e2-4ca0-9e32-511d48c936bf",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Photos by Album & Position",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}",
+								"type": "default"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}",
+								"type": "default"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com",
+								"type": "default"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLContainerRelationLiveByPosition\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 1,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            },\n            {\n                \"fieldName\": \"parentId\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"2A8B1430-8C76-4BA6-98FC-F4C6D13611AB\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\": {\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneName\": \"PrimarySync\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"resultsLimit\": 18\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query?remapEnums=True",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"query"
+							],
+							"query": [
+								{
+									"key": "remapEnums",
+									"value": "True"
+								},
+								{
+									"key": "getCurrentSyncToken",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "dsid",
+									"value": "{{dsid}}",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "61fed521-b3e2-4ca0-9e32-511d48c936bf",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Photos by Start Rank",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}",
+								"type": "default"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}",
+								"type": "default"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com",
+								"type": "default"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\":{\n        \"recordType\":\"CPLAssetAndMasterByAddedDate\",\n        \"filterBy\":[\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 1743,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\":{\"zoneName\":\"PrimarySync\",\"ownerRecordName\":\"_e8a2d278a868306ca55d7fc05a299b73\",\"zoneType\":\"REGULAR_CUSTOM_ZONE\"},\n    \"desiredKeys\":[\"rank\",\"addedDate\",\"adjustmentRenderType\",\"adjustmentType\",\"assetDate\",\"assetHDRType\",\"assetSubtype\",\"assetSubtypeV2\",\"burstFlags\",\"burstFlagsExt\",\"burstId\",\"captionEnc\",\"codec\",\"containerId\",\"customRenderedValue\",\"dataClassType\",\"dateExpunged\",\"duration\",\"filenameEnc\",\"importedBy\",\"isDeleted\",\"isExpunged\",\"isFavorite\",\"isHidden\",\"isKeyAsset\",\"itemId\",\"itemType\",\"locationEnc\",\"locationLatitude\",\"locationLongitude\",\"locationV2Enc\",\"masterRef\",\"mediaMetaDataEnc\",\"mediaMetaDataType\",\"orientation\",\"originalOrientation\",\"position\",\"recordChangeTag\",\"recordName\",\"recordType\",\"remappedRef\",\"resJPEGFullFileType\",\"resJPEGFullFingerprint\",\"resJPEGFullHeight\",\"resJPEGFullRes\",\"resJPEGFullWidth\",\"resJPEGLargeFileType\",\"resJPEGLargeFingerprint\",\"resJPEGLargeHeight\",\"resJPEGLargeRes\",\"resJPEGLargeWidth\",\"resJPEGMedFileType\",\"resJPEGMedFingerprint\",\"resJPEGMedHeight\",\"resJPEGMedRes\",\"resJPEGMedWidth\",\"resJPEGThumbFileType\",\"resJPEGThumbFingerprint\",\"resJPEGThumbHeight\",\"resJPEGThumbRes\",\"resJPEGThumbWidth\",\"resOriginalAltFileType\",\"resOriginalAltFingerprint\",\"resOriginalAltHeight\",\"resOriginalAltRes\",\"resOriginalAltWidth\",\"resOriginalFileType\",\"resOriginalFingerprint\",\"resOriginalHeight\",\"resOriginalRes\",\"resOriginalVidComplFileType\",\"resOriginalVidComplFingerprint\",\"resOriginalVidComplHeight\",\"resOriginalVidComplRes\",\"resOriginalVidComplWidth\",\"resOriginalWidth\",\"resSidecarFileType\",\"resSidecarFingerprint\",\"resSidecarHeight\",\"resSidecarRes\",\"resSidecarWidth\",\"resVidFullFileType\",\"resVidFullFingerprint\",\"resVidFullHeight\",\"resVidFullRes\",\"resVidFullWidth\",\"resVidHDRMedRes\",\"resVidMedFileType\",\"resVidMedFingerprint\",\"resVidMedHeight\",\"resVidMedRes\",\"resVidMedWidth\",\"resVidSmallFileType\",\"resVidSmallFingerprint\",\"resVidSmallHeight\",\"resVidSmallRes\",\"resVidSmallWidth\",\"timeZoneOffset\",\"vidComplDispScale\",\"vidComplDispValue\",\"vidComplDurScale\",\"vidComplDurValue\",\"vidComplVisibilityState\",\"videoFrameRate\",\"zoneID\"],\n    \"resultsLimit\":8\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query?remapEnums=True",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"query"
+							],
+							"query": [
+								{
+									"key": "remapEnums",
+									"value": "True"
+								},
+								{
+									"key": "getCurrentSyncToken",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "dsid",
+									"value": "{{dsid}}",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "61fed521-b3e2-4ca0-9e32-511d48c936bf",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Album Index Count",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}",
+								"type": "default"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}",
+								"type": "default"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com",
+								"type": "default"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\": {\n        \"recordType\": \"HyperionIndexCountLookup\",\n        \"filterBy\": {\n            \"fieldName\": \"indexCountID\",\n            \"comparator\": \"IN\",\n            \"fieldValue\": {\n                \"value\": [\n                    \"CPLAssetByAddedDate\"\n                ],\n                \"type\": \"STRING_LIST\"\n            }\n        }\n    },\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"query"
+							],
+							"query": [
+								{
+									"key": "remapEnums",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "getCurrentSyncToken",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "dsid",
+									"value": "{{dsid}}",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "61fed521-b3e2-4ca0-9e32-511d48c936bf",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Album by Parent",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}",
+								"type": "default"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}",
+								"type": "default"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com",
+								"type": "default"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLContainerRelationLiveByPosition\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 0,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            },\n            {\n                \"fieldName\": \"parentId\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"CB64A80D-60A2-469A-AADF-F4306956E48C\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"desiredKeys\": [\n        \"addedDate\",\n        \"adjustmentRenderType\",\n        \"adjustmentType\",\n        \"assetDate\",\n        \"assetHDRType\",\n        \"assetSubtype\",\n        \"assetSubtypeV2\",\n        \"burstFlags\",\n        \"burstFlagsExt\",\n        \"burstId\",\n        \"captionEnc\",\n        \"codec\",\n        \"containerId\",\n        \"customRenderedValue\",\n        \"dataClassType\",\n        \"dateExpunged\",\n        \"duration\",\n        \"filenameEnc\",\n        \"importedBy\",\n        \"isDeleted\",\n        \"isExpunged\",\n        \"isFavorite\",\n        \"isHidden\",\n        \"isKeyAsset\",\n        \"itemId\",\n        \"itemType\",\n        \"locationEnc\",\n        \"locationLatitude\",\n        \"locationLongitude\",\n        \"locationV2Enc\",\n        \"masterRef\",\n        \"mediaMetaDataEnc\",\n        \"mediaMetaDataType\",\n        \"orientation\",\n        \"originalOrientation\",\n        \"position\",\n        \"recordChangeTag\",\n        \"recordName\",\n        \"recordType\",\n        \"remappedRef\",\n        \"resJPEGFullFileType\",\n        \"resJPEGFullFingerprint\",\n        \"resJPEGFullHeight\",\n        \"resJPEGFullRes\",\n        \"resJPEGFullWidth\",\n        \"resJPEGLargeFileType\",\n        \"resJPEGLargeFingerprint\",\n        \"resJPEGLargeHeight\",\n        \"resJPEGLargeRes\",\n        \"resJPEGLargeWidth\",\n        \"resJPEGMedFileType\",\n        \"resJPEGMedFingerprint\",\n        \"resJPEGMedHeight\",\n        \"resJPEGMedRes\",\n        \"resJPEGMedWidth\",\n        \"resJPEGThumbFileType\",\n        \"resJPEGThumbFingerprint\",\n        \"resJPEGThumbHeight\",\n        \"resJPEGThumbRes\",\n        \"resJPEGThumbWidth\",\n        \"resOriginalAltFileType\",\n        \"resOriginalAltFingerprint\",\n        \"resOriginalAltHeight\",\n        \"resOriginalAltRes\",\n        \"resOriginalAltWidth\",\n        \"resOriginalFileType\",\n        \"resOriginalFingerprint\",\n        \"resOriginalHeight\",\n        \"resOriginalRes\",\n        \"resOriginalVidComplFileType\",\n        \"resOriginalVidComplFingerprint\",\n        \"resOriginalVidComplHeight\",\n        \"resOriginalVidComplRes\",\n        \"resOriginalVidComplWidth\",\n        \"resOriginalWidth\",\n        \"resSidecarFileType\",\n        \"resSidecarFingerprint\",\n        \"resSidecarHeight\",\n        \"resSidecarRes\",\n        \"resSidecarWidth\",\n        \"resVidFullFileType\",\n        \"resVidFullFingerprint\",\n        \"resVidFullHeight\",\n        \"resVidFullRes\",\n        \"resVidFullWidth\",\n        \"resVidHDRMedRes\",\n        \"resVidMedFileType\",\n        \"resVidMedFingerprint\",\n        \"resVidMedHeight\",\n        \"resVidMedRes\",\n        \"resVidMedWidth\",\n        \"resVidSmallFileType\",\n        \"resVidSmallFingerprint\",\n        \"resVidSmallHeight\",\n        \"resVidSmallRes\",\n        \"resVidSmallWidth\",\n        \"timeZoneOffset\",\n        \"vidComplDispScale\",\n        \"vidComplDispValue\",\n        \"vidComplDurScale\",\n        \"vidComplDurValue\",\n        \"vidComplVisibilityState\",\n        \"videoFrameRate\",\n        \"zoneID\"\n    ],\n    \"resultsLimit\": 75\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"query"
+							],
+							"query": [
+								{
+									"key": "remapEnums",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "getCurrentSyncToken",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "dsid",
+									"value": "{{dsid}}",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "{{clientID}}",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Lookup Records",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept-Language",
+								"value": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+								"disabled": true
+							},
+							{
+								"key": "Cache-Control",
+								"value": "no-cache",
+								"disabled": true
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "X_APPLE_WEB_KB-MQV7YLMQMH6N7BH7WFCZ3VBGEXU=\"v=1:t=BA==BST_IAAAAAAABLwIAAAAAGKlBxMRDmdzLmljbG91ZC5hdXRovQDv-c-j2gdb3NDEJnp0jD3KOX51Dyj4ugPuGCHsvbGf-jUvtvZl_2A-5cOQs7GqKE1ZD0tjRBP-SOf7PtlUv4_tzv0LxfQMRWUDWmRTwu2l_2d-FZIDgjMRH-RJLIpUCraIUo6J486zeDr9k5jaeUmgIK6ywQ~~\"; X-APPLE-WEBAUTH-HSA-TRUST=\"d5d112d62799de83efbc38fef3448db91af4e332b7927227a264abbb96094ded_HSARMTKNSRVXWFlahYnyr0WPi7wbKJhXUdtmmhPYwdV6CUqk4UP/CAzGbnuqQrRh9QizSD8zv09YNdMnRODlDH950iFyyUnHTRSEGCa08IlPqJZ6TqVu6QJKRLWHFVYQ33u/ITo81Yo4tjMlAR/OTgPldSW9OjREaF8LqNfmEWMuAl7vTlwLnubX2LI=SRVX\"; mp_52e5e0805583e8a410f1ed50d8e0c049_mixpanel=%7B%22distinct_id%22%3A%20%221810a7814fc4d2-00403fab65ddd6-367a6700-384000-1810a7814fd1e53%22%2C%22%24device_id%22%3A%20%221810a7814fc4d2-00403fab65ddd6-367a6700-384000-1810a7814fd1e53%22%2C%22%24initial_referrer%22%3A%20%22%24direct%22%2C%22%24initial_referring_domain%22%3A%20%22%24direct%22%7D; X-APPLE-WEBAUTH-PCS-Documents=\"TGlzdEFwcGw6MTpBcHBsOjE6AWyeWJxdljRfQpcyXW0Ari/AtBqb22a9NrcCCFyjfVpwoqADcE3Lh9V+h1GHtZmxiaC0MBb+Z5DvzajA3W32ct2IAA9Bv6pW/mwPIrHCHcYnHgw2djPAaGCHTavVMJHLyk7zhVrljp2p3hsBcfQ/z5xcuh3AygZMeoico75vFeHtU+DTN9GTpA==\"; X-APPLE-WEBAUTH-PCS-Photos=\"TGlzdEFwcGw6MTpBcHBsOjE6AdpdUXfedU+Vas+NqfRZSCJLMqwd/z5mkp1fUs3tI4h+F9uIHqMrRiVYV5VZwX66A0q3icgnoAd0MInDHjBErI4ROgypPddQDEIVYnj+S/gVTtZxZ470Pu0SrPdAZGPyzRziLHM5bhWacrUhhlihFhb9KbmUhlhoAZG5oyD+JgvM0OYW/XzGLQ==\"; X-APPLE-WEBAUTH-PCS-Cloudkit=\"TGlzdEFwcGw6MTpBcHBsOjE6AXRSiW6XriKzZGa7Gd6Nr0Y/NknzsX15LTmYI7x8jSapTrd21QqMMiu2opb65yBk1/F/OYgI+jhJsZ4zx9LY2zcthoK3LN8tvZsFgeRrOZEA0E51rJCC1BAO/es4MbiR5aOvn5Z6uXAspquJ2G5jPTQ1ZHLSSnnDQ5dUURK2D7gPxJc/rDlVzA==\"; X-APPLE-WEBAUTH-PCS-Safari=\"TGlzdEFwcGw6MTpBcHBsOjE6AaU9qvWr+NDBvFLrKZYByjWw/rCxef/XADQn7aflzwLv8N52alcmXjqHBN+iiHyGBPxxKO8cFsy8TgpMd9ZaGEQqv5MfMoYScJEgqYwI6O/kcXO7BpKjhaTED8+5eHwpoLxphcewtKTVVa63iAPzJVmSwgKzuW2HzJngWaMFBZshsRGglzBgRA==\"; X-APPLE-WEBAUTH-PCS-Mail=\"TGlzdEFwcGw6MTpBcHBsOjE6ATAtBX/ZY3ZW2oBO/dkai10y+cLvmXuyIHQ5K4hNC0GhEYjzUtyW74b7IBtDBDXdXPmDfS2EJ2cc4MfyVf3TexU7kgQYEkVXaN69Or1I/nz/9o69OU6BnoUIwS3IzEgqRj71sq4FBmaCynH8Bxgp2HQbspXMzPfWy3YmMFN7qPpzmwoHwkVSrQ==\"; X-APPLE-WEBAUTH-PCS-Notes=\"TGlzdEFwcGw6MTpBcHBsOjE6AY0LMus+VmZgTtDznMsS1Z2hv/gwzCRCeYDUIh+Ze+3JaBFU8pBpbrQNP6Sb/sLJHC1u8vm2xGUs5RlwcAuFErhIbLP30Rxc8c7FAxKiWbx2VfjexwqaO+rzdpkQUhvgx9i6GVFXPVGeBDFT295LsEvsMsLtoAbUzSoP3biURsOo561KIRA77g==\"; X-APPLE-WEBAUTH-PCS-News=\"TGlzdEFwcGw6MTpBcHBsOjE6ATF+zC7k9TqX55d1ENwGET79o/FHlK7ZSSMeoRHS1FzIQl513Pbmmr8/UKWJR5MZimXQP9qabPU9Uzs2gyqi9uZX+oR/ZCgta78ZKpjwN8hBpCg1JVqW0gokGrisP2jbmV34Z9nGwiNv1aVC1uf8fIm66KULc7OOdwHzwvRmc0gIdo9SHYfXTw==\"; X-APPLE-WEBAUTH-PCS-Sharing=\"TGlzdEFwcGw6MTpBcHBsOjE6AQeJRxEXUZutGV52r9WlwF0hKblPCLu+13o4BbSFt5f7OT1ctyQYGKNmWirEjntEOw1gMd5qFO+LIBlKuaIUKf/tijP+bq8C8BDRyyhkyFe9NsWTWCYNJlmsZ32qYZlxljj43ST73AeoaGxQhuPSNP72vZrLnmv0c1vaOMIG3zugisXWkCYfPg==\"; X-APPLE-UNIQUE-CLIENT-ID=\"Bg==\"; X-APPLE-WEBAUTH-LOGIN=\"v=1:t=Bg==BST_IAAAAAAABLwIAAAAAGKlGR8RDmdzLmljbG91ZC5hdXRovQBiLgpMKXaQKIPGMrUQu8Hyk9ElKYOeyW96IwlwyFUmcBhGt_8DEUbSy9D7QuLF0D8rgtrV16McI1J1KmftGrWgTMVMvIS7KGS9xoynSXpGL-pqZ-D8Ac9J9vOu8trwTYcmBreqWQGt8vMUSQYA9oAYkPeXYg~~\"; X-APPLE-WEBAUTH-USER=\"v=1:s=0:d=1016178270\"; X-APPLE-DS-WEB-SESSION-TOKEN=\"AQGxRQUj6Ck+ICZQlzty8LB2VQOX91tPiT++naSw2TSGqG6l89p8e2O6j1xSuINJizaYohEmBzlizWRq7fLkPLENNu5kORG7/fMnUgXrHzWJB2nb/PGmYmEGuCQHDDEhRC0AygyW1yWd1XX0ryNa+gqzf+bQVUEZjCCQAxCXG7j42tKdGdezkEVsMzhiLloyfYFlo3DVGHII3AFML+x06pMiH5Ak1vLWlfphgkWM7eG0yQNdyCZb+FDwKR3CBuIEDuRt9NirDc5Epk/H8MgSDuVxdf/6y+kdJHaLhhUfX8xH9FBoP0PodHtdIuBvGyYE22Y6ILr5M1mu5F69pc8dtBqi0kiuGMY2CK3hNVavRaU0o2u494sgh7BVWqGjgAc/h/wExCO1PIzpDm1ZWaai5P1I01WzMN//YebuetmusRcxqW8M5ZvBcvAwJZu1ddzkEaVF/aQk9dIADxLPpFcM4+YWcyWRDuFJ+/6G5WRwlo8IoDoa9482gPaYSbhNGj4jaz/nEqlC59X07ekKnSb6vcSLJ/+O2g6Xbfv0M137WIYAuBf+J/l/i16PXSlH577YlBFiIiTLzDY46iaPdUhUfOqIT+xQdOb0kFIy1M+GrH3DN8/IOuFgwRy1yTkQABCLujDhhAl+4LniyGLEGTGM3LzenX9EdVNhvctLjgbwQXsiVVqmlXvFh95FA+JSaNjueg==\"; X-APPLE-WEB-ID=8F34D026279B7C14FB9E0E0CB8098B715BD0F6D6; X-APPLE-WEBAUTH-VALIDATE=\"v=1:t=Bg==BST_IAAAAAAABLwIAAAAAGKl90ERDmdzLmljbG91ZC5hdXRovQAl4FZEX6OTeWiE6gX4DowUaNNlerBTNt8ck4GHw5080EhSp0bDL0dkLOTP12yTOXvKB1_8V4EkLgnjb5sdnlsfmd3gMBO5Xc10jV93gvlGEEvD9PBAr55M2SuC_7mb60hfIyCo6P7NtCoH0hilRfDTP7LYXg~~\"; X-APPLE-WEBAUTH-TOKEN=\"v=2:t=Bg==BST_IAAAAAAABLwIAAAAAGKl-aURDmdzLmljbG91ZC5hdXRovQBFp9mD_FNUZYB265_IiVftEkzp4kKFf2jHR9dZGMIgXK6wXb58r-X78nyFKsTia7esVZafAkOFsuY2q6x8bS18jxLLWDRi6nG2zdnkTN6BsdxlVdNvGu3iAkfWPCMvfYp733JuB3J2yBhpvdj8rx7huprOAw~~\"",
+								"disabled": true
+							},
+							{
+								"key": "Pragma",
+								"value": "no-cache",
+								"disabled": true
+							},
+							{
+								"key": "Referer",
+								"value": "https://www.icloud.com/",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-site",
+								"disabled": true
+							},
+							{
+								"key": "Sec-GPC",
+								"value": "1",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"records\": [\n        {\n            \"recordName\": \"E4DF0E26-AEC7-438D-B13A-ED7ACE69E329\"\n        },\n        {\n            \"recordName\": \"038B63B0-E38B-4CF2-8189-E866F28B4297\"\n        },\n        {\n            \"recordName\": \"361ABFDB-F11A-4FF9-969B-DE8FD7B38FA4\"\n        },\n        {\n            \"recordName\": \"0D34DD47-A8EC-4198-B451-8D76DBA102A9\"\n        },\n        {\n            \"recordName\": \"F7339580-C1CC-4318-B2C8-C58315AEEDD5\"\n        },\n        {\n            \"recordName\": \"97DE959B-B51F-4FB8-B020-851E854E8C5C\"\n        },\n        {\n            \"recordName\": \"8654EEB5-1074-480A-A04F-69A79561E27B\"\n        },\n        {\n            \"recordName\": \"EE3BEAFE-65E6-4568-BA6B-071DF645EFB8\"\n        },\n        {\n            \"recordName\": \"81704AA0-1B8F-43AC-8EF2-609BD59E344F\"\n        },\n        {\n            \"recordName\": \"D55CE399-B8A0-464C-B0C7-DE62A4CEBC80\"\n        },\n        {\n            \"recordName\": \"E08F4755-FB5B-4246-8C77-2FE34C3E83C7\"\n        },\n        {\n            \"recordName\": \"21A8FB06-882D-4BF6-B79B-A3D3FC4BADF4\"\n        },\n        {\n            \"recordName\": \"947B5156-1B28-49F7-93A5-1FC68B2B1CE3\"\n        },\n        {\n            \"recordName\": \"5CF10BE9-842A-4A47-9B4E-173D273B966E\"\n        },\n        {\n            \"recordName\": \"9AC57DC0-BF37-4C01-822B-4B9D9BB2A24D\"\n        },\n        {\n            \"recordName\": \"07DA69F8-C39A-4637-B6AF-3DD6AEEB13D2\"\n        },\n        {\n            \"recordName\": \"26005F2C-07A5-4904-95AF-D4BAD5E1825D\"\n        },\n        {\n            \"recordName\": \"7B8C4E94-2E4B-409C-A3DB-A52A1D761A6E\"\n        },\n        {\n            \"recordName\": \"28F14C82-2731-4490-96D2-9587EA8E234C\"\n        },\n        {\n            \"recordName\": \"8385839F-E256-4FCD-9C17-1D0D6B5F97FC\"\n        },\n        {\n            \"recordName\": \"429883B0-496A-4760-92A3-2CF2779821CA\"\n        },\n        {\n            \"recordName\": \"5B621755-8D52-4D92-B43D-1B220709BA25\"\n        },\n        {\n            \"recordName\": \"6049D5DE-7607-43B2-B435-1AFFA79432E1\"\n        },\n        {\n            \"recordName\": \"FEBF1B7C-851D-447A-BD0F-C7740F95CD19\"\n        }\n    ],\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/lookup?remapEnums=true",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"lookup"
+							],
+							"query": [
+								{
+									"key": "ckjsBuildVersion",
+									"value": "2215ProjectDev31",
+									"disabled": true
+								},
+								{
+									"key": "ckjsVersion",
+									"value": "2.6.1",
+									"disabled": true
+								},
+								{
+									"key": "getCurrentSyncToken",
+									"value": "true",
+									"disabled": true
+								},
+								{
+									"key": "remapEnums",
+									"value": "true"
+								},
+								{
+									"key": "clientBuildNumber",
+									"value": "2215Project37",
+									"disabled": true
+								},
+								{
+									"key": "clientMasteringNumber",
+									"value": "2215B21",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "61fed521-b3e2-4ca0-9e32-511d48c936bf",
+									"disabled": true
+								},
+								{
+									"key": "dsid",
+									"value": "1016178270",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Asset",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept-Language",
+								"value": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+								"disabled": true
+							},
+							{
+								"key": "Cache-Control",
+								"value": "no-cache",
+								"disabled": true
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "X-APPLE-WEBAUTH-HSA-TRUST=\"d5d112d62799de83efbc38fef3448db91af4e332b7927227a264abbb96094ded_HSARMTKNSRVXWFla4iAd85CUy15w+vHn4IsBhGZVRULKgyD3L2OcefDepUTeGdvj7hOhvwM2wg+rs52H/1gxlb9gP0CBHQvYpXgwBSuPbAyi+VpQ4rYrdRiNTTwKOmrPVLQXkSoaYa3c8m+8EhWJEfRH1a6sUSFALjnwxCv2/qiaWMsbih9iM3wKkw==SRVX\"; mp_52e5e0805583e8a410f1ed50d8e0c049_mixpanel=%7B%22distinct_id%22%3A%20%221810a7814fc4d2-00403fab65ddd6-367a6700-384000-1810a7814fd1e53%22%2C%22%24device_id%22%3A%20%221810a7814fc4d2-00403fab65ddd6-367a6700-384000-1810a7814fd1e53%22%2C%22%24initial_referrer%22%3A%20%22%24direct%22%2C%22%24initial_referring_domain%22%3A%20%22%24direct%22%7D; X-APPLE-WEBAUTH-PCS-Documents=\"TGlzdEFwcGw6MTpBcHBsOjE6AWm0//zit/yCpl4SfPGFAUCYguSiBDMzpDpEcu5Fqt9blo89kEzFu0LWg6VYhdvFktJODQA5lwwmVygBGKvG3Il+nPy+bhuAggKe/ajRMCTuNl9orGr63hJfNT8FVe/8kfzcBW9FWTDuhpWL6j2zIBiQUKFEHBHoinZhz8bMY99IdqoHbns4YA==\"; X-APPLE-WEBAUTH-PCS-Photos=\"TGlzdEFwcGw6MTpBcHBsOjE6AV+c08IQFObYcItOzIZT8tExq3JS9vRyLwEFp3Qr4+o/C7TV8BAKyVDEol2ZbcQfX1xgH7jTR2AKGK1adww6Bxk4eGOi+kEMsIec2fzNXxUQB3QIwfPtQF20aQSATjh4ZJAU3rVkunak47/GZyYWPFedal2kFpDFITD0qOlquGLytETSmmXNhA==\"; X-APPLE-WEBAUTH-PCS-Cloudkit=\"TGlzdEFwcGw6MTpBcHBsOjE6ATnS1pHGVQ9Tmvn2u1Ul8eE8+9zplyMDpRqWpaPLC/YGEAzb4w7mQo7V7OaWEkmZSUFYHToa2Lm2x6WWuB1zJIVO6HEaQsD7Kb9hRv6+0zQUtr6xz2CgAYKkqG+cABQppqto3RuhOXNlgiKdmwbTaovCsBTirrP5uCI41wgwhz0d5NwBRwSApg==\"; X-APPLE-WEBAUTH-PCS-Safari=\"TGlzdEFwcGw6MTpBcHBsOjE6AVsgrcv6Kn6MGWVQYm88Xk2uxPuVKueKmSPiSDqf2wLGs4PjNnjda1+d7uHWAeO0OdaRBIb6NJ4q4YGq+MzHQv111w6yfKzbtpv6SNox5p4TT0OE5W4cxrJ0FntvNF2lOUrj9eb0YhM59gKu1fJ3Q0YZBJwf7xugGxNrtY4tUtYgh8T0iaBXqQ==\"; X-APPLE-WEBAUTH-PCS-Mail=\"TGlzdEFwcGw6MTpBcHBsOjE6AWNhUg/vgtGu5jywJ9laObHun2Xnszru7bwg2QouCFMWgdTDRztcMpeKAbIaSzZI30wN79+bVBc9Bwx/MpxPcrDoletTQuzKLgg6GYi3i6igloRqxE+ASOQqzpbof9oabSTACZmVRVCPioiOiGnc1VrC/xyETocJNf/nQk65NJDJZgWc5HSgHA==\"; X-APPLE-WEBAUTH-PCS-Notes=\"TGlzdEFwcGw6MTpBcHBsOjE6AQK/PkCeD32iIPCT1l4Hc+geo8WXh1lEMjcIWYaq0qG5bwYHEsNShjvN3+2q/iDO9NiC6WPi9X7qlAGjdjUOsgloU+o16TaReGhEr3KbwZldOcGUxq1vN6AHFW5fZawLH4zf3suS4Lr7tY1mCvPkA3MEA2vDM2qrg7ILy0UIS8cjlkEVaJP3iA==\"; X-APPLE-WEBAUTH-PCS-News=\"TGlzdEFwcGw6MTpBcHBsOjE6AYp/7oZdvFr7w8KM6T36VRHUsMzgCcYV8dHJpldcRiyAJgRRmIBfSfaoX908kkJ/OZwDK8RNCr97Nd7fs89uKb6bYAvruMV/hHAvPY6lPbMVC1gq7zX61ur5MCkXBIb95BForpmFXFKP5gfMmY0f2PeZAwJWhxAOGxvGC27PsKPEPq828SeZBw==\"; X-APPLE-WEBAUTH-PCS-Sharing=\"TGlzdEFwcGw6MTpBcHBsOjE6AQro/LylgFcOaNUH5FwyYsnJuDqVlc0d0p46Xx7f7GFoe0Vouu20kOlTs6HUgEqxGNVrmrXGf00oUKxpQEzod9aMgN6crj9YBLcolh4Zw31VBagArD0lb80tVjgmy+K8A/RJGH6tu3Z9MKr/joCfe7P/LfIasutXNd2u8K4NMBW8pyTaRbZMMg==\"; X-APPLE-UNIQUE-CLIENT-ID=\"AQ==\"; X-APPLE-WEBAUTH-LOGIN=\"v=1:t=AQ==BST_IAAAAAAABLwIAAAAAGLvqKMRDmdzLmljbG91ZC5hdXRovQDvJrNgHOo01nkVlQZ5sHvTE1VMC1pR0fB9BRutHo9tW5VRIfsMRyzYrhM5e08JzaBMoUz5v2UGc4lRHiNXCxxvxRvyYquc7i8XaBMMTjX03EJ1hv30v-0HJQDrunWoX_85b1KmgsCaRiOaWJfTsvWEywbSvQ~~\"; X-APPLE-WEBAUTH-VALIDATE=\"v=1:t=AQ==BST_IAAAAAAABLwIAAAAAGLvqKMRDmdzLmljbG91ZC5hdXRovQDvJrNgHOo01nkVlQZ5sHvTE1VMC1pR0fB9BRutHo9tW5VRIfsMRyzYrhM5e08JzaBMoUz5v2UGc4lRHiNXCxxvxRvyYquc7i8XaBMMTjX03Ly6EM2t4XNJ4EwGna26D6DbGH3RYUubLgyyHZ5YnkqMi7WHNQ~~\"; X-APPLE-WEBAUTH-USER=\"v=1:s=0:d=1016178270\"; X_APPLE_WEB_KB-MQV7YLMQMH6N7BH7WFCZ3VBGEXU=\"v=1:t=AQ==BST_IAAAAAAABLwIAAAAAGLvqKMRDmdzLmljbG91ZC5hdXRovQDvJrNgHOo01nkVlQZ5sHvTE1VMC1pR0fB9BRutHo9tW5VRIfsMRyzYrhM5e08JzaBMoUz5v2UGc4lRHiNXCxxvxRvyYquc7i8XaBMMTjX03JE1PaNV0y65gtG-itQbUdXploQQB59UJLMSfO-6KhpegmVlmA~~\"; X-APPLE-DS-WEB-SESSION-TOKEN=\"AQHXC61zM28cCr7a3i2rz+QFAcdjUrUiLyHnZ2JI5W22skW8DyedRBb/UfNiO+wBz5mVSTu+ZtWtzUIb06zen0HtDBft4Eu4uaO+cyK1XIupSTav1NUc5Y24uR5lobmFlSJqayR118bBEO30vvHgYWvUQntX/NiVRUoepzpdV9ppirL13NUilSZ+37RI18ABqikLB3UaIVVPjYdzbTs9OQjptzBlvxGDtz3NFRA4jqdPkYKnCH4Du2DQkwi8zhuXcwBvpyaI8wG0S9dbNDP6Z+uFt4MGjT9POOdErq0hkNtvpVe9Jx3zHYorVu0e5p2g39kAuilVgDaqFxSnB8dMtBh7MvJJLe6K8pXH0wlqmjZRAjZdYJMZT8EGSQUTFQ9mYPSm6G8lJOM3x8VOg+hHyUoIGAEKX+Ke3+kE52nuHVCZKnvSsg1OPQqtXqD22oLkSjsvMKmHXBPMajDYPZH1GT4Il/ULXkNNMg7za1JL9rneX5Hm2gOeuJeDVpTvQGiyIuqxvmr38gReMwnpRd8SPMxMyyDXEskUpAQNxGIFlMuiDDnkpE+7LH4/8R+HIdZIPBL99v1jYcKVRf6Px5HwLSLbFPUR/ONQFvJm3zAdLjhOyoZqSu+Qi+zRslovcwLHN7mtEqUIhO/XaqVFvAGQ6wjgDZTBRstLlP5XJaE7/SGZfT6cjU8iHhVS+a9flsGc0mT2zwfTM+O+EXUX9p19fSslC4S/4cwgcBr0zramIUMIEdrF8JJI4UNr8MVJ0+/3vw==\"; X-APPLE-WEB-ID=8F34D026279B7C14FB9E0E0CB8098B715BD0F6D6; X-APPLE-WEBAUTH-TOKEN=\"v=2:t=AQ==BST_IAAAAAAABLwIAAAAAGLvqL0RDmdzLmljbG91ZC5hdXRovQCoYe1jl-sf33HWyO8Lcw-9fLNKtnTfwAwLubWSpK4C3RSw4KZkGMMsoNRZyqIPdqEeHyCUnSybWzpYafrYcWTfzC8JjWXjd6AeIGcCrV_9UIlReGZheMaW3AZ40vJw77291yV1h4HzXK8pugbO3wioal_s2g~~\"",
+								"disabled": true
+							},
+							{
+								"key": "Pragma",
+								"value": "no-cache",
+								"disabled": true
+							},
+							{
+								"key": "Referer",
+								"value": "https://www.icloud.com/",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-site",
+								"disabled": true
+							},
+							{
+								"key": "Sec-GPC",
+								"value": "1",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operations\": [\n        {\n            \"operationType\": \"update\",\n            \"record\": {\n                \"recordName\": \"A6154970-BDB6-43CD-856B-9E833BBB9FAA\",\n                \"recordType\": \"CPLAsset\",\n                \"recordChangeTag\": \"21h2\",\n                \"fields\": {\n                    \"isDeleted\": {\n                        \"value\": 1\n                    }\n                }\n            }\n        }\n    ],\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"atomic\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://p133-ckdatabasews.icloud.com/database/1/com.apple.photos.cloud/production/private/records/modify?ckjsBuildVersion=2220ProjectDev16&ckjsVersion=2.6.1&getCurrentSyncToken=true&remapEnums=true&clientBuildNumber=2220Project32&clientMasteringNumber=2220B20&clientId=6cedf7a9-d479-4b97-b3c6-3ef257ac6e52&dsid=1016178270",
+							"protocol": "https",
+							"host": [
+								"p133-ckdatabasews",
+								"icloud",
+								"com"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"modify"
+							],
+							"query": [
+								{
+									"key": "ckjsBuildVersion",
+									"value": "2220ProjectDev16"
+								},
+								{
+									"key": "ckjsVersion",
+									"value": "2.6.1"
+								},
+								{
+									"key": "getCurrentSyncToken",
+									"value": "true"
+								},
+								{
+									"key": "remapEnums",
+									"value": "true"
+								},
+								{
+									"key": "clientBuildNumber",
+									"value": "2220Project32"
+								},
+								{
+									"key": "clientMasteringNumber",
+									"value": "2220B20"
+								},
+								{
+									"key": "clientId",
+									"value": "6cedf7a9-d479-4b97-b3c6-3ef257ac6e52"
+								},
+								{
+									"key": "dsid",
+									"value": "1016178270"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "clientID",
+			"value": "d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d"
+		},
+		{
+			"key": "clientInfo",
+			"value": "{\"U\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0\",\"L\":\"en-US\",\"Z\":\"GMT+01:00\",\"V\":\"1.1\",\"F\":\"sla44j1e3NlY5BNlY5BSs5uQ084akJ.F_13jJ8K5iLs2dI_AIQjvEodUW2vqBBNork.Nk4Jkcs0mcK9rTJfw9Mw7UXGWY5BNlYJNNlY5QB4bVNjMk.2aw\"}"
+		},
+		{
+			"key": "userAgent",
+			"value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0"
+		},
+		{
+			"key": "accept",
+			"value": "application/json"
+		},
+		{
+			"key": "scnt",
+			"value": ""
+		},
+		{
+			"key": "X-Apple-ID-Session-Id",
+			"value": ""
+		},
+		{
+			"key": "X-Apple-TwoSV-Trust-Token",
+			"value": ""
+		},
+		{
+			"key": "X-Apple-Session-Token",
+			"value": ""
+		},
+		{
+			"key": "Photos_URL",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "dsid",
+			"value": "",
+			"type": "default"
+		}
+	]
+}

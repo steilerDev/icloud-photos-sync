@@ -6,8 +6,8 @@ import {iCloudAuth} from '../auth.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
-import {SyncEngine} from '../../sync-engine/sync-engine.js';
 import {getLogger} from '../../logger.js';
+import {convertCPLAssets} from '../../sync-engine/helpers/fetchAndLoad-helpers.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -49,21 +49,18 @@ export class iCloudPhotos extends EventEmitter {
         this.logger.debug(`Getting iCloud Photos account information`);
 
         const config: AxiosRequestConfig = {
-            headers: this.auth.getPhotosHeader(),
-            params: {
-                getCurrentSyncToken: `True`,
-                remapEnums: `True`,
+            "headers": this.auth.getPhotosHeader(),
+            "params": {
+                "getCurrentSyncToken": `True`,
+                "remapEnums": `True`,
             },
         };
 
         axios.get(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.LIST), config)
             .then(res => {
-                if (this.auth.processPhotosSetupResponse(res)) {
-                    this.logger.debug(`Successfully gathered iCloud Photos account information!`);
-                    this.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
-                } else {
-                    this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unable to acquire iCloud Photos account information`);
-                }
+                this.auth.processPhotosSetupResponse(res);
+                this.logger.debug(`Successfully gathered iCloud Photos account information!`);
+                this.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
             })
             .catch(err => {
                 this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unexpected error while setup: ${err}`);
@@ -80,17 +77,22 @@ export class iCloudPhotos extends EventEmitter {
             const state = res.data.records[0].fields.state.value;
             if (!state) {
                 this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unable to get indexing state: ${res.data}`);
-            } else if (state === `FINISHED`) {
+                return;
+            }
+
+            if (state === `FINISHED`) {
                 this.logger.info(`Indexing finished, sync can start!`);
                 this.emit(ICLOUD_PHOTOS.EVENTS.READY);
-            } else {
-                const progress = res.data.records[0].fields.progress.value;
-                if (progress) {
-                    this.emit(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, progress);
-                } else {
-                    this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unknown state (${state}): ${JSON.stringify(res.data)}`);
-                }
+                return;
             }
+
+            const progress = res.data.records[0].fields.progress.value;
+            if (progress) {
+                this.emit(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, progress);
+                return;
+            }
+
+            this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unknown state (${state}): ${JSON.stringify(res.data)}`);
         });
     }
 
@@ -100,30 +102,27 @@ export class iCloudPhotos extends EventEmitter {
      * @param callback - A callback, executed upon sucessfull execution of the query
      */
     performQuery(recordType: string, callback: (res: AxiosResponse<any, any>) => void) {
-        if (this.auth.validatePhotosAccount()) {
-            const config: AxiosRequestConfig = {
-                headers: this.auth.getPhotosHeader(),
-            };
+        this.auth.validatePhotosAccount();
+        const config: AxiosRequestConfig = {
+            "headers": this.auth.getPhotosHeader(),
+        };
 
-            const data = {
-                query: {
-                    recordType: `${recordType}`,
-                },
-                zoneID: {
-                    ownerRecordName: this.auth.iCloudPhotosAccount.ownerName,
-                    zoneName: this.auth.iCloudPhotosAccount.zoneName,
-                    zoneType: this.auth.iCloudPhotosAccount.zoneType,
-                },
-            };
+        const data = {
+            "query": {
+                "recordType": `${recordType}`,
+            },
+            "zoneID": {
+                "ownerRecordName": this.auth.iCloudPhotosAccount.ownerName,
+                "zoneName": this.auth.iCloudPhotosAccount.zoneName,
+                "zoneType": this.auth.iCloudPhotosAccount.zoneType,
+            },
+        };
 
-            axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)
-                .then(callback)
-                .catch(err => {
-                    this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unexpected error when performing query ${recordType}: ${err}`);
-                });
-        } else {
-            this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unable to perform query, because photos account validation failed`);
-        }
+        axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)
+            .then(callback)
+            .catch(err => {
+                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unexpected error when performing query ${recordType}: ${err}`);
+            });
     }
 
     /**
@@ -135,46 +134,78 @@ export class iCloudPhotos extends EventEmitter {
      * @returns An array of records as returned by the backend
      */
     async performPromiseQuery(recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
-        if (this.auth.validatePhotosAccount()) {
-            const config: AxiosRequestConfig = {
-                headers: this.auth.getPhotosHeader(),
-                params: {
-                    remapEnums: `True`,
-                },
-            };
+        this.auth.validatePhotosAccount();
+        const config: AxiosRequestConfig = {
+            "headers": this.auth.getPhotosHeader(),
+            "params": {
+                "remapEnums": `True`,
+            },
+        };
 
-            const data: any = {
-                query: {
-                    recordType: `${recordType}`,
-                },
-                zoneID: {
-                    ownerRecordName: this.auth.iCloudPhotosAccount.ownerName,
-                    zoneName: this.auth.iCloudPhotosAccount.zoneName,
-                    zoneType: this.auth.iCloudPhotosAccount.zoneType,
-                },
-            };
+        const data: any = {
+            "query": {
+                "recordType": `${recordType}`,
+            },
+            "zoneID": {
+                "ownerRecordName": this.auth.iCloudPhotosAccount.ownerName,
+                "zoneName": this.auth.iCloudPhotosAccount.zoneName,
+                "zoneType": this.auth.iCloudPhotosAccount.zoneType,
+            },
+        };
 
-            if (filterBy) {
-                data.query.filterBy = filterBy;
-            }
-
-            if (desiredKeys) {
-                data.desiredKeys = desiredKeys;
-            }
-
-            if (resultsLimit) {
-                data.resultsLimit = resultsLimit;
-            }
-
-            const fetchedRecords = (await axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)).data.records;
-            if (fetchedRecords && Array.isArray(fetchedRecords)) {
-                return fetchedRecords;
-            }
-
-            throw new Error(`Fetched records are not in an array: ${JSON.stringify(fetchedRecords)}`);
-        } else {
-            throw (new Error(`Unable to perform query, because photos account validation failed`));
+        if (filterBy) {
+            data.query.filterBy = filterBy;
         }
+
+        if (desiredKeys) {
+            data.desiredKeys = desiredKeys;
+        }
+
+        if (resultsLimit) {
+            data.resultsLimit = resultsLimit;
+        }
+
+        const fetchedRecords = (await axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)).data.records;
+        if (fetchedRecords && Array.isArray(fetchedRecords)) {
+            return fetchedRecords;
+        }
+
+        throw new Error(`Fetched records are not in an array: ${JSON.stringify(fetchedRecords)}`);
+    }
+
+    async performPromiseOperation(operationType: string, recordName: string, _fields: any) {
+        this.auth.validatePhotosAccount();
+        const config: AxiosRequestConfig = {
+            "headers": this.auth.getPhotosHeader(),
+            "params": {
+                "remapEnums": `True`,
+            },
+        };
+
+        const data: any = {
+            "operations": [
+                {
+                    "operationType": `${operationType}`,
+                    "record": {
+                        "recordName": `${recordName}`,
+                        "recordType": `CPLAsset`,
+                        "fields": _fields,
+                    },
+                },
+            ],
+            "zoneID": {
+                "ownerRecordName": this.auth.iCloudPhotosAccount.ownerName,
+                "zoneName": this.auth.iCloudPhotosAccount.zoneName,
+                "zoneType": this.auth.iCloudPhotosAccount.zoneType,
+            },
+            "atomic": true,
+        };
+        const deletedRecords = (await axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config)).data.records;
+        if (!deletedRecords || !Array.isArray(deletedRecords)) {
+            throw new Error(`Fetched records are not in an array: ${JSON.stringify(deletedRecords)}`);
+        }
+
+        return deletedRecords;
     }
 
     /**
@@ -247,7 +278,7 @@ export class iCloudPhotos extends EventEmitter {
                 // Getting associated assets for albums
                 if (record.fields.albumType.value === AlbumType.ALBUM) {
                     const albumAssets: Promise<AlbumAssets> = this.fetchAllPictureRecords(record.recordName)
-                        .then(cplResult => SyncEngine.convertCPLAssets(cplResult[0], cplResult[1]))
+                        .then(cplResult => convertCPLAssets(cplResult[0], cplResult[1]))
                         .then(assets => {
                             const _albumAssets: AlbumAssets = {};
                             assets.forEach(asset => {
@@ -366,6 +397,11 @@ export class iCloudPhotos extends EventEmitter {
                         return;
                     }
 
+                    if (record.recordType === QueryBuilder.RECORD_TYPES.CONTAINER_RELATION) {
+                        // Expecting unnecessary container relationships and ignoring them
+                        return;
+                    }
+
                     if (record.recordType === QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
                         cplMasters.push(CPLMaster.parseFromQuery(record));
                         seen[record.recordName] = true;
@@ -373,10 +409,7 @@ export class iCloudPhotos extends EventEmitter {
                         cplAssets.push(CPLAsset.parseFromQuery(record));
                         seen[record.recordName] = true;
                     } else {
-                        if (record.recordType !== QueryBuilder.RECORD_TYPES.CONTAINER_RELATION) {
-                            this.logger.warn(`Filtering record ${record.recordName}: unknown recordType: ${record.recordType}`);
-                        }
-
+                        this.logger.warn(`Filtering record ${record.recordName}: unknown recordType: ${record.recordType}`);
                         return;
                     }
                 } catch (err) {
@@ -405,13 +438,18 @@ export class iCloudPhotos extends EventEmitter {
         this.logger.debug(`Starting download of asset ${asset.fileChecksum}`);
 
         const config: AxiosRequestConfig = {
-            headers: this.auth.getPhotosHeader(),
-            responseType: `stream`,
+            "headers": this.auth.getPhotosHeader(),
+            "responseType": `stream`,
         };
 
         return axios.get(
             asset.downloadURL,
             config,
         );
+    }
+
+    async deleteAsset(recordName: string) {
+        this.logger.debug(`Deleting asset ${recordName}`);
+        return this.performPromiseOperation(`update`, recordName, QueryBuilder.getIsDeletedField());
     }
 }

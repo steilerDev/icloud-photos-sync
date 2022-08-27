@@ -5,7 +5,6 @@
   "preferGlobal": true,
   "type": "module",
   "main": "bin/main.js",
-  "types": "bin/main.d.ts",
   "bin": {
     "icloud-photos-sync": "bin/main.js"
   },
@@ -14,13 +13,16 @@
     "prebuild-name": "node -p \"'export const VERSION = ' + JSON.stringify(require('./package.json').version) + ';'\" >> src/lib/package.ts",
     "prebuild-version": "node -p \"'export const NAME = ' + JSON.stringify(require('./package.json').name) + ';'\" >> src/lib/package.ts",
     "prebuild-description": "node -p \"'export const DESC = ' + JSON.stringify(require('./package.json').description) + ';'\" >> src/lib/package.ts",
-    "prebuild": "npm run prebuild-clean && npm run prebuild-name && npm run prebuild-version && npm run prebuild-description",
-    "build": "npm install && eslint --fix --ext .ts ./src && tsc",
+    "prebuild-lint": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
+    "prebuild": "npm run prebuild-clean && npm run prebuild-name && npm run prebuild-version && npm run prebuild-description && npm run prebuild-lint",
+    "build": "npx tsc",
     "docs": "npx typedoc",
-    "clean": "rm -rf bin/ docs/ node_modules/",
-    "test": "echo \"Currently no test specified\" && exit 0",
-    "execute": "node bin/main.js",
-    "start": "npm run build && npm run execute"
+    "clean": "rm -rf bin/ coverage/ docs/ node_modules/ src/lib/package.ts",
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json",
+    "test-coverage": "npm run test -- --coverage=true",
+    "test-api": "NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/api/*.test.ts",
+    "test-unit": "NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/unit/*.test.ts", 
+    "execute": "node bin/main.js"
   },
   "repository": {
     "type": "git",
@@ -42,6 +44,7 @@
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.0",
+    "@types/jest": "^28.1.6",
     "@types/node": "^17.0.42",
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.10.2",
@@ -49,17 +52,22 @@
     "eslint": "^8.8.0",
     "eslint-config-xo": "^0.39.0",
     "eslint-plugin-tsdoc": "^0.2.14",
+    "jest": "^28.1.3",
+    "jest-summarizing-reporter": "^1.1.4",
+    "ts-jest": "^28.0.7",
     "typedoc": "^0.23.5",
     "typedoc-github-wiki-theme": "^1.0.1",
     "typedoc-plugin-markdown": "^3.13.2",
     "typescript": "^4.5.5"
   },
   "dependencies": {
+    "@types/mock-fs": "^4.13.1",
     "axios": "^0.27.2",
     "chalk": "^5.0.0",
     "cli-progress": "^3.11.2",
     "commander": "^9.0.0",
     "loglevel": "^1.8.0",
+    "mock-fs": "^5.1.4",
     "p-event": "^5.0.1",
     "p-queue": "^7.2.0",
     "tough-cookie": "^4.0.0"

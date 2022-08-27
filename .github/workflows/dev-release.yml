@@ -1,0 +1,35 @@
+name: Development Release
+# This workflow will run on every push
+# If the app builds and passes tests, it will release the development channels (private DockerHub)
+
+on: [push, pull_request]
+
+env:
+  PKG_NAME: icloud-photos-sync
+  NODE_VERSION: 18
+
+jobs:
+  build-workflow:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: ./.github/workflows/build.yml
+      with:
+        nodeVersion: ${{ env.NODE_VERSION }}
+  
+  publish-docker-dev:
+    name: Publish Project to steilerGroup-Docker
+    needs: build-workflow
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: rootfs
+    - name: Login to Docker Registry
+      run: docker login ${{secrets.DOCKER_DEV_HOST}} -u ${{secrets.DOCKER_DEV_USERNAME}} -p ${{secrets.DOCKER_DEV_PWD}}
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag ${{secrets.DOCKER_DEV_HOST}}/$PKG_NAME:latest
+    - name: Push the Docker image
+      run: docker push ${{secrets.DOCKER_DEV_HOST}}/$PKG_NAME:latest
