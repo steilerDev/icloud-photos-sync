@@ -4,6 +4,7 @@ name: Build & Test
 #  - rootfs.tar.gz (Docker RootFS)
 #  - npm.tar.gz (NPM Uplaod)
 #  - docs.tar.gz (Documentation for GH Wiki)
+#  - changelog (File containing changelog description)
 
 on:
   workflow_call:
@@ -58,3 +59,16 @@ jobs:
         with:
           name: docs-artifacts
           path: ./docs.tar.gz
+      - name: Extract Changelog
+        run: |
+          START_LINE=$(grep -n -m 1 -E '^##' CHANGELOG.md | grep -Eo '^[0-9]+')
+          ((START_LINE++))
+          END_LINE=$(grep -n -m 2 -E '^##' CHANGELOG.md | tail -n 1 | grep -Eo '^[0-9]+')
+          LENGTH=$(( END_LINE - START_LINE ))
+
+          tail -n +$START_LINE CHANGELOG.md | head -n $LENGTH > CHANGELOG.latest.md
+      - name: Upload changelog
+        uses: actions/upload-artifact@v2
+        with:
+          name: changelog
+          path: ./CHANGELOG.latest.md
