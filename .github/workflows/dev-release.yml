@@ -13,9 +13,9 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-    - uses: ./.github/workflows/build
+    - uses: ./.github/workflows/build.yml@dev
       with:
-        nodeVersion: ${{ env.NODE_VERSION }} 
+        nodeVersion: ${{ env.NODE_VERSION }}
   
   publish-docker-dev:
     name: Publish Project to steilerGroup-Docker
