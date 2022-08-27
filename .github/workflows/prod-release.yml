@@ -1,5 +1,3 @@
-
-
 name: Production Release
 # A manually triggered workflow to create a new release
 
@@ -7,10 +5,10 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version string for release
-        default: v1.0.0
+        description: 'Version string for release'
+        default: 'v1.0.0'
         required: true
-
+        type: string
 
 env:
   PKG_NAME: icloud-photos-sync
