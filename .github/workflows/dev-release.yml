@@ -12,7 +12,7 @@ jobs:
   build-workflow:
     uses: ./.github/workflows/build.yml
     with:
-      nodeVersion: ${{ env.NODE_VERSION }}
+      nodeVersion: 18
   
   publish-docker-dev:
     name: Publish Project to steilerGroup-Docker
