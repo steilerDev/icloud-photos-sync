@@ -4,7 +4,7 @@ name: API Test
 
 on:
   schedule:
-    - cron: '0 7,16,19 * * *'
+    - cron: '5 7,14,19 * * *'
   workflow_dispatch:
 
 env:
