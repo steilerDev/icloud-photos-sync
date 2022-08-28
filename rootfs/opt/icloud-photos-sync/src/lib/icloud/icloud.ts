@@ -46,7 +46,8 @@ export class iCloud extends EventEmitter {
      */
     constructor(cliOpts: OptionValues) {
         super();
-        this.logger.info(`Initiating iCloud connection for ${cliOpts.username}`);
+        this.logger.info(`Initiating iCloud connection`);
+        this.logger.trace(`  - user: ${cliOpts.username}`)
 
         // MFA Server & lifecycle management
         this.mfaServer = new MFAServer(cliOpts.port);
@@ -133,7 +134,8 @@ export class iCloud extends EventEmitter {
 
                 this.logger.info(`Authentication successfull`);
                 this.auth.processAuthSecrets(res);
-                this.logger.debug(`Acquired secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
+                this.logger.debug(`Acquired secrets`);
+                this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`)
                 this.emit(ICLOUD.EVENTS.TRUSTED);
             })
             .catch(err => {
@@ -149,7 +151,7 @@ export class iCloud extends EventEmitter {
                 }
 
                 this.auth.processAuthSecrets(res);
-                this.logger.debug(`Acquired secrets, requiring MFA: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
+                this.logger.debug(`Acquired secrets, requiring MFA`);
                 this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
             });
 
@@ -244,7 +246,8 @@ export class iCloud extends EventEmitter {
         axios.get(ICLOUD.URL.TRUST, config)
             .then(res => this.auth.processAccountTokens(res))
             .then(() => {
-                this.logger.debug(`Acquired account tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`);
+                this.logger.debug(`Acquired account tokens`);
+                this.logger.trace(`  - tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`)
                 this.emit(ICLOUD.EVENTS.TRUSTED);
             })
             .catch(err => {

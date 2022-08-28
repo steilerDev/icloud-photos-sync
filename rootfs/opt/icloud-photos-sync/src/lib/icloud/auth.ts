@@ -131,10 +131,11 @@ export class iCloudAuth {
         this.logger.debug(`Trying to load trust token from disk`);
         try {
             const trustToken = readFileSync(this.trustTokenFile, {"encoding": ICLOUD.TRUST_TOKEN_FILE_ENCODING});
-            this.logger.debug(`Acquired trust token from file: ${trustToken}`);
+            this.logger.debug(`Acquired trust token from file`);
+            this.logger.trace(`  - token: ${trustToken}`)
             this.iCloudAccountTokens.trustToken = trustToken;
         } catch (err) {
-            this.logger.warn(`Unable to acquire trust token from file: ${err}`);
+            this.logger.warn(`Unable to acquire trust token from file: ${err.message}`);
         }
     }
 
@@ -147,11 +148,11 @@ export class iCloudAuth {
         const trustTokenPath = path.dirname(this.trustTokenFile);
         return mkdir(trustTokenPath, {"recursive": true})
             .catch(err => {
-                this.logger.warn(`Unable to create trust token directory (${trustTokenPath}): ${err}`);
+                this.logger.warn(`Unable to create trust token directory (${trustTokenPath}): ${err.message}`);
             })
             .then(() => writeFile(this.trustTokenFile, this.iCloudAccountTokens.trustToken, {"encoding": ICLOUD.TRUST_TOKEN_FILE_ENCODING}))
             .catch(err => {
-                this.logger.warn(`Unable to persist trust token to disk: ${err}`);
+                this.logger.warn(`Unable to persist trust token to disk: ${err.message}`);
             });
     }
 
@@ -177,7 +178,8 @@ export class iCloudAuth {
         this.iCloudAuthSecrets.aasp = removedMetadata;
 
         this.validateAuthSecrets();
-        this.logger.debug(`Authentication processed, auth secrets populated: ${JSON.stringify(this.iCloudAuthSecrets)}`);
+        this.logger.debug(`Authentication processed, auth secrets populated`);
+        this.logger.trace(`  - auth secrets: ${JSON.stringify(this.iCloudAuthSecrets)}`)
     }
 
     /* MFA flow not testable in automation */
@@ -239,7 +241,7 @@ export class iCloudAuth {
 
         cookieHeaders.forEach(cookieString => {
             const cookie = Cookie.parse(cookieString);
-            this.logger.debug(`Adding cookie: ${cookie}`);
+            this.logger.trace(`Adding cookie: ${cookie}`);
             this.iCloudCookies.push(cookie);
         });
 
@@ -290,12 +292,27 @@ export class iCloudAuth {
     }
 
     /**
+     * Throws and error but provides the sensitive information only to the trace log
+     * @param msg - Message to be thrown
+     * @param sensitiveMsg  - Sensitive message to be logged to the trace log
+     */
+    throwSensitiveError(msg: string, sensitiveMsg: string) {
+        this.logger.trace(`${msg}: ${sensitiveMsg}`)
+        throw new Error(msg)
+    }
+
+    /**
      * Validates that the object is in a authenticated iCloud state
      * @throws An error, if the cloud cookies are no longer valid
      */
     validateCloudCookies() {
-        if (!(this.iCloudCookies && this.iCloudCookies.length > 0 && this.iCloudCookies.some(cookie => cookie.TTL() > 0))) {
-            throw new Error(`Unable to validate cloud cookies: ${JSON.stringify(this.iCloudCookies)}`);
+        if (!this.iCloudCookies || this.iCloudCookies.length === 0) {
+            throw new Error(`Unable to validate cloud cookies: No cookies loaded`)
+        } 
+        const expiredCookies = this.iCloudCookies.filter(cookie => cookie.TTL() === 0)
+        if(expiredCookies.length > 0) {
+            this.logger.trace(`Found expired cookies: ${JSON.stringify(expiredCookies)}`)
+            throw new Error(`Unable to validate cloud cookies: Some cookies are expired`);
         }
     }
 
@@ -305,12 +322,20 @@ export class iCloudAuth {
      */
     validatePhotosAccount() {
         this.validateCloudCookies();
-        if (!(this.iCloudPhotosAccount.zoneName && this.iCloudPhotosAccount.zoneName.length > 0
-            && this.iCloudPhotosAccount.photosDomain && this.iCloudPhotosAccount.photosDomain.length > 0
-            && this.iCloudPhotosAccount.zoneType && this.iCloudPhotosAccount.zoneType.length > 0
-            && this.iCloudPhotosAccount.ownerName && this.iCloudPhotosAccount.ownerName.length > 0
-            && this.iCloudPhotosAccount.syncToken && this.iCloudPhotosAccount.syncToken.length > 0)) {
-            throw new Error(`Unable to validate Photos account: ${JSON.stringify(this.iCloudPhotosAccount)}`);
+        if (!this.iCloudPhotosAccount.zoneName || this.iCloudPhotosAccount.zoneName.length === 0) {
+            throw new Error(`Unable to validate Photos account: ZoneName invalid`)
+        }
+        if(!this.iCloudPhotosAccount.photosDomain || this.iCloudPhotosAccount.photosDomain.length === 0) {
+            throw new Error(`Unable to validate Photos account: PhotosDomain invalid`)
+        }
+        if(!this.iCloudPhotosAccount.zoneType || this.iCloudPhotosAccount.zoneType.length === 0) {
+            throw new Error(`Unable to validate Photos account: ZoneType invalid`)
+        }
+        if(!this.iCloudPhotosAccount.ownerName || this.iCloudPhotosAccount.ownerName.length === 0) {
+            throw new Error(`Unable to validate Photos account: OwnerName invalid`)
+        }
+        if(!this.iCloudPhotosAccount.syncToken || this.iCloudPhotosAccount.syncToken.length ===0) {
+            throw new Error(`Unable to validate Photos account: SyncToken invalid`)
         }
     }
 
@@ -319,9 +344,11 @@ export class iCloudAuth {
      * @throws An error, if the account secrets cannot be validated
      */
     validateAccountSecrets() {
-        if (!(this.iCloudAccountSecrets.username && this.iCloudAccountSecrets.username.length > 0
-            && this.iCloudAccountSecrets.password && this.iCloudAccountSecrets.password.length > 0)) {
-            throw new Error(`Unable to validate account secrets: ${JSON.stringify(this.iCloudAccountSecrets)}`);
+        if (!this.iCloudAccountSecrets.username || this.iCloudAccountSecrets.username.length === 0) {
+            throw new Error(`Unable to validate account secrets: Username invalid`)
+        }
+        if(!this.iCloudAccountSecrets.password || this.iCloudAccountSecrets.password.length === 0) {
+            throw new Error(`Unable to validate account secrets: Password invalid`)
         }
     }
 
@@ -330,10 +357,14 @@ export class iCloudAuth {
      * @throws An error, if authentication secrets cannot be validated
      */
     validateAuthSecrets() {
-        if (!(this.iCloudAuthSecrets.aasp && this.iCloudAuthSecrets.aasp.length > 0
-            && this.iCloudAuthSecrets.scnt && this.iCloudAuthSecrets.scnt.length > 0
-            && this.iCloudAuthSecrets.sessionId && this.iCloudAuthSecrets.sessionId.length > 0)) {
-            throw new Error(`Unable to validate auth secrets: ${JSON.stringify(this.iCloudAuthSecrets)}`);
+        if (!this.iCloudAuthSecrets.aasp || this.iCloudAuthSecrets.aasp.length === 0) {
+            throw new Error(`Unable to validate auth secrets: aasp invalid`);
+        }
+        if(!this.iCloudAuthSecrets.scnt || this.iCloudAuthSecrets.scnt.length === 0) {
+            throw new Error(`Unable to validate auth secrets: scnt invalid`);
+        }
+        if(!this.iCloudAuthSecrets.sessionId || this.iCloudAuthSecrets.sessionId.length === 0) {
+            throw new Error(`Unable to validate auth secrets: sessionId invalid`);
         }
     }
 
@@ -342,9 +373,11 @@ export class iCloudAuth {
      * @throws An error, if account tokens cannot be validated
      */
     validateAccountTokens() {
-        if (!(this.iCloudAccountTokens.sessionToken && this.iCloudAccountTokens.sessionToken.length > 0
-            && this.iCloudAccountTokens.trustToken && this.iCloudAccountTokens.trustToken.length > 0)) {
-            throw new Error(`Unable to validate account tokens: ${JSON.stringify(this.iCloudAccountTokens)}`);
+        if (!this.iCloudAccountTokens.sessionToken || this.iCloudAccountTokens.sessionToken.length === 0) {
+            throw new Error(`Unable to validate account tokens: sessionToken invalid`);
+        }
+        if(!this.iCloudAccountTokens.trustToken || this.iCloudAccountTokens.trustToken.length === 0) {
+            throw new Error(`Unable to validate account tokens: trustToken invalid`);
         }
     }
 }
