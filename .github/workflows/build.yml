@@ -39,17 +39,22 @@ jobs:
           npm run build && \
           npm run docs
         working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Package npm artifacts
+      - name: Package artifacts
         run: |
+          // docker rootfs
+          tar -C ./rootfs -czf ./rootfs.tar.gz ./
+
+          // npm artifacts
           cp README.md LICENSE rootfs/opt/icloud-photos-sync/ && \
-          tar -C rootfs/opt/icloud-photos-sync/ -czf ./npm.tar.gz README.md LICENSE package.json bin/
+          tar -C rootfs/opt/icloud-photos-sync/ -czf ./npm.tar.gz README.md CHANGELOG.md LICENSE package.json bin/
+
+          // docs
+          tar -C rootfs/opt/icloud-photos-sync/ -czf ./docs.tar.gz docs/
       - name: Upload npm artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: npm-artifacts
           path: ./npm.tar.gz
-      - name: Package docker rootfs
-        run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
       - name: Upload docker artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -57,10 +62,8 @@ jobs:
           path: |
             ./rootfs.tar.gz
             ./Dockerfile
-      - name: Package docs
-        run: tar -C rootfs/opt/icloud-photos-sync/ -czf ./docs.tar.gz docs/
       - name: Upload doc artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: doc-artifacts
           path: ./docs.tar.gz
