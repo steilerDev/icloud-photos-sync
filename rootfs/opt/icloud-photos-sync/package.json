@@ -9,7 +9,7 @@
     "icloud-photos-sync": "bin/main.js"
   },
   "scripts": {
-    "clean": "rm -rf bin/ coverage/ docs/ node_modules/ src/lib/package.ts",
+    "clean": "rm -rf bin/ coverage/ docs/ node_modules/",
     "prebuild": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
     "build": "npx tsc",
     "docs": "npx typedoc",
