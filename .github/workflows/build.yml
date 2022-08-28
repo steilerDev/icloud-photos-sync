@@ -25,16 +25,19 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.nodeVersion }}
-      - name: Build
+      - name: Install
         run: |
           npm run clean && \
-          npm install && \
-          npm run build && \
-          npm run docs
+          npm install
         working-directory: rootfs/opt/icloud-photos-sync/
       - name: Test
         run: |
           npm run test-unit
+        working-directory: rootfs/opt/icloud-photos-sync/
+      - name: Build
+        run: |
+          npm run build && \
+          npm run docs
         working-directory: rootfs/opt/icloud-photos-sync/
       - name: Package npm artifacts
         run: |
