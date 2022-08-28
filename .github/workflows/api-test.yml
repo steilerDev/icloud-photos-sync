@@ -19,7 +19,7 @@ env:
 
 jobs:
   run-test:
-    name: Build Project & Start SSH
+    name: Run Test
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -37,7 +37,7 @@ jobs:
     - name: Install
       run: |
         npm link && \
-        chmod +x~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/enter_mfa.sh && \
+        chmod +x ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/enter_mfa.sh && \
         ln -s ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/enter_mfa.sh /usr/local/bin/enter_mfa && \
         chmod +x ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/resend_mfa.sh && \
         ln -s ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/resend_mfa.sh /usr/local/bin/resend_mfa
