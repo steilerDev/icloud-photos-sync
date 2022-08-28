@@ -4,7 +4,7 @@ name: API Test
 
 on:
   schedule:
-    - cron: '30 * * * *'
+    - cron:  '35 * * * *'
   workflow_dispatch:
 
 env:
@@ -75,4 +75,4 @@ jobs:
       uses: lhotari/action-upterm@v1
       with:
         limit-access-to-users: steilerDev
-        upterm-server: ssh://uptermd.upterm.dev
+        upterm-server: ssh://uptermd.upterm.dev:22
