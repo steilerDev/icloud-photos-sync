@@ -1,10 +1,10 @@
 name: API Test
 # This workflow continously runs the API Tests for this projects, to validate that the undocumented API used does not change
-# Should the provided token expire, the job will wait for a refresh of the token or timeout
+# If the token expires, this workflow can be executed manually in order to acquire a new token
 
 on:
   schedule:
-    - cron:  '35 * * * *'
+    - cron:  '50 * * * *'
   workflow_dispatch:
 
 env:
@@ -12,7 +12,6 @@ env:
   NODE_VERSION: 18
   APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
   APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
-  #TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
   PORT: 8080
   LOG_LEVEL: debug
   LOG_TO_CLI: true
@@ -22,6 +21,8 @@ jobs:
     name: Run Test
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
+    env:
+      TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
     steps:
     - name: Checkout
       uses: actions/checkout@v2
