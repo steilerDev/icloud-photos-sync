@@ -41,14 +41,14 @@ jobs:
         working-directory: rootfs/opt/icloud-photos-sync/
       - name: Package artifacts
         run: |
-          // docker rootfs
+          # docker rootfs
           tar -C ./rootfs -czf ./rootfs.tar.gz ./
 
-          // npm artifacts
+          # npm artifacts
           cp README.md LICENSE rootfs/opt/icloud-photos-sync/ && \
           tar -C rootfs/opt/icloud-photos-sync/ -czf ./npm.tar.gz README.md CHANGELOG.md LICENSE package.json bin/
 
-          // docs
+          # docs
           tar -C rootfs/opt/icloud-photos-sync/ -czf ./docs.tar.gz docs/
       - name: Upload npm artifacts
         uses: actions/upload-artifact@v3
