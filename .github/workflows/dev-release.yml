@@ -16,7 +16,7 @@ jobs:
       nodeVersion: 18 # ${{ env.NODE_VERSION }} doesn't work
   
   publish-docker-dev:
-    name: Publish Project to steilerGroup-Docker
+    name: Publish Nightly Docker Image
     needs: build-workflow
     runs-on: ubuntu-latest
     steps:
@@ -24,8 +24,6 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: docker-artifacts
-    - name: Prepare artifacts
-      run: tar -xzf docker.tar.gz
     - name: Login to DockerHub
       run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
     - name: Build the Docker image

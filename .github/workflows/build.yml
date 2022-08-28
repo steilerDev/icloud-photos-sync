@@ -45,15 +45,15 @@ jobs:
         with:
           name: npm-artifacts
           path: ./npm.tar.gz
-      - name: Package docker artifacts
-        run: |
-          tar -C ./rootfs -czf ./rootfs.tar.gz ./
-          tar -czf ./docker.tar.gz ./rootfs.tar.gz ./Dockerfile
+      - name: Package docker rootfs
+        run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
       - name: Upload docker artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: docker-artifacts
-          path: ./docker.tar.gz
+          path: |
+            ./rootfs.tar.gz
+            ./Dockerfile
       - name: Package docs
         run: tar -C rootfs/opt/icloud-photos-sync/ -czf ./docs.tar.gz docs/
       - name: Upload doc artifacts
@@ -61,13 +61,12 @@ jobs:
         with:
           name: doc-artifacts
           path: ./docs.tar.gz
-      - name: Extract Changelog
+      - name: Extract this build's changelog
         run: |
           START_LINE=$(grep -n -m 1 -E '^##' CHANGELOG.md | grep -Eo '^[0-9]+')
           ((START_LINE++))
           END_LINE=$(grep -n -m 2 -E '^##' CHANGELOG.md | tail -n 1 | grep -Eo '^[0-9]+')
           LENGTH=$(( END_LINE - START_LINE ))
-
           tail -n +$START_LINE CHANGELOG.md | head -n $LENGTH > CHANGELOG.latest.md
       - name: Upload changelog
         uses: actions/upload-artifact@v2

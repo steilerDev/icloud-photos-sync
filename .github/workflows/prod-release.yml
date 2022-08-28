@@ -50,7 +50,7 @@ jobs:
       nodeVersion: 18 # ${{ env.NODE_VERSION }} doesn't work
 
   publish-dockerhub:
-    name: Publish Project to Docker
+    name: Publish Docker Image
     needs: build-workflow
     runs-on: ubuntu-latest
     steps:
@@ -58,8 +58,6 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: docker-artifacts
-      - name: Prepare artifacts
-        run: tar -xzf docker.tar.gz
       - name: Login to DockerHub
         run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
       - name: Build the Docker image
@@ -80,7 +78,7 @@ jobs:
           readme-filepath: ./README.md
 
   publish-npm:
-    name: Publish Project to npm
+    name: Publish npm
     needs: build-workflow
     runs-on: ubuntu-latest
     steps:
@@ -102,7 +100,7 @@ jobs:
           token: ${{ secrets.NPM_TOKEN }}
   
   publish-wiki:
-    name: Publish documentation to GitHub publish-wiki
+    name: Publish GitHub Wiki
     needs: build-workflow
     runs-on: ubuntu-latest
     steps:
