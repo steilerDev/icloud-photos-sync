@@ -2,14 +2,17 @@ name: API Test
 # This workflow continously runs the API Tests for this projects, to validate that the undocumented API used does not change
 # Should the provided token expire, the job will wait for a refresh of the token or timeout
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  '45 7,15,19 * * *'
 
 env:
   PKG_NAME: icloud-photos-sync
   NODE_VERSION: 18
   APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
   APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
-  TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
+  #TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
   PORT: 8080
   LOG_LEVEL: debug
   LOG_TO_CLI: true
@@ -29,8 +32,15 @@ jobs:
       run: |
         npm run clean && \
         npm install && \
-        npm run build && \
-        npm link
+        npm run build
+      working-directory: rootfs/opt/icloud-photos-sync/
+    - name: Install
+      run: |
+        npm link && \
+        chmod +x~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/enter_mfa.sh && \
+        ln -s ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/enter_mfa.sh /usr/local/bin/enter_mfa && \
+        chmod +x ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/resend_mfa.sh && \
+        ln -s ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/resend_mfa.sh /usr/local/bin/resend_mfa
       working-directory: rootfs/opt/icloud-photos-sync/
     - name: Check MFA Token
       run: |
@@ -38,10 +48,11 @@ jobs:
       env:
         FAIL_ON_MFA: true
     - name: Acquire token
-      if: failure()
+      if: failure() && ${{ github.event_name == 'workflow_dispatch' }}
       uses: lhotari/action-upterm@v1
       with:
-        limit-access-to-users: 'steilerDev'
+        limit-access-to-users: steilerDev
+        upterm-server: ssh://uptermd.upterm.dev
     - name: Run API Test
       run: |
         npm run test-api
