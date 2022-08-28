@@ -45,7 +45,7 @@ jobs:
           tar -C ./rootfs -czf ./rootfs.tar.gz ./
 
           # npm artifacts
-          cp README.md LICENSE rootfs/opt/icloud-photos-sync/ && \
+          cp README.md CHANGELOG.md LICENSE rootfs/opt/icloud-photos-sync/ && \
           tar -C rootfs/opt/icloud-photos-sync/ -czf ./npm.tar.gz README.md CHANGELOG.md LICENSE package.json bin/
 
           # docs
