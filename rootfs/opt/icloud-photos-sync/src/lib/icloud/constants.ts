@@ -111,15 +111,6 @@ export const URL = {
 };
 
 /**
- * Indicating, which MFA method should be used
- */
-export enum MFAMethod {
-    DEVICE = 1,
-    SMS = 2,
-    VOICE = 3
-}
-
-/**
  * Filename of persistent trust token file
  */
 export const TRUST_TOKEN_FILE_NAME = `.trust-token.icloud`;

@@ -25,18 +25,18 @@ jobs:
       uses: actions/setup-node@v2
       with:
         node-version: ${{ env.NODE_VERSION }}
-    - name: Build
+    - name: Build & Install
       run: |
         npm run clean && \
         npm install && \
-        npm run build
+        npm run build && \
+        npm link
       working-directory: rootfs/opt/icloud-photos-sync/
     - name: Check MFA Token
       run: |
-        npm run execute token
+        icloud-photos-sync token
       env:
         FAIL_ON_MFA: true
-      working-directory: rootfs/opt/icloud-photos-sync/
     - name: Acquire token
       if: failure()
       uses: lhotari/action-upterm@v1

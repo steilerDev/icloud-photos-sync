@@ -27,7 +27,7 @@ const cliInterface = new CLIInterface(cliOpts, icloud, syncEngine);
  * Waiting for setup to complete
  */
 await icloud.authenticate()
-    .catch(err => cliInterface.fatalError(`Init failed: ${err.message}`));
+    .catch(err => cliInterface.fatalError(`Init failed: ${err}`));
 
 if (cliCommand[0] === CLIInterfaceCommand.token) {
     try {
