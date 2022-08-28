@@ -35,6 +35,7 @@
         "max-params": "off",
         "no-return-assign": ["error", "except-parens"],
         "no-unreachable": "warn",
-        "default-case-last": "off"
+        "default-case-last": "off",
+        "no-debugger": "warn"
     }
 }

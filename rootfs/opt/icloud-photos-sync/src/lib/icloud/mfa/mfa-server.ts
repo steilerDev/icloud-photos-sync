@@ -2,7 +2,7 @@ import EventEmitter from 'events';
 import http from 'http';
 import * as MFA_SERVER from './constants.js';
 import {getLogger} from '../../logger.js';
-import {MFAMethod} from '../constants.js';
+import {MFAMethod} from './mfa-method.js';
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
@@ -25,6 +25,11 @@ export class MFAServer extends EventEmitter {
     port: number;
 
     /**
+     * Holds the MFA method used for this server
+     */
+    private mfaMethod: MFAMethod;
+
+    /**
      * Creates the server object
      * @param port - The port to listen on
      */
@@ -39,6 +44,9 @@ export class MFAServer extends EventEmitter {
     startServer() {
         this.logger.debug(`Preparing MFA server on port ${this.port}`);
         this.server = http.createServer(this.handleRequest.bind(this));
+
+        // Default MFA request always goes to device
+        this.mfaMethod = new MFAMethod();
 
         this.server.on(`close`, () => {
             this.logger.debug(`MFA server stopped`);
@@ -87,7 +95,7 @@ export class MFAServer extends EventEmitter {
 
         this.logger.debug(`Received MFA: ${mfa}`);
         this.sendResponse(res, 200, `Read MFA code: ${mfa}`);
-        this.emit(MFA_SERVER.EVENTS.MFA_RECEIVED, mfa);
+        this.emit(MFA_SERVER.EVENTS.MFA_RECEIVED, this.mfaMethod, mfa);
     }
 
     /**
@@ -103,27 +111,17 @@ export class MFAServer extends EventEmitter {
         }
 
         const methodString = methodMatch[0].slice(7);
-        let method: MFAMethod;
-        switch (methodString) {
-        case `sms`:
-            method = MFAMethod.SMS;
-            break;
-        case `voice`:
-            method = MFAMethod.VOICE;
-            break;
-        default:
-        case `device`:
-            method = MFAMethod.DEVICE;
-            break;
-        }
 
         const phoneNumberIdMatch = req.url.match(/phoneNumberId=\d+/);
+
         if (phoneNumberIdMatch) {
-            const phoneNumberId = phoneNumberIdMatch[0].slice(14);
-            this.emit(MFA_SERVER.EVENTS.MFA_RESEND, method, phoneNumberId);
+            this.mfaMethod.update(methodString, parseInt(phoneNumberIdMatch[0].slice(14), 10));
         } else {
-            this.emit(MFA_SERVER.EVENTS.MFA_RESEND, method);
+            this.mfaMethod.update(methodString);
         }
+
+        this.sendResponse(res, 200, `Requesting MFA resend with method ${this.mfaMethod}`);
+        this.emit(MFA_SERVER.EVENTS.MFA_RESEND, this.mfaMethod);
     }
 
     /**

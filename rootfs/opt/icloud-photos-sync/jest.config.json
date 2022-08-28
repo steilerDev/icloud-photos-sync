@@ -3,7 +3,8 @@
     "testEnvironment": "node",
     "reporters": [
       "default",
-      "jest-summarizing-reporter"
+      "jest-summarizing-reporter",
+      "github-actions"
     ],
     "collectCoverageFrom": [
       "src/**/*.ts",

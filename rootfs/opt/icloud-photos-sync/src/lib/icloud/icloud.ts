@@ -1,14 +1,15 @@
 import axios, {AxiosRequestConfig, AxiosRequestHeaders} from 'axios';
 
 import EventEmitter from 'events';
-import {MFAServer} from './mfa-server/mfa-server.js';
+import {MFAServer} from './mfa/mfa-server.js';
 import * as ICLOUD from './constants.js';
 import * as ICLOUD_PHOTOS from './icloud-photos/constants.js';
-import * as MFA_SERVER from './mfa-server/constants.js';
+import * as MFA_SERVER from './mfa/constants.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {iCloudAuth} from './auth.js';
 import {OptionValues} from 'commander';
 import {getLogger} from '../logger.js';
+import {MFAMethod} from './mfa/mfa-method.js';
 
 /**
  * This class holds the iCloud connection
@@ -40,23 +41,13 @@ export class iCloud extends EventEmitter {
     ready: Promise<void>;
 
     /**
-     * Holds information, which mfa method was last used, in order to validate code using the right endpoint
-     * Per default, this should be 'device'
-     */
-    mfaMethod: ICLOUD.MFAMethod;
-
-    /**
-     * Holds information, which trusted phone number (id of number) was last used, in order to validate code using right endpoint
-     */
-    mfaPhoneNumberId: number;
-
-    /**
      * Creates a new iCloud Object
      * @param cliOpts - The read CLI options containing username, password and MFA server port
      */
     constructor(cliOpts: OptionValues) {
         super();
-        this.logger.info(`Initiating iCloud connection for ${cliOpts.username}`);
+        this.logger.info(`Initiating iCloud connection`);
+        this.logger.trace(`  - user: ${cliOpts.username}`)
 
         // MFA Server & lifecycle management
         this.mfaServer = new MFAServer(cliOpts.port);
@@ -143,7 +134,8 @@ export class iCloud extends EventEmitter {
 
                 this.logger.info(`Authentication successfull`);
                 this.auth.processAuthSecrets(res);
-                this.logger.debug(`Acquired secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
+                this.logger.debug(`Acquired secrets`);
+                this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`)
                 this.emit(ICLOUD.EVENTS.TRUSTED);
             })
             .catch(err => {
@@ -159,9 +151,7 @@ export class iCloud extends EventEmitter {
                 }
 
                 this.auth.processAuthSecrets(res);
-                this.logger.debug(`Acquired secrets, requiring MFA: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
-                // Per default, the trusted device is pinged
-                this.mfaMethod = ICLOUD.MFAMethod.DEVICE;
+                this.logger.debug(`Acquired secrets, requiring MFA`);
                 this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
             });
 
@@ -175,60 +165,32 @@ export class iCloud extends EventEmitter {
      * @param method - The method to be used
      * @param phoneNumberId - Optionally, the phoneNumberId. Will use ID 1 (first number) per default.
      */
-    resendMFA(method: ICLOUD.MFAMethod, phoneNumberId?: number) {
-        this.mfaMethod = method;
-        this.mfaPhoneNumberId = phoneNumberId ? phoneNumberId : 1; // 1 is the primary registered phone number id
-        this.logger.info(`Resending MFA code with ${this.mfaMethod} and phone number id ${this.mfaPhoneNumberId}`);
+    resendMFA(method: MFAMethod) {
+        this.logger.info(`Resending MFA code with ${method}`);
 
         const config: AxiosRequestHeaders = {
             "headers": this.auth.getMFAHeaders(),
         };
 
-        let data = {};
-        let url = ``;
-        switch (this.mfaMethod) {
-        case ICLOUD.MFAMethod.VOICE:
-            data = {
-                "phoneNumber": {
-                    "id": this.mfaPhoneNumberId,
-                },
-                "mode": `voice`,
-            };
-            url = ICLOUD.URL.MFA_PHONE;
-            break;
-        case ICLOUD.MFAMethod.SMS:
-            data = {
-                "phoneNumber": {
-                    "id": this.mfaPhoneNumberId,
-                },
-                "mode": `sms`,
-            };
-            url = ICLOUD.URL.MFA_PHONE;
-            break;
-        default:
-        case ICLOUD.MFAMethod.DEVICE:
-            url = ICLOUD.URL.MFA_DEVICE;
-            data = undefined;
-            break;
-        }
+        const data = method.getResendPayload();
+        const url = method.getResendURL();
 
         this.logger.debug(`Requesting MFA code via URL ${url} with data ${JSON.stringify(data)}`);
         axios.put(url, data, config)
-            .then(res => { // Weird difference in response code, depending on endpoint
-                if ((this.mfaMethod === ICLOUD.MFAMethod.DEVICE && res.status !== 202)
-                || ((this.mfaMethod === ICLOUD.MFAMethod.SMS || this.mfaMethod === ICLOUD.MFAMethod.VOICE) && res.status !== 200)) {
+            .then(res => {
+                if (!method.resendSuccesfull(res)) {
                     this.emit(ICLOUD.EVENTS.ERROR, `Unable to request new MFA code: ${JSON.stringify(res)}`);
                     return;
                 }
 
-                if (this.mfaMethod === ICLOUD.MFAMethod.SMS || this.mfaMethod === ICLOUD.MFAMethod.VOICE) {
+                if (method.isSMS() || method.isVoice()) {
                     this.logger.info(`Sucesfully requested new MFA code using phone ${res.data.trustedPhoneNumber.numberWithDialCode}`);
                 } else {
                     this.logger.info(`Sucesfully requested new MFA code using ${res.data.trustedDeviceCount} trusted device(s)`);
                 }
             })
             .catch(err => {
-                this.emit(ICLOUD.EVENTS.ERROR, `Received error while trying to resend MFA code: ${err}`);
+                this.emit(ICLOUD.EVENTS.ERROR, `Received error while trying to resend MFA code: ${method.processResendError(err)}`);
             });
     }
     /* c8 ignore stop */
@@ -239,7 +201,7 @@ export class iCloud extends EventEmitter {
      * Enters and validates the MFA code in order to acquire necessary account tokens
      * @param mfa - The MFA code
      */
-    mfaReceived(mfa: string) {
+    mfaReceived(method: MFAMethod, mfa: string) {
         this.mfaServer.stopServer();
         this.auth.validateAuthSecrets();
         this.logger.info(`Authenticating MFA with code ${mfa}`);
@@ -248,48 +210,13 @@ export class iCloud extends EventEmitter {
             "headers": this.auth.getMFAHeaders(),
         };
 
-        let data = {};
-        let url = ``;
-        switch (this.mfaMethod) {
-        case ICLOUD.MFAMethod.VOICE:
-            data = {
-                "securityCode": {
-                    "code": `${mfa}`,
-                },
-                "phoneNumber": {
-                    "id": this.mfaPhoneNumberId,
-                },
-                "mode": `voice`,
-            };
-            url = ICLOUD.URL.MFA_PHONE_ENTER;
-            break;
-        case ICLOUD.MFAMethod.SMS:
-            data = {
-                "securityCode": {
-                    "code": `${mfa}`,
-                },
-                "phoneNumber": {
-                    "id": this.mfaPhoneNumberId,
-                },
-                "mode": `sms`,
-            };
-            url = ICLOUD.URL.MFA_PHONE_ENTER;
-            break;
-        default:
-        case ICLOUD.MFAMethod.DEVICE:
-            url = ICLOUD.URL.MFA_DEVICE_ENTER;
-            data = {
-                "securityCode": {
-                    "code": `${mfa}`,
-                },
-            };
-            break;
-        }
+        const data = method.getEnterPayload(mfa);
+        const url = method.getEnterURL();
 
+        this.logger.debug(`Entering MFA code via URL ${url} with data ${JSON.stringify(data)}`);
         axios.post(url, data, config)
             .then(res => { // Weird difference in response code, depending on endpoint
-                if ((this.mfaMethod === ICLOUD.MFAMethod.DEVICE && res.status !== 204)
-                   || ((this.mfaMethod === ICLOUD.MFAMethod.SMS || this.mfaMethod === ICLOUD.MFAMethod.VOICE) && res.status !== 200)) {
+                if (!method.enterSuccesfull(res)) {
                     this.emit(ICLOUD.EVENTS.ERROR, `Received unexpected response code during MFA validation: ${res.status} (${res.statusText})`);
                     return;
                 }
@@ -319,7 +246,8 @@ export class iCloud extends EventEmitter {
         axios.get(ICLOUD.URL.TRUST, config)
             .then(res => this.auth.processAccountTokens(res))
             .then(() => {
-                this.logger.debug(`Acquired account tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`);
+                this.logger.debug(`Acquired account tokens`);
+                this.logger.trace(`  - tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`)
                 this.emit(ICLOUD.EVENTS.TRUSTED);
             })
             .catch(err => {

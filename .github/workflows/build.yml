@@ -1,9 +1,10 @@
 name: Build & Test
 # This reusable workflow will test and build the application. All assets will be packaged and uploaded
 # Creates the following artifacts:
-#  - rootfs.tar.gz (Docker RootFS)
-#  - npm.tar.gz (NPM Uplaod)
-#  - docs.tar.gz (Documentation for GH Wiki)
+#  - docker-artifacts (Docker RootFS)
+#  - npm-artifacts (NPM Uplaod)
+#  - doc-artifacts (Documentation for GH Wiki)
+#  - changelog (File containing changelog description)
 
 on:
   workflow_call:
@@ -15,7 +16,7 @@ on:
 
 jobs:
   build:
-      name: Build Project
+      name: Build & Test Project
       runs-on: ubuntu-latest
       steps:
       - name: Checkout
@@ -24,37 +25,57 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ inputs.nodeVersion }}
-      - name: Build
+      - name: Install
         run: |
           npm run clean && \
-          npm install && \
-          npm run build && \
-          npm run docs
+          npm install
         working-directory: rootfs/opt/icloud-photos-sync/
       - name: Test
         run: |
           npm run test-unit
         working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Package npm artifacts
+      - name: Build
         run: |
-          cp README.md LICENSE rootfs/opt/icloud-photos-sync/ && \
-          tar -C rootfs/opt/icloud-photos-sync/ -czf ./npm.tar.gz README.md LICENSE package.json bin/
+          npm run build && \
+          npm run docs
+        working-directory: rootfs/opt/icloud-photos-sync/
+      - name: Package artifacts
+        run: |
+          # docker rootfs
+          tar -C ./rootfs -czf ./rootfs.tar.gz ./
+
+          # npm artifacts
+          cp README.md CHANGELOG.md LICENSE rootfs/opt/icloud-photos-sync/ && \
+          tar -C rootfs/opt/icloud-photos-sync/ -czf ./npm.tar.gz README.md CHANGELOG.md LICENSE package.json bin/
+
+          # docs
+          tar -C rootfs/opt/icloud-photos-sync/ -czf ./docs.tar.gz docs/
       - name: Upload npm artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: npm-artifacts
           path: ./npm.tar.gz
-      - name: Package docker artifacts
-        run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
       - name: Upload docker artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: rootfs
-          path: ./rootfs.tar.gz
-      - name: Package docs
-        run: tar -C rootfs/opt/icloud-photos-sync/ -czf ./docs.tar.gz docs/
-      - name: Upload docs artifacts
-        uses: actions/upload-artifact@v2
+          name: docker-artifacts
+          path: |
+            ./rootfs.tar.gz
+            ./Dockerfile
+      - name: Upload doc artifacts
+        uses: actions/upload-artifact@v3
         with:
-          name: docs-artifacts
+          name: doc-artifacts
           path: ./docs.tar.gz
+      - name: Extract this build's changelog
+        run: |
+          START_LINE=$(grep -n -m 1 -E '^##' CHANGELOG.md | grep -Eo '^[0-9]+')
+          ((START_LINE++))
+          END_LINE=$(grep -n -m 2 -E '^##' CHANGELOG.md | tail -n 1 | grep -Eo '^[0-9]+')
+          LENGTH=$(( END_LINE - START_LINE ))
+          tail -n +$START_LINE CHANGELOG.md | head -n $LENGTH > CHANGELOG.latest.md
+      - name: Upload changelog
+        uses: actions/upload-artifact@v2
+        with:
+          name: changelog
+          path: ./CHANGELOG.latest.md

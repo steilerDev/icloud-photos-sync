@@ -8,7 +8,7 @@ import {AlbumType} from '../../src/lib/photos-library/model/album';
 
 const photosDataDir = `/media/files/photos-library`;
 const assetDir = path.join(photosDataDir, ASSET_DIR);
-const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
+// Const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
 
 function photosLibraryFactory(): PhotosLibrary {
     const opts = {
