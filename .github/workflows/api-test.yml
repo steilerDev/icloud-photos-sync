@@ -21,6 +21,7 @@ jobs:
   run-test:
     name: Run Test
     runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -29,6 +30,34 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
     - name: Build & Install
+      run: |
+        npm run clean && \
+        npm install && \
+        npm run build && \
+        npm link
+      working-directory: rootfs/opt/icloud-photos-sync/
+    - name: Check MFA Token
+      run: |
+        icloud-photos-sync token
+      env:
+        FAIL_ON_MFA: true
+    - name: Run API Test
+      run: |
+        npm run test-api
+      working-directory: rootfs/opt/icloud-photos-sync/
+  
+  acquire-token:
+    name: Acquire Token
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Setup node
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    - name: Build 
       run: |
         npm run clean && \
         npm install && \
@@ -42,18 +71,8 @@ jobs:
         chmod +x ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/resend_mfa.sh && \
         ln -s ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/resend_mfa.sh /usr/local/bin/resend_mfa
       working-directory: rootfs/opt/icloud-photos-sync/
-    - name: Check MFA Token
-      run: |
-        icloud-photos-sync token
-      env:
-        FAIL_ON_MFA: true
-    - name: Acquire token
-      if: failure() && ${{ github.event_name == 'workflow_dispatch' }}
+    - name: Access runner to acquire token
       uses: lhotari/action-upterm@v1
       with:
         limit-access-to-users: steilerDev
         upterm-server: ssh://uptermd.upterm.dev
-    - name: Run API Test
-      run: |
-        npm run test-api
-      working-directory: rootfs/opt/icloud-photos-sync/
