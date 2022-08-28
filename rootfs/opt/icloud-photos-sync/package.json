@@ -9,15 +9,10 @@
     "icloud-photos-sync": "bin/main.js"
   },
   "scripts": {
-    "prebuild-clean": "echo \"// File created during pre-build, to expose package metadata to the application\" > src/lib/package.ts",
-    "prebuild-name": "node -p \"'export const VERSION = ' + JSON.stringify(require('./package.json').version) + ';'\" >> src/lib/package.ts",
-    "prebuild-version": "node -p \"'export const NAME = ' + JSON.stringify(require('./package.json').name) + ';'\" >> src/lib/package.ts",
-    "prebuild-description": "node -p \"'export const DESC = ' + JSON.stringify(require('./package.json').description) + ';'\" >> src/lib/package.ts",
-    "prebuild-lint": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
-    "prebuild": "npm run prebuild-clean && npm run prebuild-name && npm run prebuild-version && npm run prebuild-description && npm run prebuild-lint",
+    "clean": "rm -rf bin/ coverage/ docs/ node_modules/ src/lib/package.ts",
+    "prebuild": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
     "build": "npx tsc",
     "docs": "npx typedoc",
-    "clean": "rm -rf bin/ coverage/ docs/ node_modules/ src/lib/package.ts",
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json",
     "test-coverage": "npm run test -- --coverage=true",
     "test-api": "NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/api/*.test.ts",

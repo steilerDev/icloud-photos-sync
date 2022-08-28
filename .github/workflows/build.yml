@@ -1,9 +1,9 @@
 name: Build & Test
 # This reusable workflow will test and build the application. All assets will be packaged and uploaded
 # Creates the following artifacts:
-#  - docker-rootfs (Docker RootFS)
+#  - docker-artifacts (Docker RootFS)
 #  - npm-artifacts (NPM Uplaod)
-#  - docs-artifacts (Documentation for GH Wiki)
+#  - doc-artifacts (Documentation for GH Wiki)
 #  - changelog (File containing changelog description)
 
 on:
@@ -46,18 +46,20 @@ jobs:
           name: npm-artifacts
           path: ./npm.tar.gz
       - name: Package docker artifacts
-        run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
+        run: |
+          tar -C ./rootfs -czf ./rootfs.tar.gz ./
+          tar -czf ./docker.tar.gz ./rootfs.tar.gz ./Dockerfile
       - name: Upload docker artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: docker-rootfs
-          path: ./rootfs.tar.gz
+          name: docker-artifacts
+          path: ./docker.tar.gz
       - name: Package docs
         run: tar -C rootfs/opt/icloud-photos-sync/ -czf ./docs.tar.gz docs/
-      - name: Upload docs artifacts
+      - name: Upload doc artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: docs-artifacts
+          name: doc-artifacts
           path: ./docs.tar.gz
       - name: Extract Changelog
         run: |

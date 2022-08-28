@@ -1,6 +1,6 @@
 name: Development Release
 # This workflow will run on every push
-# If the app builds and passes tests, it will release the development channels (private DockerHub)
+# If the app builds and passes tests, it will release the development channels ('nightly' tag)
 
 on: [push, pull_request]
 
@@ -10,24 +10,25 @@ env:
 
 jobs:
   build-workflow:
+    name: Build & Test
     uses: ./.github/workflows/build.yml
     with:
-      nodeVersion: 18
+      nodeVersion: 18 # ${{ env.NODE_VERSION }} doesn't work
   
   publish-docker-dev:
     name: Publish Project to steilerGroup-Docker
     needs: build-workflow
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
     - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
-        name: docker-rootfs
-    - name: Login to Docker Registry
-      run: docker login ${{secrets.DOCKER_DEV_HOST}} -u ${{secrets.DOCKER_DEV_USERNAME}} -p ${{secrets.DOCKER_DEV_PWD}}
+        name: docker-artifacts
+    - name: Prepare artifacts
+      run: tar -xzf docker.tar.gz
+    - name: Login to DockerHub
+      run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ${{secrets.DOCKER_DEV_HOST}}/$PKG_NAME:latest
-    - name: Push the Docker image
-      run: docker push ${{secrets.DOCKER_DEV_HOST}}/$PKG_NAME:latest
+      run: docker build . --file Dockerfile --tag ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:nightly
+    - name: Push to DockerHub
+      run: docker image push ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:nightly

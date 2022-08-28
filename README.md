@@ -41,6 +41,8 @@ services:
 
 A full list of configuration options (applied through environment variables) can be found by executing `docker run icloud-photos-sync:latest icloud-photos-sync --help`.
 
+The latest snapshot build is available through the `nightly` tag on DockerHub. This release channel might not be stable.
+
 ### CLI from npm
 The application can be installed from npm using:
 ```
