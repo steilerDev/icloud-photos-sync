@@ -30,4 +30,3 @@ jobs:
       with:
         limit-access-to-users: 'steilerDev'
         upterm-server: ssh://uptermd.upterm.dev:22
-      working-directory: rootfs/opt/icloud-photos-sync/
