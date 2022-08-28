@@ -57,6 +57,9 @@ export function setupLogger(cliOpts: OptionValues): void {
     };
 
     log.setLevel(cliOpts.logLevel);
+    if (cliOpts.logLevel === `trace`) {
+        log.warn(`Log level set to 'trace', private data might be recorded in logs!`);
+    }
 
     // Set specific loggers to levels to reduce verbosity during development
     /**

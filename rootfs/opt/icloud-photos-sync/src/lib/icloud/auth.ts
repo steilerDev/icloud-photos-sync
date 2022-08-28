@@ -132,7 +132,7 @@ export class iCloudAuth {
         try {
             const trustToken = readFileSync(this.trustTokenFile, {"encoding": ICLOUD.TRUST_TOKEN_FILE_ENCODING});
             this.logger.debug(`Acquired trust token from file`);
-            this.logger.trace(`  - token: ${trustToken}`)
+            this.logger.trace(`  - token: ${trustToken}`);
             this.iCloudAccountTokens.trustToken = trustToken;
         } catch (err) {
             this.logger.warn(`Unable to acquire trust token from file: ${err.message}`);
@@ -179,7 +179,7 @@ export class iCloudAuth {
 
         this.validateAuthSecrets();
         this.logger.debug(`Authentication processed, auth secrets populated`);
-        this.logger.trace(`  - auth secrets: ${JSON.stringify(this.iCloudAuthSecrets)}`)
+        this.logger.trace(`  - auth secrets: ${JSON.stringify(this.iCloudAuthSecrets)}`);
     }
 
     /* MFA flow not testable in automation */
@@ -297,8 +297,8 @@ export class iCloudAuth {
      * @param sensitiveMsg  - Sensitive message to be logged to the trace log
      */
     throwSensitiveError(msg: string, sensitiveMsg: string) {
-        this.logger.trace(`${msg}: ${sensitiveMsg}`)
-        throw new Error(msg)
+        this.logger.trace(`${msg}: ${sensitiveMsg}`);
+        throw new Error(msg);
     }
 
     /**
@@ -307,11 +307,12 @@ export class iCloudAuth {
      */
     validateCloudCookies() {
         if (!this.iCloudCookies || this.iCloudCookies.length === 0) {
-            throw new Error(`Unable to validate cloud cookies: No cookies loaded`)
-        } 
-        const expiredCookies = this.iCloudCookies.filter(cookie => cookie.TTL() === 0)
-        if(expiredCookies.length > 0) {
-            this.logger.trace(`Found expired cookies: ${JSON.stringify(expiredCookies)}`)
+            throw new Error(`Unable to validate cloud cookies: No cookies loaded`);
+        }
+
+        const expiredCookies = this.iCloudCookies.filter(cookie => cookie.TTL() === 0);
+        if (expiredCookies.length > 0) {
+            this.logger.trace(`Found expired cookies: ${JSON.stringify(expiredCookies)}`);
             throw new Error(`Unable to validate cloud cookies: Some cookies are expired`);
         }
     }
@@ -323,19 +324,23 @@ export class iCloudAuth {
     validatePhotosAccount() {
         this.validateCloudCookies();
         if (!this.iCloudPhotosAccount.zoneName || this.iCloudPhotosAccount.zoneName.length === 0) {
-            throw new Error(`Unable to validate Photos account: ZoneName invalid`)
+            throw new Error(`Unable to validate Photos account: ZoneName invalid`);
         }
-        if(!this.iCloudPhotosAccount.photosDomain || this.iCloudPhotosAccount.photosDomain.length === 0) {
-            throw new Error(`Unable to validate Photos account: PhotosDomain invalid`)
+
+        if (!this.iCloudPhotosAccount.photosDomain || this.iCloudPhotosAccount.photosDomain.length === 0) {
+            throw new Error(`Unable to validate Photos account: PhotosDomain invalid`);
         }
-        if(!this.iCloudPhotosAccount.zoneType || this.iCloudPhotosAccount.zoneType.length === 0) {
-            throw new Error(`Unable to validate Photos account: ZoneType invalid`)
+
+        if (!this.iCloudPhotosAccount.zoneType || this.iCloudPhotosAccount.zoneType.length === 0) {
+            throw new Error(`Unable to validate Photos account: ZoneType invalid`);
         }
-        if(!this.iCloudPhotosAccount.ownerName || this.iCloudPhotosAccount.ownerName.length === 0) {
-            throw new Error(`Unable to validate Photos account: OwnerName invalid`)
+
+        if (!this.iCloudPhotosAccount.ownerName || this.iCloudPhotosAccount.ownerName.length === 0) {
+            throw new Error(`Unable to validate Photos account: OwnerName invalid`);
         }
-        if(!this.iCloudPhotosAccount.syncToken || this.iCloudPhotosAccount.syncToken.length ===0) {
-            throw new Error(`Unable to validate Photos account: SyncToken invalid`)
+
+        if (!this.iCloudPhotosAccount.syncToken || this.iCloudPhotosAccount.syncToken.length === 0) {
+            throw new Error(`Unable to validate Photos account: SyncToken invalid`);
         }
     }
 
@@ -345,10 +350,11 @@ export class iCloudAuth {
      */
     validateAccountSecrets() {
         if (!this.iCloudAccountSecrets.username || this.iCloudAccountSecrets.username.length === 0) {
-            throw new Error(`Unable to validate account secrets: Username invalid`)
+            throw new Error(`Unable to validate account secrets: Username invalid`);
         }
-        if(!this.iCloudAccountSecrets.password || this.iCloudAccountSecrets.password.length === 0) {
-            throw new Error(`Unable to validate account secrets: Password invalid`)
+
+        if (!this.iCloudAccountSecrets.password || this.iCloudAccountSecrets.password.length === 0) {
+            throw new Error(`Unable to validate account secrets: Password invalid`);
         }
     }
 
@@ -360,10 +366,12 @@ export class iCloudAuth {
         if (!this.iCloudAuthSecrets.aasp || this.iCloudAuthSecrets.aasp.length === 0) {
             throw new Error(`Unable to validate auth secrets: aasp invalid`);
         }
-        if(!this.iCloudAuthSecrets.scnt || this.iCloudAuthSecrets.scnt.length === 0) {
+
+        if (!this.iCloudAuthSecrets.scnt || this.iCloudAuthSecrets.scnt.length === 0) {
             throw new Error(`Unable to validate auth secrets: scnt invalid`);
         }
-        if(!this.iCloudAuthSecrets.sessionId || this.iCloudAuthSecrets.sessionId.length === 0) {
+
+        if (!this.iCloudAuthSecrets.sessionId || this.iCloudAuthSecrets.sessionId.length === 0) {
             throw new Error(`Unable to validate auth secrets: sessionId invalid`);
         }
     }
@@ -376,7 +384,8 @@ export class iCloudAuth {
         if (!this.iCloudAccountTokens.sessionToken || this.iCloudAccountTokens.sessionToken.length === 0) {
             throw new Error(`Unable to validate account tokens: sessionToken invalid`);
         }
-        if(!this.iCloudAccountTokens.trustToken || this.iCloudAccountTokens.trustToken.length === 0) {
+
+        if (!this.iCloudAccountTokens.trustToken || this.iCloudAccountTokens.trustToken.length === 0) {
             throw new Error(`Unable to validate account tokens: trustToken invalid`);
         }
     }
