@@ -9,7 +9,7 @@
     "icloud-photos-sync": "bin/main.js"
   },
   "scripts": {
-    "clean": "rm -rf bin/ coverage/ docs/ node_modules/",
+    "clean": "rm -rf bin/ coverage/ docs/ node_modules/ package-lock.json",
     "prebuild": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
     "build": "npx tsc",
     "docs": "npx typedoc",
@@ -53,6 +53,7 @@
     "jest": "^28.1.3",
     "jest-summarizing-reporter": "^1.1.4",
     "ts-jest": "^28.0.7",
+    "mock-fs": "^5.1.4",
     "typedoc": "^0.23.5",
     "typedoc-github-wiki-theme": "^1.0.1",
     "typedoc-plugin-markdown": "^3.13.2",
@@ -65,7 +66,6 @@
     "cli-progress": "^3.11.2",
     "commander": "^9.0.0",
     "loglevel": "^1.8.0",
-    "mock-fs": "^5.1.4",
     "p-event": "^5.0.1",
     "p-queue": "^7.2.0",
     "tough-cookie": "^4.0.0"
