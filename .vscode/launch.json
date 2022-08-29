@@ -25,11 +25,11 @@
             "runtimeArgs": [
               "--experimental-vm-modules",
               "--inspect-brk",
-              "${workspaceRoot}/rootfs/opt/icloud-photos-sync/node_modules/.bin/jest",
+              "node_modules/.bin/jest",
               "--runInBand",
               "--coverage=true",
               "--config", "jest.config.json",
-              "test/unit/photos-library.unit.test.ts"
+              //"test/unit/photos-library.unit.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
