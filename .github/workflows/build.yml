@@ -87,7 +87,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    if: (github.ref != 'refs/heads/dev') || (matrix.os == 'ubuntu-latest')
+    if: (github.ref != 'refs/heads/dev') || (${{matrix.os}} == 'ubuntu-latest')
     env:
       NODE_OPTIONS: --experimental-vm-modules
     steps:
