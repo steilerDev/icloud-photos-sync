@@ -32,10 +32,10 @@ jobs:
           npm install
         working-directory: rootfs/opt/icloud-photos-sync/
       - name: Build app
-        run: npm run build
+        run: |
+          npm run build
+          cd ../../../README.md ../../../CHANGELOG.md ../../../LICENSE ./
         working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Package app Metadata
-        run: cp README.md CHANGELOG.md LICENSE ./rootfs/opt/icloud-photos-sync/
       - name: Build doc artifacts
         run: npm run docs
         working-directory: rootfs/opt/icloud-photos-sync/
@@ -53,12 +53,11 @@ jobs:
         with:
           name: npm-artifacts
           path: |
-            ../../../README.md
-            ./CHANGELOG.md
-            ./LICENSE
-            ./package.json
-            ./bin/
-        working-directory: rootfs/opt/icloud-photos-sync/
+            ./rootfs/opt/icloud-photos-sync/README.md
+            ./rootfs/opt/icloud-photos-sync/CHANGELOG.md
+            ./rootfs/opt/icloud-photos-sync/LICENSE
+            ./rootfs/opt/icloud-photos-sync/package.json
+            ./rootfs/opt/icloud-photos-sync/bin/
       - name: Upload docker artifacts
         uses: actions/upload-artifact@v3
         with:
