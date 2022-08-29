@@ -8,10 +8,10 @@
 [![Production Release Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Production%20Release?label=Prod%20Release&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml)
 
 ### OS Support
-![OS Support Debian](https://img.shields.io/static/v1?label=Debian-10&message=Production%20Use&color=success&style=for-the-badge)
-[![OS Support Ubuntu](https://img.shields.io/static/v1?label=Ubuntu-latest&message=Unit%20Tested&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
-[![OS Support MacOS](https://img.shields.io/static/v1?label=MacOS-latest&message=Unit%20Tested&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
-[![OS Support Windows](https://img.shields.io/static/v1?label=Windows-latest&message=Failing&color=critical&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
+![OS Support Debian](https://img.shields.io/static/v1?label=Debian-10&message=Dev%20Platform&color=informational&style=for-the-badge)
+[![OS Support Ubuntu](https://img.shields.io/static/v1?label=Ubuntu-latest&message=Unit%20Test&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
+[![OS Support MacOS](https://img.shields.io/static/v1?label=MacOS-latest&message=Unit%20Test&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
+[![OS Support Windows](https://img.shields.io/static/v1?label=Windows-latest&message=Skipped&color=inactive&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
 
 ### Downloads
 [![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/releases)
