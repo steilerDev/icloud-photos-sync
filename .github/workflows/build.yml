@@ -85,7 +85,7 @@ jobs:
     name: Test Project
     strategy:
       matrix:
-        os: ${{ github.ref == 'refs/heads/dev' && ['ubuntu-latest'] || ['ubuntu-latest', 'macos-latest'] }} 
+        os: ${{ fromJSON(github.ref == 'refs/heads/dev' && ['ubuntu-latest'] || ['ubuntu-latest', 'macos-latest']) }} # Only testing ubuntu when pushing to dev
     runs-on: ${{ matrix.os }}
     env:
       NODE_OPTIONS: --experimental-vm-modules
