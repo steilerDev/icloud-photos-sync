@@ -15,8 +15,8 @@
     "docs": "npx typedoc",
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json",
     "test-coverage": "npm run test -- --coverage=true",
-    "test-api": "NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/api/*.test.ts",
-    "test-unit": "NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/unit/*.test.ts", 
+    "test-api": "npx jest --config jest.config.json test/api/*.test.ts",
+    "test-unit": "npx jest --config jest.config.json test/unit/*.test.ts", 
     "execute": "node bin/main.js"
   },
   "repository": {
