@@ -26,19 +26,22 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Clean
-        run: npm run clean
+      - name: Prepare environment
+        run: |
+          npm run clean
+          npm install
         working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Install
-        run: npm install
-        working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Build App
+      - name: Build app
         run: npm run build
         working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Build Docs
+      - name: Package app Metadata
+        run: cp README.md CHANGELOG.md LICENSE ./rootfs/opt/icloud-photos-sync/
+      - name: Build doc artifacts
         run: npm run docs
         working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Build Changelog
+      - name: Build docker artifacts
+        run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
+      - name: Build changelog artifact
         run: |
           START_LINE=$(grep -n -m 1 -E '^##' CHANGELOG.md | grep -Eo '^[0-9]+')
           ((START_LINE++))
@@ -50,11 +53,12 @@ jobs:
         with:
           name: npm-artifacts
           path: |
-            ./README.md
+            ../../../README.md
             ./CHANGELOG.md
             ./LICENSE
-            ./rootfs/opt/icloud-photos-sync/package.json
-            ./rootfs/opt/icloud-photos-sync/bin/
+            ./package.json
+            ./bin/
+        working-directory: rootfs/opt/icloud-photos-sync/
       - name: Upload docker artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -68,7 +72,7 @@ jobs:
         with:
           name: doc-artifacts
           path: ./rootfs/opt/icloud-photos-sync/docs
-      - name: Upload changelog
+      - name: Upload changelog artifact
         uses: actions/upload-artifact@v3
         with:
           name: changelog

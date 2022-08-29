@@ -84,11 +84,8 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: npm-artifacts
-      - name: Prepare artifacts
-        run: |
-          tar -xzf npm.tar.gz && \
-          rm npm.tar.gz && \
-          npm install
+      - name: Prepare environment
+        run: npm install
       - uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.NPM_TOKEN }}
@@ -102,12 +99,11 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: docs-artifacts
-      - name: Prepare artifacts
-        run: tar -xzf docs.tar.gz
+          path: docs
       - name: Upload Documentation to Wiki
         uses: SwiftDocOrg/github-wiki-publish-action@v1
         with:
-          path: "docs"
+          path: docs
         env:
           GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
 
@@ -121,11 +117,14 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          name: changelog
+          path: ./artifacts
+      - name: Prepare artifacts
+        run: tar -C ./artifacts -czf ./icloud-photos-sync.${{github.event.inputs.version}}.tar.gz ./
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          bodyFile: "CHANGELOG.latest.md"
+          bodyFile: ./artifacts/changelog/CHANGELOG.latest.md
           token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           tag: ${{ inputs.version }}
           prerelease: ${{ inputs.pre-release }}
+          artifacts: ./icloud-photos-sync.${{inputs.version}}.tar.gz
