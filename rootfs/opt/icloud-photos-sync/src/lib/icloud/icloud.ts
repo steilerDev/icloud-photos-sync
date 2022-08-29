@@ -47,7 +47,7 @@ export class iCloud extends EventEmitter {
     constructor(cliOpts: OptionValues) {
         super();
         this.logger.info(`Initiating iCloud connection`);
-        this.logger.trace(`  - user: ${cliOpts.username}`)
+        this.logger.trace(`  - user: ${cliOpts.username}`);
 
         // MFA Server & lifecycle management
         this.mfaServer = new MFAServer(cliOpts.port);
@@ -135,7 +135,7 @@ export class iCloud extends EventEmitter {
                 this.logger.info(`Authentication successfull`);
                 this.auth.processAuthSecrets(res);
                 this.logger.debug(`Acquired secrets`);
-                this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`)
+                this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
                 this.emit(ICLOUD.EVENTS.TRUSTED);
             })
             .catch(err => {
@@ -247,7 +247,7 @@ export class iCloud extends EventEmitter {
             .then(res => this.auth.processAccountTokens(res))
             .then(() => {
                 this.logger.debug(`Acquired account tokens`);
-                this.logger.trace(`  - tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`)
+                this.logger.trace(`  - tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`);
                 this.emit(ICLOUD.EVENTS.TRUSTED);
             })
             .catch(err => {

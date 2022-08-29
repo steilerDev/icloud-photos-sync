@@ -7,7 +7,6 @@ on:
 
 env:
   PKG_NAME: icloud-photos-sync
-  NODE_VERSION: 18
 
 jobs:
   build-workflow:

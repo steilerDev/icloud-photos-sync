@@ -2,16 +2,17 @@
 
 **Work in progress, [current state and upcoming milestones below](#milestone-plan)**
 
-## Status
+### Status
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/API%20Test?label=API%20Status&style=for-the-badge)
+[![API Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/API%20Test?label=API%20Status&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml)
+[![Development Release Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Development%20Release?label=Dev%20Release&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/dev-release.yml)
+[![Production Release Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Production%20Release?label=Prod%20Release&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml)
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Production%20Release?label=Prod%20Release&style=for-the-badge)
+### Downloads
+
 [![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/releases)
 [![npm](https://img.shields.io/npm/dm/icloud-photos-sync?label=npm%20downloads&style=for-the-badge)](https://www.npmjs.com/package/icloud-photos-sync)
 [![Docker Pulls](https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync?style=for-the-badge)](https://hub.docker.com/r/steilerdev/icloud-photos-sync)
-
-![Dev Release Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Development%20Release?label=Dev%20Release&style=for-the-badge)
 
 ## Overview
 
