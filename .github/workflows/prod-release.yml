@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Version bump # Changing version in CHANGELOG.md / package.json /src/lib/package.ts
+      - name: Version bump
         run: |
           NUMERIC_VERSION=${VERSION:1}
           sed -i '/^## Nightly Changes/c\<!-- ## Nightly Changes-->\n\n## '${VERSION} CHANGELOG.md
@@ -41,8 +41,6 @@ jobs:
     name: Build & Test
     needs: version-bump
     uses: ./.github/workflows/build.yml
-    with:
-      nodeVersion: 18 # ${{ env.NODE_VERSION }} doesn't work
 
   publish-dockerhub:
     name: Publish Docker Image

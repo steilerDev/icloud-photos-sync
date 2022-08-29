@@ -8,11 +8,9 @@ name: Build & Test
 
 on:
   workflow_call:
-    inputs:
-      nodeVersion:
-        default: 18
-        required: true
-        type: number
+
+env:
+  NODE_VERSION: 18
 
 jobs:
   build:
@@ -24,7 +22,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v2
         with:
-          node-version: ${{ inputs.nodeVersion }}
+          node-version: ${{ env.NODE_VERSION }}
       - name: Install
         run: |
           npm run clean && \
