@@ -4,7 +4,7 @@ name: API Test
 
 on:
   schedule:
-    - cron:  '5 5,17 * * *'
+    - cron: '5 5,17 * * *'
   workflow_dispatch:
 
 env:
@@ -14,6 +14,7 @@ env:
   APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
   PORT: 8080
   LOG_TO_CLI: true
+  NODE_OPTIONS: --experimental-vm-modules
 
 jobs:
   run-test:

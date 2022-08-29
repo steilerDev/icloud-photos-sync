@@ -99,7 +99,7 @@ jobs:
         run: npm install
         working-directory: rootfs/opt/icloud-photos-sync/
       - name: Test
-        run: npm run test-unit
+        run: npm run test
         working-directory: rootfs/opt/icloud-photos-sync/
 
   scan:
