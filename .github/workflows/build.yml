@@ -34,7 +34,7 @@ jobs:
       - name: Build app
         run: |
           npm run build
-          cd ../../../README.md ../../../CHANGELOG.md ../../../LICENSE ./
+          cp ../../../README.md ../../../CHANGELOG.md ../../../LICENSE ./
         working-directory: rootfs/opt/icloud-photos-sync/
       - name: Build doc artifacts
         run: npm run docs
