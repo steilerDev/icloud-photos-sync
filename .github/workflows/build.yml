@@ -1,6 +1,7 @@
 name: Build, Test & Scan
 # This reusable workflow will test, build and scan the application. All build assets will be packaged and uploaded
 # This action is also run, in order to validate, that Pull Requests are functional
+# When this workflow is triggered due to a push to dev, testing & code scanning will be skipped/fast tracked
 #
 # Creates the following artifacts:
 #  - docker-artifacts (Docker RootFS + Dockerfile)
@@ -85,7 +86,7 @@ jobs:
     name: Test Project
     strategy:
       matrix:
-        os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Only testing ubuntu when pushing to dev
+        os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
     runs-on: ${{ matrix.os }}
     env:
       NODE_OPTIONS: --experimental-vm-modules
