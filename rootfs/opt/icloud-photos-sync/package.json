@@ -15,7 +15,7 @@
     "docs": "npx typedoc",
     "test": "run-script-os",
     "test:linux:darwin": "npx jest --config jest.config.json test/unit/*.test.ts",
-    "test:win32": "npx jest --config jest.config.json test\\unit\\*.test.ts",
+    "test:win32": "npx jest --config jest.config.json 'test/unit/.*.test.ts'",
     "test-api": "npx jest --config jest.config.json test/api/*.test.ts",
     "execute": "run-script-os",
     "execute:linux:darwin": "node bin/main.js",
