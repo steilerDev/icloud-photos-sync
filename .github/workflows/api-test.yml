@@ -25,7 +25,7 @@ jobs:
       TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Setup node
       uses: actions/setup-node@v2
       with:
