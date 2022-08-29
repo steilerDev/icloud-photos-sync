@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Version bump
         run: |
           NUMERIC_VERSION=${VERSION:1}
@@ -38,7 +38,7 @@ jobs:
           tagging_message: ${{ inputs.version }}
 
   build-workflow:
-    name: Build & Test
+    name: Build
     needs: version-bump
     uses: ./.github/workflows/build.yml
 
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: docker-artifacts
       - name: Login to DockerHub
@@ -63,11 +63,12 @@ jobs:
       - name: Push to DockerHub
         run: docker image push --all-tags ${{secrets.DOCKER_USERNAME}}/$PKG_NAME
       - name: Update DockerHub readme
-        uses: peter-evans/dockerhub-description@v2
+        uses: peter-evans/dockerhub-description@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PWD }}
           repository: ${{secrets.DOCKER_USERNAME}}/${{env.PKG_NAME}}
+          short-description: ${{ github.event.repository.description }}
           readme-filepath: ./README.md
 
   publish-npm:
@@ -76,11 +77,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup Node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: npm-artifacts
       - name: Prepare artifacts
@@ -98,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: docs-artifacts
       - name: Prepare artifacts
@@ -116,9 +117,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: changelog
       - name: Create Release

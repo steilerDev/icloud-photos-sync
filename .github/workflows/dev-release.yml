@@ -11,7 +11,7 @@ env:
 
 jobs:
   build-workflow:
-    name: Build & Test
+    name: Build
     uses: ./.github/workflows/build.yml
   
   publish-docker-dev:
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download artifacts
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: docker-artifacts
     - name: Login to DockerHub
