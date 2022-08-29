@@ -5,8 +5,8 @@ name: Development Release
 on: 
   push:
     branches:
-        - 'main'
-        - 'dev'
+      - 'main'
+      - 'dev'
 
 env:
   PKG_NAME: icloud-photos-sync
