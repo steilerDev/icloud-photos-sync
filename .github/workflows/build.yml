@@ -45,8 +45,6 @@ jobs:
           END_LINE=$(grep -n -m 2 -E '^##' CHANGELOG.md | tail -n 1 | grep -Eo '^[0-9]+')
           LENGTH=$(( END_LINE - START_LINE ))
           tail -n +$START_LINE CHANGELOG.md | head -n $LENGTH > CHANGELOG.latest.md
-      - name: Build Docker rootfs
-        run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
       - name: Upload npm artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -55,7 +53,8 @@ jobs:
             ./README.md
             ./CHANGELOG.md
             ./LICENSE
-            ./rootfs/opt/icloud-photos-sync/
+            ./rootfs/opt/icloud-photos-sync/package.json
+            ./rootfs/opt/icloud-photos-sync/bin/
       - name: Upload docker artifacts
         uses: actions/upload-artifact@v3
         with:

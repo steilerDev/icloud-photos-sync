@@ -37,10 +37,6 @@
   "engines": {
     "node": ">=18.6.0"
   },
-  "os": [
-    "linux",
-    "!win32"
-  ],
   "devDependencies": {
     "@types/cli-progress": "^3.11.0",
     "@types/jest": "^28.1.6",
