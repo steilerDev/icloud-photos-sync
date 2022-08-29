@@ -17,7 +17,7 @@ env:
 
 jobs:
   build:
-    name: Build & Test Project
+    name: Build Project
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,10 +30,6 @@ jobs:
         run: |
           npm run clean && \
           npm install
-        working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Test
-        run: |
-          npm run test-unit
         working-directory: rootfs/opt/icloud-photos-sync/
       - name: Build
         run: |
@@ -80,6 +76,30 @@ jobs:
         with:
           name: changelog
           path: ./CHANGELOG.latest.md
+
+  test:
+    name: Test Project
+    needs: build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install
+        run: |
+          npm run clean && \
+          npm install
+        working-directory: rootfs/opt/icloud-photos-sync/
+      - name: Test
+        run: |
+          npm run test-unit
+        working-directory: rootfs/opt/icloud-photos-sync/
 
   scan:
     name: Perform Code Scan
