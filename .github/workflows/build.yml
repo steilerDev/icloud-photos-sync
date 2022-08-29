@@ -18,7 +18,7 @@ on:
       - '!dev'
 
 env:
-  NODE_VERSION: 18
+  NODE_VERSION: 18.8.0
 
 jobs:
   build:
