@@ -46,8 +46,6 @@ jobs:
     name: Build & Test
     needs: version-bump
     uses: ./.github/workflows/build.yml
-    with:
-      nodeVersion: 18 # ${{ env.NODE_VERSION }} doesn't work
 
   publish-dockerhub:
     name: Publish Docker Image
