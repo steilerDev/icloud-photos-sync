@@ -2,7 +2,8 @@ name: Development Release
 # This workflow will run on every push
 # If the app builds and passes tests, it will release the development channels ('nightly' tag)
 
-on: [push, pull_request]
+on: 
+  push:
 
 env:
   PKG_NAME: icloud-photos-sync
