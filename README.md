@@ -3,20 +3,23 @@
 **Work in progress, [current state and upcoming milestones below](#milestone-plan)**
 
 ### Status
-
 [![API Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/API%20Test?label=API%20Status&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml)
 [![Development Release Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Development%20Release?label=Dev%20Release&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/dev-release.yml)
 [![Production Release Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Production%20Release?label=Prod%20Release&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml)
 
-### Downloads
+### OS Support
+![OS Support Debian](https://img.shields.io/static/v1?label=Debian-10&message=Production%20Use&color=success&style=for-the-badge)
+[![OS Support Ubuntu](https://img.shields.io/static/v1?label=Ubuntu-latest&message=Unit%20Tested&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
+[![OS Support MacOS](https://img.shields.io/static/v1?label=MacOS-latest&message=Unit%20Tested&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
+[![OS Support Windows](https://img.shields.io/static/v1?label=Windows-latest&message=Failing&color=critical&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
 
+### Downloads
 [![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/releases)
 [![npm](https://img.shields.io/npm/dm/icloud-photos-sync?label=npm%20downloads&style=for-the-badge)](https://www.npmjs.com/package/icloud-photos-sync)
 [![Docker Pulls](https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync?style=for-the-badge)](https://hub.docker.com/r/steilerdev/icloud-photos-sync)
 
 ## Overview
-
-This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem (only tested on Linux Debian 10/buster).
+This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem.
 
 Currently, this can only be achived, by having a Mac continously run the Photos.app (with 'Keep originals' enabled). With this method the files cannot be easily viewed without the Photos.app.
 

@@ -81,7 +81,7 @@ jobs:
     name: Test Project
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     env:
       NODE_OPTIONS: --experimental-vm-modules

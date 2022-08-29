@@ -13,13 +13,9 @@
     "prebuild": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
     "build": "npx tsc",
     "docs": "npx typedoc",
-    "test": "run-script-os",
-    "test:linux:darwin": "npx jest --config jest.config.json test/unit/*.test.ts",
-    "test:win32": "npx jest --config jest.config.json 'test/unit/.*.test.ts'",
+    "test": "npx jest --config jest.config.json test/unit/*.test.ts",
     "test-api": "npx jest --config jest.config.json test/api/*.test.ts",
-    "execute": "run-script-os",
-    "execute:linux:darwin": "node bin/main.js",
-    "execute:win32": "node bin\\main.js"
+    "execute": "node bin/main.js"
   },
   "repository": {
     "type": "git",
@@ -39,6 +35,11 @@
   "engines": {
     "node": ">=18.6.0"
   },
+  "os": [
+    "linux",
+    "darwin",
+    "!win32"
+  ],
   "devDependencies": {
     "@types/cli-progress": "^3.11.0",
     "@types/jest": "^28.1.6",
@@ -51,7 +52,6 @@
     "eslint-plugin-tsdoc": "^0.2.14",
     "jest": "^28.1.3",
     "jest-summarizing-reporter": "^1.1.4",
-    "run-script-os": "^1.1.6",
     "ts-jest": "^28.0.7",
     "typedoc": "^0.23.5",
     "typedoc-github-wiki-theme": "^1.0.1",
