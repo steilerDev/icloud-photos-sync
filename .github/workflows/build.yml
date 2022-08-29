@@ -1,8 +1,10 @@
 name: Build & Test
-# This reusable workflow will test and build the application. All assets will be packaged and uploaded
+# This reusable workflow will test, build and scan the application. All build assets will be packaged and uploaded
+# This action is also run, in order to validate, that Pull Requests are functional
+#
 # Creates the following artifacts:
-#  - docker-artifacts (Docker RootFS)
-#  - npm-artifacts (NPM Uplaod)
+#  - docker-artifacts (Docker RootFS + Dockerfile)
+#  - npm-artifacts (NPM Upload)
 #  - doc-artifacts (Documentation for GH Wiki)
 #  - changelog (File containing changelog description)
 
