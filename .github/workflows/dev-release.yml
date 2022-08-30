@@ -2,8 +2,6 @@ name: Development Release
 # This workflow will run on every push against the main or dev branch
 # If the app builds and passes tests, it will release to the development channel (Docker's 'nightly' tag)
 
-# Skip if commit message starts with '(CI)'' [which would imply it was triggered through the release CI]
-
 on: 
   push:
     branches:

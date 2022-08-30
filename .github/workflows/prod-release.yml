@@ -28,9 +28,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           branch: main
-          commit_message: (CI) Version bump to ${{ inputs.version }}
-          commit_user_name: steilerDev
-          commit_user_email: frank@steilerdev.de
+          commit_message: Version bump to ${{ inputs.version }} - [skip ci]
           tagging_message: ${{ inputs.version }}
 
   build-workflow:
