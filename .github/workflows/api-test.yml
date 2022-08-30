@@ -4,7 +4,7 @@ name: API Test
 
 on:
   schedule:
-    - cron: '5 5,17 * * *'
+    - cron: '20 5,17 * * *'
   workflow_dispatch:
 
 env:
@@ -31,7 +31,7 @@ jobs:
         npm install && \
         npm run build && \
         npm link
-      working-directory: rootfs/opt/icloud-photos-sync/
+      working-directory: app/
     - name: Check MFA Token
       run: |
         icloud-photos-sync token
@@ -43,7 +43,7 @@ jobs:
         npm run test-api
       env:
         NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
-      working-directory: rootfs/opt/icloud-photos-sync/
+      working-directory: app/
   
   acquire-token:
     name: Acquire Token
@@ -63,15 +63,15 @@ jobs:
         npm run clean && \
         npm install && \
         npm run build
-      working-directory: rootfs/opt/icloud-photos-sync/
+      working-directory: app/
     - name: Install
       run: |
         npm link && \
-        chmod +x ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/enter_mfa.sh && \
-        ln -s ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/enter_mfa.sh /usr/local/bin/enter_mfa && \
-        chmod +x ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/resend_mfa.sh && \
-        ln -s ~/work/icloud-photos-sync/icloud-photos-sync/rootfs/root/resend_mfa.sh /usr/local/bin/resend_mfa
-      working-directory: rootfs/opt/icloud-photos-sync/
+        chmod 755 ~/work/icloud-photos-sync/icloud-photos-sync/docker/rootfs/root/enter_mfa.sh && \
+        ln -s ~/work/icloud-photos-sync/icloud-photos-sync/docker/rootfs/root/enter_mfa.sh /usr/local/bin/enter_mfa && \
+        chmod 755 ~/work/icloud-photos-sync/icloud-photos-sync/docker/rootfs/root/resend_mfa.sh && \
+        ln -s ~/work/icloud-photos-sync/icloud-photos-sync/docker/rootfs/root/resend_mfa.sh /usr/local/bin/resend_mfa
+      working-directory: app/
     - name: Access runner to acquire token
       uses: lhotari/action-upterm@v1
       with:
