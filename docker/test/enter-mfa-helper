@@ -1,3 +1,4 @@
+#!/bin/bash
 
 echo "'Enter MFA' helper linked"
 BIN=$(docker run --entrypoint /bin/bash icloud-photos-sync:latest which enter_mfa)
