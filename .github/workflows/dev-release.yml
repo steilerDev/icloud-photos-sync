@@ -21,18 +21,20 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
           name: docs-pages-artifacts
           path: docs/
-      - name: Publish GH Pages
-        #uses: JamesIves/github-pages-deploy-action@releases/v4-init
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
         with:
-          folder: docs/
-          branch: gh-pages
-          token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          # Upload entire repository
+          path: ./docs
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v1
   
   publish-docker-dev:
     name: Publish Nightly Docker Image
