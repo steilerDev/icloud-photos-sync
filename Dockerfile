@@ -12,7 +12,7 @@ RUN apt-get update \
         && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Installing icloud-photos-sync 
-RUN cd /rootfs/opt/icloud-photos-sync/ && \
+RUN cd /opt/icloud-photos-sync/ && \
     npm install && \
     npm link
 

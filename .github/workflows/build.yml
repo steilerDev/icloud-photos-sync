@@ -27,7 +27,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ secrets.NODE_VERSION }}
+          node-version: 18.8.0
       - name: Build app
         run: |
           npm run clean
