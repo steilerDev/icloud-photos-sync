@@ -1,0 +1,18 @@
+
+echo "'Enter MFA' helper linked"
+BIN=$(docker run --entrypoint /bin/bash icloud-photos-sync:latest which enter_mfa)
+if [ $? -eq 1 ]; then
+    echo " - Fail"
+    exit 1
+fi
+echo " - Pass"
+
+echo "'Enter MFA' helper executable"
+TARGET=$(docker run --entrypoint /bin/readlink icloud-photos-sync:latest -f ${BIN})
+FILE_MODE=$(docker run --entrypoint /usr/bin/stat icloud-photos-sync:latest -c %a ${TARGET})
+if [ "$FILE_MODE" != "755" ]; then
+    echo " - Fail"
+    exit 1
+fi
+echo " - Pass"
+exit 0
