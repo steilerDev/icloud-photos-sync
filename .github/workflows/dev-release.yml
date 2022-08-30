@@ -8,7 +8,6 @@ on:
       - 'main'
       - 'dev'
 
-
 jobs:
   build-workflow:
     name: Build
@@ -30,8 +29,9 @@ jobs:
       - name: Publish GH Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: docs
+          folder: docs/
           branch: gh-pages
+          token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
   
   publish-docker-dev:
     name: Publish Nightly Docker Image

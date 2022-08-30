@@ -9,9 +9,6 @@ on:
         default: 'v1.0.0'
         required: true
 
-permissions:
-  contents: write
-
 jobs:
   version-bump:
     name: Repository version bump

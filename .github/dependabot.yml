@@ -18,3 +18,9 @@ updates:
     directory: "/docker"
     schedule:
       interval: "daily"
+
+  # Maintain dependencies for pip (docs site)
+  - package-ecosystem: "pip"
+    directory: "/pages"
+    schedule:
+      interval: "daily"
