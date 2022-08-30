@@ -22,7 +22,7 @@ jobs:
     name: Build Project
     runs-on: ubuntu-latest
     env:
-      NODE_VERSION: ${{ secrets.NODE_VERSION }}
+      NODE_VERSION: ${{ secrets.NODE_SETTING }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -112,9 +112,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: $NODE_VERSION
-        env:
-          NODE_VERSION: ${{ secrets.NODE_VERSION }}
+          node-version: ${{ secrets.NODE_SETTING}}
       - name: Clean
         run: npm run clean
         working-directory: rootfs/opt/icloud-photos-sync/
