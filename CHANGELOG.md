@@ -1,13 +1,16 @@
 # Changelog
 
 ## Nightly Changes
+  * Created fully automated CI/CD process for smooth future releases
+  * Performing continous API tests via GH Actions using a test environment
   * Implemented testing process
     * Unit tests implemented for
       * `icloud`
       * `photos-library` (partial)
-    * API Tests on test account
+    * API Tests of iCloud & iCloud Photos backend
+    * Basic testing of Docker Image
   * Foundations for archiving
-  * Various bug fixes and re-implementations
+  * Various bug fixes, re-implementations and re-structuring
 
 ## v0.2.0 - Folder Sync working
 With this release the sync of the remote state is fully functional. This release adds the reconstruction of the full folder structure. In a space efficient way (through links).
