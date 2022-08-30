@@ -17,9 +17,6 @@ on:
       - '!main'
       - '!dev'
 
-env:
-  NODE_VERSION: 18.8.0
-
 jobs:
   build:
     name: Build Project
@@ -30,29 +27,14 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Prepare environment
+          node-version: ${{ secrets.NODE_VERSION }}
+      - name: Build app
         run: |
           npm run clean
           npm install
-        working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Build app
-        run: |
           npm run build
           cp ../../../README.md ../../../CHANGELOG.md ../../../LICENSE ./
         working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Build doc artifacts
-        run: npm run docs
-        working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Build docker artifacts
-        run: tar -C ./rootfs -czf ./rootfs.tar.gz ./
-      - name: Build changelog artifact
-        run: |
-          START_LINE=$(grep -n -m 1 -E '^##' CHANGELOG.md | grep -Eo '^[0-9]+')
-          ((START_LINE++))
-          END_LINE=$(grep -n -m 2 -E '^##' CHANGELOG.md | tail -n 1 | grep -Eo '^[0-9]+')
-          LENGTH=$(( END_LINE - START_LINE ))
-          tail -n +$START_LINE CHANGELOG.md | head -n $LENGTH > CHANGELOG.latest.md
       - name: Upload npm artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -63,19 +45,51 @@ jobs:
             ./rootfs/opt/icloud-photos-sync/LICENSE
             ./rootfs/opt/icloud-photos-sync/package.json
             ./rootfs/opt/icloud-photos-sync/bin/
+      - name: Build doc artifacts
+        run: npm run docs
+        working-directory: rootfs/opt/icloud-photos-sync/
+      - name: Upload doc artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: doc-artifacts
+          path: |
+            ./rootfs/opt/icloud-photos-sync/README.md
+            ./rootfs/opt/icloud-photos-sync/CHANGELOG.md
+            ./rootfs/opt/icloud-photos-sync/LICENSE
+            ./rootfs/opt/icloud-photos-sync/docs/
+      - name: Build docker artifacts
+        run: |
+          # Cleaning unecessary files to slim artifacts
+          rm -rf ./rootfs/opt/icloud-photos-sync/docs \
+                 ./rootfs/opt/icloud-photos-sync/node_modules \
+                 ./rootfs/opt/icloud-photos-sync/src \
+                 ./rootfs/opt/icloud-photos-sync/test \
+                 ./rootfs/opt/icloud-photos-sync/eslint.config.json \
+                 ./rootfs/opt/icloud-photos-sync/jest.config.json \
+                 ./rootfs/opt/icloud-photos-sync/tsconfig.json
+
+          # Packaging assets
+          tar -C ./rootfs -czf ./rootfs.tar.gz ./
+
+          # Actually building
+          docker build . --file Dockerfile --tag ${{ github.event.repository.name }}
+          docker save ${{ github.event.repository.name }} | gzip > ./docker-image.tar.gz
       - name: Upload docker artifacts
         uses: actions/upload-artifact@v3
         with:
           name: docker-artifacts
           path: |
-            ./rootfs.tar.gz
-            ./Dockerfile
             ./README.md
-      - name: Upload doc artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: doc-artifacts
-          path: ./rootfs/opt/icloud-photos-sync/docs
+            ./CHANGELOG.md
+            ./LICENSE
+            ./docker-image.tar.gz
+      - name: Build changelog artifact
+        run: |
+          START_LINE=$(grep -n -m 1 -E '^##' CHANGELOG.md | grep -Eo '^[0-9]+')
+          ((START_LINE++))
+          END_LINE=$(grep -n -m 2 -E '^##' CHANGELOG.md | tail -n 1 | grep -Eo '^[0-9]+')
+          LENGTH=$(( END_LINE - START_LINE ))
+          tail -n +$START_LINE CHANGELOG.md | head -n $LENGTH > CHANGELOG.latest.md
       - name: Upload changelog artifact
         uses: actions/upload-artifact@v3
         with:
@@ -96,7 +110,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ secrets.NODE_VERSION }}
       - name: Clean
         run: npm run clean
         working-directory: rootfs/opt/icloud-photos-sync/

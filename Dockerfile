@@ -11,11 +11,15 @@ RUN apt-get update \
             apt-utils vim curl \
         && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Installing icloud-photos-sync 
+RUN cd /rootfs/opt/icloud-photos-sync/ && \
+    npm install && \
+    npm link
+
+# Installing helper scripts
 RUN chmod +x /root/enter_mfa.sh && \
     ln -s /root/enter_mfa.sh /usr/local/bin/enter_mfa && \
     chmod +x /root/resend_mfa.sh && \
-    ln -s /root/resend_mfa.sh /usr/local/bin/resend_mfa && \
-    chmod +x /opt/icloud-photos-sync/bin/main.js && \
-    ln -s /opt/icloud-photos-sync/bin/main.js /usr/local/bin/icloud-photos-sync
+    ln -s /root/resend_mfa.sh /usr/local/bin/resend_mfa
 
-ENTRYPOINT ["node", "/opt/icloud-photos-sync/bin/main.js"]
+ENTRYPOINT ["icloud-photos-sync"]

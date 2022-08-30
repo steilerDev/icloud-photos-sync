@@ -1,5 +1,5 @@
 name: Development Release
-# This workflow will run on every push
+# This workflow will run on every push against the main or dev branch
 # If the app builds and passes tests, it will release to the development channel (Docker's 'nightly' tag)
 
 on: 
@@ -7,10 +7,6 @@ on:
     branches:
       - 'main'
       - 'dev'
-
-env:
-  PKG_NAME: icloud-photos-sync
-  DEV_CHANNEL: nightly
 
 jobs:
   build-workflow:
@@ -28,7 +24,9 @@ jobs:
         name: docker-artifacts
     - name: Login to DockerHub
       run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:$DEV_CHANNEL
-    - name: Push to DockerHub
-      run: docker image push ${{secrets.DOCKER_USERNAME}}/$PKG_NAME:$DEV_CHANNEL
+    - name: Load & Tag Docker Image
+      run: |
+        docker load --input ./docker-image.tar.gz
+        docker image tag ${{ github.event.repository.name }} ${{secrets.DOCKER_USERNAME}}/${{ github.event.repository.name }}:nightly
+    - name: Push Docker Image
+      run: docker image push --all-tags ${{ github.event.repository.name }}

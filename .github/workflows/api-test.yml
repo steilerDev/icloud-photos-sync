@@ -8,13 +8,12 @@ on:
   workflow_dispatch:
 
 env:
-  PKG_NAME: icloud-photos-sync
   NODE_VERSION: 18.8.0
+  NODE_OPTIONS: --experimental-vm-modules
   APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
   APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
   PORT: 8080
   LOG_TO_CLI: true
-  NODE_OPTIONS: --experimental-vm-modules
 
 jobs:
   run-test:

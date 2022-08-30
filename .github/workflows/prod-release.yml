@@ -9,7 +9,6 @@ on:
         default: 'v1.0.0'
         required: true
 
-
 env:
   PKG_NAME: 'icloud-photos-sync'
   NODE_VERSION: 18.8.0
@@ -99,7 +98,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: docs-artifacts
-          path: docs
       - name: Upload Documentation to Wiki
         uses: SwiftDocOrg/github-wiki-publish-action@v1
         with:
