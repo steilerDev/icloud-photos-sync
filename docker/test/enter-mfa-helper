@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "'Enter MFA' helper linked"
-BIN=$(docker run --entrypoint /bin/sh icloud-photos-sync:latest which enter_mfa)
+BIN=$(docker run --entrypoint /usr/bin/which icloud-photos-sync:latest enter_mfa)
 if [ $? -eq 1 ]; then
     echo " - Fail"
     exit 1
