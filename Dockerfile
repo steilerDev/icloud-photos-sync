@@ -1,4 +1,4 @@
-FROM node:18.8.0-bullseye
+FROM node:18.8.0-bullseye-slim
 
 # Applying fs patch for assets
 ADD rootfs.tar.gz /

@@ -27,7 +27,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ secrets.NODE_VERSION }}
+          node-version: ${{secrets.NODE_VERSION}}
       - name: Build app
         run: |
           npm run clean
@@ -110,7 +110,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ secrets.NODE_VERSION }}
+          node-version: '${{secrets.NODE_VERSION}}'
       - name: Clean
         run: npm run clean
         working-directory: rootfs/opt/icloud-photos-sync/
