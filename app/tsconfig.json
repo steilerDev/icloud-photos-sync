@@ -10,13 +10,6 @@
     "allowJs": true,
     "resolveJsonModule": true
   },
-  "typedocOptions": {
-    "entryPoints": ["src/"],
-    "out": "docs-out",
-    "excludeExternals": true,
-    "entryPointStrategy": "expand",
-    "theme": "github-wiki"
-  },
   "include": ["src/**/*"],
   "lib": [
     "es2021"

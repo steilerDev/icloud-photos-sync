@@ -75,7 +75,7 @@ jobs:
             ./app/README.md
             ./app/CHANGELOG.md
             ./app/LICENSE
-            ./app/docs-out/
+            ./app/docs/
 
   build-changelog:
     name: Build Changelog
