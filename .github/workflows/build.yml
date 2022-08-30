@@ -7,7 +7,7 @@ name: Build, Test & Scan
 #  - docker-artifacts (Docker RootFS + Dockerfile)
 #  - app-artifacts (NPM Upload)
 #  - doc-artifacts (Documentation for GH Wiki)
-#  - docs-pages-artifacts (Documentation and webpage for GH Pages)
+#  - gh-pages (Documentation and webpage for GH Pages)
 #  - changelog (File containing changelog description)
 
 on:
@@ -76,8 +76,8 @@ jobs:
             ./app/LICENSE
             ./app/doc/
   
-  build-docs-site:
-    name: Build Docs Pages
+  build-gh-pages:
+    name: Build GH Pages
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -92,13 +92,13 @@ jobs:
         run: |
           pip install -r pages/requirements.txt
           cp README.md pages/docs/
+          cp CHANGELOG.md pages/docs/
       - name: Build Pages
         run: mkdocs build
         working-directory: pages/
-      - name: Upload docs pages artifacts
-        uses: actions/upload-artifact@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
         with:
-          name: docs-pages-artifacts
           path: ./pages/site/
 
   build-changelog:

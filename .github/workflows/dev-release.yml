@@ -18,6 +18,9 @@ jobs:
     name: Publish GH Pages
     needs: build-workflow
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       contents: read
       pages: write
@@ -25,16 +28,8 @@ jobs:
     steps:
       - name: Setup Pages
         uses: actions/configure-pages@v2
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: docs-pages-artifacts
-          path: docs/
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
-        with:
-          path: ./docs
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v1
   
   publish-docker-dev:

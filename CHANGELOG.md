@@ -1,6 +1,8 @@
 # Changelog
 
 ## Nightly Changes
+This release contains a massive amount of 'behind the scenes' changes to the development and testing process. This is a big step torwards long term maintainability of this code base.
+
   * Created fully automated CI/CD process for smooth future releases
   * Performing continous API tests via GH Actions using a test environment
   * Implemented testing process
@@ -11,6 +13,8 @@
     * Basic testing of Docker Image
   * Foundations for archiving
   * Various bug fixes, re-implementations and re-structuring
+  * Documentation page using MKDocs
+  * Now running CodeQL and dependabot scans
 
 ## v0.2.0 - Folder Sync working
 With this release the sync of the remote state is fully functional. This release adds the reconstruction of the full folder structure. In a space efficient way (through links).
