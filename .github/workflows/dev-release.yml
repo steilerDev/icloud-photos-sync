@@ -14,6 +14,22 @@ jobs:
     uses: ./.github/workflows/build.yml
     secrets: inherit
   
+  publish-gh-pages:
+    name: Publish GH Pages
+    needs: build-workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: docs-pages-artifacts
+          path: docs/
+      - name: Publish GH Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: docs
+          branch: gh-pages
+  
   publish-docker-dev:
     name: Publish Nightly Docker Image
     needs: build-workflow

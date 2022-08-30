@@ -7,6 +7,7 @@ name: Build, Test & Scan
 #  - docker-artifacts (Docker RootFS + Dockerfile)
 #  - app-artifacts (NPM Upload)
 #  - doc-artifacts (Documentation for GH Wiki)
+#  - docs-pages-artifacts (Documentation and webpage for GH Pages)
 #  - changelog (File containing changelog description)
 
 on:
@@ -28,6 +29,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{secrets.NODE_VERSION}}
+          cache: 'npm'
       - name: Build app artifacts
         run: |
           npm run clean
@@ -46,8 +48,8 @@ jobs:
             ./app/package.json
             ./app/bin/
 
-  build-doc:
-    name: Build Doc
+  build-typedoc:
+    name: Build TypeDoc
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -56,6 +58,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{secrets.NODE_VERSION}}
+          cache: 'npm'
       - name: Clean
         run: npm run clean
         working-directory: app/
@@ -74,6 +77,30 @@ jobs:
             ./app/CHANGELOG.md
             ./app/LICENSE
             ./app/doc/
+  
+  build-docs-site:
+    name: Build Docs Pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip' # caching pip dependencies
+      - name: Setup build environment
+        run: |
+          pip install mkdocs 
+          cp README.md pages/docs/index.md
+      - name: Build Pages
+        run: mkdocs build
+        working-directory: pages/
+      - name: Upload docs pages artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs-pages-artifacts
+          path: ./pages/site/
 
   build-changelog:
     name: Build Changelog
@@ -138,6 +165,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{secrets.NODE_VERSION}}
+          cache: 'npm'
       - name: Clean
         run: npm run clean
         working-directory: app/
