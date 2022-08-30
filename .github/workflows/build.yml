@@ -30,10 +30,11 @@ jobs:
         with:
           node-version: ${{secrets.NODE_VERSION}}
           cache: 'npm'
+        working-directory: app/
       - name: Build app artifacts
         run: |
           npm run clean
-          npm install
+          npm ci
           npm run build
           cp ../README.md ../CHANGELOG.md ../LICENSE ./
         working-directory: app/
@@ -59,11 +60,12 @@ jobs:
         with:
           node-version: ${{secrets.NODE_VERSION}}
           cache: 'npm'
+        working-directory: app/
       - name: Clean
         run: npm run clean
         working-directory: app/
       - name: Install
-        run: npm install
+        run: npm ci
         working-directory: app/
       - name: Build doc artifacts
         run: npm run doc
@@ -89,9 +91,10 @@ jobs:
         with:
           python-version: '3.9'
           cache: 'pip' # caching pip dependencies
+        working-directory: pages/
       - name: Setup build environment
         run: |
-          pip install mkdocs 
+          pip install -r pages/requirements.txt
           cp README.md pages/docs/index.md
       - name: Build Pages
         run: mkdocs build
