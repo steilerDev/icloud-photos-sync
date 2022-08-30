@@ -8,8 +8,6 @@ on:
       - 'main'
       - 'dev'
 
-permissions:
-  contents: write
 
 jobs:
   build-workflow:
@@ -21,6 +19,8 @@ jobs:
     name: Publish GH Pages
     needs: build-workflow
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
