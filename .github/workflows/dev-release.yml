@@ -28,6 +28,5 @@ jobs:
       run: |
         docker load --input ./docker-image.tar.gz
         docker image tag ${{github.event.repository.name}} ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
-        docker image ls
     - name: Push Docker Image
       run: docker image push ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly

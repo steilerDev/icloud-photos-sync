@@ -103,7 +103,7 @@ jobs:
         os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
     runs-on: ${{ matrix.os }}
     env:
-      NODE_OPTIONS: --experimental-vm-modules
+      NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -124,7 +124,7 @@ jobs:
   scan:
     name: Perform Code Scan
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/dev'
+    if: github.ref != 'refs/heads/dev' # Skip this on dev branch
     permissions:
       security-events: write
     steps:
