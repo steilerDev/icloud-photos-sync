@@ -43,6 +43,7 @@
   "devDependencies": {
     "@types/cli-progress": "^3.11.0",
     "@types/jest": "^29.0.0",
+    "@types/mock-fs": "^4.13.1",
     "@types/node": "^18.7.13",
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.10.2",
@@ -60,7 +61,6 @@
     "typescript": "^4.5.5"
   },
   "dependencies": {
-    "@types/mock-fs": "^4.13.1",
     "axios": "^0.27.2",
     "chalk": "^5.0.0",
     "cli-progress": "^3.11.2",

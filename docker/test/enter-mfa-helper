@@ -9,8 +9,8 @@ fi
 echo " - Pass"
 
 echo "'Enter MFA' helper executable"
-TARGET=$(docker run --entrypoint /bin/readlink icloud-photos-sync:latest -f ${BIN})
-FILE_MODE=$(docker run --entrypoint /usr/bin/stat icloud-photos-sync:latest -c %a ${TARGET})
+TARGET=$(docker run --entrypoint /usr/bin/readlink icloud-photos-sync:latest -f ${BIN})
+FILE_MODE=$(docker run --entrypoint /bin/stat icloud-photos-sync:latest -c %a ${TARGET})
 if [ "$FILE_MODE" != "755" ]; then
     echo " - Fail"
     exit 1
