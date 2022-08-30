@@ -25,9 +25,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Dump GitHub context
+        run: echo "$GITHUB_CONTEXT"
         env:
           GITHUB_CONTEXT: ${{ toJSON(github) }}
-        run: echo "$GITHUB_CONTEXT"
       - name: Setup node
         uses: actions/setup-node@v3
         with:
@@ -114,6 +114,7 @@ jobs:
           tar -C ./rootfs -czf ./rootfs.tar.gz ./
         working-directory: docker/
       - name: Build docker image
+        run: |
           docker build ./docker --tag ${{ github.event.repository.name }}
           docker save ${{ github.event.repository.name }} | gzip > ./docker-image.tar.gz
       - name: Upload docker artifacts
@@ -166,8 +167,7 @@ jobs:
       - name: Install
         run: docker load --input ./docker-image/docker-image.tar.gz
       - name: Test
-        run: |
-          run-parts -v --exit-on-error docker/test/
+        run: run-parts -v --exit-on-error docker/test/
 
   scan:
     name: Perform Code Scan
