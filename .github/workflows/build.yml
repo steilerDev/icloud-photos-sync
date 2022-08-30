@@ -33,7 +33,6 @@ jobs:
           cache-dependency-path: app/
       - name: Build app artifacts
         run: |
-          npm run clean
           npm ci
           npm run build
           cp ../README.md ../CHANGELOG.md ../LICENSE ./
@@ -61,9 +60,6 @@ jobs:
           node-version: ${{secrets.NODE_VERSION}}
           cache: 'npm'
           cache-dependency-path: app/
-      - name: Clean
-        run: npm run clean
-        working-directory: app/
       - name: Install
         run: npm ci
         working-directory: app/
@@ -170,9 +166,6 @@ jobs:
           node-version: ${{secrets.NODE_VERSION}}
           cache: 'npm'
           cache-dependency-path: app/
-      - name: Clean
-        run: npm run clean
-        working-directory: app/
       - name: Install
         run: npm install
         working-directory: app/
