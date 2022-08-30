@@ -8,6 +8,9 @@ on:
       - 'main'
       - 'dev'
 
+permissions:
+  contents: write
+
 jobs:
   build-workflow:
     name: Build
