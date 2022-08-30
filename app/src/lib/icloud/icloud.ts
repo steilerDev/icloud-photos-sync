@@ -13,7 +13,8 @@ import {MFAMethod} from './mfa/mfa-method.js';
 
 /**
  * This class holds the iCloud connection
- * */
+ * The authentication flow -followed by this class- is documented in a [Miro Board](https://miro.com/app/board/uXjVOxcisIM=/?share_link_id=646572552229).
+ */
 export class iCloud extends EventEmitter {
     /**
      * Default logger for the class

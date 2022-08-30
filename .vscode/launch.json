@@ -12,10 +12,10 @@
                 "<node_internals>/**"
             ],
             "preLaunchTask": "build-app",
-            "program": "${workspaceFolder}/rootfs/opt/icloud-photos-sync/src/main.ts",
+            "program": "${workspaceFolder}/app/src/main.ts",
             "args": ["sync"],
             "outFiles": [
-                "${workspaceFolder}/rootfs/opt/icloud-photos-sync/bin/**/*.js",
+                "${workspaceFolder}/app/bin/**/*.js",
             ],
             "envFile": "${workspaceFolder}/.vscode/debug-test.env"
         }, {
@@ -33,7 +33,7 @@
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
-            "cwd": "${workspaceFolder}/rootfs/opt/icloud-photos-sync",
+            "cwd": "${workspaceFolder}/app",
             "envFile": "${workspaceFolder}/.vscode/debug-test.env"
           }
     ]

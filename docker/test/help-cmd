@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "Help command working"
+docker run icloud-photos-sync:latest help > /dev/null
+if [ $? -eq 0 ]; then
+    echo " - Pass"
+else
+    echo " - Fail"
+    exit 1
+fi
+
+exit 0

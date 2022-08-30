@@ -20,14 +20,15 @@ jobs:
         run: |
           NUMERIC_VERSION=${VERSION:1}
           sed -i '/^## Nightly Changes/c\<!-- ## Nightly Changes-->\n\n## '${VERSION} CHANGELOG.md
-          sed -ri 's/"version": "[0-9]+\.[0-9]+\.[0-9]+"/"version": "'${NUMERIC_VERSION}'"/' rootfs/opt/icloud-photos-sync/package.json
-          sed -ri 's/VERSION = "[0-9]+\.[0-9]+\.[0-9]+"/VERSION = "'${NUMERIC_VERSION}'"/' rootfs/opt/icloud-photos-sync/src/lib/package.ts
+          sed -ri 's/"version": "[0-9]+\.[0-9]+\.[0-9]+"/"version": "'${NUMERIC_VERSION}'"/' app/package.json
+          sed -ri 's/VERSION = "[0-9]+\.[0-9]+\.[0-9]+"/VERSION = "'${NUMERIC_VERSION}'"/' app/src/lib/package.ts
         env:
           VERSION: ${{ github.event.inputs.version }}
       - name: Commit & Tag
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Version bump to ${{ inputs.version }}
+          branch: main
+          commit_message: (CI) Version bump to ${{ inputs.version }}
           commit_user_name: steilerDev
           commit_user_email: frank@steilerdev.de
           tagging_message: ${{ inputs.version }}
@@ -78,7 +79,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          name: npm-artifacts
+          name: app-artifacts
       - name: Prepare environment
         run: npm install
       - uses: JS-DevTools/npm-publish@v1
@@ -93,11 +94,11 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          name: docs-artifacts
+          name: doc-artifacts
       - name: Upload Documentation to Wiki
         uses: SwiftDocOrg/github-wiki-publish-action@v1
         with:
-          path: docs
+          path: ./docs-out
         env:
           GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
 
@@ -106,8 +107,6 @@ jobs:
     needs: build-workflow
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:

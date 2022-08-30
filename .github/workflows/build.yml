@@ -5,7 +5,7 @@ name: Build, Test & Scan
 #
 # Creates the following artifacts:
 #  - docker-artifacts (Docker RootFS + Dockerfile)
-#  - npm-artifacts (NPM Upload)
+#  - app-artifacts (NPM Upload)
 #  - doc-artifacts (Documentation for GH Wiki)
 #  - changelog (File containing changelog description)
 
@@ -18,8 +18,42 @@ on:
       - '!dev'
 
 jobs:
-  build:
-    name: Build Project
+  build-app:
+    name: Build App
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{secrets.NODE_VERSION}}
+      - name: Build app artifacts
+        run: |
+          npm run clean
+          npm install
+          npm run build
+          cp ../README.md ../CHANGELOG.md ../LICENSE ./
+        working-directory: app/
+      - name: Upload app artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-artifacts
+          path: |
+            ./app/README.md
+            ./app/CHANGELOG.md
+            ./app/LICENSE
+            ./app/package.json
+            ./app/bin/
+            ./app/src/
+            ./app/test/
+
+  build-doc:
+    name: Build Doc
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,62 +62,28 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{secrets.NODE_VERSION}}
-      - name: Build app
-        run: |
-          npm run clean
-          npm install
-          npm run build
-          cp ../../../README.md ../../../CHANGELOG.md ../../../LICENSE ./
-        working-directory: rootfs/opt/icloud-photos-sync/
-      - name: Upload npm artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: npm-artifacts
-          path: |
-            ./rootfs/opt/icloud-photos-sync/README.md
-            ./rootfs/opt/icloud-photos-sync/CHANGELOG.md
-            ./rootfs/opt/icloud-photos-sync/LICENSE
-            ./rootfs/opt/icloud-photos-sync/package.json
-            ./rootfs/opt/icloud-photos-sync/bin/
       - name: Build doc artifacts
-        run: npm run docs
-        working-directory: rootfs/opt/icloud-photos-sync/
+        run: |
+          #Todo: Build comprehensive docs
+          npm run docs
+        working-directory: app/
       - name: Upload doc artifacts
         uses: actions/upload-artifact@v3
         with:
           name: doc-artifacts
           path: |
-            ./rootfs/opt/icloud-photos-sync/README.md
-            ./rootfs/opt/icloud-photos-sync/CHANGELOG.md
-            ./rootfs/opt/icloud-photos-sync/LICENSE
-            ./rootfs/opt/icloud-photos-sync/docs/
-      - name: Build docker artifacts
-        run: |
-          # Cleaning unecessary files to slim artifacts
-          rm -rf ./rootfs/opt/icloud-photos-sync/docs \
-                 ./rootfs/opt/icloud-photos-sync/node_modules \
-                 ./rootfs/opt/icloud-photos-sync/src \
-                 ./rootfs/opt/icloud-photos-sync/test \
-                 ./rootfs/opt/icloud-photos-sync/eslint.config.json \
-                 ./rootfs/opt/icloud-photos-sync/jest.config.json \
-                 ./rootfs/opt/icloud-photos-sync/tsconfig.json
+            ./app/README.md
+            ./app/CHANGELOG.md
+            ./app/LICENSE
+            ./app/docs-out/
 
-          # Packaging assets
-          tar -C ./rootfs -czf ./rootfs.tar.gz ./
-
-          # Actually building
-          docker build . --file Dockerfile --tag ${{ github.event.repository.name }}
-          docker save ${{ github.event.repository.name }} | gzip > ./docker-image.tar.gz
-      - name: Upload docker artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: docker-artifacts
-          path: |
-            ./README.md
-            ./CHANGELOG.md
-            ./LICENSE
-            ./docker-image.tar.gz
-      - name: Build changelog artifact
+  build-changelog:
+    name: Build Changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build changelog artifacts
         run: |
           START_LINE=$(grep -n -m 1 -E '^##' CHANGELOG.md | grep -Eo '^[0-9]+')
           ((START_LINE++))
@@ -96,8 +96,38 @@ jobs:
           name: changelog
           path: ./CHANGELOG.latest.md
 
+  build-docker:
+    name: Build Docker
+    runs-on: ubuntu-latest
+    needs: build-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Download app artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: app-artifacts
+          path: ./docker/rootfs/opt/icloud-photos-sync
+      - name: Build docker rootfs
+        run: |
+          # Packaging assets
+          tar -C ./rootfs -czf ./rootfs.tar.gz ./
+        working-directory: docker/
+      - name: Build docker image
+          docker build ./docker --tag ${{ github.event.repository.name }}
+          docker save ${{ github.event.repository.name }} | gzip > ./docker-image.tar.gz
+      - name: Upload docker artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-artifacts
+          path: |
+            ./README.md
+            ./CHANGELOG.md
+            ./LICENSE
+            ./docker-image.tar.gz
+        
   test:
-    name: Test Project
+    name: Test App
     strategy:
       matrix:
         os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
@@ -120,6 +150,24 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
         working-directory: rootfs/opt/icloud-photos-sync/
+
+  test-docker:
+    name: Test Docker Image
+    needs: build-docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Download 
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-artifacts
+          path: docker-image
+      - name: Install
+        run: docker load --input ./docker-image/docker-image.tar.gz
+      - name: Test
+        run: |
+          run-parts -v --exit-on-error docker/test/
 
   scan:
     name: Perform Code Scan

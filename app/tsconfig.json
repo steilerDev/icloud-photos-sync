@@ -12,7 +12,7 @@
   },
   "typedocOptions": {
     "entryPoints": ["src/"],
-    "out": "docs",
+    "out": "docs-out",
     "excludeExternals": true,
     "entryPointStrategy": "expand",
     "theme": "github-wiki"

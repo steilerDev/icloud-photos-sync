@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "No command"
+docker run icloud-photos-sync:latest > /dev/null
+if [ $? -eq 1 ]; then
+    echo " - Pass"
+else
+    echo " - Fail"
+    exit 1
+fi
+
+exit 0
