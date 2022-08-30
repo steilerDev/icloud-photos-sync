@@ -170,8 +170,6 @@ jobs:
         run: chmod +x ./docker/test/*
       - name: Test Image
         run: run-parts -v --exit-on-error ./docker/test
-      - name: Test App
-
 
   scan:
     name: Perform Code Scan
