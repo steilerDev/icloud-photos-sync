@@ -27,8 +27,8 @@ jobs:
           name: docs-pages-artifacts
           path: docs/
       - name: Publish GH Pages
-        uses: JamesIves/github-pages-deploy-action@releases/v4-init
-#        uses: JamesIves/github-pages-deploy-action@v4
+        #uses: JamesIves/github-pages-deploy-action@releases/v4-init
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: docs/
           branch: gh-pages
