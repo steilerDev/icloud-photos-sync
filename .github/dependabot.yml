@@ -9,12 +9,12 @@ updates:
 
   # Maintain dependencies for npm
   - package-ecosystem: "npm"
-    directory: "/rootfs/opt/icloud-photos-sync"
+    directory: "/app"
     schedule:
       interval: "daily"
   
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/docker"
     schedule:
       interval: "daily"
