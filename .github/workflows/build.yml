@@ -63,9 +63,7 @@ jobs:
         run: npm install
         working-directory: app/
       - name: Build doc artifacts
-        run: |
-          #Todo: Build comprehensive docs
-          npm run docs
+        run: npm run doc
         working-directory: app/
       - name: Upload doc artifacts
         uses: actions/upload-artifact@v3
@@ -75,7 +73,7 @@ jobs:
             ./app/README.md
             ./app/CHANGELOG.md
             ./app/LICENSE
-            ./app/docs/
+            ./app/doc/
 
   build-changelog:
     name: Build Changelog
