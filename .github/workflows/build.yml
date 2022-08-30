@@ -21,15 +21,13 @@ jobs:
   build:
     name: Build Project
     runs-on: ubuntu-latest
-    env:
-      NODE_VERSION: ${{ secrets.NODE_SETTING }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{env.NODE_VERSION}}
+          node-version: ${{secrets.NODE_VERSION}}
       - name: Build app
         run: |
           npm run clean
@@ -104,15 +102,13 @@ jobs:
       matrix:
         os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
     runs-on: ${{ matrix.os }}
-    env:
-      NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ secrets.NODE_SETTING}}
+          node-version: ${{secrets.NODE_VERSION}}
       - name: Clean
         run: npm run clean
         working-directory: rootfs/opt/icloud-photos-sync/
@@ -121,6 +117,8 @@ jobs:
         working-directory: rootfs/opt/icloud-photos-sync/
       - name: Test
         run: npm run test
+        env:
+          NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
         working-directory: rootfs/opt/icloud-photos-sync/
 
   scan:
