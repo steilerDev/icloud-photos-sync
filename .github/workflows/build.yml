@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: ${{secrets.NODE_VERSION}}
           cache: 'npm'
-        working-directory: app/
+          cache-dependency-path: app/
       - name: Build app artifacts
         run: |
           npm run clean
@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: ${{secrets.NODE_VERSION}}
           cache: 'npm'
-        working-directory: app/
+          cache-dependency-path: app/
       - name: Clean
         run: npm run clean
         working-directory: app/
@@ -91,7 +91,7 @@ jobs:
         with:
           python-version: '3.9'
           cache: 'pip' # caching pip dependencies
-        working-directory: pages/
+          cache-dependency-path: pages/
       - name: Setup build environment
         run: |
           pip install -r pages/requirements.txt
@@ -169,6 +169,7 @@ jobs:
         with:
           node-version: ${{secrets.NODE_VERSION}}
           cache: 'npm'
+          cache-dependency-path: app/
       - name: Clean
         run: npm run clean
         working-directory: app/
