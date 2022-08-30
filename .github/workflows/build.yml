@@ -91,8 +91,7 @@ jobs:
       - name: Setup build environment
         run: |
           pip install -r pages/requirements.txt
-          cp README.md pages/docs/
-          cp CHANGELOG.md pages/docs/
+          cp LICENSE README.md CHANGELOG.md pages/docs/
       - name: Build Pages
         run: mkdocs build
         working-directory: pages/

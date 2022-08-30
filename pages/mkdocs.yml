@@ -2,6 +2,19 @@ site_name: icloud-photos-sync
 site_url: https://example.com/
 repo_url: https://github.com/steilerDev/icloud-photos-sync
 edit_uri: ""
+nav:
+  - 'Home': README.md
+  - 'User Guides': 
+    - 'CLI Reference': user-guides/cli.md
+    - 'NPM User Guide': user-guides/npm.md
+    - 'Docker User Guide': user-guides/docker.md
+  - 'Development Ressources':
+    - 'Milestone Plan': dev/milestone-plan.md
+    - 'Test Environment': dev/test-environment.md
+    - 'Motivation': dev/motivation.md
+    - 'Authentication Flow': dev/authentication-flow.md
+  - 'Changelog': CHANGELOG.md
+
 theme:
   name: material
   logo: assets/icloud-photos.svg
@@ -17,7 +30,6 @@ theme:
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
-
     # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
@@ -26,25 +38,11 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
-
 dev_addr: 0.0.0.0:8000
-nav:
-  - 'Home': README.md
-  - 'User Guides': 
-    - 'CLI Documentation': user-guides/cli.md
-    - 'NPM Installation Guide': user-guides/npm.md
-    - 'Docker Installation Guide': user-guides/docker.md
-  - 'Development Ressources':
-    - 'Milestone Plan': dev/milestone-plan.md
-    - 'Test Environment': dev/test-environment.md
-    - 'Motivation': dev/motivation.md
-    - 'Authentication Flow': dev/authentication-flow.md
-
 markdown_extensions:
   - attr_list
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
-
 plugins:
   - search
