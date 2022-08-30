@@ -1,15 +1,11 @@
-FROM node:18.8.0-bullseye-slim
+FROM node:18.8.0-alpine
 
 # Applying fs patch for assets
 ADD rootfs.tar.gz /
 
-RUN apt-get update \
- && apt-get install \
-        --no-install-recommends \
-        --fix-missing \
-        --assume-yes \
-            apt-utils vim curl \
-        && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apk update && \
+    apk add curl vim bash && \
+    rm -rf /var/cache/apk/*
 
 # Installing icloud-photos-sync 
 RUN cd /opt/icloud-photos-sync/ && \
