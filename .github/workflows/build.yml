@@ -91,7 +91,7 @@ jobs:
       - name: Setup build environment
         run: |
           pip install -r pages/requirements.txt
-          cp README.md pages/docs/index.md
+          cp README.md pages/docs/
       - name: Build Pages
         run: mkdocs build
         working-directory: pages/

@@ -6,6 +6,7 @@ This file documents the test environment, used to execute the included API tests
 This test environment uses royalty free pictures from [Unsplash](https://unsplash.com/). The lowest possible resolution per picture was chosen, in order to keep network traffic low. Additionally, this application expects to receive a maximum of 200 records per batch request. In order to test the split of queries, we need at least 200 pictures in our test environment.
 
 The following pictures were selected (~17.7MB):
+
   * [Photo](https://unsplash.com/photos/pbY2DCN1Atk) by [Aditya Vyas](https://unsplash.com/@aditya1702)
   * [Photo](https://unsplash.com/photos/NevAUtzG14U) by [Jefferson Sees](https://unsplash.com/@jeffersonsees)
   * [Photo](https://unsplash.com/photos/ZZ3KWaZMP08) by [Ian Liberry](https://unsplash.com/@ianliberry)
@@ -221,11 +222,12 @@ The following folder structure was created. Underscores indicate that this entry
 ├── _Random_
 └── Stuff
 ```
- ## Asset folder relation
- All pictures are put into every folder, besides `Summer fun`, which will stay empty.
 
- ## Favorites
- The first 10 pictures are marked as 'Favorite'
+## Asset folder relation
+All pictures are put into every folder, besides `Summer fun`, which will stay empty.
 
- ## Edits
- The first two and last two pictures will be cropped and
+## Favorites
+The first 10 pictures are marked as 'Favorite'
+
+## Edits
+The first two and last two pictures will be cropped and

@@ -1,2 +1,50 @@
 site_name: icloud-photos-sync
 site_url: https://example.com/
+repo_url: https://github.com/steilerDev/icloud-photos-sync
+edit_uri: ""
+theme:
+  name: material
+  logo: assets/icloud-photos.svg
+  favicon: assets/icloud-photos.svg
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep-orange
+      accent: deep-orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep-orange
+      accent: deep-orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+dev_addr: 0.0.0.0:8000
+nav:
+  - 'Home': README.md
+  - 'User Guides': 
+    - 'CLI Documentation': user-guides/cli.md
+    - 'NPM Installation Guide': user-guides/npm.md
+    - 'Docker Installation Guide': user-guides/docker.md
+  - 'Development Ressources':
+    - 'Milestone Plan': dev/milestone-plan.md
+    - 'Test Environment': dev/test-environment.md
+    - 'Motivation': dev/motivation.md
+    - 'Authentication Flow': dev/authentication-flow.md
+
+markdown_extensions:
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+
+plugins:
+  - search
