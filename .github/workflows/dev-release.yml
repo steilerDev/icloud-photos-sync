@@ -33,21 +33,3 @@ jobs:
         docker image tag ${{github.event.repository.name}} ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
     - name: Push Docker Image
       run: docker image push ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
-  
-  publish-gh-pages:
-    name: Publish GH Pages
-    needs: build-workflow
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    steps:
-      - name: Setup Pages
-        uses: actions/configure-pages@v2
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v1
