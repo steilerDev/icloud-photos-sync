@@ -5,7 +5,9 @@ This file documents the test environment, used to execute the included API tests
 ## Photos
 This test environment uses royalty free pictures from [Unsplash](https://unsplash.com/). The lowest possible resolution per picture was chosen, in order to keep network traffic low. Additionally, this application expects to receive a maximum of 200 records per batch request. In order to test the split of queries, we need at least 200 pictures in our test environment.
 
-The following pictures were selected (~17.7MB):
+
+<details>
+  <summary>A total of 202 pictures were selected (~17.7MB)</summary>
 
   * [Photo](https://unsplash.com/photos/pbY2DCN1Atk) by [Aditya Vyas](https://unsplash.com/@aditya1702)
   * [Photo](https://unsplash.com/photos/NevAUtzG14U) by [Jefferson Sees](https://unsplash.com/@jeffersonsees)
@@ -209,7 +211,9 @@ The following pictures were selected (~17.7MB):
   * [Photo](https://unsplash.com/photos/px-d44bbe7o) by [Pawel Czerwinski](https://unsplash.com/@pawel_czerwinski)
   * [Photo](https://unsplash.com/photos/q9aDh9Z5YDU) by [Ilia Bronskiy](https://unsplash.com/@idbronskiy)
   * [Photo](https://unsplash.com/photos/TqCRkyPXGbM) by [Marek Piwnicki](https://unsplash.com/@marekpiwnicki) 
-  
+
+</details>
+
 ## Folder structure
 The following folder structure was created. Underscores indicate that this entry is an Album (instead of a Folder).
 ```

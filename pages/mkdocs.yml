@@ -1,4 +1,4 @@
-site_name: icloud-photos-sync
+site_name: iCloud Photos Sync
 site_url: https://example.com/
 repo_url: https://github.com/steilerDev/icloud-photos-sync
 edit_uri: ""
@@ -13,12 +13,13 @@ nav:
     - 'Test Environment': dev/test-environment.md
     - 'Motivation': dev/motivation.md
     - 'Authentication Flow': dev/authentication-flow.md
+    - 'TypeDoc Code Documentation': https://github.com/steilerDev/icloud-photos-sync/wiki/Exports
   - 'Changelog': CHANGELOG.md
 
 theme:
   name: material
-  logo: assets/icloud-photos.svg
-  favicon: assets/icloud-photos.svg
+  logo: assets/icloud-photos-sync.svg
+  favicon: assets/icloud-photos-sync.svg
   icon:
     repo: fontawesome/brands/github
   palette:

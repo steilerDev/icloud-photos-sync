@@ -1,6 +1,10 @@
-# iCloud Photos Sync
-
-**Work in progress, [current state and upcoming milestones on GH pages](https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/)**
+<p align="center">
+  <a href="https://steilerdev.github.io/icloud-photos-sync/">
+    <img alt="icloud-photos-sync Logo" width="200px" src="https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync.svg">
+  </a>
+  <h1>iCloud Photos Sync</h1>
+  <p><b>Work in progress</b>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see current state & milestone plan</a></p>
+</p>
 
 ### Status
 [![API Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/API%20Test?label=API%20Status&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml)
@@ -21,26 +25,29 @@
 ## Overview
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem.
 
-Currently, this can only be achived, by having a Mac continously run the Photos.app (with 'Keep originals' enabled). With this method the files cannot be easily viewed without the Photos.app.
+Currently, this can only be achived, by having a Mac continously run the *Photos.app* (with `Keep originals` enabled). With this method, the files cannot be easily viewed without the Photos.app.
 
-Albums can be archived ([currently an open milestone](https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/)). This will enable users to keep their favorite pictures in the iCloud Photos Library, while reducing iCloud storage needs. This is done by offloading them to the local server/NAS (where this script is running).
+This CLI Application offers the following functionality:
+  - Continously sync your remote iCloud Photos Library to your local file system
+  - Support for MFA Authentication through trusted devices, SMS and Voice authentication
+  - Archiving of folders
+    - All assets currently in the album will be persisted in the respective folder on the machine running icloud-photos-sync
+    - Future syncs will ignore the folder (so those assets will not be changed/deleted)
+    - If the remote album is moved, the archived folder will be moved to the same location
+    - If the remote album is deleted, the archived folder will be put into a 'lost+found' type of folder
+    - (*optionally*) All photos from the archived folder will be deleted from the iCloud Photos Library, unless they are *Favorites* (Saving cloud storage needs)
 
-Upon archiving an album the following will happen:
-- All assets currently in the album will be persisted in the respective folder on the machine running icloud-photos-sync
-- Future syncs will ignore the folder (so those assets will not be changed/deleted)
-- All photos from the archived folder will be deleted from the iCloud Photos Library, unless they are *Favorites*
-
-My personal use case / workflow is [documented](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/), alongside some other potential interessting pieces of documentation, helping to understand the scope of this project.
+My personal use case / workflow is [documented on GH Pages](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/), alongside some other potential interessting pieces of (developer) documentation.
 
 ## Guides
-This app is written in typescript and can therefore be used directly on the host through npm or by using the provided Docker image:
-  - [NPM User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/)
+This app is written in Typescript/NodeJS and can therefore be executed directly on the host through npm. Alternatively a Docker Image is provided:
+  - [NPM User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/npm/)
   - [Docker User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/docker/)
   - [CLI Reference](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/)
 
 ## Contributing & Feedback
-This app relatively young and there might still be some issues, that need to be addressed..
+he tool is not yet 'production ready', since it (mighmost likely) still contains some issues and edge cases, that need to be addressed.
 
-I hope some early adopters will help me fully understand the reverse-engineered API and discover edge cases and bugs. I tried to make this code base as maintainable and automated as possible, in the hopes to find support through other contributors soon.
+I hope for the support of the community, to fully understand the reverse-engineered API and discover edge cases and bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy.
 
-Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) for any bug you are experiencing!
+Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing!

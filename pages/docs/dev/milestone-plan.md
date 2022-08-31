@@ -1,7 +1,5 @@
 # Milestone Plan
-As I'm currently actively developing this tool, I'm looking for any and all feedback! Especially since the iCloud API was reverse engineered using my personal account, there might be edge cases, that I have not considered yet (especially the non-standard file types returned by Apple are limited to the file types I am using)
-
-The tool is not yet 'production ready', however I would like to ask the community to test the functionality and open issues, so we can get it there (please attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`).
+The following primary milestones are currently pursured.
 
 1. :white_check_mark: iCloud Authentication 
 2. :white_check_mark: State fetched from iCloud
@@ -21,8 +19,8 @@ The tool is not yet 'production ready', however I would like to ask the communit
    - :white_check_mark: Writing asset diff
    - :white_check_mark: Writing album diff
 8. :x: Enable archiving
-9. :white_check_mark: Improve MFA workflow (re-request code/send code through other means)
-10. :x: Provide WebUI
+9. :x: Full Test Covarage
+10. :white_check_mark: Improve MFA workflow (re-request code/send code through other means)
+11. :x: Provide WebUI
     - :x: Archive folders through UI
     - :x: Explore all pictures through UI
-11. :x: Figure out checksum algorithm to (properly) verify downloaded files

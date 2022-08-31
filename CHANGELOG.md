@@ -13,7 +13,7 @@ This release contains a massive amount of 'behind the scenes' changes to the dev
     * Basic testing of Docker Image
   * Foundations for archiving
   * Various bug fixes, re-implementations and re-structuring
-  * Documentation page using MKDocs
+  * Documentation pages using MKDocs & GH Pages
   * Now running CodeQL and dependabot scans
 
 ## v0.2.0 - Folder Sync working

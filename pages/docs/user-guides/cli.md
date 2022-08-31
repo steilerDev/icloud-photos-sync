@@ -1,7 +1,4 @@
 # CLI Reference
-
-Outpur of `icloud-photos-sync help`:
-
 ```
 Usage: icloud-photos-sync [options] [command]
 
@@ -29,4 +26,39 @@ Commands:
   archive [options] <path>         Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.
   token [options]                  Validates the current trust token and prints it to the command line
   help [command]                   display help for command
+```
+
+## `sync` command
+```
+Usage: icloud-photos-sync sync [options]
+
+This command will fetch the remote state and persist it to the local disk.
+
+Options:
+  -h, --help  display help for command
+```
+
+## `archive` command
+```
+Usage: icloud-photos-sync archive [options] <path>
+
+Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.
+
+Arguments:
+  path                Path to the folder that should be archived
+
+Options:
+  --no-remote-delete  Do not delete any remote assets upon archiving (env: NO_REMOTE_DELETE)
+  -h, --help          display help for command
+```
+
+## `token` command
+```
+Usage: icloud-photos-sync token [options]
+
+Validates the current trust token and prints it to the command line
+
+Options:
+  --refresh-token  Ignore any stored token and always refresh it (default: false, env: REFRESH_TOKEN)
+  -h, --help       display help for comman
 ```
