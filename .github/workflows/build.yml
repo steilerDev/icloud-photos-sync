@@ -18,7 +18,6 @@ on:
       - '!main'
       - '!dev'
 
-
 jobs:
   build-app:
     name: Build App
