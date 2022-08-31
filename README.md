@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://steilerdev.github.io/icloud-photos-sync/">
-    <img alt="icloud-photos-sync Logo" width="200px" src="https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync.svg">
+    <img alt="icloud-photos-sync Logo" height="200px" src="https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png">
   </a>
 </p>
 
