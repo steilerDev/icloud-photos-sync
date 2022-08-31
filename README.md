@@ -2,9 +2,10 @@
   <a href="https://steilerdev.github.io/icloud-photos-sync/">
     <img alt="icloud-photos-sync Logo" width="200px" src="https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync.svg">
   </a>
-  <h1>iCloud Photos Sync</h1>
-  <p><b>Work in progress</b>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see current state & milestone plan</a></p>
 </p>
+
+<h1 align="center">iCloud Photos Sync</h1>
+<p align="center"><b>Work in progress</b>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see current state & milestone plan</a></p>
 
 ### Status
 [![API Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/API%20Test?label=API%20Status&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml)
