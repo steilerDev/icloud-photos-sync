@@ -18,12 +18,12 @@ on:
       - '!main'
       - '!dev'
 
-permissions: read-all
 
 jobs:
   build-app:
     name: Build App
     runs-on: ubuntu-latest
+    permissions: {}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -53,6 +53,7 @@ jobs:
   build-typedoc:
     name: Build TypeDoc
     runs-on: ubuntu-latest
+    permissions: read-all
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -81,6 +82,7 @@ jobs:
   build-gh-pages:
     name: Build GH Pages
     runs-on: ubuntu-latest
+    permissions: read-all
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -105,6 +107,7 @@ jobs:
   build-changelog:
     name: Build Changelog
     runs-on: ubuntu-latest
+    permissions: read-all
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -125,6 +128,7 @@ jobs:
     name: Build Docker Image
     runs-on: ubuntu-latest
     needs: build-app
+    permissions: read-all
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -158,6 +162,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
     runs-on: ${{ matrix.os }}
+    permissions: read-all
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -180,6 +185,7 @@ jobs:
     name: Test Docker Image
     needs: build-docker
     runs-on: ubuntu-latest
+    permissions: read-all
     steps:
       - name: Checkout
         uses: actions/checkout@v3
