@@ -58,7 +58,7 @@ This CLI Application offers the following functionality:
 My personal use case / workflow is [documented on GH Pages](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/), alongside some other potential interessting pieces of documentation.
 
 ## Guides
-This application is written in Typescript/NodeJS and can therefore be executed directly on various platforms through npm. Please check this application's [OS support matrix](#os-support). Alternatively a Docker Image is provided (and preferred).
+This application is written in Typescript/NodeJS and can therefore be executed directly on various platforms through npm. Please check this application's [OS support matrix](#os-support) for compatibility. Alternatively a Docker Image is provided (and preferred).
 
   - [NPM User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/npm/)
   - [Docker User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/docker/)

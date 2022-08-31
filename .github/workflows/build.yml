@@ -6,7 +6,7 @@ name: Build, Test & Scan
 # Creates the following artifacts:
 #  - docker-artifacts (Docker RootFS + Dockerfile)
 #  - app-artifacts (NPM Upload)
-#  - doc-artifacts (Documentation for GH Wiki)
+#  - gh-wiki-artifacts (Documentation for GH Wiki)
 #  - gh-pages (Documentation and webpage for GH Pages)
 #  - changelog (File containing changelog description)
 
@@ -47,6 +47,7 @@ jobs:
             ./app/CHANGELOG.md
             ./app/LICENSE
             ./app/package.json
+            ./app/package-lock.json
             ./app/bin/
 
   build-typedoc:
@@ -71,7 +72,7 @@ jobs:
       - name: Upload doc artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: doc-artifacts
+          name: gh-wiki-artifacts
           path: |
             ./app/README.md
             ./app/CHANGELOG.md
