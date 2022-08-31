@@ -6,9 +6,9 @@
 
 <h1 align="center"><strong>iCloud Photos Sync</strong></h1>
 <p align="center" style="font-size:130%;">
-  <img alt="⚠" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/26a0.svg" title=":warning:"> 
+  <img alt="⚠" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/26a0.svg" title=":warning:" style="height: 1.125em;"> 
   <strong>Work in progress</strong>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see curent state &amp; milestone plan</a> 
-  <img alt="⚠" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/26a0.svg" title=":warning:"> 
+  <img alt="⚠" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/26a0.svg" title=":warning:" style="height: 1.125em;"> 
 </p>
 
 <p align="center">
@@ -42,19 +42,24 @@ Currently, this can only be achived, by having a Mac continously run the *Photos
 
 This CLI Application offers the following functionality:
 
-  - Continously sync your remote iCloud Photos Library to your local file system
-  - Support for MFA Authentication through trusted devices, SMS and Voice authentication
+  - Continuously sync your remote iCloud Photos Library to your local file system, so it can be explored without any third party dependency
+    - Support of MFA Authentication through trusted devices, SMS and Voice authentication
+    - Enable autonomous operation, by caching of MFA trust token (currently testing how long the token is valid: cached token for API tests has been valid since Aug 28, 2022)
+    - Support of large libraries, through efficient diffing algorithm
+  - Efficient handling of local state
+    - Each asset is only downloaded once and linked to its respective folders
+    - No need track local state in database, since state is completely reflected in filesystem (through naming & linking)
   - Archiving of folders
     - All assets currently in the album will be persisted in the respective folder on the machine running icloud-photos-sync
     - Future syncs will ignore the folder (so those assets will not be changed/deleted)
     - If the remote album is moved, the archived folder will be moved to the same location
     - If the remote album is deleted, the archived folder will be put into a 'lost+found' type of folder
-    - (*optionally*) All photos from the archived folder will be deleted from the iCloud Photos Library, unless they are *Favorites* (Saving cloud storage needs)
+    - (*optionally*) All photos from the archived folder will be deleted from the iCloud Photos Library, unless they are *Favorites* (Reducing cloud storage needs)
 
-My personal use case / workflow is [documented on GH Pages](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/), alongside some other potential interessting pieces of (developer) documentation.
+My personal use case / workflow is [documented on GH Pages](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/), alongside some other potential interessting pieces of documentation.
 
 ## Guides
-This application is written in Typescript/NodeJS and can therefore be executed directly on the host through npm. Alternatively a Docker Image is provided. 
+This application is written in Typescript/NodeJS and can therefore be executed directly on various platforms through npm. Please check this application's [OS support matrix](#os-support). Alternatively a Docker Image is provided (and preferred).
 
   - [NPM User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/npm/)
   - [Docker User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/docker/)
