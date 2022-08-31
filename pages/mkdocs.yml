@@ -1,5 +1,8 @@
 site_name: iCloud Photos Sync
 site_url: https://example.com/
+site_description: Documentation for icloud-photos-sync by steilerDev
+site_author: Frank Steiler
+copyright: steilerDev
 repo_url: https://github.com/steilerDev/icloud-photos-sync
 edit_uri: ""
 nav:
@@ -42,8 +45,10 @@ theme:
 dev_addr: 0.0.0.0:8000
 markdown_extensions:
   - attr_list
+  - md_in_html
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
 plugins:
-  - search
+  - search:
+      prebuild_index: true
