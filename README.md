@@ -6,9 +6,7 @@
 
 <h1 align="center"><strong>iCloud Photos Sync</strong></h1>
 <p align="center" style="font-size:130%;">
-  <img alt="⚠" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/26a0.svg" title=":warning:" style="height: 1.125em;"> 
-  <strong>Work in progress</strong>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see curent state &amp; milestone plan</a> 
-  <img alt="⚠" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/26a0.svg" title=":warning:" style="height: 1.125em;"> 
+  ⚠️<strong>Work in progress</strong>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see curent state &amp; milestone plan</a>⚠️
 </p>
 
 <p align="center">
@@ -35,6 +33,7 @@
   </a>
 </p>
 
+  
 ## Overview
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem.
 
