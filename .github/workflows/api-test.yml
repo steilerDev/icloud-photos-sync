@@ -54,7 +54,6 @@ jobs:
     env:
       APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
       APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
-      TRUST_TOKEN: ${{ secrets.TEST_TUST_TOKEN }}
       PORT: 8080
     steps:
     - name: Checkout
