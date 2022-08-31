@@ -7,7 +7,7 @@ on:
     - cron: '20 5,17 * * *'
   workflow_dispatch:
 
-permissions: read-all
+permissions: {}
 
 jobs:
   run-test:
@@ -54,7 +54,6 @@ jobs:
     env:
       APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
       APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
-      TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
       PORT: 8080
     steps:
     - name: Checkout

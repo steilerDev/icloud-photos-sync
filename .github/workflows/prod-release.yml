@@ -14,6 +14,8 @@ jobs:
     name: Repository version bump
     runs-on: ubuntu-latest
     environment: production
+    permissions: 
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -43,6 +45,7 @@ jobs:
     needs: build-workflow
     runs-on: ubuntu-latest
     environment: production
+    permissions: {}
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -72,6 +75,7 @@ jobs:
     needs: build-workflow
     runs-on: ubuntu-latest
     environment: production
+    permissions: {}
     steps:
       - name: Setup Node
         uses: actions/setup-node@v3
@@ -110,6 +114,7 @@ jobs:
     needs: build-workflow
     runs-on: ubuntu-latest
     environment: production
+    permissions: {}
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -127,6 +132,8 @@ jobs:
     needs: build-workflow
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -138,7 +145,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           bodyFile: ./artifacts/changelog/CHANGELOG.latest.md
-          token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           tag: ${{ inputs.version }}
           prerelease: ${{ inputs.pre-release }}
           artifacts: ./icloud-photos-sync.${{inputs.version}}.tar.gz
+          token: ${{ secrets.YOUR_GITHUB_TOKEN }}
