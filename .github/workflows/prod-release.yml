@@ -148,4 +148,4 @@ jobs:
           tag: ${{ inputs.version }}
           prerelease: ${{ inputs.pre-release }}
           artifacts: ./icloud-photos-sync.${{inputs.version}}.tar.gz
-          token: ${{ secrets.YOUR_GITHUB_TOKEN }}
+          #token: ${{ secrets.YOUR_GITHUB_TOKEN }}

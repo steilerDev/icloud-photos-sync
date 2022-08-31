@@ -4,24 +4,36 @@
   </a>
 </p>
 
-<h1 align="center">iCloud Photos Sync</h1>
-<p align="center"><b>Work in progress</b>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see current state & milestone plan</a></p>
+<h1 align="center"><strong>iCloud Photos Sync</strong></h1>
+<p align="center" style="font-size:130%;">
+  <img alt="⚠" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/26a0.svg" title=":warning:"> 
+  <strong>Work in progress</strong>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see curent state &amp; milestone plan</a> 
+  <img alt="⚠" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/26a0.svg" title=":warning:"> 
+</p>
 
-### Status
-[![API Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/API%20Test?label=API%20Status&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml)
-[![Development Release Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Development%20Release?label=Dev%20Release&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/dev-release.yml)
-[![Production Release Status](https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Production%20Release?label=Prod%20Release&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml)
-
-### OS Support
-![OS Support Debian](https://img.shields.io/static/v1?label=Debian-11&message=Dev%20Platform&color=informational&style=for-the-badge)
-[![OS Support Ubuntu](https://img.shields.io/static/v1?label=Ubuntu-latest&message=Unit%20Test&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
-[![OS Support MacOS](https://img.shields.io/static/v1?label=MacOS-latest&message=Unit%20Test&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
-[![OS Support Windows](https://img.shields.io/static/v1?label=Windows-latest&message=Skipped&color=inactive&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
-
-### Downloads
-[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&style=for-the-badge)](https://github.com/steilerDev/icloud-photos-sync/releases)
-[![npm](https://img.shields.io/npm/dm/icloud-photos-sync?label=npm%20downloads&style=for-the-badge)](https://www.npmjs.com/package/icloud-photos-sync)
-[![Docker Pulls](https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync?style=for-the-badge)](https://hub.docker.com/r/steilerdev/icloud-photos-sync)
+<p align="center">
+  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml">
+    <img alt="API Status" src="https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/API%20Test?label=API%20Status&amp;style=for-the-badge">
+  </a>
+  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/dev-release.yml">
+    <img alt="Development Release Status" src="https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Development%20Release?label=Dev%20Release&amp;style=for-the-badge">
+  </a>
+  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml">
+    <img alt="Production Release Status" src="https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Production%20Release?label=Prod%20Release&amp;style=for-the-badge">
+  </a>
+</p>
+<hr>
+<p align="center">
+  <a href="https://github.com/steilerDev/icloud-photos-sync/releases">
+    <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&amp;style=for-the-badge">
+  </a>
+  <a href="https://www.npmjs.com/package/icloud-photos-sync">
+    <img alt="npm" src="https://img.shields.io/npm/dm/icloud-photos-sync?label=npm%20downloads&amp;style=for-the-badge">
+  </a>
+  <a href="https://hub.docker.com/r/steilerdev/icloud-photos-sync">
+    <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync?style=for-the-badge">
+  </a>
+</p>
 
 ## Overview
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem.
@@ -42,11 +54,20 @@ This CLI Application offers the following functionality:
 My personal use case / workflow is [documented on GH Pages](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/), alongside some other potential interessting pieces of (developer) documentation.
 
 ## Guides
-This app is written in Typescript/NodeJS and can therefore be executed directly on the host through npm. Alternatively a Docker Image is provided:
+This application is written in Typescript/NodeJS and can therefore be executed directly on the host through npm. Alternatively a Docker Image is provided. 
 
   - [NPM User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/npm/)
   - [Docker User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/docker/)
   - [CLI Reference](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/)
+
+## OS Support
+![OS Support Debian](https://img.shields.io/static/v1?label=Debian-11&message=Dev%20Platform&color=informational&style=for-the-badge)
+
+[![OS Support Ubuntu](https://img.shields.io/static/v1?label=Ubuntu-latest&message=Unit%20Test&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
+
+[![OS Support MacOS](https://img.shields.io/static/v1?label=MacOS-latest&message=Unit%20Test&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
+
+[![OS Support Windows](https://img.shields.io/static/v1?label=Windows-latest&message=Not%20planned&color=inactive&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
 
 ## Contributing & Feedback
 This tool is not yet *production ready*, since it (most likely) still contains some issues and edge cases, that need to be addressed.
