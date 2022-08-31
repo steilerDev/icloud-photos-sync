@@ -6,7 +6,7 @@
 
 <h1 align="center"><strong>iCloud Photos Sync</strong></h1>
 <p align="center" style="font-size:130%;">
-  ⚠️<strong>Work in progress</strong>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see curent state &amp; milestone plan</a>⚠️
+  ⚠️ <strong>Work in progress</strong>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see curent state &amp; milestone plan</a> ⚠️
 </p>
 
 <p align="center">
