@@ -28,6 +28,7 @@ This project provides a one-way sync engine for the iCloud Photos Library. The i
 Currently, this can only be achived, by having a Mac continously run the *Photos.app* (with `Keep originals` enabled). With this method, the files cannot be easily viewed without the Photos.app.
 
 This CLI Application offers the following functionality:
+
   - Continously sync your remote iCloud Photos Library to your local file system
   - Support for MFA Authentication through trusted devices, SMS and Voice authentication
   - Archiving of folders
@@ -41,12 +42,13 @@ My personal use case / workflow is [documented on GH Pages](https://steilerdev.g
 
 ## Guides
 This app is written in Typescript/NodeJS and can therefore be executed directly on the host through npm. Alternatively a Docker Image is provided:
+
   - [NPM User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/npm/)
   - [Docker User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/docker/)
   - [CLI Reference](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/)
 
 ## Contributing & Feedback
-he tool is not yet 'production ready', since it (mighmost likely) still contains some issues and edge cases, that need to be addressed.
+This tool is not yet *production ready*, since it (most likely) still contains some issues and edge cases, that need to be addressed.
 
 I hope for the support of the community, to fully understand the reverse-engineered API and discover edge cases and bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy.
 
