@@ -7,6 +7,8 @@ on:
     branches:
       - 'main'
       - 'dev'
+  
+permissions: read-all
 
 jobs:
   build-workflow:
@@ -14,27 +16,11 @@ jobs:
     uses: ./.github/workflows/build.yml
     secrets: inherit
   
-  publish-gh-pages:
-    name: Publish GH Pages
-    needs: build-workflow
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    steps:
-      - name: Setup Pages
-        uses: actions/configure-pages@v2
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v1
-  
   publish-docker-dev:
     name: Publish Nightly Docker Image
     needs: build-workflow
     runs-on: ubuntu-latest
+    environment: development
     steps:
     - name: Download artifacts
       uses: actions/download-artifact@v3

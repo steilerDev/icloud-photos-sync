@@ -7,16 +7,17 @@ on:
     - cron: '20 5,17 * * *'
   workflow_dispatch:
 
-env:
-  APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
-  APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
+permissions: read-all
 
 jobs:
   run-test:
     name: Run Test
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
+    environment: test
     env:
+      APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
+      APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
       TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
     steps:
     - name: Checkout
@@ -49,7 +50,11 @@ jobs:
     name: Acquire Token
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    environment: test
     env:
+      APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
+      APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
+      TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
       PORT: 8080
     steps:
     - name: Checkout

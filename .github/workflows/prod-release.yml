@@ -13,6 +13,7 @@ jobs:
   version-bump:
     name: Repository version bump
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -41,6 +42,7 @@ jobs:
     name: Publish Docker Image
     needs: build-workflow
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -69,6 +71,7 @@ jobs:
     name: Publish npm
     needs: build-workflow
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Setup Node
         uses: actions/setup-node@v3
@@ -84,10 +87,29 @@ jobs:
         with:
           token: ${{ secrets.NPM_TOKEN }}
   
+  publish-gh-pages:
+    name: Publish GH Pages
+    needs: build-workflow
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
+  
   publish-wiki:
     name: Publish GitHub Wiki
     needs: build-workflow
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -104,6 +126,7 @@ jobs:
     name: Create GH Release
     needs: build-workflow
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
