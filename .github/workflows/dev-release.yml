@@ -4,10 +4,12 @@ name: Development Release
 
 on: 
   push:
-    branches:
+    branches: # Only run docker deploy, when pushing to my primary branches, not on random pull requests
       - 'main'
       - 'dev'
-  
+
+permissions: {}  
+
 jobs:
   build-workflow:
     name: Build
@@ -19,7 +21,6 @@ jobs:
     needs: build-workflow
     runs-on: ubuntu-latest
     environment: development
-    permissions: {}
     steps:
     - name: Download artifacts
       uses: actions/download-artifact@v3
