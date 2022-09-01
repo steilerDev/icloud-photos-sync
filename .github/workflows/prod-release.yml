@@ -1,44 +1,25 @@
-name: Production Release
-# A manually triggered workflow to create a new release
+name: Publish Production Release
+# This workflow will run on every push containing a version tag targeting the main branch
+# If the app builds and passes tests, it will release to the production channel (Docker's 'latest' tag, npm release...)
 
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version string for release'
-        default: 'v1.0.0'
-        required: true
+on: 
+  push:
+    tags: # Only run deploy, when there is a tag. Ignore all pushes to non-main branches
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+    branches-ignore:
+      - '!main'
+
+    # ${{github.ref_name}} should contain the tag name (aka version string)
+
+# Just a roll-up with the max permissions / handled on job level
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
-  version-bump:
-    name: Repository version bump
-    runs-on: ubuntu-latest
-    environment: 
-      name: production
-      url: https://github.com/steilerDev/icloud-photos-sync/tree/main
-    permissions: 
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Version bump
-        run: |
-          NUMERIC_VERSION=${VERSION:1}
-          sed -i '/^## Nightly Changes/c\<!-- ## Nightly Changes-->\n\n## '${VERSION} CHANGELOG.md
-          sed -ri 's/"version": "[0-9]+\.[0-9]+\.[0-9]+"/"version": "'${NUMERIC_VERSION}'"/' app/package.json
-          sed -ri 's/VERSION = "[0-9]+\.[0-9]+\.[0-9]+"/VERSION = "'${NUMERIC_VERSION}'"/' app/src/lib/package.ts
-        env:
-          VERSION: ${{ github.event.inputs.version }}
-      - name: Commit & Tag
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          branch: main
-          commit_message: Version bump to ${{ inputs.version }} - [skip ci]
-          tagging_message: ${{ inputs.version }}
-
   build-workflow:
     name: Build
-    needs: version-bump
     uses: ./.github/workflows/build.yml
     secrets: inherit
     permissions: {}
@@ -63,7 +44,7 @@ jobs:
           docker load --input ./docker-image.tar.gz
           docker image tag ${{github.event.repository.name}} ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
           docker image tag ${{github.event.repository.name}} ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}:latest
-          docker image tag ${{github.event.repository.name}} ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}:${{github.event.inputs.version}}
+          docker image tag ${{github.event.repository.name}} ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}:${{github.ref_name}}
       - name: Push Docker Image
         run: docker image push --all-tags ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}
       - name: Update DockerHub readme
@@ -151,12 +132,12 @@ jobs:
         with:
           path: ./artifacts
       - name: Prepare artifacts
-        run: tar -C ./artifacts -czf ./icloud-photos-sync.${{github.event.inputs.version}}.tar.gz ./
+        run: tar -C ./artifacts -czf ./icloud-photos-sync.${{github.ref_name}}.tar.gz ./
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
           bodyFile: ./artifacts/changelog/CHANGELOG.latest.md
-          tag: ${{ inputs.version }}
+          tag: ${{ github.ref_name }}
           prerelease: ${{ inputs.pre-release }}
-          artifacts: ./icloud-photos-sync.${{inputs.version}}.tar.gz
+          artifacts: ./icloud-photos-sync.${{github.ref_name}}.tar.gz
           #token: ${{ secrets.YOUR_GITHUB_TOKEN }}

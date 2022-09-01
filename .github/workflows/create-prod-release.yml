@@ -1,0 +1,52 @@
+name: Create Production Release
+# A manually triggered workflow to create a new release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version string for release'
+        default: 'v1.0.0'
+        required: true
+
+# Just a roll-up with the max permissions / handled on job level
+permissions:
+  contents: write
+
+jobs:
+  version-bump:
+    name: Repository version bump
+    runs-on: ubuntu-latest
+    environment: 
+      name: production
+      url: https://github.com/steilerDev/icloud-photos-sync/tree/main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{secrets.NODE_VERSION}}
+          cache: 'npm'
+          cache-dependency-path: app/
+      - name: Version bump
+        run: |
+          NUMERIC_VERSION=${VERSION:1}
+
+          # Updating changelog to reflect that nightly changes are now in release
+          sed -i '/^## Nightly Changes/c\<!-- ## Nightly Changes-->\n\n## '${VERSION} CHANGELOG.md
+
+          # Updateding version refernces in the app
+          sed -ri 's/"version": "[0-9]+\.[0-9]+\.[0-9]+"/"version": "'${NUMERIC_VERSION}'"/' app/package.json
+          sed -ri 's/VERSION = "[0-9]+\.[0-9]+\.[0-9]+"/VERSION = "'${NUMERIC_VERSION}'"/' app/src/lib/package.ts
+
+          # Updating ./app/package-lock.json through npm install
+          cd app/ && npm install
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+      - name: Commit & Tag
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          branch: main
+          commit_message: Version bump to ${{ inputs.version }}
+          tagging_message: ${{ inputs.version }}
