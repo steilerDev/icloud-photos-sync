@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: 
       name: production
-      url: https://hub.docker.com/r/steilerdev/icloud-photos-sync
+      url: https://hub.docker.com/r/${{env.DOCKER_USERNAME}}/${{github.event.repository.name}}
     permissions: {}
     steps:
       - name: Download artifacts
@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{steps.deployment.outputs.page_url}}
     permissions:
       contents: read
       pages: write
@@ -125,7 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: 
       name: production
-      url: https://github.com/steilerDev/icloud-photos-sync/releases
+      url: https://github.com/steilerDev/icloud-photos-sync/releases/tag/${{github.ref_name}}
     permissions:
       contents: write
     steps:
@@ -139,7 +139,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           bodyFile: ./artifacts/changelog/CHANGELOG.latest.md
-          tag: ${{ github.ref_name }}
-          prerelease: ${{ inputs.pre-release }}
+          tag: ${{github.ref_name}}
+          prerelease: true
           artifacts: ./icloud-photos-sync.${{github.ref_name}}.tar.gz
           #token: ${{ secrets.YOUR_GITHUB_TOKEN }}

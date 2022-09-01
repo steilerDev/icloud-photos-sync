@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: 
       name: development
-      url: https://hub.docker.com/r/steilerdev/icloud-photos-sync
+      url: https://hub.docker.com/r/${{env.DOCKER_USERNAME}}/${{github.event.repository.name}}
     steps:
     - name: Download artifacts
       uses: actions/download-artifact@v3
