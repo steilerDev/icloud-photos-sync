@@ -10,7 +10,10 @@ on:
     tags-ignore:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
-permissions: {}  
+permissions: {}
+
+env:
+  DOCKER_USERNAME: steilerdev
 
 jobs:
   build-workflow:
@@ -31,10 +34,10 @@ jobs:
       with:
         name: docker-artifacts
     - name: Login to DockerHub
-      run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
+      run: docker login -u ${{env.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
     - name: Load & Tag Docker Image
       run: |
         docker load --input ./docker-image.tar.gz
-        docker image tag ${{github.event.repository.name}} ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
+        docker image tag ${{github.event.repository.name}} ${{env.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
     - name: Push Docker Image
-      run: docker image push ${{secrets.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
+      run: docker image push ${{env.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
