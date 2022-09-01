@@ -1,4 +1,5 @@
 name: "CodeQL Scan"
+# Continuous CodeQL scans, to catch any potential security issues
 
 on:
   push:

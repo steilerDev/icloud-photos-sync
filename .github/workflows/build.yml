@@ -1,14 +1,14 @@
 name: Build, Test & Scan
 # This reusable workflow will test, build and scan the application. All build assets will be packaged and uploaded
 # This action is also run, in order to validate, that Pull Requests are functional
-# When this workflow is triggered due to a push to dev, testing & code scanning will be skipped/fast tracked
+# When this workflow is triggered due to a push to dev, testing will be fast tracked
 #
 # Creates the following artifacts:
 #  - docker-artifacts (Docker RootFS + Dockerfile)
 #  - app-artifacts (NPM Upload)
-#  - gh-wiki-artifacts (Documentation for GH Wiki)
-#  - gh-pages (Documentation and webpage for GH Pages)
-#  - changelog (File containing changelog description)
+#  - gh-wiki-artifacts (Documentation for GH Wiki) - Only if github.ref != 'refs/heads/dev'
+#  - gh-pages (Documentation and webpage for GH Pages) - Only if github.ref != 'refs/heads/dev'
+#  - changelog (File containing changelog description) - Only if github.ref != 'refs/heads/dev'
 
 on:
   workflow_call:
@@ -54,6 +54,7 @@ jobs:
   build-typedoc:
     name: Build TypeDoc
     runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/dev'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -82,6 +83,7 @@ jobs:
   build-gh-pages:
     name: Build GH Pages
     runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/dev'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -106,6 +108,7 @@ jobs:
   build-changelog:
     name: Build Changelog
     runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/dev'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -181,6 +184,7 @@ jobs:
     name: Test Docker Image
     needs: build-docker
     runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/dev'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
