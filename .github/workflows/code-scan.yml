@@ -2,11 +2,7 @@ name: "CodeQL Scan"
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
-    paths:
-      - '/app/**/*'
   schedule:
     - cron: '30 1 * * 0'
 
