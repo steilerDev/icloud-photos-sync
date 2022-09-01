@@ -13,7 +13,7 @@ name: Build, Test & Scan
 on:
   workflow_call:
   pull_request:
-  push:
+  push: # For any other branch
     branches:
       - '!main'
       - '!dev'
