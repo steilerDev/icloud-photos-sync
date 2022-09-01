@@ -30,7 +30,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{secrets.NODE_VERSION}}
+          node-version-file: 'app/.node-version'
           cache: 'npm'
           cache-dependency-path: app/
       - name: Build app artifacts
@@ -44,6 +44,7 @@ jobs:
         with:
           name: app-artifacts
           path: |
+            ./app/.node-version
             ./app/README.md
             ./app/CHANGELOG.md
             ./app/LICENSE
@@ -61,7 +62,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{secrets.NODE_VERSION}}
+          node-version-file: 'app/.node-version'
           cache: 'npm'
           cache-dependency-path: app/
       - name: Install
@@ -168,7 +169,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{secrets.NODE_VERSION}}
+          node-version-file: 'app/.node-version'
           cache: 'npm'
           cache-dependency-path: app/
       - name: Install
