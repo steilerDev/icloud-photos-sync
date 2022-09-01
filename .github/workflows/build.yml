@@ -147,11 +147,13 @@ jobs:
         run: |
           docker build ./docker --tag ${{ github.event.repository.name }}
           docker save ${{ github.event.repository.name }} | gzip > ./docker-image.tar.gz
+          cp ./docker/.docker-username .
       - name: Upload docker artifacts
         uses: actions/upload-artifact@v3
         with:
           name: docker-artifacts
           path: |
+            ./.docker-username
             ./README.md
             ./CHANGELOG.md
             ./LICENSE

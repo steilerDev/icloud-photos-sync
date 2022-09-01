@@ -12,9 +12,6 @@ on:
 
 permissions: {}
 
-env:
-  DOCKER_USERNAME: steilerdev
-
 jobs:
   build-workflow:
     name: Build
@@ -34,10 +31,12 @@ jobs:
       with:
         name: docker-artifacts
     - name: Login to DockerHub
-      run: docker login -u ${{env.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PWD}}
+      run: |
+        DOCKER_USERNAME=$(cat ./.docker-username)
+        docker login -u $DOCKER_USERNAME -p ${{secrets.DOCKER_PWD}}
     - name: Load & Tag Docker Image
       run: |
         docker load --input ./docker-image.tar.gz
-        docker image tag ${{github.event.repository.name}} ${{env.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
+        docker image tag ${{github.event.repository.name}} $DOCKER_USERNAME/${{github.event.repository.name}}:nightly
     - name: Push Docker Image
-      run: docker image push ${{env.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
+      run: docker image push $DOCKER_USERNAME/${{github.event.repository.name}}:nightly
