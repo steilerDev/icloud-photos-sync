@@ -25,20 +25,21 @@ jobs:
     - name: Setup node
       uses: actions/setup-node@v3
       with:
-        node-version: ${{ secrets.NODE_VERSION }}
-    - name: Build & Install
+        node-version-file: 'app/.node-version'
+        cache: 'npm'
+        cache-dependency-path: app/
+    - name: Build
       run: |
-        npm run clean && \
-        npm install && \
-        npm run build && \
-        npm link
+        npm ci && \
+        npm run build
       working-directory: app/
     - name: Check MFA Token
       run: |
-        icloud-photos-sync token
+        npm run execute -- token
       env:
         FAIL_ON_MFA: true
         LOG_TO_CLI: true
+      working-directory: app/
     - name: Run API Test
       run: |
         npm run test-api
@@ -61,11 +62,12 @@ jobs:
     - name: Setup node
       uses: actions/setup-node@v3
       with:
-        node-version: ${{ secrets.NODE_VERSION }}
+        node-version-file: 'app/.node-version'
+        cache: 'npm'
+        cache-dependency-path: app/
     - name: Build 
       run: |
-        npm run clean && \
-        npm install && \
+        npm ci && \
         npm run build
       working-directory: app/
     - name: Install

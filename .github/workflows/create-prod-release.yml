@@ -26,7 +26,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{secrets.NODE_VERSION}}
+          node-version-file: 'app/.node-version'
           cache: 'npm'
           cache-dependency-path: app/
       - name: Version bump

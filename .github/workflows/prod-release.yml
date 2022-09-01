@@ -66,16 +66,18 @@ jobs:
       url: https://www.npmjs.com/package/icloud-photos-sync
     permissions: {}
     steps:
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ secrets.NODE_VERSION }}
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
           name: app-artifacts
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: 'app/.node-version'
+          cache: 'npm'
+          cache-dependency-path: app/
       - name: Prepare environment
-        run: npm install
+        run: npm ci
       - uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.NPM_TOKEN }}
