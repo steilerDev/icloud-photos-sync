@@ -38,7 +38,7 @@ jobs:
     - name: Load & Tag Docker Image
       run: |
         docker load --input ./docker-image.tar.gz
-        docker image tag ${{github.event.repository.name}} ${{env.DOCKER_USERNAME}}/${{github.event.repository.name}}:nightly
+        docker image tag ${{github.event.repository.name}} $DOCKER_USERNAME/${{github.event.repository.name}}:nightly
     - name: Push Docker Image
       run: | 
         docker image push $DOCKER_USERNAME/${{github.event.repository.name}}:nightly
