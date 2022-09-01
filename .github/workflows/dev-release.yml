@@ -30,9 +30,10 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: docker-artifacts
+    - name: Load Docker Username
+      run: echo "DOCKER_USERNAME=$(cat ./.docker-username)" >> $GITHUB_ENV
     - name: Login to DockerHub
       run: |
-        echo "DOCKER_USERNAME=$(cat ./.docker-username)" >> $GITHUB_ENV
         docker login -u $DOCKER_USERNAME -p ${{secrets.DOCKER_PWD}}
     - name: Load & Tag Docker Image
       run: |
