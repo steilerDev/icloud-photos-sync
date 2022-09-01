@@ -20,7 +20,9 @@ jobs:
     name: Publish Nightly Docker Image
     needs: build-workflow
     runs-on: ubuntu-latest
-    environment: development
+    environment: 
+      name: development
+      url: https://hub.docker.com/r/steilerdev/icloud-photos-sync
     steps:
     - name: Download artifacts
       uses: actions/download-artifact@v3

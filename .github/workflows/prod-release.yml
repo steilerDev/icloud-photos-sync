@@ -13,7 +13,9 @@ jobs:
   version-bump:
     name: Repository version bump
     runs-on: ubuntu-latest
-    environment: production
+    environment: 
+      name: production
+      url: https://github.com/steilerDev/icloud-photos-sync/tree/main
     permissions: 
       contents: write
     steps:
@@ -45,7 +47,9 @@ jobs:
     name: Publish Docker Image
     needs: build-workflow
     runs-on: ubuntu-latest
-    environment: production
+    environment: 
+      name: production
+      url: https://hub.docker.com/r/steilerdev/icloud-photos-sync
     permissions: {}
     steps:
       - name: Download artifacts
@@ -75,7 +79,9 @@ jobs:
     name: Publish npm
     needs: build-workflow
     runs-on: ubuntu-latest
-    environment: production
+    environment: 
+      name: production
+      url: https://www.npmjs.com/package/icloud-photos-sync
     permissions: {}
     steps:
       - name: Setup Node
@@ -114,7 +120,9 @@ jobs:
     name: Publish GitHub Wiki
     needs: build-workflow
     runs-on: ubuntu-latest
-    environment: production
+    environment: 
+      name: production
+      url: https://github.com/steilerDev/icloud-photos-sync/wiki
     permissions: {}
     steps:
       - name: Download artifacts
@@ -132,7 +140,9 @@ jobs:
     name: Create GH Release
     needs: build-workflow
     runs-on: ubuntu-latest
-    environment: production
+    environment: 
+      name: production
+      url: https://github.com/steilerDev/icloud-photos-sync/releases
     permissions:
       contents: write
     steps:
