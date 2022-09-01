@@ -1,4 +1,4 @@
-name: Build, Test & Scan
+name: Build & Test
 # This reusable workflow will test, build and scan the application. All build assets will be packaged and uploaded
 # This action is also run, in order to validate, that Pull Requests are functional
 # When this workflow is triggered due to a push to dev, testing will be fast tracked

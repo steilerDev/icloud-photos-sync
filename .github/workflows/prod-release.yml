@@ -1,13 +1,11 @@
 name: Publish Production Release
-# This workflow will run on every push containing a version tag targeting the main branch
+# This workflow will run on every push containing a tag, that is matching version naming
 # If the app builds and passes tests, it will release to the production channel (Docker's 'latest' tag, npm release...)
 
 on: 
   push:
-    tags: # Only run deploy, when there is a tag. Ignore all pushes to non-main branches
+    tags: # Only run deploy, when there is a tag matching version naming
       - 'v[0-9]+.[0-9]+.[0-9]+'
-    branches-ignore:
-      - '!main'
 
     # ${{github.ref_name}} should contain the tag name (aka version string)
 
