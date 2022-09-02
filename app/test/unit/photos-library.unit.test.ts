@@ -2,7 +2,7 @@ import mockfs from 'mock-fs';
 import fs from 'fs';
 import {expect, describe, test, afterEach} from '@jest/globals';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
-import {ASSET_DIR, ARCHIVE_DIR} from '../../src/lib/photos-library/constants';
+import {ASSET_DIR, ARCHIVE_DIR, SAFE_FILES} from '../../src/lib/photos-library/constants';
 import path from 'path';
 import {AlbumType} from '../../src/lib/photos-library/model/album';
 
@@ -254,81 +254,134 @@ describe(`Unit Tests - Photos Library`, () => {
                 expect(Object.keys(albums).length).toEqual(0);
             });
 
-            test.skip(`Load nested state`, async () => {
-                // This is the structure of the test environment on disk
+            test(`Ignore safe files in empty album`, async () => {
+                const emptyAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                const emptyAlbumName = `Stuff`;
+
+                const files: any = {}
+                for (const safeFileName of SAFE_FILES) {
+                    files[safeFileName] = Buffer.from([1])
+                }
                 mockfs({
                     [photosDataDir]: {
-                        [ASSET_DIR]: {
-
-                        },
-                        ".7198a6a0-27fe-4fb6-961b-74231e425858": {
-                            ".6e7f4f44-445a-41ee-a87e-844a9109069d": {
-                                "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": mockfs.symlink({
-                                    "path": `../../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
-                                }),
-                            },
-                            "2022": mockfs.symlink({
-                                "path": `.6e7f4f44-445a-41ee-a87e-844a9109069d`,
-                            }),
-                        },
-                        ".b971e88c-ca73-4712-9f70-202879ea8b26": {
-                            "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": mockfs.symlink({
-                                "path": `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
-                            }),
-                            "steve-johnson-gkfvdCEbUbQ-unsplash.jpeg": mockfs.symlink({
-                                "path": `../_All-Photos/AQ-qACkUB_yOBUVvye9kJSVdxZEc.jpeg`,
-                            }),
-                            "steve-johnson-T12spiHYons-unsplash.jpeg": mockfs.symlink({
-                                "path": `../_All-Photos/Acgr2fdPRy7x4l16nE6wwBNKrOzf.jpeg`,
-                            }),
-                            "steve-johnson-YLfycNerbPo-unsplash.jpeg": mockfs.symlink({
-                                "path": `./_All-Photos/AfFUy6toSMWpB1FVJQThs4Y-rVHJ.jpeg`,
-                            }),
-                        },
-                        ".cc40a239-2beb-483e-acee-e897db1b818a": {
-                        },
-                        "Memories": mockfs.symlink({
-                            "path": `.cc40a239-2beb-483e-acee-e897db1b818a`,
-                        }),
-                        "Random": mockfs.symlink({
-                            "path": `.b971e88c-ca73-4712-9f70-202879ea8b26`,
-                        }),
-                        "Stuff": mockfs.symlink({
-                            "path": `.7198a6a0-27fe-4fb6-961b-74231e425858`,
+                        [`.${emptyAlbumUUID}`]: files,
+                        [emptyAlbumName]: mockfs.symlink({
+                            "path": `.${emptyAlbumUUID}`,
                         }),
                     },
                 });
 
                 const library = photosLibraryFactory();
                 const albums = await library.loadAlbums();
-                expect(Object.keys(albums).length).toEqual(4);
 
-                const emptyAlbumUUID = `7198a6a0-27fe-4fb6-961b-74231e425858`;
-                const emptyAlbum = albums[emptyAlbumUUID];
-                expect(emptyAlbum).toBeDefined();
-                expect(emptyAlbum.albumName).toEqual(`Stuff`);
-                expect(emptyAlbum.uuid).toEqual(`7198a6a0-27fe-4fb6-961b-74231e425858`);
-                expect(Object.keys(emptyAlbum.assets).length).toEqual(0);
-                expect(emptyAlbum.albumType).toEqual(AlbumType.ALBUM);
+                expect(Object.keys(albums).length).toEqual(1);
 
-                const multiItemAlbumUUID = `b971e88c-ca73-4712-9f70-202879ea8b26`;
-                const multiItemAlbum = albums[multiItemAlbumUUID];
-                expect(multiItemAlbum).toBeDefined();
-                expect(multiItemAlbum.albumName).toEqual(`Random`);
-                expect(multiItemAlbum.uuid).toEqual(multiItemAlbumUUID);
-                expect(Object.keys(multiItemAlbum.assets).length).toEqual(4);
-                expect(multiItemAlbum.albumType).toEqual(AlbumType.ALBUM);
-
-                const folderUUID = `.7198a6a0-27fe-4fb6-961b-74231e425858`;
-                const folder = albums[folderUUID];
-                expect(folder).toBeDefined();
-                expect(folder.albumName).toEqual(`Memories`);
-                expect(folder.uuid).toEqual(folderUUID);
-                expect(Object.keys(folder.assets).length).toEqual(0);
-                expect(folder.albumType).toEqual(AlbumType.FOLDER);
+                const emptyFolder = albums[emptyAlbumUUID];
+                expect(emptyFolder).toBeDefined();
+                expect(emptyFolder.albumName).toEqual(emptyAlbumName);
+                expect(emptyFolder.uuid).toEqual(emptyAlbumUUID);
+                expect(Object.keys(emptyFolder.assets).length).toEqual(0);
+                expect(emptyFolder.albumType).toEqual(AlbumType.ALBUM);
             });
 
-            test.todo(`Ignore safe files in folder`);
+            test.only(`Load nested state`, async () => {
+                const emptyAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                const emptyAlbumName = `Stuff`;
+                const files: any = {}
+                for (const safeFileName of SAFE_FILES) {
+                    files[safeFileName] = Buffer.from([1])
+                }
+                const folderUUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
+                const folderName = `Memories`;
+                const folderedFolderUUID = `6e7f4f44-445a-41ee-a87e-844a9109069d`;
+                const folderedFolderName = `2022`;
+                const nonEmptyAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818c`;
+                const nonEmptyAlbumName = `Random`;
+                const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
+                const archivedName = `2015 - 2016`;
+
+                mockfs({
+                    [photosDataDir]: {
+                        [ASSET_DIR]: {
+                            "test-file": Buffer.from([1, 1, 1]),
+                        },
+                        [ARCHIVE_DIR]: {
+                            "test-file": Buffer.from([1, 1, 1]),
+                        },
+                        [`.${emptyAlbumUUID}`]: files,
+                        [emptyAlbumName]: mockfs.symlink({
+                            "path": `.${emptyAlbumUUID}`,
+                        }),
+                        [`.${folderUUID}`]: {
+                            [`.${folderedFolderUUID}`]: {
+                                [`.${nonEmptyAlbumUUID}`]: {
+                                    "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": mockfs.symlink({
+                                        "path": `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
+                                    }),
+                                    "steve-johnson-gkfvdCEbUbQ-unsplash.jpeg": mockfs.symlink({
+                                        "path": `../_All-Photos/AQ-qACkUB_yOBUVvye9kJSVdxZEc.jpeg`,
+                                    }),
+                                    "steve-johnson-T12spiHYons-unsplash.jpeg": mockfs.symlink({
+                                        "path": `../_All-Photos/Acgr2fdPRy7x4l16nE6wwBNKrOzf.jpeg`,
+                                    }),
+                                    "steve-johnson-YLfycNerbPo-unsplash.jpeg": mockfs.symlink({
+                                        "path": `./_All-Photos/AfFUy6toSMWpB1FVJQThs4Y-rVHJ.jpeg`,
+                                    }),
+                                },
+                                [nonEmptyAlbumName]: mockfs.symlink({
+                                    "path": `.${nonEmptyAlbumUUID}`,
+                                }),
+                                [`.${archivedUUID}`]: {
+                                    "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": Buffer.from([1, 1, 1, 1]),
+                                    "steve-johnson-gkfvdCEbUbQ-unsplash.jpeg": Buffer.from([1, 1, 1, 1]),
+                                    "steve-johnson-T12spiHYons-unsplash.jpeg": Buffer.from([1, 1, 1, 1]),
+                                    "steve-johnson-YLfycNerbPo-unsplash.jpeg": Buffer.from([1, 1, 1, 1]),
+                                },
+                                [archivedName]: mockfs.symlink({
+                                    "path": `.${archivedUUID}`,
+                                }),
+                            },
+                            [folderedFolderName]: mockfs.symlink({
+                                "path": `.${folderedFolderUUID}`,
+                            }),
+                        },
+                        [folderName]: mockfs.symlink({
+                            "path": `.${folderUUID}`,
+                        }),
+                    },
+                });
+
+                const library = photosLibraryFactory();
+                const albums = await library.loadAlbums();
+
+                expect(Object.keys(albums).length).toEqual(5);
+
+                const emptyAlbum = albums[emptyAlbumUUID]
+                expect(emptyAlbum).toBeDefined()
+                expect(emptyAlbum.albumType).toEqual(AlbumType.ALBUM)
+                expect(Object.keys(emptyAlbum.assets).length).toEqual(0)
+
+                const folder = albums[folderUUID]
+                expect(folder).toBeDefined()
+                expect(folder.albumType).toEqual(AlbumType.FOLDER)
+                expect(Object.keys(folder.assets).length).toEqual(0)
+
+                const folderedFolder = albums[folderedFolderUUID]
+                expect(folderedFolder).toBeDefined()
+                expect(folderedFolder.albumType).toEqual(AlbumType.FOLDER)
+                expect(Object.keys(folderedFolder.assets).length).toEqual(0)
+
+                const nonEmptyAlbum = albums[nonEmptyAlbumUUID]
+                expect(nonEmptyAlbum).toBeDefined()
+                expect(nonEmptyAlbum.albumType).toEqual(AlbumType.ALBUM)
+                expect(Object.keys(nonEmptyAlbum.assets).length).toEqual(4)
+
+                const archivedAlbum = albums[archivedUUID]
+                expect(archivedAlbum).toBeDefined()
+                expect(archivedAlbum.albumType).toEqual(AlbumType.ARCHIVED)
+                expect(Object.keys(archivedAlbum.assets).length).toEqual(0)
+            });
+
         });
     });
     describe(`Write state`, () => {

@@ -41,19 +41,24 @@ Currently, this can only be achived, by having a Mac continously run the *Photos
 
 This CLI Application offers the following functionality:
 
-  - Continuously sync your remote iCloud Photos Library to your local file system, so it can be explored without any third party dependency
+  - *Continuously sync your remote iCloud Photos Library to your local file system effeciently*
     - Support of MFA Authentication through trusted devices, SMS and Voice authentication
     - Enable autonomous operation, by caching of MFA trust token (currently testing how long the token is valid: cached token for API tests has been valid since Aug 28, 2022)
-    - Support of large libraries, through efficient diffing algorithm
-  - Efficient handling of local state
+    - Support of large libraries, through efficient diffing algorithm instead of full library pull
+    - Full iCloud Photos Library Backup with all important files in their original state + edits
+  - *Efficient handling of local state*
     - Each asset is only downloaded once and linked to its respective folders
     - No need track local state in database, since state is completely reflected in filesystem (through naming & linking)
-  - Archiving of folders
+  - *Archiving of folders*
     - All assets currently in the album will be persisted in the respective folder on the machine running icloud-photos-sync
     - Future syncs will ignore the folder (so those assets will not be changed/deleted)
     - If the remote album is moved, the archived folder will be moved to the same location
     - If the remote album is deleted, the archived folder will be put into a 'lost+found' type of folder
     - (*optionally*) All photos from the archived folder will be deleted from the iCloud Photos Library, unless they are *Favorites* (Reducing cloud storage needs)
+  - *Single purpose iCloud Photos application*
+    - No reliance on full fledged third-party libraries that provide access to iCloud
+    - No configuration needed for continuous full backup
+    - Quicker support of use-case specific needs
 
 My personal use case / workflow is [documented on GH Pages](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/), alongside some other potential interessting pieces of documentation.
 

@@ -100,7 +100,6 @@ export class PhotosLibrary {
         if (album.albumType === AlbumType.ARCHIVED) {
             return [album];
         }
-
         const albums: Album[] = [];
 
         // Not adding dummy album
