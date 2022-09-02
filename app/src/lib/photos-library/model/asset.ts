@@ -15,7 +15,11 @@ export enum AssetType {
     /**
      * Shows that this is the latest edit
      */
-    EDIT = 1
+    EDIT = 1,
+    /**
+     * Shows that this is a live photo
+     */
+    LIVE = 2
 }
 /**
  * This class represents an Asset in the Photo Library

@@ -18,9 +18,10 @@ The following primary milestones are currently pursured.
 7. :white_check_mark: Writing diff to disk
    - :white_check_mark: Writing asset diff
    - :white_check_mark: Writing album diff
-8. :x: Enable archiving (*in progress*)
-9. :x: Full Test Covarage (*in progress*)
-10. :white_check_mark: Improve MFA workflow (re-request code/send code through other means)
-11. :x: Provide WebUI
+8. :white_check_mark: Improve MFA workflow (re-request code/send code through other means)
+9. :x: Enable archiving (*in progress*)
+10. :x: Full Test Covarage (*in progress*)
+11. :x: Support Live-Photos
+12. :x: Provide WebUI
     - :x: Archive folders through UI
     - :x: Explore all pictures through UI
