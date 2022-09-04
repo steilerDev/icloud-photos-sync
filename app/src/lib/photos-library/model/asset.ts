@@ -34,7 +34,7 @@ export class Asset implements PEntity<Asset> {
      */
     size: number;
     /**
-     * Modified timestamp as epoch timestamp
+     * Modified timestamp as epoch timestamp (ms since epoch)
      */
     modified: number;
     /**
@@ -100,7 +100,7 @@ export class Asset implements PEntity<Asset> {
      * Creates an Asset from the information provided by the backend
      * @param asset - The AssetID object returned from the backend
      * @param assetType - The assetType string, describing the filetype
-     * @param modified - The modified date as returned from the backend (converted to epoch time in this function, as it is returned in milliseconds)
+     * @param modified - The modified date as returned from the backend (in ms since epoch)
      * @param origFilename - The original filename, extracted from the parent object
      * @param assetType - If this asset is the original or an edit
      * @returns An Asset based on the backend objects
@@ -110,7 +110,7 @@ export class Asset implements PEntity<Asset> {
             asset.fileChecksum,
             asset.size,
             FileType.fromAssetType(fileTypeDescriptor),
-            Math.floor(modified / 1000),
+            modified,
             assetType,
             origFilename,
             asset.wrappingKey,
@@ -132,7 +132,7 @@ export class Asset implements PEntity<Asset> {
             Buffer.from(path.basename(fileName, path.extname(fileName)), `base64url`).toString(`base64`),
             stats.size,
             FileType.fromExtension(path.extname(fileName)),
-            Math.floor(stats.mtimeMs / 1000),
+            stats.mtimeMs,
         );
     }
 
@@ -194,10 +194,20 @@ export class Asset implements PEntity<Asset> {
     /**
      * Verifies that the object representation matches the given file
      * @param file - The read file
+     * @param fileStats - The file stats object to investigate the metadata
      * @returns True if the provided file matches this object representation
      */
-    verify(file: Buffer): boolean {
-        return this.verifyChecksum(file) && this.verifySize(file);
+    verify(file: Buffer, fileStats: Stats): boolean {
+        return this.verifyChecksum(file) && this.verifySize(file) && this.verifyMTime(fileStats)
+    }
+
+    /**
+     * Verifies that the modified timestamps matches the one of the given file
+     * @param fileStats - The file stats object to investigate the metadata
+     * @returns True if the modified time matches
+     */
+    private verifyMTime(fileStats: Stats):  boolean {
+        return fileStats.mtimeMs === this.modified
     }
 
     /**

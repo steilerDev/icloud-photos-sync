@@ -15,7 +15,8 @@ nav:
     - 'Milestone Plan': dev/milestone-plan.md
     - 'Test Environment': dev/test-environment.md
     - 'Motivation': dev/motivation.md
-    - 'Authentication Flow': dev/authentication-flow.md
+    - 'API': dev/api.md
+    - 'Local File Structure': dev/local-file-structure.md
     - 'TypeDoc Code Documentation': https://github.com/steilerDev/icloud-photos-sync/wiki/Exports
   - 'Changelog': CHANGELOG.md
 

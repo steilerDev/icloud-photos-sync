@@ -26,4 +26,11 @@ describe(`Unit Tests - Sync Engine`, () => {
             test.todo(`Remote album's content (locally archived) changed`);
         });
     });
+
+    describe(`Handle processing queue`, () => {
+        test.todo(`Empty processing queue`);
+        test.todo(`Only deleting`);
+        test.todo(`Only adding`);
+        test.todo(`Adding & deleting`);
+    });
 });

@@ -13,7 +13,7 @@ import {getLogger} from '../logger.js';
 import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
 import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
-import {addAlbum, deleteAlbum, findAlbumInPath, findAlbum, queueIsSorted, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
+import {addAlbum, removeAlbum, queueIsSorted, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 
 /**
  * This class handles the photos sync
@@ -96,10 +96,9 @@ export class SyncEngine extends EventEmitter {
                     // Checking if we should retry
                     if (this.checkFatalError(err)) {
                         throw err;
-                    } else {
-                        this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
-                        await this.prepareRetry();
-                    }
+                    } 
+                    this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
+                    await this.prepareRetry();
                 }
             }
 
@@ -117,30 +116,30 @@ export class SyncEngine extends EventEmitter {
      * @returns - True if a fatal error occured that should NOT be retried
      */
     private checkFatalError(err: any): boolean {
-        if (err.name === `AxiosError`) {
-            this.logger.debug(`Detected Axios error`);
+        if (err.name !== `AxiosError`) {
+            this.logger.warn(`Unknown error (${JSON.stringify(err)}), aborting!`);
+            return true;
+        }
+        this.logger.debug(`Detected Axios error`);
 
-            if (err.code === `ERR_BAD_RESPONSE`) {
-                this.logger.debug(`Bad server response (${err.response?.status}), retrying...`);
-                return false;
-            }
-
-            if (err.code === `ERR_BAD_REQUEST`) {
-                if (err.response?.status === 410 || err.response?.status === 421) {
-                    this.logger.debug(`Remote ressources have changed location, updating URLs by retrying...`);
-                    // This seems to happen ever 60mins
-                    return false;
-                }
-
-                this.logger.warn(`Unknown bad request (${JSON.stringify(err)}), aborting!`);
-                return true;
-            }
-
+        if (err.code !== `ERR_BAD_REQUEST` && err.code !== `ERR_BAD_RESPONSE`) {
             this.logger.warn(`Unknown Axios error (${JSON.stringify(err)}), aborting!`);
             return true;
         }
 
-        this.logger.warn(`Unknown error (${JSON.stringify(err)}), aborting!`);
+        if (err.code === `ERR_BAD_RESPONSE`) {
+            this.logger.debug(`Bad server response (${err.response?.status}), retrying...`);
+            return false;
+        }
+
+        this.logger.debug(`Error was due to a bad request`)
+        if (err.response?.status === 410 || err.response?.status === 421) {
+            this.logger.debug(`Remote ressources have changed location, updating URLs by retrying...`);
+            // This seems to happen ever 60mins
+            return false;
+        }
+
+        this.logger.warn(`Unknown bad request (${JSON.stringify(err)}), aborting!`);
         return true;
     }
 
@@ -250,7 +249,5 @@ export class SyncEngine extends EventEmitter {
     protected queueIsSorted = queueIsSorted;
     protected sortQueue = sortQueue;
     protected addAlbum = addAlbum;
-    protected findAlbumInPath = findAlbumInPath;
-    protected findAlbum = findAlbum;
-    protected deleteAlbum = deleteAlbum;
+    protected removeAlbum = removeAlbum;
 }

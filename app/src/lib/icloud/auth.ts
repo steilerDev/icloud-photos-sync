@@ -292,16 +292,6 @@ export class iCloudAuth {
     }
 
     /**
-     * Throws and error but provides the sensitive information only to the trace log
-     * @param msg - Message to be thrown
-     * @param sensitiveMsg  - Sensitive message to be logged to the trace log
-     */
-    throwSensitiveError(msg: string, sensitiveMsg: string) {
-        this.logger.trace(`${msg}: ${sensitiveMsg}`);
-        throw new Error(msg);
-    }
-
-    /**
      * Validates that the object is in a authenticated iCloud state
      * @throws An error, if the cloud cookies are no longer valid
      */

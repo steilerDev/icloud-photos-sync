@@ -170,22 +170,32 @@ export class PhotosLibrary {
         return AlbumType.ALBUM;
     }
 
+    /**
+     * Writes the contents of the Axios response (as stream) to the filesystem, based on the associated Asset
+     * @param asset - The asset associated to the request
+     * @param response - The response -as a stream- containing the data of the asset
+     * @returns A promise, that resolves once this asset was written to disk and verified
+     */
     async writeAsset(asset: Asset, response: AxiosResponse<any, any>): Promise<void> {
         this.logger.debug(`Writing asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath(this.assetDir);
         const writeStream = fs.createWriteStream(location);
         response.data.pipe(writeStream);
         return pEvent(writeStream, `close`)
-            .then(() => fs.promises.utimes(asset.getAssetFilePath(this.assetDir), asset.modified, asset.modified)) // Setting modified date on file
+            .then(() => fs.promises.utimes(asset.getAssetFilePath(this.assetDir), new Date(asset.modified), new Date(asset.modified))) // Setting modified date on file
             .then(() => {
                 if (!this.verifyAsset(asset)) {
                     throw new Error(`Unable to verify asset ${asset.getDisplayName()}`);
                 }
-
                 this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
             });
     }
 
+    /**
+     * Deletes the specified asset from disk
+     * @param asset - The asset that needs to be removed
+     * @returns A promise, that resolves once the asset was deleted from disk
+     */
     async deleteAsset(asset: Asset): Promise<void> {
         this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
         return fs.promises.rm(asset.getAssetFilePath(this.assetDir), {"force": true});
@@ -200,6 +210,187 @@ export class PhotosLibrary {
         this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath(this.assetDir);
         return fs.existsSync(location)
-            && asset.verify(fs.readFileSync(location));
+            && asset.verify(fs.readFileSync(location), fs.statSync(location));
+    }
+
+    /**
+     * Finds the full path of the parent of a given albumj
+     * @param album - The album
+     * @returns The full path to the parent album
+     * @throws An error if the folder could not be found
+     */
+    findParentPath(album: Album): string {
+        if(!album.parentAlbumUUID) {
+            return this.photoDataDir
+        }
+        return this.findAlbumByUUID(album.parentAlbumUUID)
+    }
+
+    /**
+     * Finds a given album within the photosDataDir
+     * @param album - The album
+     * @returns The full path to the album
+     * @throws An error if the folder could not be found
+     */
+    findAlbum(album: Album): string {
+        return this.findAlbumByUUID(album.getUUID())
+    }
+
+    /**
+     * Finds a given album within the photoDataDir
+     * @param albumUUID - The UUID of the album
+     * @returns The full path to the album
+     * @throws An error if the folder could not be found
+     */
+    findAlbumByUUID(albumUUID: string): string {
+        const relativeFolderPath = this.findAlbumByUUIDInPath(albumUUID, this.photoDataDir);
+        if(relativeFolderPath.length === 0) {
+            throw new Error(`Unable to find album ${albumUUID}`)
+        }
+        return path.join(this.photoDataDir, relativeFolderPath);
+    }
+
+    /**
+     * Finds a given album in a given path (as long as it is within the directory tree)
+     * @param albumUUID - The UUID of the album
+     * @param rootPath  - The path in which the album should be searched
+     * @returns The path to the album, relative to the provided path, or the empty string if the album could not be found, or the full path including photoDataDir, if _rootPath was undefined
+     */
+    findAlbumByUUIDInPath(albumUUID: string, rootPath: string): string {
+        this.logger.trace(`Checking ${rootPath} for folder ${albumUUID}`);
+        // Get all folders in the path
+        const foldersInPath = fs.readdirSync(rootPath, {"withFileTypes": true}).filter(dirent => dirent.isDirectory());
+
+        // See if the searched folder is in the path
+        const filteredFolder = foldersInPath.filter(folder => folder.name === `.${albumUUID}`); // Since the folder is hidden, a dot is prefacing it
+        if (filteredFolder.length === 1) {
+            return filteredFolder[0].name;
+        }
+        // No luck in the current folder. Looking in all child folders
+
+        // This will contain either empty strings or the path to the searched album
+        const searchResult = foldersInPath.map(folder => {
+            // Look into each folder and see if the album can be found there
+            const result = this.findAlbumByUUIDInPath(albumUUID, path.join(rootPath, folder.name));
+            if (result !== ``) { // We've got a match and it should have returned
+                return path.join(folder.name, result);
+            }
+
+            // No luck in this directory tree
+            return ``;
+        }).filter(result => result !== ``); // Removing non-matches
+
+        if (searchResult.length === 1) {
+            this.logger.debug(`Found folder ${albumUUID} in ${rootPath}`);
+            return searchResult[0];
+        }
+
+        if (searchResult.length > 1) {
+            throw new Error(`Unable to find album ${albumUUID} in path ${rootPath}: Multiple matches: ${JSON.stringify(searchResult)}`);
+        }
+
+        // No match in this folder hierachy
+        return ``;
+    }
+
+    /**
+     * Writes a given album to disk & links the necessary assets
+     * @param album - The album to be written to disk
+     */
+    writeAlbum(album: Album) {
+        // Directory path of the parent folder
+        const parentPath = this.findParentPath(album)
+        // LinkedAlbum will be the visible album, with the correct name
+        const linkedAlbum = path.join(parentPath, album.getSanitizedFilename());
+        // AlbumPath will be the actual directory, having the UUID as foldername
+        const albumPath = path.join(parentPath, `.${album.getUUID()}`);
+        // Relative album path is relative to parent, not linkedAlbum
+        const relativeAlbumPath = path.relative(parentPath, albumPath);
+
+        if(fs.existsSync(linkedAlbum) || fs.existsSync(albumPath)) {
+            throw new Error(`Unable to create album ${album.getDisplayName()}: ${linkedAlbum} or ${albumPath} already exists!`)
+        }
+
+        // Creating album
+        this.logger.debug(`Creating folder ${albumPath}`);
+        fs.mkdirSync(albumPath, {"recursive": true});
+        // Symlinking to correctly named album
+        this.logger.debug(`Linking ${relativeAlbumPath} to ${linkedAlbum}`);
+        fs.symlinkSync(relativeAlbumPath, linkedAlbum);
+
+        if(album.albumType === AlbumType.ALBUM) {
+            this.linkAlbumAssets(album, albumPath)
+        }
+    }
+
+    /**
+     * Links the assets for the given album
+     * @param album - Album holding information about the linked assets
+     * @param albumPath - Album path to link assets to
+     */
+    linkAlbumAssets(album: Album, albumPath: string) {
+        Object.keys(album.assets).forEach(assetUUID => {
+            const linkedAsset = path.format({
+                "dir": albumPath,
+                "base": album.assets[assetUUID],
+            });
+            const assetPath = path.format({
+                "dir": this.assetDir,
+                "base": assetUUID,
+            });
+            // Getting asset time, in order to update link as well
+            const assetTime = fs.statSync(assetPath).mtime;
+            // Relative asset path is relativ to album, not the linkedAsset
+            const relativeAssetPath = path.relative(albumPath, assetPath);
+            this.logger.debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
+            try {
+                fs.symlinkSync(relativeAssetPath, linkedAsset);
+                fs.lutimesSync(linkedAsset, assetTime, assetTime);
+            } catch (err) {
+                this.logger.warn(`Not linking ${relativeAssetPath} to ${linkedAsset} in album ${album.getDisplayName()}: ${err.message}`);
+            }
+        });
+    }
+
+    /**
+     * Deletes the given album. The folder will only be deleted, if it contains no 'real' files
+     * @param album - The album that needs to be removed
+     */
+    deleteAlbum(album: Album) {
+        // If albumType == Archived -> Move folder to archived folder
+        this.logger.debug(`Deleting folder ${album.getDisplayName()}`);
+        // path to album
+        const albumPath = this.findAlbum(album);
+        // path to linked album
+        const linkedPath = path.normalize(`${albumPath}/../${album.getSanitizedFilename()}`); // The linked folder is one layer below
+        const pathContent = fs.readdirSync(albumPath, {"withFileTypes": true})
+            .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
+
+        if (pathContent.length > 0) {
+            throw new Error(`Album in path ${path} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
+        } 
+        
+        if (!fs.existsSync(linkedPath)) {
+            throw new Error(`Unable to find linked file, expected ${linkedPath}`);
+        }
+        fs.rmSync(albumPath, {"recursive": true});
+        fs.unlinkSync(linkedPath);
+        this.logger.debug(`Sucesfully deleted album ${album.getDisplayName()} at ${path} & ${linkedPath}`);
+    }
+
+    /**
+     * Stashes an archived album in case it was deleted/moved in the remote library
+     * @param album - The album that needs to be stashed
+     */
+    stashArchivedAlbum(album: Album) {
+
+    }
+
+    /**
+     * Tries to retrieve a previously stashed archived album
+     * @param album - The album that needs to be retrieved
+     */
+    retrieveArchivedAlbum(album: Album) {
+
     }
 }

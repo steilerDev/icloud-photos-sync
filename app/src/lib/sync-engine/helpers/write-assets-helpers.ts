@@ -29,14 +29,14 @@ export async function writeAssets(this: SyncEngine, processingQueue: PLibraryPro
  */
 export async function addAsset(this: SyncEngine, asset: Asset): Promise<void> {
     this.logger.info(`Adding asset ${asset.getDisplayName()}`);
-    if (this.photosLibrary.verifyAsset(asset)) {
-        this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
+    if (this.dryRun) {
+        this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Adding asset ${asset.getDisplayName()} from ${asset.downloadURL}`);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
         return;
     }
 
-    if (this.dryRun) {
-        this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Adding asset ${asset.getDisplayName()} from ${asset.downloadURL}`);
+    if (this.photosLibrary.verifyAsset(asset)) {
+        this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
         return;
     }
