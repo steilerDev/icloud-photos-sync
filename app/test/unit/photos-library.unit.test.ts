@@ -4,7 +4,7 @@ import {expect, describe, test, afterEach} from '@jest/globals';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 import {ASSET_DIR, ARCHIVE_DIR, SAFE_FILES} from '../../src/lib/photos-library/constants';
 import path from 'path';
-import {AlbumType} from '../../src/lib/photos-library/model/album';
+import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import mock from 'mock-fs';
@@ -799,15 +799,197 @@ describe(`Unit Tests - Photos Library`, () => {
             });
 
             describe(`Create albums`, () => {
-                test.todo(`Create & link album`);
-                test.todo(`Create & link album - already exists`);
-                test.todo(`Link album assets - No assets`);
-                test.todo(`Link album assets - Multiple assets`);
+                test(`Create & link folder - Root`, () => {
+                    mockfs({
+                        [photosDataDir]: {},
+                    });
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+                    const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
+                    const library = photosLibraryFactory();
+                    library.writeAlbum(folder);
+                    const uuidFolder = fs.statSync(path.join(photosDataDir, `.${albumUUID}`));
+                    const namedFolder = fs.lstatSync(path.join(photosDataDir, albumName));
+                    const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, albumName));
+                    expect(uuidFolder.isDirectory()).toBeTruthy();
+                    expect(namedFolder.isSymbolicLink()).toBeTruthy();
+                    expect(namedFolderTarget).toEqual(`.${albumUUID}`);
+                });
 
-                test.todo(`Write album - Invalid parent`);
-                test.todo(`Write album - Root`);
-                test.todo(`Write album - Subdir`);
+                test(`Create & Link folder - Subdir`, () => {
+                    const parentUUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
+                    const parentName = `Memories`;
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `2021`;
+                    mockfs({
+                        [photosDataDir]: {
+                            [`.${parentUUID}`]: {},
+                            [parentName]: mockfs.symlink({
+                                "path": `.${parentUUID}`,
+                            }),
+                        },
+                    });
+                    const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, parentUUID);
+                    const library = photosLibraryFactory();
+
+                    library.writeAlbum(folder);
+
+                    const uuidFolder = fs.statSync(path.join(photosDataDir, `.${parentUUID}`, `.${albumUUID}`));
+                    const namedFolder = fs.lstatSync(path.join(photosDataDir, `.${parentUUID}`, albumName));
+                    const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, parentName, albumName));
+                    expect(uuidFolder.isDirectory()).toBeTruthy();
+                    expect(namedFolder.isSymbolicLink()).toBeTruthy();
+                    expect(namedFolderTarget).toEqual(`.${albumUUID}`);
+                });
+
+                test(`Create & link folder - already exists`, () => {
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+                    mockfs({
+                        [photosDataDir]: {
+                            [`.${albumUUID}`]: {},
+                            [albumName]: mockfs.symlink({
+                                "path": `.${albumUUID}`,
+                            }),
+                        },
+                    });
+                    const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
+                    const library = photosLibraryFactory();
+                    expect(() => library.writeAlbum(folder)).toThrowError(`already exists`);
+                });
+
+                test(`Create & Link folder - Invalid parent`, () => {
+                    const parentUUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+                    mockfs({
+                        [photosDataDir]: {},
+                    });
+                    const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, parentUUID);
+                    const library = photosLibraryFactory();
+                    expect(() => library.writeAlbum(folder)).toThrowError(`Unable to find album`);
+                });
+
+                test(`Create & link album - no assets`, () => {
+                    mockfs({
+                        [photosDataDir]: {},
+                    });
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+                    const folder = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
+                    const library = photosLibraryFactory();
+
+                    library.writeAlbum(folder);
+
+                    const uuidFolder = fs.statSync(path.join(photosDataDir, `.${albumUUID}`));
+                    const namedFolder = fs.lstatSync(path.join(photosDataDir, albumName));
+                    const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, albumName));
+                    expect(uuidFolder.isDirectory()).toBeTruthy();
+                    expect(namedFolder.isSymbolicLink()).toBeTruthy();
+                    expect(namedFolderTarget).toEqual(`.${albumUUID}`);
+                });
+
+                test(`Create & link album - multiple assets`, () => {
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+
+                    const albumAsset1PrettyFilename = `2h-media-MOCpD78SHW0-unsplash.jpeg`;
+                    const albumAsset1Filename = `AexevMtFb8wMSLb78udseVvLv-m2.jpeg`;
+                    const albumAsset1mTime = 1640995200000; // 01.01.2022
+                    const albumAsset2PrettyFilename = `2h-media-Q_x3Equ11Jk-unsplash.jpeg`;
+                    const albumAsset2Filename = `AZmQ91f-NKAp5b67HE23Fqhjt5NO.jpeg`;
+                    const albumAsset2mTime = 1609459200000; // 01.01.2021
+                    const albumAsset3PrettyFilename = `aditya-vyas-pbY2DCN1Atk-unsplash-edited.jpeg`;
+                    const albumAsset3Filename = `AXDMJGQac7vQa1exGBIEFkvZoIWL.jpeg`;
+                    const albumAsset3mTime = 1577836800000; // 01.01.2020
+                    const albumAsset4PrettyFilename = `aditya-vyas-pbY2DCN1Atk-unsplash.jpeg`;
+                    const albumAsset4Filename = `AQcZhJl1ZIGYuUtKNYDBI_b7MYpN.jpeg`;
+                    const albumAsset4mTime = 1546300800000; // 01.01.2019
+
+                    mockfs({
+                        [photosDataDir]: {
+                            [ASSET_DIR]: {
+                                [albumAsset1Filename]: mockfs.file({
+                                    "mtime": new Date(albumAsset1mTime),
+                                    "content": Buffer.from([1, 1, 1, 1]),
+                                }),
+                                [albumAsset2Filename]: mockfs.file({
+                                    "mtime": new Date(albumAsset2mTime),
+                                    "content": Buffer.from([1, 1, 1, 1]),
+                                }),
+                                [albumAsset3Filename]: mockfs.file({
+                                    "mtime": new Date(albumAsset3mTime),
+                                    "content": Buffer.from([1, 1, 1, 1]),
+                                }),
+                                [albumAsset4Filename]: mockfs.file({
+                                    "mtime": new Date(albumAsset4mTime),
+                                    "content": Buffer.from([1, 1, 1, 1]),
+                                }),
+                            },
+                        },
+                    });
+
+                    const albumAssets = {
+                        [albumAsset1Filename]: albumAsset1PrettyFilename,
+                        [albumAsset2Filename]: albumAsset2PrettyFilename,
+                        [albumAsset3Filename]: albumAsset3PrettyFilename,
+                        [albumAsset4Filename]: albumAsset4PrettyFilename,
+                    };
+
+                    const folder = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
+                    folder.assets = albumAssets;
+                    const library = photosLibraryFactory();
+
+                    library.writeAlbum(folder);
+
+                    const uuidFolder = fs.statSync(path.join(photosDataDir, `.${albumUUID}`));
+                    const namedFolder = fs.lstatSync(path.join(photosDataDir, albumName));
+                    const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, albumName));
+                    expect(uuidFolder.isDirectory()).toBeTruthy();
+                    expect(namedFolder.isSymbolicLink()).toBeTruthy();
+                    expect(namedFolderTarget).toEqual(`.${albumUUID}`);
+
+                    const albumAsset1Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
+                    const albumAsset1Stat = fs.lstatSync(albumAsset1Path);
+                    expect(albumAsset1Stat.isSymbolicLink()).toBeTruthy();
+                    // Lutimes support lacking in mock-fs see https://github.com/tschaub/mock-fs/issues/365
+                    // expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime))
+                    const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
+                    expect(albumAsset1Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset1Filename));
+
+                    const albumAsset2Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
+                    const albumAsset2Stat = fs.lstatSync(albumAsset2Path);
+                    expect(albumAsset2Stat.isSymbolicLink()).toBeTruthy();
+                    // Lutimes support lacking in mock-fs see https://github.com/tschaub/mock-fs/issues/365
+                    // expect(albumAsset2Stat.mtime).toEqual(new Date(albumAsset2mTime))
+                    const albumAsset2Target = fs.readlinkSync(albumAsset2Path);
+                    expect(albumAsset2Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset2Filename));
+
+                    const albumAsset3Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset3PrettyFilename);
+                    const albumAsset3Stat = fs.lstatSync(albumAsset3Path);
+                    expect(albumAsset3Stat.isSymbolicLink()).toBeTruthy();
+                    // Lutimes support lacking in mock-fs see https://github.com/tschaub/mock-fs/issues/365
+                    // expect(albumAsset3Stat.mtime).toEqual(new Date(albumAsset3mTime))
+                    const albumAsset3Target = fs.readlinkSync(albumAsset3Path);
+                    expect(albumAsset3Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset3Filename));
+
+                    const albumAsset4Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset4PrettyFilename);
+                    const albumAsset4Stat = fs.lstatSync(albumAsset4Path);
+                    expect(albumAsset4Stat.isSymbolicLink()).toBeTruthy();
+                    // Lutimes support lacking in mock-fs see https://github.com/tschaub/mock-fs/issues/365
+                    // expect(albumAsset4Stat.mtime).toEqual(new Date(albumAsset4mTime))
+                    const albumAsset4Target = fs.readlinkSync(albumAsset4Path);
+                    expect(albumAsset4Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset4Filename));
+                });
             });
+
+            describe(`Delete albums`, () => {
+                test.todo(`Delete folder`)
+                test.todo(`Delete non-empty folder (non-safe files)`)
+                test.todo(`Delete non-empty folder (safe files)`)
+                test.todo(`Only pretty folder exists`)
+                test.todo(`Only UUID folder exists`)
+            })
 
             describe(`Archived albums`, () => {
                 test.todo(`Stash album - Empty album`);
