@@ -5,11 +5,10 @@ import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 import {ASSET_DIR, ARCHIVE_DIR, SAFE_FILES} from '../../src/lib/photos-library/constants';
 import path from 'path';
 import {AlbumType} from '../../src/lib/photos-library/model/album';
-import { Asset } from '../../src/lib/photos-library/model/asset';
-import { FileType } from '../../src/lib/photos-library/model/file-type';
-import { file } from 'mock-fs/lib/filesystem';
+import {Asset} from '../../src/lib/photos-library/model/asset';
+import {FileType} from '../../src/lib/photos-library/model/file-type';
 import mock from 'mock-fs';
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, {AxiosRequestConfig} from 'axios';
 
 const photosDataDir = `/media/files/photos-library`;
 const assetDir = path.join(photosDataDir, ASSET_DIR);
@@ -263,10 +262,11 @@ describe(`Unit Tests - Photos Library`, () => {
                 const emptyAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const emptyAlbumName = `Stuff`;
 
-                const files: any = {}
+                const files: any = {};
                 for (const safeFileName of SAFE_FILES) {
-                    files[safeFileName] = Buffer.from([1])
+                    files[safeFileName] = Buffer.from([1]);
                 }
+
                 mockfs({
                     [photosDataDir]: {
                         [`.${emptyAlbumUUID}`]: files,
@@ -292,10 +292,11 @@ describe(`Unit Tests - Photos Library`, () => {
             test(`Load nested state`, async () => {
                 const emptyAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const emptyAlbumName = `Stuff`;
-                const files: any = {}
+                const files: any = {};
                 for (const safeFileName of SAFE_FILES) {
-                    files[safeFileName] = Buffer.from([1])
+                    files[safeFileName] = Buffer.from([1]);
                 }
+
                 const folderUUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
                 const folderName = `Memories`;
                 const folderedFolderUUID = `6e7f4f44-445a-41ee-a87e-844a9109069d`;
@@ -361,169 +362,168 @@ describe(`Unit Tests - Photos Library`, () => {
 
                 expect(Object.keys(albums).length).toEqual(5);
 
-                const emptyAlbum = albums[emptyAlbumUUID]
-                expect(emptyAlbum).toBeDefined()
-                expect(emptyAlbum.albumType).toEqual(AlbumType.ALBUM)
-                expect(Object.keys(emptyAlbum.assets).length).toEqual(0)
+                const emptyAlbum = albums[emptyAlbumUUID];
+                expect(emptyAlbum).toBeDefined();
+                expect(emptyAlbum.albumType).toEqual(AlbumType.ALBUM);
+                expect(Object.keys(emptyAlbum.assets).length).toEqual(0);
 
-                const folder = albums[folderUUID]
-                expect(folder).toBeDefined()
-                expect(folder.albumType).toEqual(AlbumType.FOLDER)
-                expect(Object.keys(folder.assets).length).toEqual(0)
+                const folder = albums[folderUUID];
+                expect(folder).toBeDefined();
+                expect(folder.albumType).toEqual(AlbumType.FOLDER);
+                expect(Object.keys(folder.assets).length).toEqual(0);
 
-                const folderedFolder = albums[folderedFolderUUID]
-                expect(folderedFolder).toBeDefined()
-                expect(folderedFolder.albumType).toEqual(AlbumType.FOLDER)
-                expect(Object.keys(folderedFolder.assets).length).toEqual(0)
+                const folderedFolder = albums[folderedFolderUUID];
+                expect(folderedFolder).toBeDefined();
+                expect(folderedFolder.albumType).toEqual(AlbumType.FOLDER);
+                expect(Object.keys(folderedFolder.assets).length).toEqual(0);
 
-                const nonEmptyAlbum = albums[nonEmptyAlbumUUID]
-                expect(nonEmptyAlbum).toBeDefined()
-                expect(nonEmptyAlbum.albumType).toEqual(AlbumType.ALBUM)
-                expect(Object.keys(nonEmptyAlbum.assets).length).toEqual(4)
+                const nonEmptyAlbum = albums[nonEmptyAlbumUUID];
+                expect(nonEmptyAlbum).toBeDefined();
+                expect(nonEmptyAlbum.albumType).toEqual(AlbumType.ALBUM);
+                expect(Object.keys(nonEmptyAlbum.assets).length).toEqual(4);
 
-                const archivedAlbum = albums[archivedUUID]
-                expect(archivedAlbum).toBeDefined()
-                expect(archivedAlbum.albumType).toEqual(AlbumType.ARCHIVED)
-                expect(Object.keys(archivedAlbum.assets).length).toEqual(0)
+                const archivedAlbum = albums[archivedUUID];
+                expect(archivedAlbum).toBeDefined();
+                expect(archivedAlbum.albumType).toEqual(AlbumType.ARCHIVED);
+                expect(Object.keys(archivedAlbum.assets).length).toEqual(0);
             });
-
         });
     });
 
     describe(`Write state`, () => {
         describe(`Write assets`, () => {
             test(`Succesfully verify asset`, () => {
-                const assetFileName = "Aa7_yox97ecSUNmVw0xP4YzIDDKf"
-                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`)
-                const assetExt = "jpeg"
-                const assetData = Buffer.from([1, 1, 1, 1])
-                const assetMTime = 1640995200000 // 01.01.2022
-                const fileType = FileType.fromExtension(assetExt)
+                const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
+                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
+                const assetExt = `jpeg`;
+                const assetData = Buffer.from([1, 1, 1, 1]);
+                const assetMTime = 1640995200000; // 01.01.2022
+                const fileType = FileType.fromExtension(assetExt);
                 mockfs({
-                    [assetDir] : {
+                    [assetDir]: {
                         [`${assetFileName}.${assetExt}`]: mock.file({
-                            content: assetData,
-                            mtime: new Date(assetMTime)
+                            "content": assetData,
+                            "mtime": new Date(assetMTime),
                         }),
-                    }
-                })
-                
+                    },
+                });
+
                 const library = photosLibraryFactory();
-                const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime)
-                expect(library.verifyAsset(asset)).toBeTruthy()
+                const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
+                expect(library.verifyAsset(asset)).toBeTruthy();
             });
 
             test(`Reject unverifiable asset - Wrong Size`, () => {
-                const assetFileName = "Aa7_yox97ecSUNmVw0xP4YzIDDKf"
-                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`)
-                const assetExt = "jpeg"
-                const assetData = Buffer.from([1, 1, 1, 1])
-                const assetMTime = 1640995200000 // 01.01.2022
-                const fileType = FileType.fromExtension(assetExt)
+                const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
+                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
+                const assetExt = `jpeg`;
+                const assetData = Buffer.from([1, 1, 1, 1]);
+                const assetMTime = 1640995200000; // 01.01.2022
+                const fileType = FileType.fromExtension(assetExt);
                 mockfs({
-                    [assetDir] : {
+                    [assetDir]: {
                         [`${assetFileName}.${assetExt}`]: mock.file({
-                            content: assetData,
-                            mtime: new Date(assetMTime)
+                            "content": assetData,
+                            "mtime": new Date(assetMTime),
                         }),
-                    }
-                })
-                
+                    },
+                });
+
                 const library = photosLibraryFactory();
-                const asset = new Asset(assetChecksum, 1, fileType, assetMTime)
-                expect(library.verifyAsset(asset)).toBeFalsy()
-            })
+                const asset = new Asset(assetChecksum, 1, fileType, assetMTime);
+                expect(library.verifyAsset(asset)).toBeFalsy();
+            });
 
             test(`Reject unverifiable asset - Wrong MTime`, () => {
-                const assetFileName = "Aa7_yox97ecSUNmVw0xP4YzIDDKf"
-                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`)
-                const assetExt = "jpeg"
-                const assetData = Buffer.from([1, 1, 1, 1])
-                const assetMTime = 1640995200000 // 01.01.2022
-                const fileType = FileType.fromExtension(assetExt)
+                const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
+                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
+                const assetExt = `jpeg`;
+                const assetData = Buffer.from([1, 1, 1, 1]);
+                const assetMTime = 1640995200000; // 01.01.2022
+                const fileType = FileType.fromExtension(assetExt);
                 mockfs({
-                    [assetDir] : {
+                    [assetDir]: {
                         [`${assetFileName}.${assetExt}`]: mock.file({
-                            content: assetData,
-                            mtime: new Date(assetMTime)
+                            "content": assetData,
+                            "mtime": new Date(assetMTime),
                         }),
-                    }
-                })
-                
+                    },
+                });
+
                 const library = photosLibraryFactory();
-                const asset = new Asset(assetChecksum, assetData.length, fileType, 0)
-                expect(library.verifyAsset(asset)).toBeFalsy()
-            })
+                const asset = new Asset(assetChecksum, assetData.length, fileType, 0);
+                expect(library.verifyAsset(asset)).toBeFalsy();
+            });
 
             // Checksum verification is currently not understood/implemented. Therefore skipping
             test.skip(`Reject unverifiable asset - Wrong Checksum`, () => {
-                const assetFileName = "Aa7_yox97ecSUNmVw0xP4YzIDDKf"
-                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`)
-                const assetExt = "jpeg"
-                const assetData = Buffer.from([1, 1, 1, 1])
-                const assetMTime = 1640995200000 // 01.01.2022
-                const fileType = FileType.fromExtension(assetExt)
+                const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
+                const _assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
+                const assetExt = `jpeg`;
+                const assetData = Buffer.from([1, 1, 1, 1]);
+                const assetMTime = 1640995200000; // 01.01.2022
+                const fileType = FileType.fromExtension(assetExt);
                 mockfs({
-                    [assetDir] : {
+                    [assetDir]: {
                         [`${assetFileName}.${assetExt}`]: mock.file({
-                            content: assetData,
-                            mtime: new Date(assetMTime)
+                            "content": assetData,
+                            "mtime": new Date(assetMTime),
                         }),
-                    }
-                })
-                
+                    },
+                });
+
                 const library = photosLibraryFactory();
-                const asset = new Asset("asdf", assetData.length, fileType, assetMTime)
-                expect(library.verifyAsset(asset)).toBeFalsy()
-            })
+                const asset = new Asset(`asdf`, assetData.length, fileType, assetMTime);
+                expect(library.verifyAsset(asset)).toBeFalsy();
+            });
 
             test(`Write asset`, async () => {
-                // downloading banner of this repo
-                const url = "https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png"
+                // Downloading banner of this repo
+                const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
                 const config: AxiosRequestConfig = {
                     "responseType": `stream`,
                 };
-                const fileName = "asdf"
-                const ext = "png"
+                const fileName = `asdf`;
+                const ext = `png`;
                 const asset = new Asset(
                     fileName,
                     82215,
                     FileType.fromExtension(ext),
-                    42
-                )
+                    42,
+                );
                 mockfs({
-                    [assetDir] : {}
-                })
+                    [assetDir]: {},
+                });
 
-                const library = photosLibraryFactory()
+                const library = photosLibraryFactory();
                 const response = await axios.get(url, config);
-                await library.writeAsset(asset, response)
-                const assetPath = path.join(assetDir, `${fileName}.${ext}`)
-                expect(fs.existsSync(assetPath)).toBeTruthy()
-                expect(fs.readFileSync(assetPath).length).toBeGreaterThan(0)
+                await library.writeAsset(asset, response);
+                const assetPath = path.join(assetDir, `${fileName}.${ext}`);
+                expect(fs.existsSync(assetPath)).toBeTruthy();
+                expect(fs.readFileSync(assetPath).length).toBeGreaterThan(0);
             });
 
             test(`Delete asset`, async () => {
-                const assetFileName = "Aa7_yox97ecSUNmVw0xP4YzIDDKf"
-                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`)
-                const assetExt = "jpeg"
-                const assetData = Buffer.from([1, 1, 1, 1])
-                const assetMTime = 1640995200000 // 01.01.2022
-                const fileType = FileType.fromExtension(assetExt)
-                const assetFullFilename = `${assetFileName}.${assetExt}`
+                const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
+                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
+                const assetExt = `jpeg`;
+                const assetData = Buffer.from([1, 1, 1, 1]);
+                const assetMTime = 1640995200000; // 01.01.2022
+                const fileType = FileType.fromExtension(assetExt);
+                const assetFullFilename = `${assetFileName}.${assetExt}`;
                 mockfs({
-                    [assetDir] : {
+                    [assetDir]: {
                         [assetFullFilename]: mock.file({
-                            content: assetData,
-                            mtime: new Date(assetMTime)
+                            "content": assetData,
+                            "mtime": new Date(assetMTime),
                         }),
-                    }
-                })
-                
+                    },
+                });
+
                 const library = photosLibraryFactory();
-                const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime)
-                await library.deleteAsset(asset)
-                expect(fs.existsSync(path.join(assetDir, assetFullFilename))).toBeFalsy()
+                const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
+                await library.deleteAsset(asset);
+                expect(fs.existsSync(path.join(assetDir, assetFullFilename))).toBeFalsy();
             });
         });
 
@@ -541,10 +541,10 @@ describe(`Unit Tests - Photos Library`, () => {
                             }),
                         },
                     });
-                    const library = photosLibraryFactory()
-                    const relativePath = library.findAlbumByUUIDInPath(albumUUID, photosDataDir)
-                    expect(relativePath).toEqual(`.${albumUUID}`)
-                })
+                    const library = photosLibraryFactory();
+                    const relativePath = library.findAlbumByUUIDInPath(albumUUID, photosDataDir);
+                    expect(relativePath).toEqual(`.${albumUUID}`);
+                });
 
                 test(`Find album in sub-directory`, () => {
                     const folderUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -566,9 +566,9 @@ describe(`Unit Tests - Photos Library`, () => {
                     });
 
                     const library = photosLibraryFactory();
-                    const relativePath = library.findAlbumByUUIDInPath(folderedAlbumUUID, photosDataDir)
-                    expect(relativePath).toEqual(`.${folderUUID}/.${folderedAlbumUUID}`)
-                })
+                    const relativePath = library.findAlbumByUUIDInPath(folderedAlbumUUID, photosDataDir);
+                    expect(relativePath).toEqual(`.${folderUUID}/.${folderedAlbumUUID}`);
+                });
 
                 test(`Find album in multibranch sub-directory`, () => {
                     const folder1UUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -591,8 +591,8 @@ describe(`Unit Tests - Photos Library`, () => {
                     const folderedAlbum6UUID = `6e7f4f44-445a-41ee-a87e-844a91090693`;
                     const folderedAlbum6Name = `2027`;
 
-                    const searchAlbumUUID = `6e7f4f44-445a-41ee-a87e-844a91090694`
-                    const searchAlbumName = `2042`
+                    const searchAlbumUUID = `6e7f4f44-445a-41ee-a87e-844a91090694`;
+                    const searchAlbumName = `2042`;
 
                     mockfs({
                         [photosDataDir]: {
@@ -650,9 +650,9 @@ describe(`Unit Tests - Photos Library`, () => {
                     });
 
                     const library = photosLibraryFactory();
-                    const relativePath = library.findAlbumByUUIDInPath(searchAlbumUUID, photosDataDir)
-                    expect(relativePath).toEqual(`.${folder3UUID}/.${folderedAlbum6UUID}/.${searchAlbumUUID}`)
-                })
+                    const relativePath = library.findAlbumByUUIDInPath(searchAlbumUUID, photosDataDir);
+                    expect(relativePath).toEqual(`.${folder3UUID}/.${folderedAlbum6UUID}/.${searchAlbumUUID}`);
+                });
 
                 test(`Find album in multibranch sub-directory: Duplicate UUIDs`, () => {
                     const folder1UUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -689,8 +689,8 @@ describe(`Unit Tests - Photos Library`, () => {
                     });
 
                     const library = photosLibraryFactory();
-                    expect(() => library.findAlbumByUUIDInPath(searchAlbumUUID, photosDataDir)).toThrowError('Multiple matches')
-                })
+                    expect(() => library.findAlbumByUUIDInPath(searchAlbumUUID, photosDataDir)).toThrowError(`Multiple matches`);
+                });
 
                 test(`Find album in multibranch sub-directory: Album does not exist`, () => {
                     const folder1UUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -713,7 +713,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     const folderedAlbum6UUID = `6e7f4f44-445a-41ee-a87e-844a91090693`;
                     const folderedAlbum6Name = `2027`;
 
-                    const searchAlbumUUID = `6e7f4f44-445a-41ee-a87e-844a91090694`
+                    const searchAlbumUUID = `6e7f4f44-445a-41ee-a87e-844a91090694`;
 
                     mockfs({
                         [photosDataDir]: {
@@ -766,9 +766,9 @@ describe(`Unit Tests - Photos Library`, () => {
                     });
 
                     const library = photosLibraryFactory();
-                    const relativePath = library.findAlbumByUUIDInPath(searchAlbumUUID, photosDataDir)
-                    expect(relativePath.length).toEqual(0)
-                })
+                    const relativePath = library.findAlbumByUUIDInPath(searchAlbumUUID, photosDataDir);
+                    expect(relativePath.length).toEqual(0);
+                });
 
                 test(`Get full path for existing album`, () => {
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -782,10 +782,10 @@ describe(`Unit Tests - Photos Library`, () => {
                             }),
                         },
                     });
-                    const library = photosLibraryFactory()
-                    const relativePath = library.findAlbumByUUID(albumUUID)
-                    expect(relativePath).toEqual(`${photosDataDir}/.${albumUUID}`)
-                })
+                    const library = photosLibraryFactory();
+                    const relativePath = library.findAlbumByUUID(albumUUID);
+                    expect(relativePath).toEqual(`${photosDataDir}/.${albumUUID}`);
+                });
 
                 test(`Get full path for non-existing album`, () => {
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -793,31 +793,30 @@ describe(`Unit Tests - Photos Library`, () => {
                     mockfs({
                         [photosDataDir]: {},
                     });
-                    const library = photosLibraryFactory()
-                    expect(() => library.findAlbumByUUID(albumUUID)).toThrowError('Unable to find album')
-                })
-            })
+                    const library = photosLibraryFactory();
+                    expect(() => library.findAlbumByUUID(albumUUID)).toThrowError(`Unable to find album`);
+                });
+            });
 
             describe(`Create albums`, () => {
-                test.todo(`Create & link album`)
-                test.todo(`Create & link album - already exists`)
-                test.todo(`Link album assets - No assets`)
-                test.todo(`Link album assets - Multiple assets`)
+                test.todo(`Create & link album`);
+                test.todo(`Create & link album - already exists`);
+                test.todo(`Link album assets - No assets`);
+                test.todo(`Link album assets - Multiple assets`);
 
-                test.todo(`Write album - Invalid parent`)
-                test.todo(`Write album - Root`)
-                test.todo(`Write album - Subdir`)
-            })
+                test.todo(`Write album - Invalid parent`);
+                test.todo(`Write album - Root`);
+                test.todo(`Write album - Subdir`);
+            });
 
             describe(`Archived albums`, () => {
-                test.todo(`Stash album - Empty album`)
-                test.todo(`Stash album - Non-empty album`)
-                test.todo(`Stash album - Album already in stash`)
-                test.todo(`Retrieve stashed album - Empty album`)
-                test.todo(`Retrieve stashed album - Non-empty album`)
-                test.todo(`Retrieve stashed album - Album not in stash`)
-            })
-        })
+                test.todo(`Stash album - Empty album`);
+                test.todo(`Stash album - Non-empty album`);
+                test.todo(`Stash album - Album already in stash`);
+                test.todo(`Retrieve stashed album - Empty album`);
+                test.todo(`Retrieve stashed album - Non-empty album`);
+                test.todo(`Retrieve stashed album - Album not in stash`);
+            });
+        });
     });
-
 });

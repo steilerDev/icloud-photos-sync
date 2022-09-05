@@ -198,7 +198,7 @@ export class Asset implements PEntity<Asset> {
      * @returns True if the provided file matches this object representation
      */
     verify(file: Buffer, fileStats: Stats): boolean {
-        return this.verifyChecksum(file) && this.verifySize(file) && this.verifyMTime(fileStats)
+        return this.verifyChecksum(file) && this.verifySize(file) && this.verifyMTime(fileStats);
     }
 
     /**
@@ -206,8 +206,8 @@ export class Asset implements PEntity<Asset> {
      * @param fileStats - The file stats object to investigate the metadata
      * @returns True if the modified time matches
      */
-    private verifyMTime(fileStats: Stats):  boolean {
-        return fileStats.mtimeMs === this.modified
+    private verifyMTime(fileStats: Stats): boolean {
+        return fileStats.mtimeMs === this.modified;
     }
 
     /**

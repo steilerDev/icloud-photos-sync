@@ -36,19 +36,19 @@ export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryPro
 export function addAlbum(this: SyncEngine, album: Album) {
     // If albumType == Archive -> Check in 'archivedFolder' and move
     this.logger.debug(`Creating album ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
-    
-    if(this.dryRun) {
-        this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Creating ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`)
-        return
+
+    if (this.dryRun) {
+        this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Creating ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
+        return;
     }
 
-    if(album.albumType === AlbumType.ARCHIVED) {
-        this.photosLibrary.retrieveArchivedAlbum(album)
-        return
+    if (album.albumType === AlbumType.ARCHIVED) {
+        this.photosLibrary.retrieveArchivedAlbum(album);
+        return;
     }
 
     try {
-        this.photosLibrary.writeAlbum(album)
+        this.photosLibrary.writeAlbum(album);
     } catch (err) {
         this.logger.warn(`Unable to add album ${album.getDisplayName()}: ${err.message}`);
     }
@@ -63,15 +63,16 @@ export function removeAlbum(this: SyncEngine, album: Album) {
     this.logger.debug(`Removing album ${album.getDisplayName()}`);
     if (this.dryRun) {
         this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Deleting folder ${album.getDisplayName}`);
-        return
+        return;
     }
 
-    if(album.albumType === AlbumType.ARCHIVED) {
-        this.photosLibrary.stashArchivedAlbum(album)
-        return
+    if (album.albumType === AlbumType.ARCHIVED) {
+        this.photosLibrary.stashArchivedAlbum(album);
+        return;
     }
+
     try {
-        this.photosLibrary.deleteAlbum(album)
+        this.photosLibrary.deleteAlbum(album);
     } catch (err) {
         this.logger.warn(`Unable to delete album ${album.getDisplayName()}: ${err.message}`);
     }

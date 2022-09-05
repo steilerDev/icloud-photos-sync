@@ -37,5 +37,13 @@
         "no-unreachable": "warn",
         "default-case-last": "off",
         "no-debugger": "warn"
-    }
+    },
+    "overrides": [
+        {
+            "files": ["*.test.ts"],
+            "rules": {
+                "max-nested-callbacks": "off"
+            }
+        }
+    ]
 }

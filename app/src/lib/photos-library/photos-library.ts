@@ -100,6 +100,7 @@ export class PhotosLibrary {
         if (album.albumType === AlbumType.ARCHIVED) {
             return [album];
         }
+
         const albums: Album[] = [];
 
         // Not adding dummy album
@@ -187,6 +188,7 @@ export class PhotosLibrary {
                 if (!this.verifyAsset(asset)) {
                     throw new Error(`Unable to verify asset ${asset.getDisplayName()}`);
                 }
+
                 this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
             });
     }
@@ -220,10 +222,11 @@ export class PhotosLibrary {
      * @throws An error if the folder could not be found
      */
     findParentPath(album: Album): string {
-        if(!album.parentAlbumUUID) {
-            return this.photoDataDir
+        if (!album.parentAlbumUUID) {
+            return this.photoDataDir;
         }
-        return this.findAlbumByUUID(album.parentAlbumUUID)
+
+        return this.findAlbumByUUID(album.parentAlbumUUID);
     }
 
     /**
@@ -233,7 +236,7 @@ export class PhotosLibrary {
      * @throws An error if the folder could not be found
      */
     findAlbum(album: Album): string {
-        return this.findAlbumByUUID(album.getUUID())
+        return this.findAlbumByUUID(album.getUUID());
     }
 
     /**
@@ -244,9 +247,10 @@ export class PhotosLibrary {
      */
     findAlbumByUUID(albumUUID: string): string {
         const relativeFolderPath = this.findAlbumByUUIDInPath(albumUUID, this.photoDataDir);
-        if(relativeFolderPath.length === 0) {
-            throw new Error(`Unable to find album ${albumUUID}`)
+        if (relativeFolderPath.length === 0) {
+            throw new Error(`Unable to find album ${albumUUID}`);
         }
+
         return path.join(this.photoDataDir, relativeFolderPath);
     }
 
@@ -299,7 +303,7 @@ export class PhotosLibrary {
      */
     writeAlbum(album: Album) {
         // Directory path of the parent folder
-        const parentPath = this.findParentPath(album)
+        const parentPath = this.findParentPath(album);
         // LinkedAlbum will be the visible album, with the correct name
         const linkedAlbum = path.join(parentPath, album.getSanitizedFilename());
         // AlbumPath will be the actual directory, having the UUID as foldername
@@ -307,8 +311,8 @@ export class PhotosLibrary {
         // Relative album path is relative to parent, not linkedAlbum
         const relativeAlbumPath = path.relative(parentPath, albumPath);
 
-        if(fs.existsSync(linkedAlbum) || fs.existsSync(albumPath)) {
-            throw new Error(`Unable to create album ${album.getDisplayName()}: ${linkedAlbum} or ${albumPath} already exists!`)
+        if (fs.existsSync(linkedAlbum) || fs.existsSync(albumPath)) {
+            throw new Error(`Unable to create album ${album.getDisplayName()}: ${linkedAlbum} or ${albumPath} already exists!`);
         }
 
         // Creating album
@@ -318,8 +322,8 @@ export class PhotosLibrary {
         this.logger.debug(`Linking ${relativeAlbumPath} to ${linkedAlbum}`);
         fs.symlinkSync(relativeAlbumPath, linkedAlbum);
 
-        if(album.albumType === AlbumType.ALBUM) {
-            this.linkAlbumAssets(album, albumPath)
+        if (album.albumType === AlbumType.ALBUM) {
+            this.linkAlbumAssets(album, albumPath);
         }
     }
 
@@ -359,20 +363,21 @@ export class PhotosLibrary {
     deleteAlbum(album: Album) {
         // If albumType == Archived -> Move folder to archived folder
         this.logger.debug(`Deleting folder ${album.getDisplayName()}`);
-        // path to album
+        // Path to album
         const albumPath = this.findAlbum(album);
-        // path to linked album
+        // Path to linked album
         const linkedPath = path.normalize(`${albumPath}/../${album.getSanitizedFilename()}`); // The linked folder is one layer below
         const pathContent = fs.readdirSync(albumPath, {"withFileTypes": true})
             .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
 
         if (pathContent.length > 0) {
             throw new Error(`Album in path ${path} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
-        } 
-        
+        }
+
         if (!fs.existsSync(linkedPath)) {
             throw new Error(`Unable to find linked file, expected ${linkedPath}`);
         }
+
         fs.rmSync(albumPath, {"recursive": true});
         fs.unlinkSync(linkedPath);
         this.logger.debug(`Sucesfully deleted album ${album.getDisplayName()} at ${path} & ${linkedPath}`);

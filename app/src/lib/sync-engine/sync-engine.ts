@@ -96,7 +96,8 @@ export class SyncEngine extends EventEmitter {
                     // Checking if we should retry
                     if (this.checkFatalError(err)) {
                         throw err;
-                    } 
+                    }
+
                     this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
                     await this.prepareRetry();
                 }
@@ -120,6 +121,7 @@ export class SyncEngine extends EventEmitter {
             this.logger.warn(`Unknown error (${JSON.stringify(err)}), aborting!`);
             return true;
         }
+
         this.logger.debug(`Detected Axios error`);
 
         if (err.code !== `ERR_BAD_REQUEST` && err.code !== `ERR_BAD_RESPONSE`) {
@@ -132,7 +134,7 @@ export class SyncEngine extends EventEmitter {
             return false;
         }
 
-        this.logger.debug(`Error was due to a bad request`)
+        this.logger.debug(`Error was due to a bad request`);
         if (err.response?.status === 410 || err.response?.status === 421) {
             this.logger.debug(`Remote ressources have changed location, updating URLs by retrying...`);
             // This seems to happen ever 60mins
