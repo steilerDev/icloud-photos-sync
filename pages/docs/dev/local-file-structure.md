@@ -22,6 +22,6 @@ Every user folder has two components:
   * A link with the display name of the folder/album, which links to
   * A folder containing the data, named after the UUID of the folder (and hidden: `.{UUID}`)
 
-For each asset within an album, a link to the asset dir is created. Naming is based on the filename, provided by iCloud. Original files don't have a suffix, edits are suffixed with `-edited` ([See src](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/src/lib/photos-library/model/asset.ts#L179)), live photos tbd.
+For each asset within an album, a link to the asset dir is created. Naming is based on the filename, provided by iCloud. Original files don't have a suffix, edits are suffixed with `-edited`, live photos are suffixed with `-live` ([eee src](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/src/lib/photos-library/model/asset.ts#L179)).
 
 If a user folder contains a non-safe file (see [Safe Files](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/src/lib/photos-library/constants.ts)), this marks the folder as archived, and its content is ignored upon future syncs.
