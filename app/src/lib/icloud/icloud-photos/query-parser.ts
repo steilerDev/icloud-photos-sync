@@ -145,9 +145,9 @@ export class CPLMaster {
     modified: number;
 
     // Can optionally have the following keys (indicating that this is a live foto, the following keys hold the information about the 'video' part of this):
-    // resOriginalVidComplRes -> AssetID 
+    // resOriginalVidComplRes -> AssetID
     // resOriginalVidComplFileType -> Filetyp (seems to always be com.apple.quicktime-movie)
-    // 
+    //
     // Asset logic should stay same, folder linking might be an issue
 
     /**
