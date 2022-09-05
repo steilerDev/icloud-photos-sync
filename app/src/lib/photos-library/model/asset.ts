@@ -178,7 +178,7 @@ export class Asset implements PEntity<Asset> {
      */
     getPrettyFilename(): string {
         return path.format({
-            "name": this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``),
+            "name": this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``) + (this.assetType === AssetType.LIVE ? `-live` : ``),
             "ext": this.fileType.getExtension(),
         });
     }
