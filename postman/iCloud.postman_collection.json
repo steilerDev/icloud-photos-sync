@@ -194,7 +194,7 @@
 				{
 					"name": "01-- Get list of devices",
 					"request": {
-						"method": "PUT",
+						"method": "GET",
 						"header": [
 							{
 								"key": "User-Agent",
@@ -328,7 +328,7 @@
 							}
 						],
 						"url": {
-							"raw": "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
+							"raw": "https://idmsa.apple.com/appleauth/auth",
 							"protocol": "https",
 							"host": [
 								"idmsa",
@@ -337,10 +337,7 @@
 							],
 							"path": [
 								"appleauth",
-								"auth",
-								"verify",
-								"trusteddevice",
-								"securitycode"
+								"auth"
 							]
 						}
 					},
@@ -807,7 +804,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"securityCode\": {\n        \"code\": \"271366\"\n    }\n}",
+							"raw": "{\n    \"securityCode\": {\n        \"code\": \"354707\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1432,6 +1429,80 @@
 					"response": []
 				},
 				{
+					"name": "Get Smart Album - Live Photos",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}",
+								"type": "default"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}",
+								"type": "default"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com",
+								"type": "default"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLAssetAndMasterInSmartAlbumByAssetDate\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"smartAlbum\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\"type\": \"STRING\", \"value\": \"LIVE\"}\n            }\n        ]\n    },\n    \"zoneID\": {\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneName\": \"PrimarySync\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"resultsLimit\": 18\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query?remapEnums=True",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"query"
+							],
+							"query": [
+								{
+									"key": "remapEnums",
+									"value": "True"
+								},
+								{
+									"key": "getCurrentSyncToken",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "dsid",
+									"value": "{{dsid}}",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "61fed521-b3e2-4ca0-9e32-511d48c936bf",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Get Photos by Start Rank",
 					"event": [
 						{
@@ -1470,7 +1541,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"query\":{\n        \"recordType\":\"CPLAssetAndMasterByAddedDate\",\n        \"filterBy\":[\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 1743,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\":{\"zoneName\":\"PrimarySync\",\"ownerRecordName\":\"_e8a2d278a868306ca55d7fc05a299b73\",\"zoneType\":\"REGULAR_CUSTOM_ZONE\"},\n    \"desiredKeys\":[\"rank\",\"addedDate\",\"adjustmentRenderType\",\"adjustmentType\",\"assetDate\",\"assetHDRType\",\"assetSubtype\",\"assetSubtypeV2\",\"burstFlags\",\"burstFlagsExt\",\"burstId\",\"captionEnc\",\"codec\",\"containerId\",\"customRenderedValue\",\"dataClassType\",\"dateExpunged\",\"duration\",\"filenameEnc\",\"importedBy\",\"isDeleted\",\"isExpunged\",\"isFavorite\",\"isHidden\",\"isKeyAsset\",\"itemId\",\"itemType\",\"locationEnc\",\"locationLatitude\",\"locationLongitude\",\"locationV2Enc\",\"masterRef\",\"mediaMetaDataEnc\",\"mediaMetaDataType\",\"orientation\",\"originalOrientation\",\"position\",\"recordChangeTag\",\"recordName\",\"recordType\",\"remappedRef\",\"resJPEGFullFileType\",\"resJPEGFullFingerprint\",\"resJPEGFullHeight\",\"resJPEGFullRes\",\"resJPEGFullWidth\",\"resJPEGLargeFileType\",\"resJPEGLargeFingerprint\",\"resJPEGLargeHeight\",\"resJPEGLargeRes\",\"resJPEGLargeWidth\",\"resJPEGMedFileType\",\"resJPEGMedFingerprint\",\"resJPEGMedHeight\",\"resJPEGMedRes\",\"resJPEGMedWidth\",\"resJPEGThumbFileType\",\"resJPEGThumbFingerprint\",\"resJPEGThumbHeight\",\"resJPEGThumbRes\",\"resJPEGThumbWidth\",\"resOriginalAltFileType\",\"resOriginalAltFingerprint\",\"resOriginalAltHeight\",\"resOriginalAltRes\",\"resOriginalAltWidth\",\"resOriginalFileType\",\"resOriginalFingerprint\",\"resOriginalHeight\",\"resOriginalRes\",\"resOriginalVidComplFileType\",\"resOriginalVidComplFingerprint\",\"resOriginalVidComplHeight\",\"resOriginalVidComplRes\",\"resOriginalVidComplWidth\",\"resOriginalWidth\",\"resSidecarFileType\",\"resSidecarFingerprint\",\"resSidecarHeight\",\"resSidecarRes\",\"resSidecarWidth\",\"resVidFullFileType\",\"resVidFullFingerprint\",\"resVidFullHeight\",\"resVidFullRes\",\"resVidFullWidth\",\"resVidHDRMedRes\",\"resVidMedFileType\",\"resVidMedFingerprint\",\"resVidMedHeight\",\"resVidMedRes\",\"resVidMedWidth\",\"resVidSmallFileType\",\"resVidSmallFingerprint\",\"resVidSmallHeight\",\"resVidSmallRes\",\"resVidSmallWidth\",\"timeZoneOffset\",\"vidComplDispScale\",\"vidComplDispValue\",\"vidComplDurScale\",\"vidComplDurValue\",\"vidComplVisibilityState\",\"videoFrameRate\",\"zoneID\"],\n    \"resultsLimit\":8\n}",
+							"raw": "{\n    \"query\":{\n        \"recordType\":\"CPLAssetAndMasterByAddedDate\",\n        \"filterBy\":[\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 0,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\":{\"zoneName\":\"PrimarySync\",\"ownerRecordName\":\"_e8a2d278a868306ca55d7fc05a299b73\",\"zoneType\":\"REGULAR_CUSTOM_ZONE\"},\n    \"desiredKeys\":[\"rank\",\"addedDate\",\"adjustmentRenderType\",\"adjustmentType\",\"assetDate\",\"assetHDRType\",\"assetSubtype\",\"assetSubtypeV2\",\"burstFlags\",\"burstFlagsExt\",\"burstId\",\"captionEnc\",\"codec\",\"containerId\",\"customRenderedValue\",\"dataClassType\",\"dateExpunged\",\"duration\",\"filenameEnc\",\"importedBy\",\"isDeleted\",\"isExpunged\",\"isFavorite\",\"isHidden\",\"isKeyAsset\",\"itemId\",\"itemType\",\"locationEnc\",\"locationLatitude\",\"locationLongitude\",\"locationV2Enc\",\"masterRef\",\"mediaMetaDataEnc\",\"mediaMetaDataType\",\"orientation\",\"originalOrientation\",\"position\",\"recordChangeTag\",\"recordName\",\"recordType\",\"remappedRef\",\"resJPEGFullFileType\",\"resJPEGFullFingerprint\",\"resJPEGFullHeight\",\"resJPEGFullRes\",\"resJPEGFullWidth\",\"resJPEGLargeFileType\",\"resJPEGLargeFingerprint\",\"resJPEGLargeHeight\",\"resJPEGLargeRes\",\"resJPEGLargeWidth\",\"resJPEGMedFileType\",\"resJPEGMedFingerprint\",\"resJPEGMedHeight\",\"resJPEGMedRes\",\"resJPEGMedWidth\",\"resJPEGThumbFileType\",\"resJPEGThumbFingerprint\",\"resJPEGThumbHeight\",\"resJPEGThumbRes\",\"resJPEGThumbWidth\",\"resOriginalAltFileType\",\"resOriginalAltFingerprint\",\"resOriginalAltHeight\",\"resOriginalAltRes\",\"resOriginalAltWidth\",\"resOriginalFileType\",\"resOriginalFingerprint\",\"resOriginalHeight\",\"resOriginalRes\",\"resOriginalVidComplFileType\",\"resOriginalVidComplFingerprint\",\"resOriginalVidComplHeight\",\"resOriginalVidComplRes\",\"resOriginalVidComplWidth\",\"resOriginalWidth\",\"resSidecarFileType\",\"resSidecarFingerprint\",\"resSidecarHeight\",\"resSidecarRes\",\"resSidecarWidth\",\"resVidFullFileType\",\"resVidFullFingerprint\",\"resVidFullHeight\",\"resVidFullRes\",\"resVidFullWidth\",\"resVidHDRMedRes\",\"resVidMedFileType\",\"resVidMedFingerprint\",\"resVidMedHeight\",\"resVidMedRes\",\"resVidMedWidth\",\"resVidSmallFileType\",\"resVidSmallFingerprint\",\"resVidSmallHeight\",\"resVidSmallRes\",\"resVidSmallWidth\",\"timeZoneOffset\",\"vidComplDispScale\",\"vidComplDispValue\",\"vidComplDurScale\",\"vidComplDurValue\",\"vidComplVisibilityState\",\"videoFrameRate\",\"zoneID\"],\n    \"resultsLimit\":202\n}",
 							"options": {
 								"raw": {
 									"language": "json"
