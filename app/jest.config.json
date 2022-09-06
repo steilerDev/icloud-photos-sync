@@ -3,7 +3,6 @@
     "testEnvironment": "node",
     "reporters": [
       "default",
-      "jest-summarizing-reporter",
       "github-actions"
     ],
     "collectCoverageFrom": [
@@ -11,7 +10,8 @@
       "!src/main.ts",
       "!src/lib/package.ts",
       "!src/lib/cli.ts",
-      "!src/lib/logger.ts"
+      "!src/lib/logger.ts",
+      "!src/lib/photos-library/model/photos-entity.ts"
     ],
     "coverageProvider": "v8",
     "coverageReporters": [

@@ -984,11 +984,143 @@ describe(`Unit Tests - Photos Library`, () => {
             });
 
             describe(`Delete albums`, () => {
-                test.todo(`Delete folder`)
-                test.todo(`Delete non-empty folder (non-safe files)`)
-                test.todo(`Delete non-empty folder (safe files)`)
-                test.todo(`Only pretty folder exists`)
-                test.todo(`Only UUID folder exists`)
+                test(`Delete folder`, () => {
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+                    mockfs({
+                        [photosDataDir]: {
+                            [`.${albumUUID}`]: {},
+                            [albumName]: mockfs.symlink({
+                                "path": `.${albumUUID}`,
+                            }),
+                        },
+                    });
+                    const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
+                    const library = photosLibraryFactory();
+
+                    library.deleteAlbum(folder)
+
+                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy()
+                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy()
+                })
+
+                test(`Delete non-empty folder (only links)`, () => {
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+                    mockfs({
+                        [photosDataDir]: {
+                            [`.${albumUUID}`]: {
+                                "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": mockfs.symlink({
+                                    "path": `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
+                                }),
+                                "steve-johnson-gkfvdCEbUbQ-unsplash.jpeg": mockfs.symlink({
+                                    "path": `../_All-Photos/AQ-qACkUB_yOBUVvye9kJSVdxZEc.jpeg`,
+                                }),
+                                "steve-johnson-T12spiHYons-unsplash.jpeg": mockfs.symlink({
+                                    "path": `../_All-Photos/Acgr2fdPRy7x4l16nE6wwBNKrOzf.jpeg`,
+                                }),
+                                "steve-johnson-YLfycNerbPo-unsplash.jpeg": mockfs.symlink({
+                                    "path": `./_All-Photos/AfFUy6toSMWpB1FVJQThs4Y-rVHJ.jpeg`,
+                                }),
+                            },
+                            [albumName]: mockfs.symlink({
+                                "path": `.${albumUUID}`,
+                            }),
+                        }
+                    });
+                    const folder = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
+                    const library = photosLibraryFactory();
+
+                    library.deleteAlbum(folder)
+
+                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy()
+                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy()
+                    
+                })
+
+                test(`Delete non-empty folder (non-safe files)`, () => {
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+                    mockfs({
+                        [photosDataDir]: {
+                            [`.${albumUUID}`]: {
+                                "test-picture": Buffer.from([1,1,1,1])
+                            },
+                            [albumName]: mockfs.symlink({
+                                "path": `.${albumUUID}`,
+                            }),
+                        },
+                    });
+                    const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
+                    const library = photosLibraryFactory();
+
+                    expect(() => library.deleteAlbum(folder)).toThrowError("not empty")
+
+                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeTruthy()
+                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeTruthy()
+                })
+
+                test(`Delete non-empty folder (safe files)`, () => {
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+
+                    const files: any = {};
+                    for (const safeFileName of SAFE_FILES) {
+                        files[safeFileName] = Buffer.from([1]);
+                    }
+
+                    mockfs({
+                        [photosDataDir]: {
+                            [`.${albumUUID}`]: files,
+                            [albumName]: mockfs.symlink({
+                                "path": `.${albumUUID}`,
+                            }),
+                        },
+                    });
+                    const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
+                    const library = photosLibraryFactory();
+                    
+                    library.deleteAlbum(folder)
+
+                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy()
+                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy()
+                })
+
+                test(`Only pretty folder exists`, () => {
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+
+                    mockfs({
+                        [photosDataDir]: {
+                            [albumName]: mockfs.symlink({
+                                "path": `.${albumUUID}`,
+                            }),
+                        },
+                    });
+                    const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
+                    const library = photosLibraryFactory();
+                    
+                    expect(() => library.deleteAlbum(folder)).toThrowError("Unable to find album")
+
+                    expect(fs.readlinkSync(path.join(photosDataDir, albumName)).length).toBeGreaterThan(0)
+                })
+
+                test(`Only UUID folder exists`, () => {
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+
+                    mockfs({
+                        [photosDataDir]: {
+                            [`.${albumUUID}`]: {},
+                        },
+                    });
+                    const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
+                    const library = photosLibraryFactory();
+                    
+                    expect(() => library.deleteAlbum(folder)).toThrowError("Unable to find linked path")
+
+                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeTruthy()
+                })
             })
 
             describe(`Archived albums`, () => {

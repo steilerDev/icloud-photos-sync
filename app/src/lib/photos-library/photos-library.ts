@@ -366,21 +366,20 @@ export class PhotosLibrary {
         // Path to album
         const albumPath = this.findAlbum(album);
         // Path to linked album
-        const linkedPath = path.normalize(`${albumPath}/../${album.getSanitizedFilename()}`); // The linked folder is one layer below
+        const linkedPath = path.normalize(path.join(albumPath, `..`, album.getSanitizedFilename())); // The linked folder is one layer below
         const pathContent = fs.readdirSync(albumPath, {"withFileTypes": true})
             .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
 
         if (pathContent.length > 0) {
-            throw new Error(`Album in path ${path} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
+            throw new Error(`Album in path ${albumPath} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
         }
 
         if (!fs.existsSync(linkedPath)) {
-            throw new Error(`Unable to find linked file, expected ${linkedPath}`);
+            throw new Error(`Unable to find linked path, expected ${linkedPath}`);
         }
-
         fs.rmSync(albumPath, {"recursive": true});
         fs.unlinkSync(linkedPath);
-        this.logger.debug(`Sucesfully deleted album ${album.getDisplayName()} at ${path} & ${linkedPath}`);
+        this.logger.debug(`Sucesfully deleted album ${album.getDisplayName()} at ${albumPath} & ${linkedPath}`);
     }
 
     /**
