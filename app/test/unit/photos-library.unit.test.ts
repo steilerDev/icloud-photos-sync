@@ -1238,9 +1238,58 @@ describe(`Unit Tests - Photos Library`, () => {
                     expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeTruthy();
                 });
 
+                test(`Stash album - AlbumName does not exist`, () => {
+                    const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
+                    const archivedName = `2015 - 2016`;
+                    const asset1Name = `stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg`;
+                    const asset2Name = `steve-johnson-gkfvdCEbUbQ-unsplash.jpeg`;
+                    const asset3Name = `steve-johnson-T12spiHYons-unsplash.jpeg`;
+                    const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
+                    const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
+                    mockfs({
+                        [photosDataDir]: {
+                            [ARCHIVE_DIR]: {
+                            },
+                            [`.${archivedUUID}`]: {
+                                [asset1Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset2Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset3Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset4Name]: Buffer.from([1, 1, 1, 1]),
+                            },
+                        },
+                    });
+
+                    const library = photosLibraryFactory();
+                    expect(() => library.stashArchivedAlbum(album)).toThrowError(`Unable to find albumName path`);
+
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
+                });
+
+                test(`Stash album - AlbumUUID does not exist`, () => {
+                    const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
+                    const archivedName = `2015 - 2016`;
+                    const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
+                    mockfs({
+                        [photosDataDir]: {
+                            [ARCHIVE_DIR]: {
+                            },
+                            [archivedName]: {}
+                        },
+                    });
+
+                    const library = photosLibraryFactory();
+                    expect(() => library.stashArchivedAlbum(album)).toThrowError(`Unable to find uuid path`);
+                    expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeTruthy();
+                });
+
                 test.todo(`Retrieve stashed album`);
                 test.todo(`Retrieve stashed album - AlbumName not in stash`);
                 test.todo(`Retrieve stashed album - AlbumPath not in stash`);
+                test.todo(`Clean archived orphans`)
             });
         });
     });
