@@ -5,6 +5,7 @@
       "default",
       "github-actions"
     ],
+    "collectCoverage": true,
     "collectCoverageFrom": [
       "src/**/*.ts",
       "!src/main.ts",
