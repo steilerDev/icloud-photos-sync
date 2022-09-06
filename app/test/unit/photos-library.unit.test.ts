@@ -998,11 +998,11 @@ describe(`Unit Tests - Photos Library`, () => {
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
                     const library = photosLibraryFactory();
 
-                    library.deleteAlbum(folder)
+                    library.deleteAlbum(folder);
 
-                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy()
-                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy()
-                })
+                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy();
+                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy();
+                });
 
                 test(`Delete non-empty folder (only links)`, () => {
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -1026,17 +1026,16 @@ describe(`Unit Tests - Photos Library`, () => {
                             [albumName]: mockfs.symlink({
                                 "path": `.${albumUUID}`,
                             }),
-                        }
+                        },
                     });
                     const folder = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
                     const library = photosLibraryFactory();
 
-                    library.deleteAlbum(folder)
+                    library.deleteAlbum(folder);
 
-                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy()
-                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy()
-                    
-                })
+                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy();
+                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy();
+                });
 
                 test(`Delete non-empty folder (non-safe files)`, () => {
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -1044,7 +1043,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     mockfs({
                         [photosDataDir]: {
                             [`.${albumUUID}`]: {
-                                "test-picture": Buffer.from([1,1,1,1])
+                                "test-picture": Buffer.from([1, 1, 1, 1]),
                             },
                             [albumName]: mockfs.symlink({
                                 "path": `.${albumUUID}`,
@@ -1054,11 +1053,11 @@ describe(`Unit Tests - Photos Library`, () => {
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
                     const library = photosLibraryFactory();
 
-                    expect(() => library.deleteAlbum(folder)).toThrowError("not empty")
+                    expect(() => library.deleteAlbum(folder)).toThrowError(`not empty`);
 
-                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeTruthy()
-                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeTruthy()
-                })
+                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeTruthy();
+                });
 
                 test(`Delete non-empty folder (safe files)`, () => {
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -1079,12 +1078,12 @@ describe(`Unit Tests - Photos Library`, () => {
                     });
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
                     const library = photosLibraryFactory();
-                    
-                    library.deleteAlbum(folder)
 
-                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy()
-                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy()
-                })
+                    library.deleteAlbum(folder);
+
+                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy();
+                    expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy();
+                });
 
                 test(`Only pretty folder exists`, () => {
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -1099,11 +1098,11 @@ describe(`Unit Tests - Photos Library`, () => {
                     });
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
                     const library = photosLibraryFactory();
-                    
-                    expect(() => library.deleteAlbum(folder)).toThrowError("Unable to find album")
 
-                    expect(fs.readlinkSync(path.join(photosDataDir, albumName)).length).toBeGreaterThan(0)
-                })
+                    expect(() => library.deleteAlbum(folder)).toThrowError(`Unable to find album`);
+
+                    expect(fs.readlinkSync(path.join(photosDataDir, albumName)).length).toBeGreaterThan(0);
+                });
 
                 test(`Only UUID folder exists`, () => {
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -1116,12 +1115,12 @@ describe(`Unit Tests - Photos Library`, () => {
                     });
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
                     const library = photosLibraryFactory();
-                    
-                    expect(() => library.deleteAlbum(folder)).toThrowError("Unable to find linked path")
 
-                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeTruthy()
-                })
-            })
+                    expect(() => library.deleteAlbum(folder)).toThrowError(`Unable to find linked path`);
+
+                    expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeTruthy();
+                });
+            });
 
             describe(`Archived albums`, () => {
                 test.todo(`Stash album - Empty album`);

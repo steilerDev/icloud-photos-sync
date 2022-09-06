@@ -377,6 +377,7 @@ export class PhotosLibrary {
         if (!fs.existsSync(linkedPath)) {
             throw new Error(`Unable to find linked path, expected ${linkedPath}`);
         }
+
         fs.rmSync(albumPath, {"recursive": true});
         fs.unlinkSync(linkedPath);
         this.logger.debug(`Sucesfully deleted album ${album.getDisplayName()} at ${albumPath} & ${linkedPath}`);
