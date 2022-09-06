@@ -51,11 +51,6 @@ export class SyncEngine extends EventEmitter {
     maxRetry: number;
 
     /**
-     * Flag indicating, that the app should not perform any writes, but simply print out the action
-     */
-    dryRun: boolean;
-
-    /**
      * Creates a new sync engine from the previously created objects and CLI options
      * @param iCloud - The authenticated and 'ready' iCloud connection
      * @param photosLibrary - The PhotosLibrary
@@ -67,7 +62,6 @@ export class SyncEngine extends EventEmitter {
         this.photosLibrary = photosLibrary;
         this.downloadCCY = cliOpts.downloadThreads;
         this.maxRetry = cliOpts.maxRetries;
-        this.dryRun = cliOpts.dryRun;
     }
 
     /**

@@ -35,10 +35,6 @@ export class Album implements PEntity<Album> {
      */
     albumName: string;
     /**
-     * If this class is loaded from disk, the path will be populated
-     */
-    albumPath?: string;
-    /**
      * Assets, where the key is the uuid & the value the filename
      */
     assets: AlbumAssets;
@@ -52,15 +48,13 @@ export class Album implements PEntity<Album> {
      * @param uuid - The UUID of the album
      * @param albumType - The album type of the album
      * @param albumName - The album name of the album
-     * @param parentRecordName  - The UUID of the parent album
-     * @param albumPath - Optionally, the full path to the album on disk
+     * @param parentAlbumUUID - The UUID of the parent album
      */
-    constructor(uuid: string, albumType: AlbumType, albumName: string, parentAlbumUUID: string, albumPath?: string) {
+    constructor(uuid: string, albumType: AlbumType, albumName: string, parentAlbumUUID: string) {
         this.uuid = uuid;
         this.albumType = albumType;
         this.albumName = albumName;
         this.parentAlbumUUID = parentAlbumUUID;
-        this.albumPath = albumPath;
         this.assets = {};
     }
 
@@ -109,8 +103,8 @@ export class Album implements PEntity<Album> {
      * @param photoDataDir - The folder path of all albums
      * @returns The dummy album
      */
-    static getRootAlbum(photoDataDir: string): Album {
-        return new Album(``, AlbumType.FOLDER, `iCloud Photos Library`, ``, photoDataDir);
+    static getRootAlbum(): Album {
+        return new Album(``, AlbumType.FOLDER, `iCloud Photos Library`, ``);
     }
 
     /**

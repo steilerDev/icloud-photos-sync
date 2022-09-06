@@ -12,7 +12,7 @@ import axios, {AxiosRequestConfig} from 'axios';
 
 const photosDataDir = `/media/files/photos-library`;
 const assetDir = path.join(photosDataDir, ASSET_DIR);
-// Const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
+const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
 
 function photosLibraryFactory(): PhotosLibrary {
     const opts = {
@@ -1099,7 +1099,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
                     const library = photosLibraryFactory();
 
-                    expect(() => library.deleteAlbum(folder)).toThrowError(`Unable to find album`);
+                    expect(() => library.deleteAlbum(folder)).toThrowError(`Unable to find uuid path`);
 
                     expect(fs.readlinkSync(path.join(photosDataDir, albumName)).length).toBeGreaterThan(0);
                 });
@@ -1116,19 +1116,131 @@ describe(`Unit Tests - Photos Library`, () => {
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
                     const library = photosLibraryFactory();
 
-                    expect(() => library.deleteAlbum(folder)).toThrowError(`Unable to find linked path`);
+                    expect(() => library.deleteAlbum(folder)).toThrowError(`Unable to find albumName path`);
 
                     expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeTruthy();
                 });
             });
 
             describe(`Archived albums`, () => {
-                test.todo(`Stash album - Empty album`);
-                test.todo(`Stash album - Non-empty album`);
-                test.todo(`Stash album - Album already in stash`);
-                test.todo(`Retrieve stashed album - Empty album`);
-                test.todo(`Retrieve stashed album - Non-empty album`);
-                test.todo(`Retrieve stashed album - Album not in stash`);
+                test(`Stash album`, () => {
+                    const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
+                    const archivedName = `2015 - 2016`;
+                    const asset1Name = `stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg`;
+                    const asset2Name = `steve-johnson-gkfvdCEbUbQ-unsplash.jpeg`;
+                    const asset3Name = `steve-johnson-T12spiHYons-unsplash.jpeg`;
+                    const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
+                    const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
+                    mockfs({
+                        [photosDataDir]: {
+                            [`.${archivedUUID}`]: {
+                                [asset1Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset2Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset3Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset4Name]: Buffer.from([1, 1, 1, 1]),
+                            },
+                            [archivedName]: mockfs.symlink({
+                                "path": `.${archivedUUID}`,
+                            }),
+                        },
+                    });
+
+                    const library = photosLibraryFactory();
+                    library.stashArchivedAlbum(album);
+
+                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`))).toBeTruthy();
+                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(archiveDir, archivedName))).toBeTruthy();
+
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeFalsy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeFalsy();
+                });
+
+                test(`Stash album - Album with same UUID already in stash`, () => {
+                    const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
+                    const archivedName = `2015 - 2016`;
+                    const asset1Name = `stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg`;
+                    const asset2Name = `steve-johnson-gkfvdCEbUbQ-unsplash.jpeg`;
+                    const asset3Name = `steve-johnson-T12spiHYons-unsplash.jpeg`;
+                    const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
+                    const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
+                    mockfs({
+                        [photosDataDir]: {
+                            [ARCHIVE_DIR]: {
+                                [`.${archivedUUID}`]: {},
+                            },
+                            [`.${archivedUUID}`]: {
+                                [asset1Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset2Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset3Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset4Name]: Buffer.from([1, 1, 1, 1]),
+                            },
+                            [archivedName]: mockfs.symlink({
+                                "path": `.${archivedUUID}`,
+                            }),
+                        },
+                    });
+
+                    const library = photosLibraryFactory();
+                    expect(() => library.stashArchivedAlbum(album)).toThrowError(`Supposed stash uuid path already exists`);
+
+                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`))).toBeTruthy();
+
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeTruthy();
+                });
+
+                test(`Stash album - Album with same name already in stash`, () => {
+                    const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
+                    const archivedName = `2015 - 2016`;
+                    const asset1Name = `stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg`;
+                    const asset2Name = `steve-johnson-gkfvdCEbUbQ-unsplash.jpeg`;
+                    const asset3Name = `steve-johnson-T12spiHYons-unsplash.jpeg`;
+                    const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
+                    const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
+                    mockfs({
+                        [photosDataDir]: {
+                            [ARCHIVE_DIR]: {
+                                [archivedName]: {},
+                            },
+                            [`.${archivedUUID}`]: {
+                                [asset1Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset2Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset3Name]: Buffer.from([1, 1, 1, 1]),
+                                [asset4Name]: Buffer.from([1, 1, 1, 1]),
+                            },
+                            [archivedName]: mockfs.symlink({
+                                "path": `.${archivedUUID}`,
+                            }),
+                        },
+                    });
+
+                    const library = photosLibraryFactory();
+                    expect(() => library.stashArchivedAlbum(album)).toThrowError(`Supposed stash albumName path already exists`);
+
+                    expect(fs.existsSync(path.join(archiveDir, archivedName))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeTruthy();
+                });
+
+                test.todo(`Retrieve stashed album`);
+                test.todo(`Retrieve stashed album - AlbumName not in stash`);
+                test.todo(`Retrieve stashed album - AlbumPath not in stash`);
             });
         });
     });

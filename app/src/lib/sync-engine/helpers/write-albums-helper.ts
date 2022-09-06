@@ -1,7 +1,6 @@
 import {Album, AlbumType} from "../../photos-library/model/album.js";
 import {PLibraryProcessingQueues} from "../../photos-library/model/photos-entity.js";
 import {SyncEngine} from "../sync-engine.js";
-import * as SYNC_ENGINE from '../constants.js';
 
 /**
  * Writes the album changes defined in the processing queue to to disk
@@ -24,6 +23,8 @@ export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryPro
     toBeAdded.forEach(album => {
         this.addAlbum(album);
     });
+
+    this.photosLibrary.cleanArchivedOrphans();
 }
 
 /**
@@ -36,11 +37,6 @@ export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryPro
 export function addAlbum(this: SyncEngine, album: Album) {
     // If albumType == Archive -> Check in 'archivedFolder' and move
     this.logger.debug(`Creating album ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
-
-    if (this.dryRun) {
-        this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Creating ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
-        return;
-    }
 
     if (album.albumType === AlbumType.ARCHIVED) {
         this.photosLibrary.retrieveArchivedAlbum(album);
@@ -61,10 +57,6 @@ export function addAlbum(this: SyncEngine, album: Album) {
  */
 export function removeAlbum(this: SyncEngine, album: Album) {
     this.logger.debug(`Removing album ${album.getDisplayName()}`);
-    if (this.dryRun) {
-        this.emit(SYNC_ENGINE.EVENTS.DRY_RUN, `Deleting folder ${album.getDisplayName}`);
-        return;
-    }
 
     if (album.albumType === AlbumType.ARCHIVED) {
         this.photosLibrary.stashArchivedAlbum(album);

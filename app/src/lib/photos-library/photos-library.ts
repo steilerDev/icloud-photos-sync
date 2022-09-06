@@ -83,7 +83,7 @@ export class PhotosLibrary {
     async loadAlbums(): Promise<PLibraryEntities<Album>> {
         // Loading folders
         const libAlbums: PLibraryEntities<Album> = {};
-        (await this.loadAlbum(Album.getRootAlbum(this.photoDataDir)))
+        (await this.loadAlbum(Album.getRootAlbum(), this.photoDataDir))
             .forEach(album => {
                 libAlbums[album.getUUID()] = album;
             });
@@ -95,7 +95,7 @@ export class PhotosLibrary {
      * @param album - The album that needs to be loaded, containing a filepath
      * @returns An array of loaded albums, including the provided one and all its child items
      */
-    async loadAlbum(album: Album): Promise<Album[]> {
+    async loadAlbum(album: Album, albumPath: string): Promise<Album[]> {
         // If we are loading an archived folder, we can ignore the content and add it to the queue
         if (album.albumType === AlbumType.ARCHIVED) {
             return [album];
@@ -110,7 +110,7 @@ export class PhotosLibrary {
 
         this.logger.info(`Loading album ${album.getDisplayName()}`);
 
-        const symbolicLinks = (await fs.promises.readdir(album.albumPath, {
+        const symbolicLinks = (await fs.promises.readdir(albumPath, {
             "withFileTypes": true,
         })).filter(file => file.isSymbolicLink());
 
@@ -118,17 +118,17 @@ export class PhotosLibrary {
 
         for (const link of symbolicLinks) {
             // The target's basename contains the UUID
-            const target = await fs.promises.readlink(path.join(album.albumPath, link.name));
+            const target = await fs.promises.readlink(path.join(albumPath, link.name));
 
             if (album.albumType === AlbumType.FOLDER) {
                 const uuid = path.basename(target).substring(1); // Removing leading '.'
-                const fullPath = path.join(album.albumPath, target);
+                const fullPath = path.join(albumPath, target);
                 const folderType = await this.readAlbumTypeFromPath(fullPath);
                 const folderName = link.name;
                 const parentFolderUUID = album.getUUID();
 
-                const loadedAlbum = new Album(uuid, folderType, folderName, parentFolderUUID, fullPath);
-                albums.push(...await this.loadAlbum(loadedAlbum));
+                const loadedAlbum = new Album(uuid, folderType, folderName, parentFolderUUID);
+                albums.push(...await this.loadAlbum(loadedAlbum, fullPath));
             } else if (album.albumType === AlbumType.ALBUM) {
                 const uuidFile = path.parse(target).base;
                 albums[0].assets[uuidFile] = link.name;
@@ -216,6 +216,23 @@ export class PhotosLibrary {
     }
 
     /**
+     * Finds the absolut paths of the folder pair for a given album
+     * The path is created, by finding the parent on filesystem. The folder paths do not necessarily exist.
+     * @param album - The album
+     * @returns A tuple containing the albumNamePath, uuidPath
+     * @throws An error, if the parent path cannot be found
+     */
+    findAlbumPaths(album: Album): [albumNamePath: string, uuidPath: string] {
+        // Directory path of the parent folder
+        const parentPath = this.findParentPath(album);
+        // LinkedAlbum will be the visible album, with the correct name
+        const albumNamePath = path.join(parentPath, album.getSanitizedFilename());
+        // AlbumPath will be the actual directory, having the UUID as foldername
+        const uuidPath = path.join(parentPath, `.${album.getUUID()}`);
+        return [albumNamePath, uuidPath];
+    }
+
+    /**
      * Finds the full path of the parent of a given albumj
      * @param album - The album
      * @returns The full path to the parent album
@@ -227,16 +244,6 @@ export class PhotosLibrary {
         }
 
         return this.findAlbumByUUID(album.parentAlbumUUID);
-    }
-
-    /**
-     * Finds a given album within the photosDataDir
-     * @param album - The album
-     * @returns The full path to the album
-     * @throws An error if the folder could not be found
-     */
-    findAlbum(album: Album): string {
-        return this.findAlbumByUUID(album.getUUID());
     }
 
     /**
@@ -302,28 +309,21 @@ export class PhotosLibrary {
      * @param album - The album to be written to disk
      */
     writeAlbum(album: Album) {
-        // Directory path of the parent folder
-        const parentPath = this.findParentPath(album);
-        // LinkedAlbum will be the visible album, with the correct name
-        const linkedAlbum = path.join(parentPath, album.getSanitizedFilename());
-        // AlbumPath will be the actual directory, having the UUID as foldername
-        const albumPath = path.join(parentPath, `.${album.getUUID()}`);
-        // Relative album path is relative to parent, not linkedAlbum
-        const relativeAlbumPath = path.relative(parentPath, albumPath);
+        const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
 
-        if (fs.existsSync(linkedAlbum) || fs.existsSync(albumPath)) {
-            throw new Error(`Unable to create album ${album.getDisplayName()}: ${linkedAlbum} or ${albumPath} already exists!`);
+        if (fs.existsSync(uuidPath) || fs.existsSync(albumNamePath)) {
+            throw new Error(`Unable to create album ${album.getDisplayName()}: ${uuidPath} or ${albumNamePath} already exists!`);
         }
 
         // Creating album
-        this.logger.debug(`Creating folder ${albumPath}`);
-        fs.mkdirSync(albumPath, {"recursive": true});
+        this.logger.debug(`Creating folder ${uuidPath}`);
+        fs.mkdirSync(uuidPath, {"recursive": true});
         // Symlinking to correctly named album
-        this.logger.debug(`Linking ${relativeAlbumPath} to ${linkedAlbum}`);
-        fs.symlinkSync(relativeAlbumPath, linkedAlbum);
+        this.logger.debug(`Linking ${albumNamePath} to ${path.basename(uuidPath)}`);
+        fs.symlinkSync(path.basename(uuidPath), albumNamePath);
 
         if (album.albumType === AlbumType.ALBUM) {
-            this.linkAlbumAssets(album, albumPath);
+            this.linkAlbumAssets(album, uuidPath);
         }
     }
 
@@ -361,26 +361,28 @@ export class PhotosLibrary {
      * @param album - The album that needs to be removed
      */
     deleteAlbum(album: Album) {
-        // If albumType == Archived -> Move folder to archived folder
         this.logger.debug(`Deleting folder ${album.getDisplayName()}`);
+        const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
         // Path to album
-        const albumPath = this.findAlbum(album);
-        // Path to linked album
-        const linkedPath = path.normalize(path.join(albumPath, `..`, album.getSanitizedFilename())); // The linked folder is one layer below
-        const pathContent = fs.readdirSync(albumPath, {"withFileTypes": true})
+        if (!fs.existsSync(uuidPath)) {
+            throw new Error(`Unable to find uuid path, expected ${uuidPath}`);
+        }
+
+        // Checking content
+        const pathContent = fs.readdirSync(uuidPath, {"withFileTypes": true})
             .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
-
         if (pathContent.length > 0) {
-            throw new Error(`Album in path ${albumPath} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
+            throw new Error(`Album in path ${uuidPath} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
         }
 
-        if (!fs.existsSync(linkedPath)) {
-            throw new Error(`Unable to find linked path, expected ${linkedPath}`);
+        // Path to real name folder
+        if (!fs.existsSync(albumNamePath)) {
+            throw new Error(`Unable to find albumName path, expcted ${albumNamePath}`);
         }
 
-        fs.rmSync(albumPath, {"recursive": true});
-        fs.unlinkSync(linkedPath);
-        this.logger.debug(`Sucesfully deleted album ${album.getDisplayName()} at ${albumPath} & ${linkedPath}`);
+        fs.rmSync(uuidPath, {"recursive": true});
+        fs.unlinkSync(albumNamePath);
+        this.logger.debug(`Sucesfully deleted album ${album.getDisplayName()} at ${albumNamePath} & ${uuidPath}`);
     }
 
     /**
@@ -388,7 +390,35 @@ export class PhotosLibrary {
      * @param album - The album that needs to be stashed
      */
     stashArchivedAlbum(album: Album) {
+        this.logger.debug(`Stashing album ${album.getDisplayName()}`);
+        if (album.albumType !== AlbumType.ARCHIVED) {
+            throw new Error(`Not stashing archive of type ${album.albumType}`);
+        }
 
+        const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
+        const stashedAlbumNamePath = path.join(this.archiveDir, path.basename(albumNamePath));
+        const stashedUUIDPath = path.join(this.archiveDir, path.basename(uuidPath));
+        if (!fs.existsSync(albumNamePath)) {
+            throw new Error(`Unable to find albumName path, expected ${albumNamePath}`);
+        }
+
+        if (!fs.existsSync(uuidPath)) {
+            throw new Error(`Unable to find uuid path, expected ${uuidPath}`);
+        }
+
+        if (fs.existsSync(stashedAlbumNamePath)) {
+            throw new Error(`Supposed stash albumName path already exists: ${stashedAlbumNamePath}`);
+        }
+
+        if (fs.existsSync(stashedUUIDPath)) {
+            throw new Error(`Supposed stash uuid path already exists: ${stashedUUIDPath}`);
+        }
+
+        this.logger.debug(`Moving ${uuidPath} to ${stashedUUIDPath}`);
+        fs.renameSync(uuidPath, stashedUUIDPath);
+        this.logger.debug(`Unlinking ${albumNamePath} and re-linking ${stashedAlbumNamePath}`);
+        fs.unlinkSync(albumNamePath);
+        fs.symlinkSync(path.basename(stashedUUIDPath), stashedAlbumNamePath);
     }
 
     /**
@@ -396,6 +426,13 @@ export class PhotosLibrary {
      * @param album - The album that needs to be retrieved
      */
     retrieveArchivedAlbum(album: Album) {
+
+    }
+
+    /**
+     * This function will look for orphaned albums and remove the unecessary UUID links to make them more manageable
+     */
+    cleanArchivedOrphans() {
 
     }
 }

@@ -17,5 +17,4 @@ export enum EVENTS {
     DONE = `done`, // No arg
     RETRY = `retry`, // RetryCount
     ERROR = `error`, // ErrorMessage
-    DRY_RUN = `dry-run` // DryRunMsg
 }
