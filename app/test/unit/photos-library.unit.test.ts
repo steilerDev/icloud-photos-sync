@@ -770,9 +770,10 @@ describe(`Unit Tests - Photos Library`, () => {
                     expect(relativePath.length).toEqual(0);
                 });
 
-                test(`Get full path for existing album`, () => {
+                test(`Get full path for existing album - Root`, () => {
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                     const albumName = `Stuff`;
+                    const album = new Album(albumUUID, AlbumType.FOLDER, albumName, "")
 
                     mockfs({
                         [photosDataDir]: {
@@ -783,18 +784,48 @@ describe(`Unit Tests - Photos Library`, () => {
                         },
                     });
                     const library = photosLibraryFactory();
-                    const relativePath = library.findAlbumByUUID(albumUUID);
-                    expect(relativePath).toEqual(`${photosDataDir}/.${albumUUID}`);
+                    const [albumNamePath, uuidPath] = library.findAlbumPaths(album);
+                    expect(uuidPath).toEqual(path.join(photosDataDir, `.${albumUUID}`));
+                    expect(albumNamePath).toEqual(path.join(photosDataDir, albumName))
                 });
 
-                test(`Get full path for non-existing album`, () => {
+                test(`Get full path for existing album - Non-Root`, () => {
+                    const folderUUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
+                    const folderName = `Stuff`;
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Stuff`;
+                    const album = new Album(albumUUID, AlbumType.FOLDER, albumName, folderUUID)
+
+                    mockfs({
+                        [photosDataDir]: {
+                            [`.${folderUUID}`]: {
+                                [`.${albumUUID}`]: {},
+                                [albumName]: mockfs.symlink({
+                                    "path": `.${albumName}`,
+                                })
+                            },
+                            [folderName]: mockfs.symlink({
+                                "path": `.${folderUUID}`,
+                            }),
+                        },
+                    });
+                    const library = photosLibraryFactory();
+                    const [albumNamePath, uuidPath] = library.findAlbumPaths(album);
+                    expect(uuidPath).toEqual(path.join(photosDataDir, `.${folderUUID}`, `.${albumUUID}`));
+                    expect(albumNamePath).toEqual(path.join(photosDataDir, `.${folderUUID}`, albumName))
+                });
+
+                test(`Get full path for album with non-existing parent`, () => {
+                    const parentUUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Stuff`;
+                    const album = new Album(albumUUID, AlbumType.FOLDER, albumName, parentUUID)
 
                     mockfs({
                         [photosDataDir]: {},
                     });
                     const library = photosLibraryFactory();
-                    expect(() => library.findAlbumByUUID(albumUUID)).toThrowError(`Unable to find album`);
+                    expect(() => library.findAlbumPaths(album)).toThrowError(`Unable to find parent of album`);
                 });
             });
 
@@ -867,7 +898,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     });
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, parentUUID);
                     const library = photosLibraryFactory();
-                    expect(() => library.writeAlbum(folder)).toThrowError(`Unable to find album`);
+                    expect(() => library.writeAlbum(folder)).toThrowError(`Unable to find parent of album`);
                 });
 
                 test(`Create & link album - no assets`, () => {

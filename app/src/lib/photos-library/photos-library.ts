@@ -217,48 +217,27 @@ export class PhotosLibrary {
 
     /**
      * Finds the absolut paths of the folder pair for a given album
-     * The path is created, by finding the parent on filesystem. The folder paths do not necessarily exist.
+     * The path is created, by finding the parent on filesystem. The folder paths do not necessarily exist, the parent path needs to exist.
      * @param album - The album
      * @returns A tuple containing the albumNamePath, uuidPath
      * @throws An error, if the parent path cannot be found
      */
     findAlbumPaths(album: Album): [albumNamePath: string, uuidPath: string] {
         // Directory path of the parent folder
-        const parentPath = this.findParentPath(album);
+        let parentPath = this.photoDataDir
+        if(album.parentAlbumUUID) {
+            const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, this.photoDataDir)
+            if(parentPathExt.length === 0) {
+                throw new Error(`Unable to find parent of album ${album.getDisplayName()} (Looking for parent ${album.parentAlbumUUID})`);
+            }
+            parentPath = path.join(parentPath, parentPathExt)
+        }
+
         // LinkedAlbum will be the visible album, with the correct name
         const albumNamePath = path.join(parentPath, album.getSanitizedFilename());
         // AlbumPath will be the actual directory, having the UUID as foldername
         const uuidPath = path.join(parentPath, `.${album.getUUID()}`);
         return [albumNamePath, uuidPath];
-    }
-
-    /**
-     * Finds the full path of the parent of a given albumj
-     * @param album - The album
-     * @returns The full path to the parent album
-     * @throws An error if the folder could not be found
-     */
-    findParentPath(album: Album): string {
-        if (!album.parentAlbumUUID) {
-            return this.photoDataDir;
-        }
-
-        return this.findAlbumByUUID(album.parentAlbumUUID);
-    }
-
-    /**
-     * Finds a given album within the photoDataDir
-     * @param albumUUID - The UUID of the album
-     * @returns The full path to the album
-     * @throws An error if the folder could not be found
-     */
-    findAlbumByUUID(albumUUID: string): string {
-        const relativeFolderPath = this.findAlbumByUUIDInPath(albumUUID, this.photoDataDir);
-        if (relativeFolderPath.length === 0) {
-            throw new Error(`Unable to find album ${albumUUID}`);
-        }
-
-        return path.join(this.photoDataDir, relativeFolderPath);
     }
 
     /**
