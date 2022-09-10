@@ -17,7 +17,7 @@ export class MFAServer extends EventEmitter {
     /**
      * The server object
      */
-    private server: http.Server;
+    server: http.Server;
 
     /**
      * Port to start server on
@@ -27,21 +27,16 @@ export class MFAServer extends EventEmitter {
     /**
      * Holds the MFA method used for this server
      */
-    private mfaMethod: MFAMethod;
+    mfaMethod: MFAMethod;
 
     /**
      * Creates the server object
-     * @param port - The port to listen on
+     * @param port - The port to listen on, defaults to 80
      */
-    constructor(port: number) {
+    constructor(port: number = 80) {
         super();
         this.port = port;
-    }
 
-    /**
-     * Starts the server and listens for incoming requests to perform MFA actions
-     */
-    startServer() {
         this.logger.debug(`Preparing MFA server on port ${this.port}`);
         this.server = http.createServer(this.handleRequest.bind(this));
 
@@ -52,7 +47,12 @@ export class MFAServer extends EventEmitter {
             this.logger.debug(`MFA server stopped`);
             this.server = undefined;
         });
+    }
 
+    /**
+     * Starts the server and listens for incoming requests to perform MFA actions
+     */
+    startServer() {
         this.server.listen(this.port, () => {
             this.logger.info(`Exposing endpoints: ${JSON.stringify(MFA_SERVER.ENDPOINT)}`);
         });
@@ -106,7 +106,7 @@ export class MFAServer extends EventEmitter {
     handleMFAResend(req: http.IncomingMessage, res: http.ServerResponse) {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
         if (!methodMatch) {
-            this.sendResponse(res, 400, `Unable to match resend method`);
+            this.sendResponse(res, 400, `Method does not match expected format`);
             return;
         }
 
@@ -114,7 +114,7 @@ export class MFAServer extends EventEmitter {
 
         const phoneNumberIdMatch = req.url.match(/phoneNumberId=\d+/);
 
-        if (phoneNumberIdMatch) {
+        if (phoneNumberIdMatch && methodString !== "device") {
             this.mfaMethod.update(methodString, parseInt(phoneNumberIdMatch[0].slice(14), 10));
         } else {
             this.mfaMethod.update(methodString);
@@ -140,6 +140,9 @@ export class MFAServer extends EventEmitter {
      */
     stopServer() {
         this.logger.debug(`Stopping server`);
-        this.server.close();
+        if(this.server) {
+            this.server.close();
+            this.server = undefined
+        }
     }
 }

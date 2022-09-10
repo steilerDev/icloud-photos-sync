@@ -28,7 +28,7 @@
               "node_modules/.bin/jest",
               "--runInBand",
               "--config", "jest.config.json",
-              "test/unit/photos-library.unit.test.ts"
+              "test/unit/mfa-server.unit.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
