@@ -14,6 +14,7 @@
     "build": "npx tsc",
     "doc": "npx typedoc",
     "test": "npx jest --config jest.config.json test/unit/*.test.ts",
+    "test-full": "npx jest --config jest.config.json",
     "test-api": "npx jest --config jest.config.json test/api/*.test.ts",
     "execute": "node bin/main.js"
   },

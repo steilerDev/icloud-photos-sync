@@ -1,4 +1,5 @@
 import {CPLAlbum} from "../../icloud/icloud-photos/query-parser.js";
+import {STASH_DIR} from "../constants.js";
 import {PEntity} from "./photos-entity.js";
 
 /**
@@ -105,6 +106,10 @@ export class Album implements PEntity<Album> {
      */
     static getRootAlbum(): Album {
         return new Album(``, AlbumType.FOLDER, `iCloud Photos Library`, ``);
+    }
+
+    static getStashAlbum(): Album {
+        return new Album(STASH_DIR, AlbumType.FOLDER, `iCloud Photos Library Archive`, ``);
     }
 
     /**

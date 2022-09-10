@@ -26,10 +26,9 @@
               "--experimental-vm-modules",
               "--inspect-brk",
               "node_modules/.bin/jest",
-              "--runInBand",
-              "--coverage=true",
+              //"--runInBand",
               "--config", "jest.config.json",
-              "test/unit/photos-library.unit.test.ts"
+              //"test/unit/photos-library.unit.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

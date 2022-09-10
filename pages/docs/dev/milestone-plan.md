@@ -22,6 +22,7 @@ The following primary milestones are currently pursured.
 9. :x: Enable archiving (*in progress*)
 10. :x: Full Test Covarage (*in progress*)
 11. :x: Support Live-Photos
+12. :x: Support special folders
 12. :x: Provide WebUI
     - :x: Archive folders through UI
     - :x: Explore all pictures through UI

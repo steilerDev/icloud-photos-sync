@@ -9,6 +9,8 @@ import {getLogger} from '../logger.js';
 import {AxiosResponse} from 'axios';
 import {pEvent} from 'p-event';
 
+export type PathTuple = [namePath: string, uuidPath: string]
+
 /**
  * This class holds the local data structure
  */
@@ -46,13 +48,13 @@ export class PhotosLibrary {
         this.photoDataDir = this.getFullPathAndCreate([cliOpts.dataDir]);
         this.assetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ASSET_DIR]);
         this.archiveDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR]);
-        this.stashDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR, PHOTOS_LIBRARY.STASH_DIR])
+        this.stashDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR, PHOTOS_LIBRARY.STASH_DIR]);
     }
 
     /**
      * Joins the subpaths & photosDataDir together (if photosDataDir is set) and creates the folder if it does not exist
-     * @param subpaths An array of subpaths
-     * @returns The full path 
+     * @param subpaths - An array of subpaths
+     * @returns The full path
      */
     getFullPathAndCreate(subpaths: string[]) {
         const thisDir = this.photoDataDir ? path.join(this.photoDataDir, ...subpaths) : path.join(...subpaths);
@@ -60,6 +62,7 @@ export class PhotosLibrary {
             this.logger.debug(`${thisDir} does not exist, creating`);
             fs.mkdirSync(thisDir, {"recursive": true});
         }
+
         return thisDir;
     }
 
@@ -114,7 +117,7 @@ export class PhotosLibrary {
         const albums: Album[] = [];
 
         // Not adding dummy album
-        if (album.getUUID().length > 0) {
+        if (album.getUUID().length > 0 && album.getUUID() !== PHOTOS_LIBRARY.STASH_DIR) {
             albums.push(album);
         }
 
@@ -232,15 +235,16 @@ export class PhotosLibrary {
      * @returns A tuple containing the albumNamePath, uuidPath
      * @throws An error, if the parent path cannot be found
      */
-    findAlbumPaths(album: Album): [albumNamePath: string, uuidPath: string] {
+    findAlbumPaths(album: Album): PathTuple {
         // Directory path of the parent folder
-        let parentPath = this.photoDataDir
-        if(album.parentAlbumUUID) {
-            const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, this.photoDataDir)
-            if(parentPathExt.length === 0) {
+        let parentPath = this.photoDataDir;
+        if (album.parentAlbumUUID) {
+            const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, this.photoDataDir);
+            if (parentPathExt.length === 0) {
                 throw new Error(`Unable to find parent of album ${album.getDisplayName()} (Looking for parent ${album.parentAlbumUUID})`);
             }
-            parentPath = path.join(parentPath, parentPathExt)
+
+            parentPath = path.join(parentPath, parentPathExt);
         }
 
         // LinkedAlbum will be the visible album, with the correct name
@@ -248,6 +252,12 @@ export class PhotosLibrary {
         // AlbumPath will be the actual directory, having the UUID as foldername
         const uuidPath = path.join(parentPath, `.${album.getUUID()}`);
         return [albumNamePath, uuidPath];
+    }
+
+    findStashAlbumPaths(album: Album): PathTuple {
+        const stashedAlbumNamePath = path.join(this.stashDir, path.basename(album.getSanitizedFilename()));
+        const stashedUUIDPath = path.join(this.stashDir, path.basename(`.${album.getUUID()}`));
+        return [stashedAlbumNamePath, stashedUUIDPath];
     }
 
     /**
@@ -380,34 +390,10 @@ export class PhotosLibrary {
      */
     stashArchivedAlbum(album: Album) {
         this.logger.debug(`Stashing album ${album.getDisplayName()}`);
-        if (album.albumType !== AlbumType.ARCHIVED) {
-            throw new Error(`Not stashing archive of type ${album.albumType}`);
-        }
-
-        const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
-        const stashedAlbumNamePath = path.join(this.stashDir, path.basename(albumNamePath));
-        const stashedUUIDPath = path.join(this.stashDir, path.basename(uuidPath));
-        if (!fs.existsSync(albumNamePath)) {
-            throw new Error(`Unable to find albumName path, expected ${albumNamePath}`);
-        }
-
-        if (!fs.existsSync(uuidPath)) {
-            throw new Error(`Unable to find uuid path, expected ${uuidPath}`);
-        }
-
-        if (fs.existsSync(stashedAlbumNamePath)) {
-            throw new Error(`Supposed stash albumName path already exists: ${stashedAlbumNamePath}`);
-        }
-
-        if (fs.existsSync(stashedUUIDPath)) {
-            throw new Error(`Supposed stash uuid path already exists: ${stashedUUIDPath}`);
-        }
-
-        this.logger.debug(`Moving ${uuidPath} to ${stashedUUIDPath}`);
-        fs.renameSync(uuidPath, stashedUUIDPath);
-        this.logger.debug(`Unlinking ${albumNamePath} and re-linking ${stashedAlbumNamePath}`);
-        fs.unlinkSync(albumNamePath);
-        fs.symlinkSync(path.basename(stashedUUIDPath), stashedAlbumNamePath);
+        this.movePathTuple(
+            this.findAlbumPaths(album),
+            this.findStashAlbumPaths(album),
+        );
     }
 
     /**
@@ -415,13 +401,65 @@ export class PhotosLibrary {
      * @param album - The album that needs to be retrieved
      */
     retrieveArchivedAlbum(album: Album) {
+        this.logger.debug(`Retrieving stashed album ${album.getDisplayName()}`);
+        this.movePathTuple(
+            this.findStashAlbumPaths(album),
+            this.findAlbumPaths(album),
+        );
+    }
 
+    /**
+     * Moves & re-links the path tuple
+     * @param src - The source of folders
+     * @param dest - The destination of folders
+     */
+    movePathTuple(src: PathTuple, dest: PathTuple) {
+        const [srcNamePath, srcUUIDPath] = src;
+        const [destNamePath, destUUIDPath] = dest;
+
+        if (!fs.existsSync(srcNamePath)) {
+            throw new Error(`Unable to find source album name path, expected ${srcNamePath}`);
+        }
+
+        if (!fs.existsSync(srcUUIDPath)) {
+            throw new Error(`Unable to find source uuid path, expected ${srcUUIDPath}`);
+        }
+
+        if (fs.existsSync(destNamePath)) {
+            throw new Error(`Supposed destination path already exists: ${destNamePath}`);
+        }
+
+        if (fs.existsSync(destUUIDPath)) {
+            throw new Error(`Supposed destination uuid path already exists: ${destUUIDPath}`);
+        }
+
+        this.logger.debug(`Moving ${srcUUIDPath} to ${destUUIDPath}`);
+        fs.renameSync(srcUUIDPath, destUUIDPath);
+        this.logger.debug(`Unlinking ${srcNamePath} and re-linking ${destNamePath}`);
+        fs.unlinkSync(srcNamePath);
+        fs.symlinkSync(path.basename(destUUIDPath), destNamePath);
     }
 
     /**
      * This function will look for orphaned albums and remove the unecessary UUID links to make them more manageable
      */
-    cleanArchivedOrphans() {
+    async cleanArchivedOrphans() {
+        this.logger.debug(`Cleaning archived orphans`);
+        const archivedOphans = await this.loadAlbum(Album.getStashAlbum(), this.stashDir);
+        for (const album of archivedOphans) {
+            this.logger.debug(`Found orphaned album ${album}`);
+            const [namePath, uuidPath] = this.findStashAlbumPaths(album);
+            let targetPath: string;
+            let index = 0;
+            do {
+                const basename = index === 0 ? path.basename(namePath) : `${path.basename(namePath)}-${index}`;
+                index++;
+                targetPath = path.join(this.archiveDir, basename);
+            } while (fs.existsSync(targetPath));
 
+            this.logger.debug(`Moving ${uuidPath} to ${targetPath}, unlinking ${namePath}`);
+            fs.renameSync(uuidPath, targetPath);
+            fs.unlinkSync(namePath);
+        }
     }
 }

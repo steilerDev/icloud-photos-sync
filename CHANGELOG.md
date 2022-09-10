@@ -8,7 +8,7 @@ This release contains a massive amount of 'behind the scenes' changes to the dev
   * Implemented testing process
     * Unit tests implemented for
       * `icloud`
-      * `photos-library` (partial)
+      * `photos-library`
     * API Tests of iCloud & iCloud Photos backend
     * Basic testing of Docker Image
   * Foundations for archiving
