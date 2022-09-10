@@ -39,7 +39,7 @@ export function addAlbum(this: SyncEngine, album: Album) {
     this.logger.debug(`Creating album ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
 
     if (album.albumType === AlbumType.ARCHIVED) {
-        this.photosLibrary.retrieveArchivedAlbum(album);
+        this.photosLibrary.retrieveStashedAlbum(album);
         return;
     }
 

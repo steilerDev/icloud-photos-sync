@@ -1353,7 +1353,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 test(`Retrieve stashed album`, () => {
-                    mockfs()
+                    mockfs();
                     const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
                     const archivedName = `2015 - 2016`;
 
@@ -1369,7 +1369,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 test(`Stash album`, () => {
-                    mockfs()
+                    mockfs();
                     const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
                     const archivedName = `2015 - 2016`;
 
