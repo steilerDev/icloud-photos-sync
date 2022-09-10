@@ -2,7 +2,7 @@ import mockfs from 'mock-fs';
 import fs from 'fs';
 import {expect, describe, test, afterEach} from '@jest/globals';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
-import {ASSET_DIR, ARCHIVE_DIR, SAFE_FILES} from '../../src/lib/photos-library/constants';
+import {ASSET_DIR, ARCHIVE_DIR, STASH_DIR, SAFE_FILES} from '../../src/lib/photos-library/constants';
 import path from 'path';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
@@ -13,6 +13,7 @@ import axios, {AxiosRequestConfig} from 'axios';
 const photosDataDir = `/media/files/photos-library`;
 const assetDir = path.join(photosDataDir, ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
+const stashDir = path.join(photosDataDir, ARCHIVE_DIR, STASH_DIR)
 
 function photosLibraryFactory(): PhotosLibrary {
     const opts = {
@@ -31,6 +32,8 @@ describe(`Unit Tests - Photos Library`, () => {
         const _library = photosLibraryFactory();
         expect(fs.existsSync(photosDataDir)).toBe(true);
         expect(fs.existsSync(assetDir)).toBe(true);
+        expect(fs.existsSync(archiveDir)).toBe(true);
+        expect(fs.existsSync(stashDir)).toBe(true);
     });
 
     test(`Should use existing directories and not overwrite content`, () => {
@@ -40,6 +43,13 @@ describe(`Unit Tests - Photos Library`, () => {
                 [ASSET_DIR]: {
                     "testFile": `test content`,
                 },
+                [ARCHIVE_DIR]: {
+                    [STASH_DIR]: {
+                        "testFile": `test content`,
+                    },
+                    "testFile": `test content`,
+                },
+
             },
         });
         const opts = {
@@ -47,9 +57,13 @@ describe(`Unit Tests - Photos Library`, () => {
         };
         const _library = new PhotosLibrary(opts);
         expect(fs.existsSync(photosDataDir)).toBe(true);
-        expect(fs.existsSync(assetDir)).toBe(true);
         expect(fs.existsSync(path.join(photosDataDir, `testFile`)));
+        expect(fs.existsSync(assetDir)).toBe(true);
         expect(fs.existsSync(path.join(assetDir, `testFile`)));
+        expect(fs.existsSync(archiveDir)).toBe(true);
+        expect(fs.existsSync(path.join(archiveDir, `testFile`)));
+        expect(fs.existsSync(stashDir)).toBe(true);
+        expect(fs.existsSync(path.join(stashDir, `testFile`)));
     });
 
     describe(`Load state`, () => {
@@ -1179,12 +1193,12 @@ describe(`Unit Tests - Photos Library`, () => {
                     const library = photosLibraryFactory();
                     library.stashArchivedAlbum(album);
 
-                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`))).toBeTruthy();
-                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(archiveDir, archivedName))).toBeTruthy();
+                    expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`))).toBeTruthy();
+                    expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(stashDir, archivedName))).toBeTruthy();
 
                     expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeFalsy();
                     expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeFalsy();
@@ -1205,7 +1219,9 @@ describe(`Unit Tests - Photos Library`, () => {
                     mockfs({
                         [photosDataDir]: {
                             [ARCHIVE_DIR]: {
-                                [`.${archivedUUID}`]: {},
+                                [STASH_DIR]: {
+                                    [`.${archivedUUID}`]: {},
+                                }
                             },
                             [`.${archivedUUID}`]: {
                                 [asset1Name]: Buffer.from([1, 1, 1, 1]),
@@ -1222,7 +1238,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     const library = photosLibraryFactory();
                     expect(() => library.stashArchivedAlbum(album)).toThrowError(`Supposed stash uuid path already exists`);
 
-                    expect(fs.existsSync(path.join(archiveDir, `.${archivedUUID}`))).toBeTruthy();
+                    expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`))).toBeTruthy();
 
                     expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeTruthy();
                     expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
@@ -1243,7 +1259,9 @@ describe(`Unit Tests - Photos Library`, () => {
                     mockfs({
                         [photosDataDir]: {
                             [ARCHIVE_DIR]: {
-                                [archivedName]: {},
+                                [STASH_DIR]: {
+                                    [archivedName]: {},
+                                }
                             },
                             [`.${archivedUUID}`]: {
                                 [asset1Name]: Buffer.from([1, 1, 1, 1]),
@@ -1260,7 +1278,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     const library = photosLibraryFactory();
                     expect(() => library.stashArchivedAlbum(album)).toThrowError(`Supposed stash albumName path already exists`);
 
-                    expect(fs.existsSync(path.join(archiveDir, archivedName))).toBeTruthy();
+                    expect(fs.existsSync(path.join(stashDir, archivedName))).toBeTruthy();
                     expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeTruthy();
                     expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
                     expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();

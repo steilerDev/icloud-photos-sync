@@ -5,22 +5,29 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
 
   # Maintain dependencies for npm
   - package-ecosystem: "npm"
     directory: "/app"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
   
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"
     directory: "/docker"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "saturday"
 
   # Maintain dependencies for pip (docs site)
   - package-ecosystem: "pip"
     directory: "/pages"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"

@@ -34,22 +34,32 @@ export class PhotosLibrary {
     archiveDir: string;
 
     /**
+     * The full path to the sub-dir within 'archiveDir', containing temporarily stashed albums
+     */
+    stashDir: string;
+
+    /**
      * Creates the local PhotoLibrary, based on the provided CLI options
      * @param cliOpts - The read CLI options
      */
     constructor(cliOpts: OptionValues) {
-        this.photoDataDir = this.getFullPathAndCreate(cliOpts.dataDir);
-        this.assetDir = this.getFullPathAndCreate(PHOTOS_LIBRARY.ASSET_DIR);
-        this.archiveDir = this.getFullPathAndCreate(PHOTOS_LIBRARY.ARCHIVE_DIR);
+        this.photoDataDir = this.getFullPathAndCreate([cliOpts.dataDir]);
+        this.assetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ASSET_DIR]);
+        this.archiveDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR]);
+        this.stashDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR, PHOTOS_LIBRARY.STASH_DIR])
     }
 
-    getFullPathAndCreate(subpath: string) {
-        const thisDir = this.photoDataDir ? path.join(this.photoDataDir, subpath) : subpath;
+    /**
+     * Joins the subpaths & photosDataDir together (if photosDataDir is set) and creates the folder if it does not exist
+     * @param subpaths An array of subpaths
+     * @returns The full path 
+     */
+    getFullPathAndCreate(subpaths: string[]) {
+        const thisDir = this.photoDataDir ? path.join(this.photoDataDir, ...subpaths) : path.join(...subpaths);
         if (!fs.existsSync(thisDir)) {
             this.logger.debug(`${thisDir} does not exist, creating`);
             fs.mkdirSync(thisDir, {"recursive": true});
         }
-
         return thisDir;
     }
 
@@ -375,8 +385,8 @@ export class PhotosLibrary {
         }
 
         const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
-        const stashedAlbumNamePath = path.join(this.archiveDir, path.basename(albumNamePath));
-        const stashedUUIDPath = path.join(this.archiveDir, path.basename(uuidPath));
+        const stashedAlbumNamePath = path.join(this.stashDir, path.basename(albumNamePath));
+        const stashedUUIDPath = path.join(this.stashDir, path.basename(uuidPath));
         if (!fs.existsSync(albumNamePath)) {
             throw new Error(`Unable to find albumName path, expected ${albumNamePath}`);
         }

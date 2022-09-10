@@ -3,6 +3,7 @@
  */
 export const ASSET_DIR = `_All-Photos`;
 export const ARCHIVE_DIR = `_Archive`;
+export const STASH_DIR = `.stash`
 
 /**
  * A list of files, that are safe to ignore for the application.
