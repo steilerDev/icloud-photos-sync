@@ -26,14 +26,27 @@
               "--experimental-vm-modules",
               "--inspect-brk",
               "node_modules/.bin/jest",
-              //"--runInBand",
+              "--runInBand",
               "--config", "jest.config.json",
-              //"test/unit/photos-library.unit.test.ts"
+              "test/unit/photos-library.unit.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
             "envFile": "${workspaceFolder}/.vscode/debug-test.env"
-          }
+        }, {
+            "name": "Run All Tests",
+            "type": "node",
+            "request": "launch",
+            "runtimeArgs": [
+                "--experimental-vm-modules",
+                "node_modules/.bin/jest",
+                "--config", "jest.config.json"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "${workspaceFolder}/app",
+            "envFile": "${workspaceFolder}/.vscode/debug-test.env"
+        }
     ]
 }

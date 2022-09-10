@@ -400,7 +400,7 @@ export class PhotosLibrary {
      * Tries to retrieve a previously stashed archived album
      * @param album - The album that needs to be retrieved
      */
-    retrieveArchivedAlbum(album: Album) {
+    retrieveStashedAlbum(album: Album) {
         this.logger.debug(`Retrieving stashed album ${album.getDisplayName()}`);
         this.movePathTuple(
             this.findStashAlbumPaths(album),

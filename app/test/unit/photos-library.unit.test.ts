@@ -1331,23 +1331,6 @@ describe(`Unit Tests - Photos Library`, () => {
                         expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
                         expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
                     });
-                });
-
-                describe(`Stash album`, () => {
-                    test(`Stash album`, () => {
-                        const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
-                        const archivedName = `2015 - 2016`;
-
-                        const library = photosLibraryFactory();
-                        library.movePathTuple = jest.fn();
-
-                        const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
-                        library.stashArchivedAlbum(album);
-                        expect(library.movePathTuple).toHaveBeenCalledWith(
-                            [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
-                            [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
-                        );
-                    });
 
                     test(`AlbumUUID does not exist`, () => {
                         const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
@@ -1370,6 +1353,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 test(`Retrieve stashed album`, () => {
+                    mockfs()
                     const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
                     const archivedName = `2015 - 2016`;
 
@@ -1377,10 +1361,26 @@ describe(`Unit Tests - Photos Library`, () => {
                     library.movePathTuple = jest.fn();
 
                     const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
-                    library.retrieveArchivedAlbum(album);
+                    library.retrieveStashedAlbum(album);
                     expect(library.movePathTuple).toHaveBeenCalledWith(
                         [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
                         [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
+                    );
+                });
+
+                test(`Stash album`, () => {
+                    mockfs()
+                    const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
+                    const archivedName = `2015 - 2016`;
+
+                    const library = photosLibraryFactory();
+                    library.movePathTuple = jest.fn();
+
+                    const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
+                    library.stashArchivedAlbum(album);
+                    expect(library.movePathTuple).toHaveBeenCalledWith(
+                        [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
+                        [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
                     );
                 });
 
