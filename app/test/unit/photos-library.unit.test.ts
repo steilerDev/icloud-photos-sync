@@ -7,7 +7,6 @@ import path from 'path';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
-import mock from 'mock-fs';
 import axios, {AxiosRequestConfig} from 'axios';
 
 const photosDataDir = `/media/files/photos-library`;
@@ -415,7 +414,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 const fileType = FileType.fromExtension(assetExt);
                 mockfs({
                     [assetDir]: {
-                        [`${assetFileName}.${assetExt}`]: mock.file({
+                        [`${assetFileName}.${assetExt}`]: mockfs.file({
                             "content": assetData,
                             "mtime": new Date(assetMTime),
                         }),
@@ -436,7 +435,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 const fileType = FileType.fromExtension(assetExt);
                 mockfs({
                     [assetDir]: {
-                        [`${assetFileName}.${assetExt}`]: mock.file({
+                        [`${assetFileName}.${assetExt}`]: mockfs.file({
                             "content": assetData,
                             "mtime": new Date(assetMTime),
                         }),
@@ -457,7 +456,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 const fileType = FileType.fromExtension(assetExt);
                 mockfs({
                     [assetDir]: {
-                        [`${assetFileName}.${assetExt}`]: mock.file({
+                        [`${assetFileName}.${assetExt}`]: mockfs.file({
                             "content": assetData,
                             "mtime": new Date(assetMTime),
                         }),
@@ -479,7 +478,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 const fileType = FileType.fromExtension(assetExt);
                 mockfs({
                     [assetDir]: {
-                        [`${assetFileName}.${assetExt}`]: mock.file({
+                        [`${assetFileName}.${assetExt}`]: mockfs.file({
                             "content": assetData,
                             "mtime": new Date(assetMTime),
                         }),
@@ -527,7 +526,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 const assetFullFilename = `${assetFileName}.${assetExt}`;
                 mockfs({
                     [assetDir]: {
-                        [assetFullFilename]: mock.file({
+                        [assetFullFilename]: mockfs.file({
                             "content": assetData,
                             "mtime": new Date(assetMTime),
                         }),

@@ -1,6 +1,44 @@
-import {describe, test} from '@jest/globals';
+import {describe, test, jest, expect} from '@jest/globals';
+import { CPLAsset, CPLMaster } from '../../src/lib/icloud/icloud-photos/query-parser';
+import {SyncEngine} from '../../src/lib/sync-engine/sync-engine'
+import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
+import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
+import {iCloud} from '../../src/lib/icloud/icloud'
+import { PhotosLibrary } from '../../src/lib/photos-library/photos-library';
+const photosDataDir = `/media/files/photos-library`;
+
+function syncEngineFactory(): SyncEngine {
+    return new SyncEngine(
+        {
+            downloadThreads: 1,
+            maxRetry: -1
+        },
+        new iCloud({
+            username: "steilerdev@web.de", 
+            password: "some-pass", 
+            trustToken: "token", 
+            dataDir: photosDataDir
+        }),
+        new PhotosLibrary({
+            "dataDir": photosDataDir,
+        }),
+    )
+}
+
 describe(`Unit Tests - Sync Engine`, () => {
     describe(`Processing remote records`, () => {
+        describe(`Converting assets`, () => {
+            test.only(`Valid list`, () => {
+                const cplAssets = expectedAssetsAll as CPLAsset[]
+                const cplMasters = expectedMastersAll.map(pseudoMaster => {
+                    pseudoMaster.resource["downloadURL"] = "https:/icloud.com"
+                    return pseudoMaster
+                }) as unknown as CPLMaster[]
+                const assets = SyncEngine.convertCPLAssets(cplAssets, cplMasters)
+                debugger
+                expect(assets.length).toEqual(206) // 202 + 4 edits
+            })
+        })
         test.todo(`Converting assets`);
         test.todo(`Converting albums`);
     });

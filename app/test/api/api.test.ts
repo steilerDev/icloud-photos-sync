@@ -111,8 +111,8 @@ describe(`API E2E Tests`, () => {
             const albumRecordName = `311f9778-1f40-4762-9e57-569ebf5fb070`;
             const [assets, masters] = await icloud.photos.fetchAllPictureRecords(albumRecordName);
 
-            // _writeTestData(assets.map(postProcessAssetData), "album-assets-data")
-            // _writeTestData(masters.map(postProcessMasterData), "album-master-data")
+            // _writeTestData(assets.map(postProcessAssetData), "api.expected.album-cpl-assets")
+            // _writeTestData(masters.map(postProcessMasterData), "api.expected.album-cpl-masters")
             expect(assets.length).toEqual(202);
             expect(masters.length).toEqual(202);
             expect(assets.map(postProcessAssetData).sort(sortByRecordName)).toEqual(expectedAssetsAlbum.sort(sortByRecordName));

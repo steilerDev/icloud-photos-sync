@@ -27,8 +27,9 @@
               "--inspect-brk",
               "node_modules/.bin/jest",
               "--runInBand",
+              "--collectCoverage=false",
               "--config", "jest.config.json",
-              "test/unit/mfa-server.unit.test.ts"
+              "test/unit/sync-engine.unit.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

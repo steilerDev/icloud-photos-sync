@@ -1,6 +1,7 @@
 import {CPLAlbum, CPLAsset, CPLMaster} from "../../src/lib/icloud/icloud-photos/query-parser";
 import * as fs from 'fs';
 import path from "path";
+import mockfs from 'mock-fs'
 
 /**
  * The data dir path, to be used in the tests
@@ -29,12 +30,12 @@ export function postProcessMasterData(a: CPLMaster): any {
         "filenameEnc": a.filenameEnc,
         "modified": a.modified,
         "recordName": a.recordName,
+        "resourceType": a.resourceType,
         "resource": {
             "fileChecksum": a.resource.fileChecksum,
             "referenceChecksum": a.resource.referenceChecksum,
             "size": a.resource.size,
             "wrappingKey": a.resource.wrappingKey,
-            "resourceType": a.resourceType,
         },
     };
 }
@@ -87,6 +88,6 @@ export async function postProcessAlbumData(a: CPLAlbum): Promise<any> {
  * @param pathExt - The path extension to the local project path
  */
 export function writeTestData(data: any, pathExt: string) {
-    const basePath = `/home/coder/project/icloud-photos-sync/rootfs/opt/icloud-photos-sync`;
-    fs.writeFileSync(path.join(basePath, `${pathExt}.json`), JSON.stringify(data));
+    const basePath = `/home/coder/project/icloud-photos-sync/app/test/_data`;
+    mockfs.bypass(() => fs.writeFileSync(path.join(basePath, `${pathExt}.json`), JSON.stringify(data)))
 }
