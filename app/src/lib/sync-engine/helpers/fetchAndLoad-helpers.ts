@@ -19,6 +19,7 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
         const master: CPLMaster = cplMasterRecords[asset.masterRef];
         const origFilenameWithExt = Buffer.from(master.filenameEnc, `base64`).toString();
         const origFilename = path.parse(origFilenameWithExt).name;
+
         if (master?.resource && master?.resourceType) {
             remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, master.modified, origFilename, AssetType.ORIG, asset.recordName, asset.favorite === 1));
         }

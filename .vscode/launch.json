@@ -27,7 +27,6 @@
               "--inspect-brk",
               "node_modules/.bin/jest",
               "--runInBand",
-              "--collectCoverage=false",
               "--config", "jest.config.json",
               "test/unit/sync-engine.unit.test.ts"
             ],
