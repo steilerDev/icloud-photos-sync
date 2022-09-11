@@ -1,4 +1,5 @@
-import {describe, test, jest, expect} from '@jest/globals';
+import mockfs from 'mock-fs';
+import {describe, test, jest, expect, afterEach, beforeEach} from '@jest/globals';
 import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
 import {SyncEngine} from '../../src/lib/sync-engine/sync-engine';
 import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
@@ -14,6 +15,14 @@ import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
 import {AxiosResponse} from 'axios';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 const photosDataDir = `/media/files/photos-library`;
+
+beforeEach(() => {
+    mockfs({});
+});
+
+afterEach(() => {
+    mockfs.restore();
+});
 
 function syncEngineFactory(): SyncEngine {
     const syncEngine = new SyncEngine(
