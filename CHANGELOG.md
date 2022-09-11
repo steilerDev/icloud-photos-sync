@@ -7,9 +7,12 @@ This release contains a massive amount of 'behind the scenes' changes to the dev
   * Performing continous API tests via GH Actions using a test environment
   * Implemented testing process
     * Unit tests implemented for
-      * `icloud`
+      * `icloud` (logic not covered by API Test)
       * `photos-library`
       * `mfa-server`
+      * `sync-engine`
+        * `fetchNLoad`
+        * `diffing`
     * API Tests of iCloud & iCloud Photos backend
     * Basic testing of Docker Image
   * Foundations for archiving

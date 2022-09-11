@@ -212,8 +212,8 @@ export class SyncEngine extends EventEmitter {
     }
 
     // From ./helpers/diff-helpers.ts
-    private resolveHierarchicalDependencies = resolveHierarchicalDependencies;
-    private getProcessingQueues = getProcessingQueues;
+    resolveHierarchicalDependencies = resolveHierarchicalDependencies;
+    getProcessingQueues = getProcessingQueues;
 
     /**
      * Takes the processing queues and performs the necessary actions to write them to disk
