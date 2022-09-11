@@ -37,6 +37,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 if (pseudoAsset.resource) {
                     pseudoAsset.resource.downloadURL = `https:/icloud.com`;
                 }
+
                 return pseudoAsset;
             }) as CPLAsset[];
 

@@ -46,6 +46,7 @@
     "@types/jest": "^29.0.0",
     "@types/mock-fs": "^4.13.1",
     "@types/node": "^18.7.13",
+    "@types/supertest": "^2.0.12",
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.10.2",
     "@typescript-eslint/parser": "^5.10.2",
@@ -63,7 +64,6 @@
     "typescript": "^4.5.5"
   },
   "dependencies": {
-    "@types/supertest": "^2.0.12",
     "axios": "^0.27.2",
     "chalk": "^5.0.0",
     "cli-progress": "^3.11.2",
