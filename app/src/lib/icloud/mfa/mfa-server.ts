@@ -114,7 +114,7 @@ export class MFAServer extends EventEmitter {
 
         const phoneNumberIdMatch = req.url.match(/phoneNumberId=\d+/);
 
-        if (phoneNumberIdMatch && methodString !== "device") {
+        if (phoneNumberIdMatch && methodString !== `device`) {
             this.mfaMethod.update(methodString, parseInt(phoneNumberIdMatch[0].slice(14), 10));
         } else {
             this.mfaMethod.update(methodString);
@@ -140,9 +140,9 @@ export class MFAServer extends EventEmitter {
      */
     stopServer() {
         this.logger.debug(`Stopping server`);
-        if(this.server) {
+        if (this.server) {
             this.server.close();
-            this.server = undefined
+            this.server = undefined;
         }
     }
 }

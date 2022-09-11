@@ -1,499 +1,496 @@
 import {describe, test, jest, expect} from '@jest/globals';
-import { CPLAlbum, CPLAsset, CPLMaster } from '../../src/lib/icloud/icloud-photos/query-parser';
-import {SyncEngine} from '../../src/lib/sync-engine/sync-engine'
+import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
+import {SyncEngine} from '../../src/lib/sync-engine/sync-engine';
 import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
 import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
-import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json"
-import {iCloud} from '../../src/lib/icloud/icloud'
-import { PhotosLibrary } from '../../src/lib/photos-library/photos-library';
-import { Asset, AssetType } from '../../src/lib/photos-library/model/asset';
-import { FileType } from '../../src/lib/photos-library/model/file-type';
-import { PLibraryEntities } from '../../src/lib/photos-library/model/photos-entity';
-import { Album, AlbumType } from '../../src/lib/photos-library/model/album';
-import exp from 'constants';
+import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
+import {iCloud} from '../../src/lib/icloud/icloud';
+import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
+import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
+import {FileType} from '../../src/lib/photos-library/model/file-type';
+import {PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
+import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 const photosDataDir = `/media/files/photos-library`;
 
 function syncEngineFactory(): SyncEngine {
     return new SyncEngine(
         {
-            downloadThreads: 1,
-            maxRetry: -1
+            "downloadThreads": 1,
+            "maxRetry": -1,
         },
         new iCloud({
-            username: "steilerdev@web.de", 
-            password: "some-pass", 
-            trustToken: "token", 
-            dataDir: photosDataDir
+            "username": `steilerdev@web.de`,
+            "password": `some-pass`,
+            "trustToken": `token`,
+            "dataDir": photosDataDir,
         }),
         new PhotosLibrary({
             "dataDir": photosDataDir,
         }),
-    )
+    );
 }
 
 describe(`Unit Tests - Sync Engine`, () => {
     describe(`Processing remote records`, () => {
         test(`Converting Assets - E2E Flow`, () => {
-            const cplAssets = expectedAssetsAll.map(pseudoAsset => {
-                if(pseudoAsset.resource) {
-                    pseudoAsset.resource["downloadURL"] = "https:/icloud.com"
+            const cplAssets = expectedAssetsAll.map((pseudoAsset: any) => {
+                if (pseudoAsset.resource) {
+                    pseudoAsset.resource.downloadURL = `https:/icloud.com`;
                 }
-                return pseudoAsset
-            }) as CPLAsset[]
+                return pseudoAsset;
+            }) as CPLAsset[];
 
-            const cplMasters = expectedMastersAll.map(pseudoMaster => {
-                pseudoMaster.resource["downloadURL"] = "https:/icloud.com"
-                return pseudoMaster
-            }) as unknown as CPLMaster[]
+            const cplMasters = expectedMastersAll.map((pseudoMaster: any) => {
+                pseudoMaster.resource.downloadURL = `https:/icloud.com`;
+                return pseudoMaster;
+            }) as unknown as CPLMaster[];
 
-            const assets = SyncEngine.convertCPLAssets(cplAssets, cplMasters)
-            expect(assets.length).toEqual(206) // 202 + 4 edits
-            for(const asset of assets) {
-                expect(asset.fileChecksum.length).toBeGreaterThan(0)
-                expect(asset.size).toBeGreaterThan(0)
-                expect(asset.modified).toBeGreaterThan(0)
-                expect(asset.fileType).toBeDefined()
-                expect(asset.assetType).toBeDefined()
-                expect(asset.origFilename.length).toBeGreaterThan(0)
-                expect(asset.wrappingKey).toBeDefined()
-                expect(asset.wrappingKey?.length).toBeGreaterThan(0)
-                expect(asset.referenceChecksum).toBeDefined()
-                expect(asset.referenceChecksum?.length).toBeGreaterThan(0)
-                expect(asset.downloadURL).toBeDefined()
-                expect(asset.downloadURL?.length).toBeGreaterThan(0)
-                expect(asset.recordName).toBeDefined()
-                expect(asset.recordName?.length).toBeGreaterThan(0)
-                expect(asset.isFavorite).toBeDefined()
+            const assets = SyncEngine.convertCPLAssets(cplAssets, cplMasters);
+            expect(assets.length).toEqual(206); // 202 + 4 edits
+            for (const asset of assets) {
+                expect(asset.fileChecksum.length).toBeGreaterThan(0);
+                expect(asset.size).toBeGreaterThan(0);
+                expect(asset.modified).toBeGreaterThan(0);
+                expect(asset.fileType).toBeDefined();
+                expect(asset.assetType).toBeDefined();
+                expect(asset.origFilename.length).toBeGreaterThan(0);
+                expect(asset.wrappingKey).toBeDefined();
+                expect(asset.wrappingKey?.length).toBeGreaterThan(0);
+                expect(asset.referenceChecksum).toBeDefined();
+                expect(asset.referenceChecksum?.length).toBeGreaterThan(0);
+                expect(asset.downloadURL).toBeDefined();
+                expect(asset.downloadURL?.length).toBeGreaterThan(0);
+                expect(asset.recordName).toBeDefined();
+                expect(asset.recordName?.length).toBeGreaterThan(0);
+                expect(asset.isFavorite).toBeDefined();
             }
-        })
+        });
 
         test(`Converting Albums - E2E Flow`, async () => {
-            const cplAlbums = expectedAlbumsAll as CPLAlbum[]
+            const cplAlbums = expectedAlbumsAll as CPLAlbum[];
 
-            const albums = await SyncEngine.convertCPLAlbums(cplAlbums)
-            expect(albums.length).toEqual(8)
-            for(const album of albums) {
-                expect(album.albumName.length).toBeGreaterThan(0)
-                expect(album.uuid.length).toBeGreaterThan(0)
-                expect(album.albumType).toBeDefined()
+            const albums = await SyncEngine.convertCPLAlbums(cplAlbums);
+            expect(albums.length).toEqual(8);
+            for (const album of albums) {
+                expect(album.albumName.length).toBeGreaterThan(0);
+                expect(album.uuid.length).toBeGreaterThan(0);
+                expect(album.albumType).toBeDefined();
             }
-        })
+        });
     });
 
     describe(`Diffing state`, () => {
         test(`Add items to empty state`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test', 'somekey', 'somechecksum', 'https://icloud.com', 'somerecordname', false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test1', 'somekey', 'somechecksum1', 'https://icloud.com', 'somerecordname1', false),
-                new Asset(`somechecksum2`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test2', 'somekey', 'somechecksum2', 'https://icloud.com', 'somerecordname2', false),
-                new Asset(`somechecksum3`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test3', 'somekey', 'somechecksum3', 'https://icloud.com', 'somerecordname3', false)
-            ]
-            const localAssets: PLibraryEntities<Asset> = {}
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+            ];
+            const localAssets: PLibraryEntities<Asset> = {};
 
-            const syncEngine = syncEngineFactory()
+            const syncEngine = syncEngineFactory();
 
-            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets)
-            expect(toBeDeleted.length).toEqual(0)
-            expect(toBeAdded.length).toEqual(4)
-            expect(toBeKept.length).toEqual(0)
+            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets);
+            expect(toBeDeleted.length).toEqual(0);
+            expect(toBeAdded.length).toEqual(4);
+            expect(toBeKept.length).toEqual(0);
         });
 
         test(`Only remove items from existing state`, () => {
-            const remoteAssets = []
+            const remoteAssets = [];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test', 'somekey', 'somechecksum', 'https://icloud.com', 'somerecordname', false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test1', 'somekey', 'somechecksum1', 'https://icloud.com', 'somerecordname1', false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test2', 'somekey', 'somechecksum2', 'https://icloud.com', 'somerecordname2', false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test3', 'somekey', 'somechecksum3', 'https://icloud.com', 'somerecordname3', false)
-            }
+                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+            };
 
-            const syncEngine = syncEngineFactory()
+            const syncEngine = syncEngineFactory();
 
-            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets)
-            expect(toBeDeleted.length).toEqual(4)
-            expect(toBeAdded.length).toEqual(0)
-            expect(toBeKept.length).toEqual(0)
+            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets);
+            expect(toBeDeleted.length).toEqual(4);
+            expect(toBeAdded.length).toEqual(0);
+            expect(toBeKept.length).toEqual(0);
         });
 
         test(`Only add items to existing state`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test', 'somekey', 'somechecksum', 'https://icloud.com', 'somerecordname', false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test1', 'somekey', 'somechecksum1', 'https://icloud.com', 'somerecordname1', false),
-                new Asset(`somechecksum2`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test2', 'somekey', 'somechecksum2', 'https://icloud.com', 'somerecordname2', false),
-                new Asset(`somechecksum3`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test3', 'somekey', 'somechecksum3', 'https://icloud.com', 'somerecordname3', false)
-            ]
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+            ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test', 'somekey', 'somechecksum', 'https://icloud.com', 'somerecordname', false),
-            }
+                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+            };
 
-            const syncEngine = syncEngineFactory()
+            const syncEngine = syncEngineFactory();
 
-            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets)
-            expect(toBeDeleted.length).toEqual(0)
-            expect(toBeAdded.length).toEqual(3)
-            expect(toBeKept.length).toEqual(1)
+            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets);
+            expect(toBeDeleted.length).toEqual(0);
+            expect(toBeAdded.length).toEqual(3);
+            expect(toBeKept.length).toEqual(1);
         });
 
         test(`Add & remove items from existing state`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test', 'somekey', 'somechecksum', 'https://icloud.com', 'somerecordname', false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test1', 'somekey', 'somechecksum1', 'https://icloud.com', 'somerecordname1', false),
-                new Asset(`somechecksum4`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test4', 'somekey', 'somechecksum4', 'https://icloud.com', 'somerecordname4', false)
-            ]
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false),
+            ];
 
             const localAssets = {
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test2', 'somekey', 'somechecksum2', 'https://icloud.com', 'somerecordname2', false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test3', 'somekey', 'somechecksum3', 'https://icloud.com', 'somerecordname3', false),
-                'somechecksum4': new Asset(`somechecksum4`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test4', 'somekey', 'somechecksum4', 'https://icloud.com', 'somerecordname4', false)
-            }
+                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                'somechecksum4': new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false),
+            };
 
-            const syncEngine = syncEngineFactory()
+            const syncEngine = syncEngineFactory();
 
-            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets)
-            expect(toBeDeleted.length).toEqual(2)
-            expect(toBeAdded.length).toEqual(2)
-            expect(toBeKept.length).toEqual(1)
-
+            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets);
+            expect(toBeDeleted.length).toEqual(2);
+            expect(toBeAdded.length).toEqual(2);
+            expect(toBeKept.length).toEqual(1);
         });
 
         test(`No change in state`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test', 'somekey', 'somechecksum', 'https://icloud.com', 'somerecordname', false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test1', 'somekey', 'somechecksum1', 'https://icloud.com', 'somerecordname1', false),
-                new Asset(`somechecksum2`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test2', 'somekey', 'somechecksum2', 'https://icloud.com', 'somerecordname2', false),
-                new Asset(`somechecksum3`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test3', 'somekey', 'somechecksum3', 'https://icloud.com', 'somerecordname3', false)
-            ]
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+            ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test', 'somekey', 'somechecksum', 'https://icloud.com', 'somerecordname', false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test1', 'somekey', 'somechecksum1', 'https://icloud.com', 'somerecordname1', false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test2', 'somekey', 'somechecksum2', 'https://icloud.com', 'somerecordname2', false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test3', 'somekey', 'somechecksum3', 'https://icloud.com', 'somerecordname3', false)
-            }
+                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+            };
 
-            const syncEngine = syncEngineFactory()
+            const syncEngine = syncEngineFactory();
 
-            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets)
-            expect(toBeDeleted.length).toEqual(0)
-            expect(toBeAdded.length).toEqual(0)
-            expect(toBeKept.length).toEqual(4)
+            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets);
+            expect(toBeDeleted.length).toEqual(0);
+            expect(toBeAdded.length).toEqual(0);
+            expect(toBeKept.length).toEqual(4);
         });
 
         test(`Only modified changed`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension('png'), 43, AssetType.ORIG, 'test', 'somekey', 'somechecksum', 'https://icloud.com', 'somerecordname', false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension('png'), 43, AssetType.EDIT, 'test1', 'somekey', 'somechecksum1', 'https://icloud.com', 'somerecordname1', false),
-                new Asset(`somechecksum2`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test2', 'somekey', 'somechecksum2', 'https://icloud.com', 'somerecordname2', false),
-                new Asset(`somechecksum3`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test3', 'somekey', 'somechecksum3', 'https://icloud.com', 'somerecordname3', false)
-            ]
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 43, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 43, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+            ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test', 'somekey', 'somechecksum', 'https://icloud.com', 'somerecordname', false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test1', 'somekey', 'somechecksum1', 'https://icloud.com', 'somerecordname1', false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension('png'), 42, AssetType.EDIT, 'test2', 'somekey', 'somechecksum2', 'https://icloud.com', 'somerecordname2', false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension('png'), 42, AssetType.ORIG, 'test3', 'somekey', 'somechecksum3', 'https://icloud.com', 'somerecordname3', false)
-            }
+                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+            };
 
-            const syncEngine = syncEngineFactory()
+            const syncEngine = syncEngineFactory();
 
-            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets)
-            expect(toBeDeleted.length).toEqual(2)
-            expect(toBeAdded.length).toEqual(2)
-            expect(toBeKept.length).toEqual(2)
+            const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets);
+            expect(toBeDeleted.length).toEqual(2);
+            expect(toBeAdded.length).toEqual(2);
+            expect(toBeKept.length).toEqual(2);
         });
 
         describe(`Hierarchical dependencies`, () => {
             test(`Album moved`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    "albumUUID1": new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    "albumUUID2": new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID1"),
-                    "albumUUID3": new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID1"),
-                    "albumUUID4": new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID1"),
-                }
-                // albumUUID2 is moved from folderUUID1 to root
+                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
+                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
+                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
+                };
+                // AlbumUUID2 is moved from folderUUID1 to root
                 const toBeAdded = [
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", ""),
-                ]
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, ``),
+                ];
                 const toBeDeleted = [
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID1"),
-                ]
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
+                ];
                 const toBeKept = [
-                    new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID1"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID1"),
-                ]
+                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
+                ];
 
-                const syncEngine = syncEngineFactory()
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities)
+                const syncEngine = syncEngineFactory();
+                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
 
-                expect(processedToBeAdded).toEqual(toBeAdded)
-                expect(processedToBeDeleted).toEqual(toBeDeleted)
-                expect(processedToKept).toEqual(toBeKept)
+                expect(processedToBeAdded).toEqual(toBeAdded);
+                expect(processedToBeDeleted).toEqual(toBeDeleted);
+                expect(processedToKept).toEqual(toBeKept);
             });
 
             test(`Folder with albums moved`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    "folderUUID2": new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1"),
-                    "albumUUID1": new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    "albumUUID2": new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    "albumUUID3": new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID2"),
-                    "albumUUID4": new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID2"),
-                }
-                // folderUUID2 (with all albums) is moved from folderUUID1 to root
+                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    "folderUUID2": new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID2`),
+                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID2`),
+                };
+                // FolderUUID2 (with all albums) is moved from folderUUID1 to root
                 const toBeAdded = [
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", ""),
-                ]
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, ``),
+                ];
                 const toBeDeleted = [
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1")
-                ]
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                ];
                 const toBeKept = [
-                    new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID2"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID2"),
-                ]
+                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID2`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID2`),
+                ];
 
-                const syncEngine = syncEngineFactory()
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities)
+                const syncEngine = syncEngineFactory();
+                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
 
-                expect(processedToBeAdded.length).toEqual(4)
+                expect(processedToBeAdded.length).toEqual(4);
                 expect(processedToBeAdded).toEqual([
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", ""),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID2"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID2"),
-                ])
-                expect(processedToBeDeleted.length).toEqual(4)
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, ``),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID2`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID2`),
+                ]);
+                expect(processedToBeDeleted.length).toEqual(4);
                 expect(processedToBeDeleted).toEqual([
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1"),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID2"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID2"),
-                ])
-                expect(processedToKept.length).toEqual(2)
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID2`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID2`),
+                ]);
+                expect(processedToKept.length).toEqual(2);
                 expect(processedToKept).toEqual([
-                    new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                ])
+                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                ]);
             });
 
             test(`Folder with folders moved`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    "folderUUID2": new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1"),
-                    "folderUUID3": new Album('folderUUID3', AlbumType.FOLDER, "folderName3", "folderUUID2"),
-                    "folderUUID4": new Album('folderUUID4', AlbumType.FOLDER, "folderName4", "folderUUID2"),
-                    "albumUUID1": new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    "albumUUID2": new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    "albumUUID3": new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID3"),
-                    "albumUUID4": new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID4"),
-                }
-                // folderUUID2 (with all albums & folders) is moved from folderUUID1 to root
+                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    "folderUUID2": new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    "folderUUID3": new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    "folderUUID4": new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                };
+                // FolderUUID2 (with all albums & folders) is moved from folderUUID1 to root
                 const toBeAdded = [
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", ""),
-                ]
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, ``),
+                ];
                 const toBeDeleted = [
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1")
-                ]
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                ];
                 const toBeKept = [
-                    new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    new Album('folderUUID3', AlbumType.FOLDER, "folderName3", "folderUUID2"),
-                    new Album('folderUUID4', AlbumType.FOLDER, "folderName4", "folderUUID2"),
-                    new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID3"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID4"),
-                ]
+                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                ];
 
-                const syncEngine = syncEngineFactory()
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities)
+                const syncEngine = syncEngineFactory();
+                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
 
-                expect(processedToBeAdded.length).toEqual(6)
+                expect(processedToBeAdded.length).toEqual(6);
                 expect(processedToBeAdded).toEqual([
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", ""),
-                    new Album('folderUUID3', AlbumType.FOLDER, "folderName3", "folderUUID2"),
-                    new Album('folderUUID4', AlbumType.FOLDER, "folderName4", "folderUUID2"),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID3"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID4"),
-                ])
-                expect(processedToBeDeleted.length).toEqual(6)
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, ``),
+                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                ]);
+                expect(processedToBeDeleted.length).toEqual(6);
                 expect(processedToBeDeleted).toEqual([
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1"),
-                    new Album('folderUUID3', AlbumType.FOLDER, "folderName3", "folderUUID2"),
-                    new Album('folderUUID4', AlbumType.FOLDER, "folderName4", "folderUUID2"),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID3"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID4"),
-                ])
-                expect(processedToKept.length).toEqual(2)
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                ]);
+                expect(processedToKept.length).toEqual(2);
                 expect(processedToKept).toEqual([
-                    new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                ])
+                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                ]);
             });
 
             test(`Folder with albums deleted, albums kept`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    "albumUUID1": new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    "albumUUID2": new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID1"),
-                    "albumUUID3": new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID1"),
-                    "albumUUID4": new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID1"),
-                }
-                // folderUUID1 is deleted and all albums within are moved from folderUUID1 to root
+                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
+                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
+                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
+                };
+                // FolderUUID1 is deleted and all albums within are moved from folderUUID1 to root
                 const toBeAdded = [
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", ""),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", ""),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", ""),
-                ]
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, ``),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, ``),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, ``),
+                ];
                 const toBeDeleted = [
-                    new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID1"),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID1"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID1"),
-                ]
+                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
+                ];
                 const toBeKept = [
-                    new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                ]
+                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                ];
 
-                const syncEngine = syncEngineFactory()
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities)
+                const syncEngine = syncEngineFactory();
+                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
 
-                expect(processedToBeAdded).toEqual(toBeAdded)
-                expect(processedToBeDeleted).toEqual(toBeDeleted)
-                expect(processedToKept).toEqual(toBeKept)
+                expect(processedToBeAdded).toEqual(toBeAdded);
+                expect(processedToBeDeleted).toEqual(toBeDeleted);
+                expect(processedToKept).toEqual(toBeKept);
             });
 
             test(`Folder with albums deleted, albums deleted`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    "albumUUID1": new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    "albumUUID2": new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID1"),
-                    "albumUUID3": new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID1"),
-                    "albumUUID4": new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID1"),
-                }
-                // folderUUID1 is deleted and all albums within are also deleted
-                const toBeAdded = []
+                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
+                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
+                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
+                };
+                // FolderUUID1 is deleted and all albums within are also deleted
+                const toBeAdded = [];
                 const toBeDeleted = [
-                    new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID1"),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID1"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID1"),
-                ]
+                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
+                ];
                 const toBeKept = [
-                    new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                ]
+                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                ];
 
-                const syncEngine = syncEngineFactory()
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities)
+                const syncEngine = syncEngineFactory();
+                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
 
-                expect(processedToBeAdded).toEqual(toBeAdded)
-                expect(processedToBeDeleted).toEqual(toBeDeleted)
-                expect(processedToKept).toEqual(toBeKept)
+                expect(processedToBeAdded).toEqual(toBeAdded);
+                expect(processedToBeDeleted).toEqual(toBeDeleted);
+                expect(processedToKept).toEqual(toBeKept);
             });
 
             test(`Folder with folders deleted, nested folder kept`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    "folderUUID2": new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1"),
-                    "folderUUID3": new Album('folderUUID3', AlbumType.FOLDER, "folderName3", "folderUUID2"), 
-                    "folderUUID4": new Album('folderUUID4', AlbumType.FOLDER, "folderName4", "folderUUID2"),
-                    "albumUUID1": new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    "albumUUID2": new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    "albumUUID3": new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID3"),
-                    "albumUUID4": new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID4"),
-                }
-                // folderUUID2 is deleted and its albums & folder are moved to root
+                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    "folderUUID2": new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    "folderUUID3": new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    "folderUUID4": new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                };
+                // FolderUUID2 is deleted and its albums & folder are moved to root
                 const toBeAdded = [
-                    new Album('folderUUID3', AlbumType.FOLDER, "folderName3", ""),
-                    new Album('folderUUID4', AlbumType.FOLDER, "folderName4", ""),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "")
-                ]
+                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, ``),
+                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, ``),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, ``),
+                ];
                 const toBeDeleted = [
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1"),
-                    new Album('folderUUID3', AlbumType.FOLDER, "folderName3", "folderUUID2"), 
-                    new Album('folderUUID4', AlbumType.FOLDER, "folderName4", "folderUUID2"),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                ]
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                ];
                 const toBeKept = [
-                    new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID3"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID4"),
-                ]
+                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                ];
 
-                const syncEngine = syncEngineFactory()
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities)
+                const syncEngine = syncEngineFactory();
+                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
 
                 expect(processedToBeAdded).toEqual([
-                    new Album('folderUUID3', AlbumType.FOLDER, "folderName3", ""),
-                    new Album('folderUUID4', AlbumType.FOLDER, "folderName4", ""),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", ""),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID3"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID4"),
-                ])
+                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, ``),
+                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, ``),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, ``),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                ]);
 
                 expect(processedToBeDeleted).toEqual([
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1"),
-                    new Album('folderUUID3', AlbumType.FOLDER, "folderName3", "folderUUID2"), 
-                    new Album('folderUUID4', AlbumType.FOLDER, "folderName4", "folderUUID2"),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID3"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID4"),
-                ])
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                ]);
 
                 expect(processedToKept).toEqual([
-                    new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                ])
+                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                ]);
             });
 
             test(`Folder with folders deleted, nested folder deleted`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    "folderUUID2": new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1"),
-                    "folderUUID3": new Album('folderUUID3', AlbumType.FOLDER, "folderName3", "folderUUID2"), 
-                    "folderUUID4": new Album('folderUUID4', AlbumType.FOLDER, "folderName4", "folderUUID2"),
-                    "albumUUID1": new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                    "albumUUID2": new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    "albumUUID3": new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID3"),
-                    "albumUUID4": new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID4"),
-                }
-                // folderUUID2, folderUUID3 and folderUUID4 are deleted and its albums are moved to root
+                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    "folderUUID2": new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    "folderUUID3": new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    "folderUUID4": new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                };
+                // FolderUUID2, folderUUID3 and folderUUID4 are deleted and its albums are moved to root
                 const toBeAdded = [
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", ""),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", ""),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", ""),
-                ]
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, ``),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, ``),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, ``),
+                ];
                 const toBeDeleted = [
-                    new Album('folderUUID2', AlbumType.FOLDER, "folderName2", "folderUUID1"),
-                    new Album('folderUUID3', AlbumType.FOLDER, "folderName3", "folderUUID2"), 
-                    new Album('folderUUID4', AlbumType.FOLDER, "folderName4", "folderUUID2"),
-                    new Album('albumUUID2', AlbumType.ALBUM, "albumName2", "folderUUID2"),
-                    new Album('albumUUID3', AlbumType.ALBUM, "albumName3", "folderUUID3"),
-                    new Album('albumUUID4', AlbumType.ALBUM, "albumName4", "folderUUID4"),
-                ]
+                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                ];
                 const toBeKept = [
-                    new Album('folderUUID1', AlbumType.FOLDER, "folderName1", ""),
-                    new Album('albumUUID1', AlbumType.ALBUM, "albumName1", ""),
-                ]
+                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                ];
 
-                const syncEngine = syncEngineFactory()
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities)
+                const syncEngine = syncEngineFactory();
+                const [processedToBeDeleted, processedToBeAdded, processedToKept] = syncEngine.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
 
-                expect(processedToBeAdded).toEqual(toBeAdded)
-                expect(processedToBeDeleted).toEqual(toBeDeleted)
-                expect(processedToKept).toEqual(toBeKept)
-            })
+                expect(processedToBeAdded).toEqual(toBeAdded);
+                expect(processedToBeDeleted).toEqual(toBeDeleted);
+                expect(processedToKept).toEqual(toBeKept);
+            });
         });
-
     });
 
     describe(`Handle processing queue`, () => {
@@ -502,7 +499,7 @@ describe(`Unit Tests - Sync Engine`, () => {
             test.todo(`Only deleting`);
             test.todo(`Only adding`);
             test.todo(`Adding & deleting`);
-        })
+        });
         describe(`Handle album queue`, () => {
             test.todo(`Empty processing queue`);
             test.todo(`Only deleting`);
@@ -513,6 +510,6 @@ describe(`Unit Tests - Sync Engine`, () => {
                 test.todo(`Remote album (locally archived) moved`);
                 test.todo(`Remote album's content (locally archived) changed`);
             });
-        })
+        });
     });
 });
