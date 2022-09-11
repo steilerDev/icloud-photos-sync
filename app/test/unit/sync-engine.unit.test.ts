@@ -10,12 +10,15 @@ import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
+import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
+import {AxiosResponse} from 'axios';
+import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 const photosDataDir = `/media/files/photos-library`;
 
 function syncEngineFactory(): SyncEngine {
-    return new SyncEngine(
+    const syncEngine = new SyncEngine(
         {
-            "downloadThreads": 1,
+            "downloadThreads": 10,
             "maxRetry": -1,
         },
         new iCloud({
@@ -28,6 +31,8 @@ function syncEngineFactory(): SyncEngine {
             "dataDir": photosDataDir,
         }),
     );
+    syncEngine.iCloud.photos = new iCloudPhotos(syncEngine.iCloud.auth);
+    return syncEngine;
 }
 
 describe(`Unit Tests - Sync Engine`, () => {
@@ -496,10 +501,114 @@ describe(`Unit Tests - Sync Engine`, () => {
 
     describe(`Handle processing queue`, () => {
         describe(`Handle asset queue`, () => {
-            test.todo(`Empty processing queue`);
-            test.todo(`Only deleting`);
-            test.todo(`Only adding`);
-            test.todo(`Adding & deleting`);
+            function mockSyncEngineForAssetQueue(syncEngine: SyncEngine): SyncEngine {
+                syncEngine.photosLibrary.verifyAsset = jest.fn(() => false);
+                syncEngine.photosLibrary.writeAsset = jest.fn(async () => {});
+                syncEngine.photosLibrary.deleteAsset = jest.fn(async () => {});
+                syncEngine.iCloud.photos.downloadAsset = jest.fn(async () => ({} as AxiosResponse<any, any>));
+                return syncEngine;
+            }
+
+            test(`Empty processing queue`, async () => {
+                const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
+
+                const writeAssetCompleteEvent = jest.fn();
+                syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, writeAssetCompleteEvent);
+
+                await syncEngine.writeAssets([[], [], []]);
+
+                expect(syncEngine.photosLibrary.verifyAsset).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.writeAsset).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
+                expect(syncEngine.iCloud.photos.downloadAsset).not.toHaveBeenCalled();
+                expect(writeAssetCompleteEvent).not.toHaveBeenCalled();
+            });
+
+            test(`Only deleting`, async () => {
+                const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
+
+                const writeAssetCompleteEvent = jest.fn();
+                syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, writeAssetCompleteEvent);
+
+                const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+                const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+                const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
+                const toBeDeleted = [asset1, asset2, asset3];
+
+                await syncEngine.writeAssets([toBeDeleted, [], []]);
+
+                expect(syncEngine.photosLibrary.verifyAsset).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.writeAsset).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenCalledTimes(3);
+                expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(1, asset1);
+                expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(2, asset2);
+                expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(3, asset3);
+                expect(syncEngine.iCloud.photos.downloadAsset).not.toHaveBeenCalled();
+                expect(writeAssetCompleteEvent).not.toHaveBeenCalled();
+            });
+
+            test(`Only adding`, async () => {
+                const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
+
+                const writeAssetCompleteEvent = jest.fn();
+                syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, writeAssetCompleteEvent);
+
+                const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+                const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+                const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
+                const toBeAdded = [asset1, asset2, asset3];
+
+                await syncEngine.writeAssets([[], toBeAdded, []]);
+
+                expect(syncEngine.photosLibrary.verifyAsset).toHaveBeenCalledTimes(3);
+                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
+                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
+                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
+                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
+
+                expect(syncEngine.photosLibrary.writeAsset).toHaveBeenCalledTimes(3);
+                expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(3);
+                expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(1, `somechecksum1`);
+                expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);
+                expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(3, `somechecksum3`);
+
+                expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
+            });
+
+            test(`Adding & deleting`, async () => {
+                const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
+
+                const writeAssetCompleteEvent = jest.fn();
+                syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, writeAssetCompleteEvent);
+
+                const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+                const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+                const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
+                const asset4 = new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false);
+                const asset5 = new Asset(`somechecksum5`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test5`, `somekey`, `somechecksum5`, `https://icloud.com`, `somerecordname5`, false);
+                const asset6 = new Asset(`somechecksum6`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test6`, `somekey`, `somechecksum6`, `https://icloud.com`, `somerecordname6`, false);
+                const toBeAdded = [asset1, asset2, asset3];
+                const toBeDeleted = [asset4, asset5, asset6];
+
+                await syncEngine.writeAssets([toBeDeleted, toBeAdded, []]);
+
+                expect(syncEngine.photosLibrary.verifyAsset).toHaveBeenCalledTimes(3);
+                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
+                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
+                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
+                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
+
+                expect(syncEngine.photosLibrary.writeAsset).toHaveBeenCalledTimes(3);
+                expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(3);
+                expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(1, `somechecksum1`);
+                expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);
+                expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(3, `somechecksum3`);
+
+                expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenCalledTimes(3);
+                expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(1, asset4);
+                expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(2, asset5);
+                expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(3, asset6);
+            });
         });
         describe(`Handle album queue`, () => {
             test.todo(`Empty processing queue`);

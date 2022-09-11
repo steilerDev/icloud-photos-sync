@@ -236,7 +236,7 @@ export class SyncEngine extends EventEmitter {
     }
 
     // From ./helpers/write-assets-helpers.ts
-    private writeAssets = writeAssets;
+    writeAssets = writeAssets;
     protected addAsset = addAsset;
     protected removeAsset = removeAsset;
 
