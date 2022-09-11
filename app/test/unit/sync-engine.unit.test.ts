@@ -575,6 +575,32 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
             });
 
+            test(`Only adding - one asset present`, async () => {
+                const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
+                // Return 'true' on validation once
+                syncEngine.photosLibrary.verifyAsset = jest.fn(() => false).mockReturnValueOnce(true).mockReturnValue(false);
+
+                const writeAssetCompleteEvent = jest.fn();
+                syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, writeAssetCompleteEvent);
+
+                const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+                const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+                const toBeAdded = [asset1, asset2];
+
+                await syncEngine.writeAssets([[], toBeAdded, []]);
+
+                expect(syncEngine.photosLibrary.verifyAsset).toHaveBeenCalledTimes(2);
+                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenCalledTimes(1);
+                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset2);
+
+                expect(syncEngine.photosLibrary.writeAsset).toHaveBeenCalledTimes(1);
+                expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(2);
+                expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(1, `somechecksum1`);
+                expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);
+
+                expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
+            });
+
             test(`Adding & deleting`, async () => {
                 const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
 
