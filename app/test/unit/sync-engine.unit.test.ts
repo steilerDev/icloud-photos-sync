@@ -11,9 +11,10 @@ import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
-import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
 import {AxiosResponse} from 'axios';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
+import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
+
 const photosDataDir = `/media/files/photos-library`;
 
 beforeEach(() => {
