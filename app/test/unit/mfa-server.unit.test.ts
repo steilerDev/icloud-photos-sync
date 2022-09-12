@@ -1,9 +1,9 @@
 
 import {expect, describe, test, jest} from '@jest/globals';
-import request from 'supertest';
 import {MFAServer} from '../../src/lib/icloud/mfa/mfa-server';
 import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
+import supertest from 'supertest';
 
 describe(`Unit Tests - MFA Server`, () => {
     describe(`MFA Code`, () => {
@@ -15,7 +15,7 @@ describe(`Unit Tests - MFA Server`, () => {
 
             const codeEvent = jest.fn();
             server.on(EVENTS.MFA_RECEIVED, codeEvent);
-            const response = await request(server.server)
+            const response = await supertest(server.server)
                 .post(`${ENDPOINT.CODE_INPUT}?code=${code}`);
 
             expect(response.status).toEqual(200);
@@ -28,7 +28,7 @@ describe(`Unit Tests - MFA Server`, () => {
             const server = new MFAServer();
             const code = `123 456`;
 
-            const response = await request(server.server)
+            const response = await supertest(server.server)
                 .post(`${ENDPOINT.CODE_INPUT}?code=${code}`);
 
             expect(response.status).toEqual(400);
@@ -47,7 +47,7 @@ describe(`Unit Tests - MFA Server`, () => {
             const resendEvent = jest.fn();
             server.on(EVENTS.MFA_RESEND, resendEvent);
 
-            const response = await request(server.server)
+            const response = await supertest(server.server)
                 .post(`${ENDPOINT.RESEND_CODE}?method=${method}`);
             expect(response.status).toEqual(200);
             expect(response.headers[`Content-Type`.toLowerCase()]).toMatch(/json/);
@@ -64,7 +64,7 @@ describe(`Unit Tests - MFA Server`, () => {
                 const resendEvent = jest.fn();
                 server.on(EVENTS.MFA_RESEND, resendEvent);
 
-                const response = await request(server.server)
+                const response = await supertest(server.server)
                     .post(`${ENDPOINT.RESEND_CODE}?method=${method}`);
                 expect(response.status).toEqual(200);
                 expect(response.headers[`Content-Type`.toLowerCase()]).toMatch(/json/);
@@ -81,7 +81,7 @@ describe(`Unit Tests - MFA Server`, () => {
                 const resendEvent = jest.fn();
                 server.on(EVENTS.MFA_RESEND, resendEvent);
 
-                const response = await request(server.server)
+                const response = await supertest(server.server)
                     .post(`${ENDPOINT.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
                 expect(response.status).toEqual(200);
                 expect(response.headers[`Content-Type`.toLowerCase()]).toMatch(/json/);
@@ -98,7 +98,7 @@ describe(`Unit Tests - MFA Server`, () => {
                 const resendEvent = jest.fn();
                 server.on(EVENTS.MFA_RESEND, resendEvent);
 
-                const response = await request(server.server)
+                const response = await supertest(server.server)
                     .post(`${ENDPOINT.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId.toString(16)}`);
                 expect(response.status).toEqual(200);
                 expect(response.headers[`Content-Type`.toLowerCase()]).toMatch(/json/);
@@ -112,7 +112,7 @@ describe(`Unit Tests - MFA Server`, () => {
 
             const server = new MFAServer();
 
-            const response = await request(server.server)
+            const response = await supertest(server.server)
                 .post(`${ENDPOINT.RESEND_CODE}?method=${method}`);
             expect(response.status).toEqual(400);
             expect(response.headers[`Content-Type`.toLowerCase()]).toMatch(/json/);
