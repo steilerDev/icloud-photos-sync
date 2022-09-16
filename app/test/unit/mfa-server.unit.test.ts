@@ -1,9 +1,19 @@
 
-import {expect, describe, test, jest} from '@jest/globals';
+import {expect, describe, test, jest, beforeEach, afterEach} from '@jest/globals';
 import {MFAServer} from '../../src/lib/icloud/mfa/mfa-server';
 import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import supertest from 'supertest';
+
+beforeEach(() => {
+    //Before asynchronous call
+    jest.useFakeTimers()
+})
+
+afterEach(() => {
+    //After asynchronous call
+    jest.runAllTimers()
+})
 
 describe(`Unit Tests - MFA Server`, () => {
     describe(`MFA Code`, () => {
