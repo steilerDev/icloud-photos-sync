@@ -17,7 +17,7 @@ afterEach(() => {
 
 describe(`Unit Tests - MFA Server`, () => {
     describe(`MFA Code`, () => {
-        test(`Valid Code format`, async () => {
+        test.only(`Valid Code format`, async () => {
             const code = `123456`;
             const mfaMethod = new MFAMethod(`device`);
 
