@@ -7,12 +7,10 @@ import supertest from 'supertest';
 
 beforeEach(() => {
     //Before asynchronous call
-    jest.useFakeTimers()
 })
 
 afterEach(() => {
     //After asynchronous call
-    jest.runAllTimers()
 })
 
 describe(`Unit Tests - MFA Server`, () => {
@@ -25,8 +23,12 @@ describe(`Unit Tests - MFA Server`, () => {
 
             const codeEvent = jest.fn();
             server.on(EVENTS.MFA_RECEIVED, codeEvent);
+
+            jest.useFakeTimers()
             const response = await supertest(server.server)
                 .post(`${ENDPOINT.CODE_INPUT}?code=${code}`);
+            jest.runAllTimers()
+    
 
             expect(response.status).toEqual(200);
             expect(response.headers[`Content-Type`.toLowerCase()]).toMatch(/json/);
