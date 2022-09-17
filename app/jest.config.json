@@ -30,7 +30,8 @@
     },
     "transformIgnorePatterns": [
       "/node_modules/p-queue/",
-      "/node_modules/superagent/"
+      "/node_modules/superagent/",
+      "/node_modules/supertest/"
     ],
     "moduleNameMapper": {
       ".*/logger.js": "<rootDir>/test/_helpers/mock_logger.ts",
