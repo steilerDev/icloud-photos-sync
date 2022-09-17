@@ -2,8 +2,6 @@
     "preset": "ts-jest/presets/default-esm-legacy",
     "testEnvironment": "node",
     "testRegex": "\\.test\\.ts$",
-    "clearMocks": true,
-    "resetMocks": true,
     "slowTestThreshold": 10,
     "reporters": [
       "default",
