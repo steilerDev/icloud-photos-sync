@@ -1,5 +1,5 @@
 {
-    "preset": "ts-jest/presets/default-esm",
+    "preset": "ts-jest/presets/default-esm-legacy",
     "testEnvironment": "node",
     "reporters": [
       "default",
@@ -20,11 +20,18 @@
       "html"
     ],
     "extensionsToTreatAsEsm": [".ts"],
-    "globals": {
-      "ts-jest": {
-        "useESM": true
-      }
+    "transform": {
+      "\\.[jt]sx?$": [
+        "ts-jest",
+        {
+          "useESM": true
+        }
+      ]
     },
+    "transformIgnorePatterns": [
+      "/node_modules/p-queue/",
+      "/node_modules/superagent/"
+    ],
     "moduleNameMapper": {
       ".*/logger.js": "<rootDir>/test/_helpers/mock_logger.ts",
       "^(\\.{1,2}/.*)\\.js$": "$1"

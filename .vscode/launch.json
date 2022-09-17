@@ -19,16 +19,16 @@
             ],
             "envFile": "${workspaceFolder}/.vscode/debug-test.env"
         }, {
-            "name": "Debug Tests",
+            "name": "Debug Test",
             "type": "node",
             "request": "launch",
             "runtimeArgs": [
-              "--experimental-vm-modules",
-              "--inspect-brk",
-              "node_modules/.bin/jest",
-              "--runInBand",
-              "--config", "jest.config.json",
-              "test/unit/mfa-server.unit.test.ts"
+                "--experimental-vm-modules",
+                "--inspect-brk",
+                "node_modules/.bin/jest",
+                "--runInBand",
+                "--config", "jest.config.json",
+                "test/unit/mfa-server.unit.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
