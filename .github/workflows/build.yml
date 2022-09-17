@@ -178,11 +178,11 @@ jobs:
       - name: Install
         run: npm ci
         working-directory: app/
-#      - name: Access runner to acquire token
-#        uses: lhotari/action-upterm@v1
-#        with:
-#          limit-access-to-users: steilerDev
-#          upterm-server: ssh://uptermd.upterm.dev:22
+      - name: Access runner to acquire token
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-users: steilerDev
+          upterm-server: ssh://uptermd.upterm.dev:22
       - name: Test
         run: npm run test
         env:
