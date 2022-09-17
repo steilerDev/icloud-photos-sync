@@ -23,7 +23,7 @@
     ],
     "extensionsToTreatAsEsm": [".ts"],
     "transform": {
-      "\\.[jt]sx?$": [
+      "\\.ts$": [
         "ts-jest",
         {
           "useESM": true
