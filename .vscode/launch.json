@@ -17,7 +17,7 @@
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",
             ],
-            "envFile": "${workspaceFolder}/.vscode/debug-test.env"
+            "envFile": "${workspaceFolder}/.vscode/test-account.env"
         }, {
             "name": "Debug Test",
             "type": "node",
@@ -33,7 +33,7 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/debug-test.env"
+            "envFile": "${workspaceFolder}/.vscode/test.env"
         }, {
             "name": "Run All Tests",
             "type": "node",
@@ -41,12 +41,13 @@
             "runtimeArgs": [
                 "--experimental-vm-modules",
                 "node_modules/.bin/jest",
+                "--runInBand",
                 "--config", "jest.config.json"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/debug-test.env"
+            "envFile": "${workspaceFolder}/.vscode/test.env"
         }
     ]
 }

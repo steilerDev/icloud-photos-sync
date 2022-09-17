@@ -184,12 +184,9 @@ jobs:
 #          limit-access-to-users: steilerDev
 #          upterm-server: ssh://uptermd.upterm.dev:22
       - name: Test
-#        run: npm run test
-#        env:
-#          NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
-        run: | 
-          node --experimental-vm-modules \
-            node_modules/.bin/jest --runInBand --config jest.config.json test/unit/*.test.ts
+        run: npm run test
+        env:
+          NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
         working-directory: app/
       - name: Collect test coverage
         if: matrix.os == 'ubuntu-latest'

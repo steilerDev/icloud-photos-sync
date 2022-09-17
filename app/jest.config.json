@@ -2,7 +2,8 @@
     "preset": "ts-jest/presets/default-esm-legacy",
     "testEnvironment": "node",
     "reporters": [
-      "default"
+      "default",
+      "github-actions"
     ],
     "collectCoverage": true,
     "collectCoverageFrom": [
