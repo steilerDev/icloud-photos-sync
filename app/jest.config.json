@@ -2,8 +2,7 @@
     "preset": "ts-jest/presets/default-esm-legacy",
     "testEnvironment": "node",
     "reporters": [
-      "default",
-      "github-actions"
+      "default"
     ],
     "collectCoverage": true,
     "collectCoverageFrom": [
@@ -28,11 +27,6 @@
         }
       ]
     },
-    "transformIgnorePatterns": [
-      "/node_modules/p-queue/",
-      "/node_modules/superagent/",
-      "/node_modules/supertest/"
-    ],
     "moduleNameMapper": {
       ".*/logger.js": "<rootDir>/test/_helpers/mock_logger.ts",
       "^(\\.{1,2}/.*)\\.js$": "$1"
