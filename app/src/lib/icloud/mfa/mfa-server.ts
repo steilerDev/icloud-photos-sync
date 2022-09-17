@@ -3,7 +3,7 @@ import http from 'http';
 import * as MFA_SERVER from './constants.js';
 import {getLogger} from '../../logger.js';
 import {MFAMethod} from './mfa-method.js';
-import * as PACKAGE from '../../package';
+import * as PACKAGE from '../../package.js';
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
