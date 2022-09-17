@@ -178,12 +178,16 @@ jobs:
       - name: Install
         run: npm ci
         working-directory: app/
+      - name: Access runner to acquire token
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-users: steilerDev
+          upterm-server: ssh://uptermd.upterm.dev:22
       - name: Test
 #        run: npm run test
 #        env:
 #          NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
         run: | 
-          npm run build
           node --experimental-vm-modules \
             node_modules/.bin/jest --runInBand --config jest.config.json test/unit/*.test.ts
         working-directory: app/
