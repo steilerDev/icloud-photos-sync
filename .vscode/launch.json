@@ -41,8 +41,8 @@
             "runtimeArgs": [
                 "--experimental-vm-modules",
                 "node_modules/.bin/jest",
-                "--runInBand",
-                "--config", "jest.config.json"
+                "--config", "jest.config.json",
+                "test/unit/"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

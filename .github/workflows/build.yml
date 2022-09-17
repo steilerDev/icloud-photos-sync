@@ -184,10 +184,12 @@ jobs:
           limit-access-to-users: steilerDev
           upterm-server: ssh://uptermd.upterm.dev:22
       - name: Test
-        run: npm run test
-        env:
-          NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
-        working-directory: app/
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: cd app/ && npm run test
       - name: Collect test coverage
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v3
