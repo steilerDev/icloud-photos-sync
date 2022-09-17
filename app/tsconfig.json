@@ -3,7 +3,7 @@
     "module": "es2022",
     "esModuleInterop": true,
     "target": "es2022",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "sourceMap": true,
     "outDir": "bin",
     "declaration": true,

@@ -1,4 +1,4 @@
-import axios, {AxiosRequestConfig, AxiosRequestHeaders} from 'axios';
+import axios, {Axios, AxiosRequestConfig, AxiosRequestHeaders} from 'axios';
 
 import EventEmitter from 'events';
 import {MFAServer} from './mfa/mfa-server.js';
@@ -41,6 +41,8 @@ export class iCloud extends EventEmitter {
      */
     ready: Promise<void>;
 
+    axios: Axios;
+
     /**
      * Creates a new iCloud Object
      * @param cliOpts - The read CLI options containing username, password and MFA server port
@@ -49,6 +51,8 @@ export class iCloud extends EventEmitter {
         super();
         this.logger.info(`Initiating iCloud connection`);
         this.logger.trace(`  - user: ${cliOpts.username}`);
+
+        this.axios = (axios as unknown as Axios);
 
         // MFA Server & lifecycle management
         this.mfaServer = new MFAServer(cliOpts.port);
@@ -126,7 +130,7 @@ export class iCloud extends EventEmitter {
             ],
         };
 
-        axios.post(ICLOUD.URL.SIGNIN, data, config)
+        this.axios.post(ICLOUD.URL.SIGNIN, data, config)
             .then(res => {
                 if (res.status !== 200) {
                     this.emit(ICLOUD.EVENTS.ERROR, `Unexpected HTTP code: ${res.status}`);
@@ -177,7 +181,7 @@ export class iCloud extends EventEmitter {
         const url = method.getResendURL();
 
         this.logger.debug(`Requesting MFA code via URL ${url} with data ${JSON.stringify(data)}`);
-        axios.put(url, data, config)
+        this.axios.put(url, data, config)
             .then(res => {
                 if (!method.resendSuccesfull(res)) {
                     this.emit(ICLOUD.EVENTS.ERROR, `Unable to request new MFA code: ${JSON.stringify(res)}`);
@@ -215,7 +219,7 @@ export class iCloud extends EventEmitter {
         const url = method.getEnterURL();
 
         this.logger.debug(`Entering MFA code via URL ${url} with data ${JSON.stringify(data)}`);
-        axios.post(url, data, config)
+        this.axios.post(url, data, config)
             .then(res => { // Weird difference in response code, depending on endpoint
                 if (!method.enterSuccesfull(res)) {
                     this.emit(ICLOUD.EVENTS.ERROR, `Received unexpected response code during MFA validation: ${res.status} (${res.statusText})`);
@@ -244,7 +248,7 @@ export class iCloud extends EventEmitter {
             "headers": this.auth.getMFAHeaders(),
         };
 
-        axios.get(ICLOUD.URL.TRUST, config)
+        this.axios.get(ICLOUD.URL.TRUST, config)
             .then(res => this.auth.processAccountTokens(res))
             .then(() => {
                 this.logger.debug(`Acquired account tokens`);
@@ -269,7 +273,7 @@ export class iCloud extends EventEmitter {
 
         const data = this.auth.getSetupData();
 
-        axios.post(ICLOUD.URL.SETUP, data, config)
+        this.axios.post(ICLOUD.URL.SETUP, data, config)
             .then(res => {
                 if (res.status !== 200) {
                     this.emit(ICLOUD.EVENTS.ERROR, `Received unexpected response code during iCloud Setup: ${res.status} (${res.statusText})`);

@@ -1,4 +1,4 @@
-import axios, {AxiosRequestConfig, AxiosResponse} from 'axios';
+import axios, {Axios, AxiosRequestConfig, AxiosResponse} from 'axios';
 import {EventEmitter} from 'events';
 import * as ICLOUD_PHOTOS from './constants.js';
 import * as QueryBuilder from './query-builder.js';
@@ -23,6 +23,8 @@ export class iCloudPhotos extends EventEmitter {
      */
     private auth: iCloudAuth;
 
+    axios: Axios;
+
     /**
      * Creates a new iCloud Photos Class
      * @param auth - The populated authentication object
@@ -30,6 +32,7 @@ export class iCloudPhotos extends EventEmitter {
     constructor(auth: iCloudAuth) {
         super();
         this.auth = auth;
+        this.axios = (axios as unknown as Axios);
         this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, this.checkingIndexingStatus);
     }
 
@@ -56,7 +59,7 @@ export class iCloudPhotos extends EventEmitter {
             },
         };
 
-        axios.get(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.LIST), config)
+        this.axios.get(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.LIST), config)
             .then(res => {
                 this.auth.processPhotosSetupResponse(res);
                 this.logger.debug(`Successfully gathered iCloud Photos account information!`);
@@ -118,7 +121,7 @@ export class iCloudPhotos extends EventEmitter {
             },
         };
 
-        axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)
+        this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)
             .then(callback)
             .catch(err => {
                 this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unexpected error when performing query ${recordType}: ${err}`);
@@ -165,7 +168,7 @@ export class iCloudPhotos extends EventEmitter {
             data.resultsLimit = resultsLimit;
         }
 
-        const fetchedRecords = (await axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)).data.records;
+        const fetchedRecords = (await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)).data.records;
         if (fetchedRecords && Array.isArray(fetchedRecords)) {
             return fetchedRecords;
         }
@@ -200,7 +203,7 @@ export class iCloudPhotos extends EventEmitter {
             },
             "atomic": true,
         };
-        const deletedRecords = (await axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config)).data.records;
+        const deletedRecords = (await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config)).data.records;
         if (!deletedRecords || !Array.isArray(deletedRecords)) {
             throw new Error(`Fetched records are not in an array: ${JSON.stringify(deletedRecords)}`);
         }
@@ -442,7 +445,7 @@ export class iCloudPhotos extends EventEmitter {
             "responseType": `stream`,
         };
 
-        return axios.get(
+        return this.axios.get(
             asset.downloadURL,
             config,
         );

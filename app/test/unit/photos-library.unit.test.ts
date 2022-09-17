@@ -7,7 +7,7 @@ import path from 'path';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
-import axios, {AxiosRequestConfig} from 'axios';
+import axios, {Axios, AxiosRequestConfig} from 'axios';
 
 const photosDataDir = `/media/files/photos-library`;
 const assetDir = path.join(photosDataDir, ASSET_DIR);
@@ -509,7 +509,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                const response = await axios.get(url, config);
+                const response = await (axios as unknown as Axios).get(url, config);
                 await library.writeAsset(asset, response);
                 const assetPath = path.join(assetDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeTruthy();
