@@ -5,17 +5,13 @@ import {SyncEngine} from '../../src/lib/sync-engine/sync-engine';
 import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
 import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
 import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
-import {iCloud} from '../../src/lib/icloud/icloud';
-import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {AxiosResponse} from 'axios';
-import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
-
-const photosDataDir = `/media/files/photos-library`;
+import {syncEngineFactory} from '../_helpers/sync-engine'
 
 beforeEach(() => {
     mockfs({});
@@ -24,26 +20,6 @@ beforeEach(() => {
 afterEach(() => {
     mockfs.restore();
 });
-
-function syncEngineFactory(): SyncEngine {
-    const syncEngine = new SyncEngine(
-        {
-            "downloadThreads": 10,
-            "maxRetry": -1,
-        },
-        new iCloud({
-            "username": `steilerdev@web.de`,
-            "password": `some-pass`,
-            "trustToken": `token`,
-            "dataDir": photosDataDir,
-        }),
-        new PhotosLibrary({
-            "dataDir": photosDataDir,
-        }),
-    );
-    syncEngine.iCloud.photos = new iCloudPhotos(syncEngine.iCloud.auth);
-    return syncEngine;
-}
 
 describe(`Unit Tests - Sync Engine`, () => {
     describe(`Processing remote records`, () => {

@@ -2,7 +2,7 @@ import mockfs from 'mock-fs';
 import {describe, test, beforeEach, afterEach, expect} from '@jest/globals';
 import path from 'path';
 import * as ICLOUD from '../../src/lib/icloud/constants';
-import {appDataDir} from '../_helpers/helpers';
+import {appDataDir} from '../_helpers/config';
 import fs from 'fs';
 import {iCloudAuth} from '../../src/lib/icloud/auth';
 

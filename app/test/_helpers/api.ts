@@ -4,11 +4,6 @@ import path from "path";
 import mockfs from 'mock-fs';
 
 /**
- * The data dir path, to be used in the tests
- */
-export const appDataDir = `/opt/icloud-photos-library`;
-
-/**
  * Helper to compare objects, that have string property 'recordName'
  * Function used to determine the order of the elements, based on the property 'recordName'.
  * @param a - One object
