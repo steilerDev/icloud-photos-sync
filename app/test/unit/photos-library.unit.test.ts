@@ -8,8 +8,8 @@ import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import axios, {Axios, AxiosRequestConfig} from 'axios';
-import {appDataDir as photosDataDir} from '../_helpers/config'
-import {photosLibraryFactory} from '../_helpers/photos-library'
+import {appDataDir as photosDataDir} from '../_helpers/config';
+import {photosLibraryFactory} from '../_helpers/photos-library';
 
 const assetDir = path.join(photosDataDir, ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);

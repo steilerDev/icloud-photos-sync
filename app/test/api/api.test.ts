@@ -9,7 +9,7 @@ import expectedMastersAlbum from "../_data/api.expected.album-cpl-masters.json";
 import expectedAssetsAlbum from "../_data/api.expected.album-cpl-assets.json";
 import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
 import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/api.js';
-import {appDataDir} from '../_helpers/config'
+import {appDataDir} from '../_helpers/config';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 

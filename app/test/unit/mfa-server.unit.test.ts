@@ -2,8 +2,8 @@
 import {expect, describe, test, jest, beforeEach, afterEach} from '@jest/globals';
 import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import * as PACKAGE from '../../src/lib/package'
-import { mfaServerFactory, requestFactory, responseFactory, spyOnEvent } from '../_helpers/mfa-server';
+import * as PACKAGE from '../../src/lib/package';
+import {mfaServerFactory, requestFactory, responseFactory, spyOnEvent} from '../_helpers/mfa-server';
 
 describe(`Unit Tests - MFA Server`, () => {
     describe(`MFA Code`, () => {
@@ -11,12 +11,12 @@ describe(`Unit Tests - MFA Server`, () => {
             const code = `123456`;
             const mfaMethod = new MFAMethod(`device`);
 
-            const server = mfaServerFactory()
+            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
-            const mfaReceivedEvent = spyOnEvent(server, EVENTS.MFA_RECEIVED)
+            const mfaReceivedEvent = spyOnEvent(server, EVENTS.MFA_RECEIVED);
 
-            const req = requestFactory(`${ENDPOINT.CODE_INPUT}?code=${code}`)
-            const res = responseFactory()
+            const req = requestFactory(`${ENDPOINT.CODE_INPUT}?code=${code}`);
+            const res = responseFactory();
 
             server.handleMFACode(req, res);
 
@@ -27,11 +27,11 @@ describe(`Unit Tests - MFA Server`, () => {
         test(`Invalid code format`, () => {
             const code = `123 456`;
 
-            const server = mfaServerFactory()
+            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
 
-            const req = requestFactory(`${ENDPOINT.CODE_INPUT}?code=${code}`)
-            const res = responseFactory()
+            const req = requestFactory(`${ENDPOINT.CODE_INPUT}?code=${code}`);
+            const res = responseFactory();
 
             server.handleMFACode(req, res);
 
@@ -44,12 +44,12 @@ describe(`Unit Tests - MFA Server`, () => {
             const method = `device`;
             const mfaMethod = new MFAMethod(method);
 
-            const server = mfaServerFactory()
+            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
-            const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND)
+            const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
-            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`)
-            const res = responseFactory()
+            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
+            const res = responseFactory();
 
             server.handleMFAResend(req, res);
 
@@ -61,12 +61,12 @@ describe(`Unit Tests - MFA Server`, () => {
             test(`Default id`, () => {
                 const mfaMethod = new MFAMethod(method as `sms` | `voice`);
 
-                const server = mfaServerFactory()
+                const server = mfaServerFactory();
                 server.sendResponse = jest.fn();
-                const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND)
+                const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
-                const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`)
-                const res = responseFactory()
+                const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
+                const res = responseFactory();
 
                 server.handleMFAResend(req, res);
 
@@ -78,12 +78,12 @@ describe(`Unit Tests - MFA Server`, () => {
                 const phoneNumberId = 3;
                 const mfaMethod = new MFAMethod(method as `sms` | `voice`, phoneNumberId);
 
-                const server = mfaServerFactory()
+                const server = mfaServerFactory();
                 server.sendResponse = jest.fn();
-                const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND)
+                const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
-                const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`)
-                const res = responseFactory()
+                const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
+                const res = responseFactory();
 
                 server.handleMFAResend(req, res);
 
@@ -92,15 +92,15 @@ describe(`Unit Tests - MFA Server`, () => {
             });
 
             test(`Invalid id`, () => {
-                const phoneNumberId = "invalid";
+                const phoneNumberId = `invalid`;
                 const mfaMethod = new MFAMethod(method as `sms` | `voice`);
 
-                const server = mfaServerFactory()
+                const server = mfaServerFactory();
                 server.sendResponse = jest.fn();
-                const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND)
+                const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
-                const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`)
-                const res = responseFactory()
+                const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
+                const res = responseFactory();
 
                 server.handleMFAResend(req, res);
 
@@ -112,11 +112,11 @@ describe(`Unit Tests - MFA Server`, () => {
         test(`Invalid resend method`, () => {
             const method = `invalid`;
 
-            const server = mfaServerFactory()
+            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
 
-            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`)
-            const res = responseFactory()
+            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
+            const res = responseFactory();
 
             server.handleMFAResend(req, res);
 
@@ -126,113 +126,113 @@ describe(`Unit Tests - MFA Server`, () => {
 
     describe(`Request routing`, () => {
         test(`GET /`, () => {
-            const req = requestFactory('/', 'GET')
-            const res = responseFactory()
+            const req = requestFactory(`/`, `GET`);
+            const res = responseFactory();
 
-            const server = mfaServerFactory()
+            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
-            server.handleMFAResend = jest.fn()
-            server.handleMFACode = jest.fn()
+            server.handleMFAResend = jest.fn();
+            server.handleMFACode = jest.fn();
 
-            server.handleRequest(req, res)
+            server.handleRequest(req, res);
 
-            expect(server.sendResponse).toHaveBeenCalledWith(res, 200, `MFA Server up & running - ${PACKAGE.NAME}@v${PACKAGE.VERSION}`)
-            expect(server.handleMFACode).not.toHaveBeenCalled()
-            expect(server.handleMFAResend).not.toHaveBeenCalled()
-        })
+            expect(server.sendResponse).toHaveBeenCalledWith(res, 200, `MFA Server up & running - ${PACKAGE.NAME}@v${PACKAGE.VERSION}`);
+            expect(server.handleMFACode).not.toHaveBeenCalled();
+            expect(server.handleMFAResend).not.toHaveBeenCalled();
+        });
 
         test(`POST /ENDPOINT.CODE_INPUT`, () => {
-            const req = requestFactory(`${ENDPOINT.CODE_INPUT}?testparam=abc`, 'POST')
-            const res = responseFactory()
+            const req = requestFactory(`${ENDPOINT.CODE_INPUT}?testparam=abc`, `POST`);
+            const res = responseFactory();
 
-            const server = mfaServerFactory()
+            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
-            server.handleMFAResend = jest.fn()
-            server.handleMFACode = jest.fn()
+            server.handleMFAResend = jest.fn();
+            server.handleMFACode = jest.fn();
 
-            server.handleRequest(req, res)
+            server.handleRequest(req, res);
 
-            expect(server.handleMFACode).toHaveBeenCalledWith(req, res)
-            expect(server.sendResponse).not.toHaveBeenCalled()
-            expect(server.handleMFAResend).not.toHaveBeenCalled()
-        })
+            expect(server.handleMFACode).toHaveBeenCalledWith(req, res);
+            expect(server.sendResponse).not.toHaveBeenCalled();
+            expect(server.handleMFAResend).not.toHaveBeenCalled();
+        });
 
         test(`POST /ENDPOINT.RESEND_CODE`, () => {
-            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?testparam=abc`, 'POST')
-            const res = responseFactory()
+            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?testparam=abc`, `POST`);
+            const res = responseFactory();
 
-            const server = mfaServerFactory()
+            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
-            server.handleMFAResend = jest.fn()
-            server.handleMFACode = jest.fn()
+            server.handleMFAResend = jest.fn();
+            server.handleMFACode = jest.fn();
 
-            server.handleRequest(req, res)
+            server.handleRequest(req, res);
 
-            expect(server.handleMFAResend).toHaveBeenCalledWith(req, res)
-            expect(server.sendResponse).not.toHaveBeenCalled()
-            expect(server.handleMFACode).not.toHaveBeenCalled()
-        })
+            expect(server.handleMFAResend).toHaveBeenCalledWith(req, res);
+            expect(server.sendResponse).not.toHaveBeenCalled();
+            expect(server.handleMFACode).not.toHaveBeenCalled();
+        });
 
         test(`GET /invalid`, () => {
-            const method = 'GET'
-            const req = requestFactory('/invalid', method)
-            const res = responseFactory()
+            const method = `GET`;
+            const req = requestFactory(`/invalid`, method);
+            const res = responseFactory();
 
-            const server = mfaServerFactory()
+            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
-            server.handleMFAResend = jest.fn()
-            server.handleMFACode = jest.fn()
+            server.handleMFAResend = jest.fn();
+            server.handleMFACode = jest.fn();
 
-            server.handleRequest(req, res)
+            server.handleRequest(req, res);
 
-            expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Method not supported: ${method}`)
-            expect(server.handleMFAResend).not.toHaveBeenCalled()
-            expect(server.handleMFACode).not.toHaveBeenCalled()
-        })
+            expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Method not supported: ${method}`);
+            expect(server.handleMFAResend).not.toHaveBeenCalled();
+            expect(server.handleMFACode).not.toHaveBeenCalled();
+        });
 
         test(`POST /invalid`, () => {
-            const method = '/invalid'
-            const req = requestFactory(method, 'POST')
-            const res = responseFactory()
+            const method = `/invalid`;
+            const req = requestFactory(method, `POST`);
+            const res = responseFactory();
 
-            const server = mfaServerFactory()
+            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
-            server.handleMFAResend = jest.fn()
-            server.handleMFACode = jest.fn()
+            server.handleMFAResend = jest.fn();
+            server.handleMFACode = jest.fn();
 
-            server.handleRequest(req, res)
+            server.handleRequest(req, res);
 
-            expect(server.sendResponse).toHaveBeenCalledWith(res, 404, `Route not found, available endpoints: ["/mfa","/resend_mfa"]`)
-            expect(server.handleMFAResend).not.toHaveBeenCalled()
-            expect(server.handleMFACode).not.toHaveBeenCalled()
-        })
+            expect(server.sendResponse).toHaveBeenCalledWith(res, 404, `Route not found, available endpoints: ["/mfa","/resend_mfa"]`);
+            expect(server.handleMFAResend).not.toHaveBeenCalled();
+            expect(server.handleMFACode).not.toHaveBeenCalled();
+        });
     });
 
     describe(`Server lifecycle`, () => {
         test(`Startup`, () => {
-            const server = mfaServerFactory()
-            server.server.listen = jest.fn() as any
+            const server = mfaServerFactory();
+            server.server.listen = jest.fn() as any;
 
-            server.startServer()
-            expect((server.server.listen as any).mock.lastCall[0]).toEqual(80)
+            server.startServer();
+            expect((server.server.listen as any).mock.lastCall[0]).toEqual(80);
         });
 
         test(`Shutdown`, () => {
-            const server = mfaServerFactory()
-            const closeFn = jest.fn() as any
-            server.server.close = closeFn
+            const server = mfaServerFactory();
+            const closeFn = jest.fn() as any;
+            server.server.close = closeFn;
 
-            server.stopServer()
-            expect(closeFn).toHaveBeenCalled()
-            expect(server.server).toBeUndefined()
+            server.stopServer();
+            expect(closeFn).toHaveBeenCalled();
+            expect(server.server).toBeUndefined();
         });
 
         test(`Send response`, () => {
-            const res = responseFactory()
-            const server = mfaServerFactory()
-            server.sendResponse(res, 200, 'test')
-            expect(res.writeHead).toHaveBeenCalledWith(200, {"Content-Type": "application/json"})
-            expect(res.end).toHaveBeenCalledWith(`{"message":"test"}`)
-        })
+            const res = responseFactory();
+            const server = mfaServerFactory();
+            server.sendResponse(res, 200, `test`);
+            expect(res.writeHead).toHaveBeenCalledWith(200, {"Content-Type": `application/json`});
+            expect(res.end).toHaveBeenCalledWith(`{"message":"test"}`);
+        });
     });
 });

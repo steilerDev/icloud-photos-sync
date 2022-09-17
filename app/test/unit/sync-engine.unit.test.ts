@@ -11,7 +11,7 @@ import {PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {AxiosResponse} from 'axios';
 import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
-import {syncEngineFactory} from '../_helpers/sync-engine'
+import {syncEngineFactory} from '../_helpers/sync-engine';
 
 beforeEach(() => {
     mockfs({});
