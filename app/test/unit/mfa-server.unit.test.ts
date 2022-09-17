@@ -7,7 +7,7 @@ import request from 'supertest';
 
 describe(`Unit Tests - MFA Server`, () => {
     describe(`MFA Code`, () => {
-        test.only(`Valid Code format`, async () => {
+        test(`Valid Code format`, async () => {
             const code = `123456`;
             const mfaMethod = new MFAMethod(`device`);
 
@@ -18,7 +18,6 @@ describe(`Unit Tests - MFA Server`, () => {
 
             const response = await request(server.server)
                 .post(`${ENDPOINT.CODE_INPUT}?code=${code}`);
-    
 
             expect(response.status).toEqual(200);
             expect(response.headers[`Content-Type`.toLowerCase()]).toMatch(/json/);
