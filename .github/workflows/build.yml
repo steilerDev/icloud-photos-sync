@@ -178,18 +178,11 @@ jobs:
       - name: Install
         run: npm ci
         working-directory: app/
-      - name: Access runner to acquire token
-        uses: lhotari/action-upterm@v1
-        with:
-          limit-access-to-users: steilerDev
-          upterm-server: ssh://uptermd.upterm.dev:22
       - name: Test
-        uses: nick-fields/retry@v2
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_on: error
-          command: cd app/ && npm run test
+        run: npm run test
+        env:
+          NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
+        working-directory: app/
       - name: Collect test coverage
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v3
