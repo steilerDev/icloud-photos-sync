@@ -164,7 +164,7 @@ jobs:
     name: Test App
     strategy:
       matrix:
-        os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest",  "macos-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
+        os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -173,10 +173,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: 'app/.node-version'
-#          cache: 'npm'
-#          cache-dependency-path: app/
+          cache: 'npm'
+          cache-dependency-path: app/
       - name: Install
-        run: npm install
+        run: npm ci
         working-directory: app/
       - name: Test
 #        run: npm run test
