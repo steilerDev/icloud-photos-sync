@@ -183,6 +183,7 @@ jobs:
 #        env:
 #          NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
         run: | 
+          npm run build
           node --experimental-vm-modules \
             node_modules/.bin/jest --runInBand --config jest.config.json test/unit/*.test.ts
         working-directory: app/
