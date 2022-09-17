@@ -3,7 +3,10 @@ import {expect, describe, test, jest, beforeEach, afterEach} from '@jest/globals
 import {MFAServer} from '../../src/lib/icloud/mfa/mfa-server';
 import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import request from 'supertest';
+
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const request = require('supertest')
 
 describe(`Unit Tests - MFA Server`, () => {
     describe(`MFA Code`, () => {
