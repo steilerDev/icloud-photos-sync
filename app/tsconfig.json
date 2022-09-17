@@ -7,7 +7,6 @@
     "sourceMap": true,
     "outDir": "bin",
     "declaration": true,
-    "allowJs": true,
     "resolveJsonModule": true
   },
   "include": ["src/**/*"],
