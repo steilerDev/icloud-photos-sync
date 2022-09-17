@@ -164,7 +164,7 @@ jobs:
     name: Test App
     strategy:
       matrix:
-        os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-22.04"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
+        os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest",  "macos-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
