@@ -3,7 +3,7 @@ import {appDataDir} from './config';
 
 /**
  * Creates a Photo Library object pointing to the default location
- * @returns
+ * @returns The newly created library object
  */
 export function photosLibraryFactory(): PhotosLibrary {
     const opts = {

@@ -19,7 +19,7 @@ export class iCloud extends EventEmitter {
     /**
      * Default logger for the class
      */
-    private logger = getLogger(this);
+    logger = getLogger(this);
 
     /**
      * Authentication object of the current iCloud session
@@ -56,7 +56,7 @@ export class iCloud extends EventEmitter {
 
         // MFA Server & lifecycle management
         this.mfaServer = new MFAServer(cliOpts.port);
-        this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.mfaReceived.bind(this));
+        this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.submitMFA.bind(this));
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RESEND, this.resendMFA.bind(this));
 
         // ICloud Auth object
@@ -163,14 +163,12 @@ export class iCloud extends EventEmitter {
         return this.ready;
     }
 
-    /* MFA flow not testable in automation */
-    /* c8 ignore start */
     /**
      * This function will ask the iCloud backend, to re-send the MFA token, using the provided method and number
      * @param method - The method to be used
-     * @param phoneNumberId - Optionally, the phoneNumberId. Will use ID 1 (first number) per default.
+     * @returns A promise that resolves once all activity has been completed
      */
-    resendMFA(method: MFAMethod) {
+    async resendMFA(method: MFAMethod): Promise<void> {
         this.logger.info(`Resending MFA code with ${method}`);
 
         const config: AxiosRequestHeaders = {
@@ -181,7 +179,7 @@ export class iCloud extends EventEmitter {
         const url = method.getResendURL();
 
         this.logger.debug(`Requesting MFA code via URL ${url} with data ${JSON.stringify(data)}`);
-        this.axios.put(url, data, config)
+        return this.axios.put(url, data, config)
             .then(res => {
                 if (!method.resendSuccesfull(res)) {
                     this.emit(ICLOUD.EVENTS.ERROR, `Unable to request new MFA code: ${JSON.stringify(res)}`);
@@ -190,7 +188,10 @@ export class iCloud extends EventEmitter {
 
                 if (method.isSMS() || method.isVoice()) {
                     this.logger.info(`Sucesfully requested new MFA code using phone ${res.data.trustedPhoneNumber.numberWithDialCode}`);
-                } else {
+                    return;
+                }
+
+                if (method.isDevice()) {
                     this.logger.info(`Sucesfully requested new MFA code using ${res.data.trustedDeviceCount} trusted device(s)`);
                 }
             })
@@ -198,17 +199,14 @@ export class iCloud extends EventEmitter {
                 this.emit(ICLOUD.EVENTS.ERROR, `Received error while trying to resend MFA code: ${method.processResendError(err)}`);
             });
     }
-    /* c8 ignore stop */
 
-    /* MFA flow not testable in automation */
-    /* c8 ignore start */
     /**
      * Enters and validates the MFA code in order to acquire necessary account tokens
      * @param mfa - The MFA code
+     * @returns A promise that resolves to a boolean upon completion. Returns true, if the final event had listeners.
      */
-    mfaReceived(method: MFAMethod, mfa: string) {
+    async submitMFA(method: MFAMethod, mfa: string): Promise<boolean> {
         this.mfaServer.stopServer();
-        this.auth.validateAuthSecrets();
         this.logger.info(`Authenticating MFA with code ${mfa}`);
 
         const config: AxiosRequestHeaders = {
@@ -219,24 +217,19 @@ export class iCloud extends EventEmitter {
         const url = method.getEnterURL();
 
         this.logger.debug(`Entering MFA code via URL ${url} with data ${JSON.stringify(data)}`);
-        this.axios.post(url, data, config)
-            .then(res => { // Weird difference in response code, depending on endpoint
+        return this.axios.post(url, data, config)
+            .then(res => {
                 if (!method.enterSuccesfull(res)) {
                     this.emit(ICLOUD.EVENTS.ERROR, `Received unexpected response code during MFA validation: ${res.status} (${res.statusText})`);
                     return;
                 }
 
                 this.logger.info(`MFA code correct!`);
-                this.emit(ICLOUD.EVENTS.AUTHENTICATED);
+                return this.emit(ICLOUD.EVENTS.AUTHENTICATED);
             })
-            .catch(err => {
-                this.emit(ICLOUD.EVENTS.ERROR, `Received error during MFA validation: ${err}`);
-            });
+            .catch(err => this.emit(ICLOUD.EVENTS.ERROR, `Received error during MFA validation: ${JSON.stringify(err)}`));
     }
-    /* c8 ignore stop */
 
-    /* This is only called as part of non-testable MFA flow */
-    /* c8 ignore start */
     /**
      * Acquires sessionToken and two factor trust token after succesfull authentication
      */
@@ -259,7 +252,6 @@ export class iCloud extends EventEmitter {
                 this.emit(ICLOUD.EVENTS.ERROR, `Received error while acquiring trust tokens: ${err}`);
             });
     }
-    /* c8 ignore stop */
 
     /**
      * Acquiring necessary cookies from trust and auth token for further processing & gets the user specific domain to interact with the Photos backend

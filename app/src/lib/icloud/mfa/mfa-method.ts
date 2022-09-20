@@ -144,6 +144,12 @@ export class MFAMethod {
         }
     }
 
+    /* c8 ignore start */
+    /**
+     * Will take the Axios Error returned from the backend, and provide a user-readable string
+     * @param err - The error returned
+     * @returns A user readable error description
+     */
     processResendError(err: AxiosError): string {
         if (!err.response) {
             return `No response received: ${err.message}`;
@@ -174,6 +180,7 @@ export class MFAMethod {
             return `Bad request, unknown cause with method ${this}: ${JSON.stringify(err.response.data)}`;
         }
     }
+    /* c8 ignore stop */
 
     /**
      * @param mfa - The MFA code, that should be send for validation
