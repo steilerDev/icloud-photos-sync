@@ -1,5 +1,5 @@
 import {AxiosResponse} from "axios";
-import {writeFile, mkdir} from 'fs/promises';
+import {writeFileSync, mkdirSync} from 'fs';
 import {readFileSync} from 'fs';
 import * as path from 'path';
 import {Cookie} from "tough-cookie";
@@ -142,18 +142,21 @@ export class iCloudAuth {
     /**
      * Tries to write the trust token to disk
      */
-    async storeTrustToken(): Promise<void> {
+    storeTrustToken() {
         this.logger.debug(`Trying to persist trust token to disk`);
 
         const trustTokenPath = path.dirname(this.trustTokenFile);
-        return mkdir(trustTokenPath, {"recursive": true})
-            .catch(err => {
-                this.logger.warn(`Unable to create trust token directory (${trustTokenPath}): ${err.message}`);
-            })
-            .then(() => writeFile(this.trustTokenFile, this.iCloudAccountTokens.trustToken, {"encoding": ICLOUD.TRUST_TOKEN_FILE_ENCODING}))
-            .catch(err => {
-                this.logger.warn(`Unable to persist trust token to disk: ${err.message}`);
-            });
+        try {
+            mkdirSync(trustTokenPath, {"recursive": true});
+        } catch (err) {
+            throw new Error(`Unable to create trust token directory (${trustTokenPath}): ${err.message}`);
+        }
+
+        try {
+            writeFileSync(this.trustTokenFile, this.iCloudAccountTokens.trustToken, {"encoding": ICLOUD.TRUST_TOKEN_FILE_ENCODING});
+        } catch (err) {
+            throw new Error(`Unable to persist trust token to disk: ${err.message}`);
+        }
     }
 
     /**
@@ -182,8 +185,6 @@ export class iCloudAuth {
         this.logger.trace(`  - auth secrets: ${JSON.stringify(this.iCloudAuthSecrets)}`);
     }
 
-    /* MFA flow not testable in automation */
-    /* c8 ignore start */
     /**
      * Headers required for MFA authentication flow (Enter 2-FA + get tokens)
      * @returns The header object for the request
@@ -196,23 +197,19 @@ export class iCloudAuth {
             "Cookie": `aasp=${this.iCloudAuthSecrets.aasp}`,
         };
     }
-    /* c8 ignore stop */
 
-    /* MFA flow not testable in automation */
-    /* c8 ignore start */
     /**
      * Processing the response from acquiring the necessary trust tokens. This method is automatically storing the trust token on disk
      * @param response - The response from the trust token endpoint
      * @returns True if acquied account tokens were sucesfully validated
      */
-    async processAccountTokens(response: AxiosResponse) {
+    processAccountTokens(response: AxiosResponse) {
         this.logger.debug(`Processing trust token response`);
         this.iCloudAccountTokens.sessionToken = response?.headers[ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()];
         this.iCloudAccountTokens.trustToken = response?.headers[ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN.toLowerCase()];
         this.validateAccountTokens();
-        await this.storeTrustToken();
+        this.storeTrustToken();
     }
-    /* c8 ignore stop */
 
     /**
      *

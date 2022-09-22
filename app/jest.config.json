@@ -19,7 +19,8 @@
     "coverageProvider": "v8",
     "coverageReporters": [
       "text-summary",
-      "html"
+      "html",
+      "json-summary"
     ],
     "extensionsToTreatAsEsm": [".ts"],
     "transform": {

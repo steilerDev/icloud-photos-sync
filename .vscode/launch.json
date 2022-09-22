@@ -28,7 +28,8 @@
                 "node_modules/.bin/jest",
                 "--runInBand",
                 "--config", "jest.config.json",
-                "test/unit/icloud-mfa.unit.test.ts"
+                //"--detectOpenHandles",
+                "test/unit/icloud.unit.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

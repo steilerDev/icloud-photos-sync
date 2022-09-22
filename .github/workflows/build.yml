@@ -11,6 +11,8 @@ name: Build & Test
 #  - changelog (File containing changelog description) - Only if github.ref != 'refs/heads/dev'
 #  - coverage-report (Test coverage report)
 
+# Todo: Add Code Coverage Report to GH Pages & using https://shields.io/endpoint to create badge 
+
 on:
   workflow_call:
   pull_request:
