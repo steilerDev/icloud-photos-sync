@@ -140,7 +140,7 @@ describe(`Unit Tests - iCloud`, () => {
 
             await icloud.authenticate();
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(mfaEvent).toHaveBeenCalledWith(80);
+            expect(mfaEvent).toHaveBeenCalledWith(0);
 
             expect(icloud.auth.iCloudAuthSecrets.aasp).toEqual(Config.aasp);
             expect(icloud.auth.iCloudAuthSecrets.scnt).toEqual(Config.scnt);
