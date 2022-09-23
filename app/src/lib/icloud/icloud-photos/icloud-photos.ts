@@ -41,6 +41,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param ext - The service endpoint extension applied to the base domain
      */
     getServiceEndpoint(ext: string): string {
+        this.auth.validatePhotosAccount();
         return `${this.auth.iCloudPhotosAccount.photosDomain}${ICLOUD_PHOTOS.PATHS.BASE_PATH}${ext}`;
     }
 

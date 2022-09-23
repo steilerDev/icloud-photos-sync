@@ -29,7 +29,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/icloud.unit.test.ts"
+                "test/unit/icloud.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

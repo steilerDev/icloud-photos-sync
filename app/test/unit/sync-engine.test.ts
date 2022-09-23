@@ -622,6 +622,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(3, asset6);
             });
         });
+
         describe(`Handle album queue`, () => {
             test.todo(`Empty processing queue`);
             test.todo(`Only deleting`);
