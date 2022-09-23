@@ -1,5 +1,5 @@
 import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
-import {appDataDir} from './config';
+import {appDataDir} from './_config';
 
 /**
  * Creates a Photo Library object pointing to the default location

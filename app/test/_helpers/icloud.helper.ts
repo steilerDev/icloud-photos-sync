@@ -1,6 +1,6 @@
 import {iCloud} from "../../src/lib/icloud/icloud";
-import * as Config from './config';
-import {expectedMFAHeaders} from "./icloud-mfa";
+import * as Config from './_config';
+import {expectedMFAHeaders} from "./icloud-mfa.helper";
 
 export const _defaultCliOpts = {
     "port": 0,

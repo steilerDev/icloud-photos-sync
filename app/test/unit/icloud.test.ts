@@ -2,15 +2,15 @@ import mockfs from 'mock-fs';
 import {describe, test, beforeEach, afterEach, expect, jest} from '@jest/globals';
 import path from 'path';
 import * as ICLOUD from '../../src/lib/icloud/constants';
-import {appDataDir} from '../_helpers/config';
+import {appDataDir} from '../_helpers/_config';
 import fs from 'fs';
 import {iCloudAuth} from '../../src/lib/icloud/auth';
 import {AxiosError, AxiosRequestConfig} from 'axios';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import {expectedAxiosPost, expectedAxiosPut} from '../_helpers/icloud-mfa';
+import {expectedAxiosPost, expectedAxiosPut} from '../_helpers/icloud-mfa.helper';
 import {spyOnEvent} from '../_helpers/_general';
-import {expectedTokenGet, iCloudFactory, _defaultCliOpts} from '../_helpers/icloud';
-import * as Config from '../_helpers/config';
+import {expectedTokenGet, iCloudFactory, _defaultCliOpts} from '../_helpers/icloud.helper';
+import * as Config from '../_helpers/_config';
 import {iCloud} from '../../src/lib/icloud/icloud';
 
 describe(`Unit Tests - iCloud`, () => {

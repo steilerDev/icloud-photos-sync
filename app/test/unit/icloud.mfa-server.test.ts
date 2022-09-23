@@ -3,7 +3,7 @@ import {expect, describe, test, jest} from '@jest/globals';
 import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
-import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server';
+import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {spyOnEvent} from '../_helpers/_general';
 
 describe(`Unit Tests - MFA Server`, () => {

@@ -1,4 +1,4 @@
-import * as Config from './config';
+import * as Config from './_config';
 import {MFAMethod, MFAMethodType} from '../../src/lib/icloud/mfa/mfa-method.js';
 
 export function expectedMFAHeaders(): any {
