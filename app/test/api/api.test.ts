@@ -8,8 +8,8 @@ import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
 import expectedMastersAlbum from "../_data/api.expected.album-cpl-masters.json";
 import expectedAssetsAlbum from "../_data/api.expected.album-cpl-assets.json";
 import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
-import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/api.js';
-import {appDataDir} from '../_helpers/config';
+import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/api.helper';
+import {appDataDir} from '../_helpers/_config';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 
@@ -42,7 +42,6 @@ describe(`API E2E Tests`, () => {
         expect(token?.length).toBeGreaterThan(0);
     });
 
-    // Not running API tests on github for now, as the MFA token is not portable
     describe(`Login flow`, () => {
         test(`Login flow with invalid username/password`, async () => {
             const cliOpts = {

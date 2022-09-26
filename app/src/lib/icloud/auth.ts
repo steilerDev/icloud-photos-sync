@@ -175,7 +175,7 @@ export class iCloudAuth {
             throw new Error(`Unable to process auth response: No set-cookie directive found`);
         }
 
-        const extractedHeader:string = cookieHeaders.find(el => el.startsWith(`${ICLOUD.AUTH_RESPONSE_HEADER.AASP_COOKIE}=`));
+        const extractedHeader: string = cookieHeaders.find(el => el.startsWith(`${ICLOUD.AUTH_RESPONSE_HEADER.AASP_COOKIE}=`));
         const removedKey: string = extractedHeader.substring(ICLOUD.AUTH_RESPONSE_HEADER.AASP_COOKIE.length + 1);
         const removedMetadata: string = removedKey.split(`;`)[0];
         this.iCloudAuthSecrets.aasp = removedMetadata;
@@ -242,6 +242,10 @@ export class iCloudAuth {
             this.iCloudCookies.push(cookie);
         });
 
+        if (!response?.data?.webservices?.ckdatabasews?.url) {
+            throw new Error(`Unable to get photosDomain from setup response: ${JSON.stringify(response.data)}`);
+        }
+
         this.iCloudPhotosAccount.photosDomain = response.data.webservices.ckdatabasews.url;
 
         this.validateCloudCookies();
@@ -297,7 +301,11 @@ export class iCloudAuth {
             throw new Error(`Unable to validate cloud cookies: No cookies loaded`);
         }
 
-        const expiredCookies = this.iCloudCookies.filter(cookie => cookie.TTL() === 0);
+        const expiredCookies = this.iCloudCookies
+            .filter(cookie => cookie.expires !== `Infinity`) // Being explicit about that
+            .filter(cookie => cookie.TTL() <= 0)
+            .filter(cookie => (cookie.expires as Date).getTime() !== 1000);
+
         if (expiredCookies.length > 0) {
             this.logger.trace(`Found expired cookies: ${JSON.stringify(expiredCookies)}`);
             throw new Error(`Unable to validate cloud cookies: Some cookies are expired`);

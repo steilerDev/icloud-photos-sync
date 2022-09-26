@@ -269,7 +269,7 @@ export class iCloud extends EventEmitter {
     /**
      * Acquiring necessary cookies from trust and auth token for further processing & gets the user specific domain to interact with the Photos backend
      */
-    getiCloudCookies() {
+    async getiCloudCookies() {
         this.auth.validateAccountTokens();
         this.logger.info(`Setting up iCloud connection`);
         const config: AxiosRequestConfig = {
@@ -279,20 +279,26 @@ export class iCloud extends EventEmitter {
         // Validate setup data
         const data = this.auth.getSetupData();
 
-        this.axios.post(ICLOUD.URL.SETUP, data, config)
+        return this.axios.post(ICLOUD.URL.SETUP, data, config)
             .then(res => {
                 if (res.status !== 200) {
-                    this.emit(ICLOUD.EVENTS.ERROR, `Received unexpected response code during iCloud Setup: ${res.status} (${res.statusText})`);
+                    this.emit(ICLOUD.EVENTS.ERROR, `Received unexpected response code during iCloud Setup: ${res.status}`);
                     return;
                 }
 
-                this.auth.processCloudSetupResponse(res);
+                try {
+                    this.auth.processCloudSetupResponse(res);
+                } catch (err) {
+                    this.emit(ICLOUD.EVENTS.ERROR, err.message);
+                    return;
+                }
+
                 this.photos = new iCloudPhotos(this.auth);
                 this.logger.debug(`Account ready`);
                 this.emit(ICLOUD.EVENTS.ACCOUNT_READY);
             })
             .catch(err => {
-                this.emit(ICLOUD.EVENTS.ERROR, `Received error during iCloud Setup: ${err}`);
+                this.emit(ICLOUD.EVENTS.ERROR, `Received error during iCloud Setup: ${err.message}`);
             });
     }
 
@@ -300,9 +306,16 @@ export class iCloud extends EventEmitter {
      * Creating iCloud Photos sub-class and linking it
     */
     getiCloudPhotosReady() {
-        this.auth.validateCloudCookies();
+        try {
+            this.auth.validateCloudCookies();
+        } catch (err) {
+            this.emit(ICLOUD.EVENTS.ERROR, err.message);
+            return;
+        }
+
         if (!this.photos) {
             this.emit(ICLOUD.EVENTS.ERROR, `Unable to setup iCloud Photos, object does not exist!`);
+            return;
         }
 
         this.logger.info(`Getting iCloud Photos Service ready`);
