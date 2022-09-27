@@ -692,7 +692,7 @@ describe(`Unit Tests - iCloud`, () => {
                 const icloud = iCloudFactory();
                 icloud.auth.iCloudCookies = getICloudCookies();
                 icloud.photos = new iCloudPhotos(icloud.auth);
-                icloud.photos.setup = jest.fn();
+                icloud.photos.setup = jest.fn(() => Promise.resolve());
 
                 icloud.getiCloudPhotosReady();
 
@@ -707,7 +707,7 @@ describe(`Unit Tests - iCloud`, () => {
                 icloud.auth.iCloudCookies = getICloudCookies(true);
                 const errorEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR);
                 icloud.photos = new iCloudPhotos(icloud.auth);
-                icloud.photos.setup = jest.fn();
+                icloud.photos.setup = jest.fn(() => Promise.resolve());
 
                 icloud.getiCloudPhotosReady();
 
