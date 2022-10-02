@@ -2,7 +2,11 @@ import {jest} from '@jest/globals';
 import {AxiosResponse} from 'axios';
 import {iCloud} from "../../src/lib/icloud/icloud";
 import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
-import {Album} from '../../src/lib/photos-library/model/album';
+import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
+import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
+import {Asset} from '../../src/lib/photos-library/model/asset';
+import {FileType} from '../../src/lib/photos-library/model/file-type';
+import {PLibraryEntities, PLibraryProcessingQueues} from '../../src/lib/photos-library/model/photos-entity';
 import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
 import {SyncEngine} from "../../src/lib/sync-engine/sync-engine";
 import * as Config from "./_config";
@@ -62,3 +66,50 @@ export function queueIsSorted(albumQueue: Album[]): boolean {
             .findIndex(potentialParentAlbum => currentAlbum.parentAlbumUUID === potentialParentAlbum.getUUID()) === -1; // Get the index of the album
     });
 }
+
+export const fetchAndLoadStateReturnValue = [
+    [new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10)],
+    [new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``)],
+    {'someChecksum': new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10)},
+    {'someUUID': new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``)},
+] as [Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>];
+
+export const diffStateReturnValue = [
+    [
+        [new Asset(`someChecksum1`, 50, FileType.fromExtension(`png`), 10)],
+        [new Asset(`someChecksum2`, 60, FileType.fromExtension(`png`), 20)],
+        [new Asset(`someChecksum3`, 70, FileType.fromExtension(`png`), 30)],
+    ], [
+        [new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``)],
+        [new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName2`, ``)],
+        [new Album(`someUUID3`, AlbumType.ALBUM, `someAlbumName3`, ``)],
+    ],
+] as [PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>];
+
+export const fetchAllPictureRecordsReturnValue = [
+    [new CPLAsset()],
+    [new CPLMaster()],
+] as [CPLAsset[], CPLMaster[]];
+
+export const convertCPLAssetsReturnValue = [
+    new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10),
+] as Asset[];
+
+export const fetchAllAlbumRecordsReturnValue = [
+    new CPLAlbum(),
+] as CPLAlbum[];
+
+export const convertCPLAlbumsReturnValue = [
+    new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``),
+] as Album[];
+
+export const loadAssetsReturnValue = {
+    'someChecksum': new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10),
+} as PLibraryEntities<Asset>;
+
+export const loadAlbumsReturnValue = {
+    'someUUID': new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``),
+} as PLibraryEntities<Album>;
+
+export const getProcessingQueuesReturnValue = [[], [], []];
+export const resolveHierarchicalDependenciesReturnValue = [[], [], []] as PLibraryProcessingQueues<Album>;

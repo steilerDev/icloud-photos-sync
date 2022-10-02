@@ -10,7 +10,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from '../../src/lib/photos-library/model/photos-entity';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
-import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted, mockSyncEngineForAlbumQueue} from '../_helpers/sync-engine.helper';
+import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted, mockSyncEngineForAlbumQueue, fetchAndLoadStateReturnValue, diffStateReturnValue, fetchAllPictureRecordsReturnValue, convertCPLAssetsReturnValue, fetchAllAlbumRecordsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue} from '../_helpers/sync-engine.helper';
 import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albums-helper';
 import {spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
@@ -29,9 +29,12 @@ describe(`Unit Tests - Sync Engine`, () => {
         describe(`Sync`, () => {
             test(`Succesfull on first try`, async () => {
                 const syncEngine = syncEngineFactory();
+
                 const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
-                syncEngine.fetchAndLoadState = jest.fn(() => Promise.resolve([[], [], {}, {}] as [Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]));
-                syncEngine.diffState = jest.fn((_remoteAssets, _remoteAlbums, _localAssets, _localAlbums) => Promise.resolve([[[], [], []], [[], [], []]] as [PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]));
+                syncEngine.fetchAndLoadState = jest.fn<() => Promise<typeof fetchAndLoadStateReturnValue>>()
+                    .mockResolvedValue(fetchAndLoadStateReturnValue);
+                syncEngine.diffState = jest.fn<() => Promise<typeof diffStateReturnValue>>()
+                    .mockResolvedValue(diffStateReturnValue);
                 syncEngine.writeState = jest.fn((_assetQueue, _albumQueue) => Promise.resolve(true));
                 const doneEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.DONE);
 
@@ -39,8 +42,8 @@ describe(`Unit Tests - Sync Engine`, () => {
 
                 expect(startEvent).toHaveBeenCalledTimes(1);
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
-                expect(syncEngine.diffState).toHaveBeenCalledWith([], [], {}, {});
-                expect(syncEngine.writeState).toHaveBeenCalledWith([[], [], []], [[], [], []]);
+                expect(syncEngine.diffState).toHaveBeenCalledWith(...fetchAndLoadStateReturnValue);
+                expect(syncEngine.writeState).toHaveBeenCalledWith(...diffStateReturnValue);
                 expect(doneEvent).toHaveBeenCalledTimes(1);
             });
 
@@ -48,23 +51,27 @@ describe(`Unit Tests - Sync Engine`, () => {
                 const syncEngine = syncEngineFactory();
                 syncEngine.maxRetry = 4;
 
+                const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
+                syncEngine.fetchAndLoadState = jest.fn<() => Promise<typeof fetchAndLoadStateReturnValue>>()
+                    .mockResolvedValue(fetchAndLoadStateReturnValue);
+                syncEngine.diffState = jest.fn<() => Promise<typeof diffStateReturnValue>>()
+                    .mockResolvedValue(diffStateReturnValue);
+
                 const error = new Error(`Bad Request - 421`) as unknown as AxiosError;
                 error.name = `AxiosError`;
                 error.code = `ERR_BAD_REQUEST`;
                 error.response = {
                     "status": 421,
                 } as unknown as AxiosResponse;
-
-                const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
-                syncEngine.fetchAndLoadState = jest.fn(() => Promise.resolve([[], [], {}, {}] as [Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]));
-                syncEngine.diffState = jest.fn((_remoteAssets, _remoteAlbums, _localAssets, _localAlbums) => Promise.resolve([[[], [], []], [[], [], []]] as [PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]));
                 syncEngine.writeState = jest.fn<() => Promise<boolean>>()
                     .mockRejectedValueOnce(error)
                     .mockRejectedValueOnce(error)
                     .mockRejectedValueOnce(error)
                     .mockRejectedValueOnce(error)
                     .mockResolvedValueOnce(true);
+
                 syncEngine.prepareRetry = jest.fn<() => Promise<void>>();
+
                 const errorEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.ERROR);
 
                 await syncEngine.sync();
@@ -72,15 +79,15 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(startEvent).toHaveBeenCalled();
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(4);
                 expect(syncEngine.diffState).toHaveBeenCalledTimes(4);
-                expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, [], [], {}, {});
-                expect(syncEngine.diffState).toHaveBeenNthCalledWith(2, [], [], {}, {});
-                expect(syncEngine.diffState).toHaveBeenNthCalledWith(3, [], [], {}, {});
-                expect(syncEngine.diffState).toHaveBeenNthCalledWith(4, [], [], {}, {});
+                expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
+                expect(syncEngine.diffState).toHaveBeenNthCalledWith(2, ...fetchAndLoadStateReturnValue);
+                expect(syncEngine.diffState).toHaveBeenNthCalledWith(3, ...fetchAndLoadStateReturnValue);
+                expect(syncEngine.diffState).toHaveBeenNthCalledWith(4, ...fetchAndLoadStateReturnValue);
                 expect(syncEngine.writeState).toHaveBeenCalledTimes(4);
-                expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, [[], [], []], [[], [], []]);
-                expect(syncEngine.writeState).toHaveBeenNthCalledWith(2, [[], [], []], [[], [], []]);
-                expect(syncEngine.writeState).toHaveBeenNthCalledWith(3, [[], [], []], [[], [], []]);
-                expect(syncEngine.writeState).toHaveBeenNthCalledWith(4, [[], [], []], [[], [], []]);
+                expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, ...diffStateReturnValue);
+                expect(syncEngine.writeState).toHaveBeenNthCalledWith(2, ...diffStateReturnValue);
+                expect(syncEngine.writeState).toHaveBeenNthCalledWith(3, ...diffStateReturnValue);
+                expect(syncEngine.writeState).toHaveBeenNthCalledWith(4, ...diffStateReturnValue);
                 expect(syncEngine.prepareRetry).toHaveBeenCalledTimes(4);
                 expect(errorEvent).toHaveBeenCalledWith(`Sync did not complete succesfull within 4 tries`);
             });
@@ -118,9 +125,12 @@ describe(`Unit Tests - Sync Engine`, () => {
                 })(),
             ])(`Recoverable write failure - $error.message`, async ({error}) => {
                 const syncEngine = syncEngineFactory();
+
                 const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
-                syncEngine.fetchAndLoadState = jest.fn(() => Promise.resolve([[], [], {}, {}] as [Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]));
-                syncEngine.diffState = jest.fn((_remoteAssets, _remoteAlbums, _localAssets, _localAlbums) => Promise.resolve([[[], [], []], [[], [], []]] as [PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]));
+                syncEngine.fetchAndLoadState = jest.fn<() => Promise<typeof fetchAndLoadStateReturnValue>>()
+                    .mockResolvedValue(fetchAndLoadStateReturnValue);
+                syncEngine.diffState = jest.fn<() => Promise<typeof diffStateReturnValue>>()
+                    .mockResolvedValue(diffStateReturnValue);
                 syncEngine.writeState = jest.fn<() => Promise<boolean>>()
                     .mockRejectedValueOnce(error)
                     .mockResolvedValueOnce(true);
@@ -132,11 +142,11 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(startEvent).toHaveBeenCalled();
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(2);
                 expect(syncEngine.diffState).toHaveBeenCalledTimes(2);
-                expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, [], [], {}, {});
-                expect(syncEngine.diffState).toHaveBeenNthCalledWith(2, [], [], {}, {});
+                expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
+                expect(syncEngine.diffState).toHaveBeenNthCalledWith(2, ...fetchAndLoadStateReturnValue);
                 expect(syncEngine.writeState).toHaveBeenCalledTimes(2);
-                expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, [[], [], []], [[], [], []]);
-                expect(syncEngine.writeState).toHaveBeenNthCalledWith(2, [[], [], []], [[], [], []]);
+                expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, ...diffStateReturnValue);
+                expect(syncEngine.writeState).toHaveBeenNthCalledWith(2, ...diffStateReturnValue);
                 expect(syncEngine.prepareRetry).toHaveBeenCalledTimes(1);
                 expect(doneEvent).toHaveBeenCalledTimes(1);
             });
@@ -159,8 +169,11 @@ describe(`Unit Tests - Sync Engine`, () => {
             ])(`Fatal failure - $error.message`, async ({error}) => {
                 const syncEngine = syncEngineFactory();
                 const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
-                syncEngine.fetchAndLoadState = jest.fn(() => Promise.resolve([[], [], {}, {}] as [Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]));
-                syncEngine.diffState = jest.fn((_remoteAssets, _remoteAlbums, _localAssets, _localAlbums) => Promise.resolve([[[], [], []], [[], [], []]] as [PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]));
+
+                syncEngine.fetchAndLoadState = jest.fn<() => Promise<typeof fetchAndLoadStateReturnValue>>()
+                    .mockResolvedValue(fetchAndLoadStateReturnValue);
+                syncEngine.diffState = jest.fn<() => Promise<typeof diffStateReturnValue>>()
+                    .mockResolvedValue(diffStateReturnValue);
                 syncEngine.writeState = jest.fn<() => Promise<boolean>>()
                     .mockRejectedValue(error);
                 const errorEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.ERROR);
@@ -170,9 +183,9 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(startEvent).toHaveBeenCalled();
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
                 expect(syncEngine.diffState).toHaveBeenCalledTimes(1);
-                expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, [], [], {}, {});
+                expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
                 expect(syncEngine.writeState).toHaveBeenCalledTimes(1);
-                expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, [[], [], []], [[], [], []]);
+                expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, ...diffStateReturnValue);
                 expect(errorEvent).toHaveBeenCalledTimes(1);
                 expect(errorEvent).toHaveBeenCalledWith(error.message);
             });
@@ -229,21 +242,23 @@ describe(`Unit Tests - Sync Engine`, () => {
             const syncEngine = syncEngineFactory();
             const fetchNLoadEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
 
-            syncEngine.iCloud.photos.fetchAllPictureRecords = jest.fn<() => Promise<[CPLAsset[], CPLMaster[]]>>()
-                .mockResolvedValue([[], []]);
+            syncEngine.iCloud.photos.fetchAllPictureRecords = jest.fn<() => Promise<typeof fetchAllPictureRecordsReturnValue>>()
+                .mockResolvedValue(fetchAllPictureRecordsReturnValue);
             const convertCPLAssetsOriginal = SyncEngine.convertCPLAssets;
-            SyncEngine.convertCPLAssets = jest.fn<() => Asset[]>().mockReturnValue([]);
+            SyncEngine.convertCPLAssets = jest.fn<() => Asset[]>()
+                .mockReturnValue(convertCPLAssetsReturnValue);
 
             syncEngine.iCloud.photos.fetchAllAlbumRecords = jest.fn<() => Promise<CPLAlbum[]>>()
-                .mockResolvedValue([]);
+                .mockResolvedValue(fetchAllAlbumRecordsReturnValue);
             const convertCPLAlbumsOriginal = SyncEngine.convertCPLAlbums;
-            SyncEngine.convertCPLAlbums = jest.fn<() => Promise<Album[]>>().mockResolvedValue([]);
+            SyncEngine.convertCPLAlbums = jest.fn<() => Promise<Album[]>>()
+                .mockResolvedValue(convertCPLAlbumsReturnValue);
 
             syncEngine.photosLibrary.loadAssets = jest.fn<() => Promise<PLibraryEntities<Asset>>>()
-                .mockResolvedValue({});
+                .mockResolvedValue(loadAssetsReturnValue);
 
             syncEngine.photosLibrary.loadAlbums = jest.fn<() => Promise<PLibraryEntities<Album>>>()
-                .mockResolvedValue({});
+                .mockResolvedValue(loadAlbumsReturnValue);
 
             const fetchNLoadCompletedEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED);
 
@@ -252,21 +267,70 @@ describe(`Unit Tests - Sync Engine`, () => {
             expect(fetchNLoadEvent).toHaveBeenCalledTimes(1);
             expect(syncEngine.iCloud.photos.fetchAllPictureRecords).toHaveBeenCalledTimes(1);
             expect(SyncEngine.convertCPLAssets).toHaveBeenCalledTimes(1);
-            expect(SyncEngine.convertCPLAssets).toHaveBeenCalledWith([], []);
+            expect(SyncEngine.convertCPLAssets).toHaveBeenCalledWith(...fetchAllPictureRecordsReturnValue);
             SyncEngine.convertCPLAssets = convertCPLAssetsOriginal;
             expect(syncEngine.iCloud.photos.fetchAllAlbumRecords).toHaveBeenCalledTimes(1);
             expect(SyncEngine.convertCPLAlbums).toHaveBeenCalledTimes(1);
-            expect(SyncEngine.convertCPLAlbums).toHaveBeenCalledWith([]);
+            expect(SyncEngine.convertCPLAlbums).toHaveBeenCalledWith(fetchAllAlbumRecordsReturnValue);
             SyncEngine.convertCPLAlbums = convertCPLAlbumsOriginal;
             expect(syncEngine.photosLibrary.loadAssets).toHaveBeenCalledTimes(1);
             expect(syncEngine.photosLibrary.loadAlbums).toHaveBeenCalledTimes(1);
             expect(fetchNLoadCompletedEvent).toHaveBeenCalledTimes(1);
-            expect(fetchNLoadCompletedEvent).toHaveBeenCalledWith(0, 0, 0, 0);
-            expect(result).toEqual([[], [], {}, {}]);
+            expect(fetchNLoadCompletedEvent).toHaveBeenCalledWith(1, 1, 1, 1);
+            expect(result).toEqual([convertCPLAssetsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue]);
         });
 
-        test.todo(`Diff state`);
-        test.todo(`Write state`);
+        test(`Diff state`, async () => {
+            const syncEngine = syncEngineFactory();
+
+            const diffStartEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.DIFF);
+            syncEngine.getProcessingQueues = jest.fn<() => [[], [], []]>()
+                .mockReturnValue([[], [], []]);
+            syncEngine.resolveHierarchicalDependencies = jest.fn<() => PLibraryProcessingQueues<Album>>()
+                .mockReturnValue(resolveHierarchicalDependenciesReturnValue);
+            const diffCompletedEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
+
+            const result = await syncEngine.diffState(...fetchAndLoadStateReturnValue);
+
+            expect(diffStartEvent).toHaveBeenCalledTimes(1);
+            expect(syncEngine.getProcessingQueues).toBeCalledTimes(2);
+            expect(syncEngine.getProcessingQueues).toHaveBeenNthCalledWith(1, fetchAndLoadStateReturnValue[0], fetchAndLoadStateReturnValue[2]);
+            expect(syncEngine.getProcessingQueues).toHaveBeenNthCalledWith(2, fetchAndLoadStateReturnValue[1], fetchAndLoadStateReturnValue[3]);
+            expect(syncEngine.resolveHierarchicalDependencies).toHaveBeenCalledTimes(1);
+            expect(diffCompletedEvent).toHaveBeenCalledTimes(1);
+            expect(result).toEqual([[[], [], []], resolveHierarchicalDependenciesReturnValue]);
+        });
+
+        test(`Write state`, async () => {
+            const syncEngine = syncEngineFactory();
+            syncEngine.writeAssets = jest.fn<() => Promise<void[]>>()
+                .mockResolvedValue([]);
+            syncEngine.writeAlbums = jest.fn<() => Promise<void>>()
+                .mockResolvedValue();
+
+            const writeEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE);
+            const writeAssetsEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSETS);
+            const writeAssetsCompletedEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED);
+            const writeAlbumsEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ALBUMS);
+            const writeAlbumCompletedEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED);
+            const writeCompletedEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_COMPLETED);
+
+            const res = await syncEngine.writeState(...diffStateReturnValue);
+
+            expect(writeEvent).toHaveBeenCalledTimes(1);
+            expect(writeAssetsEvent).toHaveBeenCalledTimes(1);
+            expect(writeAssetsEvent).toHaveBeenCalledWith(1, 1, 1);
+            expect(syncEngine.writeAssets).toHaveBeenCalledTimes(1);
+            expect(syncEngine.writeAssets).toHaveBeenCalledWith(diffStateReturnValue[0]);
+            expect(writeAssetsCompletedEvent).toHaveBeenCalledTimes(1);
+            expect(writeAlbumsEvent).toHaveBeenCalledTimes(1);
+            expect(writeAlbumsEvent).toHaveBeenCalledWith(1, 1, 1);
+            expect(syncEngine.writeAlbums).toHaveBeenCalledTimes(1);
+            expect(syncEngine.writeAlbums).toHaveBeenCalledWith(diffStateReturnValue[1]);
+            expect(writeAlbumCompletedEvent).toHaveBeenCalledTimes(1);
+            expect(writeCompletedEvent).toHaveBeenCalledTimes(1);
+            expect(res).toBeTruthy();
+        });
     });
 
     describe(`Processing remote records`, () => {
