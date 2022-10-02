@@ -11,8 +11,8 @@ export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryPro
     this.logger.info(`Writing lib structure!`);
 
     // Making sure our queues are sorted
-    const toBeDeleted: Album[] = this.queueIsSorted(processingQueue[0]) ? processingQueue[0] : this.sortQueue(processingQueue[0]);
-    const toBeAdded: Album[] = this.queueIsSorted(processingQueue[1]) ? processingQueue[1] : this.sortQueue(processingQueue[1]);
+    const toBeDeleted: Album[] = this.sortQueue(processingQueue[0]);
+    const toBeAdded: Album[] = this.sortQueue(processingQueue[1]);
 
     // Deletion before addition, in order to avoid duplicate folders
     // Reversing processing order, since we need to remove nested folders first
@@ -71,46 +71,40 @@ export function removeAlbum(this: SyncEngine, album: Album) {
 }
 
 /**
- * This function will sort a given queue
- * Order is defined as follows: For every album in the array, its parent's index is never bigger than the index of the album (parent is 'in front' of all of its children)
- * @param unsortedQueue - The unsorted queue
+ * This function will sort a given queue. The sort is performed on a copy of the array, referencing the same objects.
+ * Order is defined as follows: For every album in the array, its parent's index (if exists) is always smaller than the index of the album (parent is 'in front' of all of its children)
+ * @param unsortedQueue - The unsorted queue.
  * @returns A sorted queue
  */
 export function sortQueue(this: SyncEngine, unsortedQueue: Album[]): Album[] {
-    this.logger.debug(`Sorting queue...`);
-    const sortedQueue = unsortedQueue.sort((a, b) => {
-        if (a.hasAncestor(b, unsortedQueue)) {
-            return 1; // B is ancestor, therefore his index needs to be smaller
-        }
-
-        if (b.hasAncestor(a, unsortedQueue)) {
-            return -1; // A is ancestor, therefore his index needs to be smaller
-        }
-
-        return 0; // Either they are the same, or independent
-    });
-    // Double checking, because I don't trust my code
-    if (!this.queueIsSorted(sortedQueue)) {
-        throw new Error(`Expected sorted queue, but got ${JSON.stringify(sortedQueue)}`);
-    } else {
-        return sortedQueue;
-    }
+    return [...unsortedQueue].sort((a, b) => compareQueueElements(unsortedQueue, a, b));
 }
 
 /**
- * This function checks, if the provided album queue is 'in order'
- * Order is defined as follows: For every album in the array, its parent's index is always smaller than the index of the album (parent is 'in front' of all of its children)
- * @param albumQueue - The album queue to check
- * @returns True if for every album in the array, its parent's index is always smaller than the index of the album (parent is 'in front' of all of its children)
+ * Compares two queue elements, based on the specification of compareFn of Array.sort
+ * @param fullQueue - The full queue necessary to check for ancestors
+ * @param a - The first element
+ * @param b - The second element
+ * @returns - Returns a negative value if the first element is less than the second element, zero if they're equal, and a positive value otherwise.
  */
-export function queueIsSorted(this: SyncEngine, albumQueue: Album[]): boolean {
-    return albumQueue.every((currentAlbum, index) => {
-        if (currentAlbum.parentAlbumUUID === ``) { // If the album is in the root folder, it can be ignored
-            return true;
-        } // Album has a parent
+export function compareQueueElements(fullQueue: Album[], a: Album, b: Album): number {
+    if (a.getUUID() === b.getUUID()) {
+        return 0;
+    }
 
-        return albumQueue // FindIndex will return -1 if there is no match, we hope that there is no match
-            .slice(index) // Reducing search space, since we need to check if the parent is 'behind' the current album
-            .findIndex(potentialParentAlbum => currentAlbum.parentAlbumUUID === potentialParentAlbum.getUUID()) === -1; // Get the index of the album
-    });
+    if (a.hasAncestor(b, fullQueue)) {
+        return 1; // B is ancestor, therefore his index needs to be bigger
+    }
+
+    if (b.hasAncestor(a, fullQueue)) {
+        return -1; // A is ancestor, therefore his index needs to be bigger
+    }
+
+    try {
+        const distanceToRootA = Album.distanceToRoot(a, fullQueue);
+        const distanceToRootB = Album.distanceToRoot(b, fullQueue);
+        return distanceToRootA - distanceToRootB; // Provide distance based on depth
+    } catch (err) {
+        return 0; // If there is a broke in the link, return them as equal
+    }
 }

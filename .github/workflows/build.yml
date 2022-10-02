@@ -104,6 +104,7 @@ jobs:
       - name: Build Pages
         run: mkdocs build
         working-directory: pages/
+        # todo: bundle coverage report
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:

@@ -70,7 +70,7 @@ export class iCloudPhotos extends EventEmitter {
                 this.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
             })
             .catch(err => {
-                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unexpected error while setup: ${err.message}`);
+                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unexpected error while setting up iCloud Photos: ${err.message}`);
             });
     }
 
@@ -155,7 +155,14 @@ export class iCloudPhotos extends EventEmitter {
         throw new Error(`Fetched records are not in an array: ${JSON.stringify(fetchedRecords)}`);
     }
 
-    async performOperation(operationType: string, recordName: string, _fields: any) {
+    /**
+     * Performs a single operation with the iCloud Backend
+     * @param operationType - The type of operation, that should be performed
+     * @param recordName - The recordName of the asset the operation should be performed on
+     * @param fields - The fields to be altered
+     * @returns An array of records that have been altered
+     */
+    async performOperation(operationType: string, recordName: string, fields: any) {
         this.auth.validatePhotosAccount();
         const config: AxiosRequestConfig = {
             "headers": this.auth.getPhotosHeader(),
@@ -171,7 +178,7 @@ export class iCloudPhotos extends EventEmitter {
                     "record": {
                         "recordName": `${recordName}`,
                         "recordType": `CPLAsset`,
-                        "fields": _fields,
+                        fields,
                     },
                 },
             ],
@@ -182,12 +189,12 @@ export class iCloudPhotos extends EventEmitter {
             },
             "atomic": true,
         };
-        const deletedRecords = (await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config)).data.records;
-        if (!deletedRecords || !Array.isArray(deletedRecords)) {
-            throw new Error(`Fetched records are not in an array: ${JSON.stringify(deletedRecords)}`);
+        const {records} = (await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config)).data;
+        if (!records || !Array.isArray(records)) {
+            throw new Error(`Deleted records are not in an array: ${JSON.stringify(records)}`);
         }
 
-        return deletedRecords;
+        return records;
     }
 
     /**
@@ -417,7 +424,7 @@ export class iCloudPhotos extends EventEmitter {
      * @returns A promise, that -once resolved-, contains the Axios response
      */
     async downloadAsset(asset: Asset): Promise<AxiosResponse<any, any>> {
-        this.logger.debug(`Starting download of asset ${asset.fileChecksum}`);
+        this.logger.debug(`Starting download of asset ${asset.getDisplayName()}`);
 
         const config: AxiosRequestConfig = {
             "headers": this.auth.getPhotosHeader(),
@@ -430,6 +437,11 @@ export class iCloudPhotos extends EventEmitter {
         );
     }
 
+    /**
+     * Deletes the record in the remote library
+     * @param recordName - The record name that needs to be deleted
+     * @returns
+     */
     async deleteAsset(recordName: string) {
         this.logger.debug(`Deleting asset ${recordName}`);
         return this.performOperation(`update`, recordName, QueryBuilder.getIsDeletedField());

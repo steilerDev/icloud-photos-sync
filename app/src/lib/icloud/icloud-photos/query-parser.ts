@@ -1,5 +1,6 @@
 /**
  * This file contains various helper classes, that help parsing responses from the iCloud API
+ * These parsers will not try to validate data, only make it easily accessible
  */
 
 import {AlbumAssets} from '../../photos-library/model/album.js';

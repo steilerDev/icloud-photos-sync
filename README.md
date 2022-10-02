@@ -43,7 +43,7 @@ This CLI Application offers the following functionality:
 
   - *Continuously sync your remote iCloud Photos Library to your local file system effeciently*
     - Support of MFA Authentication through trusted devices, SMS and Voice authentication
-    - Enable autonomous operation, by caching of MFA trust token (currently testing how long the token is valid: cached token for API tests has been valid since Aug 28, 2022)
+    - Enable autonomous operation, by caching of MFA trust token (seems to be valid for 30 days: Aug 28, 2022 - Sep 27, 2022, Sep 28, 2022 - ???)
     - Support of large libraries, through efficient diffing algorithm instead of full library pull
     - Full iCloud Photos Library Backup with all important files in their original state + edits
   - *Efficient handling of local state*

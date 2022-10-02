@@ -168,6 +168,20 @@ export class Album implements PEntity<Album> {
             return parent.hasAncestor(potentialAncestor, fullQueue);
         }
 
+        // If there is no parent, this means the queue has a gap and all we can assume is, that the ancestor is false
         return false;
+    }
+
+    static distanceToRoot(album: Album, fullQueue: Album[]): number {
+        if (album.parentAlbumUUID === ``) {
+            return 0;
+        }
+
+        const parent = fullQueue.find(potentialParent => potentialParent.getUUID() === album.parentAlbumUUID);
+        if (parent) {
+            return Album.distanceToRoot(parent, fullQueue) + 1;
+        }
+
+        throw new Error(`Unable to determine distance to root, no link to root!`);
     }
 }
