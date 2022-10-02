@@ -306,12 +306,4 @@ export class Asset implements PEntity<Asset> {
     getDisplayName(): string {
         return this.fileChecksum;
     }
-
-    /**
-     * Function to extract a plain Asset from the PEntity interface
-     * @returns - The plain Asset object
-     */
-    unpack(): Asset {
-        return this;
-    }
 }

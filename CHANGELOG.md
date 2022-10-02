@@ -9,7 +9,7 @@ This release contains a massive amount of 'behind the scenes' changes to the dev
     * Unit tests implemented for
       * `icloud`
         * `mfa-server`
-        * `icloud-auth` (partially)
+        * `icloud-auth` (mostly)
         * `icloud-photos` (pending)
       * `photos-library`
       * `mfa-server`

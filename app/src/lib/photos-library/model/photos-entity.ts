@@ -16,10 +16,6 @@ export interface PEntity<T> {
      * @returns True, if both enities are equal
      */
     equal(entity: T): boolean
-    /**
-     * Returns the object as the underlying type
-     */
-    unpack(): T
 }
 
 /**

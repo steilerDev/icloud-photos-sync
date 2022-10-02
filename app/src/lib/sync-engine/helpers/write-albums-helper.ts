@@ -77,7 +77,7 @@ export function removeAlbum(this: SyncEngine, album: Album) {
  * @returns A sorted queue
  */
 export function sortQueue(this: SyncEngine, unsortedQueue: Album[]): Album[] {
-    return [...unsortedQueue].sort((a, b) => compareQueueElements(unsortedQueue, a, b));
+    return [...unsortedQueue].sort((a, b) => SyncEngine.compareQueueElements(unsortedQueue, a, b));
 }
 
 /**

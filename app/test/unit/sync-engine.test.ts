@@ -23,6 +23,18 @@ afterEach(() => {
 });
 
 describe(`Unit Tests - Sync Engine`, () => {
+
+    describe(`Coordination`, () => {
+        describe(`Sync`, () => {
+            test.todo(`Succesfull on first try`)
+            test.todo(`Recoverable failure`)
+            test.todo(`Fatal Failure`)
+        })
+        test.todo(`Fetch & Load State`)
+        test.todo(`Diff state`)
+        test.todo(`Write state`)
+    })
+
     describe(`Processing remote records`, () => {
         test(`Converting Assets - E2E Flow`, () => {
             const cplAssets = expectedAssetsAll.map((pseudoAsset: any) => {

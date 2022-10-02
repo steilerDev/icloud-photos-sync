@@ -13,7 +13,7 @@ import {getLogger} from '../logger.js';
 import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
 import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
-import {addAlbum, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
+import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 
 /**
  * This class handles the photos sync
@@ -237,12 +237,13 @@ export class SyncEngine extends EventEmitter {
 
     // From ./helpers/write-assets-helpers.ts
     writeAssets = writeAssets;
-    protected addAsset = addAsset;
-    protected removeAsset = removeAsset;
+    addAsset = addAsset;
+    removeAsset = removeAsset;
 
     // From ./helpers/write-albums-helpers.ts
     writeAlbums = writeAlbums;
     sortQueue = sortQueue;
+    static compareQueueElements = compareQueueElements;
     addAlbum = addAlbum;
     removeAlbum = removeAlbum;
 }

@@ -139,14 +139,6 @@ export class Album implements PEntity<Album> {
     }
 
     /**
-     * Function to extract a plain Album from the PEntity interface
-     * @returns - The plain Album object
-     */
-    unpack(): Album {
-        return this;
-    }
-
-    /**
      * Check if a given album is in the chain of ancestors
      * @param potentialAncestor - The potential ancesotr for the given album
      * @param fullState - The full directory state
