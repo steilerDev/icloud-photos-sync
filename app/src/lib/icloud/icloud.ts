@@ -268,6 +268,7 @@ export class iCloud extends EventEmitter {
 
     /**
      * Acquiring necessary cookies from trust and auth token for further processing & gets the user specific domain to interact with the Photos backend
+     * If trustToken has recently been acquired, this function can be used to reset the iCloud Connection
      */
     async getiCloudCookies() {
         this.auth.validateAccountTokens();

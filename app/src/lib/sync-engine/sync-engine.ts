@@ -110,7 +110,7 @@ export class SyncEngine extends EventEmitter {
      * @param err - An error that was thrown during 'writeState()'
      * @returns - True if a fatal error occured that should NOT be retried
      */
-    private checkFatalError(err: any): boolean {
+    checkFatalError(err: any): boolean {
         if (err.name !== `AxiosError`) {
             this.logger.warn(`Unknown error (${JSON.stringify(err)}), aborting!`);
             return true;
@@ -142,7 +142,7 @@ export class SyncEngine extends EventEmitter {
     /**
      * Prepares the sync engine for a retry, by emptying the queue and refreshing iCloud cookies
      */
-    private async prepareRetry(): Promise<void> {
+    async prepareRetry(): Promise<void> {
         this.logger.debug(`Preparing retry...`);
         if (this.downloadQueue) {
             if (this.downloadQueue.size > 0) {
@@ -167,7 +167,7 @@ export class SyncEngine extends EventEmitter {
      * This function fetches the remote state and loads the local state from disk
      * @returns A promise that resolve once the fetch was completed, containing the remote & local state - remote album state is in order
      */
-    private async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
+    async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
         return Promise.all([
             this.iCloud.photos.fetchAllPictureRecords()
@@ -198,7 +198,7 @@ export class SyncEngine extends EventEmitter {
      * @param localAlbums - A list of local albums
      * @returns A promise that, once resolved, will contain processing queues that can be used in order to sync the remote state.
      */
-    private async diffState(remoteAssets: Asset[], remoteAlbums: Album[], localAssets: PLibraryEntities<Asset>, localAlbums: PLibraryEntities<Album>): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
+    async diffState(remoteAssets: Asset[], remoteAlbums: Album[], localAssets: PLibraryEntities<Asset>, localAlbums: PLibraryEntities<Album>): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
         this.logger.info(`Diffing state`);
         return Promise.all([
@@ -221,7 +221,7 @@ export class SyncEngine extends EventEmitter {
      * @param albumQueue - The queue containing albums that need to be written to, or deleted from disk
      * @returns A promise that will settle, once the state has been written to disk
      */
-    private async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
+    async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
         this.emit(SYNC_ENGINE.EVENTS.WRITE);
         this.logger.info(`Writing state`);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);

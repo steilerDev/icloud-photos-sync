@@ -11,7 +11,7 @@ export function syncEngineFactory(): SyncEngine {
     const syncEngine = new SyncEngine(
         {
             "downloadThreads": 10,
-            "maxRetry": -1,
+            "maxRetries": -1,
         },
         new iCloud({
             "username": Config.username,

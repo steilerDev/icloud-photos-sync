@@ -36,7 +36,8 @@
         "no-return-assign": ["error", "except-parens"],
         "no-unreachable": "warn",
         "default-case-last": "off",
-        "no-debugger": "warn"
+        "no-debugger": "warn",
+        "no-promise-executor-return": "off"
     },
     "overrides": [
         {
