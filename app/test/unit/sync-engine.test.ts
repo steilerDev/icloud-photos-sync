@@ -10,8 +10,9 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PEntity, PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
-import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted} from '../_helpers/sync-engine.helper';
+import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted, mockSyncEngineForAlbumQueue} from '../_helpers/sync-engine.helper';
 import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albums-helper';
+import {spyOnEvent} from '../_helpers/_general';
 
 beforeEach(() => {
     mockfs({});
@@ -616,8 +617,7 @@ describe(`Unit Tests - Sync Engine`, () => {
             test(`Empty processing queue`, async () => {
                 const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
 
-                const writeAssetCompleteEvent = jest.fn();
-                syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, writeAssetCompleteEvent);
+                const writeAssetCompleteEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED);
 
                 await syncEngine.writeAssets([[], [], []]);
 
@@ -631,8 +631,7 @@ describe(`Unit Tests - Sync Engine`, () => {
             test(`Only deleting`, async () => {
                 const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
 
-                const writeAssetCompleteEvent = jest.fn();
-                syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, writeAssetCompleteEvent);
+                const writeAssetCompleteEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED);
 
                 const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
                 const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
@@ -654,8 +653,7 @@ describe(`Unit Tests - Sync Engine`, () => {
             test(`Only adding`, async () => {
                 const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
 
-                const writeAssetCompleteEvent = jest.fn();
-                syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, writeAssetCompleteEvent);
+                const writeAssetCompleteEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED);
 
                 const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
                 const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
@@ -684,8 +682,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 // Return 'true' on validation once
                 syncEngine.photosLibrary.verifyAsset = jest.fn(() => false).mockReturnValueOnce(true).mockReturnValue(false);
 
-                const writeAssetCompleteEvent = jest.fn();
-                syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, writeAssetCompleteEvent);
+                const writeAssetCompleteEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED);
 
                 const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
                 const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
@@ -708,8 +705,7 @@ describe(`Unit Tests - Sync Engine`, () => {
             test(`Adding & deleting`, async () => {
                 const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
 
-                const writeAssetCompleteEvent = jest.fn();
-                syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, writeAssetCompleteEvent);
+                const writeAssetCompleteEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED);
 
                 const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
                 const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
@@ -953,14 +949,134 @@ describe(`Unit Tests - Sync Engine`, () => {
                 });
             });
 
-            test.todo(`Empty processing queue`);
-            test.todo(`Only deleting`);
-            test.todo(`Only adding`);
-            test.todo(`Adding & deleting`);
+            test(`Empty processing queue`, async () => {
+                const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
+
+                await syncEngine.writeAlbums([[], [], []]);
+
+                expect(syncEngine.photosLibrary.cleanArchivedOrphans).toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.stashArchivedAlbum).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.retrieveStashedAlbum).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.deleteAlbum).not.toHaveBeenCalled();
+            });
+
+            test(`Only deleting`, async () => {
+                const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
+
+                const albumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
+                const albumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
+                const albumChildChild = new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName3`, `someUUID1-1`);
+                // The order here does not matter
+                await syncEngine.writeAlbums([[albumChild, albumChildChild, albumParent], [], []]);
+
+                expect(syncEngine.photosLibrary.cleanArchivedOrphans).toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.stashArchivedAlbum).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.retrieveStashedAlbum).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenCalledTimes(3);
+                // Needs to be called from the furthes node
+                expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(1, albumChildChild);
+                expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(2, albumChild);
+                expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(3, albumParent);
+            });
+
+            test(`Only adding`, async () => {
+                const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
+
+                const albumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
+                const albumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
+                const albumChildChild = new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName3`, `someUUID1-1`);
+                // The order here does not matter
+                await syncEngine.writeAlbums([[], [albumChild, albumChildChild, albumParent], []]);
+
+                expect(syncEngine.photosLibrary.cleanArchivedOrphans).toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.stashArchivedAlbum).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.retrieveStashedAlbum).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.deleteAlbum).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenCalledTimes(3);
+                // Needs to be called from the furthes node
+                expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(1, albumParent);
+                expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(2, albumChild);
+                expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(3, albumChildChild);
+            });
+
+            test(`Adding & deleting`, async () => {
+                const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
+
+                const addAlbumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
+                const addAlbumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
+                const addAlbumChildChild = new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName3`, `someUUID1-1`);
+                const removeAlbumParent = new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName4`, ``);
+                const removeAlbumChild = new Album(`someUUID2-1`, AlbumType.ALBUM, `someAlbumName5`, `someUUID2`);
+                const removeAlbumChildChild = new Album(`someUUID2-1-1`, AlbumType.ALBUM, `someAlbumName6`, `someUUID2-1`);
+                // The order here does not matter
+                await syncEngine.writeAlbums([[removeAlbumChild, removeAlbumParent, removeAlbumChildChild], [addAlbumChild, addAlbumParent, addAlbumChildChild], []]);
+
+                expect(syncEngine.photosLibrary.cleanArchivedOrphans).toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.stashArchivedAlbum).not.toHaveBeenCalled();
+                expect(syncEngine.photosLibrary.retrieveStashedAlbum).not.toHaveBeenCalled();
+
+                expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenCalledTimes(3);
+                // Needs to be called from the furthes node
+                expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(1, removeAlbumChildChild);
+                expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(2, removeAlbumChild);
+                expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(3, removeAlbumParent);
+
+                expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenCalledTimes(3);
+                // Needs to be called from the closest node
+                expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(1, addAlbumParent);
+                expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(2, addAlbumChild);
+                expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(3, addAlbumChildChild);
+            });
+
             describe(`Archive albums`, () => {
-                test.todo(`Remote album (locally archived) deleted`);
-                test.todo(`Remote album (locally archived) moved`);
-                test.todo(`Remote album's content (locally archived) changed`);
+                test(`Remote album (locally archived) deleted`, async () => {
+                    const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
+
+                    const albumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
+                    const albumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
+                    const albumChildChild = new Album(`someUUID1-1-1`, AlbumType.ARCHIVED, `someAlbumName3`, `someUUID1-1`);
+                    // The order here does not matter
+                    await syncEngine.writeAlbums([[albumChild, albumChildChild, albumParent], [], []]);
+
+                    expect(syncEngine.photosLibrary.cleanArchivedOrphans).toHaveBeenCalled();
+                    expect(syncEngine.photosLibrary.retrieveStashedAlbum).not.toHaveBeenCalled();
+                    expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
+
+                    expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenCalledTimes(1);
+                    expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenNthCalledWith(1, albumChildChild);
+
+                    expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenCalledTimes(2);
+                    // Needs to be called from the furthes node
+                    expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(1, albumChild);
+                    expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(2, albumParent);
+                });
+
+                test(`Remote album (locally archived) moved`, async () => {
+                    const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
+
+                    const removedAlbumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
+                    const removedAlbumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
+                    const removedAlbumChildChild = new Album(`someUUID1-1-1`, AlbumType.ARCHIVED, `someAlbumName3`, `someUUID1-1`);
+                    const newAlbum = removedAlbumChildChild;
+                    // The order here does not matter
+                    await syncEngine.writeAlbums([[removedAlbumParent, removedAlbumChild, removedAlbumChildChild], [newAlbum], []]);
+
+                    expect(syncEngine.photosLibrary.cleanArchivedOrphans).toHaveBeenCalled();
+
+                    expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenCalledTimes(2);
+                    expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(1, removedAlbumChild);
+                    expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(2, removedAlbumParent);
+
+                    expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenCalledTimes(1);
+                    expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenNthCalledWith(1, removedAlbumChildChild);
+
+                    expect(syncEngine.photosLibrary.retrieveStashedAlbum).toHaveBeenCalledTimes(1);
+                    expect(syncEngine.photosLibrary.retrieveStashedAlbum).toHaveBeenNthCalledWith(1, newAlbum);
+
+                    expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
+                });
             });
         });
     });

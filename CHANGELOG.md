@@ -17,6 +17,7 @@ This release contains a massive amount of 'behind the scenes' changes to the dev
         * `fetchNLoad`
         * `diffing`
         * `asset-write`
+        * `album-write`
     * API Tests of iCloud & iCloud Photos backend
     * Basic testing of Docker Image
   * Foundations for archiving

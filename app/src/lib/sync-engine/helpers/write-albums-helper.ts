@@ -24,7 +24,7 @@ export async function writeAlbums(this: SyncEngine, processingQueue: PLibraryPro
         this.addAlbum(album);
     });
 
-    this.photosLibrary.cleanArchivedOrphans();
+    await this.photosLibrary.cleanArchivedOrphans();
 }
 
 /**

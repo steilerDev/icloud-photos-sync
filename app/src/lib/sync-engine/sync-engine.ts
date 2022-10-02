@@ -241,7 +241,7 @@ export class SyncEngine extends EventEmitter {
     protected removeAsset = removeAsset;
 
     // From ./helpers/write-albums-helpers.ts
-    private writeAlbums = writeAlbums;
+    writeAlbums = writeAlbums;
     sortQueue = sortQueue;
     addAlbum = addAlbum;
     removeAlbum = removeAlbum;
