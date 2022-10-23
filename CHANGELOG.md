@@ -9,7 +9,7 @@ This release contains a massive amount of 'behind the scenes' changes to the dev
     * Unit tests implemented for
       * `icloud`
         * `mfa-server`
-        * `icloud-auth` (mostly)
+        * `icloud-auth`
         * `icloud-photos` (pending)
       * `photos-library`
       * `mfa-server`
@@ -18,6 +18,7 @@ This release contains a massive amount of 'behind the scenes' changes to the dev
         * `diffing`
         * `asset-write`
         * `album-write`
+      * `archive-engine`
     * API Tests of iCloud & iCloud Photos backend
     * Basic testing of Docker Image
   * Foundations for archiving

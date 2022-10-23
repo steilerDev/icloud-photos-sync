@@ -134,13 +134,7 @@ export class PhotosLibrary {
             const target = await fs.promises.readlink(path.join(albumPath, link.name));
 
             if (album.albumType === AlbumType.FOLDER) {
-                const uuid = path.basename(target).substring(1); // Removing leading '.'
-                const fullPath = path.join(albumPath, target);
-                const folderType = await this.readAlbumTypeFromPath(fullPath);
-                const folderName = link.name;
-                const parentFolderUUID = album.getUUID();
-
-                const loadedAlbum = new Album(uuid, folderType, folderName, parentFolderUUID);
+                const [loadedAlbum, fullPath] = await this.readFolderFromDisk(link.name, albumPath, album.getUUID());
                 albums.push(...await this.loadAlbum(loadedAlbum, fullPath));
             } else if (album.albumType === AlbumType.ALBUM) {
                 const uuidFile = path.parse(target).base;
@@ -149,6 +143,22 @@ export class PhotosLibrary {
         }
 
         return albums;
+    }
+
+    /**
+     * Creates a shallow album, by reading the basic information from disk
+     * @param folderName - The foldername that will link to the uuid
+     * @param parentFolderPath - The path of the parent's folder
+     * @param parentUUID - The parent Album UUID
+     * @returns The shallow Album and its path
+     */
+    async readFolderFromDisk(folderName: string, parentFolderPath: string, parentUUID: string): Promise<[Album, string]> {
+        const uuidFolderName = await fs.promises.readlink(path.join(parentFolderPath, folderName));
+        const uuid = path.basename(uuidFolderName).substring(1); // Removing leading '.'
+        const fullPath = path.join(parentFolderPath, uuidFolderName);
+        const folderType = await this.readAlbumTypeFromPath(fullPath);
+        const loadedAlbum = new Album(uuid, folderType, folderName, parentUUID);
+        return [loadedAlbum, fullPath];
     }
 
     /**

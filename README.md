@@ -32,8 +32,16 @@
     <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync?style=for-the-badge">
   </a>
 </p>
+<hr>
+<p align="center">
+  <a href="https://steilerdev.github.io/icloud-photos-sync/user-guides/docker/">
+    <img alt="Get Started - Docker" src="https://img.shields.io/badge/Get%20started!-Docker-blue?style=for-the-badge">
+  </a>
+  <a href="https://steilerdev.github.io/icloud-photos-sync/user-guides/npm/">
+    <img alt="Get Started - NPM" src="https://img.shields.io/badge/Get%20started!-NPM-red?style=for-the-badge">
+  </a>
+</p>
 
-  
 ## Overview
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem.
 
