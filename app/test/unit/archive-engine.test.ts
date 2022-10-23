@@ -2,14 +2,11 @@ import mockfs from 'mock-fs';
 import {describe, test, afterEach, expect, jest} from '@jest/globals';
 import {archiveEngineFactory} from '../_helpers/archive-engine.helper';
 import {appDataDir as photosDataDir} from '../_helpers/_config';
-import {ASSET_DIR, ARCHIVE_DIR, STASH_DIR, SAFE_FILES} from '../../src/lib/photos-library/constants';
+import {ASSET_DIR, ARCHIVE_DIR} from '../../src/lib/photos-library/constants';
 import path from 'path';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
-
-const assetDir = path.join(photosDataDir, ASSET_DIR);
-const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
 
 describe(`Unit Tests - Archive Engine`, () => {
     afterEach(() => {
@@ -276,10 +273,6 @@ describe(`Unit Tests - Archive Engine`, () => {
 
     describe(`Delete remote asset`, () => {
         test(`Delete remote asset`, async () => {
-            const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
-            const albumUUIDPath = `.${albumUUID}`;
-            const albumName = `Random`;
-
             const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
             const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
