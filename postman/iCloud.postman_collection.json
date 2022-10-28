@@ -1130,7 +1130,179 @@
 					"response": []
 				},
 				{
-					"name": "05-Check indexing State",
+					"name": "05-Get Libraries (private)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}",
+								"type": "default"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}",
+								"type": "default"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com",
+								"type": "default"
+							},
+							{
+								"key": "Content-Type",
+								"value": "text/plain",
+								"type": "default",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\": {\n        \"recordType\":\"CheckIndexingState\"\n    },\n    \"zoneID\":{\n        \"zoneName\":\"PrimarySync\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query?getCurrentSyncToken=True",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"query"
+							],
+							"query": [
+								{
+									"key": "getCurrentSyncToken",
+									"value": "True"
+								},
+								{
+									"key": "remapEnums",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "dsid",
+									"value": "{{dsid}}",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "{{clientID}}",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "05-Get Libraries (shared)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}",
+								"type": "default"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}",
+								"type": "default"
+							},
+							{
+								"key": "Origin",
+								"value": "https://www.icloud.com",
+								"type": "default"
+							},
+							{
+								"key": "Content-Type",
+								"value": "text/plain",
+								"type": "default",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\": {\n        \"recordType\":\"CheckIndexingState\"\n    },\n    \"zoneID\":{\n        \"zoneName\":\"PrimarySync\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query?getCurrentSyncToken=True",
+							"host": [
+								"{{Photos_URL}}"
+							],
+							"path": [
+								"database",
+								"1",
+								"com.apple.photos.cloud",
+								"production",
+								"private",
+								"records",
+								"query"
+							],
+							"query": [
+								{
+									"key": "getCurrentSyncToken",
+									"value": "True"
+								},
+								{
+									"key": "remapEnums",
+									"value": "True",
+									"disabled": true
+								},
+								{
+									"key": "dsid",
+									"value": "{{dsid}}",
+									"disabled": true
+								},
+								{
+									"key": "clientId",
+									"value": "{{clientID}}",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "06-Check indexing State",
 					"event": [
 						{
 							"listen": "prerequest",
