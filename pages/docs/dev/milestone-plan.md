@@ -23,6 +23,7 @@ The following primary milestones are currently pursured.
 10. :x: Enable archiving (*in progress*)
 11. :x: Support Live-Photos
 12. :x: Support special folders
-12. :x: Provide WebUI
+13. :x: Support for shared photo library
+14. :x: Provide WebUI
     - :x: Archive folders through UI
     - :x: Explore all pictures through UI

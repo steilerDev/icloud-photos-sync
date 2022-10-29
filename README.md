@@ -67,6 +67,7 @@ This CLI Application offers the following functionality:
     - No reliance on full fledged third-party libraries that provide access to iCloud
     - No configuration needed for continuous full backup
     - Quicker support of use-case specific needs
+  - *Support of shared Photos Library*
 
 My personal use case / workflow is [documented on GH Pages](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/), alongside some other potential interessting pieces of documentation.
 

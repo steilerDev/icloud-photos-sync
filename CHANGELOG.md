@@ -25,6 +25,7 @@ This release contains a massive amount of 'behind the scenes' changes to the dev
   * Various bug fixes, re-implementations and re-structuring
   * Documentation pages using MKDocs & GH Pages
   * Now running CodeQL and dependabot scans
+  * Initial steps for support of iCloud Shared Photo Libraries
 
 ## v0.2.0 - Folder Sync working
 With this release the sync of the remote state is fully functional. This release adds the reconstruction of the full folder structure. In a space efficient way (through links).
