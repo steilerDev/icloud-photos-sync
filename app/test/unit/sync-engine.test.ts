@@ -607,7 +607,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(toBeKept.length).toEqual(4);
             });
 
-            test.skip(`Only content changed`, () => {
+            test(`Only content changed`, () => {
                 const remoteAssets = [
                     new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 43, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
                     new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 43, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),

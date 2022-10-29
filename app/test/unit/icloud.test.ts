@@ -26,11 +26,12 @@ describe(`Unit Tests - iCloud`, () => {
         });
 
         // For some reason this 'throws' an error
-        test.skip(`Fail on MFA`, () => {
+        test.only(`Fail on MFA`, () => {
             const cliOpts = _defaultCliOpts;
             cliOpts.failOnMfa = true;
 
             const icloud = new iCloud(cliOpts);
+            icloud.ready.catch(() => {}) // making sure error is catched
 
             const event = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR);
             icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
