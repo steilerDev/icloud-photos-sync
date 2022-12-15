@@ -31,7 +31,7 @@ describe(`Unit Tests - iCloud`, () => {
             cliOpts.failOnMfa = true;
 
             const icloud = new iCloud(cliOpts);
-            icloud.ready.catch(() => {}) // making sure error is catched
+            icloud.ready.catch(() => {}); // Making sure error is catched
 
             const event = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR);
             icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
