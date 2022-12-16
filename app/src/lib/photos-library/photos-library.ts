@@ -2,12 +2,12 @@ import * as path from 'path';
 import * as PHOTOS_LIBRARY from './constants.js';
 import {Album, AlbumType} from './model/album.js';
 import fs from 'fs';
-import {OptionValues} from 'commander';
 import {Asset} from './model/asset.js';
 import {PLibraryEntities} from './model/photos-entity.js';
 import {getLogger} from '../logger.js';
 import {AxiosResponse} from 'axios';
 import {pEvent} from 'p-event';
+import {iCloudApp} from '../../app/app-icloud.js';
 
 export type PathTuple = [namePath: string, uuidPath: string]
 
@@ -42,10 +42,10 @@ export class PhotosLibrary {
 
     /**
      * Creates the local PhotoLibrary, based on the provided CLI options
-     * @param cliOpts - The read CLI options
+     * @param app - The app object holding CLI options
      */
-    constructor(cliOpts: OptionValues) {
-        this.photoDataDir = this.getFullPathAndCreate([cliOpts.dataDir]);
+    constructor(app: iCloudApp) {
+        this.photoDataDir = this.getFullPathAndCreate([app.options.dataDir]);
         this.assetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ASSET_DIR]);
         this.archiveDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR]);
         this.stashDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR, PHOTOS_LIBRARY.STASH_DIR]);

@@ -1,5 +1,4 @@
 import axios, {Axios, AxiosRequestConfig, AxiosRequestHeaders} from 'axios';
-
 import EventEmitter from 'events';
 import {MFAServer} from './mfa/mfa-server.js';
 import * as ICLOUD from './constants.js';
@@ -7,9 +6,9 @@ import * as ICLOUD_PHOTOS from './icloud-photos/constants.js';
 import * as MFA_SERVER from './mfa/constants.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {iCloudAuth} from './auth.js';
-import {OptionValues} from 'commander';
 import {getLogger} from '../logger.js';
 import {MFAMethod} from './mfa/mfa-method.js';
+import {iCloudApp} from '../../app/app-icloud.js';
 
 /**
  * This class holds the iCloud connection
@@ -48,29 +47,29 @@ export class iCloud extends EventEmitter {
 
     /**
      * Creates a new iCloud Object
-     * @param cliOpts - The read CLI options containing username, password and MFA server port
+     * @param app - The app object holding CLI options containing username, password and MFA server port
      */
-    constructor(cliOpts: OptionValues) {
+    constructor(app: iCloudApp) {
         super();
         this.logger.info(`Initiating iCloud connection`);
-        this.logger.trace(`  - user: ${cliOpts.username}`);
+        this.logger.trace(`  - user: ${app.options.username}`);
 
         this.axios = (axios as unknown as Axios);
 
         // MFA Server & lifecycle management
-        this.mfaServer = new MFAServer(cliOpts.port);
+        this.mfaServer = new MFAServer(app.options.port);
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.submitMFA.bind(this));
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RESEND, this.resendMFA.bind(this));
 
         // ICloud Auth object
-        this.auth = new iCloudAuth(cliOpts.username, cliOpts.password, cliOpts.trustToken, cliOpts.dataDir);
-        if (cliOpts.refreshToken) {
+        this.auth = new iCloudAuth(app.options.username, app.options.password, app.options.trustToken, app.options.dataDir);
+        if (app.options.refreshToken) {
             this.logger.info(`Clearing token due to refresh token flag`);
             this.auth.iCloudAccountTokens.trustToken = ``;
         }
 
         // ICloud lifecycle management
-        if (cliOpts.failOnMfa) {
+        if (app.options.failOnMfa) {
             this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
                 this.emit(ICLOUD.EVENTS.ERROR, `MFA code required, failing due to failOnMfa flag`);
             });

@@ -1,4 +1,3 @@
-import {OptionValues} from 'commander';
 import {getLogger} from '../logger.js';
 import {AlbumType} from '../photos-library/model/album.js';
 import {Asset} from '../photos-library/model/asset.js';
@@ -6,6 +5,7 @@ import {PhotosLibrary} from '../photos-library/photos-library.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
+import {iCloudApp} from '../../app/app-icloud.js';
 
 export class ArchiveEngine {
     /**
@@ -17,10 +17,14 @@ export class ArchiveEngine {
     photosLibrary: PhotosLibrary;
     icloud: iCloud;
 
-    constructor(cliOpts: OptionValues, photosLibrary: PhotosLibrary, icloud: iCloud) {
-        this.noRemoteDelete = cliOpts.noRemoteDelete;
-        this.icloud = icloud;
-        this.photosLibrary = photosLibrary;
+    /**
+     * Creates a new Archive Engine object
+     * @param app - The application holding references to necessary objects (iCloud connection, Photos Library & CLI options)
+     */
+    constructor(app: iCloudApp) {
+        this.noRemoteDelete = app.options.noRemoteDelete;
+        this.icloud = app.icloud;
+        this.photosLibrary = app.photosLibrary;
     }
 
     /**

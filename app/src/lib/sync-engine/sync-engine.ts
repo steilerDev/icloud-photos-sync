@@ -1,7 +1,6 @@
 import {EventEmitter} from 'events';
 import {iCloud} from '../icloud/icloud.js';
 import {PhotosLibrary} from '../photos-library/photos-library.js';
-import {OptionValues} from 'commander';
 import * as SYNC_ENGINE from './constants.js';
 import {Asset} from '../photos-library/model/asset.js';
 import {Album} from '../photos-library/model/album.js';
@@ -14,6 +13,7 @@ import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/di
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
 import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
+import {iCloudApp} from '../../app/app-icloud.js';
 
 /**
  * This class handles the photos sync
@@ -27,7 +27,7 @@ export class SyncEngine extends EventEmitter {
     /**
      * The iCloud connection
      */
-    iCloud: iCloud;
+    icloud: iCloud;
 
     /**
      * The local PhotosLibrary
@@ -52,16 +52,14 @@ export class SyncEngine extends EventEmitter {
 
     /**
      * Creates a new sync engine from the previously created objects and CLI options
-     * @param iCloud - The authenticated and 'ready' iCloud connection
-     * @param photosLibrary - The PhotosLibrary
-     * @param cliOpts - The CLI options
+     * @param app - The application object, holding references to the iCloud object, the Photos Library object and CLI options
      */
-    constructor(cliOpts: OptionValues, iCloud: iCloud, photosLibrary: PhotosLibrary) {
+    constructor(app: iCloudApp) {
         super();
-        this.iCloud = iCloud;
-        this.photosLibrary = photosLibrary;
-        this.downloadCCY = cliOpts.downloadThreads;
-        this.maxRetry = cliOpts.maxRetries;
+        this.icloud = app.icloud;
+        this.photosLibrary = app.photosLibrary;
+        this.downloadCCY = app.options.downloadThreads;
+        this.maxRetry = app.options.maxRetries;
     }
 
     /**
@@ -158,8 +156,8 @@ export class SyncEngine extends EventEmitter {
         }
 
         this.logger.debug(`Refreshing iCloud connection`);
-        const iCloudReady = this.iCloud.getReady();
-        this.iCloud.getiCloudCookies();
+        const iCloudReady = this.icloud.getReady();
+        this.icloud.getiCloudCookies();
         return iCloudReady;
     }
 
@@ -170,9 +168,9 @@ export class SyncEngine extends EventEmitter {
     async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
         return Promise.all([
-            this.iCloud.photos.fetchAllPictureRecords()
+            this.icloud.photos.fetchAllPictureRecords()
                 .then(([cplAssets, cplMasters]) => SyncEngine.convertCPLAssets(cplAssets, cplMasters)),
-            this.iCloud.photos.fetchAllAlbumRecords()
+            this.icloud.photos.fetchAllAlbumRecords()
                 .then(cplAlbums => SyncEngine.convertCPLAlbums(cplAlbums)),
             this.photosLibrary.loadAssets(),
             this.photosLibrary.loadAlbums(),

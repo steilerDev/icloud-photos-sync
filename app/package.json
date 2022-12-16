@@ -63,6 +63,7 @@
   },
   "dependencies": {
     "axios": "^0.27.2",
+    "backtrace-node": "^1.2.0",
     "chalk": "^5.0.0",
     "cli-progress": "^3.11.2",
     "commander": "^9.0.0",

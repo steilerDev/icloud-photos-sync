@@ -36,7 +36,7 @@ export async function addAsset(this: SyncEngine, asset: Asset): Promise<void> {
         return;
     }
 
-    return this.iCloud.photos.downloadAsset(asset)
+    return this.icloud.photos.downloadAsset(asset)
         .then(data => this.photosLibrary.writeAsset(asset, data))
         .then(() => {
             this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
