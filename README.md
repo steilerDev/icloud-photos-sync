@@ -11,13 +11,13 @@
 
 <p align="center">
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml">
-    <img alt="API Status" src="https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/API%20Test?label=API%20Status&amp;style=for-the-badge">
+    <img alt="API Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/api-test.yml?branch=main&label=API%20Status&style=for-the-badge">
   </a>
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/dev-release.yml">
-    <img alt="Development Release Status" src="https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Development%20Release?label=Dev%20Release&amp;style=for-the-badge">
+    <img alt="Development Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/dev-release.yml?branch=dev&label=Dev%20Release&style=for-the-badge">
   </a>
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml">
-    <img alt="Production Release Status" src="https://img.shields.io/github/workflow/status/steilerDev/icloud-photos-sync/Production%20Release?label=Prod%20Release&amp;style=for-the-badge">
+    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?branch=main&label=Prod%20Release&style=for-the-badge">
   </a>
 </p>
 <hr>
