@@ -2,7 +2,7 @@ import {ArchiveEngine} from '../../src/lib/archive-engine/archive-engine';
 import {iCloud} from '../../src/lib/icloud/icloud';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
-import {appWithOptions} from './app-factory';
+import {appWithOptions} from './app-factory.helper';
 import {iCloudAuthFactory} from './icloud-auth.helper';
 import * as Config from './_config';
 

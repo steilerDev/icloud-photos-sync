@@ -1,5 +1,6 @@
 import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
-import {appWithOptions} from "./app-factory";
+import {appWithOptions} from "./app-factory.helper";
+
 import {appDataDir} from './_config';
 
 /**

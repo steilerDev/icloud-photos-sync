@@ -51,7 +51,7 @@ export function appFactory(argv: string[]): iCloudApp {
             .default(5))
         .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://steilerdev.github.io/icloud-photos-sync/user-guides/telemetry/ for more information`)
             .env(`ENABLE_CRASH_REPORTING`)
-            .default(true))
+            .default(false))
         .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon an error (-1 means that it will always retry)`)
             .env(`MAX_RETRIES`)
             .default(-1))

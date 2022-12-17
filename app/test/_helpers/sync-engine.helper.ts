@@ -9,7 +9,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PLibraryEntities, PLibraryProcessingQueues} from '../../src/lib/photos-library/model/photos-entity';
 import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
 import {SyncEngine} from "../../src/lib/sync-engine/sync-engine";
-import {appWithOptions} from './app-factory';
+import {appWithOptions} from './app-factory.helper';
 import * as Config from "./_config";
 
 export function syncEngineFactory(): SyncEngine {

@@ -5,7 +5,7 @@ import {addHoursToCurrentDate, getDateInThePast} from "./_general";
 import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
 import {iCloudAuth} from "../../src/lib/icloud/auth";
 import {getICloudCookies} from "./icloud-auth.helper";
-import {appWithOptions} from "./app-factory";
+import {appWithOptions} from "./app-factory.helper";
 
 export const _defaultCliOpts = {
     "port": 0,

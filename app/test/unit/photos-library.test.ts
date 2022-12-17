@@ -10,7 +10,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import axios, {Axios, AxiosRequestConfig} from 'axios';
 import {appDataDir as photosDataDir} from '../_helpers/_config';
 import {photosLibraryFactory} from '../_helpers/photos-library.helper';
-import {appWithOptions} from '../_helpers/app-factory';
+import {appWithOptions} from '../_helpers/app-factory.helper';
 
 const assetDir = path.join(photosDataDir, ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
