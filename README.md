@@ -87,9 +87,16 @@ This application is written in Typescript/NodeJS and can therefore be executed d
 
 [![OS Support Windows](https://img.shields.io/static/v1?label=Windows-latest&message=Not%20planned&color=inactive&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
 
+## Security of your Apple ID credentials
+Since this application needs to communicate with the Apple iCloud backend, full access to your AppleID needs to be provided. By providing full access to the source code of this application, I hope to gain your trust, that I am not able to read or access your credentials or tokens!
+
+This application will never log any credentials (except when log level is set to `trace`, so be careful when doing this!). Credentials are only sent directly to Apple's authentication servers - third party services are NOT involved.
+
+In order to improve this application's development, this tool can report crash and error data to the developer. This capability requires opt-in and is the only non-Apple service this application will communicate with. Scrubbing of credentials and sensitive data is performed before any errors are persisted. More information about this topic can be found [here](https://steilerdev.github.io/icloud-photos-sync/user-guides/telemetry/).
+
 ## Contributing & Feedback
 This tool is not yet *production ready*, since it (most likely) still contains some issues and edge cases, that need to be addressed.
 
 I hope for the support of the community, to fully understand the reverse-engineered API and discover edge cases and bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy.
 
-Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing!
+Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing. Additionally please [enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/telemetry/), so this crash and all required technical details are recorded and reported.

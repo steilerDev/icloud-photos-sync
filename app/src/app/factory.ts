@@ -36,7 +36,7 @@ export function appFactory(argv: string[]): iCloudApp {
         .addOption(new Option(`-p, --port <number>`, `port number for MFA server (Awaiting MFA code when necessary)`)
             .env(`PORT`)
             .default(80))
-        .addOption(new Option(`-l, --log-level <level>`, `Set the log level. Note: 'trace' might leak sensitive session data`)
+        .addOption(new Option(`-l, --log-level <level>`, `Set the log level. NOTE: 'trace' might leak sensitive session data`)
             .env(`LOG_LEVEL`)
             .choices([`trace`, `debug`, `info`, `warn`, `error`])
             .default(`info`))
