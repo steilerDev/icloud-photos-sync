@@ -31,3 +31,6 @@ updates:
       interval: "weekly"
       day: "saturday"
       time: "09:00"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"] # only alert about major update
