@@ -84,31 +84,6 @@ jobs:
             ./app/LICENSE
             ./app/doc/
   
-  build-gh-pages:
-    name: Build GH Pages
-    runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/dev'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-          cache: 'pip' 
-          cache-dependency-path: pages/
-      - name: Setup build environment
-        run: |
-          pip install -r pages/requirements.txt
-          cp LICENSE README.md CHANGELOG.md pages/docs/
-      - name: Build Pages
-        run: mkdocs build
-        working-directory: pages/
-        # todo: bundle coverage report
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
-        with:
-          path: ./pages/site/
 
   build-changelog:
     name: Build Changelog
@@ -213,3 +188,34 @@ jobs:
         run: chmod +x ./docker/test/*
       - name: Test Image
         run: run-parts -v --exit-on-error ./docker/test
+
+  build-gh-pages:
+    name: Build GH Pages
+    needs: test-app
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/dev'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip' 
+          cache-dependency-path: pages/
+      - name: Setup build environment
+        run: |
+          pip install -r pages/requirements.txt
+          cp LICENSE README.md CHANGELOG.md pages/docs/
+      - name: Build Pages
+        run: mkdocs build
+        working-directory: pages/
+      - name: Bundle coverage reports
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-report
+          path: ./pages/site/dev/coverage
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./pages/site/
