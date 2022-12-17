@@ -224,13 +224,13 @@ describe(`Unit Tests - Sync Engine`, () => {
             ])(`Prepare Retry - $msg`, async ({queue}) => {
                 const syncEngine = syncEngineFactory();
                 syncEngine.downloadQueue = queue as unknown as PQueue;
-                syncEngine.iCloud.getiCloudCookies = jest.fn<() => Promise<void>>().mockResolvedValue();
-                syncEngine.iCloud.getReady = jest.fn<() => Promise<void>>().mockResolvedValue();
+                syncEngine.icloud.getiCloudCookies = jest.fn<() => Promise<void>>().mockResolvedValue();
+                syncEngine.icloud.getReady = jest.fn<() => Promise<void>>().mockResolvedValue();
 
                 await syncEngine.prepareRetry();
 
                 expect.assertions(queue ? 3 : 1);
-                expect(syncEngine.iCloud.getiCloudCookies).toHaveBeenCalledTimes(1);
+                expect(syncEngine.icloud.getiCloudCookies).toHaveBeenCalledTimes(1);
                 if (syncEngine.downloadQueue) {
                     expect(syncEngine.downloadQueue.size).toEqual(0);
                     expect(syncEngine.downloadQueue.pending).toEqual(0);
@@ -242,13 +242,13 @@ describe(`Unit Tests - Sync Engine`, () => {
             const syncEngine = syncEngineFactory();
             const fetchNLoadEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
 
-            syncEngine.iCloud.photos.fetchAllPictureRecords = jest.fn<() => Promise<typeof fetchAllPictureRecordsReturnValue>>()
+            syncEngine.icloud.photos.fetchAllPictureRecords = jest.fn<() => Promise<typeof fetchAllPictureRecordsReturnValue>>()
                 .mockResolvedValue(fetchAllPictureRecordsReturnValue);
             const convertCPLAssetsOriginal = SyncEngine.convertCPLAssets;
             SyncEngine.convertCPLAssets = jest.fn<() => Asset[]>()
                 .mockReturnValue(convertCPLAssetsReturnValue);
 
-            syncEngine.iCloud.photos.fetchAllAlbumRecords = jest.fn<() => Promise<CPLAlbum[]>>()
+            syncEngine.icloud.photos.fetchAllAlbumRecords = jest.fn<() => Promise<CPLAlbum[]>>()
                 .mockResolvedValue(fetchAllAlbumRecordsReturnValue);
             const convertCPLAlbumsOriginal = SyncEngine.convertCPLAlbums;
             SyncEngine.convertCPLAlbums = jest.fn<() => Promise<Album[]>>()
@@ -265,11 +265,11 @@ describe(`Unit Tests - Sync Engine`, () => {
             const result = await syncEngine.fetchAndLoadState();
 
             expect(fetchNLoadEvent).toHaveBeenCalledTimes(1);
-            expect(syncEngine.iCloud.photos.fetchAllPictureRecords).toHaveBeenCalledTimes(1);
+            expect(syncEngine.icloud.photos.fetchAllPictureRecords).toHaveBeenCalledTimes(1);
             expect(SyncEngine.convertCPLAssets).toHaveBeenCalledTimes(1);
             expect(SyncEngine.convertCPLAssets).toHaveBeenCalledWith(...fetchAllPictureRecordsReturnValue);
             SyncEngine.convertCPLAssets = convertCPLAssetsOriginal;
-            expect(syncEngine.iCloud.photos.fetchAllAlbumRecords).toHaveBeenCalledTimes(1);
+            expect(syncEngine.icloud.photos.fetchAllAlbumRecords).toHaveBeenCalledTimes(1);
             expect(SyncEngine.convertCPLAlbums).toHaveBeenCalledTimes(1);
             expect(SyncEngine.convertCPLAlbums).toHaveBeenCalledWith(fetchAllAlbumRecordsReturnValue);
             SyncEngine.convertCPLAlbums = convertCPLAlbumsOriginal;
@@ -934,7 +934,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.photosLibrary.verifyAsset).not.toHaveBeenCalled();
                 expect(syncEngine.photosLibrary.writeAsset).not.toHaveBeenCalled();
                 expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
-                expect(syncEngine.iCloud.photos.downloadAsset).not.toHaveBeenCalled();
+                expect(syncEngine.icloud.photos.downloadAsset).not.toHaveBeenCalled();
                 expect(writeAssetCompleteEvent).not.toHaveBeenCalled();
             });
 
@@ -956,7 +956,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(1, asset1);
                 expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(2, asset2);
                 expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(3, asset3);
-                expect(syncEngine.iCloud.photos.downloadAsset).not.toHaveBeenCalled();
+                expect(syncEngine.icloud.photos.downloadAsset).not.toHaveBeenCalled();
                 expect(writeAssetCompleteEvent).not.toHaveBeenCalled();
             });
 
@@ -973,10 +973,10 @@ describe(`Unit Tests - Sync Engine`, () => {
                 await syncEngine.writeAssets([[], toBeAdded, []]);
 
                 expect(syncEngine.photosLibrary.verifyAsset).toHaveBeenCalledTimes(3);
-                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
-                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
-                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
-                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
+                expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
+                expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
+                expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
+                expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
 
                 expect(syncEngine.photosLibrary.writeAsset).toHaveBeenCalledTimes(3);
                 expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(3);
@@ -1001,8 +1001,8 @@ describe(`Unit Tests - Sync Engine`, () => {
                 await syncEngine.writeAssets([[], toBeAdded, []]);
 
                 expect(syncEngine.photosLibrary.verifyAsset).toHaveBeenCalledTimes(2);
-                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenCalledTimes(1);
-                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset2);
+                expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledTimes(1);
+                expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset2);
 
                 expect(syncEngine.photosLibrary.writeAsset).toHaveBeenCalledTimes(1);
                 expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(2);
@@ -1029,10 +1029,10 @@ describe(`Unit Tests - Sync Engine`, () => {
                 await syncEngine.writeAssets([toBeDeleted, toBeAdded, []]);
 
                 expect(syncEngine.photosLibrary.verifyAsset).toHaveBeenCalledTimes(3);
-                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
-                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
-                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
-                expect(syncEngine.iCloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
+                expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
+                expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
+                expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
+                expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
 
                 expect(syncEngine.photosLibrary.writeAsset).toHaveBeenCalledTimes(3);
                 expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(3);

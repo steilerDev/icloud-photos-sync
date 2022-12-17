@@ -10,6 +10,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import axios, {Axios, AxiosRequestConfig} from 'axios';
 import {appDataDir as photosDataDir} from '../_helpers/_config';
 import {photosLibraryFactory} from '../_helpers/photos-library.helper';
+import {appWithOptions} from '../_helpers/app-factory';
 
 const assetDir = path.join(photosDataDir, ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
@@ -48,7 +49,7 @@ describe(`Unit Tests - Photos Library`, () => {
         const opts = {
             "dataDir": photosDataDir,
         };
-        const _library = new PhotosLibrary(opts);
+        const _library = new PhotosLibrary(appWithOptions(opts));
         expect(fs.existsSync(photosDataDir)).toBe(true);
         expect(fs.existsSync(path.join(photosDataDir, `testFile`)));
         expect(fs.existsSync(assetDir)).toBe(true);

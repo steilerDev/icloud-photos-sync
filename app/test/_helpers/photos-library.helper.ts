@@ -1,4 +1,5 @@
 import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
+import {appWithOptions} from "./app-factory";
 import {appDataDir} from './_config';
 
 /**
@@ -9,5 +10,5 @@ export function photosLibraryFactory(): PhotosLibrary {
     const opts = {
         "dataDir": appDataDir,
     };
-    return new PhotosLibrary(opts);
+    return new PhotosLibrary(appWithOptions(opts));
 }

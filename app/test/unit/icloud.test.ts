@@ -15,6 +15,7 @@ import * as Config from '../_helpers/_config';
 import {iCloud} from '../../src/lib/icloud/icloud';
 import {getICloudCookies} from '../_helpers/icloud-auth.helper';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
+import {appWithOptions} from '../_helpers/app-factory';
 
 describe(`Unit Tests - iCloud`, () => {
     describe(`CLI Options`, () => {
@@ -30,7 +31,7 @@ describe(`Unit Tests - iCloud`, () => {
             const cliOpts = _defaultCliOpts;
             cliOpts.failOnMfa = true;
 
-            const icloud = new iCloud(cliOpts);
+            const icloud = new iCloud(appWithOptions(cliOpts));
             icloud.ready.catch(() => {}); // Making sure error is catched
 
             const event = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR);
@@ -228,7 +229,7 @@ describe(`Unit Tests - iCloud`, () => {
 
     describe(`MFA Flow`, () => {
         test(`Start MFA Server`, () => {
-            const icloud = new iCloud(_defaultCliOpts);
+            const icloud = new iCloud(appWithOptions(_defaultCliOpts));
 
             icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
             expect(icloud.mfaServer.server.listening).toBeTruthy();

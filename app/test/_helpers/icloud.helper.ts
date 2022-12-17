@@ -5,6 +5,7 @@ import {addHoursToCurrentDate, getDateInThePast} from "./_general";
 import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
 import {iCloudAuth} from "../../src/lib/icloud/auth";
 import {getICloudCookies} from "./icloud-auth.helper";
+import {appWithOptions} from "./app-factory";
 
 export const _defaultCliOpts = {
     "port": 0,
@@ -17,7 +18,7 @@ export const _defaultCliOpts = {
 };
 
 export function iCloudFactory(cliOpts: any = _defaultCliOpts): iCloud {
-    const icloud = new iCloud(cliOpts);
+    const icloud = new iCloud(appWithOptions(cliOpts));
     icloud.mfaServer.startServer = () => {};
     icloud.mfaServer.stopServer = () => {};
     icloud.removeAllListeners();

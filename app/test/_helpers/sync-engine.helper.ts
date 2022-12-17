@@ -9,25 +9,27 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PLibraryEntities, PLibraryProcessingQueues} from '../../src/lib/photos-library/model/photos-entity';
 import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
 import {SyncEngine} from "../../src/lib/sync-engine/sync-engine";
+import {appWithOptions} from './app-factory';
 import * as Config from "./_config";
 
 export function syncEngineFactory(): SyncEngine {
     const syncEngine = new SyncEngine(
-        {
+        appWithOptions({
             "downloadThreads": 10,
             "maxRetries": -1,
         },
-        new iCloud({
+        new PhotosLibrary(appWithOptions({
+            "dataDir": Config.appDataDir,
+        })),
+        new iCloud(appWithOptions({
             "username": Config.username,
             "password": Config.password,
             "trustToken": Config.trustToken,
             "dataDir": Config.appDataDir,
-        }),
-        new PhotosLibrary({
-            "dataDir": Config.appDataDir,
-        }),
+        })),
+        ),
     );
-    syncEngine.iCloud.photos = new iCloudPhotos(syncEngine.iCloud.auth);
+    syncEngine.icloud.photos = new iCloudPhotos(syncEngine.icloud.auth);
     return syncEngine;
 }
 
@@ -35,7 +37,7 @@ export function mockSyncEngineForAssetQueue(syncEngine: SyncEngine): SyncEngine 
     syncEngine.photosLibrary.verifyAsset = jest.fn(() => false);
     syncEngine.photosLibrary.writeAsset = jest.fn(async () => {});
     syncEngine.photosLibrary.deleteAsset = jest.fn(async () => {});
-    syncEngine.iCloud.photos.downloadAsset = jest.fn(async () => ({} as AxiosResponse<any, any>));
+    syncEngine.icloud.photos.downloadAsset = jest.fn(async () => ({} as AxiosResponse<any, any>));
     return syncEngine;
 }
 

@@ -12,6 +12,7 @@ import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortB
 import {appDataDir} from '../_helpers/_config';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
+import {appWithOptions} from '../_helpers/app-factory.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
@@ -50,7 +51,7 @@ describe(`API E2E Tests`, () => {
                 "dataDir": appDataDir,
                 "failOnMfa": true,
             };
-            const _icloud = new iCloud(cliOpts);
+            const _icloud = new iCloud(appWithOptions(cliOpts));
             await expect(_icloud.authenticate()).rejects.toMatch(`Unexpected HTTP code: 403`);
         });
 
@@ -61,7 +62,7 @@ describe(`API E2E Tests`, () => {
                 "dataDir": appDataDir,
                 "failOnMfa": true,
             };
-            const _icloud = new iCloud(cliOpts);
+            const _icloud = new iCloud(appWithOptions(cliOpts));
             await expect(_icloud.authenticate()).rejects.toMatch(`MFA code required, failing due to failOnMfa flag`);
         });
 
@@ -73,7 +74,7 @@ describe(`API E2E Tests`, () => {
                 "dataDir": appDataDir,
                 "failOnMfa": true,
             };
-            icloud = new iCloud(cliOpts);
+            icloud = new iCloud(appWithOptions(cliOpts));
             await expect(icloud.authenticate()).resolves.not.toThrow();
         });
     });
