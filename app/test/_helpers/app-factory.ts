@@ -1,4 +1,4 @@
-import {iCloudApp} from "../../src/app/app-icloud";
+import {iCloudApp} from "../../src/app/icloud-app";
 import {iCloud} from "../../src/lib/icloud/icloud";
 import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
 

@@ -13,7 +13,7 @@ import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/di
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
 import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
-import {iCloudApp} from '../../app/app-icloud.js';
+import {iCloudApp} from '../../app/icloud-app.js';
 
 /**
  * This class handles the photos sync

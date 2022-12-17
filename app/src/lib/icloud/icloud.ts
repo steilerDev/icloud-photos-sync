@@ -8,7 +8,7 @@ import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {iCloudAuth} from './auth.js';
 import {getLogger} from '../logger.js';
 import {MFAMethod} from './mfa/mfa-method.js';
-import {iCloudApp} from '../../app/app-icloud.js';
+import {iCloudApp} from '../../app/icloud-app.js';
 
 /**
  * This class holds the iCloud connection

@@ -7,7 +7,7 @@ import {PLibraryEntities} from './model/photos-entity.js';
 import {getLogger} from '../logger.js';
 import {AxiosResponse} from 'axios';
 import {pEvent} from 'p-event';
-import {iCloudApp} from '../../app/app-icloud.js';
+import {iCloudApp} from '../../app/icloud-app.js';
 
 export type PathTuple = [namePath: string, uuidPath: string]
 

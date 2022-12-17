@@ -1,6 +1,6 @@
 import {Command, Option} from "commander";
 import * as PACKAGE_INFO from '../lib/package.js';
-import {iCloudApp, TokenApp, SyncApp, ArchiveApp} from "./app-icloud.js";
+import {iCloudApp, TokenApp, SyncApp, ArchiveApp} from "./icloud-app.js";
 
 /**
  * This function will parse the provided string array and return the correct application object

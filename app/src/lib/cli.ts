@@ -8,7 +8,7 @@ import {SingleBar} from 'cli-progress';
 import {exit} from 'process';
 import {getLogger} from './logger.js';
 import {ArchiveEngine} from './archive-engine/archive-engine.js';
-import {iCloudApp, SyncApp, ArchiveApp} from '../app/app-icloud.js';
+import {iCloudApp, SyncApp, ArchiveApp} from '../app/icloud-app.js';
 
 /**
  * This class handles the input/output to the command line

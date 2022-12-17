@@ -2,7 +2,7 @@ import log from 'loglevel';
 import chalk from 'chalk';
 import * as fs from 'fs';
 import * as path from 'path';
-import {iCloudApp} from '../app/app-icloud.js';
+import {iCloudApp} from '../app/icloud-app.js';
 
 const LOG_FILE_NAME = `.icloud-photos-sync.log`;
 

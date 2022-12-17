@@ -5,7 +5,7 @@ import {PhotosLibrary} from '../photos-library/photos-library.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
-import {iCloudApp} from '../../app/app-icloud.js';
+import {iCloudApp} from '../../app/icloud-app.js';
 
 export class ArchiveEngine {
     /**
