@@ -1,12 +1,12 @@
 <p align="center">
-  <a href="https://steilerdev.github.io/icloud-photos-sync/">
-    <img alt="icloud-photos-sync Logo" src="https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png">
+  <a href="https://icloud-photos-sync.steilerdev.de/">
+    <img alt="icloud-photos-sync Logo" src="https://icloud-photos-sync.steilerdev.de/assets/icloud-photos-sync-open-graph.png">
   </a>
 </p>
 
 <h1 align="center"><strong>iCloud Photos Sync</strong></h1>
 <p align="center" style="font-size:130%;">
-  ⚠️ <strong>Work in progress</strong>, <a href="https://steilerdev.github.io/icloud-photos-sync/dev/milestone-plan/">see curent state &amp; milestone plan</a> ⚠️
+  ⚠️ <strong>Work in progress</strong>, <a href="https://github.com/steilerDev/icloud-photos-sync/milestone/1">see milestone plan</a> ⚠️
 </p>
 
 <p align="center">
@@ -34,10 +34,10 @@
 </p>
 <hr>
 <p align="center">
-  <a href="https://steilerdev.github.io/icloud-photos-sync/user-guides/docker/">
+  <a href="https://icloud-photos-sync.steilerdev.de/user-guides/docker/">
     <img alt="Get Started - Docker" src="https://img.shields.io/badge/Get%20started!-Docker-blue?style=for-the-badge">
   </a>
-  <a href="https://steilerdev.github.io/icloud-photos-sync/user-guides/npm/">
+  <a href="https://icloud-photos-sync.steilerdev.de/user-guides/npm/">
     <img alt="Get Started - NPM" src="https://img.shields.io/badge/Get%20started!-NPM-red?style=for-the-badge">
   </a>
 </p>
@@ -69,14 +69,14 @@ This CLI Application offers the following functionality:
     - Quicker support of use-case specific needs
   - *Support of shared Photos Library*
 
-My personal use case / workflow is [documented on GH Pages](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/), alongside some other potential interessting pieces of documentation.
+My personal use case / workflow is [documented on GH Pages](https://icloud-photos-sync.steilerdev.de/dev/motivation/), alongside some other potential interessting pieces of documentation.
 
 ## Guides
 This application is written in Typescript/NodeJS and can therefore be executed directly on various platforms through npm. Please check this application's [OS support matrix](#os-support) for compatibility. Alternatively a Docker Image is provided (and preferred).
 
-  - [NPM User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/npm/)
-  - [Docker User Guide](https://steilerdev.github.io/icloud-photos-sync/user-guides/docker/)
-  - [CLI Reference](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/)
+  - [NPM User Guide](https://icloud-photos-sync.steilerdev.de/user-guides/npm/)
+  - [Docker User Guide](https://icloud-photos-sync.steilerdev.de/user-guides/docker/)
+  - [CLI Reference](https://icloud-photos-sync.steilerdev.de/user-guides/cli/)
 
 ## OS Support
 ![OS Support Debian](https://img.shields.io/static/v1?label=Debian-11&message=Dev%20Platform&color=informational&style=for-the-badge)
@@ -92,11 +92,11 @@ Since this application needs to communicate with the Apple iCloud backend, full 
 
 This application will never log any credentials (except when log level is set to `trace`, so be careful when doing this!). Credentials are only sent directly to Apple's authentication servers - third party services are NOT involved.
 
-In order to improve this application's development, this tool can report crash and error data to the developer. This capability requires opt-in and is the only non-Apple service this application will communicate with. Scrubbing of credentials and sensitive data is performed before any errors are persisted. More information about this topic can be found [here](https://steilerdev.github.io/icloud-photos-sync/user-guides/telemetry/).
+In order to improve this application's development, this tool can report crash and error data to the developer. This capability requires opt-in and is the only non-Apple service this application will communicate with. Scrubbing of credentials and sensitive data is performed before any errors are persisted. More information about this topic can be found [here](https://icloud-photos-sync.steilerdev.de/user-guides/telemetry/).
 
 ## Contributing & Feedback
 This tool is not yet *production ready*, since it (most likely) still contains some issues and edge cases, that need to be addressed.
 
 I hope for the support of the community, to fully understand the reverse-engineered API and discover edge cases and bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy.
 
-Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing. Additionally please [enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/telemetry/), so this crash and all required technical details are recorded and reported.
+Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing. Additionally please [enable crash and error reporting](https://icloud-photos-sync.steilerdev.de/user-guides/telemetry/), so this crash and all required technical details are recorded and reported.

@@ -32,7 +32,7 @@
   "bugs": {
     "url": "https://github.com/steilerDev/icloud-photos-sync/issues"
   },
-  "homepage": "https://steilerdev.github.io/icloud-photos-sync/",
+  "homepage": "https://icloud-photos-sync.steilerdev.de/",
   "engines": {
     "node": ">=18.8.0"
   },
