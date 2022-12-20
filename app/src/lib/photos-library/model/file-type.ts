@@ -9,6 +9,7 @@ const EXT = {
     'com.apple.quicktime-movie': `mov`,
     'public.heic': `heic`,
     'com.sony.arw-raw-image': `arw`,
+    'com.compuserve.gif': `gif`,
 };
 
 /**
