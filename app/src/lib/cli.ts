@@ -5,10 +5,10 @@ import * as ICLOUD from './icloud/constants.js';
 import * as SYNC_ENGINE from './sync-engine/constants.js';
 import {SyncEngine} from './sync-engine/sync-engine.js';
 import {SingleBar} from 'cli-progress';
-import {exit} from 'process';
 import {getLogger} from './logger.js';
 import {ArchiveEngine} from './archive-engine/archive-engine.js';
 import {iCloudApp, SyncApp, ArchiveApp} from '../app/icloud-app.js';
+import {ErrorHandler, ERROR_EVENT} from '../app/error-handler.js';
 
 /**
  * This class handles the input/output to the command line
@@ -44,6 +44,7 @@ export class CLIInterface {
         this.enableCLIOutput = !app.options.logToCli && !app.options.silent;
 
         this.setupCLIiCloudInterface(app.icloud);
+        this.setupCLIErrorHandlerInterface(app.errorHandler);
 
         if (app instanceof SyncApp) {
             this.setupCLISyncEngineInterface(app.syncEngine);
@@ -52,16 +53,6 @@ export class CLIInterface {
         if (app instanceof ArchiveApp) {
             this.setupCLIArchiveEngineInterface(app.archiveEngine);
         }
-
-        process.on(`SIGTERM`, () => {
-            // Issued by docker compose down
-            this.fatalError(`Received SIGTERM, aborting!`);
-        });
-
-        process.on(`SIGINT`, () => {
-            // Received from ctrl-c
-            this.fatalError(`Received SIGINT, aborting!`);
-        });
 
         if (this.enableCLIOutput) {
             console.clear();
@@ -87,14 +78,14 @@ export class CLIInterface {
     }
 
     /**
-     * Logs a fatal error and exits the application
-     * @param err - The error message to display
+     * Prints a fatal error
+     * @param err - The error containing the error message
+     * @param desc - Optional
      */
-    fatalError(err: string) {
+    printFatalError(err: Error) {
         this.print(chalk.red(this.getHorizontalLine()));
-        this.print(chalk.red(`Experienced fatal error at ${this.getDateTime()}: ${err}`));
+        this.print(chalk.red(`Experienced fatal error at ${this.getDateTime()}: ${err.message}`));
         this.print(chalk.red(this.getHorizontalLine()));
-        exit(1);
     }
 
     /**
@@ -144,11 +135,6 @@ export class CLIInterface {
 
         iCloud.on(ICLOUD.EVENTS.READY, () => {
             this.print(chalk.greenBright(`iCloud connection established!`));
-        });
-
-        iCloud.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
-            this.print(chalk.red(`Unexpected error: ${msg}`));
-            this.print(chalk.white(this.getHorizontalLine()));
         });
     }
 
@@ -222,14 +208,18 @@ export class CLIInterface {
             this.print(chalk.white(this.getHorizontalLine()));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
+        syncEngine.on(ERROR_EVENT, () => {
             this.progressBar.stop();
-            this.print(chalk.red(`Sync engine: Unexpected error: ${msg}`));
-            this.print(chalk.white(this.getHorizontalLine()));
         });
     }
 
     setupCLIArchiveEngineInterface(_archiveEngine: ArchiveEngine) {
 
+    }
+
+    setupCLIErrorHandlerInterface(errorHandler: ErrorHandler) {
+        errorHandler.on(ERROR_EVENT, err => {
+            this.printFatalError(err);
+        });
     }
 }

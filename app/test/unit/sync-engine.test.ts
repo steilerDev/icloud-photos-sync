@@ -15,6 +15,7 @@ import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albu
 import {spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
+import {ERROR_EVENT} from '../../src/app/error-handler';
 
 beforeEach(() => {
     mockfs({});
@@ -72,7 +73,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
                 syncEngine.prepareRetry = jest.fn<() => Promise<void>>();
 
-                const errorEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.ERROR);
+                const errorEvent = spyOnEvent(syncEngine, ERROR_EVENT);
 
                 await syncEngine.sync();
 
@@ -89,7 +90,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.writeState).toHaveBeenNthCalledWith(3, ...diffStateReturnValue);
                 expect(syncEngine.writeState).toHaveBeenNthCalledWith(4, ...diffStateReturnValue);
                 expect(syncEngine.prepareRetry).toHaveBeenCalledTimes(4);
-                expect(errorEvent).toHaveBeenCalledWith(`Sync did not complete succesfull within 4 tries`);
+                expect(errorEvent).toHaveBeenCalledWith(new Error(`Sync did not complete succesfull within 4 tries`));
             });
 
             test.each([
@@ -176,7 +177,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                     .mockResolvedValue(diffStateReturnValue);
                 syncEngine.writeState = jest.fn<() => Promise<boolean>>()
                     .mockRejectedValue(error);
-                const errorEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.ERROR);
+                const errorEvent = spyOnEvent(syncEngine, ERROR_EVENT);
 
                 await syncEngine.sync();
 
@@ -187,7 +188,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.writeState).toHaveBeenCalledTimes(1);
                 expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, ...diffStateReturnValue);
                 expect(errorEvent).toHaveBeenCalledTimes(1);
-                expect(errorEvent).toHaveBeenCalledWith(error.message);
+                expect(errorEvent).toHaveBeenCalledWith(error);
             });
 
             test.each([

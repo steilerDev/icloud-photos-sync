@@ -3,11 +3,10 @@ import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
 import * as Logger from '../lib/logger.js';
 import * as fs from 'fs';
 import {CLIInterface} from "../lib/cli.js";
-import * as bt from 'backtrace-node';
 import {OptionValues} from "commander";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
-import * as PACKAGE_INFO from '../lib/package.js';
+import {ErrorHandler} from "./error-handler.js";
 
 /**
  * This is the base application class which will setup and manage the iCloud connection and local Photos Library
@@ -29,24 +28,19 @@ export abstract class iCloudApp {
     cliInterface: CLIInterface;
 
     /**
+     * Crash and error handling client
+     */
+    errorHandler: ErrorHandler;
+
+    /**
      * Creates and sets up the necessary infrastructure
      * @param options - The parsed CLI options
      */
     constructor(options: OptionValues) {
         this.options = options;
-
         // Setting up infrastructure
         Logger.setupLogger(this);
-        if (this.options.enableCrashReporting) {
-            bt.initialize({
-                "endpoint": `https://submit.backtrace.io/steilerdev/92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49/json`,
-                "token": `92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49`,
-                "attributes": {
-                    "application": PACKAGE_INFO.NAME,
-                    "appversion": PACKAGE_INFO.VERSION,
-                },
-            });
-        }
+        this.errorHandler = new ErrorHandler(this);
 
         // It's crucial for the data dir to exist, create if it doesn't
         if (!fs.existsSync(this.options.dataDir)) {
@@ -55,6 +49,7 @@ export abstract class iCloudApp {
 
         // Creating necessary objects for this scope
         this.icloud = new iCloud(this);
+        this.errorHandler.registerErrorEventHandler(this.icloud);
     }
 
     /**
@@ -64,9 +59,8 @@ export abstract class iCloudApp {
     async run(): Promise<any> {
         // Hocking up CLI Output
         this.cliInterface = new CLIInterface(this);
-
         return this.icloud.authenticate()
-            .catch(err => this.cliInterface.fatalError(`Init failed: ${err}`));
+            .catch(err => this.errorHandler.fatalError(new Error(`Init failed`, {"cause": err})));
     }
 }
 
@@ -84,7 +78,7 @@ export class TokenApp extends iCloudApp {
             this.cliInterface.print(`Validated trust token:`);
             this.cliInterface.print(this.icloud.auth.iCloudAccountTokens.trustToken);
         } catch (err) {
-            this.cliInterface.fatalError(`Getting validated trust token failed: ${err.message}`);
+            await this.errorHandler.fatalError(new Error(`Getting validated trust token failed`, {"cause": err}));
         }
     }
 }
@@ -111,6 +105,7 @@ export class SyncApp extends iCloudApp {
         super(options);
         this.photosLibrary = new PhotosLibrary(this);
         this.syncEngine = new SyncEngine(this);
+        this.errorHandler.registerErrorEventHandler(this.syncEngine);
     }
 
     /**
@@ -120,7 +115,7 @@ export class SyncApp extends iCloudApp {
     async run(): Promise<any> {
         return super.run()
             .then(() => this.syncEngine.sync())
-            .catch(err => this.cliInterface.fatalError(`Sync failed: ${err.message}`));
+            .catch(err => this.errorHandler.fatalError(new Error(`Sync failed`, {"cause": err})));
     }
 }
 
@@ -151,6 +146,6 @@ export class ArchiveApp extends SyncApp {
     async run() {
         return super.run()
             .then(([remoteAssets]) => this.archiveEngine.archivePath(this.archivePath, remoteAssets))
-            .catch(err => this.cliInterface.fatalError(`Archive failed: ${err.message}`));
+            .catch(err => this.errorHandler.fatalError(new Error(`Archive failed`, {"cause": err})));
     }
 }

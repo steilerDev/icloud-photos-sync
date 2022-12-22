@@ -8,6 +8,7 @@ import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import {getLogger} from '../../logger.js';
 import {convertCPLAssets} from '../../sync-engine/helpers/fetchAndLoad-helpers.js';
+import {ERROR_EVENT} from '../../../app/error-handler.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -70,7 +71,7 @@ export class iCloudPhotos extends EventEmitter {
                 this.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
             })
             .catch(err => {
-                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unexpected error while setting up iCloud Photos: ${err.message}`);
+                this.emit(ERROR_EVENT, new Error(`Unexpected error while setting up iCloud Photos: ${err.message}`, {"cause": err}));
             });
     }
 
@@ -84,7 +85,7 @@ export class iCloudPhotos extends EventEmitter {
             .then(result => {
                 const state = result[0]?.fields?.state?.value;
                 if (!state) {
-                    this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unable to get indexing state: ${JSON.stringify(result)}`);
+                    this.emit(ERROR_EVENT, new Error(`Unable to get indexing state`, {"cause": result}));
                     return;
                 }
 
@@ -100,10 +101,10 @@ export class iCloudPhotos extends EventEmitter {
                     return;
                 }
 
-                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unknown state (${state}): ${JSON.stringify(result)}`);
+                this.emit(ERROR_EVENT, new Error(`Unknown state (${state})`, {"cause": result}));
             })
             .catch(err => {
-                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, `Unexpected error while checking indexing status: ${err.message}`);
+                this.emit(ERROR_EVENT, new Error(`Unexpected error while checking indexing status: ${err.message}`, {"cause": err}));
             });
     }
 

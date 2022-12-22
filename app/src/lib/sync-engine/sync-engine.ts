@@ -14,6 +14,7 @@ import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers
 import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 import {SyncApp} from '../../app/icloud-app.js';
+import {ERROR_EVENT} from '../../app/error-handler.js';
 
 /**
  * This class handles the photos sync
@@ -99,7 +100,8 @@ export class SyncEngine extends EventEmitter {
             throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
         } catch (err) {
             this.logger.warn(`Unrecoverable sync error: ${err.message}`);
-            this.emit(SYNC_ENGINE.EVENTS.ERROR, err.message);
+            this.emit(ERROR_EVENT, err);
+            return undefined;
         }
     }
 

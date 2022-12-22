@@ -46,6 +46,8 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
+  features: 
+    - content.tabs.link
 dev_addr: 0.0.0.0:8000
 markdown_extensions:
   - attr_list
@@ -53,6 +55,9 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true 
 plugins:
   - search:
       prebuild_index: true

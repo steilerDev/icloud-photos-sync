@@ -18,6 +18,7 @@ const LOGGER = {
     "SyncEngine": `Sync-Engine`,
     "CLIInterface": `CLI-Interface`,
     "ArchiveEngine": `Archive-Engine`,
+    "ErrorHandler": `Error-Handler`,
 };
 
 /**

@@ -13,7 +13,7 @@
             ],
             "preLaunchTask": "build-app",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["archive"],
+            "args": ["sync"],
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",
             ],
@@ -29,7 +29,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/app.test.ts"
+                "test/unit/sync-engine.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
