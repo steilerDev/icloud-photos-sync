@@ -13,7 +13,7 @@
             ],
             "preLaunchTask": "build-app",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["token"],
+            "args": ["archive"],
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",
             ],
@@ -29,12 +29,11 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/icloud.test.ts"
+                "test/unit/app.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/test.env"
         }, {
             "name": "Run All Unit Tests",
             "type": "node",
@@ -48,7 +47,6 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/test.env"
         }, {
             "name": "Run All Tests",
             "type": "node",

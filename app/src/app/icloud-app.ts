@@ -24,15 +24,14 @@ export abstract class iCloudApp {
     icloud: iCloud;
 
     /**
-     * This sessions' Photos Library object
-     */
-    photosLibrary: PhotosLibrary;
-
-    /**
      * This sessions' CLI Interface object
      */
     cliInterface: CLIInterface;
 
+    /**
+     * Creates and sets up the necessary infrastructure
+     * @param options - The parsed CLI options
+     */
     constructor(options: OptionValues) {
         this.options = options;
 
@@ -56,7 +55,6 @@ export abstract class iCloudApp {
 
         // Creating necessary objects for this scope
         this.icloud = new iCloud(this);
-        this.photosLibrary = new PhotosLibrary(this);
     }
 
     /**
@@ -96,12 +94,22 @@ export class TokenApp extends iCloudApp {
  */
 export class SyncApp extends iCloudApp {
     /**
+     * This sessions' Photos Library object
+     */
+    photosLibrary: PhotosLibrary;
+
+    /**
      * This sessions' Sync Engine object
      */
     syncEngine: SyncEngine;
 
+    /**
+     * Creates and sets up the necessary infrastructure for this app
+     * @param options - The parsed CLI options
+     */
     constructor(options: OptionValues) {
         super(options);
+        this.photosLibrary = new PhotosLibrary(this);
         this.syncEngine = new SyncEngine(this);
     }
 

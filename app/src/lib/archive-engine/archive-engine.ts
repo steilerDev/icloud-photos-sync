@@ -5,7 +5,7 @@ import {PhotosLibrary} from '../photos-library/photos-library.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
-import {iCloudApp} from '../../app/icloud-app.js';
+import {ArchiveApp} from '../../app/icloud-app.js';
 
 export class ArchiveEngine {
     /**
@@ -21,7 +21,7 @@ export class ArchiveEngine {
      * Creates a new Archive Engine object
      * @param app - The application holding references to necessary objects (iCloud connection, Photos Library & CLI options)
      */
-    constructor(app: iCloudApp) {
+    constructor(app: ArchiveApp) {
         this.noRemoteDelete = app.options.noRemoteDelete;
         this.icloud = app.icloud;
         this.photosLibrary = app.photosLibrary;

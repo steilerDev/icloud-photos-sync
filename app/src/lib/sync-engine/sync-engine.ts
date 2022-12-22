@@ -13,7 +13,7 @@ import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/di
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
 import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
-import {iCloudApp} from '../../app/icloud-app.js';
+import {SyncApp} from '../../app/icloud-app.js';
 
 /**
  * This class handles the photos sync
@@ -54,7 +54,7 @@ export class SyncEngine extends EventEmitter {
      * Creates a new sync engine from the previously created objects and CLI options
      * @param app - The application object, holding references to the iCloud object, the Photos Library object and CLI options
      */
-    constructor(app: iCloudApp) {
+    constructor(app: SyncApp) {
         super();
         this.icloud = app.icloud;
         this.photosLibrary = app.photosLibrary;

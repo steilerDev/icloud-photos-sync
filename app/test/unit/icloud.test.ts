@@ -229,17 +229,14 @@ describe(`Unit Tests - iCloud`, () => {
 
     describe(`MFA Flow`, () => {
         test(`Start MFA Server`, () => {
-
             const icloud = new iCloud(
                 appWithOptions(
-                    Object.assign({}, 
-                        _defaultCliOpts, 
-                        {
-                            failOnMfa: false
-                        }
-                    )
-                )
-            )
+                    {
+                        ..._defaultCliOpts,
+                        "failOnMfa": false,
+                    },
+                ),
+            );
 
             icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
             expect(icloud.mfaServer.server.listening).toBeTruthy();
