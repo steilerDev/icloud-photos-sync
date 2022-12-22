@@ -20,6 +20,7 @@ nav:
     - 'Local File Structure': dev/local-file-structure.md
     - 'TypeDoc Code Documentation': https://github.com/steilerDev/icloud-photos-sync/wiki/Exports
     - 'Coverage': dev/coverage.md
+    - 'CI/CD': dev/ci-cd.md
   - 'Changelog': CHANGELOG.md
 
 theme:
