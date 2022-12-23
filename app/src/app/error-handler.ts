@@ -83,4 +83,51 @@ export class ErrorHandler extends EventEmitter {
         const errorCode = result[privateRxIdAttribute] as string;
         return errorCode;
     }
+
+    /**
+    * This function removes confidental data from the environment after parsing arguments, to make sure, nothing is collected.
+    */
+    static cleanEnv() {
+        const confidentialData = {
+            "username": {
+               "env": `APPLE_ID_USER`,
+               "cli": [
+                   `-u`, `--username`,
+               ],
+               "replacement": `<APPLE ID USERNAME>`,
+           },
+           "password": {
+               "env": `APPLE_ID_PWD`,
+               "cli": [
+                   `-p`, `--password`,
+               ],
+               "replacement": `<APPLE ID PASSWORD>`,
+           },
+           "trust-token": {
+               "env": `TRUST_TOKEN`,
+               "cli": [
+                   `-T`, `--trust-token`,
+               ],
+               "replacement": `<TRUST TOKEN>`,
+           },
+       };
+   
+       for (const confidentialEntry of Object.values(confidentialData)) {
+           if (process.env[confidentialEntry.env]) {
+               process.env[confidentialEntry.env] = confidentialEntry.replacement;
+           }
+   
+           for (const confidentalCliValue of confidentialEntry.cli) {
+               const confidentalCliValueIndexArgV = process.argv.findIndex(value => value === confidentalCliValue);
+               if (confidentalCliValueIndexArgV !== -1) {
+                   process.argv[confidentalCliValueIndexArgV + 1] = confidentialEntry.replacement;
+               }
+   
+               const confidentalCliValueIndexExecArgV = process.execArgv.findIndex(value => value === confidentalCliValue);
+               if (confidentalCliValueIndexExecArgV !== -1) {
+                   process.argv[confidentalCliValueIndexExecArgV + 1] = confidentialEntry.replacement;
+               }
+           }
+       }
+   }
 }

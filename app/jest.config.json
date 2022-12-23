@@ -11,6 +11,7 @@
     "collectCoverageFrom": [
       "src/**/*.ts",
       "!src/main.ts",
+      "!src/app/error-handler.ts",
       "!src/lib/package.ts",
       "!src/lib/cli.ts",
       "!src/lib/logger.ts",

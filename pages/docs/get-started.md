@@ -18,16 +18,16 @@ Find examples for the various options within this guide.
         ```
         version: '2'
         services:
-        photo-sync:
+          photos-sync:
             image: steilerdev/icloud-photos-sync:latest
-            container_name: photo-sync
+            container_name: photos-sync
             command: "sync"
             environment:
-            APPLE_ID_USER: "<iCloud Username>"
-            APPLE_ID_PWD: "<iCloud Password>"
-            ENABLE_CRASH_REPORTING: true
+              APPLE_ID_USER: "<iCloud Username>"
+              APPLE_ID_PWD: "<iCloud Password>"
+              ENABLE_CRASH_REPORTING: true
             volumes:
-            - <photos-dir>:/opt/icloud-photos-library
+              - <photos-dir>:/opt/icloud-photos-library
         ```
 
         Get the latest image by running:
@@ -84,16 +84,16 @@ In order to only perform authentication (without syncing any assets) and validat
         ```
         version: '2'
         services:
-        photo-sync:
+          photos-sync:
             image: steilerdev/icloud-photos-sync:latest
             container_name: photos-sync
             command: "token"
             environment:
-            APPLE_ID_USER: "<iCloud Username>"
-            APPLE_ID_PWD: "<iCloud Password>"
-            ENABLE_CRASH_REPORTING: true
+              APPLE_ID_USER: "<iCloud Username>"
+              APPLE_ID_PWD: "<iCloud Password>"
+              ENABLE_CRASH_REPORTING: true
             volumes:
-            - </path/to/your/local/library>:/opt/icloud-photos-library
+              - </path/to/your/local/library>:/opt/icloud-photos-library
         ```
 
         And start the application using
@@ -244,16 +244,16 @@ In order to perform a single synchronisation execution, the [`sync` command](/us
         ```
         version: '2'
         services:
-        photo-sync:
+          photos-sync:
             image: steilerdev/icloud-photos-sync:latest
             container_name: photos-sync
             command: "sync"
             environment:
-            APPLE_ID_USER: "<iCloud Username>"
-            APPLE_ID_PWD: "<iCloud Password>"
-            ENABLE_CRASH_REPORTING: true
+              APPLE_ID_USER: "<iCloud Username>"
+              APPLE_ID_PWD: "<iCloud Password>"
+              ENABLE_CRASH_REPORTING: true
             volumes:
-            - </path/to/your/local/library>:/opt/icloud-photos-library
+              - </path/to/your/local/library>:/opt/icloud-photos-library
         ```
 
         Start the application using
@@ -311,17 +311,17 @@ For scheduled execution the `--fail-on-mfa` flag is advised, otherwise the app w
         ```
         version: '2'
         services:
-        photo-sync:
+          photos-sync:
             image: steilerdev/icloud-photos-sync:latest
             container_name: photos-sync
             command: "sync"
             environment:
-            APPLE_ID_USER: "<iCloud Username>"
-            APPLE_ID_PWD: "<iCloud Password>"
-            FAIL_ON_MFA: true
+              APPLE_ID_USER: "<iCloud Username>"
+              APPLE_ID_PWD: "<iCloud Password>"
+              FAIL_ON_MFA: true
             ENABLE_CRASH_REPORTING: true
             volumes:
-            - </path/to/your/local/library>:/opt/icloud-photos-library
+              - </path/to/your/local/library>:/opt/icloud-photos-library
         ```
 
         Run `crontab -e` and add the following line using your preferred [cron schedule](https://crontab.guru/):
@@ -375,16 +375,16 @@ In order to archive an album, the [`archive` command](/user-guides/cli/#archive-
         ```
         version: '2'
         services:
-        photo-sync:
+          photos-sync:
             image: steilerdev/icloud-photos-sync:latest
             container_name: photos-sync
             command: "archive </opt/icloud-photos-library/<path/to/album>>"
             environment:
-            APPLE_ID_USER: "<iCloud Username>"
-            APPLE_ID_PWD: "<iCloud Password>"
-            ENABLE_CRASH_REPORTING: true
+              APPLE_ID_USER: "<iCloud Username>"
+              APPLE_ID_PWD: "<iCloud Password>"
+              ENABLE_CRASH_REPORTING: true
             volumes:
-            - </path/to/your/local/library>:/opt/icloud-photos-library
+              - </path/to/your/local/library>:/opt/icloud-photos-library
         ```
 
         Start the application using

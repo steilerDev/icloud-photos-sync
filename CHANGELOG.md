@@ -7,6 +7,8 @@ This release contains a massive amount of 'behind the scenes' changes to the dev
   * Performing continous API tests via GH Actions using a test environment
   * Implemented testing process
     * Unit tests implemented for
+      * `app`
+        * `factory`
       * `icloud`
         * `mfa-server`
         * `icloud-auth`
