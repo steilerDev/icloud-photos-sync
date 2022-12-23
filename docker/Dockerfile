@@ -4,7 +4,7 @@ FROM node:18.8.0-alpine
 ADD rootfs.tar.gz /
 
 RUN apk update && \
-    apk add curl vim bash && \
+    apk add curl vim bash jq && \
     rm -rf /var/cache/apk/*
 
 # Installing icloud-photos-sync 
