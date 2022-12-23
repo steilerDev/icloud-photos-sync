@@ -68,7 +68,7 @@ export function appFactory(argv: string[]): iCloudApp {
             .env(`DOWNLOAD_THREADS`)
             .default(5)
             .argParser(commanderParseInt))
-        .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://steilerdev.github.io/icloud-photos-sync/user-guides/telemetry/ for more information`)
+        .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://icloud-photos-sync.steilerdev.de/user-guides/error-reporting/ for more information`)
             .env(`ENABLE_CRASH_REPORTING`)
             .default(false))
         .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon an error (-1 means that it will always retry)`)
@@ -77,6 +77,9 @@ export function appFactory(argv: string[]): iCloudApp {
             .argParser(commanderParseInt))
         .addOption(new Option(`--refresh-token`, `Ignore any stored token and always refresh it`)
             .env(`REFRESH_TOKEN`)
+            .default(false))
+        .addOption(new Option(`--remote-delete`, `If this flag is set, delete non-favorited photos in the iCloud Photos backend upon archiving.`)
+            .env(`REMOTE_DELETE`)
             .default(false));
 
     program.command(AppCommands.sync)
@@ -90,10 +93,7 @@ export function appFactory(argv: string[]): iCloudApp {
             app = new ArchiveApp(program.opts(), archivePath);
         })
         .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)
-        .argument(`<path>`, `Path to the folder that should be archived`)
-        .addOption(new Option(`--no-remote-delete`, `Do not delete any remote assets upon archiving`)
-            .env(`NO_REMOTE_DELETE`)
-            .default(false));
+        .argument(`<path>`, `Path to the folder that should be archived`);
 
     program.command(AppCommands.token)
         .action(() => {

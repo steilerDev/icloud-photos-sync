@@ -422,7 +422,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             });
 
             const archiveEngine = archiveEngineFactory();
-            archiveEngine.noRemoteDelete = true;
+            archiveEngine.remoteDelete = false;
 
             archiveEngine.icloud.photos.deleteAsset = jest.fn(() => Promise.resolve([]));
 

@@ -6,10 +6,10 @@ import {appWithOptions} from './app-factory.helper';
 import {iCloudAuthFactory} from './icloud-auth.helper';
 import * as Config from './_config';
 
-export function archiveEngineFactory(_noRemoteDelete: boolean = false): ArchiveEngine {
+export function archiveEngineFactory(_remoteDelete: boolean = true): ArchiveEngine {
     const engine = new ArchiveEngine(
         appWithOptions({
-            'noRemoteDelete': _noRemoteDelete,
+            'remoteDelete': _remoteDelete,
         },
         new PhotosLibrary(appWithOptions({
             "dataDir": Config.appDataDir,

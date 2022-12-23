@@ -320,6 +320,7 @@ export const validOptions = {
         `-r`,
         `-1`,
         `--refresh-token`,
+        `--remote-delete`,
         `archive`,
         `/root/someTestDir/`,
     ],

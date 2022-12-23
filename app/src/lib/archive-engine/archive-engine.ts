@@ -13,7 +13,7 @@ export class ArchiveEngine {
      */
     protected logger = getLogger(this);
 
-    noRemoteDelete: boolean;
+    remoteDelete: boolean;
     photosLibrary: PhotosLibrary;
     icloud: iCloud;
 
@@ -22,7 +22,7 @@ export class ArchiveEngine {
      * @param app - The application holding references to necessary objects (iCloud connection, Photos Library & CLI options)
      */
     constructor(app: ArchiveApp) {
-        this.noRemoteDelete = app.options.noRemoteDelete;
+        this.remoteDelete = app.options.remoteDelete;
         this.icloud = app.icloud;
         this.photosLibrary = app.photosLibrary;
     }
@@ -89,7 +89,7 @@ export class ArchiveEngine {
      * @returns A Promise, that resolves, once the remote asset has been deleted
      */
     async deleteRemoteAsset(assetPath: string, assetList: Asset[]) {
-        if (this.noRemoteDelete) {
+        if (!this.remoteDelete) {
             return;
         }
 

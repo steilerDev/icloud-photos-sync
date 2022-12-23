@@ -1,5 +1,5 @@
 site_name: iCloud Photos Sync
-site_url: https://icloud-photos-sync.steilerdev.de
+site_url: https://steilerdev.github.io/icloud-photos-sync/
 site_description: Documentation for icloud-photos-sync by steilerDev
 site_author: Frank Steiler
 copyright: steilerDev
@@ -7,20 +7,19 @@ repo_url: https://github.com/steilerDev/icloud-photos-sync
 edit_uri: ""
 nav:
   - 'Home': README.md
-  - 'User Guides': 
+  - 'Get Started': get-started.md
+  - 'User Guides':
     - 'CLI Reference': user-guides/cli.md
-    - 'NPM User Guide': user-guides/npm.md
-    - 'Docker User Guide': user-guides/docker.md
-    - 'Error & Crash Reporting': user-guides/telemetry.md
+    - 'Error & Crash Reporting': user-guides/error-reporting.md
   - 'Development Ressources':
     - 'Milestone Plan': https://github.com/steilerDev/icloud-photos-sync/milestones
-    - 'Test Environment': dev/test-environment.md
     - 'Motivation': dev/motivation.md
-    - 'API': dev/api.md
+    - 'iCloud API': dev/api.md
     - 'Local File Structure': dev/local-file-structure.md
     - 'TypeDoc Code Documentation': https://github.com/steilerDev/icloud-photos-sync/wiki/Exports
-    - 'Coverage': dev/coverage.md
-    - 'CI/CD': dev/ci-cd.md
+    - 'Test & Deployment':
+      - 'Test Environment': dev/test-environment.md
+      - 'Coverage': dev/coverage.md
   - 'Changelog': CHANGELOG.md
 
 theme:
@@ -58,6 +57,7 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true 
+  - admonition
 plugins:
   - search:
       prebuild_index: true

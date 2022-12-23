@@ -34,49 +34,71 @@
 </p>
 <hr>
 <p align="center">
-  <a href="https://icloud-photos-sync.steilerdev.de/user-guides/docker/">
-    <img alt="Get Started - Docker" src="https://img.shields.io/badge/Get%20started!-Docker-blue?style=for-the-badge">
-  </a>
-  <a href="https://icloud-photos-sync.steilerdev.de/user-guides/npm/">
-    <img alt="Get Started - NPM" src="https://img.shields.io/badge/Get%20started!-NPM-red?style=for-the-badge">
+  <a href="https://icloud-photos-sync.steilerdev.de/get-started/">
+    <img alt="Get Started" src="https://img.shields.io/static/v1?label=&message=Get%20Started&color=green&style=for-the-badge" style="width: 50%;">
   </a>
 </p>
+<p align="center">
+  <a href="https://icloud-photos-sync.steilerdev.de/user-guides/cli">
+    <img alt="CLI Reference" src="https://img.shields.io/static/v1?label=&message=CLI%20Reference&color=grey&style=for-the-badge" style="width: 30%;">
+  </a>
+</p>
+<hr>
 
 ## Overview
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem.
 
 Currently, this can only be achived, by having a Mac continously run the *Photos.app* (with `Keep originals` enabled). With this method, the files cannot be easily viewed without the Photos.app.
 
-This CLI Application offers the following functionality:
+This CLI Application offers the following high level functionality:
 
-  - *Continuously sync your remote iCloud Photos Library to your local file system effeciently*
-    - Support of MFA Authentication through trusted devices, SMS and Voice authentication
-    - Enable autonomous operation, by caching of MFA trust token (seems to be valid for 30 days: Aug 28, 2022 - Sep 27, 2022, Sep 28, 2022 - ???)
-    - Support of large libraries, through efficient diffing algorithm instead of full library pull
-    - Full iCloud Photos Library Backup with all important files in their original state + edits
-  - *Efficient handling of local state*
-    - Each asset is only downloaded once and linked to its respective folders
-    - No need track local state in database, since state is completely reflected in filesystem (through naming & linking)
-  - *Archiving of folders*
-    - All assets currently in the album will be persisted in the respective folder on the machine running icloud-photos-sync
-    - Future syncs will ignore the folder (so those assets will not be changed/deleted)
-    - If the remote album is moved, the archived folder will be moved to the same location
-    - If the remote album is deleted, the archived folder will be put into a 'lost+found' type of folder
-    - (*optionally*) All photos from the archived folder will be deleted from the iCloud Photos Library, unless they are *Favorites* (Reducing cloud storage needs)
-  - *Single purpose iCloud Photos application*
-    - No reliance on full fledged third-party libraries that provide access to iCloud
-    - No configuration needed for continuous full backup
-    - Quicker support of use-case specific needs
-  - *Support of shared Photos Library*
+<details>
+  <summary>Continuously sync your remote iCloud Photos Library to your local file system effeciently</summary>
+  <p>
+    <ul>
+      <li>Support of MFA Authentication through trusted devices, SMS and Voice authentication</li>
+      <li>Enable autonomous operation, by caching of MFA trust token</li>
+      <li>Support of large libraries, through efficient diffing algorithm instead of full library pull</li>
+      <li>Full iCloud Photos Library Backup with all important files in their original state + edits</li>
+    </ul>
+  </p>
+</details>
+
+<details>
+  <summary>Efficient handling of local state</summary>
+  <p>
+    <ul>
+      <li>Each asset is only downloaded once and linked to its respective folders</li>
+      <li>No need track local state in database, since state is completely reflected in filesystem (through naming & linking)</li>
+    </ul>
+  </p>
+</details>
+
+<details>
+  <summary>Archiving of folders</summary>
+  <p>
+    <ul>
+      <li>All assets currently in the album will be persisted in the respective folder on the machine running icloud-photos-sync</li>
+      <li>Future syncs will ignore the folder (so those assets will not be changed/deleted)</li>
+      <li>If the remote album is moved, the archived folder will be moved to the same location</li>
+      <li>If the remote album is deleted, the archived folder will be put into a 'lost+found' type of folder</li>
+      <li>All photos from the archived folder can be deleted from the iCloud Photos Library, unless they are *Favorites* (Reducing cloud storage needs)</li>
+    </ul>
+  </p>
+</details>
+
+<details>
+  <summary>Single purpose iCloud Photos application</summary>
+  <p>
+    <ul>
+      <li>No reliance on full fledged third-party libraries that provide access to iCloud</li>
+      <li>No configuration needed for continuous full backup</li>
+      <li>Quicker support of use-case specific needs</li>
+    </ul>
+  </p>
+</details>
 
 My personal use case / workflow is [documented on GH Pages](https://icloud-photos-sync.steilerdev.de/dev/motivation/), alongside some other potential interessting pieces of documentation.
-
-## Guides
-This application is written in Typescript/NodeJS and can therefore be executed directly on various platforms through npm. Please check this application's [OS support matrix](#os-support) for compatibility. Alternatively a Docker Image is provided (and preferred).
-
-  - [NPM User Guide](https://icloud-photos-sync.steilerdev.de/user-guides/npm/)
-  - [Docker User Guide](https://icloud-photos-sync.steilerdev.de/user-guides/docker/)
-  - [CLI Reference](https://icloud-photos-sync.steilerdev.de/user-guides/cli/)
 
 ## OS Support
 ![OS Support Debian](https://img.shields.io/static/v1?label=Debian-11&message=Dev%20Platform&color=informational&style=for-the-badge)
@@ -92,11 +114,11 @@ Since this application needs to communicate with the Apple iCloud backend, full 
 
 This application will never log any credentials (except when log level is set to `trace`, so be careful when doing this!). Credentials are only sent directly to Apple's authentication servers - third party services are NOT involved.
 
-In order to improve this application's development, this tool can report crash and error data to the developer. This capability requires opt-in and is the only non-Apple service this application will communicate with. Scrubbing of credentials and sensitive data is performed before any errors are persisted. More information about this topic can be found [here](https://icloud-photos-sync.steilerdev.de/user-guides/telemetry/).
+In order to improve this application's development, this tool can report crash and error data to the developer. This capability requires opt-in and is the only non-Apple service this application will communicate with. Scrubbing of credentials and sensitive data is performed before any errors are persisted. More information about this topic can be found [here](https://icloud-photos-sync.steilerdev.de/user-guides/error-reporting/).
 
 ## Contributing & Feedback
 This tool is not yet *production ready*, since it (most likely) still contains some issues and edge cases, that need to be addressed.
 
 I hope for the support of the community, to fully understand the reverse-engineered API and discover edge cases and bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy.
 
-Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing. Additionally please [enable crash and error reporting](https://icloud-photos-sync.steilerdev.de/user-guides/telemetry/), so this crash and all required technical details are recorded and reported.
+Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing. Additionally please [enable crash and error reporting](https://icloud-photos-sync.steilerdev.de/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.
