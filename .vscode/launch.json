@@ -17,7 +17,7 @@
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",
             ],
-            "envFile": "${workspaceFolder}/.vscode/test-account.env"
+            "envFile": "${workspaceFolder}/.vscode/private-account.env"
         }, {
             "name": "Debug Test",
             "type": "node",

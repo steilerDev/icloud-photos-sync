@@ -112,7 +112,7 @@ export class SyncEngine extends EventEmitter {
      */
     checkFatalError(err: any): boolean {
         if (err.name !== `AxiosError`) {
-            this.logger.warn(`Unknown error (${JSON.stringify(err)}), aborting!`);
+            this.logger.warn(`Unknown error (${err.message}), aborting!`);
             return true;
         }
 

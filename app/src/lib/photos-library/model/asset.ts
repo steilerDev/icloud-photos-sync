@@ -203,11 +203,14 @@ export class Asset implements PEntity<Asset> {
 
     /**
      * Verifies that the modified timestamps matches the one of the given file
+     * (due to potential rounding errors, we are checking if the timestamp is within 10ms)
      * @param fileStats - The file stats object to investigate the metadata
      * @returns True if the modified time matches
      */
     private verifyMTime(fileStats: Stats): boolean {
-        return fileStats.mtimeMs === this.modified;
+        const acceptableVariance = 10;
+        return fileStats.mtimeMs > this.modified - acceptableVariance
+            && fileStats.mtimeMs < this.modified + acceptableVariance;
     }
 
     /**

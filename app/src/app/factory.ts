@@ -1,6 +1,6 @@
 import {Command, Option, InvalidArgumentError} from "commander";
 import * as PACKAGE_INFO from '../lib/package.js';
-import { ErrorHandler } from "./error-handler.js";
+import {ErrorHandler} from "./error-handler.js";
 import {iCloudApp, TokenApp, SyncApp, ArchiveApp} from "./icloud-app.js";
 
 /**
