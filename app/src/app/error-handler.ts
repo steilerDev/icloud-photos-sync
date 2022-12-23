@@ -28,6 +28,7 @@ export class ErrorHandler extends EventEmitter {
                     'application.version': PACKAGE_INFO.VERSION,
                 },
             });
+            this.btClient.setSymbolication();
         }
 
         // Register handlers
