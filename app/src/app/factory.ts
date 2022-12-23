@@ -102,6 +102,53 @@ export function appFactory(argv: string[]): iCloudApp {
         .description(`Validates the current trust token, fetches a new one (if necessary) and prints it to the CLI`);
 
     program.parse(argv);
-
+    cleanEnv();
     return app;
+}
+
+/**
+ * This function removes confidental data from the environment after parsing arguments, to make sure, nothing is collected.
+ */
+function cleanEnv() {
+    const confidentialData = {
+        "username": {
+            "env": `APPLE_ID_USER`,
+            "cli": [
+                `-u`, `--username`,
+            ],
+            "replacement": `<APPLE ID USERNAME>`,
+        },
+        "password": {
+            "env": `APPLE_ID_PWD`,
+            "cli": [
+                `-p`, `--password`,
+            ],
+            "replacement": `<APPLE ID PASSWORD>`,
+        },
+        "trust-token": {
+            "env": `TRUST_TOKEN`,
+            "cli": [
+                `-T`, `--trust-token`,
+            ],
+            "replacement": `<TRUST TOKEN>`,
+        },
+    };
+
+    for (const confidentialEntry of Object.values(confidentialData)) {
+        if (process.env[confidentialEntry.env]) {
+            process.env[confidentialEntry.env] = confidentialEntry.replacement;
+        }
+
+        for (const confidentalCliValue of confidentialEntry.cli) {
+            const confidentalCliValueIndexArgV = process.argv.findIndex(value => value === confidentalCliValue);
+            if (confidentalCliValueIndexArgV !== -1) {
+                process.argv[confidentalCliValueIndexArgV + 1] = confidentialEntry.replacement;
+            }
+
+            const confidentalCliValueIndexExecArgV = process.execArgv.findIndex(value => value === confidentalCliValue);
+            if (confidentalCliValueIndexExecArgV !== -1) {
+                process.argv[confidentalCliValueIndexExecArgV + 1] = confidentialEntry.replacement;
+            }
+        }
+    }
 }
