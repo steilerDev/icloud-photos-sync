@@ -53,7 +53,7 @@ describe(`Unit Tests - Archive Engine`, () => {
 
             const archiveEngine = archiveEngineFactory();
 
-            archiveEngine.persistAsset = jest.fn(assetPath => Promise.resolve(assetPath));
+            archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.deleteRemoteAsset = jest.fn(() => Promise.resolve());
 
             await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
@@ -109,7 +109,7 @@ describe(`Unit Tests - Archive Engine`, () => {
 
                 const archiveEngine = archiveEngineFactory();
 
-                archiveEngine.persistAsset = jest.fn(assetPath => Promise.resolve(assetPath));
+                archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
                 archiveEngine.deleteRemoteAsset = jest.fn(() => Promise.resolve());
 
                 expect.assertions(3);
@@ -167,7 +167,7 @@ describe(`Unit Tests - Archive Engine`, () => {
 
                 const archiveEngine = archiveEngineFactory();
 
-                archiveEngine.persistAsset = jest.fn(assetPath => Promise.resolve(assetPath));
+                archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
                 archiveEngine.deleteRemoteAsset = jest.fn(() => Promise.resolve());
 
                 expect.assertions(3);
@@ -207,7 +207,7 @@ describe(`Unit Tests - Archive Engine`, () => {
 
                 const archiveEngine = archiveEngineFactory();
 
-                archiveEngine.persistAsset = jest.fn(assetPath => Promise.resolve(assetPath));
+                archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
                 archiveEngine.deleteRemoteAsset = jest.fn(() => Promise.resolve());
 
                 expect.assertions(3);

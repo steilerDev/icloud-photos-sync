@@ -53,7 +53,7 @@ Currently, this can only be achived, by having a Mac continously run the *Photos
 This CLI Application offers the following high level functionality:
 
 <details>
-  <summary>Continuously sync your remote iCloud Photos Library to your local file system effeciently</summary>
+  <summary><i>Continuously sync your remote iCloud Photos Library to your local file system effeciently</i></summary>
   <p>
     <ul>
       <li>Support of MFA Authentication through trusted devices, SMS and Voice authentication</li>
@@ -65,7 +65,7 @@ This CLI Application offers the following high level functionality:
 </details>
 
 <details>
-  <summary>Efficient handling of local state</summary>
+  <summary><i>Efficient handling of local state</i></summary>
   <p>
     <ul>
       <li>Each asset is only downloaded once and linked to its respective folders</li>
@@ -75,7 +75,7 @@ This CLI Application offers the following high level functionality:
 </details>
 
 <details>
-  <summary>Archiving of folders</summary>
+  <summary><i>Archiving of folders</i></summary>
   <p>
     <ul>
       <li>All assets currently in the album will be persisted in the respective folder on the machine running icloud-photos-sync</li>
@@ -88,7 +88,7 @@ This CLI Application offers the following high level functionality:
 </details>
 
 <details>
-  <summary>Single purpose iCloud Photos application</summary>
+  <summary><i>Single purpose iCloud Photos application</i></summary>
   <p>
     <ul>
       <li>No reliance on full fledged third-party libraries that provide access to iCloud</li>
