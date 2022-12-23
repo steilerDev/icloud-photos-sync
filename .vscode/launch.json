@@ -11,7 +11,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "preLaunchTask": "build-app",
+            "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
             "args": ["sync"],
             "outFiles": [
@@ -30,19 +30,6 @@
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
                 "test/unit/sync-engine.test.ts"
-            ],
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "cwd": "${workspaceFolder}/app",
-        }, {
-            "name": "Run All Unit Tests",
-            "type": "node",
-            "request": "launch",
-            "runtimeArgs": [
-                "--experimental-vm-modules",
-                "node_modules/.bin/jest",
-                "--config", "jest.config.json",
-                "test/unit/"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

@@ -7,15 +7,30 @@
 			"path": "app/",
 			"group": "build",
 			"problemMatcher": [],
-			"label": "build-app",
-			"detail": "npm run build"
-		},{
+			"label": "Build App"
+		},
+		{
+			"type": "shell",
+			"command": "/home/coder/.local/bin/mkdocs",
+			"args": [
+				"build"
+			],
+			"presentation": {
+				"reveal": "always"
+			},
+			"options": {
+				"cwd": "/home/coder/project/icloud-photos-sync/pages/"
+			},
+			"label": "Build Page",
+			"group": "build"
+		},
+		{
 			"type": "npm",
 			"script": "test",
-			"path": "app/",
+			"path": "app",
 			"group": "test",
-			"label": "test-app",
-			"detail": "npm run test"
+			"problemMatcher": [],
+			"label": "Unit Test App",
 		}
 	]
 }
