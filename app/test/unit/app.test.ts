@@ -4,6 +4,8 @@ import {describe, test, expect, jest, beforeEach, afterEach} from '@jest/globals
 import {rejectOptions, validOptions} from '../_helpers/app-factory.helper';
 import {ArchiveApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {appFactory} from '../../src/app/factory';
+import {Asset} from '../../src/lib/photos-library/model/asset';
+import {Album} from '../../src/lib/photos-library/model/album';
 
 describe(`Unit Tests - iCloud App`, () => {
     beforeEach(() => {
@@ -61,18 +63,97 @@ describe(`Unit Tests - iCloud App`, () => {
     });
 
     describe(`App control flow`, () => {
-        test.todo(`Handle authentication error`);
+        test(`Handle authentication error`, async () => {
+            const tokenApp = appFactory(validOptions.token);
+            tokenApp.errorHandler.fatalError = jest.fn(_err => Promise.resolve());
+            tokenApp.icloud.authenticate = jest.fn(() => Promise.reject());
+            await tokenApp.run();
+            expect(tokenApp.errorHandler.fatalError).toHaveBeenCalledWith(new Error(`Init failed`));
+        });
+
         describe(`Token App`, () => {
-            test.todo(`Execute token actions`);
-            test.todo(`Handle trust token error`);
+            test(`Execute token actions`, async () => {
+                const tokenApp = appFactory(validOptions.token);
+                tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
+                tokenApp.icloud.auth.validateAccountTokens = jest.fn();
+
+                await tokenApp.run();
+                expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(1);
+                expect(tokenApp.icloud.auth.validateAccountTokens).toHaveBeenCalledTimes(1);
+                expect(tokenApp.cliInterface.print).toBeCalledTimes(2);
+            });
+
+            test(`Handle trust token error`, async () => {
+                const tokenApp = appFactory(validOptions.token);
+                tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
+                tokenApp.errorHandler.fatalError = jest.fn(_err => Promise.resolve());
+                tokenApp.icloud.auth.validateAccountTokens = jest.fn(() => {
+                    throw new Error();
+                });
+
+                await tokenApp.run();
+                expect(tokenApp.errorHandler.fatalError).toHaveBeenCalledWith(new Error(`Getting validated trust token failed`));
+
+                expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(1);
+                expect(tokenApp.icloud.auth.validateAccountTokens).toHaveBeenCalledTimes(1);
+            });
         });
+
         describe(`Sync App`, () => {
-            test.todo(`Execute sync actions`);
-            test.todo(`Handle sync error`);
+            test(`Execute sync actions`, async () => {
+                const syncApp = appFactory(validOptions.sync) as SyncApp;
+                syncApp.icloud.authenticate = jest.fn(() => Promise.resolve());
+                syncApp.syncEngine.sync = jest.fn(() => Promise.resolve([[], []] as [Asset[], Album[]]));
+
+                await syncApp.run();
+
+                expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
+                expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
+            });
+
+            test(`Handle sync error`, async () => {
+                const syncApp = appFactory(validOptions.sync) as SyncApp;
+                syncApp.icloud.authenticate = jest.fn(() => Promise.resolve());
+                syncApp.syncEngine.sync = jest.fn(() => Promise.reject(new Error()));
+                syncApp.errorHandler.fatalError = jest.fn(_err => Promise.resolve());
+
+                await syncApp.run();
+
+                expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
+                expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
+                expect(syncApp.errorHandler.fatalError).toHaveBeenCalledWith(new Error(`Sync failed`));
+            });
         });
+
         describe(`Archive App`, () => {
-            test.todo(`Execute archive actions`);
-            test.todo(`Handle archive error`);
+            test(`Execute archive actions`, async () => {
+                const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
+                archiveApp.icloud.authenticate = jest.fn(() => Promise.resolve());
+                const remoteState = [{"fileChecksum": `someChecksum`}] as Asset[];
+                archiveApp.syncEngine.sync = jest.fn(() => Promise.resolve([remoteState, []] as [Asset[], Album[]]));
+                archiveApp.archiveEngine.archivePath = jest.fn(() => Promise.resolve());
+
+                await archiveApp.run();
+
+                expect(archiveApp.icloud.authenticate).toHaveBeenCalledTimes(1);
+                expect(archiveApp.syncEngine.sync).toHaveBeenCalledTimes(1);
+                expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledWith(validOptions.archive[validOptions.archive.length - 1], remoteState);
+            });
+
+            test(`Handle archive error`, async () => {
+                const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
+                archiveApp.icloud.authenticate = jest.fn(() => Promise.resolve());
+                archiveApp.syncEngine.sync = jest.fn(() => Promise.resolve([[], []] as [Asset[], Album[]]));
+                archiveApp.archiveEngine.archivePath = jest.fn(() => Promise.reject(new Error()));
+                archiveApp.errorHandler.fatalError = jest.fn(_err => Promise.resolve());
+
+                await archiveApp.run();
+
+                expect(archiveApp.icloud.authenticate).toHaveBeenCalledTimes(1);
+                expect(archiveApp.syncEngine.sync).toHaveBeenCalledTimes(1);
+                expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledTimes(1);
+                expect(archiveApp.errorHandler.fatalError).toHaveBeenCalledWith(new Error(`Archive failed`));
+            });
         });
     });
 });

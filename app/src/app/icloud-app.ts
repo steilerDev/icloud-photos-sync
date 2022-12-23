@@ -49,7 +49,6 @@ export abstract class iCloudApp {
 
         // Creating necessary objects for this scope
         this.icloud = new iCloud(this);
-        this.errorHandler.registerErrorEventHandler(this.icloud);
     }
 
     /**
@@ -105,7 +104,6 @@ export class SyncApp extends iCloudApp {
         super(options);
         this.photosLibrary = new PhotosLibrary(this);
         this.syncEngine = new SyncEngine(this);
-        this.errorHandler.registerErrorEventHandler(this.syncEngine);
     }
 
     /**

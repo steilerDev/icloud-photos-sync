@@ -15,7 +15,6 @@ import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albu
 import {spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
-import {ERROR_EVENT} from '../../src/app/error-handler';
 
 beforeEach(() => {
     mockfs({});
@@ -73,9 +72,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
                 syncEngine.prepareRetry = jest.fn<() => Promise<void>>();
 
-                const errorEvent = spyOnEvent(syncEngine, ERROR_EVENT);
-
-                await syncEngine.sync();
+                await expect(syncEngine.sync()).rejects.toEqual(new Error(`Sync did not complete succesfull within 4 tries`));
 
                 expect(startEvent).toHaveBeenCalled();
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(4);
@@ -90,7 +87,6 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.writeState).toHaveBeenNthCalledWith(3, ...diffStateReturnValue);
                 expect(syncEngine.writeState).toHaveBeenNthCalledWith(4, ...diffStateReturnValue);
                 expect(syncEngine.prepareRetry).toHaveBeenCalledTimes(4);
-                expect(errorEvent).toHaveBeenCalledWith(new Error(`Sync did not complete succesfull within 4 tries`));
             });
 
             test.each([
@@ -177,9 +173,8 @@ describe(`Unit Tests - Sync Engine`, () => {
                     .mockResolvedValue(diffStateReturnValue);
                 syncEngine.writeState = jest.fn<() => Promise<boolean>>()
                     .mockRejectedValue(error);
-                const errorEvent = spyOnEvent(syncEngine, ERROR_EVENT);
 
-                await syncEngine.sync();
+                await expect(syncEngine.sync()).rejects.toEqual(error)
 
                 expect(startEvent).toHaveBeenCalled();
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
@@ -187,8 +182,6 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
                 expect(syncEngine.writeState).toHaveBeenCalledTimes(1);
                 expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, ...diffStateReturnValue);
-                expect(errorEvent).toHaveBeenCalledTimes(1);
-                expect(errorEvent).toHaveBeenCalledWith(error);
             });
 
             test.each([
@@ -486,8 +479,8 @@ describe(`Unit Tests - Sync Engine`, () => {
 
             test(`Only modified changed`, () => {
                 const remoteAssets = [
-                    new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 43, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 43, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                    new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 142, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                    new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 142, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
                     new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
                     new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
                 ];
@@ -610,8 +603,8 @@ describe(`Unit Tests - Sync Engine`, () => {
 
             test(`Only content changed`, () => {
                 const remoteAssets = [
-                    new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 43, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 43, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                    new Asset(`somechecksum`, 43, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                    new Asset(`somechecksum1`, 43, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
                     new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
                     new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
                 ];

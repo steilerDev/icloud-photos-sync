@@ -33,7 +33,7 @@ export class ArchiveEngine {
      * @param assetList - The current remote asset list
      * @returns A Promise, that resolves once the path has been archived
      */
-    async archivePath(archivePath: string, assetList: Asset[]) {
+    async archivePath(archivePath: string, assetList: Asset[]): Promise<any> {
         this.logger.debug(`Archiving path ${archivePath}`);
 
         const albumName = path.basename(archivePath);

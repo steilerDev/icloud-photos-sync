@@ -179,6 +179,10 @@ export class CLIInterface {
             this.progressBar.increment();
         });
 
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, () => {
+            this.progressBar.stop();
+        });
+
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED, () => {
             this.progressBar.stop();
             this.print(chalk.greenBright(`Succesfully synced assets!`));

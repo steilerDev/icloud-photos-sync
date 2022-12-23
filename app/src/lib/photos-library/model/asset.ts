@@ -146,7 +146,7 @@ export class Asset implements PEntity<Asset> {
                 && this.fileChecksum === asset.fileChecksum
                 && this.fileType.equal(asset.fileType)
                 && this.size === asset.size
-                && this.modified === asset.modified;
+                && this.withinRange(this.modified, asset.modified, 10);
     }
 
     /**
@@ -208,9 +208,19 @@ export class Asset implements PEntity<Asset> {
      * @returns True if the modified time matches
      */
     private verifyMTime(fileStats: Stats): boolean {
-        const acceptableVariance = 10;
-        return fileStats.mtimeMs > this.modified - acceptableVariance
-            && fileStats.mtimeMs < this.modified + acceptableVariance;
+        return this.withinRange(fileStats.mtimeMs, this.modified, 10)
+    }
+
+    /**
+     * Checks if one number is within the range of another number
+     * @param x - One number
+     * @param y - Other number
+     * @param range - Range to check
+     * @returns true if within range, false otherwise
+     */
+    private withinRange(x: number, y: number, range: number): boolean {
+        return x > y - range 
+            && x < y + range;
     }
 
     /**

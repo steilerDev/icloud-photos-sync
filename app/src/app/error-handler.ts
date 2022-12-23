@@ -58,16 +58,6 @@ export class ErrorHandler extends EventEmitter {
     }
 
     /**
-     * Starts listenening for an error event on the provided object
-     * @param object - The object to listen on
-     */
-    registerErrorEventHandler(object: EventEmitter) {
-        object.on(ERROR_EVENT, async err => {
-            await this.fatalError(err);
-        });
-    }
-
-    /**
      * Reports the provided error to the error reporting backend
      * @param err - The occured error
      * @returns - An error code

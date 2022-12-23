@@ -14,7 +14,6 @@ import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers
 import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 import {SyncApp} from '../../app/icloud-app.js';
-import {ERROR_EVENT} from '../../app/error-handler.js';
 
 /**
  * This class handles the photos sync
@@ -68,41 +67,35 @@ export class SyncEngine extends EventEmitter {
      * @returns A list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync)
      */
     async sync(): Promise<[Asset[], Album[]]> {
-        try {
-            this.logger.info(`Starting sync`);
-            this.emit(SYNC_ENGINE.EVENTS.START);
-            let retryCount = 0;
-            while (this.maxRetry === -1 || this.maxRetry > retryCount) {
-                retryCount++;
-                this.logger.info(`Performing sync, try #${retryCount}`);
+        this.logger.info(`Starting sync`);
+        this.emit(SYNC_ENGINE.EVENTS.START);
+        let retryCount = 0;
+        while (this.maxRetry === -1 || this.maxRetry > retryCount) {
+            retryCount++;
+            this.logger.info(`Performing sync, try #${retryCount}`);
 
-                const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await this.fetchAndLoadState();
-                const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums, localAssets, localAlbums);
+            const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await this.fetchAndLoadState();
+            const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums, localAssets, localAlbums);
 
-                try {
-                    await this.writeState(assetQueue, albumQueue);
-                    this.logger.info(`Completed sync!`);
-                    this.emit(SYNC_ENGINE.EVENTS.DONE);
-                    return [remoteAssets, remoteAlbums];
-                } catch (err) {
-                    this.logger.warn(`Error while writing state: ${err.message}`);
-                    // Checking if we should retry
-                    if (this.checkFatalError(err)) {
-                        throw err;
-                    }
-
-                    this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
-                    await this.prepareRetry();
+            try {
+                await this.writeState(assetQueue, albumQueue);
+                this.logger.info(`Completed sync!`);
+                this.emit(SYNC_ENGINE.EVENTS.DONE);
+                return [remoteAssets, remoteAlbums];
+            } catch (err) {
+                this.logger.warn(`Error while writing state: ${err.message}`);
+                // Checking if we should retry
+                if (this.checkFatalError(err)) {
+                    throw err;
                 }
-            }
 
-            // We'll only reach this, if we exceeded retryCount
-            throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
-        } catch (err) {
-            this.logger.warn(`Unrecoverable sync error: ${err.message}`);
-            this.emit(ERROR_EVENT, err);
-            return undefined;
+                this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
+                await this.prepareRetry();
+            }
         }
+
+        // We'll only reach this, if we exceeded retryCount
+        throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
     }
 
     /**
@@ -226,6 +219,10 @@ export class SyncEngine extends EventEmitter {
         this.logger.info(`Writing state`);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);
         return this.writeAssets(assetQueue)
+            .catch(err => {
+                this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, err.message);
+                throw err;
+            })
             .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED))
             .then(() => {
                 this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, albumQueue[0].length, albumQueue[1].length, albumQueue[2].length);
