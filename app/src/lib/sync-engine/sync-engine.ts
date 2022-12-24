@@ -111,24 +111,17 @@ export class SyncEngine extends EventEmitter {
 
         this.logger.debug(`Detected Axios error`);
 
-        if (err.code !== `ERR_BAD_REQUEST` && err.code !== `ERR_BAD_RESPONSE`) {
-            this.logger.warn(`Unknown Axios error (${JSON.stringify(err)}), aborting!`);
-            return true;
-        }
-
         if (err.code === `ERR_BAD_RESPONSE`) {
             this.logger.debug(`Bad server response (${err.response?.status}), retrying...`);
             return false;
         }
 
-        this.logger.debug(`Error was due to a bad request`);
-        if (err.response?.status === 410 || err.response?.status === 421) {
-            this.logger.debug(`Remote ressources have changed location, updating URLs by retrying...`);
-            // This seems to happen ever 60mins
+        if (err.code === `ERR_BAD_REQUEST`) {
+            this.logger.debug(`Bad request ${err.response?.status ?? err.status}, refreshing session...`);
             return false;
         }
 
-        this.logger.warn(`Unknown bad request (${JSON.stringify(err)}), aborting!`);
+        this.logger.warn(`Unknown error code (${JSON.stringify(err)}), aborting!`);
         return true;
     }
 
@@ -219,9 +212,9 @@ export class SyncEngine extends EventEmitter {
         this.logger.info(`Writing state`);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);
         return this.writeAssets(assetQueue)
-            .catch(err => {
-                this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, err.message);
-                throw err;
+            .catch((err) => {
+                this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, err.message)
+                throw err
             })
             .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED))
             .then(() => {

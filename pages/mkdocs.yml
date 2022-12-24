@@ -10,6 +10,7 @@ nav:
   - 'Get Started': get-started.md
   - 'User Guides':
     - 'CLI Reference': user-guides/cli.md
+    - 'Common Warnings': user-guides/common-warnings.md
     - 'Error & Crash Reporting': user-guides/error-reporting.md
   - 'Development Ressources':
     - 'Milestone Plan': https://github.com/steilerDev/icloud-photos-sync/milestones

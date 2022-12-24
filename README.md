@@ -5,9 +5,6 @@
 </p>
 
 <h1 align="center"><strong>iCloud Photos Sync</strong></h1>
-<p align="center" style="font-size:130%;">
-  ⚠️ <strong>Work in progress</strong>, <a href="https://github.com/steilerDev/icloud-photos-sync/milestone/1">see milestone plan</a> ⚠️
-</p>
 
 <p align="center">
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml">
@@ -35,7 +32,7 @@
 <hr>
 <p align="center">
   <a href="https://icloud-photos-sync.steilerdev.de/get-started/">
-    <img alt="Get Started" src="https://img.shields.io/static/v1?label=&message=Get%20Started&color=green&style=for-the-badge" style="width: 50%;">
+    <img alt="Get Started" src="https://img.shields.io/static/v1?label=&message=Get%20Started&color=important&style=for-the-badge" style="width: 50%;">
   </a>
 </p>
 <p align="center">
@@ -46,9 +43,9 @@
 <hr>
 
 ## Overview
-This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to natively backup the full iCloud Photos Library to the native filesystem.
+This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to backup the full iCloud Photos Library to the native filesystem.
 
-Currently, this can only be achived, by having a Mac continously run the *Photos.app* (with `Keep originals` enabled). With this method, the files cannot be easily viewed without the Photos.app.
+Currently, this can only be achived, by having a Mac continously run the *Photos.app* (with `Keep originals` enabled). With this method, the files cannot be easily viewed without the *Photos.app*.
 
 This CLI Application offers the following high level functionality:
 
@@ -117,8 +114,6 @@ This application will never log any credentials (except when log level is set to
 In order to improve this application's development, this tool can report crash and error data to the developer. This capability requires opt-in and is the only non-Apple service this application will communicate with. Scrubbing of credentials and sensitive data is performed before any errors are persisted. More information about this topic can be found [here](https://icloud-photos-sync.steilerdev.de/user-guides/error-reporting/).
 
 ## Contributing & Feedback
-This tool is not yet *production ready*, since it (most likely) still contains some issues and edge cases, that need to be addressed.
-
-I hope for the support of the community, to fully understand the reverse-engineered API and discover edge cases and bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy.
+This tool (most likely) still contains issues and edge cases, that need to be addressed. Therefore, I hope for the support of the community, to fully understand the reverse-engineered API and discover edge cases and bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy.
 
 Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing. Additionally please [enable crash and error reporting](https://icloud-photos-sync.steilerdev.de/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.
