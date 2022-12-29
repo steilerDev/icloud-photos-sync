@@ -1,4 +1,4 @@
-import { LibraryError } from "../../../app/error/types.js";
+import {LibraryError} from "../../../app/error/types.js";
 
 /**
  * Mapping of backend provided filetype description (key) and actual file extension (value)
@@ -39,7 +39,7 @@ export class FileType {
      */
     static fromAssetType(descriptor: string): FileType {
         if (!EXT[descriptor]) {
-            throw new LibraryError(`Unknown filetype descriptor ${descriptor}`, "FATAL")
+            throw new LibraryError(`Unknown filetype descriptor ${descriptor}`, `FATAL`);
         }
 
         return new FileType(descriptor);
@@ -58,7 +58,7 @@ export class FileType {
 
         const descriptor = Object.keys(EXT).find(key => EXT[key] === ext);
         if (!descriptor) {
-            throw new LibraryError(`Unknown filetype extension: ${ext}`, "FATAL");
+            throw new LibraryError(`Unknown filetype extension: ${ext}`, `FATAL`);
         }
 
         return new FileType(descriptor);

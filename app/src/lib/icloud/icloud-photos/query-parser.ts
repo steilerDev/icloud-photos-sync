@@ -3,7 +3,7 @@
  * These parsers will not try to validate data, only make it easily accessible
  */
 
-import { iCloudError, iCPSError } from '../../../app/error/types.js';
+import {iCloudError} from '../../../app/error/types.js';
 import {AlbumAssets} from '../../photos-library/model/album.js';
 import * as QueryBuilder from './query-builder.js';
 
@@ -37,8 +37,8 @@ export class AssetID {
 
     static parseFromQuery(assetId: any): AssetID {
         if (assetId.type !== `ASSETID`) {
-            throw new iCloudError(`Unknown type '${assetId.type}, expected 'ASSETID'`, "FATAL")
-                .addContext('query', assetId)
+            throw new iCloudError(`Unknown type '${assetId.type}, expected 'ASSETID'`, `FATAL`)
+                .addContext(`query`, assetId);
         }
 
         const asset = new AssetID();
@@ -90,13 +90,13 @@ export class CPLAsset {
      */
     static parseFromQuery(cplRecord: any): CPLAsset {
         if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
-            throw new iCloudError(`Unknown record type ${cplRecord.recordType}, expected ${QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD}`, "FATAL")
-                .addContext('cplRecord', cplRecord)
+            throw new iCloudError(`Unknown record type ${cplRecord.recordType}, expected ${QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD}`, `FATAL`)
+                .addContext(`cplRecord`, cplRecord);
         }
 
         if (!cplRecord.recordName) {
-            throw new iCloudError(`recordName not found`, "FATAL")
-                .addContext('cplRecord', cplRecord)
+            throw new iCloudError(`recordName not found`, `FATAL`)
+                .addContext(`cplRecord`, cplRecord);
         }
 
         const asset = new CPLAsset();
@@ -116,8 +116,8 @@ export class CPLAsset {
                 asset.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE]);
                 asset.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE_FILE_TYPE].value;
             } else if (asset.adjustmentType !== `com.apple.video.slomo`) {
-                throw new iCloudError(`Neither JPEG nor Video resource found in CPL Asset even though adjustmentType is given`, "WARN")
-                    .addContext('cplRecord', cplRecord)
+                throw new iCloudError(`Neither JPEG nor Video resource found in CPL Asset even though adjustmentType is given`, `WARN`)
+                    .addContext(`cplRecord`, cplRecord);
             }
         }
 
@@ -167,13 +167,13 @@ export class CPLMaster {
      */
     static parseFromQuery(cplRecord: any): CPLMaster {
         if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
-            throw new iCloudError(`Unknown record type ${cplRecord.recordType}, expected ${QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD}`, "FATAL")
-                .addContext('cplRecord', cplRecord)
+            throw new iCloudError(`Unknown record type ${cplRecord.recordType}, expected ${QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD}`, `FATAL`)
+                .addContext(`cplRecord`, cplRecord);
         }
 
         if (!cplRecord.recordName) {
-            throw new iCloudError(`recordName not found`, "FATAL")
-                .addContext('cplRecord', cplRecord)
+            throw new iCloudError(`recordName not found`, `FATAL`)
+                .addContext(`cplRecord`, cplRecord);
         }
 
         const master = new CPLMaster();
@@ -217,13 +217,13 @@ export class CPLAlbum {
 
     static parseFromQuery(cplRecord: any, assets?: Promise<AlbumAssets>): CPLAlbum {
         if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD) {
-            throw new iCloudError(`Unknown record type ${cplRecord.recordType}, expected ${QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD}`, "FATAL")
-                .addContext('cplRecord', cplRecord)
+            throw new iCloudError(`Unknown record type ${cplRecord.recordType}, expected ${QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD}`, `FATAL`)
+                .addContext(`cplRecord`, cplRecord);
         }
 
         if (!cplRecord.recordName) {
-            throw new iCloudError(`recordName not found`, "FATAL")
-                .addContext('cplRecord', cplRecord)
+            throw new iCloudError(`recordName not found`, `FATAL`)
+                .addContext(`cplRecord`, cplRecord);
         }
 
         const album = new CPLAlbum();

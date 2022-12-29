@@ -7,7 +7,7 @@ import {OptionValues} from "commander";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {ErrorHandler} from "./error/handler.js";
-import { ArchiveError, iCloudError, SyncError, TokenError } from "./error/types.js";
+import {ArchiveError, iCloudError, SyncError, TokenError} from "./error/types.js";
 
 /**
  * This is the base application class which will setup and manage the iCloud connection and local Photos Library
@@ -50,7 +50,7 @@ export abstract class iCloudApp {
 
         // Creating necessary objects for this scope
         this.icloud = new iCloud(this);
-        this.errorHandler.registerHandlerForObject(this.icloud)
+        this.errorHandler.registerHandlerForObject(this.icloud);
     }
 
     /**
@@ -62,7 +62,7 @@ export abstract class iCloudApp {
         this.cliInterface = new CLIInterface(this);
 
         return this.icloud.authenticate()
-            .catch(err => this.errorHandler.handle(new iCloudError("Init failed", "FATAL").addCause(err)));
+            .catch(err => this.errorHandler.handle(new iCloudError(`Init failed`, `FATAL`).addCause(err)));
     }
 }
 
@@ -80,7 +80,7 @@ export class TokenApp extends iCloudApp {
             this.cliInterface.print(`Validated trust token:`);
             this.cliInterface.print(this.icloud.auth.iCloudAccountTokens.trustToken);
         } catch (err) {
-            await this.errorHandler.handle(new TokenError("Unable to validate account token", "FATAL").addCause(err));
+            await this.errorHandler.handle(new TokenError(`Unable to validate account token`, `FATAL`).addCause(err));
         }
     }
 }
@@ -106,7 +106,7 @@ export class SyncApp extends iCloudApp {
     constructor(options: OptionValues) {
         super(options);
         this.photosLibrary = new PhotosLibrary(this);
-        this.errorHandler.registerHandlerForObject(this.photosLibrary)
+        this.errorHandler.registerHandlerForObject(this.photosLibrary);
         this.syncEngine = new SyncEngine(this);
     }
 
@@ -117,7 +117,7 @@ export class SyncApp extends iCloudApp {
     async run(): Promise<any> {
         return super.run()
             .then(() => this.syncEngine.sync())
-            .catch(err => this.errorHandler.handle(new SyncError("Sync failed", "FATAL").addCause(err)));
+            .catch(err => this.errorHandler.handle(new SyncError(`Sync failed`, `FATAL`).addCause(err)));
     }
 }
 
@@ -153,6 +153,6 @@ export class ArchiveApp extends SyncApp {
     async run() {
         return super.run()
             .then(([remoteAssets]) => this.archiveEngine.archivePath(this.archivePath, remoteAssets))
-            .catch(err => this.errorHandler.handle(new ArchiveError(`Archive failed`, "FATAL").addCause(err).addContext('archivePath', this.archivePath)));
+            .catch(err => this.errorHandler.handle(new ArchiveError(`Archive failed`, `FATAL`).addCause(err).addContext(`archivePath`, this.archivePath)));
     }
 }

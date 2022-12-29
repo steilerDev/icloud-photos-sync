@@ -14,8 +14,8 @@ import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers
 import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 import {SyncApp} from '../../app/icloud-app.js';
-import { HANDLER_EVENT } from '../../app/error/handler.js';
-import { SyncError } from '../../app/error/types.js';
+import {HANDLER_EVENT} from '../../app/error/handler.js';
+import {SyncError} from '../../app/error/types.js';
 
 /**
  * This class handles the photos sync
@@ -85,9 +85,9 @@ export class SyncEngine extends EventEmitter {
                 this.emit(SYNC_ENGINE.EVENTS.DONE);
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
-                this.emit(HANDLER_EVENT, new SyncError(`Error while writing state`, "WARN").addCause(err))
+                this.emit(HANDLER_EVENT, new SyncError(`Error while writing state`, `WARN`).addCause(err));
                 // Checking if we should retry
-               this.checkFatalError(err)
+                this.checkFatalError(err);
 
                 this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
                 await this.prepareRetry();
@@ -95,7 +95,7 @@ export class SyncEngine extends EventEmitter {
         }
 
         // We'll only reach this, if we exceeded retryCount
-        throw new SyncError(`Sync did not complete succesfull within ${retryCount} tries`, "FATAL");
+        throw new SyncError(`Sync did not complete succesfull within ${retryCount} tries`, `FATAL`);
     }
 
     /**
@@ -105,7 +105,7 @@ export class SyncEngine extends EventEmitter {
      */
     checkFatalError(err: any): boolean {
         if (err.name !== `AxiosError`) {
-            throw new SyncError(`Unknown error, aborting!`, "FATAL")
+            throw new SyncError(`Unknown error, aborting!`, `FATAL`)
                 .addCause(err);
         }
 
@@ -121,7 +121,7 @@ export class SyncEngine extends EventEmitter {
             return false;
         }
 
-        throw new SyncError(`Unknown error code, aborting!`, "FATAL")
+        throw new SyncError(`Unknown error code, aborting!`, `FATAL`)
             .addCause(err);
     }
 
@@ -212,9 +212,9 @@ export class SyncEngine extends EventEmitter {
         this.logger.info(`Writing state`);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);
         return this.writeAssets(assetQueue)
-            .catch((err) => {
-                this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, err.message)
-                throw err
+            .catch(err => {
+                this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, err.message);
+                throw err;
             })
             .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED))
             .then(() => {

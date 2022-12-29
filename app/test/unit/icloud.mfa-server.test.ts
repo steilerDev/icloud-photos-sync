@@ -6,7 +6,7 @@ import * as PACKAGE from '../../src/lib/package';
 import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {spyOnEvent} from '../_helpers/_general';
 
-test.todo(`test error_handle event`)
+test.todo(`test error_handle event`);
 
 describe(`Unit Tests - MFA Server`, () => {
     describe(`MFA Code`, () => {

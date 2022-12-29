@@ -208,7 +208,7 @@ export class Asset implements PEntity<Asset> {
      * @returns True if the modified time matches
      */
     private verifyMTime(fileStats: Stats): boolean {
-        return this.withinRange(fileStats.mtimeMs, this.modified, 10)
+        return this.withinRange(fileStats.mtimeMs, this.modified, 10);
     }
 
     /**
@@ -219,7 +219,7 @@ export class Asset implements PEntity<Asset> {
      * @returns true if within range, false otherwise
      */
     private withinRange(x: number, y: number, range: number): boolean {
-        return x > y - range 
+        return x > y - range
             && x < y + range;
     }
 

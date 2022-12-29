@@ -6,8 +6,7 @@ import {ArchiveApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {Album} from '../../src/lib/photos-library/model/album';
-import { iCloudAuthError, SyncError, TokenError } from '../../src/app/error/types';
-import { iCloudAuth } from '../../src/lib/icloud/auth';
+import {iCloudAuthError, SyncError, TokenError} from '../../src/app/error/types';
 
 describe(`Unit Tests - iCloud App`, () => {
     beforeEach(() => {
@@ -70,7 +69,7 @@ describe(`Unit Tests - iCloud App`, () => {
             tokenApp.errorHandler.handle = jest.fn(_err => Promise.resolve());
             tokenApp.icloud.authenticate = jest.fn(() => Promise.reject());
             await tokenApp.run();
-            expect(tokenApp.errorHandler.handle).toHaveBeenCalledWith(new SyncError(`Init failed`, "FATAL"));
+            expect(tokenApp.errorHandler.handle).toHaveBeenCalledWith(new SyncError(`Init failed`, `FATAL`));
         });
 
         describe(`Token App`, () => {
@@ -90,11 +89,11 @@ describe(`Unit Tests - iCloud App`, () => {
                 tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
                 tokenApp.errorHandler.handle = jest.fn(_err => Promise.resolve());
                 tokenApp.icloud.auth.validateAccountTokens = jest.fn(() => {
-                    throw new iCloudAuthError('', "FATAL")
+                    throw new iCloudAuthError(``, `FATAL`);
                 });
 
                 await tokenApp.run();
-                expect(tokenApp.errorHandler.handle).toHaveBeenCalledWith(new TokenError(`Unable to validate account token`, "FATAL"))
+                expect(tokenApp.errorHandler.handle).toHaveBeenCalledWith(new TokenError(`Unable to validate account token`, `FATAL`));
 
                 expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(1);
                 expect(tokenApp.icloud.auth.validateAccountTokens).toHaveBeenCalledTimes(1);
@@ -123,7 +122,7 @@ describe(`Unit Tests - iCloud App`, () => {
 
                 expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
                 expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
-                expect(syncApp.errorHandler.handle).toHaveBeenCalledWith(new SyncError(`Sync failed`, "FATAL"));
+                expect(syncApp.errorHandler.handle).toHaveBeenCalledWith(new SyncError(`Sync failed`, `FATAL`));
             });
         });
 

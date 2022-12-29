@@ -1,5 +1,5 @@
 import {AxiosError, AxiosResponse} from 'axios';
-import { iCloudError } from '../../../app/error/types.js';
+import {iCloudError} from '../../../app/error/types.js';
 import * as ICLOUD from '../constants.js';
 
 /**
@@ -152,16 +152,16 @@ export class MFAMethod {
      */
     processResendError(err: AxiosError): iCloudError {
         if (!err.response) {
-            return new iCloudError(`No response received`, "FATAL").addCause(err);
+            return new iCloudError(`No response received`, `FATAL`).addCause(err);
         }
 
         if (err.response.status === 403) {
-            return new iCloudError(`Timeout`, "FATAL").addCause(err);
+            return new iCloudError(`Timeout`, `FATAL`).addCause(err);
         }
 
         if (err.response.status === 412) {
             if (!err.response.data) {
-                return new iCloudError(`Bad request, no response data`, "FATAL").addCause(err);
+                return new iCloudError(`Bad request, no response data`, `FATAL`).addCause(err);
             }
 
             if (this.type === MFAMethodType.SMS || this.type === MFAMethodType.VOICE) {
@@ -169,19 +169,20 @@ export class MFAMethod {
                 if (!trustedPhones
                     || !Array.isArray(trustedPhones)
                     || trustedPhones.length === 0) {
-                    return new iCloudError(`No trusted phone numbers registered!`, "WARN")
-                        .addContext('response.data', err.response.data)
-                        .addCause(err)
+                    return new iCloudError(`No trusted phone numbers registered!`, `WARN`)
+                        .addContext(`response.data`, err.response.data)
+                        .addCause(err);
                 }
 
                 if (!trustedPhones.some(number => number.id === this.numberId)) {
-                    return new iCloudError(`Selected Phone Number ID does not exist.\nAvailable numbers: ${trustedPhones.map(number => `${number.id}: ${number.numberWithDialCode}`).join(`\n`)}`, "WARN")
-                        .addContext('response.data', err.response.data)
+                    return new iCloudError(`Selected Phone Number ID does not exist.\nAvailable numbers: ${trustedPhones.map(number => `${number.id}: ${number.numberWithDialCode}`).join(`\n`)}`, `WARN`)
+                        .addContext(`response.data`, err.response.data)
                         .addCause(err);
                 }
             }
         }
-        return new iCloudError(`Bad request, unknown cause with method ${this}`, "FATAL")
+
+        return new iCloudError(`Bad request, unknown cause with method ${this}`, `FATAL`)
             .addCause(err);
     }
 

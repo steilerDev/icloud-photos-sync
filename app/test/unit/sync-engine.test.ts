@@ -15,7 +15,7 @@ import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albu
 import {spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
-import { SyncError } from '../../src/app/error/types';
+import {SyncError} from '../../src/app/error/types';
 
 beforeEach(() => {
     mockfs({});
@@ -150,7 +150,7 @@ describe(`Unit Tests - Sync Engine`, () => {
             });
 
             test(`Fatal failure`, async () => {
-                const error = new SyncError(`Unknown error, aborting!`, "FATAL")
+                const error = new SyncError(`Unknown error, aborting!`, `FATAL`);
                 const syncEngine = syncEngineFactory();
                 const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
 
@@ -161,7 +161,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 syncEngine.writeState = jest.fn<() => Promise<boolean>>()
                     .mockRejectedValue(error);
 
-                await expect(syncEngine.sync()).rejects.toEqual(error)
+                await expect(syncEngine.sync()).rejects.toEqual(error);
 
                 expect(startEvent).toHaveBeenCalled();
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);

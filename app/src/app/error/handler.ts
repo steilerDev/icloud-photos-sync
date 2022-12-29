@@ -3,20 +3,18 @@ import * as bt from 'backtrace-node';
 import {EventEmitter} from 'events';
 import * as PACKAGE_INFO from '../../lib/package.js';
 import {getLogger, logFile} from "../../lib/logger.js";
-import { iCPSError, InterruptError } from "./types.js";
-import * as fs from 'fs'
+import {iCPSError, InterruptError} from "./types.js";
 
-export const HANDLER_EVENT = `error-handler`
+export const HANDLER_EVENT = `error-handler`;
 export const ERROR_EVENT = `error`;
 export const WARN_EVENT = `warn`;
 
 export class ErrorHandler extends EventEmitter {
-
     /**
      * Default logger for the class
      */
-     protected logger = getLogger(this);
-    
+    protected logger = getLogger(this);
+
     /**
      * The error reporting client - if activated
      */
@@ -33,10 +31,10 @@ export class ErrorHandler extends EventEmitter {
                     'application.version': PACKAGE_INFO.VERSION,
                 },
             });
-            this.btClient.on('after-send', () => {
-                debugger
-            })
-            //this.btClient.setSymbolication();
+            this.btClient.on(`after-send`, () => {
+                debugger;
+            });
+            // This.btClient.setSymbolication();
         }
 
         // Register handlers
@@ -49,28 +47,29 @@ export class ErrorHandler extends EventEmitter {
         });
     }
 
-    /** 
+    /**
      * Handles a given error. Fatal errors will exit the application
      * @param err - The occured error
      */
     async handle(err: iCPSError) {
-        const errorId = await this.reportError(err)
-        const errorReport = `${err.getDescription()} (Error Code: ${errorId})`
-        if(err.sev === "WARN") {
-            this.emit(WARN_EVENT, errorReport)
-            this.logger.warn(errorReport)
+        const errorId = await this.reportError(err);
+        const errorReport = `${err.getDescription()} (Error Code: ${errorId})`;
+        if (err.sev === `WARN`) {
+            this.emit(WARN_EVENT, errorReport);
+            this.logger.warn(errorReport);
         }
-        if(err.sev === "FATAL") {
-            this.emit(ERROR_EVENT, errorReport)
-            this.logger.error(errorReport)
-            process.exit(1)
+
+        if (err.sev === `FATAL`) {
+            this.emit(ERROR_EVENT, errorReport);
+            this.logger.error(errorReport);
+            process.exit(1);
         }
     }
 
     registerHandlerForObject(object: EventEmitter) {
-        object.on(HANDLER_EVENT, async (err) => {
-            await this.handle(err)
-        })
+        object.on(HANDLER_EVENT, async err => {
+            await this.handle(err);
+        });
     }
 
     /**
@@ -79,8 +78,8 @@ export class ErrorHandler extends EventEmitter {
      * @returns - An error code
      */
     async reportError(err: iCPSError): Promise<string> {
-        if(!this.btClient) {
-            return 'No error code! Pelase enable crash reporting!'
+        if (!this.btClient) {
+            return `No error code! Pelase enable crash reporting!`;
         }
 
         const report = this.btClient.createReport(err, {
@@ -89,8 +88,8 @@ export class ErrorHandler extends EventEmitter {
             'icps.addtlContext': JSON.stringify(err.getContext()),
         }, [logFile]);
 
-        if(err.cause) {
-            report.addAttribute('icps.cause', err.cause)
+        if (err.cause) {
+            report.addAttribute(`icps.cause`, err.cause);
         }
 
         const privateRxIdAttribute = `_rxId`;

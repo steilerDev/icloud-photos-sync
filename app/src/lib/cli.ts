@@ -8,8 +8,8 @@ import {SingleBar} from 'cli-progress';
 import {getLogger} from './logger.js';
 import {ArchiveEngine} from './archive-engine/archive-engine.js';
 import {iCloudApp, SyncApp, ArchiveApp} from '../app/icloud-app.js';
-import {ErrorHandler, ERROR_EVENT} from '../app/error-handler.js';
-import { WARN_EVENT } from '../app/error/handler.js';
+import {ErrorHandler, ERROR_EVENT} from '../app/error/handler.js';
+import {WARN_EVENT} from '../app/error/handler.js';
 
 /**
  * This class handles the input/output to the command line
@@ -31,7 +31,7 @@ export class CLIInterface {
     /**
      * Indicates, if non-critical warnings should be shown in the UI
      */
-     surpressWarnings: boolean
+    surpressWarnings: boolean;
 
     /**
      * Creates a new CLI interface based on the provided components
@@ -47,7 +47,7 @@ export class CLIInterface {
 
         // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on logToCli)
         this.enableCLIOutput = !app.options.logToCli && !app.options.silent;
-        this.surpressWarnings = app.options.surpressWarnings
+        this.surpressWarnings = app.options.surpressWarnings;
 
         this.setupCLIiCloudInterface(app.icloud);
         this.setupCLIErrorHandlerInterface(app.errorHandler);
@@ -231,11 +231,11 @@ export class CLIInterface {
         errorHandler.on(ERROR_EVENT, err => {
             this.printFatalError(err);
         });
-        
-        if(!this.surpressWarnings) {
+
+        if (!this.surpressWarnings) {
             errorHandler.on(WARN_EVENT, err => {
-                this.print(chalk.yellow(err))
-            })
+                this.print(chalk.yellow(err));
+            });
         }
     }
 }

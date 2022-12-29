@@ -9,7 +9,7 @@ export function setupLogger(_cliOpts: OptionValues): void {
     log.setLevel(`INFO`);
 }
 
-export const logFile = `test`
+export const logFile = `test`;
 
 /**
  * Returns a mocked logger, only logging relevant information

@@ -4,8 +4,8 @@ import * as MFA_SERVER from './constants.js';
 import {getLogger} from '../../logger.js';
 import {MFAMethod} from './mfa-method.js';
 import * as PACKAGE from '../../package.js';
-import { HANDLER_EVENT } from '../../../app/error/handler.js';
-import { MFAError } from '../../../app/error/types.js';
+import {HANDLER_EVENT} from '../../../app/error/handler.js';
+import {MFAError} from '../../../app/error/types.js';
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
@@ -73,7 +73,7 @@ export class MFAServer extends EventEmitter {
         }
 
         if (req.method !== `POST`) {
-            this.emit(HANDLER_EVENT, new MFAError(`Received unknown method to endpoint ${req.url}: ${req.method}`, "WARN").addContext('request', req))
+            this.emit(HANDLER_EVENT, new MFAError(`Received unknown method to endpoint ${req.url}: ${req.method}`, `WARN`).addContext(`request`, req));
             this.sendResponse(res, 400, `Method not supported: ${req.method}`);
             return;
         }
@@ -83,7 +83,7 @@ export class MFAServer extends EventEmitter {
         } else if (req.url.startsWith(MFA_SERVER.ENDPOINT.RESEND_CODE)) {
             this.handleMFAResend(req, res);
         } else {
-            this.emit(HANDLER_EVENT, new MFAError(`Received request to unknown endpoint ${req.url}`, "WARN").addContext('request', req));
+            this.emit(HANDLER_EVENT, new MFAError(`Received request to unknown endpoint ${req.url}`, `WARN`).addContext(`request`, req));
             this.sendResponse(res, 404, `Route not found, available endpoints: ${JSON.stringify(Object.values(MFA_SERVER.ENDPOINT))}`);
         }
     }

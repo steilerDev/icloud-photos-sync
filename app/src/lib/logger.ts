@@ -21,7 +21,7 @@ const LOGGER = {
     "ErrorHandler": `Error-Handler`,
 };
 
-export let logFile: string = undefined
+export let logFile: string;
 
 /**
  * Logger setup including the configuration of logger prefix

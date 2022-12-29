@@ -1,5 +1,5 @@
 import path from "path";
-import { LibraryError } from "../../../app/error/types.js";
+import {LibraryError} from "../../../app/error/types.js";
 import {CPLAlbum, CPLAsset, CPLMaster} from "../../icloud/icloud-photos/query-parser.js";
 import {Album} from "../../photos-library/model/album.js";
 import {Asset, AssetType} from "../../photos-library/model/asset.js";
@@ -29,12 +29,12 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
             if (asset?.resource && asset?.resourceType) {
                 remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite === 1));
             }
-        } catch(err) {
+        } catch (err) {
             // In case missing filetype descriptor is thrown, adding asset context to error
-            throw new LibraryError(`Error while converting asset`, "FATAL")
+            throw new LibraryError(`Error while converting asset`, `FATAL`)
                 .addCause(err)
-                .addContext('cplAsset', asset)
-                .addContext('cplMaster', master)
+                .addContext(`cplAsset`, asset)
+                .addContext(`cplMaster`, master);
         }
     });
     return remoteAssets;
