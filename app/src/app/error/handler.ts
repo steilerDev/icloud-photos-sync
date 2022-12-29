@@ -4,6 +4,7 @@ import {EventEmitter} from 'events';
 import * as PACKAGE_INFO from '../../lib/package.js';
 import {getLogger, logFile} from "../../lib/logger.js";
 import {iCPSError, InterruptError} from "./types.js";
+import {randomUUID} from "crypto";
 
 export const HANDLER_EVENT = `error-handler`;
 export const ERROR_EVENT = `error`;
@@ -30,9 +31,6 @@ export class ErrorHandler extends EventEmitter {
                     "application": PACKAGE_INFO.NAME,
                     'application.version': PACKAGE_INFO.VERSION,
                 },
-            });
-            this.btClient.on(`after-send`, () => {
-                debugger;
             });
             // This.btClient.setSymbolication();
         }
@@ -82,20 +80,23 @@ export class ErrorHandler extends EventEmitter {
             return `No error code! Pelase enable crash reporting!`;
         }
 
+        const errorUUID = randomUUID();
         const report = this.btClient.createReport(err, {
             'icps.description': err.getDescription(),
             'icps.severity': err.sev,
             'icps.addtlContext': JSON.stringify(err.getContext()),
+            'icps.uuid': errorUUID,
         }, [logFile]);
 
         if (err.cause) {
             report.addAttribute(`icps.cause`, err.cause);
         }
 
-        const privateRxIdAttribute = `_rxId`;
-        const result = await this.btClient.sendAsync(report);
-        const errorCode = result[privateRxIdAttribute] as string;
-        return errorCode;
+        // Result = await this.btClient.sendAsync(report);
+        // const privateRxIdAttribute = `_rxId`;
+        // const errorCode = result[privateRxIdAttribute] as string;
+        await this.btClient.sendAsync(report);
+        return errorUUID;
     }
 
     /**

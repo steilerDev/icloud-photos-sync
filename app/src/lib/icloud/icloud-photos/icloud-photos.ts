@@ -224,8 +224,6 @@ export class iCloudPhotos extends EventEmitter {
                         queue.push(...(await this.fetchAlbumRecords(next.recordName)));
                     }
 
-                    // Throw new iCloudError('Some test error', "FATAL", {"contextfile": "hell"})
-
                     albumRecords.push(next);
                 } catch (err) {
                     throw new iCloudError(`Unable to process ${next.albumNameEnc}`, `FATAL`).addCause(err);

@@ -10,6 +10,7 @@ import {ArchiveEngine} from './archive-engine/archive-engine.js';
 import {iCloudApp, SyncApp, ArchiveApp} from '../app/icloud-app.js';
 import {ErrorHandler, ERROR_EVENT} from '../app/error/handler.js';
 import {WARN_EVENT} from '../app/error/handler.js';
+import {iCPSError} from '../app/error/types.js';
 
 /**
  * This class handles the input/output to the command line
@@ -90,7 +91,7 @@ export class CLIInterface {
      */
     printFatalError(err: Error) {
         this.print(chalk.red(this.getHorizontalLine()));
-        this.print(chalk.red(`Experienced fatal error at ${this.getDateTime()}: ${err.message}`));
+        this.print(chalk.red(`Experienced fatal error at ${this.getDateTime()}: ${err instanceof iCPSError ? err.getDescription() : err.message}`));
         this.print(chalk.red(this.getHorizontalLine()));
     }
 
