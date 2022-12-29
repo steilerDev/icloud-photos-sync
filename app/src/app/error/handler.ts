@@ -1,17 +1,22 @@
-import {iCloudApp} from "./icloud-app.js";
+import {iCloudApp} from "./../icloud-app.js";
 import * as bt from 'backtrace-node';
 import {EventEmitter} from 'events';
-import * as PACKAGE_INFO from '../lib/package.js';
-import {getLogger} from "../lib/logger.js";
+import * as PACKAGE_INFO from '../../lib/package.js';
+import {getLogger, logFile} from "../../lib/logger.js";
+import { iCPSError, InterruptError } from "./types.js";
+import * as fs from 'fs'
 
+export const HANDLER_EVENT = `error-handler`
 export const ERROR_EVENT = `error`;
+export const WARN_EVENT = `warn`;
 
 export class ErrorHandler extends EventEmitter {
+
     /**
      * Default logger for the class
      */
-    protected logger = getLogger(this);
-
+     protected logger = getLogger(this);
+    
     /**
      * The error reporting client - if activated
      */
@@ -28,33 +33,44 @@ export class ErrorHandler extends EventEmitter {
                     'application.version': PACKAGE_INFO.VERSION,
                 },
             });
+            this.btClient.on('after-send', () => {
+                debugger
+            })
             //this.btClient.setSymbolication();
         }
 
         // Register handlers
         process.on(`SIGTERM`, async () => {
-            await this.fatalError(new Error(`Interrupted by user: SIGTERM`));
+            await this.handle(new InterruptError(`SIGTERM`));
         });
 
         process.on(`SIGINT`, async () => {
-            await this.fatalError(new Error(`Interrupted by user: SIGINT`));
+            await this.handle(new InterruptError(`SIGINT`));
         });
     }
 
-    /**
-     * Reports a fatal error and exits the application
+    /** 
+     * Handles a given error. Fatal errors will exit the application
      * @param err - The occured error
      */
-    async fatalError(err: Error) {
-        if (this.btClient) {
-            const errorId = await this.reportError(err);
-            err = new Error(`Fatal Error: ${err.message} (Error Code: ${errorId})`, {"cause": err});
-        } else {
-            err = new Error(`Fatal Error: ${err.message} (No Error Code! Please enable crash reporting!)`, {"cause": err});
+    async handle(err: iCPSError) {
+        const errorId = await this.reportError(err)
+        const errorReport = `${err.getDescription()} (Error Code: ${errorId})`
+        if(err.sev === "WARN") {
+            this.emit(WARN_EVENT, errorReport)
+            this.logger.warn(errorReport)
         }
+        if(err.sev === "FATAL") {
+            this.emit(ERROR_EVENT, errorReport)
+            this.logger.error(errorReport)
+            process.exit(1)
+        }
+    }
 
-        this.emit(ERROR_EVENT, err);
-        process.exit(1);
+    registerHandlerForObject(object: EventEmitter) {
+        object.on(HANDLER_EVENT, async (err) => {
+            await this.handle(err)
+        })
     }
 
     /**
@@ -62,10 +78,19 @@ export class ErrorHandler extends EventEmitter {
      * @param err - The occured error
      * @returns - An error code
      */
-    async reportError(err: Error): Promise<string> {
-        const report = this.btClient.createReport(err);
-        if (err.cause) {
-            report.addAttribute(`cause`, err.cause);
+    async reportError(err: iCPSError): Promise<string> {
+        if(!this.btClient) {
+            return 'No error code! Pelase enable crash reporting!'
+        }
+
+        const report = this.btClient.createReport(err, {
+            'icps.description': err.getDescription(),
+            'icps.severity': err.sev,
+            'icps.addtlContext': JSON.stringify(err.getContext()),
+        }, [logFile]);
+
+        if(err.cause) {
+            report.addAttribute('icps.cause', err.cause)
         }
 
         const privateRxIdAttribute = `_rxId`;

@@ -1,4 +1,5 @@
 import path from "path";
+import { LibraryError } from "../../../app/error/types.js";
 import {CPLAlbum, CPLAsset, CPLMaster} from "../../icloud/icloud-photos/query-parser.js";
 import {Album} from "../../photos-library/model/album.js";
 import {Asset, AssetType} from "../../photos-library/model/asset.js";
@@ -17,15 +18,23 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
     const remoteAssets: Asset[] = [];
     cplAssets.forEach(asset => {
         const master: CPLMaster = cplMasterRecords[asset.masterRef];
-        const origFilenameWithExt = Buffer.from(master.filenameEnc, `base64`).toString();
-        const origFilename = path.parse(origFilenameWithExt).name;
+        try {
+            const origFilenameWithExt = Buffer.from(master.filenameEnc, `base64`).toString();
+            const origFilename = path.parse(origFilenameWithExt).name;
 
-        if (master?.resource && master?.resourceType) {
-            remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, master.modified, origFilename, AssetType.ORIG, asset.recordName, asset.favorite === 1));
-        }
+            if (master?.resource && master?.resourceType) {
+                remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, master.modified, origFilename, AssetType.ORIG, asset.recordName, asset.favorite === 1));
+            }
 
-        if (asset?.resource && asset?.resourceType) {
-            remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite === 1));
+            if (asset?.resource && asset?.resourceType) {
+                remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite === 1));
+            }
+        } catch(err) {
+            // In case missing filetype descriptor is thrown, adding asset context to error
+            throw new LibraryError(`Error while converting asset`, "FATAL")
+                .addCause(err)
+                .addContext('cplAsset', asset)
+                .addContext('cplMaster', master)
         }
     });
     return remoteAssets;

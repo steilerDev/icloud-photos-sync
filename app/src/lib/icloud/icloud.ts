@@ -9,7 +9,8 @@ import {iCloudAuth} from './auth.js';
 import {getLogger} from '../logger.js';
 import {MFAMethod} from './mfa/mfa-method.js';
 import {iCloudApp} from '../../app/icloud-app.js';
-import {ERROR_EVENT} from '../../app/error-handler.js';
+import { HANDLER_EVENT } from '../../app/error/handler.js';
+import { iCloudError, iCPSError } from '../../app/error/types.js';
 
 /**
  * This class holds the iCloud connection
@@ -61,6 +62,7 @@ export class iCloud extends EventEmitter {
         this.mfaServer = new MFAServer(app.options.port);
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.submitMFA.bind(this));
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RESEND, this.resendMFA.bind(this));
+        this.mfaServer.on(HANDLER_EVENT,(err) => this.emit(HANDLER_EVENT, err))
 
         // ICloud Auth object
         this.auth = new iCloudAuth(app.options.username, app.options.password, app.options.trustToken, app.options.dataDir);
@@ -72,14 +74,14 @@ export class iCloud extends EventEmitter {
         // ICloud lifecycle management
         if (app.options.failOnMfa) {
             this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
-                this.emit(ERROR_EVENT, new Error(`MFA code required, failing due to failOnMfa flag`));
+                this.emit(HANDLER_EVENT, new iCloudError(`MFA code required, failing due to failOnMfa flag`, "FATAL"));
             });
         } else {
             this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
                 try {
                     this.mfaServer.startServer();
                 } catch (err) {
-                    this.emit(ERROR_EVENT, new Error(`Unable to start MFA server`, {"cause": err}));
+                    this.emit(HANDLER_EVENT, new iCloudError(`Unable to start MFA server`, "FATAL").addCause(err));
                 }
             });
         }
@@ -98,7 +100,11 @@ export class iCloud extends EventEmitter {
     getReady(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             this.once(ICLOUD.EVENTS.READY, resolve);
-            this.once(ERROR_EVENT, reject);
+            this.on(HANDLER_EVENT, (err) => {
+                if(iCPSError.fatalError(err)) {
+                    reject(err)
+                }
+            });
         });
     }
 
@@ -130,7 +136,8 @@ export class iCloud extends EventEmitter {
         this.axios.post(ICLOUD.URL.SIGNIN, data, config)
             .then(res => {
                 if (res.status !== 200) {
-                    this.emit(ERROR_EVENT, new Error(`Unexpected HTTP code: ${res.status}`, {"cause": res}));
+                    this.emit(HANDLER_EVENT, new iCloudError(`Unexpected HTTP code: ${res.status}`, "FATAL")
+                        .addContext('response', res));
                     return;
                 }
 
@@ -140,7 +147,7 @@ export class iCloud extends EventEmitter {
                     this.logger.debug(`Acquired secrets`);
                     this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
                 } catch (err) {
-                    this.emit(ERROR_EVENT, err);
+                    this.emit(HANDLER_EVENT, err);
                 }
 
                 this.emit(ICLOUD.EVENTS.TRUSTED);
@@ -148,24 +155,23 @@ export class iCloud extends EventEmitter {
             .catch(err => {
                 const res = err.response;
                 if (!res) {
-                    this.emit(ERROR_EVENT, new Error(`No response received during authentication`, {"cause": err}));
+                    this.emit(HANDLER_EVENT, new iCloudError(`No response received during authentication`, "FATAL").addCause(err));
                     return;
                 }
 
                 if (res.status !== 409) {
-                    this.emit(ERROR_EVENT, new Error(`Unexpected HTTP code: ${res.status}`, {"cause": err}));
+                    this.emit(HANDLER_EVENT, new iCloudError(`Unexpected HTTP code: ${res.status}`, "FATAL").addCause(err));
                     return;
                 }
 
                 try {
                     this.auth.processAuthSecrets(res);
+                    this.logger.debug(`Acquired secrets, requiring MFA`);
+                    this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
+                    this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
                 } catch (err) {
-                    this.emit(ERROR_EVENT, err);
+                    this.emit(HANDLER_EVENT, err);
                 }
-
-                this.logger.debug(`Acquired secrets, requiring MFA`);
-                this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
-                this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
             });
 
         return this.ready;
@@ -190,8 +196,8 @@ export class iCloud extends EventEmitter {
         return this.axios.put(url, data, config)
             .then(res => {
                 if (!method.resendSuccesfull(res)) {
-                    this.emit(ERROR_EVENT, new Error(`Unable to request new MFA code: ${JSON.stringify(res)}`, {"cause": res}));
-                    return;
+                    throw new iCloudError(`Unable to request new MFA code`, "WARN")
+                        .addContext('response', res)
                 }
 
                 if (method.isSMS() || method.isVoice()) {
@@ -204,7 +210,7 @@ export class iCloud extends EventEmitter {
                 }
             })
             .catch(err => {
-                this.emit(ERROR_EVENT, new Error(`Received error while trying to resend MFA code: ${method.processResendError(err)}`, {"cause": err}));
+                this.emit(HANDLER_EVENT, method.processResendError(err))
             });
     }
 
@@ -227,14 +233,14 @@ export class iCloud extends EventEmitter {
         return this.axios.post(url, data, config)
             .then(res => {
                 if (!method.enterSuccesfull(res)) {
-                    this.emit(ERROR_EVENT, new Error(`Received unexpected response code during MFA validation: ${res.status} (${res.statusText})`, {"cause": res}));
+                    this.emit(HANDLER_EVENT, new iCloudError(`Received unexpected response code during MFA validation: ${res.status}`, 'FATAL').addContext('response', res));
                     return;
                 }
 
                 this.logger.info(`MFA code correct!`);
                 this.emit(ICLOUD.EVENTS.AUTHENTICATED);
             })
-            .catch(err => this.emit(ERROR_EVENT, new Error(`Received error during MFA validation: ${err.message}`, {"cause": err})));
+            .catch(err => this.emit(HANDLER_EVENT, new iCloudError(`Received error during MFA validation: ${err.message}`, 'FATAL').addCause(err)));
     }
 
     /**
@@ -249,21 +255,15 @@ export class iCloud extends EventEmitter {
         };
 
         return this.axios.get(ICLOUD.URL.TRUST, config)
-            .then(res => {
-                try {
-                    this.auth.processAccountTokens(res);
-                } catch (err) {
-                    this.emit(ERROR_EVENT, err);
-                    return;
-                }
-
+            .then(res => this.auth.processAccountTokens(res))
+            .then(() => {
                 this.logger.debug(`Acquired account tokens`);
                 this.logger.trace(`  - tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`);
                 this.emit(ICLOUD.EVENTS.TRUSTED);
             })
             .catch(err => {
-                this.emit(ERROR_EVENT, new Error(`Received error while acquiring trust tokens: ${err.message}`, {"cause": err}));
-            });
+                this.emit(HANDLER_EVENT, err)
+            })
     }
 
     /**
@@ -283,14 +283,14 @@ export class iCloud extends EventEmitter {
         return this.axios.post(ICLOUD.URL.SETUP, data, config)
             .then(res => {
                 if (res.status !== 200) {
-                    this.emit(ERROR_EVENT, new Error(`Received unexpected response code during iCloud Setup: ${res.status}`, {"cause": res}));
+                    this.emit(HANDLER_EVENT, new iCloudError(`Received unexpected response code during iCloud Setup: ${res.status}`, "FATAL").addContext('response', res));
                     return;
                 }
 
                 try {
                     this.auth.processCloudSetupResponse(res);
                 } catch (err) {
-                    this.emit(ERROR_EVENT, err);
+                    this.emit(HANDLER_EVENT, err);
                     return;
                 }
 
@@ -299,7 +299,7 @@ export class iCloud extends EventEmitter {
                 this.emit(ICLOUD.EVENTS.ACCOUNT_READY);
             })
             .catch(err => {
-                this.emit(ERROR_EVENT, new Error(`Received error during iCloud Setup: ${err.message}`, {"cause": err}));
+                this.emit(HANDLER_EVENT, new iCloudError(`Received error during iCloud Setup`, "FATAL").addCause(err));
             });
     }
 
@@ -310,12 +310,12 @@ export class iCloud extends EventEmitter {
         try {
             this.auth.validateCloudCookies();
         } catch (err) {
-            this.emit(ERROR_EVENT, err);
+            this.emit(HANDLER_EVENT, new iCloudError(`No valid cookies for iCloud Photos setup`, "FATAL").addCause(err));
             return;
         }
 
         if (!this.photos) {
-            this.emit(ERROR_EVENT, new Error(`Unable to setup iCloud Photos, object does not exist!`));
+            this.emit(HANDLER_EVENT, new iCloudError(`Unable to setup iCloud Photos, object does not exist`, "FATAL"));
             return;
         }
 
@@ -324,11 +324,12 @@ export class iCloud extends EventEmitter {
         this.photos.on(ICLOUD_PHOTOS.EVENTS.READY, () => {
             this.emit(ICLOUD.EVENTS.READY);
         });
-        this.photos.on(ERROR_EVENT, err => {
-            this.emit(ERROR_EVENT, new Error(`Error from iCloud Photos: ${err.message}`, {"cause": err}));
+        this.photos.on(HANDLER_EVENT, (err: iCPSError) => {
+            this.emit(HANDLER_EVENT, new iCloudError(`Error from iCloud Photos`, err.sev).addCause(err));
         });
+
         this.photos.on(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, () => {
-            this.emit(ERROR_EVENT, new Error(`iCloud Photos indexing in progress`));
+            this.emit(HANDLER_EVENT, new iCloudError(`iCloud Photos indexing in progress`, "FATAL"));
         });
 
         this.photos.setup();

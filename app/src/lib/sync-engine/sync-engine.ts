@@ -14,6 +14,8 @@ import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers
 import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 import {SyncApp} from '../../app/icloud-app.js';
+import { HANDLER_EVENT } from '../../app/error/handler.js';
+import { SyncError } from '../../app/error/types.js';
 
 /**
  * This class handles the photos sync
@@ -83,11 +85,9 @@ export class SyncEngine extends EventEmitter {
                 this.emit(SYNC_ENGINE.EVENTS.DONE);
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
-                this.logger.warn(`Error while writing state: ${err.message}`);
+                this.emit(HANDLER_EVENT, new SyncError(`Error while writing state`, "WARN").addCause(err))
                 // Checking if we should retry
-                if (this.checkFatalError(err)) {
-                    throw err;
-                }
+               this.checkFatalError(err)
 
                 this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
                 await this.prepareRetry();
@@ -95,18 +95,18 @@ export class SyncEngine extends EventEmitter {
         }
 
         // We'll only reach this, if we exceeded retryCount
-        throw new Error(`Sync did not complete succesfull within ${retryCount} tries`);
+        throw new SyncError(`Sync did not complete succesfull within ${retryCount} tries`, "FATAL");
     }
 
     /**
-     * Checks if a retry should happen
+     * Checks if a given AxiosError can be seen as 'fatal' in the context of a sync
      * @param err - An error that was thrown during 'writeState()'
-     * @returns - True if a fatal error occured that should NOT be retried
+     * @throws If a fatal error occured that should NOT be retried
      */
     checkFatalError(err: any): boolean {
         if (err.name !== `AxiosError`) {
-            this.logger.warn(`Unknown error (${err.message}), aborting!`);
-            return true;
+            throw new SyncError(`Unknown error, aborting!`, "FATAL")
+                .addCause(err);
         }
 
         this.logger.debug(`Detected Axios error`);
@@ -121,8 +121,8 @@ export class SyncEngine extends EventEmitter {
             return false;
         }
 
-        this.logger.warn(`Unknown error code (${JSON.stringify(err)}), aborting!`);
-        return true;
+        throw new SyncError(`Unknown error code, aborting!`, "FATAL")
+            .addCause(err);
     }
 
     /**

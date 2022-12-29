@@ -8,13 +8,16 @@ import {getLogger} from '../logger.js';
 import {AxiosResponse} from 'axios';
 import {pEvent} from 'p-event';
 import {iCloudApp} from '../../app/icloud-app.js';
+import { LibraryError } from '../../app/error/types.js';
+import EventEmitter from 'events';
+import { HANDLER_EVENT } from '../../app/error/handler.js';
 
 export type PathTuple = [namePath: string, uuidPath: string]
 
 /**
  * This class holds the local data structure
  */
-export class PhotosLibrary {
+export class PhotosLibrary extends EventEmitter {
     /**
      * Default logger for the class
      */
@@ -45,6 +48,7 @@ export class PhotosLibrary {
      * @param app - The app object holding CLI options
      */
     constructor(app: iCloudApp) {
+        super()
         this.photoDataDir = this.getFullPathAndCreate([app.options.dataDir]);
         this.assetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ASSET_DIR]);
         this.archiveDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR]);
@@ -83,7 +87,7 @@ export class PhotosLibrary {
                     libAssets[asset.getUUID()] = asset;
                     this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
                 } catch (err) {
-                    this.logger.warn(`Ignoring invalid file: ${fileName} (${err.message})`);
+                    this.emit(HANDLER_EVENT, new LibraryError(`Ignoring invalid file: ${fileName}`, "WARN").addCause(err));
                 }
             });
         return libAssets;
@@ -181,7 +185,7 @@ export class PhotosLibrary {
         if (directoryPresent) {
             // AlbumType.Folder cannot be archived!
             if (filePresent) {
-                this.logger.warn(`Extranous file found in folder ${path}`);
+                this.emit(HANDLER_EVENT, new LibraryError(`Extranous file found in folder ${path}`, "WARN"));
             }
 
             return AlbumType.FOLDER;
@@ -209,7 +213,8 @@ export class PhotosLibrary {
             .then(() => fs.promises.utimes(asset.getAssetFilePath(this.assetDir), new Date(asset.modified), new Date(asset.modified))) // Setting modified date on file
             .then(() => {
                 if (!this.verifyAsset(asset)) {
-                    throw new Error(`Unable to verify asset ${asset.getDisplayName()}`);
+                    throw new LibraryError(`Unable to verify asset ${asset.getDisplayName()}`, "FATAL")
+                        .addContext('asset', asset);
                 }
 
                 this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
@@ -251,7 +256,8 @@ export class PhotosLibrary {
         if (album.parentAlbumUUID) {
             const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, this.photoDataDir);
             if (parentPathExt.length === 0) {
-                throw new Error(`Unable to find parent of album ${album.getDisplayName()} (Looking for parent ${album.parentAlbumUUID})`);
+                throw new LibraryError(`Unable to find parent of album ${album.getDisplayName()}`, "FATAL")
+                    .addContext('album', album)
             }
 
             parentPath = path.join(parentPath, parentPathExt);
@@ -264,6 +270,11 @@ export class PhotosLibrary {
         return [albumNamePath, uuidPath];
     }
 
+    /**
+     * Creates a path tuple containing the full path to the stashed album
+     * @param album - The album within the stash
+     * @returns A PathTuple containing the name based and UUID based path (not validated)
+     */
     findStashAlbumPaths(album: Album): PathTuple {
         const stashedAlbumNamePath = path.join(this.stashDir, path.basename(album.getSanitizedFilename()));
         const stashedUUIDPath = path.join(this.stashDir, path.basename(`.${album.getUUID()}`));
@@ -306,7 +317,8 @@ export class PhotosLibrary {
         }
 
         if (searchResult.length > 1) {
-            throw new Error(`Unable to find album ${albumUUID} in path ${rootPath}: Multiple matches: ${JSON.stringify(searchResult)}`);
+            throw new LibraryError(`Unable to find album ${albumUUID} in path ${rootPath}: Multiple matches`, "FATAL")
+                .addContext('searchResult', searchResult);
         }
 
         // No match in this folder hierachy
@@ -321,7 +333,7 @@ export class PhotosLibrary {
         const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
 
         if (fs.existsSync(uuidPath) || fs.existsSync(albumNamePath)) {
-            throw new Error(`Unable to create album ${album.getDisplayName()}: ${uuidPath} or ${albumNamePath} already exists!`);
+            throw new LibraryError(`Unable to create album ${album.getDisplayName()}: ${uuidPath} or ${albumNamePath} already exists!`, "FATAL");
         }
 
         // Creating album
@@ -360,7 +372,7 @@ export class PhotosLibrary {
                 fs.symlinkSync(relativeAssetPath, linkedAsset);
                 fs.lutimesSync(linkedAsset, assetTime, assetTime);
             } catch (err) {
-                this.logger.warn(`Not linking ${relativeAssetPath} to ${linkedAsset} in album ${album.getDisplayName()}: ${err.message}`);
+                this.emit(HANDLER_EVENT, new LibraryError(`Not linking ${relativeAssetPath} to ${linkedAsset} in album ${album.getDisplayName()}`, "WARN").addCause(err))
             }
         });
     }
@@ -374,19 +386,20 @@ export class PhotosLibrary {
         const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
         // Path to album
         if (!fs.existsSync(uuidPath)) {
-            throw new Error(`Unable to find uuid path, expected ${uuidPath}`);
+            throw new LibraryError(`Unable to find uuid path, expected ${uuidPath}`, "FATAL");
         }
 
         // Checking content
         const pathContent = fs.readdirSync(uuidPath, {"withFileTypes": true})
             .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
         if (pathContent.length > 0) {
-            throw new Error(`Album in path ${uuidPath} not empty (${JSON.stringify(pathContent.map(item => item.name))})`);
+            throw new LibraryError(`Album in path ${uuidPath} not empty`, "FATAL")
+                .addContext('pathContent', pathContent);
         }
 
         // Path to real name folder
         if (!fs.existsSync(albumNamePath)) {
-            throw new Error(`Unable to find albumName path, expcted ${albumNamePath}`);
+            throw new LibraryError(`Unable to find albumName path, expcted ${albumNamePath}`, "FATAL");
         }
 
         fs.rmSync(uuidPath, {"recursive": true});
@@ -428,19 +441,19 @@ export class PhotosLibrary {
         const [destNamePath, destUUIDPath] = dest;
 
         if (!fs.existsSync(srcNamePath)) {
-            throw new Error(`Unable to find source album name path, expected ${srcNamePath}`);
+            throw new LibraryError(`Unable to find source album name path, expected ${srcNamePath}`, "FATAL");
         }
 
         if (!fs.existsSync(srcUUIDPath)) {
-            throw new Error(`Unable to find source uuid path, expected ${srcUUIDPath}`);
+            throw new LibraryError(`Unable to find source uuid path, expected ${srcUUIDPath}`, "FATAL");
         }
 
         if (fs.existsSync(destNamePath)) {
-            throw new Error(`Supposed destination path already exists: ${destNamePath}`);
+            throw new LibraryError(`Supposed destination path already exists: ${destNamePath}`, "FATAL");
         }
 
         if (fs.existsSync(destUUIDPath)) {
-            throw new Error(`Supposed destination uuid path already exists: ${destUUIDPath}`);
+            throw new LibraryError(`Supposed destination uuid path already exists: ${destUUIDPath}`, "FATAL");
         }
 
         this.logger.debug(`Moving ${srcUUIDPath} to ${destUUIDPath}`);

@@ -4,7 +4,7 @@ This projects uses the error and crash reporting solution from [Backtrace](https
 
 ## Data collected
 
-Upon activation, the solution will register a session. If this session experiences an unrecoverable error, all relevant information will be collected and sent to the service.
+Upon activation, the solution will register a session. If this session experiences an unrecoverable error, all relevant information will be collected and sent to the developer.
 
 Scrubbing of potential confidential information is performed and great care has been taken that those will not be recorded by the service.
 

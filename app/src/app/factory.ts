@@ -1,6 +1,6 @@
 import {Command, Option, InvalidArgumentError} from "commander";
 import * as PACKAGE_INFO from '../lib/package.js';
-import {ErrorHandler} from "./error-handler.js";
+import {ErrorHandler} from "./error/handler.js";
 import {iCloudApp, TokenApp, SyncApp, ArchiveApp} from "./icloud-app.js";
 
 /**
@@ -61,6 +61,9 @@ export function appFactory(argv: string[]): iCloudApp {
             .default(`info`))
         .addOption(new Option(`--log-to-cli`, `Disables logging to file and logs everything to the console. This will be ignored if '--silent' is set`)
             .env(`LOG_TO_CLI`)
+            .default(false))
+        .addOption(new Option(`--surpress-warnings`, `Non critical warnings will not be displayed in the UI. They will still go into the log.`)
+            .env(`SURPRESS_WARNINGS`)
             .default(false))
         .addOption(new Option(`-s, --silent`, `Disables logging to the console and forces logs to go to the log file.`)
             .env(`SILENT`)

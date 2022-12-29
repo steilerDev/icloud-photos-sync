@@ -21,12 +21,14 @@ const LOGGER = {
     "ErrorHandler": `Error-Handler`,
 };
 
+export let logFile: string = undefined
+
 /**
  * Logger setup including the configuration of logger prefix
  * @param app - The App object, holding the CLI options
  */
 export function setupLogger(app: iCloudApp): void {
-    const logFile = path.format({
+    logFile = path.format({
         "dir": app.options.dataDir,
         "base": LOG_FILE_NAME,
     });
@@ -46,13 +48,6 @@ export function setupLogger(app: iCloudApp): void {
             } else {
                 const prefixedMessage = `[${new Date().toISOString()}] ${methodName.toUpperCase()} ${String(loggerName)}: ${message}\n`;
                 fs.appendFileSync(logFile, prefixedMessage);
-                if (!app.options.silent) {
-                    if (methodName === `warn`) {
-                        console.warn(`Warning: ${message}`);
-                    } else if (methodName === `error`) {
-                        console.error(`Error: ${message}`);
-                    }
-                }
             }
         };
     };

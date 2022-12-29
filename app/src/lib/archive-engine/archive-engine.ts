@@ -6,8 +6,12 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {ArchiveApp} from '../../app/icloud-app.js';
+import { ErrorHandler } from '../../app/error/handler.js';
+import { ArchiveError } from '../../app/error/types.js';
+import EventEmitter from 'events';
+import * as ARCHIVE_ENGINE from './constants.js'
 
-export class ArchiveEngine {
+export class ArchiveEngine extends EventEmitter {
     /**
      * Default logger for the class
      */
@@ -16,13 +20,16 @@ export class ArchiveEngine {
     remoteDelete: boolean;
     photosLibrary: PhotosLibrary;
     icloud: iCloud;
+    errorHandler: ErrorHandler
 
     /**
      * Creates a new Archive Engine object
      * @param app - The application holding references to necessary objects (iCloud connection, Photos Library & CLI options)
      */
     constructor(app: ArchiveApp) {
+        super()
         this.remoteDelete = app.options.remoteDelete;
+        this.errorHandler = app.errorHandler
         this.icloud = app.icloud;
         this.photosLibrary = app.photosLibrary;
     }
@@ -35,40 +42,46 @@ export class ArchiveEngine {
      */
     async archivePath(archivePath: string, assetList: Asset[]): Promise<any> {
         this.logger.debug(`Archiving path ${archivePath}`);
+        this.emit(ARCHIVE_ENGINE.EVENTS.ARCHIVE_START, archivePath)
 
         const albumName = path.basename(archivePath);
         if (albumName.startsWith(`.`)) {
-            throw new Error(`UUID path selected, use named path only`);
+            throw new ArchiveError(`UUID path selected, use named path only`);
         }
 
         const parentFolderPath = path.dirname(archivePath);
         const [archivedAlbum, archivedAlbumPath] = await this.photosLibrary.readFolderFromDisk(albumName, parentFolderPath, ``);
         if (archivedAlbum.albumType !== AlbumType.ALBUM) {
-            throw new Error(`Only able to archive non-archived albums`);
+            throw new ArchiveError(`Only able to archive non-archived albums`);
         }
 
         const loadedAlbum = (await this.photosLibrary.loadAlbum(archivedAlbum, archivedAlbumPath)).find(album => album.albumName === albumName);
 
         if (!loadedAlbum) {
-            throw new Error(`Unable to load album`);
+            throw new ArchiveError(`Unable to load album`);
         }
 
         if (Object.keys(loadedAlbum.assets).length === 0) {
-            throw new Error(`Folder is empty!`);
+            throw new ArchiveError(`Folder is empty!`);
         }
 
-        this.logger.debug(`Persisting ${Object.keys(loadedAlbum.assets).length} items`);
+        const numberOfItems = Object.keys(loadedAlbum.assets).length
+        this.logger.debug(`Persisting ${numberOfItems} items`);
+        this.emit(ARCHIVE_ENGINE.EVENTS.PERSISTING_START, numberOfItems)
         // Iterating over all album items to persist them
-        return Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
+        await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
             const assetPath = path.join(this.photosLibrary.assetDir, uuidFilename);
             const archivedAssetPath = path.join(archivedAlbumPath, loadedAlbum.assets[uuidFilename]);
 
             return this.persistAsset(assetPath, archivedAssetPath)
                 .then(() => this.deleteRemoteAsset(assetPath, assetList))
                 .catch(err => {
-                    this.logger.warn(`Unable to archive item: ${err.message}`);
+                    this.errorHandler.handle(new ArchiveError(err, "WARN"))
                 });
         }));
+
+        this.emit(ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE)
+        return
     }
 
     /**
@@ -98,11 +111,11 @@ export class ArchiveEngine {
         const asset = assetList.find(asset => asset.getUUID() === assetUUID);
 
         if (!asset) {
-            throw new Error(`Unable to find asset with UUID ${assetUUID}`);
+            throw new ArchiveError(`Unable to find asset with UUID ${assetUUID}`);
         }
 
         if (!asset.recordName) {
-            throw new Error(`Unable to get record name for asset ${asset.getDisplayName()}`);
+            throw new ArchiveError(`Unable to get record name for asset ${asset.getDisplayName()}`);
         }
 
         if (asset.isFavorite) {
