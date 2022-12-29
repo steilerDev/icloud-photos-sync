@@ -29,11 +29,25 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/sync-engine.test.ts"
+                "test/unit/icloud.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
+        }, {
+            "name": "Run API Tests",
+            "type": "node",
+            "request": "launch",
+            "runtimeArgs": [
+                "--experimental-vm-modules",
+                "node_modules/.bin/jest",
+                "--config", "jest.config.json",
+                "test/api/api.test.ts"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "${workspaceFolder}/app",
+            "envFile": "${workspaceFolder}/.vscode/test.env"
         }, {
             "name": "Run All Tests",
             "type": "node",

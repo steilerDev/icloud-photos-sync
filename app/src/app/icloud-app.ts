@@ -62,7 +62,7 @@ export abstract class iCloudApp {
         this.cliInterface = new CLIInterface(this);
 
         return this.icloud.authenticate()
-            .catch(err => this.errorHandler.handle(new iCloudError(err, "FATAL")));
+            .catch(err => this.errorHandler.handle(new iCloudError("Init failed", "FATAL").addCause(err)));
     }
 }
 
@@ -80,7 +80,7 @@ export class TokenApp extends iCloudApp {
             this.cliInterface.print(`Validated trust token:`);
             this.cliInterface.print(this.icloud.auth.iCloudAccountTokens.trustToken);
         } catch (err) {
-            await this.errorHandler.handle(new TokenError(err, "FATAL"));
+            await this.errorHandler.handle(new TokenError("Unable to validate account token", "FATAL").addCause(err));
         }
     }
 }
@@ -117,7 +117,7 @@ export class SyncApp extends iCloudApp {
     async run(): Promise<any> {
         return super.run()
             .then(() => this.syncEngine.sync())
-            .catch(err => this.errorHandler.handle(new SyncError(err, "FATAL")));
+            .catch(err => this.errorHandler.handle(new SyncError("Sync failed", "FATAL").addCause(err)));
     }
 }
 
@@ -153,6 +153,6 @@ export class ArchiveApp extends SyncApp {
     async run() {
         return super.run()
             .then(([remoteAssets]) => this.archiveEngine.archivePath(this.archivePath, remoteAssets))
-            .catch(err => this.errorHandler.handle(new ArchiveError(err, "FATAL")));
+            .catch(err => this.errorHandler.handle(new ArchiveError(`Archive failed`, "FATAL").addCause(err).addContext('archivePath', this.archivePath)));
     }
 }

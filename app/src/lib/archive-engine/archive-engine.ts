@@ -46,23 +46,23 @@ export class ArchiveEngine extends EventEmitter {
 
         const albumName = path.basename(archivePath);
         if (albumName.startsWith(`.`)) {
-            throw new ArchiveError(`UUID path selected, use named path only`);
+            throw new ArchiveError(`UUID path selected, use named path only`, "FATAL");
         }
 
         const parentFolderPath = path.dirname(archivePath);
         const [archivedAlbum, archivedAlbumPath] = await this.photosLibrary.readFolderFromDisk(albumName, parentFolderPath, ``);
         if (archivedAlbum.albumType !== AlbumType.ALBUM) {
-            throw new ArchiveError(`Only able to archive non-archived albums`);
+            throw new ArchiveError(`Only able to archive non-archived albums`, "FATAL");
         }
 
         const loadedAlbum = (await this.photosLibrary.loadAlbum(archivedAlbum, archivedAlbumPath)).find(album => album.albumName === albumName);
 
         if (!loadedAlbum) {
-            throw new ArchiveError(`Unable to load album`);
+            throw new ArchiveError(`Unable to load album`, "FATAL");
         }
 
         if (Object.keys(loadedAlbum.assets).length === 0) {
-            throw new ArchiveError(`Folder is empty!`);
+            throw new ArchiveError(`Folder is empty!`, "FATAL");
         }
 
         const numberOfItems = Object.keys(loadedAlbum.assets).length
@@ -111,11 +111,11 @@ export class ArchiveEngine extends EventEmitter {
         const asset = assetList.find(asset => asset.getUUID() === assetUUID);
 
         if (!asset) {
-            throw new ArchiveError(`Unable to find asset with UUID ${assetUUID}`);
+            throw new ArchiveError(`Unable to find asset with UUID ${assetUUID}`, "FATAL").addContext('assetList', assetList);
         }
 
         if (!asset.recordName) {
-            throw new ArchiveError(`Unable to get record name for asset ${asset.getDisplayName()}`);
+            throw new ArchiveError(`Unable to get record name for asset ${asset.getDisplayName()}`, "FATAL").addContext('asset', asset);
         }
 
         if (asset.isFavorite) {

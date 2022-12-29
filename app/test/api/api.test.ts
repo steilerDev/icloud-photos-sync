@@ -13,6 +13,7 @@ import {appDataDir} from '../_helpers/_config';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 import {appWithOptions} from '../_helpers/app-factory.helper';
+import { iCloudError } from '../../src/app/error/types.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
@@ -52,7 +53,7 @@ describe(`API E2E Tests`, () => {
                 "failOnMfa": true,
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
-            await expect(_icloud.authenticate()).rejects.toMatch(`Unexpected HTTP code: 403`);
+            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`Unexpected HTTP code: 403`, "FATAL"));
         });
 
         test(`Login flow without token & failOnMfa`, async () => {
@@ -63,7 +64,7 @@ describe(`API E2E Tests`, () => {
                 "failOnMfa": true,
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
-            await expect(_icloud.authenticate()).rejects.toMatch(`MFA code required, failing due to failOnMfa flag`);
+            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`MFA code required, failing due to failOnMfa flag`, "FATAL"));
         });
 
         test(`Login flow`, async () => {

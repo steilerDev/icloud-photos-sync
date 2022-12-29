@@ -2,6 +2,8 @@
 
 During the sync process a couple of warnings can pop up. The primary reason for this being, that the API behaves differently than I expect. Given however the experience I gathered, the following warnings will be printed out, but are handled gracefully by the application.
 
+Warnings can be surpressed with a [configuration options](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/).
+
 ## `Ignoring unknown album type 6`
 The program only syncs albums (type `0`) and folders (type `3`) - any other unexpected album type will be ignored (those are maybe smart albums?).
 

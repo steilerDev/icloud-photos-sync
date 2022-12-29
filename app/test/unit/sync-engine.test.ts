@@ -15,6 +15,7 @@ import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albu
 import {spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
+import { SyncError } from '../../src/app/error/types';
 
 beforeEach(() => {
     mockfs({});
@@ -148,22 +149,8 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(doneEvent).toHaveBeenCalledTimes(1);
             });
 
-            test.each([
-                (() => {
-                    const error = new Error(`Unknown error`);
-                    return {error};
-                })(),
-                (() => {
-                    const error = new Error(`Redirect - 301`) as unknown as AxiosError;
-                    error.name = `AxiosError`;
-                    error.code = `ERR_REDIRECT`;
-                    error.response = {
-                        "status": 301,
-                    } as unknown as AxiosResponse;
-
-                    return {error};
-                })(),
-            ])(`Fatal failure - $error.message`, async ({error}) => {
+            test(`Fatal failure`, async () => {
+                const error = new SyncError(`Unknown error, aborting!`, "FATAL")
                 const syncEngine = syncEngineFactory();
                 const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
 
