@@ -76,10 +76,10 @@ export function setupLogger(app: iCloudApp): void {
 export function getLogger(instance: any): log.Logger {
     const className = instance.constructor.name;
     const loggerName = LOGGER[className];
-    if (loggerName) {
-        return log.getLogger(loggerName);
+    if (!loggerName) {
+        log.warn(`Unable to find logger for class name ${className}, providing default logger`);
+        return log;
     }
 
-    console.warn(`Unable to find logger for class name ${className}, providing default logger`);
-    return log;
+    return log.getLogger(loggerName);
 }

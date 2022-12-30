@@ -12,11 +12,6 @@ export const WARN_EVENT = `warn`;
 
 export class ErrorHandler extends EventEmitter {
     /**
-     * Default logger for the class
-     */
-    protected logger = getLogger(this);
-
-    /**
      * The error reporting client - if activated
      */
     btClient?: bt.BacktraceClient;
@@ -52,7 +47,7 @@ export class ErrorHandler extends EventEmitter {
     async handle(err: iCPSError) {
         if (err.sev === `WARN`) {
             this.emit(WARN_EVENT, err.getDescription());
-            this.logger.warn(err.getDescription());
+            getLogger(this).warn(err.getDescription());
             return;
         }
 
@@ -60,12 +55,13 @@ export class ErrorHandler extends EventEmitter {
             const errorId = await this.reportError(err);
             const errorReport = `${err.getDescription()} (Error Code: ${errorId})`;
             this.emit(ERROR_EVENT, errorReport);
-            this.logger.error(errorReport);
+            getLogger(this).error(errorReport);
             process.exit(1);
         }
     }
 
     registerHandlerForObject(object: EventEmitter) {
+        debugger;
         object.on(HANDLER_EVENT, async (err: unknown) => {
             await this.handle(iCPSError.toiCPSError(err));
         });
