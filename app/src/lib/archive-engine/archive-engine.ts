@@ -76,7 +76,12 @@ export class ArchiveEngine extends EventEmitter {
             return this.persistAsset(assetPath, archivedAssetPath)
                 .then(() => this.deleteRemoteAsset(assetPath, assetList))
                 .catch(err => {
-                    this.errorHandler.handle(new ArchiveError(err, `WARN`));
+                    this.errorHandler.handle(new ArchiveError(`Unable to delete asset`, `WARN`)
+                        .addCause(err)
+                        .addContext(`assetPath`, assetPath)
+                        .addContext(`archiveAssetPath`, archivedAssetPath)
+                        .addContext(`assetList`, assetList),
+                    );
                 });
         }));
 
