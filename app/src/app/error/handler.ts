@@ -45,7 +45,7 @@ export class ErrorHandler extends EventEmitter {
      * @param err - The occured error
      */
     async handle(err: iCPSError) {
-        if (err.sev === `WARN`) {
+        if (err.sev === `WARN` || err instanceof InterruptError) {
             this.emit(WARN_EVENT, err.getDescription());
             getLogger(this).warn(err.getDescription());
             return;
