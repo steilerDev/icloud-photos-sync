@@ -8,6 +8,11 @@ export type Severity = `WARN` | `FATAL`
  */
 export class iCPSError extends Error {
     /**
+     * Optional message of this error
+     */
+    message: string;
+
+    /**
      * Optional cause of this error
      */
     cause?: Error;
@@ -22,8 +27,8 @@ export class iCPSError extends Error {
      */
     sev: Severity;
 
-    constructor(errorClass: Function, cause: string, sev: Severity) {
-        super(cause);
+    constructor(errorClass: Function, message: string, sev: Severity) {
+        super(message);
 
         // Maintains proper stack trace for where our error was thrown (only available on V8)
         if (Error.captureStackTrace) {
@@ -31,7 +36,7 @@ export class iCPSError extends Error {
         }
 
         this.name = errorClass.name;
-
+        this.message = message;
         this.sev = sev;
     }
 
@@ -106,7 +111,7 @@ export class iCPSError extends Error {
             return _err.addCause(err);
         }
 
-        return _err.addContext(`unknownErrorType`, err);
+        return _err.addContext(`unknownErrorObject`, err);
     }
 }
 
