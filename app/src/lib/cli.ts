@@ -8,9 +8,7 @@ import {SingleBar} from 'cli-progress';
 import {getLogger} from './logger.js';
 import {ArchiveEngine} from './archive-engine/archive-engine.js';
 import {iCloudApp, SyncApp, ArchiveApp} from '../app/icloud-app.js';
-import {ErrorHandler, ERROR_EVENT} from '../app/error/handler.js';
-import {WARN_EVENT} from '../app/error/handler.js';
-import {iCPSError} from '../app/error/types.js';
+import {ErrorHandler, ERROR_EVENT, HANDLER_EVENT, WARN_EVENT} from '../app/error/handler.js';
 
 /**
  * This class handles the input/output to the command line
@@ -89,9 +87,9 @@ export class CLIInterface {
      * @param err - The error containing the error message
      * @param desc - Optional
      */
-    printFatalError(err: Error) {
+    printFatalError(err: string) {
         this.print(chalk.red(this.getHorizontalLine()));
-        this.print(chalk.red(`Experienced fatal error at ${this.getDateTime()}: ${err instanceof iCPSError ? err.getDescription() : err.message}`));
+        this.print(chalk.red(`Experienced fatal error at ${this.getDateTime()}: ${err}`));
         this.print(chalk.red(this.getHorizontalLine()));
     }
 
@@ -219,7 +217,7 @@ export class CLIInterface {
             this.print(chalk.white(this.getHorizontalLine()));
         });
 
-        syncEngine.on(ERROR_EVENT, () => {
+        syncEngine.on(HANDLER_EVENT, () => {
             this.progressBar.stop();
         });
     }
@@ -229,12 +227,12 @@ export class CLIInterface {
     }
 
     setupCLIErrorHandlerInterface(errorHandler: ErrorHandler) {
-        errorHandler.on(ERROR_EVENT, err => {
+        errorHandler.on(ERROR_EVENT, (err: string) => {
             this.printFatalError(err);
         });
 
         if (!this.surpressWarnings) {
-            errorHandler.on(WARN_EVENT, err => {
+            errorHandler.on(WARN_EVENT, (err: string) => {
                 this.print(chalk.yellow(err));
             });
         }

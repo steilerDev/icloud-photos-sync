@@ -50,14 +50,15 @@ export class ErrorHandler extends EventEmitter {
      * @param err - The occured error
      */
     async handle(err: iCPSError) {
-        const errorId = await this.reportError(err);
-        const errorReport = `${err.getDescription()} (Error Code: ${errorId})`;
         if (err.sev === `WARN`) {
-            this.emit(WARN_EVENT, errorReport);
-            this.logger.warn(errorReport);
+            this.emit(WARN_EVENT, err.getDescription());
+            this.logger.warn(err.getDescription());
+            return;
         }
 
         if (err.sev === `FATAL`) {
+            const errorId = await this.reportError(err);
+            const errorReport = `${err.getDescription()} (Error Code: ${errorId})`;
             this.emit(ERROR_EVENT, errorReport);
             this.logger.error(errorReport);
             process.exit(1);
@@ -65,8 +66,8 @@ export class ErrorHandler extends EventEmitter {
     }
 
     registerHandlerForObject(object: EventEmitter) {
-        object.on(HANDLER_EVENT, async err => {
-            await this.handle(err);
+        object.on(HANDLER_EVENT, async (err: unknown) => {
+            await this.handle(iCPSError.toiCPSError(err));
         });
     }
 

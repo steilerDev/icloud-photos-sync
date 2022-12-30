@@ -61,7 +61,7 @@ export class iCPSError extends Error {
      * @returns A description for this error, containing its cause chain
      */
     getDescription(): string {
-        let desc = `${this.sev}: ${this.name}: ${this.message}`;
+        let desc = `${this.name} (${this.sev}): ${this.message}`;
         if (this.cause) {
             desc += ` caused by `;
             if (this.cause instanceof iCPSError) {
@@ -93,6 +93,20 @@ export class iCPSError extends Error {
      */
     static fatalError(err: unknown): boolean {
         return !(err instanceof iCPSError && err.sev === `WARN`);
+    }
+
+    static toiCPSError(err: unknown): iCPSError {
+        if (err instanceof iCPSError) {
+            return err;
+        }
+
+        const _err = new iCPSError(iCPSError, `Unknown error`, `FATAL`);
+
+        if (err instanceof Error) {
+            return _err.addCause(err);
+        }
+
+        return _err.addContext(`unknownErrorType`, err);
     }
 }
 
