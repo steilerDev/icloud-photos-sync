@@ -45,7 +45,7 @@ export class ErrorHandler extends EventEmitter {
      * @param err - The occured error
      */
     async handle(err: iCPSError) {
-        if (err.sev === `WARN` || err instanceof InterruptError) {
+        if (err.sev === `WARN` ) {
             this.emit(WARN_EVENT, err.getDescription());
             getLogger(this).warn(err.getDescription());
             return;
@@ -56,7 +56,10 @@ export class ErrorHandler extends EventEmitter {
             const errorReport = `${err.getDescription()} (Error Code: ${errorId})`;
             this.emit(ERROR_EVENT, errorReport);
             getLogger(this).error(errorReport);
-            process.exit(1);
+
+            if(!(err instanceof InterruptError)) {
+                process.exit(1);
+            }
         }
     }
 
