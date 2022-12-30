@@ -12,6 +12,7 @@ nav:
     - 'CLI Reference': user-guides/cli.md
     - 'Common Warnings': user-guides/common-warnings.md
     - 'Error & Crash Reporting': user-guides/error-reporting.md
+    - 'Security': user-guides/security.md
   - 'Development Ressources':
     - 'Milestone Plan': https://github.com/steilerDev/icloud-photos-sync/milestones
     - 'Motivation': dev/motivation.md
