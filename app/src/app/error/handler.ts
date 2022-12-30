@@ -61,7 +61,6 @@ export class ErrorHandler extends EventEmitter {
     }
 
     registerHandlerForObject(object: EventEmitter) {
-        debugger;
         object.on(HANDLER_EVENT, async (err: unknown) => {
             await this.handle(iCPSError.toiCPSError(err));
         });

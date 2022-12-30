@@ -51,7 +51,7 @@ export abstract class iCloudApp {
         // Creating necessary objects for this scope
         this.icloud = new iCloud(this);
         this.errorHandler.registerHandlerForObject(this.icloud);
-        this.errorHandler.registerHandlerForObject(this.icloud.mfaServer)
+        this.errorHandler.registerHandlerForObject(this.icloud.mfaServer);
     }
 
     /**
