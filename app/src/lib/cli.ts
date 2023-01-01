@@ -232,6 +232,10 @@ export class CLIInterface {
             this.print(chalk.cyan(`Persisting ${numberOfAssets} assets`));
         });
 
+        archiveEngine.on(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, (numberOfAssets: number) => {
+            this.print(chalk.yellow(`Deleting ${numberOfAssets} remote assets`));
+        });
+
         archiveEngine.on(ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE, () => {
             this.print(chalk.white(this.getHorizontalLine()));
             this.print(chalk.green.bold(`Succesfully completed archiving`));

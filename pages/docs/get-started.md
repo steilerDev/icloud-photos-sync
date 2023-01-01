@@ -360,9 +360,9 @@ For scheduled execution the `--fail-on-mfa` flag is advised, otherwise the app w
 
 ## Archiving
 
-In order to reduce complexity and storage needs in the iCloud Photos Library, archiving allows you to take a snapshot of a provided album and ignore changes to the album moving foward. This allows you to get rid of some or all of the photos whithin the album.
+In order to reduce complexity and storage needs in the iCloud Photos Library, archiving allows you to take a snapshot of a provided album and ignore changes to the album moving foward. This allows you to remove some or all of the photos whithin the album in the cloud after it was archived, while retaining a copy of all pictures locally.
 
-Optionally, this tool can remove non-favorited photos upon archiving from the iCloud Photos backend, automatically reclaiming space. This will only be checked upon archiving, and the flag on the photo can be removed afterwards safely.
+Optionally, this tool can remove non-favorited photos from iCloud upon archiving. The favorite flag on the remaining photos in the cloud can be removed after the `archive` command completed successfully.
 
 In case the album is renamed in the backend, the archived local copy will be renamed as well, but its content will not change. If the album is removed from the backend, the archived copy will be moved into `_Archive`. Files and folders in that path (except `_Archive/.stash`) can be freely modified. After a folder has been put into `_Archive`, it can be moved back into the folder structure of the library and will be ignored moving foward.
 
@@ -372,7 +372,7 @@ In order to archive an album, the [`archive` command](https://steilerdev.github.
 
     === "docker compose"
         
-        To run the `archive` command, temporarily change the `docker-compose.yml`:
+        To run the `archive` command, temporarily change the `docker-compose.yml`. To automatically delete non-favorited pictures in the album from iCloud, add the `REMOTE_DELETE: true` environment variable.
 
         ```
         version: '2'
@@ -397,6 +397,8 @@ In order to archive an album, the [`archive` command](https://steilerdev.github.
     
     === "docker run"
 
+        To automatically delete non-favorited pictures in the album from iCloud, add the `--remote-delete` flag
+
         ```
         docker run steilerdev/icloud-photos-sync:latest -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync \
             -u "<iCloud Username>" \
@@ -410,6 +412,8 @@ In order to archive an album, the [`archive` command](https://steilerdev.github.
 
     === "NPM"
 
+        To automatically delete non-favorited pictures in the album from iCloud, add the `--remote-delete` flag.
+
         ```
         icloud-photos-sync \
             -u "<iCloud Username>" \
@@ -422,6 +426,8 @@ In order to archive an album, the [`archive` command](https://steilerdev.github.
 
     === "From Source"
         
+        To automatically delete non-favorited pictures in the album from iCloud, add the `--remote-delete` flag.
+
         ```
         npm run execute -- \
             -u "<iCloud Username>" \

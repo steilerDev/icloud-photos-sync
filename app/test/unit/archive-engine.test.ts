@@ -7,8 +7,8 @@ import path from 'path';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
-
-test.todo(`Include events`);
+import {spyOnEvent} from '../_helpers/_general';
+import * as ARCHIVE_ENGINE from '../../src/lib/archive-engine/constants';
 
 describe(`Unit Tests - Archive Engine`, () => {
     afterEach(() => {
@@ -54,9 +54,14 @@ describe(`Unit Tests - Archive Engine`, () => {
             });
 
             const archiveEngine = archiveEngineFactory();
+            const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
+            const persistEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.PERSISTING_START);
+            const remoteDeleteEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE);
+            const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
-            archiveEngine.deleteRemoteAsset = jest.fn(() => Promise.resolve());
+            archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
+            archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
             await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
 
@@ -65,10 +70,17 @@ describe(`Unit Tests - Archive Engine`, () => {
             expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
             expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
-            expect(archiveEngine.deleteRemoteAsset).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.deleteRemoteAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.deleteRemoteAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.deleteRemoteAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(3);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
+
+            expect(archiveEngine.icloud.photos.deleteAssets).toHaveBeenCalledWith([`a`, `a`, `a`]);
+
+            expect(startEvent).toHaveBeenCalled();
+            expect(persistEvent).toHaveBeenCalledWith(3);
+            expect(remoteDeleteEvent).toHaveBeenCalledWith(3);
+            expect(finishEvent).toHaveBeenCalled();
         });
 
         describe(`Invalid path`, () => {
@@ -110,16 +122,19 @@ describe(`Unit Tests - Archive Engine`, () => {
                 });
 
                 const archiveEngine = archiveEngineFactory();
+                const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
 
                 archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
-                archiveEngine.deleteRemoteAsset = jest.fn(() => Promise.resolve());
+                archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
+                archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                expect.assertions(3);
-                await archiveEngine.archivePath(`/opt/icloud-photos-library/.cc40a239-2beb-483e-acee-e897db1b818a`, [asset1, asset2, asset3])
-                    .catch(err => expect(err.message).toMatch(`UUID path selected, use named path only`));
+                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/.cc40a239-2beb-483e-acee-e897db1b818a`, [asset1, asset2, asset3])).rejects.toThrowError(`UUID path selected, use named path only`);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
-                expect(archiveEngine.deleteRemoteAsset).not.toHaveBeenCalled();
+                expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
+                expect(archiveEngine.icloud.photos.deleteAssets).not.toHaveBeenCalled();
+
+                expect(startEvent).toHaveBeenCalled();
             });
 
             test(`Folder path`, async () => {
@@ -168,16 +183,19 @@ describe(`Unit Tests - Archive Engine`, () => {
                 });
 
                 const archiveEngine = archiveEngineFactory();
+                const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
 
                 archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
-                archiveEngine.deleteRemoteAsset = jest.fn(() => Promise.resolve());
+                archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
+                archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                expect.assertions(3);
-                await archiveEngine.archivePath(`/opt/icloud-photos-library/Random1`, [asset1, asset2, asset3])
-                    .catch(err => expect(err.message).toMatch(`Only able to archive non-archived albums`));
+                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random1`, [asset1, asset2, asset3])).rejects.toThrowError(`Only able to archive non-archived albums`);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
-                expect(archiveEngine.deleteRemoteAsset).not.toHaveBeenCalled();
+                expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
+                expect(archiveEngine.icloud.photos.deleteAssets).not.toHaveBeenCalled();
+
+                expect(startEvent).toHaveBeenCalled();
             });
 
             test(`Empty path`, async () => {
@@ -208,16 +226,19 @@ describe(`Unit Tests - Archive Engine`, () => {
                 });
 
                 const archiveEngine = archiveEngineFactory();
+                const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
 
                 archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
-                archiveEngine.deleteRemoteAsset = jest.fn(() => Promise.resolve());
+                archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
+                archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                expect.assertions(3);
-                await archiveEngine.archivePath(`/opt/icloud-photos-library/.cc40a239-2beb-483e-acee-e897db1b818a`, [asset1, asset2, asset3])
-                    .catch(err => expect(err.message).toMatch(`UUID path selected, use named path only`));
+                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/.cc40a239-2beb-483e-acee-e897db1b818a`, [asset1, asset2, asset3])).rejects.toThrowError(`UUID path selected, use named path only`);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
-                expect(archiveEngine.deleteRemoteAsset).not.toHaveBeenCalled();
+                expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
+                expect(archiveEngine.icloud.photos.deleteAssets).not.toHaveBeenCalled();
+
+                expect(startEvent).toHaveBeenCalled();
             });
         });
     });
@@ -274,7 +295,7 @@ describe(`Unit Tests - Archive Engine`, () => {
     });
 
     describe(`Delete remote asset`, () => {
-        test(`Delete remote asset`, async () => {
+        test(`Delete remote asset`, () => {
             const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
             const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
@@ -284,19 +305,16 @@ describe(`Unit Tests - Archive Engine`, () => {
 
             const archiveEngine = archiveEngineFactory();
 
-            archiveEngine.icloud.photos.deleteAsset = jest.fn(() => Promise.resolve([]));
+            const result1 = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            const result2 = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
+            const result3 = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
-            await archiveEngine.deleteRemoteAsset(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-            await archiveEngine.deleteRemoteAsset(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
-            await archiveEngine.deleteRemoteAsset(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
-
-            expect(archiveEngine.icloud.photos.deleteAsset).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.icloud.photos.deleteAsset).toHaveBeenCalledWith(asset1.recordName);
-            expect(archiveEngine.icloud.photos.deleteAsset).toHaveBeenCalledWith(asset2.recordName);
-            expect(archiveEngine.icloud.photos.deleteAsset).toHaveBeenCalledWith(asset3.recordName);
+            expect(result1).toEqual(asset1.recordName);
+            expect(result2).toEqual(asset2.recordName);
+            expect(result3).toEqual(asset3.recordName);
         });
 
-        test(`Unable to find remote asset`, async () => {
+        test(`Unable to find remote asset`, () => {
             const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
@@ -335,14 +353,10 @@ describe(`Unit Tests - Archive Engine`, () => {
 
             const archiveEngine = archiveEngineFactory();
 
-            archiveEngine.icloud.photos.deleteAsset = jest.fn(() => Promise.resolve([]));
-
-            await expect(archiveEngine.deleteRemoteAsset(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).rejects.toThrowError(`Unable to find asset with UUID`);
-
-            expect(archiveEngine.icloud.photos.deleteAsset).not.toHaveBeenCalled();
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrowError(`Unable to find asset with UUID`);
         });
 
-        test(`Unable to find remote asset's record name`, async () => {
+        test(`Unable to find remote asset's record name`, () => {
             const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
@@ -380,14 +394,10 @@ describe(`Unit Tests - Archive Engine`, () => {
 
             const archiveEngine = archiveEngineFactory();
 
-            archiveEngine.icloud.photos.deleteAsset = jest.fn(() => Promise.resolve([]));
-
-            await expect(archiveEngine.deleteRemoteAsset(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).rejects.toThrowError(`Unable to get record name for asset`);
-
-            expect(archiveEngine.icloud.photos.deleteAsset).not.toHaveBeenCalled();
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrowError(`Unable to get record name for asset`);
         });
 
-        test(`Don't delete asset if flag is set`, async () => {
+        test(`Don't delete asset if flag is set`, () => {
             const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
@@ -426,14 +436,11 @@ describe(`Unit Tests - Archive Engine`, () => {
             const archiveEngine = archiveEngineFactory();
             archiveEngine.remoteDelete = false;
 
-            archiveEngine.icloud.photos.deleteAsset = jest.fn(() => Promise.resolve([]));
-
-            await archiveEngine.deleteRemoteAsset(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-
-            expect(archiveEngine.icloud.photos.deleteAsset).not.toHaveBeenCalled();
+            const result = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(result).toBeUndefined();
         });
 
-        test(`Don't delete favorited asset`, async () => {
+        test(`Don't delete favorited asset`, () => {
             const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
@@ -473,11 +480,8 @@ describe(`Unit Tests - Archive Engine`, () => {
 
             const archiveEngine = archiveEngineFactory();
 
-            archiveEngine.icloud.photos.deleteAsset = jest.fn(() => Promise.resolve([]));
-
-            await archiveEngine.deleteRemoteAsset(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-
-            expect(archiveEngine.icloud.photos.deleteAsset).not.toHaveBeenCalled();
+            const result = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(result).toBeUndefined();
         });
     });
 });

@@ -6,10 +6,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {ArchiveApp} from '../../app/icloud-app.js';
-import {ErrorHandler, HANDLER_EVENT} from '../../app/error/handler.js';
 import {ArchiveError} from '../../app/error/types.js';
 import EventEmitter from 'events';
 import * as ARCHIVE_ENGINE from './constants.js';
+import {HANDLER_EVENT} from '../../app/error/handler.js';
 
 export class ArchiveEngine extends EventEmitter {
     /**
@@ -17,8 +17,19 @@ export class ArchiveEngine extends EventEmitter {
      */
     protected logger = getLogger(this);
 
+    /**
+     * True if remote assets should be deleted upon archiving
+     */
     remoteDelete: boolean;
+
+    /**
+     * The local photos library
+     */
     photosLibrary: PhotosLibrary;
+
+    /**
+     * The remote iCloud connection
+     */
     icloud: iCloud;
 
     /**
@@ -67,7 +78,7 @@ export class ArchiveEngine extends EventEmitter {
         this.logger.debug(`Persisting ${numberOfItems} items`);
         this.emit(ARCHIVE_ENGINE.EVENTS.PERSISTING_START, numberOfItems);
         // Iterating over all album items to persist them
-        await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
+        let remoteDeleteList = await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
             const assetPath = path.join(this.photosLibrary.assetDir, uuidFilename);
             const archivedAssetPath = path.join(archivedAlbumPath, loadedAlbum.assets[uuidFilename]);
 
@@ -82,16 +93,23 @@ export class ArchiveEngine extends EventEmitter {
             }
 
             try {
-                await this.deleteRemoteAsset(assetPath, assetList);
+                return this.prepareForRemoteDeletion(assetPath, assetList);
             } catch (err) {
-                this.emit(HANDLER_EVENT, new ArchiveError(`Unable to delete asset`, `WARN`)
-                    .addCause(err)
-                    .addContext(`assetPath`, assetPath)
-                    .addContext(`archiveAssetPath`, archivedAssetPath)
-                    .addContext(`assetList`, assetList),
-                );
+                this.emit(HANDLER_EVENT, err);
             }
         }));
+
+        // Filtering for undefined entries
+        remoteDeleteList = remoteDeleteList.filter(obj => obj !== undefined);
+        if (remoteDeleteList && remoteDeleteList.length > 0 && this.remoteDelete) {
+            try {
+                this.emit(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, remoteDeleteList.length);
+                await this.icloud.photos.deleteAssets(remoteDeleteList);
+            } catch (err) {
+                throw new ArchiveError(`Unable to delete remote assets`, `FATAL`)
+                    .addCause(err);
+            }
+        }
 
         this.emit(ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
     }
@@ -108,14 +126,15 @@ export class ArchiveEngine extends EventEmitter {
     }
 
     /**
-     * Deletes the associated assets on the iCloud backend, given their local assetPath
+     * Prepares the asset for deletion
      * @param assetPath - The path to the assets location in the Assets folder
      * @param assetList - A full list of all remote assets
-     * @returns A Promise, that resolves, once the remote asset has been deleted
+     * @returns A string containing the asset's recordName or undefined, if the asset should not be deleted
+     * @throws An ArchiveError if loading fails
      */
-    async deleteRemoteAsset(assetPath: string, assetList: Asset[]) {
+    prepareForRemoteDeletion(assetPath: string, assetList: Asset[]): string | undefined {
         if (!this.remoteDelete) {
-            return;
+            return undefined;
         }
 
         // Get asset UUID to find record name from assetList
@@ -123,18 +142,19 @@ export class ArchiveEngine extends EventEmitter {
         const asset = assetList.find(asset => asset.getUUID() === assetUUID);
 
         if (!asset) {
-            throw new ArchiveError(`Unable to find asset with UUID ${assetUUID}`, `FATAL`).addContext(`assetList`, assetList);
+            throw new ArchiveError(`Unable to find asset with UUID ${assetUUID}`, `WARN`).addContext(`assetList`, assetList);
         }
 
         if (!asset.recordName) {
-            throw new ArchiveError(`Unable to get record name for asset ${asset.getDisplayName()}`, `FATAL`).addContext(`asset`, asset);
+            throw new ArchiveError(`Unable to get record name for asset ${asset.getDisplayName()}`, `WARN`).addContext(`asset`, asset);
         }
 
         if (asset.isFavorite) {
-            return this.logger.debug(`Not deleting fav'ed asset ${asset.getDisplayName()}`);
+            this.logger.debug(`Not deleting fav'ed asset ${asset.getDisplayName()}`);
+            return undefined;
         }
 
-        this.logger.debug(`Deleting asset ${asset.recordName}`);
-        return this.icloud.photos.deleteAsset(asset.recordName);
+        this.logger.debug(`Returning asset ${asset.recordName} for deletion`);
+        return asset.recordName;
     }
 }

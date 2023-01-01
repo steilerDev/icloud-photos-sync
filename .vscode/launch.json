@@ -27,7 +27,7 @@
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["archive", "/media/files/Documents/Frank/Photos Library/Hello-test"],
+            "args": ["archive", "/media/files/Documents/Frank/Photos Library/Supiii"],
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",
             ],
@@ -43,7 +43,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/sync-engine.test.ts"
+                "test/unit/archive-engine.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

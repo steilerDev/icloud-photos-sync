@@ -163,11 +163,11 @@ export class iCloudPhotos extends EventEmitter {
     /**
      * Performs a single operation with the iCloud Backend
      * @param operationType - The type of operation, that should be performed
-     * @param recordName - The recordName of the asset the operation should be performed on
+     * @param recordNames - The list of recordNames of the asset the operation should be performed on
      * @param fields - The fields to be altered
      * @returns An array of records that have been altered
      */
-    async performOperation(operationType: string, recordName: string, fields: any) {
+    async performOperation(operationType: string, fields: any, recordNames: string[]) {
         this.auth.validatePhotosAccount();
         const config: AxiosRequestConfig = {
             "headers": this.auth.getPhotosHeader(),
@@ -177,17 +177,7 @@ export class iCloudPhotos extends EventEmitter {
         };
 
         const data: any = {
-            "operations": [
-                {
-                    "operationType": `${operationType}`,
-                    "record": {
-                        "recordName": `${recordName}`,
-                        "recordType": `CPLAsset`,
-                        "recordChangeTag": ICLOUD_PHOTOS.RECORD_CHANGE_TAG,
-                        fields,
-                    },
-                },
-            ],
+            "operations": [],
             "zoneID": {
                 "ownerRecordName": this.auth.iCloudPhotosAccount.ownerName,
                 "zoneName": this.auth.iCloudPhotosAccount.zoneName,
@@ -196,8 +186,18 @@ export class iCloudPhotos extends EventEmitter {
             "atomic": true,
         };
 
-        const operationResponse = (await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config)).data;
-        const fetchedRecords = operationResponse.records;
+        data.operations = recordNames.map(recordName => ({
+            "operationType": `${operationType}`,
+            "record": {
+                "recordName": `${recordName}`,
+                "recordType": `CPLAsset`,
+                "recordChangeTag": ICLOUD_PHOTOS.RECORD_CHANGE_TAG,
+                fields,
+            },
+        }));
+
+        const operationResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config);
+        const fetchedRecords = operationResponse.data.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCloudError(`Fetched records have unexpected format`, `FATAL`)
                 .addContext(`operationResponse`, operationResponse);
@@ -449,13 +449,12 @@ export class iCloudPhotos extends EventEmitter {
     }
 
     /**
-     * Deletes the record in the remote library
-     * @param recordName - The record name that needs to be deleted
-     * @returns
+     * Deletes the records in the remote library
+     * @param recordNames - A list of record names that need to be deleted
+     * @returns A Promise, that fullfils once the operation has been performed
      */
-    async deleteAsset(recordName: string) {
-        this.logger.debug(`Deleting asset ${recordName}`);
-        debugger;
-        return this.performOperation(`update`, recordName, QueryBuilder.getIsDeletedField());
+    async deleteAssets(recordNames: string[]) {
+        this.logger.debug(`Deleting ${recordNames.length} assets: ${JSON.stringify(recordNames)}`);
+        await this.performOperation(`update`, QueryBuilder.getIsDeletedField(), recordNames);
     }
 }
