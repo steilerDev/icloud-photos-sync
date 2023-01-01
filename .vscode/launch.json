@@ -7,13 +7,27 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch App",
+            "name": "Launch App - Sync",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
             "args": ["sync"],
+            "outFiles": [
+                "${workspaceFolder}/app/bin/**/*.js",
+            ],
+            "envFile": "${workspaceFolder}/.vscode/private-account.env"
+        }, {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch App - Archive",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "preLaunchTask": "Build App",
+            "program": "${workspaceFolder}/app/src/main.ts",
+            "args": ["archive", "/media/files/Documents/Frank/Photos Library/Hello-test"],
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",
             ],

@@ -364,7 +364,7 @@ In order to reduce complexity and storage needs in the iCloud Photos Library, ar
 
 Optionally, this tool can remove non-favorited photos upon archiving from the iCloud Photos backend, automatically reclaiming space. This will only be checked upon archiving, and the flag on the photo can be removed afterwards safely.
 
-In case the album is moved in the backend, the archived copy will follow. If the album is removed from the backend, the archived copy will be moved into `_Archive`. Files and folders in that path (except `_Archive/.stash`) can be freely modified.
+In case the album is renamed in the backend, the archived local copy will be renamed as well, but its content will not change. If the album is removed from the backend, the archived copy will be moved into `_Archive`. Files and folders in that path (except `_Archive/.stash`) can be freely modified. After a folder has been put into `_Archive`, it can be moved back into the folder structure of the library and will be ignored moving foward.
 
 In order to archive an album, the [`archive` command](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/#archive-command) will be used.
 

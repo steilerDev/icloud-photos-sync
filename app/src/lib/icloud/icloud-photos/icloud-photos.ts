@@ -183,6 +183,7 @@ export class iCloudPhotos extends EventEmitter {
                     "record": {
                         "recordName": `${recordName}`,
                         "recordType": `CPLAsset`,
+                        "recordChangeTag": ICLOUD_PHOTOS.RECORD_CHANGE_TAG,
                         fields,
                     },
                 },
@@ -454,6 +455,7 @@ export class iCloudPhotos extends EventEmitter {
      */
     async deleteAsset(recordName: string) {
         this.logger.debug(`Deleting asset ${recordName}`);
+        debugger;
         return this.performOperation(`update`, recordName, QueryBuilder.getIsDeletedField());
     }
 }

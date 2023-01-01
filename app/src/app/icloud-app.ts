@@ -145,6 +145,7 @@ export class ArchiveApp extends SyncApp {
         super(options);
         this.archivePath = archivePath;
         this.archiveEngine = new ArchiveEngine(this);
+        this.errorHandler.registerHandlerForObject(this.archiveEngine);
     }
 
     /**

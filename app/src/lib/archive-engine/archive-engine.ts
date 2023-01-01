@@ -6,7 +6,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {ArchiveApp} from '../../app/icloud-app.js';
-import {ErrorHandler} from '../../app/error/handler.js';
+import {ErrorHandler, HANDLER_EVENT} from '../../app/error/handler.js';
 import {ArchiveError} from '../../app/error/types.js';
 import EventEmitter from 'events';
 import * as ARCHIVE_ENGINE from './constants.js';
@@ -20,7 +20,6 @@ export class ArchiveEngine extends EventEmitter {
     remoteDelete: boolean;
     photosLibrary: PhotosLibrary;
     icloud: iCloud;
-    errorHandler: ErrorHandler;
 
     /**
      * Creates a new Archive Engine object
@@ -29,7 +28,6 @@ export class ArchiveEngine extends EventEmitter {
     constructor(app: ArchiveApp) {
         super();
         this.remoteDelete = app.options.remoteDelete;
-        this.errorHandler = app.errorHandler;
         this.icloud = app.icloud;
         this.photosLibrary = app.photosLibrary;
     }
@@ -73,16 +71,26 @@ export class ArchiveEngine extends EventEmitter {
             const assetPath = path.join(this.photosLibrary.assetDir, uuidFilename);
             const archivedAssetPath = path.join(archivedAlbumPath, loadedAlbum.assets[uuidFilename]);
 
-            return this.persistAsset(assetPath, archivedAssetPath)
-                .then(() => this.deleteRemoteAsset(assetPath, assetList))
-                .catch(err => {
-                    this.errorHandler.handle(new ArchiveError(`Unable to delete asset`, `WARN`)
-                        .addCause(err)
-                        .addContext(`assetPath`, assetPath)
-                        .addContext(`archiveAssetPath`, archivedAssetPath)
-                        .addContext(`assetList`, assetList),
-                    );
-                });
+            try {
+                await this.persistAsset(assetPath, archivedAssetPath);
+            } catch (err) {
+                this.emit(HANDLER_EVENT, new ArchiveError(`Unable to persist asset`, `WARN`)
+                    .addCause(err)
+                    .addContext(`assetPath`, assetPath)
+                    .addContext(`archivedAssetPath`, archivedAssetPath),
+                );
+            }
+
+            try {
+                await this.deleteRemoteAsset(assetPath, assetList);
+            } catch (err) {
+                this.emit(HANDLER_EVENT, new ArchiveError(`Unable to delete asset`, `WARN`)
+                    .addCause(err)
+                    .addContext(`assetPath`, assetPath)
+                    .addContext(`archiveAssetPath`, archivedAssetPath)
+                    .addContext(`assetList`, assetList),
+                );
+            }
         }));
 
         this.emit(ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
