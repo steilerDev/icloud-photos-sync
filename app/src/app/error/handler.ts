@@ -45,21 +45,34 @@ export class ErrorHandler extends EventEmitter {
      * @param err - The occured error
      */
     async handle(err: iCPSError) {
-        if (err.sev === `WARN` ) {
-            this.emit(WARN_EVENT, err.getDescription());
-            getLogger(this).warn(err.getDescription());
-            return;
+        let message = err.getDescription();
+        // Check if the error should be reported
+        const shouldReport = err.sev === `FATAL` && !(err instanceof InterruptError);
+        // Check if the program should exit execution
+        const shouldExit = err.sev === `FATAL`;
+
+        // Report error and append error code
+        if (shouldReport) {
+            const errorId = await this.reportError(err);
+            message += ` (Error Code: ${errorId})`;
         }
 
-        if (err.sev === `FATAL`) {
-            const errorId = await this.reportError(err);
-            const errorReport = `${err.getDescription()} (Error Code: ${errorId})`;
-            this.emit(ERROR_EVENT, errorReport);
-            getLogger(this).error(errorReport);
+        // Performing output based on severity
+        switch (err.sev) {
+        case `WARN`:
+            this.emit(WARN_EVENT, message);
+            getLogger(this).warn(message);
+            break;
+        default:
+        case `FATAL`:
+            this.emit(ERROR_EVENT, message);
+            getLogger(this).error(message);
+            break;
+        }
 
-            if(!(err instanceof InterruptError)) {
-                process.exit(1);
-            }
+        // Exit the process
+        if (shouldExit) {
+            process.exit(1);
         }
     }
 
