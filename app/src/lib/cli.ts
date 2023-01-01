@@ -3,6 +3,7 @@ import * as PACKAGE_INFO from './package.js';
 import {iCloud} from './icloud/icloud.js';
 import * as ICLOUD from './icloud/constants.js';
 import * as SYNC_ENGINE from './sync-engine/constants.js';
+import * as ARCHIVE_ENGINE from './archive-engine/constants.js'
 import {SyncEngine} from './sync-engine/sync-engine.js';
 import {SingleBar} from 'cli-progress';
 import {getLogger} from './logger.js';
@@ -222,8 +223,20 @@ export class CLIInterface {
         });
     }
 
-    setupCLIArchiveEngineInterface(_archiveEngine: ArchiveEngine) {
+    setupCLIArchiveEngineInterface(archiveEngine: ArchiveEngine) {
+        archiveEngine.on(ARCHIVE_ENGINE.EVENTS.ARCHIVE_START, (path: string) => {
+            this.print(chalk.white.bold(`Archiving local path ${path}`));
+        })
 
+        archiveEngine.on(ARCHIVE_ENGINE.EVENTS.PERSISTING_START, (numberOfAssets: number) => {
+            this.print(chalk.cyan(`Persisting ${numberOfAssets} assets`));
+        })
+
+        archiveEngine.on(ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE, () => {
+            this.print(chalk.white(this.getHorizontalLine()));
+            this.print(chalk.green.bold(`Succesfully completed archiving`));
+            this.print(chalk.white(this.getHorizontalLine()));
+        });
     }
 
     setupCLIErrorHandlerInterface(errorHandler: ErrorHandler) {
