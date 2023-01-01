@@ -150,6 +150,15 @@ export class Asset implements PEntity<Asset> {
     }
 
     /**
+     * Should only be called on a 'remote' entity. Will apply the local entitie's properties to the remote one
+     * @param localEntity - The local entity
+     * @returns This object with the applied properties
+     */
+    apply(_localEntity: Asset): Asset {
+        return this;
+    }
+
+    /**
      *
      * @param dir - The directory, where the file path should be based on
      * @returns The full asset file path under the provided directory

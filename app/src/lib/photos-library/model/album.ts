@@ -145,6 +145,20 @@ export class Album implements PEntity<Album> {
     }
 
     /**
+     * Should only be called on a 'remote' entity. Will apply the local entitie's properties to the remote one
+     * @param localEntity - The local entity
+     * @returns This object with the applied properties
+     */
+    apply(localEntity: Album): Album {
+        if (!localEntity) {
+            return this;
+        }
+
+        this.albumType = localEntity.albumType;
+        return this;
+    }
+
+    /**
      * Check if a given album is in the chain of ancestors
      * @param potentialAncestor - The potential ancesotr for the given album
      * @param fullState - The full directory state

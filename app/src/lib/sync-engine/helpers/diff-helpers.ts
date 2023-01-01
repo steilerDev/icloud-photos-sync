@@ -10,26 +10,26 @@ import {SyncEngine} from "../sync-engine.js";
 
 /**
  * This function diffs two entity arrays (can be either Albums or Assets) and returns the corresponding processing queue
- * @param remoteEnties - The entities fetched from a remote state
+ * @param remoteEntities - The entities fetched from a remote state
  * @param _localEntities - The local entities as read from disk
  * @returns A processing queue, containing the entities that needs to be deleted, added and kept. In the case of albums, this will not take hierarchical dependencies into consideration
  */
-export function getProcessingQueues<T>(this: SyncEngine, remoteEnties: PEntity<T>[], _localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
+export function getProcessingQueues<T>(this: SyncEngine, remoteEntities: PEntity<T>[], _localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
     const localEntities = {..._localEntities};
     this.logger.debug(`Getting processing queues`);
     const toBeAdded: T[] = [];
     const toBeKept: T[] = [];
-    remoteEnties.forEach(remoteEntity => {
+    remoteEntities.forEach(remoteEntity => {
         const localEntity = localEntities[remoteEntity.getUUID()];
         if (!localEntity || !remoteEntity.equal(localEntity)) {
             // No local entity OR local entity does not match remote entity -> Remote asset will be added & local asset will not be removed from deletion queue
             this.logger.debug(`Adding new remote entity ${remoteEntity.getDisplayName()}`);
             // Making sure entities have all relevant properties
-            toBeAdded.push(Object.assign(remoteEntity, localEntity));
+            toBeAdded.push(remoteEntity.apply(localEntity));
         } else {
             // Local asset matches remote asset, nothing to do, but preventing local asset to be deleted
             this.logger.debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
-            toBeKept.push(Object.assign(remoteEntity, localEntity));
+            toBeKept.push(remoteEntity.apply(localEntity));
             delete localEntities[remoteEntity.getUUID()];
         }
     });
