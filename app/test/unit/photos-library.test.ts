@@ -1293,7 +1293,7 @@ describe(`Unit Tests - Photos Library`, () => {
                         expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeTruthy();
                     });
 
-                    test(`Source AlbumName does not exist`, () => {
+                    test(`Source AlbumName does not exist - will be ignored`, () => {
                         const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
                         const archivedName = `2015 - 2016`;
                         const asset1Name = `stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg`;
@@ -1314,16 +1314,25 @@ describe(`Unit Tests - Photos Library`, () => {
                         });
 
                         const library = photosLibraryFactory();
-                        expect(() => library.movePathTuple(
+
+                        library.movePathTuple(
                             [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
                             [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
-                        )).toThrowError(`Unable to find source album name path`);
+                        );
 
-                        expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeTruthy();
-                        expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
-                        expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
-                        expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
-                        expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
+                        expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`))).toBeTruthy();
+                        expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
+                        expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
+                        expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
+                        expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
+                        expect(fs.existsSync(path.join(stashDir, archivedName))).toBeTruthy();
+
+                        expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeFalsy();
+                        expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeFalsy();
+                        expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeFalsy();
+                        expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeFalsy();
+                        expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeFalsy();
+                        expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeFalsy();
                     });
 
                     test(`AlbumUUID does not exist`, () => {
