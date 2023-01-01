@@ -97,6 +97,10 @@ This CLI Application offers the following high level functionality:
 
 My personal use case / workflow is [documented on GH Pages](https://icloud-photos-sync.steilerdev.de/dev/motivation/), alongside some other potential interessting pieces of documentation.
 
+## Documentation
+
+A [Get Started Guide can be found on Github Pages](https://icloud-photos-sync.steilerdev.de/get-started/). Additional documentation and further ressources are published there as well.
+
 ## OS Support
 ![OS Support Debian](https://img.shields.io/static/v1?label=Debian-11&message=Dev%20Platform&color=informational&style=for-the-badge)
 

@@ -116,15 +116,20 @@ export class Album implements PEntity<Album> {
     /**
      *
      * @param album - An album to compare to this instance
-     * @returns True if provided album is equal to this instance (based on UUID, AlbumType, AlbumName, Parent UUID & list of associated assets)
+     * @returns True if provided album is equal to this instance (based on UUID, AlbumType, AlbumName, Parent UUID & list of associated assets) - In case either of the albumTypes is archived, the list of assets will be ignored
      */
     equal(album: Album): boolean {
         return album
             && this.uuid === album.uuid
-            && this.albumType === album.albumType
             && this.getSanitizedFilename() === album.getSanitizedFilename()
             && this.parentAlbumUUID === album.parentAlbumUUID
-            && this.assetsEqual(album.assets);
+            && ( // If any of the albumTypes is ARCHIVED we will ignore asset and albumType equality
+                this.albumType === AlbumType.ARCHIVED || album.albumType === AlbumType.ARCHIVED
+                || (
+                    this.assetsEqual(album.assets)
+                    && this.albumType === album.albumType
+                )
+            );
     }
 
     /**

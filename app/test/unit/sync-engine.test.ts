@@ -486,6 +486,29 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(toBeAdded.length).toEqual(2);
                 expect(toBeKept.length).toEqual(2);
             });
+
+            test(`Only content changed`, () => {
+                const remoteAssets = [
+                    new Asset(`somechecksum`, 43, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                    new Asset(`somechecksum1`, 43, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                    new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                    new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                ];
+
+                const localAssets = {
+                    'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                    'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                    'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                    'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                };
+
+                const syncEngine = syncEngineFactory();
+
+                const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets);
+                expect(toBeDeleted.length).toEqual(2);
+                expect(toBeAdded.length).toEqual(2);
+                expect(toBeKept.length).toEqual(2);
+            });
         });
 
         describe(`Album state`, () => {
@@ -588,27 +611,158 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(toBeKept.length).toEqual(4);
             });
 
-            test(`Only content changed`, () => {
-                const remoteAssets = [
-                    new Asset(`somechecksum`, 43, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    new Asset(`somechecksum1`, 43, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+            test(`Album assets changed`, () => {
+                // LocalAlbum1 and localAlbum4 are missing assets
+                const remoteAlbum1 = new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``);
+                remoteAlbum1.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+                const remoteAlbum2 = new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``);
+                remoteAlbum2.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+                const remoteAlbum3 = new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``);
+                remoteAlbum3.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+                const remoteAlbum4 = new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``);
+                remoteAlbum4.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+
+                const localAlbum1 = new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``);
+                localAlbum1.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                };
+                const localAlbum2 = new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``);
+                localAlbum2.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+                const localAlbum3 = new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``);
+                localAlbum3.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+                const localAlbum4 = new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``);
+                localAlbum4.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                };
+
+                const remoteAlbums = [
+                    remoteAlbum1,
+                    remoteAlbum2,
+                    remoteAlbum3,
+                    remoteAlbum4,
                 ];
 
-                const localAssets = {
-                    'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                const localAlbums = {
+                    'somechecksum1': localAlbum1,
+                    'somechecksum2': localAlbum2,
+                    'somechecksum3': localAlbum3,
+                    'somechecksum4': localAlbum4,
                 };
 
                 const syncEngine = syncEngineFactory();
 
-                const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAssets, localAssets);
+                const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAlbums, localAlbums);
                 expect(toBeDeleted.length).toEqual(2);
                 expect(toBeAdded.length).toEqual(2);
                 expect(toBeKept.length).toEqual(2);
+            });
+
+            test(`Archived album's content is ignored`, () => {
+                // LocalAlbum1 is archived and should not be changed
+                const remoteAlbum1 = new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``);
+                remoteAlbum1.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+                const remoteAlbum2 = new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``);
+                remoteAlbum2.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+                const remoteAlbum3 = new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``);
+                remoteAlbum3.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+                const remoteAlbum4 = new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``);
+                remoteAlbum4.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+
+                const localAlbum1 = new Album(`somechecksum1`, AlbumType.ARCHIVED, `testAlbum1`, ``);
+                localAlbum1.assets = {};
+                const localAlbum2 = new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``);
+                localAlbum2.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+                const localAlbum3 = new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``);
+                localAlbum3.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+                const localAlbum4 = new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``);
+                localAlbum4.assets = {
+                    'assetChecksum1.png': `fileName1.png`,
+                    'assetChecksum2.png': `fileName2.png`,
+                    'assetChecksum3.png': `fileName3.png`,
+                    'assetChecksum4.png': `fileName4.png`,
+                };
+
+                const remoteAlbums = [
+                    remoteAlbum1,
+                    remoteAlbum2,
+                    remoteAlbum3,
+                    remoteAlbum4,
+                ];
+
+                const localAlbums = {
+                    'somechecksum1': localAlbum1,
+                    'somechecksum2': localAlbum2,
+                    'somechecksum3': localAlbum3,
+                    'somechecksum4': localAlbum4,
+                };
+
+                const syncEngine = syncEngineFactory();
+
+                const [toBeDeleted, toBeAdded, toBeKept] = syncEngine.getProcessingQueues(remoteAlbums, localAlbums);
+                expect(toBeDeleted.length).toEqual(0);
+                expect(toBeAdded.length).toEqual(0);
+                expect(toBeKept.length).toEqual(4);
             });
 
             describe(`Hierarchical dependencies`, () => {

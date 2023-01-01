@@ -24,11 +24,12 @@ export function getProcessingQueues<T>(this: SyncEngine, remoteEnties: PEntity<T
         if (!localEntity || !remoteEntity.equal(localEntity)) {
             // No local entity OR local entity does not match remote entity -> Remote asset will be added & local asset will not be removed from deletion queue
             this.logger.debug(`Adding new remote entity ${remoteEntity.getDisplayName()}`);
-            toBeAdded.push(remoteEntity as unknown as T);
+            // Making sure entities have all relevant properties
+            toBeAdded.push(Object.assign(remoteEntity, localEntity));
         } else {
             // Local asset matches remote asset, nothing to do, but preventing local asset to be deleted
             this.logger.debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
-            toBeKept.push(remoteEntity as unknown as T);
+            toBeKept.push(Object.assign(remoteEntity, localEntity));
             delete localEntities[remoteEntity.getUUID()];
         }
     });
