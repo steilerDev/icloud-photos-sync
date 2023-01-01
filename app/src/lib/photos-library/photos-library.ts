@@ -134,13 +134,27 @@ export class PhotosLibrary extends EventEmitter {
         this.logger.debug(`Found ${symbolicLinks.length} symbolic links in ${album.getDisplayName()}`);
 
         for (const link of symbolicLinks) {
-            // The target's basename contains the UUID
-            const target = await fs.promises.readlink(path.join(albumPath, link.name));
-
+            // If we are loading a folder, we need to iterate over it's contents UUIDs
             if (album.albumType === AlbumType.FOLDER) {
-                const [loadedAlbum, fullPath] = await this.readFolderFromDisk(link.name, albumPath, album.getUUID());
+                let loadedAlbum: Album;
+                let fullPath: string;
+                try {
+                    [loadedAlbum, fullPath] = await this.readFolderFromDisk(link.name, albumPath, album.getUUID());
+                } catch (err) {
+                    // There might be dead symlinks - let's remove them
+                    if (err.code !== `ENOENT`) {
+                        throw new LibraryError(`Unable to load album from link ${link.name}`, `FATAL`).addCause(err);
+                    }
+
+                    const deadSymlink = path.join(albumPath, link.name);
+                    this.emit(HANDLER_EVENT, new LibraryError(`Found dead symlink at ${deadSymlink} (removing it)`, `WARN`).addCause(err));
+                    await fs.promises.unlink(deadSymlink);
+                    continue;
+                }
+
                 albums.push(...await this.loadAlbum(loadedAlbum, fullPath));
-            } else if (album.albumType === AlbumType.ALBUM) {
+            } else if (album.albumType === AlbumType.ALBUM) { // If we are loading an album, we need to get the assets from their UUID based folder
+                const target = await fs.promises.readlink(path.join(albumPath, link.name));
                 const uuidFile = path.parse(target).base;
                 albums[0].assets[uuidFile] = link.name;
             }
@@ -432,17 +446,13 @@ export class PhotosLibrary extends EventEmitter {
     }
 
     /**
-     * Moves & re-links the path tuple
+     * Moves & re-links the path tuple - if named path cannot be found, unlinking will be ignored
      * @param src - The source of folders
      * @param dest - The destination of folders
      */
     movePathTuple(src: PathTuple, dest: PathTuple) {
         const [srcNamePath, srcUUIDPath] = src;
         const [destNamePath, destUUIDPath] = dest;
-
-        if (!fs.existsSync(srcNamePath)) {
-            throw new LibraryError(`Unable to find source album name path, expected ${srcNamePath}`, `FATAL`);
-        }
 
         if (!fs.existsSync(srcUUIDPath)) {
             throw new LibraryError(`Unable to find source uuid path, expected ${srcUUIDPath}`, `FATAL`);
@@ -458,8 +468,14 @@ export class PhotosLibrary extends EventEmitter {
 
         this.logger.debug(`Moving ${srcUUIDPath} to ${destUUIDPath}`);
         fs.renameSync(srcUUIDPath, destUUIDPath);
-        this.logger.debug(`Unlinking ${srcNamePath} and re-linking ${destNamePath}`);
-        fs.unlinkSync(srcNamePath);
+
+        try {
+            fs.unlinkSync(srcNamePath);
+        } catch (err) {
+            this.logger.debug(`Unable to unlink ${srcNamePath}: ${err.message}`);
+        }
+
+        this.logger.debug(`Re-linking ${destNamePath}`);
         fs.symlinkSync(path.basename(destUUIDPath), destNamePath);
     }
 
