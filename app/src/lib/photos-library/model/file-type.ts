@@ -12,6 +12,9 @@ const EXT = {
     'public.heic': `heic`,
     'com.sony.arw-raw-image': `arw`,
     'org.webmproject.webp': `webp`,
+    'com.compuserve.gif': `gif`,
+    'com.adobe.raw-image': `dng`,
+    'public.tiff': `tiff`,
 };
 
 /**
