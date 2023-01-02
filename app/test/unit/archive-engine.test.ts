@@ -612,7 +612,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
-            mockfs({})
+            mockfs({});
 
             const archiveEngine = archiveEngineFactory();
 
