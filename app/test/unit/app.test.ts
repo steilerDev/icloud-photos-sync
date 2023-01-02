@@ -7,6 +7,7 @@ import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {Album} from '../../src/lib/photos-library/model/album';
 import {iCloudAuthError, SyncError, TokenError} from '../../src/app/error/types';
+import { EVENTS } from '../../src/lib/icloud/constants';
 
 describe(`Unit Tests - iCloud App`, () => {
     beforeEach(() => {
@@ -33,39 +34,48 @@ describe(`Unit Tests - iCloud App`, () => {
         });
 
         test(`Create Token App`, () => {
-            const tokenApp = appFactory(validOptions.token);
+            const tokenApp = appFactory(validOptions.token) as TokenApp;
             expect(tokenApp).toBeInstanceOf(TokenApp);
             expect(tokenApp.icloud).toBeDefined();
             expect(tokenApp.icloud.mfaServer).toBeDefined();
             expect(tokenApp.icloud.auth).toBeDefined();
+            expect(tokenApp.cliInterface.setupCLIiCloudInterface).toHaveBeenCalled()
+            expect(tokenApp.cliInterface.setupCLIErrorHandlerInterface).toHaveBeenCalled()
             expect(fs.existsSync(`/opt/icloud-photos-library`));
         });
 
         test(`Create Sync App`, () => {
-            const syncApp = appFactory(validOptions.sync);
+            const syncApp = appFactory(validOptions.sync) as SyncApp;
             expect(syncApp).toBeInstanceOf(SyncApp);
             expect(syncApp.icloud).toBeDefined();
             expect(syncApp.icloud.mfaServer).toBeDefined();
             expect(syncApp.icloud.auth).toBeDefined();
-            expect((syncApp as SyncApp).photosLibrary).toBeDefined();
-            expect((syncApp as SyncApp).syncEngine).toBeDefined();
+            expect(syncApp.cliInterface.setupCLIiCloudInterface).toHaveBeenCalled()
+            expect(syncApp.cliInterface.setupCLIErrorHandlerInterface).toHaveBeenCalled()
+            expect(syncApp.photosLibrary).toBeDefined();
+            expect(syncApp.syncEngine).toBeDefined();
+            expect(syncApp.cliInterface.setupCLISyncEngineInterface).toHaveBeenCalled()
         });
 
         test(`Create Archive App`, () => {
-            const archiveApp = appFactory(validOptions.archive);
+            const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
             expect(archiveApp).toBeInstanceOf(ArchiveApp);
             expect(archiveApp.icloud).toBeDefined();
             expect(archiveApp.icloud.mfaServer).toBeDefined();
             expect(archiveApp.icloud.auth).toBeDefined();
-            expect((archiveApp as ArchiveApp).photosLibrary).toBeDefined();
-            expect((archiveApp as ArchiveApp).syncEngine).toBeDefined();
-            expect((archiveApp as ArchiveApp).archiveEngine).toBeDefined();
+            expect(archiveApp.cliInterface.setupCLIiCloudInterface).toHaveBeenCalled()
+            expect(archiveApp.cliInterface.setupCLIErrorHandlerInterface).toHaveBeenCalled()
+            expect(archiveApp.photosLibrary).toBeDefined();
+            expect(archiveApp.syncEngine).toBeDefined();
+            expect(archiveApp.cliInterface.setupCLISyncEngineInterface).toHaveBeenCalled()
+            expect(archiveApp.archiveEngine).toBeDefined();
+            expect(archiveApp.cliInterface.setupCLIArchiveEngineInterface).toHaveBeenCalled()
         });
     });
 
     describe(`App control flow`, () => {
         test(`Handle authentication error`, async () => {
-            const tokenApp = appFactory(validOptions.token);
+            const tokenApp = appFactory(validOptions.token) as TokenApp;
             tokenApp.errorHandler.handle = jest.fn(_err => Promise.resolve());
             tokenApp.icloud.authenticate = jest.fn(() => Promise.reject());
             await tokenApp.run();
@@ -74,7 +84,7 @@ describe(`Unit Tests - iCloud App`, () => {
 
         describe(`Token App`, () => {
             test(`Execute token actions`, async () => {
-                const tokenApp = appFactory(validOptions.token);
+                const tokenApp = appFactory(validOptions.token) as TokenApp;
                 tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
                 tokenApp.icloud.auth.validateAccountTokens = jest.fn();
 
@@ -82,21 +92,6 @@ describe(`Unit Tests - iCloud App`, () => {
                 expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(1);
                 expect(tokenApp.icloud.auth.validateAccountTokens).toHaveBeenCalledTimes(1);
                 expect(tokenApp.cliInterface.print).toBeCalledTimes(2);
-            });
-
-            test(`Handle trust token error`, async () => {
-                const tokenApp = appFactory(validOptions.token);
-                tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
-                tokenApp.errorHandler.handle = jest.fn(_err => Promise.resolve());
-                tokenApp.icloud.auth.validateAccountTokens = jest.fn(() => {
-                    throw new iCloudAuthError(``, `FATAL`);
-                });
-
-                await tokenApp.run();
-                expect(tokenApp.errorHandler.handle).toHaveBeenCalledWith(new TokenError(`Unable to validate account token`, `FATAL`));
-
-                expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(1);
-                expect(tokenApp.icloud.auth.validateAccountTokens).toHaveBeenCalledTimes(1);
             });
         });
 

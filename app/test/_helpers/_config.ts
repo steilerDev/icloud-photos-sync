@@ -22,7 +22,6 @@ export const iCloudAuthSecrets = {
 export const iCloudPhotosAccount: PhotosAccount = {
     'ownerName': `_11a1a1a1a11111111a111aa1a1111a11`,
     'photosDomain': `https://p123-ckdatabasews.icloud.com:443`,
-    'syncToken': `AAAAAAAAAAaAa/////////1a/AaAAaaAaaAAaaAAAaaA`,
     'zoneName': `PrimarySync`,
     'zoneType': `REGULAR_CUSTOM_ZONE`,
 };

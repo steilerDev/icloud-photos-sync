@@ -4,11 +4,11 @@
 export type Severity = `WARN` | `FATAL`
 
 /**
- * Base class for this tools common error type
+ * Base class for this tool's error type
  */
 export class iCPSError extends Error {
     /**
-     * Optional message of this error
+     * Message of this error
      */
     message: string;
 
@@ -63,7 +63,7 @@ export class iCPSError extends Error {
 
     /**
      *
-     * @returns A description for this error, containing its cause chain
+     * @returns A description for this error, containing its cause chain's description
      */
     getDescription(): string {
         let desc = `${this.name} (${this.sev}): ${this.message}`;
@@ -100,6 +100,11 @@ export class iCPSError extends Error {
         return !(err instanceof iCPSError && err.sev === `WARN`);
     }
 
+    /**
+     * Makes sure that the provided err is an iCPSError
+     * @param err - The error that should be in iCPSError format
+     * @returns The error (if it already is an iCPSError), or a new iCPSError that attached the provided error as cause or context (depending on type)
+     */
     static toiCPSError(err: unknown): iCPSError {
         if (err instanceof iCPSError) {
             return err;

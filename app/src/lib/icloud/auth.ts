@@ -62,7 +62,6 @@ export interface PhotosAccount {
     zoneName?: string,
     zoneType?: string,
     ownerName?: string,
-    syncToken?: string
 }
 
 /**
@@ -299,7 +298,6 @@ export class iCloudAuth {
         this.iCloudPhotosAccount.ownerName = response.data.zones[0].zoneID.ownerRecordName;
         this.iCloudPhotosAccount.zoneName = response.data.zones[0].zoneID.zoneName;
         this.iCloudPhotosAccount.zoneType = response.data.zones[0].zoneID.zoneType;
-        this.iCloudPhotosAccount.syncToken = response.data.zones[0].syncToken;
         this.validatePhotosAccount();
     }
 
@@ -351,11 +349,6 @@ export class iCloudAuth {
 
         if (!this.iCloudPhotosAccount.ownerName || this.iCloudPhotosAccount.ownerName.length === 0) {
             throw new iCloudAuthError(`Unable to validate Photos account: OwnerName invalid`, `FATAL`)
-                .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
-        }
-
-        if (!this.iCloudPhotosAccount.syncToken || this.iCloudPhotosAccount.syncToken.length === 0) {
-            throw new iCloudAuthError(`Unable to validate Photos account: SyncToken invalid`, `FATAL`)
                 .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
         }
     }

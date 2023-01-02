@@ -11,6 +11,9 @@ import axios, {Axios, AxiosRequestConfig} from 'axios';
 import {appDataDir as photosDataDir} from '../_helpers/_config';
 import {photosLibraryFactory} from '../_helpers/photos-library.helper';
 import {appWithOptions} from '../_helpers/app-factory.helper';
+import { spyOnEvent } from '../_helpers/_general';
+import { HANDLER_EVENT } from '../../src/app/error/handler';
+import { LibraryError } from '../../src/app/error/types';
 
 const assetDir = path.join(photosDataDir, ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
@@ -130,6 +133,78 @@ describe(`Unit Tests - Photos Library`, () => {
                 expect(emptyAlbum.uuid).toEqual(emptyAlbumUUID);
                 expect(Object.keys(emptyAlbum.assets).length).toEqual(0);
                 expect(emptyAlbum.albumType).toEqual(AlbumType.ALBUM);
+            });
+
+            test(`Extranous file in folder`, async () => {
+                const someFolderName = "folder"
+                const someFolderUUID = 'cc40a239-2beb-483e-acee-e897db1b818a'
+                const someAlbumName = 'album'
+                const someAlbumUUID = 'cc40a239-2beb-483e-acee-e897db1b818b'
+                const someFileName = 'file'
+
+                mockfs({
+                    [photosDataDir]: {
+                        [`.${someFolderUUID}`]: {
+                            [`.${someAlbumUUID}`]: {},
+                            [someAlbumName]: mockfs.symlink({
+                                "path": `.${someAlbumUUID}`,
+                            }),
+                            [someFileName]: Buffer.from([1, 1, 1])
+                        },
+                        [someFolderName]: mockfs.symlink({
+                            "path": `.${someFolderUUID}`,
+                        }),
+                    },
+                });
+
+                const library = photosLibraryFactory();
+                const handlerEvent = spyOnEvent(library, HANDLER_EVENT)
+
+                const albums = await library.loadAlbums()
+
+                expect(Object.keys(albums).length).toEqual(2);
+                expect(handlerEvent).toHaveBeenCalledWith(new LibraryError(`Extranous file found in folder ${path.join(photosDataDir, `.${someFolderUUID}`)}`, "WARN"))
+            });
+
+            test(`Orphaned album`, async () => {
+                const orphanedAlbumName = "Orphan"
+                const orphanedAlbumUUID = 'cc40a239-2beb-483e-acee-e897db1b818a'
+
+                mockfs({
+                    [photosDataDir]: {
+                        [orphanedAlbumName]: mockfs.symlink({
+                            "path": `.${orphanedAlbumUUID}`,
+                        }),
+                    },
+                });
+
+                const library = photosLibraryFactory();
+                const orphanEvent = spyOnEvent(library, HANDLER_EVENT)
+                const albums = await library.loadAlbums();
+
+                expect(Object.keys(albums).length).toEqual(0);
+
+                expect(orphanEvent).toHaveBeenCalledWith(new LibraryError(`Found dead symlink at ${path.join(photosDataDir, orphanedAlbumName)} (removing it)`, 'WARN'))
+                expect(() => fs.lstatSync(path.join(photosDataDir, orphanedAlbumName))).toThrowError(`ENOENT: no such file or directory, lstat '/opt/icloud-photos-library/Orphan'`)
+            });
+
+            test(`Unexpected loading error`, async () => {
+                const orphanedAlbumName = "Orphan"
+                const orphanedAlbumUUID = 'cc40a239-2beb-483e-acee-e897db1b818a'
+
+                mockfs({
+                    [photosDataDir]: {
+                        [`.${orphanedAlbumUUID}`]: {},
+                        [orphanedAlbumName]: mockfs.symlink({
+                            "path": `.${orphanedAlbumUUID}`,
+                        }),
+                    },
+                });
+
+                const library = photosLibraryFactory();
+                library.readFolderFromDisk = jest.fn(() => Promise.resolve([{}, ""] as [Album, string]))
+                    .mockRejectedValue(new Error('Undescriptive Error'))
+                await expect(library.loadAlbums()).rejects.toThrowError(`Unknown error while processing ${path.join(photosDataDir, orphanedAlbumName)}`)
             });
 
             test(`Non-empty album`, async () => {
@@ -509,6 +584,33 @@ describe(`Unit Tests - Photos Library`, () => {
                 const assetPath = path.join(assetDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeTruthy();
                 expect(fs.readFileSync(assetPath).length).toBeGreaterThan(0);
+            });
+
+            test(`Write asset with failing verification`, async () => {
+                // Downloading banner of this repo
+                const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
+                const config: AxiosRequestConfig = {
+                    "responseType": `stream`,
+                };
+                const fileName = `asdf`;
+                const ext = `png`;
+                const asset = new Asset(
+                    fileName,
+                    82215,
+                    FileType.fromExtension(ext),
+                    42,
+                );
+                mockfs({
+                    [assetDir]: {},
+                });
+
+                const library = photosLibraryFactory();
+                library.verifyAsset = jest.fn(() => false)
+
+                const response = await (axios as unknown as Axios).get(url, config);
+                await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset ${fileName}`)
+                const assetPath = path.join(assetDir, `${fileName}.${ext}`);
+                expect(fs.existsSync(assetPath)).toBeFalsy();
             });
 
             test(`Delete asset`, async () => {
@@ -995,35 +1097,87 @@ describe(`Unit Tests - Photos Library`, () => {
                     const albumAsset1Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
                     const albumAsset1Stat = fs.lstatSync(albumAsset1Path);
                     expect(albumAsset1Stat.isSymbolicLink()).toBeTruthy();
-                    // Lutimes support lacking in mock-fs see https://github.com/tschaub/mock-fs/issues/365
-                    // expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime))
+                    expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime))
                     const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
                     expect(albumAsset1Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset1Filename));
 
                     const albumAsset2Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
                     const albumAsset2Stat = fs.lstatSync(albumAsset2Path);
                     expect(albumAsset2Stat.isSymbolicLink()).toBeTruthy();
-                    // Lutimes support lacking in mock-fs see https://github.com/tschaub/mock-fs/issues/365
-                    // expect(albumAsset2Stat.mtime).toEqual(new Date(albumAsset2mTime))
+                    expect(albumAsset2Stat.mtime).toEqual(new Date(albumAsset2mTime))
                     const albumAsset2Target = fs.readlinkSync(albumAsset2Path);
                     expect(albumAsset2Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset2Filename));
 
                     const albumAsset3Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset3PrettyFilename);
                     const albumAsset3Stat = fs.lstatSync(albumAsset3Path);
                     expect(albumAsset3Stat.isSymbolicLink()).toBeTruthy();
-                    // Lutimes support lacking in mock-fs see https://github.com/tschaub/mock-fs/issues/365
-                    // expect(albumAsset3Stat.mtime).toEqual(new Date(albumAsset3mTime))
+                    expect(albumAsset3Stat.mtime).toEqual(new Date(albumAsset3mTime))
                     const albumAsset3Target = fs.readlinkSync(albumAsset3Path);
                     expect(albumAsset3Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset3Filename));
 
                     const albumAsset4Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset4PrettyFilename);
                     const albumAsset4Stat = fs.lstatSync(albumAsset4Path);
                     expect(albumAsset4Stat.isSymbolicLink()).toBeTruthy();
-                    // Lutimes support lacking in mock-fs see https://github.com/tschaub/mock-fs/issues/365
-                    // expect(albumAsset4Stat.mtime).toEqual(new Date(albumAsset4mTime))
+                    expect(albumAsset4Stat.mtime).toEqual(new Date(albumAsset4mTime))
                     const albumAsset4Target = fs.readlinkSync(albumAsset4Path);
                     expect(albumAsset4Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset4Filename));
                 });
+
+                test(`Album - linking conflict (same pretty filename)`, () => {
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+
+                    const albumAsset1PrettyFilename = `2h-media-MOCpD78SHW0-unsplash.jpeg`;
+                    const albumAsset1Filename = `AexevMtFb8wMSLb78udseVvLv-m2.jpeg`;
+                    const albumAsset1mTime = 1640995200000; // 01.01.2022
+                    const albumAsset2PrettyFilename = albumAsset1PrettyFilename;
+                    const albumAsset2Filename = `AZmQ91f-NKAp5b67HE23Fqhjt5NO.jpeg`;
+                    const albumAsset2mTime = 1609459200000; // 01.01.2021
+
+                    mockfs({
+                        [photosDataDir]: {
+                            [ASSET_DIR]: {
+                                [albumAsset1Filename]: mockfs.file({
+                                    "mtime": new Date(albumAsset1mTime),
+                                    "content": Buffer.from([1, 1, 1, 1]),
+                                }),
+                                [albumAsset2Filename]: mockfs.file({
+                                    "mtime": new Date(albumAsset2mTime),
+                                    "content": Buffer.from([1, 1, 1, 1]),
+                                }),
+                            },
+                        },
+                    });
+
+                    const albumAssets = {
+                        [albumAsset1Filename]: albumAsset1PrettyFilename,
+                        [albumAsset2Filename]: albumAsset2PrettyFilename,
+                    };
+
+                    const folder = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
+                    folder.assets = albumAssets;
+                    const library = photosLibraryFactory();
+
+                    const handlerEvent = spyOnEvent(library, HANDLER_EVENT)
+
+                    library.writeAlbum(folder);
+
+                    const uuidFolder = fs.statSync(path.join(photosDataDir, `.${albumUUID}`));
+                    const namedFolder = fs.lstatSync(path.join(photosDataDir, albumName));
+                    const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, albumName));
+                    expect(uuidFolder.isDirectory()).toBeTruthy();
+                    expect(namedFolder.isSymbolicLink()).toBeTruthy();
+                    expect(namedFolderTarget).toEqual(`.${albumUUID}`);
+
+                    const albumAsset1Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
+                    const albumAsset1Stat = fs.lstatSync(albumAsset1Path);
+                    expect(albumAsset1Stat.isSymbolicLink()).toBeTruthy();
+                    expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime))
+                    const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
+                    expect(albumAsset1Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset1Filename));
+
+                    expect(handlerEvent).toHaveBeenCalledWith(new LibraryError(`Not linking ../_All-Photos/${albumAsset2Filename} to ${photosDataDir}/.${albumUUID}/${albumAsset2PrettyFilename} in album ${albumName}`, "WARN"))
+                })
             });
 
             describe(`Delete`, () => {

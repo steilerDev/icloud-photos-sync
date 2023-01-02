@@ -140,20 +140,25 @@ export class PhotosLibrary extends EventEmitter {
                 let fullPath: string;
                 try {
                     [loadedAlbum, fullPath] = await this.readFolderFromDisk(link.name, albumPath, album.getUUID());
+                    albums.push(...await this.loadAlbum(loadedAlbum, fullPath));
                 } catch (err) {
-                    // There might be dead symlinks - let's remove them
-                    if (err.code !== `ENOENT`) {
-                        throw new LibraryError(`Unable to load album from link ${link.name}`, `FATAL`).addCause(err);
-                    }
-
+                    // This error might be caused by a dead symlink, let's check
                     const deadSymlink = path.join(albumPath, link.name);
-                    this.emit(HANDLER_EVENT, new LibraryError(`Found dead symlink at ${deadSymlink} (removing it)`, `WARN`).addCause(err));
-                    await fs.promises.unlink(deadSymlink);
-                    continue;
+                    try {
+                        // Checking if there is actually a dead symlink
+                        if(await fs.promises.lstat(deadSymlink) && !fs.existsSync(deadSymlink)) {
+                            this.emit(HANDLER_EVENT, new LibraryError(`Found dead symlink at ${deadSymlink} (removing it)`, `WARN`).addCause(err));
+                            await fs.promises.unlink(deadSymlink);
+                        } else {
+                            throw new LibraryError(`Unknown error while processing ${deadSymlink}`, 'FATAL')
+                        }
+                    } catch(err) {
+                        throw new LibraryError(`Unknown error while processing ${deadSymlink}`, 'FATAL').addCause(err)
+                    }
                 }
-
-                albums.push(...await this.loadAlbum(loadedAlbum, fullPath));
-            } else if (album.albumType === AlbumType.ALBUM) { // If we are loading an album, we need to get the assets from their UUID based folder
+            } 
+            
+            if (album.albumType === AlbumType.ALBUM) { // If we are loading an album, we need to get the assets from their UUID based folder
                 const target = await fs.promises.readlink(path.join(albumPath, link.name));
                 const uuidFile = path.parse(target).base;
                 albums[0].assets[uuidFile] = link.name;
@@ -223,16 +228,16 @@ export class PhotosLibrary extends EventEmitter {
         const location = asset.getAssetFilePath(this.assetDir);
         const writeStream = fs.createWriteStream(location);
         response.data.pipe(writeStream);
-        return pEvent(writeStream, `close`)
-            .then(() => fs.promises.utimes(asset.getAssetFilePath(this.assetDir), new Date(asset.modified), new Date(asset.modified))) // Setting modified date on file
-            .then(() => {
-                if (!this.verifyAsset(asset)) {
-                    throw new LibraryError(`Unable to verify asset ${asset.getDisplayName()}`, `FATAL`)
-                        .addContext(`asset`, asset);
-                }
+        await pEvent(writeStream, `close`)
+        await fs.promises.utimes(asset.getAssetFilePath(this.assetDir), new Date(asset.modified), new Date(asset.modified)) // Setting modified date on file
 
-                this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
-            });
+        if (!this.verifyAsset(asset)) {
+            await fs.promises.rm(asset.getAssetFilePath(this.assetDir))
+            throw new LibraryError(`Unable to verify asset ${asset.getDisplayName()}`, `FATAL`)
+                .addContext(`asset`, asset);
+        }
+
+        this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
     }
 
     /**
@@ -240,9 +245,9 @@ export class PhotosLibrary extends EventEmitter {
      * @param asset - The asset that needs to be removed
      * @returns A promise, that resolves once the asset was deleted from disk
      */
-    async deleteAsset(asset: Asset): Promise<void> {
+    async deleteAsset(asset: Asset) {
         this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
-        return fs.promises.rm(asset.getAssetFilePath(this.assetDir), {"force": true});
+        await fs.promises.rm(asset.getAssetFilePath(this.assetDir), {"force": true});
     }
 
     /**
@@ -497,8 +502,8 @@ export class PhotosLibrary extends EventEmitter {
             } while (fs.existsSync(targetPath));
 
             this.logger.debug(`Moving ${uuidPath} to ${targetPath}, unlinking ${namePath}`);
-            fs.renameSync(uuidPath, targetPath);
-            fs.unlinkSync(namePath);
+            await fs.promises.rename(uuidPath, targetPath);
+            await fs.promises.unlink(namePath);
         }
     }
 }

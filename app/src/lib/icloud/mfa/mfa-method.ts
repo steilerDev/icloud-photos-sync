@@ -1,4 +1,4 @@
-import {AxiosError, AxiosResponse} from 'axios';
+import {AxiosResponse} from 'axios';
 import {iCloudError} from '../../../app/error/types.js';
 import * as ICLOUD from '../constants.js';
 
@@ -150,8 +150,8 @@ export class MFAMethod {
      * @param err - The error returned
      * @returns A user readable error description
      */
-    processResendError(err: AxiosError): iCloudError {
-        if (!err.response) {
+    processResendError(err: any): iCloudError {
+        if (!(err.name === 'AxiosError') || !err.response) {
             return new iCloudError(`No response received`, `FATAL`).addCause(err);
         }
 
@@ -169,13 +169,13 @@ export class MFAMethod {
                 if (!trustedPhones
                     || !Array.isArray(trustedPhones)
                     || trustedPhones.length === 0) {
-                    return new iCloudError(`No trusted phone numbers registered!`, `WARN`)
+                    return new iCloudError(`No trusted phone numbers registered`, `WARN`)
                         .addContext(`response.data`, err.response.data)
                         .addCause(err);
                 }
 
                 if (!trustedPhones.some(number => number.id === this.numberId)) {
-                    return new iCloudError(`Selected Phone Number ID does not exist.\nAvailable numbers: ${trustedPhones.map(number => `${number.id}: ${number.numberWithDialCode}`).join(`\n`)}`, `WARN`)
+                    return new iCloudError(`Selected Phone Number ID does not exist.\nAvailable numbers:\n${trustedPhones.map(number => `- ${number.id}: ${number.numberWithDialCode}`).join(`\n`)}`, `WARN`)
                         .addContext(`response.data`, err.response.data)
                         .addCause(err);
                 }

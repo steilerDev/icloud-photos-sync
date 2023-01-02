@@ -6,7 +6,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {ArchiveApp} from '../../app/icloud-app.js';
-import {ArchiveError} from '../../app/error/types.js';
+import {ArchiveError, iCPSError} from '../../app/error/types.js';
 import EventEmitter from 'events';
 import * as ARCHIVE_ENGINE from './constants.js';
 import {HANDLER_EVENT} from '../../app/error/handler.js';
@@ -44,12 +44,12 @@ export class ArchiveEngine extends EventEmitter {
     }
 
     /**
-     * This will archive an Album stored in the given location and delete it's remote representation, unless noRemoteDelete is set
+     * This will archive an Album stored in the given location and delete it's remote representation, if remoteDelete is set
      * @param archivePath - The path to the local album. The named path is expected.
      * @param assetList - The current remote asset list
      * @returns A Promise, that resolves once the path has been archived
      */
-    async archivePath(archivePath: string, assetList: Asset[]): Promise<any> {
+    async archivePath(archivePath: string, assetList: Asset[]) {
         this.logger.debug(`Archiving path ${archivePath}`);
         this.emit(ARCHIVE_ENGINE.EVENTS.ARCHIVE_START, archivePath);
 
@@ -66,17 +66,14 @@ export class ArchiveEngine extends EventEmitter {
 
         const loadedAlbum = (await this.photosLibrary.loadAlbum(archivedAlbum, archivedAlbumPath)).find(album => album.albumName === albumName);
 
-        if (!loadedAlbum) {
+        if (!loadedAlbum || Object.keys(loadedAlbum.assets).length === 0) {
             throw new ArchiveError(`Unable to load album`, `FATAL`);
-        }
-
-        if (Object.keys(loadedAlbum.assets).length === 0) {
-            throw new ArchiveError(`Folder is empty!`, `FATAL`);
         }
 
         const numberOfItems = Object.keys(loadedAlbum.assets).length;
         this.logger.debug(`Persisting ${numberOfItems} items`);
         this.emit(ARCHIVE_ENGINE.EVENTS.PERSISTING_START, numberOfItems);
+
         // Iterating over all album items to persist them
         const remoteDeleteList = await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
             const assetPath = path.join(this.photosLibrary.assetDir, uuidFilename);
@@ -96,7 +93,8 @@ export class ArchiveEngine extends EventEmitter {
             try {
                 return this.prepareForRemoteDeletion(assetPath, assetList);
             } catch (err) {
-                this.emit(HANDLER_EVENT, err);
+                this.emit(HANDLER_EVENT, iCPSError.toiCPSError(err));
+                return undefined;
             }
         }));
 

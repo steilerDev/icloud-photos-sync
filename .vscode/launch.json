@@ -43,7 +43,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/archive-engine.test.ts"
+                "test/unit/app.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
@@ -70,7 +70,6 @@
                 "--experimental-vm-modules",
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
-                "test/"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

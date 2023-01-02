@@ -117,18 +117,18 @@ export class SyncEngine extends EventEmitter {
         }
 
         if (err.code === `ERR_BAD_REQUEST`) {
-            this.logger.debug(`Bad request ${err.response?.status ?? err.status}, refreshing session...`);
+            this.logger.debug(`Bad request ${err.response?.status}, refreshing session...`);
             return false;
         }
 
-        throw new SyncError(`Unknown error code, aborting!`, `FATAL`)
+        throw new SyncError(`Unknown network error code`, `FATAL`)
             .addCause(err);
     }
 
     /**
      * Prepares the sync engine for a retry, by emptying the queue and refreshing iCloud cookies
      */
-    async prepareRetry(): Promise<void> {
+    async prepareRetry() {
         this.logger.debug(`Preparing retry...`);
         if (this.downloadQueue) {
             if (this.downloadQueue.size > 0) {
@@ -146,7 +146,7 @@ export class SyncEngine extends EventEmitter {
         this.logger.debug(`Refreshing iCloud connection`);
         const iCloudReady = this.icloud.getReady();
         this.icloud.getiCloudCookies();
-        return iCloudReady;
+        await iCloudReady;
     }
 
     /**
@@ -155,21 +155,17 @@ export class SyncEngine extends EventEmitter {
      */
     async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
-        return Promise.all([
+        const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await Promise.all([
             this.icloud.photos.fetchAllPictureRecords()
                 .then(([cplAssets, cplMasters]) => SyncEngine.convertCPLAssets(cplAssets, cplMasters)),
             this.icloud.photos.fetchAllAlbumRecords()
                 .then(cplAlbums => SyncEngine.convertCPLAlbums(cplAlbums)),
             this.photosLibrary.loadAssets(),
             this.photosLibrary.loadAlbums(),
-        ]).then(result => {
-            const remoteAssetCount = result[0].length;
-            const remoteAlbumCount = result[1].length;
-            const localAssetCount = Object.keys(result[2]).length;
-            const localAlbumCount = Object.keys(result[3]).length;
-            this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, remoteAssetCount, remoteAlbumCount, localAssetCount, localAlbumCount);
-            return result;
-        });
+        ])
+
+        this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, remoteAssets.length, remoteAlbums.length, Object.keys(localAssets).length, Object.keys(localAlbums).length);
+        return [remoteAssets, remoteAlbums, localAssets, localAlbums];
     }
 
     // From ./helpers/fetchAndLoad-helpters.ts
@@ -187,14 +183,13 @@ export class SyncEngine extends EventEmitter {
     async diffState(remoteAssets: Asset[], remoteAlbums: Album[], localAssets: PLibraryEntities<Asset>, localAlbums: PLibraryEntities<Album>): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
         this.logger.info(`Diffing state`);
-        return Promise.all([
+        const [assetQueue, albumQueue] = await Promise.all([
             this.getProcessingQueues(remoteAssets, localAssets),
             this.getProcessingQueues(remoteAlbums, localAlbums),
-        ]).then(([assetQueue, albumQueue]) => {
-            const resolvedAlbumQueue = this.resolveHierarchicalDependencies(albumQueue, localAlbums);
-            this.emit(SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
-            return [assetQueue, resolvedAlbumQueue];
-        });
+        ])
+        const resolvedAlbumQueue = this.resolveHierarchicalDependencies(albumQueue, localAlbums);
+        this.emit(SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
+        return [assetQueue, resolvedAlbumQueue];
     }
 
     // From ./helpers/diff-helpers.ts
@@ -210,19 +205,20 @@ export class SyncEngine extends EventEmitter {
     async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
         this.emit(SYNC_ENGINE.EVENTS.WRITE);
         this.logger.info(`Writing state`);
+
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);
-        return this.writeAssets(assetQueue)
-            .catch(err => {
-                this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, err.message);
-                throw err;
-            })
-            .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED))
-            .then(() => {
-                this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, albumQueue[0].length, albumQueue[1].length, albumQueue[2].length);
-                return this.writeAlbums(albumQueue);
-            })
-            .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED))
-            .then(() => this.emit(SYNC_ENGINE.EVENTS.WRITE_COMPLETED));
+        try {
+            await this.writeAssets(assetQueue)
+        } catch(err) {
+            this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, err.message);
+            throw err;
+        }
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED)
+
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, albumQueue[0].length, albumQueue[1].length, albumQueue[2].length);
+        await this.writeAlbums(albumQueue);
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED)
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_COMPLETED);
     }
 
     // From ./helpers/write-assets-helpers.ts

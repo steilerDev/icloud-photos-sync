@@ -151,7 +151,7 @@ export class Asset implements PEntity<Asset> {
 
     /**
      * Should only be called on a 'remote' entity. Will apply the local entitie's properties to the remote one
-     * @param localEntity - The local entity
+     * @param _localEntity - The local entity
      * @returns This object with the applied properties
      */
     apply(_localEntity: Asset): Asset {

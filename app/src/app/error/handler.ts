@@ -6,10 +6,22 @@ import {getLogger, logFile} from "../../lib/logger.js";
 import {iCPSError, InterruptError} from "./types.js";
 import {randomUUID} from "crypto";
 
+/**
+ * The event emitted by classes of this application and picked up by the handler. An instance of iCPSError is expected as argument
+ */
 export const HANDLER_EVENT = `error-handler`;
+/**
+ * Event emitted in case an error was handled. Error string provided as argument.
+ */
 export const ERROR_EVENT = `error`;
+/**
+ * Event emitted in case a warning was handled. Error string provided as argument.
+ */
 export const WARN_EVENT = `warn`;
 
+/**
+ * This class handles errors thrown or `HANDLER_EVENT` emitted by classes of this application
+ */
 export class ErrorHandler extends EventEmitter {
     /**
      * The error reporting client - if activated
@@ -30,7 +42,7 @@ export class ErrorHandler extends EventEmitter {
             // This.btClient.setSymbolication();
         }
 
-        // Register handlers
+        // Register handlers for interrupts
         process.on(`SIGTERM`, async () => {
             await this.handle(new InterruptError(`SIGTERM`));
         });
@@ -76,6 +88,10 @@ export class ErrorHandler extends EventEmitter {
         }
     }
 
+    /**
+     * Registers an event listener for `HANDLER_EVENT` on the provided object.
+     * @param object - An EventEmitter, which will emit `HANDLER_EVENT`
+     */
     registerHandlerForObject(object: EventEmitter) {
         object.on(HANDLER_EVENT, async (err: unknown) => {
             await this.handle(iCPSError.toiCPSError(err));
@@ -85,7 +101,7 @@ export class ErrorHandler extends EventEmitter {
     /**
      * Reports the provided error to the error reporting backend
      * @param err - The occured error
-     * @returns - An error code
+     * @returns - An unique error code
      */
     async reportError(err: iCPSError): Promise<string> {
         if (!this.btClient) {
@@ -96,7 +112,7 @@ export class ErrorHandler extends EventEmitter {
         const report = this.btClient.createReport(err, {
             'icps.description': err.getDescription(),
             'icps.severity': err.sev,
-            'icps.addtlContext': JSON.stringify(err.getContext()),
+            'icps.ctx': JSON.stringify(err.getContext()),
             'icps.uuid': errorUUID,
         }, [logFile]);
 
@@ -104,9 +120,6 @@ export class ErrorHandler extends EventEmitter {
             report.addAttribute(`icps.cause`, err.cause);
         }
 
-        // Result = await this.btClient.sendAsync(report);
-        // const privateRxIdAttribute = `_rxId`;
-        // const errorCode = result[privateRxIdAttribute] as string;
         await this.btClient.sendAsync(report);
         return errorUUID;
     }

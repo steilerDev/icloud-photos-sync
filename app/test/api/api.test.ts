@@ -18,9 +18,9 @@ import {iCloudError} from '../../src/app/error/types.js';
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
 
-const username = process.env.APPLE_ID_USER;
-const password = process.env.APPLE_ID_PWD;
-const token = process.env.TRUST_TOKEN;
+const username = process.env.TEST_APPLE_ID_USER;
+const password = process.env.TEST_APPLE_ID_PWD;
+const token = process.env.TEST_TRUST_TOKEN;
 
 let icloud: iCloud;
 

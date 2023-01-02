@@ -2,4 +2,4 @@
 import {appFactory} from "./app/factory.js";
 
 // Creates and runs the appropriate application
-await appFactory(process.argv).run();
+await appFactory(process.argv).run()

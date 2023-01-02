@@ -1,12 +1,12 @@
 
 import {expect, describe, test, jest} from '@jest/globals';
+import { HANDLER_EVENT } from '../../src/app/error/handler';
+import { iCloudError, MFAError } from '../../src/app/error/types';
 import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
 import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {spyOnEvent} from '../_helpers/_general';
-
-test.todo(`test error_handle event`);
 
 describe(`Unit Tests - MFA Server`, () => {
     describe(`MFA Code`, () => {
@@ -32,6 +32,7 @@ describe(`Unit Tests - MFA Server`, () => {
 
             const server = mfaServerFactory();
             server.sendResponse = jest.fn();
+            const handlerEvent = spyOnEvent(server, HANDLER_EVENT)
 
             const req = requestFactory(`${ENDPOINT.CODE_INPUT}?code=${code}`);
             const res = responseFactory();
@@ -39,6 +40,7 @@ describe(`Unit Tests - MFA Server`, () => {
             server.handleMFACode(req, res);
 
             expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
+            expect(handlerEvent).toHaveBeenCalledWith(new MFAError(`Received unexpected MFA code format, expecting 6 digits`, 'WARN'))
         });
     });
 
@@ -117,6 +119,7 @@ describe(`Unit Tests - MFA Server`, () => {
 
             const server = mfaServerFactory();
             server.sendResponse = jest.fn();
+            const handlerEvent = spyOnEvent(server, HANDLER_EVENT)
 
             const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
             const res = responseFactory();
@@ -124,7 +127,87 @@ describe(`Unit Tests - MFA Server`, () => {
             server.handleMFAResend(req, res);
 
             expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Method does not match expected format`);
+            expect(handlerEvent).toHaveBeenCalledWith(new MFAError(`Method does not match expected format`, 'WARN'))
         });
+
+        describe(`Process resend errors`, () => {
+            describe.each([`sms`, `voice`, `device`])(`Common errors`, method => {
+                test(`Unknown error`, () => {
+                    const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`)
+                    expect(mfaMethod.processResendError(new Error())).toEqual(new iCloudError(`No response received`, `FATAL`))
+                })
+
+                test(`Timeout`, () => {
+                    const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`)
+                    const error = {
+                        name: 'AxiosError',
+                        response: {
+                            status: 403
+                        }
+                    }
+                    expect(mfaMethod.processResendError(error)).toEqual(new iCloudError(`Timeout`, `FATAL`))
+                })
+
+                test(`No response data`, () => {
+                    const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`)
+                    const error = {
+                        name: 'AxiosError',
+                        response: {
+                            status: 412
+                        }
+                    }
+                    expect(mfaMethod.processResendError(error)).toEqual(new iCloudError(`Bad request, no response data`, `FATAL`))
+                })
+
+                test(`Unexpected status code`, () => {
+                    const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`)
+                    const error = {
+                        name: 'AxiosError',
+                        response: {
+                            status: 500
+                        }
+                    }
+                    expect(mfaMethod.processResendError(error)).toEqual(new iCloudError(`Bad request, unknown cause with method ${mfaMethod}`, `FATAL`))
+                })
+            })
+
+            describe.each([`sms`, `voice`])(`Phone errors`, method => {
+                test(`No trusted phone numbers`, () => {
+                    const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`)
+                    const error = {
+                        name: 'AxiosError',
+                        response: {
+                            status: 412,
+                            data: {}
+                        }
+                    }
+                    expect(mfaMethod.processResendError(error)).toEqual(new iCloudError(`No trusted phone numbers registered`, `FATAL`))
+                })
+
+                test(`Phone number ID does not exist`, () => {
+                    const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`)
+                    const error = {
+                        name: 'AxiosError',
+                        response: {
+                            status: 412,
+                            data: {
+                                trustedPhoneNumbers: [
+                                    {
+                                        id: 2,
+                                        numberWithDialCode: "+49-123-456"
+                                    },
+                                    {
+                                        id: 3,
+                                        numberWithDialCode: "+49-789-123"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                    expect(mfaMethod.processResendError(error)).toEqual(new iCloudError(`Selected Phone Number ID does not exist.\nAvailable numbers:\n- 2: +49-123-456\n- 3: +49-789-123`, `FATAL`))
+                })
+            })
+        })
     });
 
     describe(`Request routing`, () => {
@@ -185,10 +268,12 @@ describe(`Unit Tests - MFA Server`, () => {
             server.sendResponse = jest.fn();
             server.handleMFAResend = jest.fn();
             server.handleMFACode = jest.fn();
+            const handlerEvent = spyOnEvent(server, HANDLER_EVENT)
 
             server.handleRequest(req, res);
 
             expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Method not supported: ${method}`);
+            expect(handlerEvent).toHaveBeenCalledWith(new MFAError(`Received unknown method to endpoint /invalid: ${method}`, `WARN`))
             expect(server.handleMFAResend).not.toHaveBeenCalled();
             expect(server.handleMFACode).not.toHaveBeenCalled();
         });
@@ -202,10 +287,12 @@ describe(`Unit Tests - MFA Server`, () => {
             server.sendResponse = jest.fn();
             server.handleMFAResend = jest.fn();
             server.handleMFACode = jest.fn();
+            const handlerEvent = spyOnEvent(server, HANDLER_EVENT)
 
             server.handleRequest(req, res);
 
             expect(server.sendResponse).toHaveBeenCalledWith(res, 404, `Route not found, available endpoints: ["/mfa","/resend_mfa"]`);
+            expect(handlerEvent).toHaveBeenCalledWith(new MFAError(`Received request to unknown endpoint /invalid`, `WARN`))
             expect(server.handleMFAResend).not.toHaveBeenCalled();
             expect(server.handleMFACode).not.toHaveBeenCalled();
         });

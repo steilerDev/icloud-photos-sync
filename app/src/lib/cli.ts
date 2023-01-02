@@ -49,17 +49,6 @@ export class CLIInterface {
         this.enableCLIOutput = !app.options.logToCli && !app.options.silent;
         this.surpressWarnings = app.options.surpressWarnings;
 
-        this.setupCLIiCloudInterface(app.icloud);
-        this.setupCLIErrorHandlerInterface(app.errorHandler);
-
-        if (app instanceof SyncApp) {
-            this.setupCLISyncEngineInterface(app.syncEngine);
-        }
-
-        if (app instanceof ArchiveApp) {
-            this.setupCLIArchiveEngineInterface(app.archiveEngine);
-        }
-
         if (this.enableCLIOutput) {
             console.clear();
         }
@@ -85,8 +74,7 @@ export class CLIInterface {
 
     /**
      * Prints a fatal error
-     * @param err - The error containing the error message
-     * @param desc - Optional
+     * @param err - The error string
      */
     printFatalError(err: string) {
         this.print(chalk.red(this.getHorizontalLine()));
@@ -112,6 +100,7 @@ export class CLIInterface {
 
     /**
      * Listens to iCloud events and provides CLI output
+     * @param iCloud - The iCloud object to listen on
      */
     setupCLIiCloudInterface(iCloud: iCloud) {
         iCloud.on(ICLOUD.EVENTS.AUTHENTICATION_STARTED, () => {
@@ -146,6 +135,7 @@ export class CLIInterface {
 
     /**
      * Listens to Sync Engine events and provides CLI output
+     * @param syncEngine - The Sync Engine object to listen on
      */
     setupCLISyncEngineInterface(syncEngine: SyncEngine) {
         syncEngine.on(SYNC_ENGINE.EVENTS.START, () => {
@@ -223,6 +213,10 @@ export class CLIInterface {
         });
     }
 
+    /**
+     * Listens to Archive Engine events and provides CLI output
+     * @param archiveEngine - The Archive Engine object to listen on
+     */
     setupCLIArchiveEngineInterface(archiveEngine: ArchiveEngine) {
         archiveEngine.on(ARCHIVE_ENGINE.EVENTS.ARCHIVE_START, (path: string) => {
             this.print(chalk.white.bold(`Archiving local path ${path}`));
@@ -243,6 +237,10 @@ export class CLIInterface {
         });
     }
 
+    /**
+     * Listens to Error Handler events and provides CLI output
+     * @param errorHandler - The Error Handler object to listen on
+     */
     setupCLIErrorHandlerInterface(errorHandler: ErrorHandler) {
         errorHandler.on(ERROR_EVENT, (err: string) => {
             this.printFatalError(err);

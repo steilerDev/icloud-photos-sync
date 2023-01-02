@@ -18,8 +18,8 @@ export async function writeAssets(this: SyncEngine, processingQueue: PLibraryPro
     this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
 
     // Deleting before downloading, in order to ensure no conflicts
-    return Promise.all(toBeDeleted.map(asset => this.removeAsset(asset)))
-        .then(() => Promise.all(toBeAdded.map(asset => this.downloadQueue.add(() => this.addAsset(asset)))));
+    await Promise.all(toBeDeleted.map(asset => this.removeAsset(asset)))
+    await Promise.all(toBeAdded.map(asset => this.downloadQueue.add(() => this.addAsset(asset))))
 }
 
 /**
@@ -27,7 +27,7 @@ export async function writeAssets(this: SyncEngine, processingQueue: PLibraryPro
  * @param asset - The asset that needs to be downloaded
  * @returns A promise that resolves, once the file has been sucesfully written to disk
  */
-export async function addAsset(this: SyncEngine, asset: Asset): Promise<void> {
+export async function addAsset(this: SyncEngine, asset: Asset) {
     this.logger.info(`Adding asset ${asset.getDisplayName()}`);
 
     if (this.photosLibrary.verifyAsset(asset)) {
@@ -36,11 +36,9 @@ export async function addAsset(this: SyncEngine, asset: Asset): Promise<void> {
         return;
     }
 
-    return this.icloud.photos.downloadAsset(asset)
-        .then(data => this.photosLibrary.writeAsset(asset, data))
-        .then(() => {
-            this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
-        });
+    const data = await this.icloud.photos.downloadAsset(asset)
+    await this.photosLibrary.writeAsset(asset, data)
+    this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
 }
 
 /**
@@ -48,7 +46,7 @@ export async function addAsset(this: SyncEngine, asset: Asset): Promise<void> {
  * @param asset - The asset that needs to be deleted
  * @returns A promise that resolves, once the file has been deleted
  */
-export async function removeAsset(this: SyncEngine, asset: Asset): Promise<void> {
+export async function removeAsset(this: SyncEngine, asset: Asset) {
     this.logger.info(`Removing asset ${asset.getDisplayName()}`);
-    return this.photosLibrary.deleteAsset(asset);
+    await this.photosLibrary.deleteAsset(asset);
 }

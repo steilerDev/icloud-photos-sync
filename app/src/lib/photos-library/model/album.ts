@@ -101,14 +101,17 @@ export class Album implements PEntity<Album> {
     }
 
     /**
-     * Creates a dummy album that is used to load all other albums from disk
-     * @param photoDataDir - The folder path of all albums
-     * @returns The dummy album
+     * Creates a dummy root album that is used to load all other albums from disk
+     * @returns The dummy root album
      */
     static getRootAlbum(): Album {
         return new Album(``, AlbumType.FOLDER, `iCloud Photos Library`, ``);
     }
 
+    /**
+     * Creates a dummy stash album tat is used to load all albums currently within the stash album
+     * @returns The dummy stash album
+     */
     static getStashAlbum(): Album {
         return new Album(STASH_DIR, AlbumType.FOLDER, `iCloud Photos Library Archive`, ``);
     }
@@ -161,7 +164,7 @@ export class Album implements PEntity<Album> {
     /**
      * Check if a given album is in the chain of ancestors
      * @param potentialAncestor - The potential ancesotr for the given album
-     * @param fullState - The full directory state
+     * @param fullQueue - The full list of albums
      * @returns True if potentialAncestor is part of this album's directory tree
      */
     hasAncestor(potentialAncestor: Album, fullQueue: Album[]): boolean {
@@ -184,6 +187,13 @@ export class Album implements PEntity<Album> {
         return false;
     }
 
+    /**
+     * Calculates the distance to the root folder in order to compare the album's order.
+     * @param album - The album, whose depth needs to be calculated
+     * @param fullQueue - The list of all albums
+     * @returns The number of albums between the given album and the root album
+     * @throws A LibraryError, in case there is no link from the given album to root
+     */
     static distanceToRoot(album: Album, fullQueue: Album[]): number {
         if (album.parentAlbumUUID === ``) {
             return 0;

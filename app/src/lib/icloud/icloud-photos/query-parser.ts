@@ -5,7 +5,6 @@
 
 import {iCloudError} from '../../../app/error/types.js';
 import {AlbumAssets} from '../../photos-library/model/album.js';
-import * as QueryBuilder from './query-builder.js';
 
 /**
  * Represents a resources returned from the API, called 'asset id' as per API. Can be found as a record on a CPLAsset or CPLMaster
@@ -35,9 +34,13 @@ export class AssetID {
      */
     downloadURL: string;
 
-    static parseFromQuery(assetId: any): AssetID {
-        if (assetId.type !== `ASSETID`) {
-            throw new iCloudError(`Unknown type '${assetId.type}, expected 'ASSETID'`, `FATAL`)
+    /**
+     * Parses from a record sourced through the API
+     * @param assetId - The plain JSON object, as returned by the API
+     */
+    static parseFromQuery(assetId: unknown): AssetID {
+        if (!isAssetIDQuery(assetId)) {
+            throw new iCloudError(`Query response cannot be parsed`, `FATAL`)
                 .addContext(`query`, assetId);
         }
 
@@ -49,6 +52,35 @@ export class AssetID {
         asset.downloadURL = assetId.value.downloadURL;
         return asset;
     }
+}
+
+/**
+ * Expected query response format for AssetID
+ */
+type AssetIDQuery = {
+    value: {
+        fileChecksum: string,
+        size: number
+        wrappingKey: string
+        referenceChecksum: string
+        downloadURL: string
+    };
+    type: string;
+}
+
+/**
+ * Checks if the provided object is an AssetIDQuery
+ * @param obj - The unknown object
+ * @returns True if object conforms to AssetIDQuery
+ */
+function isAssetIDQuery(obj: unknown): obj is AssetIDQuery {
+    return (obj as AssetIDQuery).value.fileChecksum !== undefined
+        && (obj as AssetIDQuery).value.size !== undefined
+        && (obj as AssetIDQuery).value.wrappingKey !== undefined
+        && (obj as AssetIDQuery).value.referenceChecksum !== undefined
+        && (obj as AssetIDQuery).value.downloadURL !== undefined
+        && (obj as AssetIDQuery).type !== undefined
+        && (obj as AssetIDQuery).type === `ASSETID`;
 }
 
 /**
@@ -88,41 +120,85 @@ export class CPLAsset {
      * Parses from a record sourced through the API
      * @param cplRecord - The plain JSON object, as returned by the API
      */
-    static parseFromQuery(cplRecord: any): CPLAsset {
-        if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
-            throw new iCloudError(`Unknown record type ${cplRecord.recordType}, expected ${QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD}`, `FATAL`)
-                .addContext(`cplRecord`, cplRecord);
-        }
-
-        if (!cplRecord.recordName) {
-            throw new iCloudError(`recordName not found`, `FATAL`)
-                .addContext(`cplRecord`, cplRecord);
+    static parseFromQuery(cplRecord: unknown): CPLAsset {
+        if (!isCPLAssetQuery(cplRecord)) {
+            throw new iCloudError(`Query response cannot be parsed`, `FATAL`)
+                .addContext(`query`, cplRecord);
         }
 
         const asset = new CPLAsset();
         asset.recordName = cplRecord.recordName;
-
-        // Will all throw an access error if not present
-        asset.masterRef = cplRecord.fields[QueryBuilder.DESIRED_KEYS.MASTER_REF].value.recordName;
-        asset.favorite = cplRecord.fields[QueryBuilder.DESIRED_KEYS.FAVORITE]?.value ?? 0;
+        asset.masterRef = cplRecord.fields.masterRef.value.recordName;
+        asset.favorite = cplRecord.fields.isFavorite?.value ?? 0;
         asset.modified = cplRecord.modified.timestamp;
 
-        if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.ADJUSTMENT_TYPE]) {
-            asset.adjustmentType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ADJUSTMENT_TYPE].value;
-            if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE]) {
-                asset.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE]);
-                asset.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.JPEG_RESOURCE_FILE_TYPE].value;
-            } else if (cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE]) {
-                asset.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE]);
-                asset.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.VIDEO_RESOURCE_FILE_TYPE].value;
-            } else if (asset.adjustmentType !== `com.apple.video.slomo`) {
-                throw new iCloudError(`Neither JPEG nor Video resource found in CPL Asset even though adjustmentType is given`, `WARN`)
-                    .addContext(`cplRecord`, cplRecord);
+        if (cplRecord.fields.adjustmentType?.value) {
+            asset.adjustmentType = cplRecord.fields.adjustmentType.value;
+            if (cplRecord.fields.resJPEGFullRes) {
+                asset.resource = AssetID.parseFromQuery(cplRecord.fields.resJPEGFullRes);
+                asset.resourceType = cplRecord.fields.resJPEGFullFileType.value;
+            } else if (cplRecord.fields.resVidFullRes) {
+                asset.resource = AssetID.parseFromQuery(cplRecord.fields.resVidFullRes);
+                asset.resourceType = cplRecord.fields.resVidFullFileType.value;
             }
         }
 
         return asset;
     }
+}
+
+/**
+ * Expected query result for CPLAsset
+ */
+type CPLAssetQuery = {
+    recordType: string
+    recordName: string,
+    modified: {
+        timestamp: number
+    }
+    fields: {
+        masterRef: {
+            value: {
+                recordName: string
+            }
+        },
+        isFavorite?: {
+            value: number
+        }
+        adjustmentType?: {
+            value: string
+        }
+        // Set if adjustmentType exists
+        resJPEGFullRes?: AssetIDQuery
+        resJPEGFullFileType?: {
+            value: string
+        },
+        // Set if adjustmentType exists
+        resVidFullRes?: AssetIDQuery
+        resVidFullFileType?: {
+            value: string
+        }
+    }
+
+}
+
+/**
+ * Checks if the provided object is a CPLAsset Query
+ * @param obj - The unknown object
+ * @returns True if object conforms to CPLAssetQuery
+ */
+function isCPLAssetQuery(obj: unknown): obj is CPLAssetQuery {
+    return (obj as CPLAssetQuery).recordType === `CPLAsset`
+        && (obj as CPLAssetQuery).recordName !== undefined
+        && (obj as CPLAssetQuery).fields.masterRef?.value.recordName !== undefined
+        && (obj as CPLAssetQuery).recordName !== undefined
+        && (obj as CPLAssetQuery).modified?.timestamp !== undefined
+        && (
+            (obj as CPLAssetQuery).fields.adjustmentType?.value === undefined // Adjustment Type is optional, but if it is provided one of the below needs to be true
+            || (obj as CPLAssetQuery).fields.adjustmentType?.value === `com.apple.video.slomo` // No additional asset for Slo-Mo videos
+            || ((obj as CPLAssetQuery).fields.resJPEGFullRes !== undefined && isAssetIDQuery((obj as CPLAssetQuery).fields.resJPEGFullRes) && (obj as CPLAssetQuery).fields.resJPEGFullFileType?.value !== undefined)
+            || ((obj as CPLAssetQuery).fields.resVidFullRes !== undefined && isAssetIDQuery((obj as CPLAssetQuery).fields.resVidFullRes) && (obj as CPLAssetQuery).fields.resVidFullFileType?.value !== undefined)
+        );
 }
 
 /**
@@ -165,25 +241,54 @@ export class CPLMaster {
      * Parses from a record sourced through the API
      * @param cplRecord - The plain JSON object, as returned by the API
      */
-    static parseFromQuery(cplRecord: any): CPLMaster {
-        if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
-            throw new iCloudError(`Unknown record type ${cplRecord.recordType}, expected ${QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD}`, `FATAL`)
-                .addContext(`cplRecord`, cplRecord);
-        }
-
-        if (!cplRecord.recordName) {
-            throw new iCloudError(`recordName not found`, `FATAL`)
-                .addContext(`cplRecord`, cplRecord);
+    static parseFromQuery(cplRecord: unknown): CPLMaster {
+        if (!isCPLMasterQuery(cplRecord)) {
+            throw new iCloudError(`Query response cannot be parsed`, `FATAL`)
+                .addContext(`query`, cplRecord);
         }
 
         const master = new CPLMaster();
         master.recordName = cplRecord.recordName;
-        master.resource = AssetID.parseFromQuery(cplRecord.fields[QueryBuilder.DESIRED_KEYS.ORIGINAL_RESOURCE]);
-        master.resourceType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ORIGINAL_RESOURCE_FILE_TYPE].value; // Orig could also be JPEG to save storage
-        master.filenameEnc = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ENCODED_FILE_NAME].value;
         master.modified = cplRecord.modified.timestamp;
+        master.resource = AssetID.parseFromQuery(cplRecord.fields.resOriginalRes);
+        master.resourceType = cplRecord.fields.resOriginalFileType.value; // Orig could also be JPEG to save storage
+        master.filenameEnc = cplRecord.fields.filenameEnc.value;
         return master;
     }
+}
+
+/**
+ * Expected query result for CPLMaster
+ */
+type CPLMasterQuery = {
+    recordType: string
+    recordName: string
+    modified: {
+        timestamp: number
+    }
+    fields: {
+        resOriginalRes: AssetID
+        resOriginalFileType: {
+            value: string
+        }
+        filenameEnc: {
+            value: string
+        }
+    }
+}
+
+/**
+ * Checks if the provided object is a CPLMaster Query
+ * @param obj - The unknown object
+ * @returns True if object conforms to CPLMasterQuery
+ */
+function isCPLMasterQuery(obj: unknown): obj is CPLMasterQuery {
+    return (obj as CPLMasterQuery).recordType === `CPLMaster`
+        && (obj as CPLMasterQuery).recordName !== undefined
+        && (obj as CPLMasterQuery).modified.timestamp !== undefined
+        && (obj as CPLMasterQuery).fields.resOriginalRes !== undefined && isAssetIDQuery((obj as CPLMasterQuery).fields.resOriginalRes)
+        && (obj as CPLMasterQuery).fields.resOriginalFileType.value !== undefined
+        && (obj as CPLMasterQuery).fields.filenameEnc.value !== undefined;
 }
 
 /**
@@ -215,25 +320,54 @@ export class CPLAlbum {
      */
     assets?: Promise<AlbumAssets>;
 
-    static parseFromQuery(cplRecord: any, assets?: Promise<AlbumAssets>): CPLAlbum {
-        if (cplRecord.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD) {
-            throw new iCloudError(`Unknown record type ${cplRecord.recordType}, expected ${QueryBuilder.RECORD_TYPES.PHOTO_ALBUM_RECORD}`, `FATAL`)
-                .addContext(`cplRecord`, cplRecord);
-        }
-
-        if (!cplRecord.recordName) {
-            throw new iCloudError(`recordName not found`, `FATAL`)
-                .addContext(`cplRecord`, cplRecord);
+    static parseFromQuery(cplRecord: unknown, assets?: Promise<AlbumAssets>): CPLAlbum {
+        if (!isCPLAlbumQuery(cplRecord)) {
+            throw new iCloudError(`Query response cannot be parsed`, `FATAL`)
+                .addContext(`query`, cplRecord);
         }
 
         const album = new CPLAlbum();
         album.recordName = cplRecord.recordName;
-        album.albumType = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ALBUM_TYPE].value;
-        album.albumNameEnc = cplRecord.fields[QueryBuilder.DESIRED_KEYS.ENCODED_ALBUM_NAME].value;
-        album.parentId = cplRecord.fields[QueryBuilder.DESIRED_KEYS.PARENT_ID]?.value;
         album.modified = cplRecord.modified.timestamp;
+        album.albumType = cplRecord.fields.albumType.value;
+        album.albumNameEnc = cplRecord.fields.albumNameEnc.value;
+        album.parentId = cplRecord.fields.parentId?.value;
         album.assets = assets;
-
         return album;
     }
+}
+
+/**
+ * Expected query result for CPLAlbum
+ */
+ type CPLAlbumQuery = {
+    recordType: string
+    recordName: string
+    modified: {
+        timestamp: number
+    }
+    fields: {
+        albumType: {
+            value: number
+        }
+        albumNameEnc: {
+            value: string
+        }
+        parentId?: {
+            value: string
+        }
+    }
+}
+
+/**
+ * Checks if the provided object is a CPLAlbum Query
+ * @param obj - The unknown object
+ * @returns True if object conforms to CPLAlbumQuery
+ */
+function isCPLAlbumQuery(obj: unknown): obj is CPLAlbumQuery {
+    return (obj as CPLAlbumQuery).recordType === `CPLAlbum`
+        && (obj as CPLAlbumQuery).recordName !== undefined
+        && (obj as CPLAlbumQuery).modified.timestamp !== undefined
+        && (obj as CPLAlbumQuery).fields.albumType.value !== undefined
+        && (obj as CPLAlbumQuery).fields.albumNameEnc.value !== undefined;
 }

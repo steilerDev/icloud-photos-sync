@@ -8,11 +8,17 @@ import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {ErrorHandler} from "./error/handler.js";
 import {ArchiveError, iCloudError, SyncError, TokenError} from "./error/types.js";
+import {Asset} from "../lib/photos-library/model/asset.js";
+import {Album} from "../lib/photos-library/model/album.js";
+
+export interface iCPSApp {
+    run(): Promise<unknown>
+}
 
 /**
  * This is the base application class which will setup and manage the iCloud connection and local Photos Library
  */
-export abstract class iCloudApp {
+export abstract class iCloudApp implements iCPSApp {
     /**
      * The runtime options for this app
      */
@@ -43,6 +49,9 @@ export abstract class iCloudApp {
         this.errorHandler = new ErrorHandler(this);
         Logger.setupLogger(this);
 
+        // Hocking up CLI Output
+        this.cliInterface = new CLIInterface(this);
+
         // It's crucial for the data dir to exist, create if it doesn't
         if (!fs.existsSync(this.options.dataDir)) {
             fs.mkdirSync(this.options.dataDir, {"recursive": true});
@@ -52,18 +61,21 @@ export abstract class iCloudApp {
         this.icloud = new iCloud(this);
         this.errorHandler.registerHandlerForObject(this.icloud);
         this.errorHandler.registerHandlerForObject(this.icloud.mfaServer);
+        this.cliInterface.setupCLIiCloudInterface(this.icloud)
+        
+        this.cliInterface.setupCLIErrorHandlerInterface(this.errorHandler)
     }
 
     /**
      * This function establishes the iCloud connection.
      * @returns A promise that either resolves or the application is exited
      */
-    async run(): Promise<any> {
-        // Hocking up CLI Output
-        this.cliInterface = new CLIInterface(this);
-
-        return this.icloud.authenticate()
-            .catch(err => this.errorHandler.handle(new iCloudError(`Init failed`, `FATAL`).addCause(err)));
+    async run(): Promise<unknown> {
+        try {
+            return await this.icloud.authenticate();
+        } catch (err) {
+            this.errorHandler.handle(new iCloudError(`Init failed`, `FATAL`).addCause(err));
+        }
     }
 }
 
@@ -73,13 +85,14 @@ export abstract class iCloudApp {
 export class TokenApp extends iCloudApp {
     /**
      * This function will validate the currently stored account token and print it afterwards
+     * @returns A promise that either resolves or the application is exited
      */
-    async run() {
+    async run(): Promise<unknown> {
         await super.run();
         try {
             this.icloud.auth.validateAccountTokens();
             this.cliInterface.print(`Validated trust token:`);
-            this.cliInterface.print(this.icloud.auth.iCloudAccountTokens.trustToken);
+            return this.cliInterface.print(this.icloud.auth.iCloudAccountTokens.trustToken);
         } catch (err) {
             await this.errorHandler.handle(new TokenError(`Unable to validate account token`, `FATAL`).addCause(err));
         }
@@ -109,16 +122,21 @@ export class SyncApp extends iCloudApp {
         this.photosLibrary = new PhotosLibrary(this);
         this.errorHandler.registerHandlerForObject(this.photosLibrary);
         this.syncEngine = new SyncEngine(this);
+        this.errorHandler.registerHandlerForObject(this.syncEngine)
+        this.cliInterface.setupCLISyncEngineInterface(this.syncEngine)
     }
 
     /**
      * Runs the syncronization of the local Photo Library
      * @returns A Promise that resolves to a tuple containing a list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync). If the sync fails, the application will exit.
      */
-    async run(): Promise<any> {
-        return super.run()
-            .then(() => this.syncEngine.sync())
-            .catch(err => this.errorHandler.handle(new SyncError(`Sync failed`, `FATAL`).addCause(err)));
+    async run(): Promise<unknown> {
+        await super.run();
+        try {
+            return await this.syncEngine.sync();
+        } catch (err) {
+            this.errorHandler.handle(new SyncError(`Sync failed`, `FATAL`).addCause(err));
+        }
     }
 }
 
@@ -146,15 +164,19 @@ export class ArchiveApp extends SyncApp {
         this.archivePath = archivePath;
         this.archiveEngine = new ArchiveEngine(this);
         this.errorHandler.registerHandlerForObject(this.archiveEngine);
+        this.cliInterface.setupCLIArchiveEngineInterface(this.archiveEngine)
     }
 
     /**
      * This function will first perform a synchronisation run and then attempt to archive the provided path
      * @returns A promise that resolves or the application will exit
      */
-    async run() {
-        return super.run()
-            .then(([remoteAssets]) => this.archiveEngine.archivePath(this.archivePath, remoteAssets))
-            .catch(err => this.errorHandler.handle(new ArchiveError(`Archive failed`, `FATAL`).addCause(err).addContext(`archivePath`, this.archivePath)));
+    async run(): Promise<unknown> {
+        try {
+            const [remoteAssets] = await super.run() as [Asset[], Album[]];
+            return await this.archiveEngine.archivePath(this.archivePath, remoteAssets);
+        } catch (err) {
+            this.errorHandler.handle(new ArchiveError(`Archive failed`, `FATAL`).addCause(err).addContext(`archivePath`, this.archivePath));
+        }
     }
 }

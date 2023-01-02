@@ -57,7 +57,10 @@ export class MFAServer extends EventEmitter {
      */
     startServer() {
         this.server.listen(this.port, () => {
+            /* c8 ignore start */
+            // Never starting the server just to see logger message
             this.logger.info(`Exposing endpoints: ${JSON.stringify(Object.values(MFA_SERVER.ENDPOINT))}`);
+            /* c8 ignore stop */
         });
     }
 
@@ -95,6 +98,7 @@ export class MFAServer extends EventEmitter {
      */
     handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!req.url.match(/\?code=\d{6}$/)) {
+            this.emit(HANDLER_EVENT, new MFAError(`Received unexpected MFA code format, expecting 6 digits`, `WARN`).addContext(`request`, req));
             this.sendResponse(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
             return;
         }
@@ -115,6 +119,7 @@ export class MFAServer extends EventEmitter {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
         if (!methodMatch) {
             this.sendResponse(res, 400, `Method does not match expected format`);
+            this.emit(HANDLER_EVENT, new MFAError(`Method does not match expected format`, 'WARN').addContext(`requestURL`, req.url))
             return;
         }
 
