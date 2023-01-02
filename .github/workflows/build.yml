@@ -168,7 +168,7 @@ jobs:
           TEST_TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
         working-directory: app/
       - name: Test Unit Only
-        if: ${{ github.ref != 'refs/heads/dev' }}
+        if: ${{ github.ref != 'refs/heads/main' }}
         run: npm run test
         env:
           NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
