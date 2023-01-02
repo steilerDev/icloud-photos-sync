@@ -9,7 +9,7 @@ RUN apk update && \
 
 # Installing icloud-photos-sync 
 RUN cd /opt/icloud-photos-sync/ && \
-    npm install && \
+    npm install --omit dev && \
     npm link
 
 # Installing helper scripts
