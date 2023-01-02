@@ -165,7 +165,7 @@ jobs:
           TEST_APPLE_ID_PWD=${{ secrets.TEST_APPLE_ID_PWD }} \
           TEST_TRUST_TOKEN=${{ secrets.TEST_TRUST_TOKEN }} \
           NODE_NO_WARNINGS=1 \
-          /usr/bin/node --experimental-vm-modules node_modules/.bin/jest --config jest.config.json
+          node --experimental-vm-modules node_modules/.bin/jest --config jest.config.json
         env:
           NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
           NODE_NO_WARNINGS: 1
