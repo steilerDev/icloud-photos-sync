@@ -612,6 +612,8 @@ describe(`Unit Tests - Archive Engine`, () => {
             const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
+            mockfs({})
+
             const archiveEngine = archiveEngineFactory();
 
             const result1 = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
