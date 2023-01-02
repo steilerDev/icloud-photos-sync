@@ -1,4 +1,6 @@
+import {LibraryError} from "../../../app/error/types.js";
 import {CPLAlbum} from "../../icloud/icloud-photos/query-parser.js";
+import {STASH_DIR} from "../constants.js";
 import {PEntity} from "./photos-entity.js";
 
 /**
@@ -35,10 +37,6 @@ export class Album implements PEntity<Album> {
      */
     albumName: string;
     /**
-     * If this class is loaded from disk, the path will be populated
-     */
-    albumPath?: string;
-    /**
      * Assets, where the key is the uuid & the value the filename
      */
     assets: AlbumAssets;
@@ -52,15 +50,13 @@ export class Album implements PEntity<Album> {
      * @param uuid - The UUID of the album
      * @param albumType - The album type of the album
      * @param albumName - The album name of the album
-     * @param parentRecordName  - The UUID of the parent album
-     * @param albumPath - Optionally, the full path to the album on disk
+     * @param parentAlbumUUID - The UUID of the parent album
      */
-    constructor(uuid: string, albumType: AlbumType, albumName: string, parentAlbumUUID: string, albumPath?: string) {
+    constructor(uuid: string, albumType: AlbumType, albumName: string, parentAlbumUUID: string) {
         this.uuid = uuid;
         this.albumType = albumType;
         this.albumName = albumName;
         this.parentAlbumUUID = parentAlbumUUID;
-        this.albumPath = albumPath;
         this.assets = {};
     }
 
@@ -105,26 +101,38 @@ export class Album implements PEntity<Album> {
     }
 
     /**
-     * Creates a dummy album that is used to load all other albums from disk
-     * @param photoDataDir - The folder path of all albums
-     * @returns The dummy album
+     * Creates a dummy root album that is used to load all other albums from disk
+     * @returns The dummy root album
      */
-    static getRootAlbum(photoDataDir: string): Album {
-        return new Album(``, AlbumType.FOLDER, `iCloud Photos Library`, ``, photoDataDir);
+    static getRootAlbum(): Album {
+        return new Album(``, AlbumType.FOLDER, `iCloud Photos Library`, ``);
+    }
+
+    /**
+     * Creates a dummy stash album tat is used to load all albums currently within the stash album
+     * @returns The dummy stash album
+     */
+    static getStashAlbum(): Album {
+        return new Album(STASH_DIR, AlbumType.FOLDER, `iCloud Photos Library Archive`, ``);
     }
 
     /**
      *
      * @param album - An album to compare to this instance
-     * @returns True if provided album is equal to this instance (based on UUID, AlbumType, AlbumName, Parent UUID & list of associated assets)
+     * @returns True if provided album is equal to this instance (based on UUID, AlbumType, AlbumName, Parent UUID & list of associated assets) - In case either of the albumTypes is archived, the list of assets will be ignored
      */
     equal(album: Album): boolean {
         return album
             && this.uuid === album.uuid
-            && this.albumType === album.albumType
             && this.getSanitizedFilename() === album.getSanitizedFilename()
             && this.parentAlbumUUID === album.parentAlbumUUID
-            && this.assetsEqual(album.assets);
+            && ( // If any of the albumTypes is ARCHIVED we will ignore asset and albumType equality
+                this.albumType === AlbumType.ARCHIVED || album.albumType === AlbumType.ARCHIVED
+                || (
+                    this.assetsEqual(album.assets)
+                    && this.albumType === album.albumType
+                )
+            );
     }
 
     /**
@@ -140,17 +148,23 @@ export class Album implements PEntity<Album> {
     }
 
     /**
-     * Function to extract a plain Album from the PEntity interface
-     * @returns - The plain Album object
+     * Should only be called on a 'remote' entity. Will apply the local entitie's properties to the remote one
+     * @param localEntity - The local entity
+     * @returns This object with the applied properties
      */
-    unpack(): Album {
+    apply(localEntity: Album): Album {
+        if (!localEntity) {
+            return this;
+        }
+
+        this.albumType = localEntity.albumType;
         return this;
     }
 
     /**
      * Check if a given album is in the chain of ancestors
      * @param potentialAncestor - The potential ancesotr for the given album
-     * @param fullState - The full directory state
+     * @param fullQueue - The full list of albums
      * @returns True if potentialAncestor is part of this album's directory tree
      */
     hasAncestor(potentialAncestor: Album, fullQueue: Album[]): boolean {
@@ -169,6 +183,27 @@ export class Album implements PEntity<Album> {
             return parent.hasAncestor(potentialAncestor, fullQueue);
         }
 
+        // If there is no parent, this means the queue has a gap and all we can assume is, that the ancestor is false
         return false;
+    }
+
+    /**
+     * Calculates the distance to the root folder in order to compare the album's order.
+     * @param album - The album, whose depth needs to be calculated
+     * @param fullQueue - The list of all albums
+     * @returns The number of albums between the given album and the root album
+     * @throws A LibraryError, in case there is no link from the given album to root
+     */
+    static distanceToRoot(album: Album, fullQueue: Album[]): number {
+        if (album.parentAlbumUUID === ``) {
+            return 0;
+        }
+
+        const parent = fullQueue.find(potentialParent => potentialParent.getUUID() === album.parentAlbumUUID);
+        if (parent) {
+            return Album.distanceToRoot(parent, fullQueue) + 1;
+        }
+
+        throw new LibraryError(`Unable to determine distance to root, no link to root!`, `FATAL`);
     }
 }

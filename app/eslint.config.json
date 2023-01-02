@@ -20,7 +20,7 @@
         "quote-props": ["error", "always"],
         "indent": ["error", 4],
         "eol-last": ["error", "never"],
-        "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudPhotos", "iCloudAuth"], "capIsNewExceptions": ["TTL"] }],
+        "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudPhotos", "iCloudAuth", "iCloudError", "iCloudAuthError", "iCPSError"], "capIsNewExceptions": ["TTL"] }],
         "tsdoc/syntax": "warn",
         "no-negated-condition": "off",
         "no-unused-vars": "off",
@@ -36,6 +36,16 @@
         "no-return-assign": ["error", "except-parens"],
         "no-unreachable": "warn",
         "default-case-last": "off",
-        "no-debugger": "warn"
-    }
+        "no-debugger": "warn",
+        "no-promise-executor-return": "off",
+        "no-unsafe-finally": "off"
+    },
+    "overrides": [
+        {
+            "files": ["*.test.ts"],
+            "rules": {
+                "max-nested-callbacks": "off"
+            }
+        }
+    ]
 }

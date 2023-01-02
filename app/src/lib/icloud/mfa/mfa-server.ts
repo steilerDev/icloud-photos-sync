@@ -3,6 +3,9 @@ import http from 'http';
 import * as MFA_SERVER from './constants.js';
 import {getLogger} from '../../logger.js';
 import {MFAMethod} from './mfa-method.js';
+import * as PACKAGE from '../../package.js';
+import {HANDLER_EVENT} from '../../../app/error/handler.js';
+import {MFAError} from '../../../app/error/types.js';
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
@@ -17,7 +20,7 @@ export class MFAServer extends EventEmitter {
     /**
      * The server object
      */
-    private server: http.Server;
+    server: http.Server;
 
     /**
      * Port to start server on
@@ -27,21 +30,16 @@ export class MFAServer extends EventEmitter {
     /**
      * Holds the MFA method used for this server
      */
-    private mfaMethod: MFAMethod;
+    mfaMethod: MFAMethod;
 
     /**
      * Creates the server object
-     * @param port - The port to listen on
+     * @param port - The port to listen on, defaults to 80
      */
-    constructor(port: number) {
+    constructor(port: number = 80) {
         super();
         this.port = port;
-    }
 
-    /**
-     * Starts the server and listens for incoming requests to perform MFA actions
-     */
-    startServer() {
         this.logger.debug(`Preparing MFA server on port ${this.port}`);
         this.server = http.createServer(this.handleRequest.bind(this));
 
@@ -52,9 +50,17 @@ export class MFAServer extends EventEmitter {
             this.logger.debug(`MFA server stopped`);
             this.server = undefined;
         });
+    }
 
+    /**
+     * Starts the server and listens for incoming requests to perform MFA actions
+     */
+    startServer() {
         this.server.listen(this.port, () => {
-            this.logger.info(`Exposing endpoints: ${JSON.stringify(MFA_SERVER.ENDPOINT)}`);
+            /* c8 ignore start */
+            // Never starting the server just to see logger message
+            this.logger.info(`Exposing endpoints: ${JSON.stringify(Object.values(MFA_SERVER.ENDPOINT))}`);
+            /* c8 ignore stop */
         });
     }
 
@@ -64,8 +70,13 @@ export class MFAServer extends EventEmitter {
      * @param res - The HTTP response object
      */
     handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        if (req.method === `GET` && req.url === `/`) {
+            this.sendResponse(res, 200, `MFA Server up & running - ${PACKAGE.NAME}@v${PACKAGE.VERSION}`);
+            return;
+        }
+
         if (req.method !== `POST`) {
-            this.logger.warn(`Received unknown method to endpoint ${req.url}: ${req.method}`);
+            this.emit(HANDLER_EVENT, new MFAError(`Received unknown method to endpoint ${req.url}: ${req.method}`, `WARN`).addContext(`request`, req));
             this.sendResponse(res, 400, `Method not supported: ${req.method}`);
             return;
         }
@@ -75,8 +86,8 @@ export class MFAServer extends EventEmitter {
         } else if (req.url.startsWith(MFA_SERVER.ENDPOINT.RESEND_CODE)) {
             this.handleMFAResend(req, res);
         } else {
-            this.logger.warn(`Received request to unknown endpoint ${req.url}`);
-            this.sendResponse(res, 404, `Route not found, available endpoints: ${JSON.stringify(MFA_SERVER.ENDPOINT)}`);
+            this.emit(HANDLER_EVENT, new MFAError(`Received request to unknown endpoint ${req.url}`, `WARN`).addContext(`request`, req));
+            this.sendResponse(res, 404, `Route not found, available endpoints: ${JSON.stringify(Object.values(MFA_SERVER.ENDPOINT))}`);
         }
     }
 
@@ -87,6 +98,7 @@ export class MFAServer extends EventEmitter {
      */
     handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!req.url.match(/\?code=\d{6}$/)) {
+            this.emit(HANDLER_EVENT, new MFAError(`Received unexpected MFA code format, expecting 6 digits`, `WARN`).addContext(`request`, req));
             this.sendResponse(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
             return;
         }
@@ -106,7 +118,8 @@ export class MFAServer extends EventEmitter {
     handleMFAResend(req: http.IncomingMessage, res: http.ServerResponse) {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
         if (!methodMatch) {
-            this.sendResponse(res, 400, `Unable to match resend method`);
+            this.sendResponse(res, 400, `Method does not match expected format`);
+            this.emit(HANDLER_EVENT, new MFAError(`Method does not match expected format`, `WARN`).addContext(`requestURL`, req.url));
             return;
         }
 
@@ -114,7 +127,7 @@ export class MFAServer extends EventEmitter {
 
         const phoneNumberIdMatch = req.url.match(/phoneNumberId=\d+/);
 
-        if (phoneNumberIdMatch) {
+        if (phoneNumberIdMatch && methodString !== `device`) {
             this.mfaMethod.update(methodString, parseInt(phoneNumberIdMatch[0].slice(14), 10));
         } else {
             this.mfaMethod.update(methodString);
@@ -140,6 +153,9 @@ export class MFAServer extends EventEmitter {
      */
     stopServer() {
         this.logger.debug(`Stopping server`);
-        this.server.close();
+        if (this.server) {
+            this.server.close();
+            this.server = undefined;
+        }
     }
 }

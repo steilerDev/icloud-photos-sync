@@ -9,6 +9,7 @@ export enum EVENTS {
     DIFF_COMPLETED = `diff-completed`, // No arg
     WRITE = `write`, // No arg
     WRITE_ASSETS = `write-assets`, // ToBeDeletedCount, toBeAddedCount, toBeKeptCount
+    WRITE_ASSETS_ABORTED = `write-assets-aborted`, // No arg
     WRITE_ASSET_COMPLETED = `write-asset-completed`, // AssetName
     WRITE_ASSETS_COMPLETED = `write-assets-completed`, // No arg
     WRITE_ALBUMS = `write-albums`, // ToBeDeletedCount, toBeAddedCount, toBeKeptCount
@@ -16,6 +17,4 @@ export enum EVENTS {
     WRITE_COMPLETED = `write-completed`, // No arg
     DONE = `done`, // No arg
     RETRY = `retry`, // RetryCount
-    ERROR = `error`, // ErrorMessage
-    DRY_RUN = `dry-run` // DryRunMsg
 }

@@ -1,21 +1,19 @@
-import {Command, Option, OptionValues} from 'commander';
 import chalk from 'chalk';
 import * as PACKAGE_INFO from './package.js';
 import {iCloud} from './icloud/icloud.js';
 import * as ICLOUD from './icloud/constants.js';
 import * as SYNC_ENGINE from './sync-engine/constants.js';
+import * as ARCHIVE_ENGINE from './archive-engine/constants.js';
 import {SyncEngine} from './sync-engine/sync-engine.js';
 import {SingleBar} from 'cli-progress';
-import {exit} from 'process';
 import {getLogger} from './logger.js';
 import {ArchiveEngine} from './archive-engine/archive-engine.js';
+import {iCloudApp} from '../app/icloud-app.js';
+import {ErrorHandler, ERROR_EVENT, HANDLER_EVENT, WARN_EVENT} from '../app/error/handler.js';
 
-export const CLIInterfaceCommand = {
-    "archive": `archive`,
-    "sync": `sync`,
-    "token": `token`,
-};
-
+/**
+ * This class handles the input/output to the command line
+ */
 export class CLIInterface {
     /**
      * Default logger for the class
@@ -30,14 +28,16 @@ export class CLIInterface {
      * Indicates if this class should write to the console or the log file
      */
     enableCLIOutput: boolean;
+    /**
+     * Indicates, if non-critical warnings should be shown in the UI
+     */
+    surpressWarnings: boolean;
 
     /**
      * Creates a new CLI interface based on the provided components
-     * @param cliOpts - The options read from the interface
-     * @param iCloud - The iCloud connection
-     * @param syncEngine - The Sync Engine
+     * @param app - The application object, holding all necessary information
      */
-    constructor(cliOpts: OptionValues, iCloud: iCloud, syncEngine: SyncEngine) {
+    constructor(app: iCloudApp) {
         this.progressBar = new SingleBar({
             "etaAsynchronousUpdate": true,
             "format": ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
@@ -46,20 +46,8 @@ export class CLIInterface {
         });
 
         // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on logToCli)
-        this.enableCLIOutput = !cliOpts.logToCli && !cliOpts.silent;
-
-        this.setupCLIiCloudInterface(iCloud);
-        this.setupCLISyncEngineInterface(syncEngine);
-
-        process.on(`SIGTERM`, () => {
-            // Issued by docker compose down
-            this.fatalError(`Received SIGTERM, aborting!`);
-        });
-
-        process.on(`SIGINT`, () => {
-            // Received from ctrl-c
-            this.fatalError(`Received SIGINT, aborting!`);
-        });
+        this.enableCLIOutput = !app.options.logToCli && !app.options.silent;
+        this.surpressWarnings = app.options.surpressWarnings;
 
         if (this.enableCLIOutput) {
             console.clear();
@@ -68,79 +56,6 @@ export class CLIInterface {
         this.print(chalk.white(this.getHorizontalLine()));
         this.print(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
         this.print(chalk.green(`Made with <3 by steilerDev`));
-    }
-
-    // Clear Structure
-    //       Assets
-    // Sync
-    //      Dry Run
-    // Archive <folder>
-    /**
-     * Processing CLI arguments
-     * @returns The parsed values from the commandline/environment variables
-     */
-    static getCLIOptions(): [OptionValues, string[]] {
-        const program = new Command();
-        program.name(PACKAGE_INFO.NAME)
-            .description(PACKAGE_INFO.DESC)
-            .version(PACKAGE_INFO.VERSION)
-            .addOption(new Option(`-u, --username <email>`, `AppleID username`)
-                .env(`APPLE_ID_USER`)
-                .makeOptionMandatory(true))
-            .addOption(new Option(`-p, --password <email>`, `AppleID password`)
-                .env(`APPLE_ID_PWD`)
-                .makeOptionMandatory(true))
-            .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, '.trust-token.icloud' in data dir is tried to be read. If all fails, a new trust token will be acquired, requiring the input of an MFA code.`)
-                .env(`TRUST_TOKEN`))
-            .addOption(new Option(`--fail-on-mfa`, `If a MFA is necessary, exit the program. (This is usefull in test scenarios)`)
-                .env(`FAIL_ON_MFA`)
-                .default(false))
-            .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library`)
-                .env(`DATA_DIR`)
-                .default(`/opt/icloud-photos-library`))
-            .addOption(new Option(`-p, --port <number>`, `port number for MFA server (Awaiting MFA code when necessary)`)
-                .env(`PORT`)
-                .default(80))
-            .addOption(new Option(`-l, --log-level <level>`, `Set the log level. Note: 'trace' might leak sensitive session data`)
-                .env(`LOG_LEVEL`)
-                .choices([`trace`, `debug`, `info`, `warn`, `error`])
-                .default(`info`))
-            .addOption(new Option(`--log-to-cli`, `Disables logging to file and logs everything to the console. This will be ignored if '--silent' is set`)
-                .env(`LOG_TO_CLI`)
-                .default(false))
-            .addOption(new Option(`-s, --silent`, `Disables logging to the console and forces logs to go to the log file.`)
-                .env(`SILENT`)
-                .default(false))
-            .addOption(new Option(`-t, --download-threads <number>`, `Sets the number of download threads`)
-                .env(`DOWNLOAD_THREADS`)
-                .default(5))
-            .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon an error (-1 means that it will always retry)`)
-                .env(`MAX_RETRIES`)
-                .default(-1))
-            .addOption(new Option(`--dry-run`, `Do not perform any write actions. Only print out changes that would be performed`)
-                .env(`DRY_RUN`)
-                .default(false));
-
-        program.command(CLIInterfaceCommand.sync)
-            .description(`This command will fetch the remote state and persist it to the local disk.`);
-
-        program.command(CLIInterfaceCommand.archive)
-            .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)
-            .argument(`<path>`, `Path to the folder that should be archived`)
-            .addOption(new Option(`--no-remote-delete`, `Do not delete any remote assets upon archiving`)
-                .env(`NO_REMOTE_DELETE`)
-                .default(false));
-
-        program.command(CLIInterfaceCommand.token)
-            .description(`Validates the current trust token and prints it to the command line`)
-            .addOption(new Option(`--refresh-token`, `Ignore any stored token and always refresh it`)
-                .env(`REFRESH_TOKEN`)
-                .default(false));
-
-        // Implement 'token' command, that will print out the current / a fresh trust token
-
-        program.parse();
-        return [program.opts(), program.args];
     }
 
     /**
@@ -158,14 +73,13 @@ export class CLIInterface {
     }
 
     /**
-     * Logs a fatal error and exits the application
-     * @param err - The error message to display
+     * Prints a fatal error
+     * @param err - The error string
      */
-    fatalError(err: string) {
+    printFatalError(err: string) {
         this.print(chalk.red(this.getHorizontalLine()));
         this.print(chalk.red(`Experienced fatal error at ${this.getDateTime()}: ${err}`));
         this.print(chalk.red(this.getHorizontalLine()));
-        exit(1);
     }
 
     /**
@@ -186,6 +100,7 @@ export class CLIInterface {
 
     /**
      * Listens to iCloud events and provides CLI output
+     * @param iCloud - The iCloud object to listen on
      */
     setupCLIiCloudInterface(iCloud: iCloud) {
         iCloud.on(ICLOUD.EVENTS.AUTHENTICATION_STARTED, () => {
@@ -216,15 +131,11 @@ export class CLIInterface {
         iCloud.on(ICLOUD.EVENTS.READY, () => {
             this.print(chalk.greenBright(`iCloud connection established!`));
         });
-
-        iCloud.on(ICLOUD.EVENTS.ERROR, (msg: string) => {
-            this.print(chalk.red(`Unexpected error: ${msg}`));
-            this.print(chalk.white(this.getHorizontalLine()));
-        });
     }
 
     /**
      * Listens to Sync Engine events and provides CLI output
+     * @param syncEngine - The Sync Engine object to listen on
      */
     setupCLISyncEngineInterface(syncEngine: SyncEngine) {
         syncEngine.on(SYNC_ENGINE.EVENTS.START, () => {
@@ -264,6 +175,10 @@ export class CLIInterface {
             this.progressBar.increment();
         });
 
+        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, () => {
+            this.progressBar.stop();
+        });
+
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED, () => {
             this.progressBar.stop();
             this.print(chalk.greenBright(`Succesfully synced assets!`));
@@ -293,19 +208,48 @@ export class CLIInterface {
             this.print(chalk.white(this.getHorizontalLine()));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.ERROR, msg => {
+        syncEngine.on(HANDLER_EVENT, () => {
             this.progressBar.stop();
-            this.print(chalk.red(`Sync engine: Unexpected error: ${msg}`));
-            this.print(chalk.white(this.getHorizontalLine()));
+        });
+    }
+
+    /**
+     * Listens to Archive Engine events and provides CLI output
+     * @param archiveEngine - The Archive Engine object to listen on
+     */
+    setupCLIArchiveEngineInterface(archiveEngine: ArchiveEngine) {
+        archiveEngine.on(ARCHIVE_ENGINE.EVENTS.ARCHIVE_START, (path: string) => {
+            this.print(chalk.white.bold(`Archiving local path ${path}`));
         });
 
-        syncEngine.on(SYNC_ENGINE.EVENTS.DRY_RUN, msg => {
-            this.print(chalk.red(`!!Dry run!! Would perform action: ${msg}`));
+        archiveEngine.on(ARCHIVE_ENGINE.EVENTS.PERSISTING_START, (numberOfAssets: number) => {
+            this.print(chalk.cyan(`Persisting ${numberOfAssets} assets`));
+        });
+
+        archiveEngine.on(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, (numberOfAssets: number) => {
+            this.print(chalk.yellow(`Deleting ${numberOfAssets} remote assets`));
+        });
+
+        archiveEngine.on(ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE, () => {
+            this.print(chalk.white(this.getHorizontalLine()));
+            this.print(chalk.green.bold(`Succesfully completed archiving`));
             this.print(chalk.white(this.getHorizontalLine()));
         });
     }
 
-    setupCLIArchiveEngineInterface(_archiveEngine: ArchiveEngine) {
+    /**
+     * Listens to Error Handler events and provides CLI output
+     * @param errorHandler - The Error Handler object to listen on
+     */
+    setupCLIErrorHandlerInterface(errorHandler: ErrorHandler) {
+        errorHandler.on(ERROR_EVENT, (err: string) => {
+            this.printFatalError(err);
+        });
 
+        if (!this.surpressWarnings) {
+            errorHandler.on(WARN_EVENT, (err: string) => {
+                this.print(chalk.yellow(err));
+            });
+        }
     }
 }

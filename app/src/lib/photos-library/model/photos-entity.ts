@@ -16,10 +16,13 @@ export interface PEntity<T> {
      * @returns True, if both enities are equal
      */
     equal(entity: T): boolean
+
     /**
-     * Returns the object as the underlying type
+     * Applies properties of the local entity to this remote entity
+     * @param localEntity - The local entitie's properties to be applied
+     * @returns This object for convenient
      */
-    unpack(): T
+    apply(localEntity: T): T
 }
 
 /**

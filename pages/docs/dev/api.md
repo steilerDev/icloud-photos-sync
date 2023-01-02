@@ -1,4 +1,4 @@
-# API
+# iCloud API
 
 This is a high level documentation of the reverse engineered iCloud API, used in this application. 
 
@@ -16,7 +16,8 @@ This research concluded in the following flow:
 
 [![Flow](../assets/01_authentication-flow.jpeg)](https://miro.com/app/board/uXjVOxcisIM=/?share_link_id=646572552229)
 
-To execute this flow in the provided Postman Collection](https://github.com/steilerDev/icloud-photos-sync/tree/main/postman), follow these steps:
+To execute this flow in the provided [Postman Collection](https://github.com/steilerDev/icloud-photos-sync/tree/main/postman), follow these steps:
+
 - Run `01-Enter Pwd` Request
 - If the status code is `409` an MFA code is required, if code is `200` continue to 4.
   - To resend the MFA code to a trusted device, run `01-- Resend 2FA In-App` request

@@ -71,7 +71,6 @@ export enum EVENTS {
     TRUSTED = `trusted`,
     ACCOUNT_READY = `account_ready`,
     READY = `ready`,
-    ERROR = `error`
 }
 
 /**

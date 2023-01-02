@@ -1,8 +1,8 @@
 import log from 'loglevel';
 import chalk from 'chalk';
-import {OptionValues} from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
+import {iCloudApp} from '../app/icloud-app.js';
 
 const LOG_FILE_NAME = `.icloud-photos-sync.log`;
 
@@ -18,15 +18,18 @@ const LOGGER = {
     "SyncEngine": `Sync-Engine`,
     "CLIInterface": `CLI-Interface`,
     "ArchiveEngine": `Archive-Engine`,
+    "ErrorHandler": `Error-Handler`,
 };
+
+export let logFile: string;
 
 /**
  * Logger setup including the configuration of logger prefix
- * @param cliOpts - The configuration options, read from the CLI
+ * @param app - The App object, holding the CLI options
  */
-export function setupLogger(cliOpts: OptionValues): void {
-    const logFile = path.format({
-        "dir": cliOpts.dataDir,
+export function setupLogger(app: iCloudApp): void {
+    logFile = path.format({
+        "dir": app.options.dataDir,
         "base": LOG_FILE_NAME,
     });
 
@@ -39,25 +42,18 @@ export function setupLogger(cliOpts: OptionValues): void {
 
     log.methodFactory = function (methodName, logLevel, loggerName) {
         return function (message) {
-            if (cliOpts.logToCli && !cliOpts.silent) {
+            if (app.options.logToCli && !app.options.silent) {
                 const prefixedMessage = `${chalk.gray(`[${new Date().toLocaleString()}]`)} ${methodName.toUpperCase()} ${chalk.green(`${String(loggerName)}: ${message}`)}`;
                 originalFactory(methodName, logLevel, loggerName)(prefixedMessage);
             } else {
                 const prefixedMessage = `[${new Date().toISOString()}] ${methodName.toUpperCase()} ${String(loggerName)}: ${message}\n`;
                 fs.appendFileSync(logFile, prefixedMessage);
-                if (!cliOpts.silent) {
-                    if (methodName === `warn`) {
-                        console.warn(`Warning: ${message}`);
-                    } else if (methodName === `error`) {
-                        console.error(`Error: ${message}`);
-                    }
-                }
             }
         };
     };
 
-    log.setLevel(cliOpts.logLevel);
-    if (cliOpts.logLevel === `trace`) {
+    log.setLevel(app.options.logLevel);
+    if (app.options.logLevel === `trace`) {
         log.warn(`Log level set to 'trace', private data might be recorded in logs!`);
     }
 
@@ -80,10 +76,10 @@ export function setupLogger(cliOpts: OptionValues): void {
 export function getLogger(instance: any): log.Logger {
     const className = instance.constructor.name;
     const loggerName = LOGGER[className];
-    if (loggerName) {
-        return log.getLogger(loggerName);
+    if (!loggerName) {
+        log.warn(`Unable to find logger for class name ${className}, providing default logger`);
+        return log;
     }
 
-    console.warn(`Unable to find logger for class name ${className}, providing default logger`);
-    return log;
+    return log.getLogger(loggerName);
 }

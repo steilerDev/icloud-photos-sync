@@ -1,17 +1,15 @@
 {
   "compilerOptions": {
-    "module": "es2022",
+    "module": "NodeNext",
+    "target": "ESNext",
+    "moduleResolution": "NodeNext",
     "esModuleInterop": true,
-    "target": "es2022",
-    "moduleResolution": "node",
     "sourceMap": true,
-    "outDir": "bin",
-    "declaration": true,
-    "allowJs": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "outDir": "bin"
   },
   "include": ["src/**/*"],
   "lib": [
-    "es2021"
+    "ESNext"
   ]
 }

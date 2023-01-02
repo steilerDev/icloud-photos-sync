@@ -9,7 +9,6 @@ export enum EVENTS {
     SETUP_COMPLETE = `setup_complete`,
     INDEX_IN_PROGRESS = `index_in_progress`,
     READY = `ready`,
-    ERROR = `error`,
 }
 
 /**
@@ -26,6 +25,11 @@ export const PATHS = {
         "LIST": `/zones/list`,
     },
 };
+
+/**
+ * To perform an operation, a record change tag is required. Hardcoding it for now
+ */
+export const RECORD_CHANGE_TAG = `21h2`;
 
 /**
  * The max record limit, requested & returned by iCloud.

@@ -19,7 +19,7 @@ export const RECORD_TYPES = {
 /**
  * All relevant desired keys as provided to the backend
  */
-export const DESIRED_KEYS = {
+const DESIRED_KEYS = {
     "RECORD_NAME": `recordName`,
     "IS_DELETED": `isDeleted`,
     "ORIGINAL_RESOURCE": `resOriginalRes`,
@@ -33,10 +33,6 @@ export const DESIRED_KEYS = {
     "IS_HIDDEN": `isHidden`,
     "ADJUSTMENT_TYPE": `adjustmentType`,
     "MASTER_REF": `masterRef`,
-    // Folder keys for parsing
-    "ALBUM_TYPE": `albumType`,
-    "ENCODED_ALBUM_NAME": `albumNameEnc`,
-    "PARENT_ID": `parentId`,
 };
 
 /**
@@ -133,10 +129,15 @@ export function getIndexCountFilter(parentId?: string): any {
     };
 }
 
-export function getIsDeletedField(_value: number = 1): any {
+/**
+ * Creates the operations field for isDeleted
+ * @param _value - The value to set the field to - 1 by default
+ * @returns The formatted field
+ */
+export function getIsDeletedField(value: number = 1): any {
     return {
         "isDeleted": {
-            "value": _value,
+            value,
         },
     };
 }

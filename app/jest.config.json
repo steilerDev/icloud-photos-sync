@@ -1,31 +1,40 @@
 {
-    "preset": "ts-jest/presets/default-esm",
+    "preset": "ts-jest/presets/default-esm-legacy",
     "testEnvironment": "node",
+    "testRegex": "\\.test\\.ts$",
+    "slowTestThreshold": 10,
     "reporters": [
       "default",
-      "jest-summarizing-reporter",
       "github-actions"
     ],
+    "collectCoverage": true,
     "collectCoverageFrom": [
       "src/**/*.ts",
       "!src/main.ts",
+      "!src/app/error/*",
       "!src/lib/package.ts",
       "!src/lib/cli.ts",
-      "!src/lib/logger.ts"
+      "!src/lib/logger.ts",
+      "!src/lib/photos-library/model/photos-entity.ts"
     ],
     "coverageProvider": "v8",
     "coverageReporters": [
       "text-summary",
-      "html"
+      "html",
+      "json-summary"
     ],
     "extensionsToTreatAsEsm": [".ts"],
-    "globals": {
-      "ts-jest": {
-        "useESM": true
-      }
+    "transform": {
+      "\\.ts$": [
+        "ts-jest",
+        {
+          "useESM": true
+        }
+      ]
     },
     "moduleNameMapper": {
-      ".*/logger.js": "<rootDir>/test/_helpers/mock_logger.ts",
+      ".*/logger.js": "<rootDir>/test/_mocks/logger.ts",
+      ".*/cli.js": "<rootDir>/test/_mocks/cli.ts",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     }
   }

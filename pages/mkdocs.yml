@@ -1,5 +1,5 @@
 site_name: iCloud Photos Sync
-site_url: https://example.com/
+site_url: https://steilerdev.github.io/icloud-photos-sync/
 site_description: Documentation for icloud-photos-sync by steilerDev
 site_author: Frank Steiler
 copyright: steilerDev
@@ -7,16 +7,21 @@ repo_url: https://github.com/steilerDev/icloud-photos-sync
 edit_uri: ""
 nav:
   - 'Home': README.md
-  - 'User Guides': 
+  - 'Get Started': get-started.md
+  - 'User Guides':
     - 'CLI Reference': user-guides/cli.md
-    - 'NPM User Guide': user-guides/npm.md
-    - 'Docker User Guide': user-guides/docker.md
+    - 'Common Warnings': user-guides/common-warnings.md
+    - 'Error & Crash Reporting': user-guides/error-reporting.md
+    - 'Security': user-guides/security.md
   - 'Development Ressources':
-    - 'Milestone Plan': dev/milestone-plan.md
-    - 'Test Environment': dev/test-environment.md
+    - 'Milestone Plan': https://github.com/steilerDev/icloud-photos-sync/milestones
     - 'Motivation': dev/motivation.md
-    - 'Authentication Flow': dev/authentication-flow.md
+    - 'iCloud API': dev/api.md
+    - 'Local File Structure': dev/local-file-structure.md
     - 'TypeDoc Code Documentation': https://github.com/steilerDev/icloud-photos-sync/wiki/Exports
+    - 'Test & Deployment':
+      - 'Test Environment': dev/test-environment.md
+      - 'Coverage': dev/coverage.md
   - 'Changelog': CHANGELOG.md
 
 theme:
@@ -42,6 +47,8 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
+  features: 
+    - content.tabs.link
 dev_addr: 0.0.0.0:8000
 markdown_extensions:
   - attr_list
@@ -49,6 +56,10 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true 
+  - admonition
 plugins:
   - search:
       prebuild_index: true

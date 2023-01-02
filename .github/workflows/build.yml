@@ -9,6 +9,9 @@ name: Build & Test
 #  - gh-wiki-artifacts (Documentation for GH Wiki) - Only if github.ref != 'refs/heads/dev'
 #  - gh-pages (Documentation and webpage for GH Pages) - Only if github.ref != 'refs/heads/dev'
 #  - changelog (File containing changelog description) - Only if github.ref != 'refs/heads/dev'
+#  - coverage-report (Test coverage report)
+
+# Todo: Add Code Coverage Report to GH Pages & using https://shields.io/endpoint to create badge 
 
 on:
   workflow_call:
@@ -37,6 +40,7 @@ jobs:
         run: |
           npm ci
           npm run build
+          true || npm run upload-sourcemap
           cp ../README.md ../CHANGELOG.md ../LICENSE ./
         working-directory: app/
       - name: Upload app artifacts
@@ -81,30 +85,6 @@ jobs:
             ./app/LICENSE
             ./app/doc/
   
-  build-gh-pages:
-    name: Build GH Pages
-    runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/dev'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-          cache: 'pip' 
-          cache-dependency-path: pages/
-      - name: Setup build environment
-        run: |
-          pip install -r pages/requirements.txt
-          cp LICENSE README.md CHANGELOG.md pages/docs/
-      - name: Build Pages
-        run: mkdocs build
-        working-directory: pages/
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
-        with:
-          path: ./pages/site/
 
   build-changelog:
     name: Build Changelog
@@ -165,6 +145,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
     runs-on: ${{ matrix.os }}
+    environment: test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -177,11 +158,28 @@ jobs:
       - name: Install
         run: npm ci
         working-directory: app/
-      - name: Test
+      - name: Test All
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: npm run test-all
+        env:
+          NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
+          TEST_APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
+          TEST_APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
+          TEST_TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
+        working-directory: app/
+      - name: Test Unit Only
+        if: ${{ github.ref != 'refs/heads/main' }}
         run: npm run test
         env:
           NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
         working-directory: app/
+      - name: Collect test coverage
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: |
+            app/coverage/
 
   test-docker:
     name: Test Docker Image
@@ -202,3 +200,34 @@ jobs:
         run: chmod +x ./docker/test/*
       - name: Test Image
         run: run-parts -v --exit-on-error ./docker/test
+
+  build-gh-pages:
+    name: Build GH Pages
+    needs: test-app
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/dev'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip' 
+          cache-dependency-path: pages/
+      - name: Setup build environment
+        run: |
+          pip install -r pages/requirements.txt
+          cp LICENSE README.md CHANGELOG.md pages/docs/
+      - name: Build Pages
+        run: mkdocs build
+        working-directory: pages/
+      - name: Bundle coverage reports
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-report
+          path: ./pages/site/dev/coverage
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./pages/site/

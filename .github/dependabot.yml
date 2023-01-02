@@ -5,22 +5,38 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
 
   # Maintain dependencies for npm
   - package-ecosystem: "npm"
     directory: "/app"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+    ignore:
+      - dependency-name: "typedoc*"
+        update-types: ["version-update:semver-minor"] # ignore minor version for something like typedoc
   
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"
     directory: "/docker"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "saturday"
+    ignore:
+      - dependency-name: "node"
+        versions: ["19.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
 
   # Maintain dependencies for pip (docs site)
   - package-ecosystem: "pip"
     directory: "/pages"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"] # only alert about major update

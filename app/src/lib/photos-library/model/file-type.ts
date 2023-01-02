@@ -1,3 +1,5 @@
+import {LibraryError} from "../../../app/error/types.js";
+
 /**
  * Mapping of backend provided filetype description (key) and actual file extension (value)
  * Incomplete list, due to lack of documentation
@@ -9,6 +11,7 @@ const EXT = {
     'com.apple.quicktime-movie': `mov`,
     'public.heic': `heic`,
     'com.sony.arw-raw-image': `arw`,
+    'org.webmproject.webp': `webp`,
 };
 
 /**
@@ -36,7 +39,7 @@ export class FileType {
      */
     static fromAssetType(descriptor: string): FileType {
         if (!EXT[descriptor]) {
-            throw new Error(`Unknown filetype descriptor: ${descriptor}`);
+            throw new LibraryError(`Unknown filetype descriptor ${descriptor}`, `FATAL`);
         }
 
         return new FileType(descriptor);
@@ -55,7 +58,7 @@ export class FileType {
 
         const descriptor = Object.keys(EXT).find(key => EXT[key] === ext);
         if (!descriptor) {
-            throw new Error(`Unknown filetype extension: ${ext}`);
+            throw new LibraryError(`Unknown filetype extension: ${ext}`, `FATAL`);
         }
 
         return new FileType(descriptor);

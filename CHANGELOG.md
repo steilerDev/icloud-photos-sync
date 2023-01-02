@@ -7,14 +7,29 @@ This release contains a massive amount of 'behind the scenes' changes to the dev
   * Performing continous API tests via GH Actions using a test environment
   * Implemented testing process
     * Unit tests implemented for
+      * `app`
+        * `factory`
       * `icloud`
-      * `photos-library` (partial)
+        * `mfa-server`
+        * `icloud-auth`
+        * `icloud-photos` (pending)
+      * `photos-library`
+      * `mfa-server`
+      * `sync-engine`
+        * `fetchNLoad`
+        * `diffing`
+        * `asset-write`
+        * `album-write`
+      * `archive-engine`
     * API Tests of iCloud & iCloud Photos backend
     * Basic testing of Docker Image
   * Foundations for archiving
   * Various bug fixes, re-implementations and re-structuring
   * Documentation pages using MKDocs & GH Pages
   * Now running CodeQL and dependabot scans
+  * Initial steps for support of iCloud Shared Photo Libraries
+  * Error and Crash Reporting integration
+  * Archiving fully working
 
 ## v0.2.0 - Folder Sync working
 With this release the sync of the remote state is fully functional. This release adds the reconstruction of the full folder structure. In a space efficient way (through links).

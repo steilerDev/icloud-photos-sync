@@ -8,16 +8,19 @@ import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
 import expectedMastersAlbum from "../_data/api.expected.album-cpl-masters.json";
 import expectedAssetsAlbum from "../_data/api.expected.album-cpl-assets.json";
 import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
-import {appDataDir, postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/helpers.js';
+import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/api.helper';
+import {appDataDir} from '../_helpers/_config';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
+import {appWithOptions} from '../_helpers/app-factory.helper';
+import {iCloudError} from '../../src/app/error/types.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(20 * 1000);
 
-const username = process.env.APPLE_ID_USER;
-const password = process.env.APPLE_ID_PWD;
-const token = process.env.TRUST_TOKEN;
+const username = process.env.TEST_APPLE_ID_USER;
+const password = process.env.TEST_APPLE_ID_PWD;
+const token = process.env.TEST_TRUST_TOKEN;
 
 let icloud: iCloud;
 
@@ -41,7 +44,6 @@ describe(`API E2E Tests`, () => {
         expect(token?.length).toBeGreaterThan(0);
     });
 
-    // Not running API tests on github for now, as the MFA token is not portable
     describe(`Login flow`, () => {
         test(`Login flow with invalid username/password`, async () => {
             const cliOpts = {
@@ -50,8 +52,8 @@ describe(`API E2E Tests`, () => {
                 "dataDir": appDataDir,
                 "failOnMfa": true,
             };
-            const _icloud = new iCloud(cliOpts);
-            await expect(_icloud.authenticate()).rejects.toMatch(`Unexpected HTTP code: 403`);
+            const _icloud = new iCloud(appWithOptions(cliOpts));
+            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`Unexpected HTTP code: 403`, `FATAL`));
         });
 
         test(`Login flow without token & failOnMfa`, async () => {
@@ -61,8 +63,8 @@ describe(`API E2E Tests`, () => {
                 "dataDir": appDataDir,
                 "failOnMfa": true,
             };
-            const _icloud = new iCloud(cliOpts);
-            await expect(_icloud.authenticate()).rejects.toMatch(`MFA code required, failing due to failOnMfa flag`);
+            const _icloud = new iCloud(appWithOptions(cliOpts));
+            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`MFA code required, failing due to failOnMfa flag`, `FATAL`));
         });
 
         test(`Login flow`, async () => {
@@ -73,7 +75,7 @@ describe(`API E2E Tests`, () => {
                 "dataDir": appDataDir,
                 "failOnMfa": true,
             };
-            icloud = new iCloud(cliOpts);
+            icloud = new iCloud(appWithOptions(cliOpts));
             await expect(icloud.authenticate()).resolves.not.toThrow();
         });
     });
@@ -111,8 +113,8 @@ describe(`API E2E Tests`, () => {
             const albumRecordName = `311f9778-1f40-4762-9e57-569ebf5fb070`;
             const [assets, masters] = await icloud.photos.fetchAllPictureRecords(albumRecordName);
 
-            // _writeTestData(assets.map(postProcessAssetData), "album-assets-data")
-            // _writeTestData(masters.map(postProcessMasterData), "album-master-data")
+            // _writeTestData(assets.map(postProcessAssetData), "api.expected.album-cpl-assets")
+            // _writeTestData(masters.map(postProcessMasterData), "api.expected.album-cpl-masters")
             expect(assets.length).toEqual(202);
             expect(masters.length).toEqual(202);
             expect(assets.map(postProcessAssetData).sort(sortByRecordName)).toEqual(expectedAssetsAlbum.sort(sortByRecordName));
