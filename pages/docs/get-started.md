@@ -73,7 +73,7 @@ Since this application needs full access to a user's iCloud Photos Library, a fu
 
 Upon initial authentication, this application will register as a 'trusted device'. This includes the acquisition of a trust token. As long as this token is valid, no MFA code is necessary to authenticate. It seems that this token currently expires after 30 days.
 
-In order to only perform authentication (without syncing any assets) and validate or acquire the trust token, the [`token` command]((../user-guides/cli/#token-command)) can be used.
+In order to only perform authentication (without syncing any assets) and validate or acquire the trust token, the [`token` command](../user-guides/cli/#token-command) can be used.
 
 === "Docker"
 
@@ -366,7 +366,7 @@ Optionally, this tool can remove non-favorited photos from iCloud upon archiving
 
 In case the album is renamed in the backend, the archived local copy will be renamed as well, but its content will not change. If the album is removed from the backend, the archived copy will be moved into `_Archive`. Files and folders in that path (except `_Archive/.stash`) can be freely modified. After a folder has been put into `_Archive`, it can be moved back into the folder structure of the library and will be ignored moving foward.
 
-In order to archive an album, the [`archive` command](/icloud-photos-sync/user-guides/cli/#archive-command) will be used.
+In order to archive an album, the [`archive` command](../user-guides/cli/#archive-command) will be used.
 
 === "Docker"
 
