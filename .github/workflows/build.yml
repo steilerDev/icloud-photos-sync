@@ -145,7 +145,6 @@ jobs:
       matrix:
         os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
     runs-on: ${{ matrix.os }}
-    environment: test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
