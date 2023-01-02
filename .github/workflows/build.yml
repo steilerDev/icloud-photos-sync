@@ -159,9 +159,10 @@ jobs:
         working-directory: app/
       - name: Test All
         if: ${{ github.ref == 'refs/heads/main' }}
-        run: npm run test-all
+        run: npx jest --config jest.config.json
         env:
           NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
+          NODE_NO_WARNINGS: 1
           TEST_APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
           TEST_APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
           TEST_TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
