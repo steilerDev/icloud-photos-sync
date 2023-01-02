@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://icloud-photos-sync.steilerdev.de/">
-    <img alt="icloud-photos-sync Logo" src="https://icloud-photos-sync.steilerdev.de/assets/icloud-photos-sync-open-graph.png">
+  <a href="https://steilerdev.github.io/icloud-photos-sync/">
+    <img alt="icloud-photos-sync Logo" src="https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png">
   </a>
 </p>
 
@@ -31,12 +31,12 @@
 </p>
 <hr>
 <p align="center">
-  <a href="https://icloud-photos-sync.steilerdev.de/get-started/">
+  <a href="https://steilerdev.github.io/icloud-photos-sync/get-started/">
     <img alt="Get Started" src="https://img.shields.io/static/v1?label=&message=Get%20Started&color=important&style=for-the-badge" style="width: 50%;">
   </a>
 </p>
 <p align="center">
-  <a href="https://icloud-photos-sync.steilerdev.de/user-guides/cli">
+  <a href="https://steilerdev.github.io/icloud-photos-sync/user-guides/cli">
     <img alt="CLI Reference" src="https://img.shields.io/static/v1?label=&message=CLI%20Reference&color=grey&style=for-the-badge" style="width: 30%;">
   </a>
 </p>
@@ -95,11 +95,11 @@ This CLI Application offers the following high level functionality:
   </p>
 </details>
 
-My personal use case / workflow is [documented on GH Pages](https://icloud-photos-sync.steilerdev.de/dev/motivation/), alongside some other potential interessting pieces of documentation.
+My personal use case / workflow is [documented on GH Pages](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/), alongside some other potential interessting pieces of documentation.
 
 ## Documentation
 
-A [Get Started Guide can be found on Github Pages](https://icloud-photos-sync.steilerdev.de/get-started/). Additional documentation and further ressources are published there as well.
+A [Get Started Guide can be found on Github Pages](https://steilerdev.github.io/icloud-photos-sync/get-started/). Additional documentation and further ressources are published there as well.
 
 ## OS Support
 ![OS Support Debian](https://img.shields.io/static/v1?label=Debian-11&message=Dev%20Platform&color=informational&style=for-the-badge)
@@ -112,6 +112,6 @@ A [Get Started Guide can be found on Github Pages](https://icloud-photos-sync.st
 
 
 ## Contributing & Feedback
-This tool (most likely) still contains issues and edge cases, that need to be addressed. Therefore, I hope for the support of the community, to fully understand the reverse-engineered API and discover the remaining bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy, including [unit](https://icloud-photos-sync.steilerdev.de/dev/coverage/) & [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) tests.
+This tool (most likely) still contains issues and edge cases, that need to be addressed. Therefore, I hope for the support of the community, to fully understand the reverse-engineered API and discover the remaining bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy, including [unit](https://steilerdev.github.io/icloud-photos-sync/dev/coverage/) & [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) tests.
 
-Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing. Additionally please [enable crash and error reporting](https://icloud-photos-sync.steilerdev.de/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.
+Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing. Additionally please [enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.
