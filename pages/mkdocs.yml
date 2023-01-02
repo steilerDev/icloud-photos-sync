@@ -28,6 +28,7 @@ theme:
   name: material
   logo: assets/icloud-photos-sync.svg
   favicon: assets/icloud-photos-sync.svg
+  language: en
   icon:
     repo: fontawesome/brands/github
   palette:
@@ -49,7 +50,6 @@ theme:
         name: Switch to light mode
   features: 
     - content.tabs.link
-dev_addr: 0.0.0.0:8000
 markdown_extensions:
   - attr_list
   - md_in_html
@@ -61,5 +61,4 @@ markdown_extensions:
       alternate_style: true 
   - admonition
 plugins:
-  - search:
-      prebuild_index: true
+  - search
