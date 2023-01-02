@@ -78,7 +78,7 @@ export class ArchiveEngine extends EventEmitter {
         this.logger.debug(`Persisting ${numberOfItems} items`);
         this.emit(ARCHIVE_ENGINE.EVENTS.PERSISTING_START, numberOfItems);
         // Iterating over all album items to persist them
-        let remoteDeleteList = await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
+        const remoteDeleteList = await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
             const assetPath = path.join(this.photosLibrary.assetDir, uuidFilename);
             const archivedAssetPath = path.join(archivedAlbumPath, loadedAlbum.assets[uuidFilename]);
 
@@ -90,6 +90,7 @@ export class ArchiveEngine extends EventEmitter {
                     .addContext(`assetPath`, assetPath)
                     .addContext(`archivedAssetPath`, archivedAssetPath),
                 );
+                return undefined;
             }
 
             try {
@@ -99,12 +100,12 @@ export class ArchiveEngine extends EventEmitter {
             }
         }));
 
-        // Filtering for undefined entries
-        remoteDeleteList = remoteDeleteList.filter(obj => obj !== undefined);
-        if (remoteDeleteList && remoteDeleteList.length > 0 && this.remoteDelete) {
+        // Filtering for unique & undefined entries
+        const uniqueDeleteList = [...new Set(remoteDeleteList.filter(obj => obj !== undefined))];
+        if (uniqueDeleteList && uniqueDeleteList.length > 0 && this.remoteDelete) {
             try {
-                this.emit(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, remoteDeleteList.length);
-                await this.icloud.photos.deleteAssets(remoteDeleteList);
+                this.emit(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, uniqueDeleteList.length);
+                await this.icloud.photos.deleteAssets(uniqueDeleteList);
             } catch (err) {
                 throw new ArchiveError(`Unable to delete remote assets`, `FATAL`)
                     .addCause(err);

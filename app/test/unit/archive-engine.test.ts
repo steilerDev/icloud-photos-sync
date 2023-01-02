@@ -9,6 +9,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
 import {spyOnEvent} from '../_helpers/_general';
 import * as ARCHIVE_ENGINE from '../../src/lib/archive-engine/constants';
+import {HANDLER_EVENT} from '../../src/app/error/handler';
 
 describe(`Unit Tests - Archive Engine`, () => {
     afterEach(() => {
@@ -60,7 +61,10 @@ describe(`Unit Tests - Archive Engine`, () => {
             const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
-            archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
+            archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
+                .mockReturnValueOnce(asset1.recordName)
+                .mockReturnValueOnce(asset2.recordName)
+                .mockReturnValueOnce(asset3.recordName);
             archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
             await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
@@ -75,10 +79,99 @@ describe(`Unit Tests - Archive Engine`, () => {
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
-            expect(archiveEngine.icloud.photos.deleteAssets).toHaveBeenCalledWith([`a`, `a`, `a`]);
+            expect(archiveEngine.icloud.photos.deleteAssets).toHaveBeenCalledWith([
+                asset1.recordName,
+                asset2.recordName,
+                asset3.recordName,
+            ]);
 
             expect(startEvent).toHaveBeenCalled();
             expect(persistEvent).toHaveBeenCalledWith(3);
+            expect(remoteDeleteEvent).toHaveBeenCalledWith(3);
+            expect(finishEvent).toHaveBeenCalled();
+        });
+
+        test(`Valid path with edits`, async () => {
+            const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+            const albumUUIDPath = `.${albumUUID}`;
+            const albumName = `Random`;
+
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
+            const asset1Edit = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKd`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.EDIT, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            asset1Edit.recordName = asset1.recordName;
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
+
+            mockfs({
+                [photosDataDir]: {
+                    [ASSET_DIR]: {
+                        [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
+                        [asset1Edit.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
+                        [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
+                        [asset3.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1, 1]),
+                    },
+                    [ARCHIVE_DIR]: {},
+                    [albumUUIDPath]: {
+                        [asset1.getPrettyFilename()]: mockfs.symlink({
+                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                        }),
+                        [asset1Edit.getPrettyFilename()]: mockfs.symlink({
+                            "path": `../${ASSET_DIR}/${asset1Edit.getAssetFilename()}`,
+                        }),
+                        [asset2.getPrettyFilename()]: mockfs.symlink({
+                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                        }),
+                        [asset3.getPrettyFilename()]: mockfs.symlink({
+                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                        }),
+                    },
+                    [albumName]: mockfs.symlink({
+                        "path": albumUUIDPath,
+                    }),
+                },
+            });
+
+            const archiveEngine = archiveEngineFactory();
+            const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
+            const persistEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.PERSISTING_START);
+            const remoteDeleteEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE);
+            const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
+            const errorEvent = spyOnEvent(archiveEngine, HANDLER_EVENT);
+
+            archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
+            archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
+                .mockReturnValueOnce(asset1.recordName)
+                .mockReturnValueOnce(asset1Edit.recordName)
+                .mockReturnValueOnce(asset2.recordName)
+                .mockReturnValueOnce(asset3.recordName);
+            archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
+
+            await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset1Edit, asset2, asset3]);
+
+            expect(errorEvent).not.toHaveBeenCalled();
+            expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(4);
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1Edit.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1Edit.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(4);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1Edit.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+
+            expect(archiveEngine.icloud.photos.deleteAssets).toHaveBeenCalledWith([
+                asset1.recordName,
+                asset2.recordName,
+                asset3.recordName,
+            ]);
+
+            expect(startEvent).toHaveBeenCalled();
+            expect(persistEvent).toHaveBeenCalledWith(4);
             expect(remoteDeleteEvent).toHaveBeenCalledWith(3);
             expect(finishEvent).toHaveBeenCalled();
         });
