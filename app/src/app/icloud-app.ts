@@ -61,9 +61,9 @@ export abstract class iCloudApp implements iCPSApp {
         this.icloud = new iCloud(this);
         this.errorHandler.registerHandlerForObject(this.icloud);
         this.errorHandler.registerHandlerForObject(this.icloud.mfaServer);
-        this.cliInterface.setupCLIiCloudInterface(this.icloud)
-        
-        this.cliInterface.setupCLIErrorHandlerInterface(this.errorHandler)
+        this.cliInterface.setupCLIiCloudInterface(this.icloud);
+
+        this.cliInterface.setupCLIErrorHandlerInterface(this.errorHandler);
     }
 
     /**
@@ -122,8 +122,8 @@ export class SyncApp extends iCloudApp {
         this.photosLibrary = new PhotosLibrary(this);
         this.errorHandler.registerHandlerForObject(this.photosLibrary);
         this.syncEngine = new SyncEngine(this);
-        this.errorHandler.registerHandlerForObject(this.syncEngine)
-        this.cliInterface.setupCLISyncEngineInterface(this.syncEngine)
+        this.errorHandler.registerHandlerForObject(this.syncEngine);
+        this.cliInterface.setupCLISyncEngineInterface(this.syncEngine);
     }
 
     /**
@@ -164,7 +164,7 @@ export class ArchiveApp extends SyncApp {
         this.archivePath = archivePath;
         this.archiveEngine = new ArchiveEngine(this);
         this.errorHandler.registerHandlerForObject(this.archiveEngine);
-        this.cliInterface.setupCLIArchiveEngineInterface(this.archiveEngine)
+        this.cliInterface.setupCLIArchiveEngineInterface(this.archiveEngine);
     }
 
     /**

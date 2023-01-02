@@ -162,7 +162,7 @@ export class SyncEngine extends EventEmitter {
                 .then(cplAlbums => SyncEngine.convertCPLAlbums(cplAlbums)),
             this.photosLibrary.loadAssets(),
             this.photosLibrary.loadAlbums(),
-        ])
+        ]);
 
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, remoteAssets.length, remoteAlbums.length, Object.keys(localAssets).length, Object.keys(localAlbums).length);
         return [remoteAssets, remoteAlbums, localAssets, localAlbums];
@@ -186,7 +186,7 @@ export class SyncEngine extends EventEmitter {
         const [assetQueue, albumQueue] = await Promise.all([
             this.getProcessingQueues(remoteAssets, localAssets),
             this.getProcessingQueues(remoteAlbums, localAlbums),
-        ])
+        ]);
         const resolvedAlbumQueue = this.resolveHierarchicalDependencies(albumQueue, localAlbums);
         this.emit(SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
         return [assetQueue, resolvedAlbumQueue];
@@ -208,16 +208,17 @@ export class SyncEngine extends EventEmitter {
 
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);
         try {
-            await this.writeAssets(assetQueue)
-        } catch(err) {
+            await this.writeAssets(assetQueue);
+        } catch (err) {
             this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, err.message);
             throw err;
         }
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED)
+
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED);
 
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, albumQueue[0].length, albumQueue[1].length, albumQueue[2].length);
         await this.writeAlbums(albumQueue);
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED)
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_COMPLETED);
     }
 

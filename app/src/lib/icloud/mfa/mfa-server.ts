@@ -119,7 +119,7 @@ export class MFAServer extends EventEmitter {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
         if (!methodMatch) {
             this.sendResponse(res, 400, `Method does not match expected format`);
-            this.emit(HANDLER_EVENT, new MFAError(`Method does not match expected format`, 'WARN').addContext(`requestURL`, req.url))
+            this.emit(HANDLER_EVENT, new MFAError(`Method does not match expected format`, `WARN`).addContext(`requestURL`, req.url));
             return;
         }
 

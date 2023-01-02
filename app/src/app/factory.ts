@@ -1,7 +1,7 @@
 import {Command, Option, InvalidArgumentError} from "commander";
 import * as PACKAGE_INFO from '../lib/package.js';
 import {ErrorHandler} from "./error/handler.js";
-import {iCloudApp, TokenApp, SyncApp, ArchiveApp, iCPSApp} from "./icloud-app.js";
+import {TokenApp, SyncApp, ArchiveApp, iCPSApp} from "./icloud-app.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as an integer and throw an invalid argument error in case it fails

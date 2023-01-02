@@ -39,24 +39,24 @@ describe(`Unit Tests - iCloud`, () => {
             const event = spyOnEvent(icloud, HANDLER_EVENT);
             icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
 
-            expect(event).toHaveBeenCalledWith(new iCloudError(`MFA code required, failing due to failOnMfa flag`, "FATAL"));
+            expect(event).toHaveBeenCalledWith(new iCloudError(`MFA code required, failing due to failOnMfa flag`, `FATAL`));
             expect(icloud.mfaServer.server.listening).toBeFalsy();
         });
 
         test(`MFA Server Startup error`, () => {
             const cliOpts = _defaultCliOpts;
-            cliOpts.failOnMfa = false
+            cliOpts.failOnMfa = false;
 
             const icloud = new iCloud(appWithOptions(cliOpts));
             icloud.ready.catch(() => {}); // Making sure error is catched
             icloud.mfaServer.startServer = jest.fn(() => {
-                throw new Error('Unable to start server')
-            })
+                throw new Error(`Unable to start server`);
+            });
             const event = spyOnEvent(icloud, HANDLER_EVENT);
 
             icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
 
-            expect(event).toHaveBeenCalledWith(new iCloudError(`Unable to start MFA server`, "FATAL"));
+            expect(event).toHaveBeenCalledWith(new iCloudError(`Unable to start MFA server`, `FATAL`));
             expect(icloud.mfaServer.server.listening).toBeFalsy();
         });
     });
@@ -409,7 +409,7 @@ describe(`Unit Tests - iCloud`, () => {
                     await icloud.submitMFA(method, `123456`);
 
                     expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                    expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during MFA validation`, "FATAL"));
+                    expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during MFA validation`, `FATAL`));
                 });
 
                 test(`Enter MFA with ${method} - Send unsuccessful`, async () => {
@@ -608,7 +608,7 @@ describe(`Unit Tests - iCloud`, () => {
                     },
                 },
                 "headers": {
-                    'set-cookie': []
+                    'set-cookie': [],
                 },
             }));
 
@@ -626,7 +626,7 @@ describe(`Unit Tests - iCloud`, () => {
                     "headers": expectedICloudSetupHeaders,
                 },
             );
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, 'FATAL'));
+            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, `FATAL`));
             expect(icloud.photos).toBeNull();
         });
 
@@ -661,7 +661,7 @@ describe(`Unit Tests - iCloud`, () => {
                     "headers": expectedICloudSetupHeaders,
                 },
             );
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, "FATAL"));
+            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, `FATAL`));
             expect(icloud.photos).toBeNull();
         });
 
@@ -688,7 +688,7 @@ describe(`Unit Tests - iCloud`, () => {
                     "headers": expectedICloudSetupHeaders,
                 },
             );
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, "FATAL"));
+            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, `FATAL`));
             expect(icloud.photos).toBeNull();
         });
 

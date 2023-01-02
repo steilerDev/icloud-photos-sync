@@ -8,7 +8,7 @@ import {SyncEngine} from './sync-engine/sync-engine.js';
 import {SingleBar} from 'cli-progress';
 import {getLogger} from './logger.js';
 import {ArchiveEngine} from './archive-engine/archive-engine.js';
-import {iCloudApp, SyncApp, ArchiveApp} from '../app/icloud-app.js';
+import {iCloudApp} from '../app/icloud-app.js';
 import {ErrorHandler, ERROR_EVENT, HANDLER_EVENT, WARN_EVENT} from '../app/error/handler.js';
 
 /**

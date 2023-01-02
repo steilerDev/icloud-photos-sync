@@ -43,7 +43,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/app.test.ts"
+                "test/unit/photos-library.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

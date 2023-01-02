@@ -151,7 +151,7 @@ export class MFAMethod {
      * @returns A user readable error description
      */
     processResendError(err: any): iCloudError {
-        if (!(err.name === 'AxiosError') || !err.response) {
+        if (!(err.name === `AxiosError`) || !err.response) {
             return new iCloudError(`No response received`, `FATAL`).addCause(err);
         }
 

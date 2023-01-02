@@ -143,21 +143,10 @@ export class PhotosLibrary extends EventEmitter {
                     albums.push(...await this.loadAlbum(loadedAlbum, fullPath));
                 } catch (err) {
                     // This error might be caused by a dead symlink, let's check
-                    const deadSymlink = path.join(albumPath, link.name);
-                    try {
-                        // Checking if there is actually a dead symlink
-                        if(await fs.promises.lstat(deadSymlink) && !fs.existsSync(deadSymlink)) {
-                            this.emit(HANDLER_EVENT, new LibraryError(`Found dead symlink at ${deadSymlink} (removing it)`, `WARN`).addCause(err));
-                            await fs.promises.unlink(deadSymlink);
-                        } else {
-                            throw new LibraryError(`Unknown error while processing ${deadSymlink}`, 'FATAL')
-                        }
-                    } catch(err) {
-                        throw new LibraryError(`Unknown error while processing ${deadSymlink}`, 'FATAL').addCause(err)
-                    }
+                    await this.removeDeadSymlink(path.join(albumPath, link.name), err);
                 }
-            } 
-            
+            }
+
             if (album.albumType === AlbumType.ALBUM) { // If we are loading an album, we need to get the assets from their UUID based folder
                 const target = await fs.promises.readlink(path.join(albumPath, link.name));
                 const uuidFile = path.parse(target).base;
@@ -166,6 +155,26 @@ export class PhotosLibrary extends EventEmitter {
         }
 
         return albums;
+    }
+
+    /**
+     * Will try and remove a dead symlink
+     * @param symlinkPath - Location of the potential dead symlink
+     * @param cause - Optional cause of the execution of this function
+     * @throws A LibraryError in case the provided path is NOT a dead symlink
+     */
+    async removeDeadSymlink(symlinkPath: string, cause?: Error) {
+        try {
+            // Checking if there is actually a dead symlink
+            if (await fs.promises.lstat(symlinkPath) && !fs.existsSync(symlinkPath)) {
+                this.emit(HANDLER_EVENT, new LibraryError(`Found dead symlink at ${symlinkPath} (removing it)`, `WARN`).addCause(cause));
+                await fs.promises.unlink(symlinkPath);
+            } else {
+                throw new LibraryError(`Unknown error while processing ${symlinkPath}`, `FATAL`);
+            }
+        } catch (err) {
+            throw new LibraryError(`Unknown error while processing ${symlinkPath}`, `FATAL`).addCause(cause);
+        }
     }
 
     /**
@@ -228,11 +237,11 @@ export class PhotosLibrary extends EventEmitter {
         const location = asset.getAssetFilePath(this.assetDir);
         const writeStream = fs.createWriteStream(location);
         response.data.pipe(writeStream);
-        await pEvent(writeStream, `close`)
-        await fs.promises.utimes(asset.getAssetFilePath(this.assetDir), new Date(asset.modified), new Date(asset.modified)) // Setting modified date on file
+        await pEvent(writeStream, `close`);
+        await fs.promises.utimes(asset.getAssetFilePath(this.assetDir), new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
 
         if (!this.verifyAsset(asset)) {
-            await fs.promises.rm(asset.getAssetFilePath(this.assetDir))
+            await fs.promises.rm(asset.getAssetFilePath(this.assetDir));
             throw new LibraryError(`Unable to verify asset ${asset.getDisplayName()}`, `FATAL`)
                 .addContext(`asset`, asset);
         }

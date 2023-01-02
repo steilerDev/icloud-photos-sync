@@ -6,8 +6,7 @@ import {ArchiveApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {Album} from '../../src/lib/photos-library/model/album';
-import {iCloudAuthError, SyncError, TokenError} from '../../src/app/error/types';
-import { EVENTS } from '../../src/lib/icloud/constants';
+import {SyncError} from '../../src/app/error/types';
 
 describe(`Unit Tests - iCloud App`, () => {
     beforeEach(() => {
@@ -39,8 +38,8 @@ describe(`Unit Tests - iCloud App`, () => {
             expect(tokenApp.icloud).toBeDefined();
             expect(tokenApp.icloud.mfaServer).toBeDefined();
             expect(tokenApp.icloud.auth).toBeDefined();
-            expect(tokenApp.cliInterface.setupCLIiCloudInterface).toHaveBeenCalled()
-            expect(tokenApp.cliInterface.setupCLIErrorHandlerInterface).toHaveBeenCalled()
+            expect(tokenApp.cliInterface.setupCLIiCloudInterface).toHaveBeenCalled();
+            expect(tokenApp.cliInterface.setupCLIErrorHandlerInterface).toHaveBeenCalled();
             expect(fs.existsSync(`/opt/icloud-photos-library`));
         });
 
@@ -50,11 +49,11 @@ describe(`Unit Tests - iCloud App`, () => {
             expect(syncApp.icloud).toBeDefined();
             expect(syncApp.icloud.mfaServer).toBeDefined();
             expect(syncApp.icloud.auth).toBeDefined();
-            expect(syncApp.cliInterface.setupCLIiCloudInterface).toHaveBeenCalled()
-            expect(syncApp.cliInterface.setupCLIErrorHandlerInterface).toHaveBeenCalled()
+            expect(syncApp.cliInterface.setupCLIiCloudInterface).toHaveBeenCalled();
+            expect(syncApp.cliInterface.setupCLIErrorHandlerInterface).toHaveBeenCalled();
             expect(syncApp.photosLibrary).toBeDefined();
             expect(syncApp.syncEngine).toBeDefined();
-            expect(syncApp.cliInterface.setupCLISyncEngineInterface).toHaveBeenCalled()
+            expect(syncApp.cliInterface.setupCLISyncEngineInterface).toHaveBeenCalled();
         });
 
         test(`Create Archive App`, () => {
@@ -63,13 +62,13 @@ describe(`Unit Tests - iCloud App`, () => {
             expect(archiveApp.icloud).toBeDefined();
             expect(archiveApp.icloud.mfaServer).toBeDefined();
             expect(archiveApp.icloud.auth).toBeDefined();
-            expect(archiveApp.cliInterface.setupCLIiCloudInterface).toHaveBeenCalled()
-            expect(archiveApp.cliInterface.setupCLIErrorHandlerInterface).toHaveBeenCalled()
+            expect(archiveApp.cliInterface.setupCLIiCloudInterface).toHaveBeenCalled();
+            expect(archiveApp.cliInterface.setupCLIErrorHandlerInterface).toHaveBeenCalled();
             expect(archiveApp.photosLibrary).toBeDefined();
             expect(archiveApp.syncEngine).toBeDefined();
-            expect(archiveApp.cliInterface.setupCLISyncEngineInterface).toHaveBeenCalled()
+            expect(archiveApp.cliInterface.setupCLISyncEngineInterface).toHaveBeenCalled();
             expect(archiveApp.archiveEngine).toBeDefined();
-            expect(archiveApp.cliInterface.setupCLIArchiveEngineInterface).toHaveBeenCalled()
+            expect(archiveApp.cliInterface.setupCLIArchiveEngineInterface).toHaveBeenCalled();
         });
     });
 

@@ -37,7 +37,8 @@
         "no-unreachable": "warn",
         "default-case-last": "off",
         "no-debugger": "warn",
-        "no-promise-executor-return": "off"
+        "no-promise-executor-return": "off",
+        "no-unsafe-finally": "off"
     },
     "overrides": [
         {

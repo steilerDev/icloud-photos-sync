@@ -134,11 +134,11 @@ export class iCloud extends EventEmitter {
 
         try {
             // Will throw error if reponse is non 2XX
-            const response = await this.axios.post(ICLOUD.URL.SIGNIN, data, config)
+            const response = await this.axios.post(ICLOUD.URL.SIGNIN, data, config);
             if (response.status !== 200) {
                 this.emit(HANDLER_EVENT, new iCloudError(`Unexpected HTTP code: ${response.status}`, `FATAL`)
                     .addContext(`response`, response));
-                return 
+                return;
             }
 
             this.logger.info(`Authentication successfull`);
@@ -151,15 +151,15 @@ export class iCloud extends EventEmitter {
                 this.emit(HANDLER_EVENT, err);
             }
         } catch (err) {
-            const response = err.response;
+            const {response} = err;
             if (!response) {
                 this.emit(HANDLER_EVENT, new iCloudError(`No response received during authentication`, `FATAL`).addCause(err));
-                return 
+                return;
             }
 
             if (response.status !== 409) {
                 this.emit(HANDLER_EVENT, new iCloudError(`Unexpected HTTP code: ${response.status}`, `FATAL`).addCause(err));
-                return 
+                return;
             }
 
             try {
@@ -171,7 +171,7 @@ export class iCloud extends EventEmitter {
                 this.emit(HANDLER_EVENT, err);
             }
         } finally {
-            return this.ready
+            return this.ready;
         }
     }
 
@@ -236,15 +236,15 @@ export class iCloud extends EventEmitter {
 
         this.logger.debug(`Entering MFA code via URL ${url} with data ${JSON.stringify(data)}`);
         try {
-            const response = await this.axios.post(url, data, config)
+            const response = await this.axios.post(url, data, config);
             if (!method.enterSuccesfull(response)) {
                 throw new iCloudError(`Received unexpected response status code (${response.status}) during MFA validation`, `FATAL`).addContext(`response`, response);
             }
 
             this.logger.info(`MFA code correct!`);
             this.emit(ICLOUD.EVENTS.AUTHENTICATED);
-        } catch(err) {
-            this.emit(HANDLER_EVENT, new iCloudError(`Received error during MFA validation`, `FATAL`).addCause(err))
+        } catch (err) {
+            this.emit(HANDLER_EVENT, new iCloudError(`Received error during MFA validation`, `FATAL`).addCause(err));
         }
     }
 
@@ -264,7 +264,7 @@ export class iCloud extends EventEmitter {
             try {
                 response = await this.axios.get(ICLOUD.URL.TRUST, config);
             } catch (err) {
-                throw new iCloudError(`Received error while acquiring trust tokens`, `FATAL`).addCause(err)
+                throw new iCloudError(`Received error while acquiring trust tokens`, `FATAL`).addCause(err);
             }
 
             await this.auth.processAccountTokens(response);
@@ -292,16 +292,17 @@ export class iCloud extends EventEmitter {
         const data = this.auth.getSetupData();
 
         try {
-            const response = await this.axios.post(ICLOUD.URL.SETUP, data, config)
+            const response = await this.axios.post(ICLOUD.URL.SETUP, data, config);
             if (response.status !== 200) {
                 throw new iCloudError(`Received unexpected response code during iCloud Setup: ${response.status}`, `FATAL`).addContext(`response`, response);
             }
+
             this.auth.processCloudSetupResponse(response);
 
             this.photos = new iCloudPhotos(this.auth);
             this.logger.debug(`Account ready`);
             this.emit(ICLOUD.EVENTS.ACCOUNT_READY);
-        } catch (err) {   
+        } catch (err) {
             this.emit(HANDLER_EVENT, new iCloudError(`Received error during iCloud Setup`, `FATAL`).addCause(err));
         }
     }

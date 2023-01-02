@@ -11,9 +11,9 @@ import axios, {Axios, AxiosRequestConfig} from 'axios';
 import {appDataDir as photosDataDir} from '../_helpers/_config';
 import {photosLibraryFactory} from '../_helpers/photos-library.helper';
 import {appWithOptions} from '../_helpers/app-factory.helper';
-import { spyOnEvent } from '../_helpers/_general';
-import { HANDLER_EVENT } from '../../src/app/error/handler';
-import { LibraryError } from '../../src/app/error/types';
+import {spyOnEvent} from '../_helpers/_general';
+import {HANDLER_EVENT} from '../../src/app/error/handler';
+import {LibraryError} from '../../src/app/error/types';
 
 const assetDir = path.join(photosDataDir, ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
@@ -136,11 +136,11 @@ describe(`Unit Tests - Photos Library`, () => {
             });
 
             test(`Extranous file in folder`, async () => {
-                const someFolderName = "folder"
-                const someFolderUUID = 'cc40a239-2beb-483e-acee-e897db1b818a'
-                const someAlbumName = 'album'
-                const someAlbumUUID = 'cc40a239-2beb-483e-acee-e897db1b818b'
-                const someFileName = 'file'
+                const someFolderName = `folder`;
+                const someFolderUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                const someAlbumName = `album`;
+                const someAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
+                const someFileName = `file`;
 
                 mockfs({
                     [photosDataDir]: {
@@ -149,7 +149,7 @@ describe(`Unit Tests - Photos Library`, () => {
                             [someAlbumName]: mockfs.symlink({
                                 "path": `.${someAlbumUUID}`,
                             }),
-                            [someFileName]: Buffer.from([1, 1, 1])
+                            [someFileName]: Buffer.from([1, 1, 1]),
                         },
                         [someFolderName]: mockfs.symlink({
                             "path": `.${someFolderUUID}`,
@@ -158,17 +158,17 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                const handlerEvent = spyOnEvent(library, HANDLER_EVENT)
+                const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
 
-                const albums = await library.loadAlbums()
+                const albums = await library.loadAlbums();
 
                 expect(Object.keys(albums).length).toEqual(2);
-                expect(handlerEvent).toHaveBeenCalledWith(new LibraryError(`Extranous file found in folder ${path.join(photosDataDir, `.${someFolderUUID}`)}`, "WARN"))
+                expect(handlerEvent).toHaveBeenCalledWith(new LibraryError(`Extranous file found in folder ${path.join(photosDataDir, `.${someFolderUUID}`)}`, `WARN`));
             });
 
             test(`Orphaned album`, async () => {
-                const orphanedAlbumName = "Orphan"
-                const orphanedAlbumUUID = 'cc40a239-2beb-483e-acee-e897db1b818a'
+                const orphanedAlbumName = `Orphan`;
+                const orphanedAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
 
                 mockfs({
                     [photosDataDir]: {
@@ -179,18 +179,18 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                const orphanEvent = spyOnEvent(library, HANDLER_EVENT)
+                const orphanEvent = spyOnEvent(library, HANDLER_EVENT);
                 const albums = await library.loadAlbums();
 
                 expect(Object.keys(albums).length).toEqual(0);
 
-                expect(orphanEvent).toHaveBeenCalledWith(new LibraryError(`Found dead symlink at ${path.join(photosDataDir, orphanedAlbumName)} (removing it)`, 'WARN'))
-                expect(() => fs.lstatSync(path.join(photosDataDir, orphanedAlbumName))).toThrowError(`ENOENT: no such file or directory, lstat '/opt/icloud-photos-library/Orphan'`)
+                expect(orphanEvent).toHaveBeenCalledWith(new LibraryError(`Found dead symlink at ${path.join(photosDataDir, orphanedAlbumName)} (removing it)`, `WARN`));
+                expect(() => fs.lstatSync(path.join(photosDataDir, orphanedAlbumName))).toThrowError(`ENOENT: no such file or directory, lstat '/opt/icloud-photos-library/Orphan'`);
             });
 
             test(`Unexpected loading error`, async () => {
-                const orphanedAlbumName = "Orphan"
-                const orphanedAlbumUUID = 'cc40a239-2beb-483e-acee-e897db1b818a'
+                const orphanedAlbumName = `Orphan`;
+                const orphanedAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
 
                 mockfs({
                     [photosDataDir]: {
@@ -202,9 +202,9 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                library.readFolderFromDisk = jest.fn(() => Promise.resolve([{}, ""] as [Album, string]))
-                    .mockRejectedValue(new Error('Undescriptive Error'))
-                await expect(library.loadAlbums()).rejects.toThrowError(`Unknown error while processing ${path.join(photosDataDir, orphanedAlbumName)}`)
+                library.readFolderFromDisk = jest.fn(() => Promise.resolve([{}, ``] as [Album, string]))
+                    .mockRejectedValue(new Error(`Undescriptive Error`));
+                await expect(library.loadAlbums()).rejects.toThrowError(`Unknown error while processing ${path.join(photosDataDir, orphanedAlbumName)}`);
             });
 
             test(`Non-empty album`, async () => {
@@ -605,10 +605,10 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                library.verifyAsset = jest.fn(() => false)
+                library.verifyAsset = jest.fn(() => false);
 
                 const response = await (axios as unknown as Axios).get(url, config);
-                await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset ${fileName}`)
+                await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset ${fileName}`);
                 const assetPath = path.join(assetDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeFalsy();
             });
@@ -1097,28 +1097,28 @@ describe(`Unit Tests - Photos Library`, () => {
                     const albumAsset1Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
                     const albumAsset1Stat = fs.lstatSync(albumAsset1Path);
                     expect(albumAsset1Stat.isSymbolicLink()).toBeTruthy();
-                    expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime))
+                    expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime));
                     const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
                     expect(albumAsset1Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset1Filename));
 
                     const albumAsset2Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
                     const albumAsset2Stat = fs.lstatSync(albumAsset2Path);
                     expect(albumAsset2Stat.isSymbolicLink()).toBeTruthy();
-                    expect(albumAsset2Stat.mtime).toEqual(new Date(albumAsset2mTime))
+                    expect(albumAsset2Stat.mtime).toEqual(new Date(albumAsset2mTime));
                     const albumAsset2Target = fs.readlinkSync(albumAsset2Path);
                     expect(albumAsset2Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset2Filename));
 
                     const albumAsset3Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset3PrettyFilename);
                     const albumAsset3Stat = fs.lstatSync(albumAsset3Path);
                     expect(albumAsset3Stat.isSymbolicLink()).toBeTruthy();
-                    expect(albumAsset3Stat.mtime).toEqual(new Date(albumAsset3mTime))
+                    expect(albumAsset3Stat.mtime).toEqual(new Date(albumAsset3mTime));
                     const albumAsset3Target = fs.readlinkSync(albumAsset3Path);
                     expect(albumAsset3Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset3Filename));
 
                     const albumAsset4Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset4PrettyFilename);
                     const albumAsset4Stat = fs.lstatSync(albumAsset4Path);
                     expect(albumAsset4Stat.isSymbolicLink()).toBeTruthy();
-                    expect(albumAsset4Stat.mtime).toEqual(new Date(albumAsset4mTime))
+                    expect(albumAsset4Stat.mtime).toEqual(new Date(albumAsset4mTime));
                     const albumAsset4Target = fs.readlinkSync(albumAsset4Path);
                     expect(albumAsset4Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset4Filename));
                 });
@@ -1158,7 +1158,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     folder.assets = albumAssets;
                     const library = photosLibraryFactory();
 
-                    const handlerEvent = spyOnEvent(library, HANDLER_EVENT)
+                    const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
 
                     library.writeAlbum(folder);
 
@@ -1172,12 +1172,12 @@ describe(`Unit Tests - Photos Library`, () => {
                     const albumAsset1Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
                     const albumAsset1Stat = fs.lstatSync(albumAsset1Path);
                     expect(albumAsset1Stat.isSymbolicLink()).toBeTruthy();
-                    expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime))
+                    expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime));
                     const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
                     expect(albumAsset1Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset1Filename));
 
-                    expect(handlerEvent).toHaveBeenCalledWith(new LibraryError(`Not linking ../_All-Photos/${albumAsset2Filename} to ${photosDataDir}/.${albumUUID}/${albumAsset2PrettyFilename} in album ${albumName}`, "WARN"))
-                })
+                    expect(handlerEvent).toHaveBeenCalledWith(new LibraryError(`Not linking ../_All-Photos/${albumAsset2Filename} to ${photosDataDir}/.${albumUUID}/${albumAsset2PrettyFilename} in album ${albumName}`, `WARN`));
+                });
             });
 
             describe(`Delete`, () => {

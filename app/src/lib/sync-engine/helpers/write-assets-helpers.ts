@@ -18,8 +18,8 @@ export async function writeAssets(this: SyncEngine, processingQueue: PLibraryPro
     this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
 
     // Deleting before downloading, in order to ensure no conflicts
-    await Promise.all(toBeDeleted.map(asset => this.removeAsset(asset)))
-    await Promise.all(toBeAdded.map(asset => this.downloadQueue.add(() => this.addAsset(asset))))
+    await Promise.all(toBeDeleted.map(asset => this.removeAsset(asset)));
+    await Promise.all(toBeAdded.map(asset => this.downloadQueue.add(() => this.addAsset(asset))));
 }
 
 /**
@@ -36,8 +36,8 @@ export async function addAsset(this: SyncEngine, asset: Asset) {
         return;
     }
 
-    const data = await this.icloud.photos.downloadAsset(asset)
-    await this.photosLibrary.writeAsset(asset, data)
+    const data = await this.icloud.photos.downloadAsset(asset);
+    await this.photosLibrary.writeAsset(asset, data);
     this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
 }
 
