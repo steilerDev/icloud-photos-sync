@@ -159,7 +159,7 @@ jobs:
         run: npm ci
         working-directory: app/
       - name: Test All
-        if: ${{ github.ref == 'refs/heads/dev' }}
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: npm run test-all
         env:
           NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
