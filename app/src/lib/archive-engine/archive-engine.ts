@@ -6,10 +6,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {ArchiveApp} from '../../app/icloud-app.js';
-import {ArchiveError, iCPSError} from '../../app/error/types.js';
+import {ArchiveError, ArchiveWarning} from '../../app/error/types.js';
 import EventEmitter from 'events';
 import * as ARCHIVE_ENGINE from './constants.js';
-import {HANDLER_EVENT} from '../../app/error/handler.js';
+import {HANDLER_WARN_EVENT} from '../../app/error/handler.js';
 
 export class ArchiveEngine extends EventEmitter {
     /**
@@ -55,19 +55,19 @@ export class ArchiveEngine extends EventEmitter {
 
         const albumName = path.basename(archivePath);
         if (albumName.startsWith(`.`)) {
-            throw new ArchiveError(`UUID path selected, use named path only`, `FATAL`);
+            throw new ArchiveError(`UUID path selected, use named path only`);
         }
 
         const parentFolderPath = path.dirname(archivePath);
         const [archivedAlbum, archivedAlbumPath] = await this.photosLibrary.readFolderFromDisk(albumName, parentFolderPath, ``);
         if (archivedAlbum.albumType !== AlbumType.ALBUM) {
-            throw new ArchiveError(`Only able to archive non-archived albums`, `FATAL`);
+            throw new ArchiveError(`Only able to archive non-archived albums`);
         }
 
         const loadedAlbum = (await this.photosLibrary.loadAlbum(archivedAlbum, archivedAlbumPath)).find(album => album.albumName === albumName);
 
         if (!loadedAlbum || Object.keys(loadedAlbum.assets).length === 0) {
-            throw new ArchiveError(`Unable to load album`, `FATAL`);
+            throw new ArchiveError(`Unable to load album`);
         }
 
         const numberOfItems = Object.keys(loadedAlbum.assets).length;
@@ -82,7 +82,7 @@ export class ArchiveEngine extends EventEmitter {
             try {
                 await this.persistAsset(assetPath, archivedAssetPath);
             } catch (err) {
-                this.emit(HANDLER_EVENT, new ArchiveError(`Unable to persist asset`, `WARN`)
+                this.emit(HANDLER_WARN_EVENT, new ArchiveError(`Unable to persist asset`)
                     .addCause(err)
                     .addContext(`assetPath`, assetPath)
                     .addContext(`archivedAssetPath`, archivedAssetPath),
@@ -93,7 +93,7 @@ export class ArchiveEngine extends EventEmitter {
             try {
                 return this.prepareForRemoteDeletion(assetPath, assetList);
             } catch (err) {
-                this.emit(HANDLER_EVENT, iCPSError.toiCPSError(err));
+                this.emit(HANDLER_WARN_EVENT, err);
                 return undefined;
             }
         }));
@@ -105,7 +105,7 @@ export class ArchiveEngine extends EventEmitter {
                 this.emit(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, uniqueDeleteList.length);
                 await this.icloud.photos.deleteAssets(uniqueDeleteList);
             } catch (err) {
-                throw new ArchiveError(`Unable to delete remote assets`, `FATAL`)
+                throw new ArchiveError(`Unable to delete remote assets`)
                     .addCause(err);
             }
         }
@@ -129,7 +129,7 @@ export class ArchiveEngine extends EventEmitter {
      * @param assetPath - The path to the assets location in the Assets folder
      * @param assetList - A full list of all remote assets
      * @returns A string containing the asset's recordName or undefined, if the asset should not be deleted
-     * @throws An ArchiveError if loading fails
+     * @throws An ArchiveWarning if loading fails
      */
     prepareForRemoteDeletion(assetPath: string, assetList: Asset[]): string | undefined {
         if (!this.remoteDelete) {
@@ -141,11 +141,11 @@ export class ArchiveEngine extends EventEmitter {
         const asset = assetList.find(asset => asset.getUUID() === assetUUID);
 
         if (!asset) {
-            throw new ArchiveError(`Unable to find asset with UUID ${assetUUID}`, `WARN`).addContext(`assetList`, assetList);
+            throw new ArchiveWarning(`Unable to find asset with UUID ${assetUUID}`).addContext(`assetList`, assetList);
         }
 
         if (!asset.recordName) {
-            throw new ArchiveError(`Unable to get record name for asset ${asset.getDisplayName()}`, `WARN`).addContext(`asset`, asset);
+            throw new ArchiveWarning(`Unable to get record name for asset ${asset.getDisplayName()}`).addContext(`asset`, asset);
         }
 
         if (asset.isFavorite) {

@@ -8,8 +8,8 @@ import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import {getLogger} from '../../logger.js';
 import {convertCPLAssets} from '../../sync-engine/helpers/fetchAndLoad-helpers.js';
-import {HANDLER_EVENT} from '../../../app/error/handler.js';
-import {iCloudError} from '../../../app/error/types.js';
+import {HANDLER_WARN_EVENT} from '../../../app/error/handler.js';
+import {iCloudError, iCloudWarning} from '../../../app/error/types.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -31,6 +31,11 @@ export class iCloudPhotos extends EventEmitter {
     axios: AxiosInstance;
 
     /**
+     * A promise that will resolve, once the object is ready or reject, in case there is an error
+     */
+    ready: Promise<void>;
+
+    /**
      * Creates a new iCloud Photos Class
      * @param auth - The populated authentication object
      */
@@ -38,7 +43,22 @@ export class iCloudPhotos extends EventEmitter {
         super();
         this.auth = auth;
         this.axios = axios.create();
-        this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, this.checkingIndexingStatus);
+        this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, async () => {
+            await this.checkingIndexingStatus();
+        });
+
+        this.ready = this.getReady();
+    }
+
+    /**
+     *
+     * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR'
+     */
+    getReady(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.once(ICLOUD_PHOTOS.EVENTS.READY, () => resolve());
+            this.once(ICLOUD_PHOTOS.EVENTS.ERROR, err => reject(err));
+        });
     }
 
     /**
@@ -48,7 +68,7 @@ export class iCloudPhotos extends EventEmitter {
      */
     getServiceEndpoint(ext: string): string {
         if (!this.auth.iCloudPhotosAccount.photosDomain || this.auth.iCloudPhotosAccount.photosDomain.length === 0) {
-            throw new iCloudError(`Unable to get service endpoint: Photos Domain not defined`, `FATAL`);
+            throw new iCloudError(`Unable to get service endpoint: Photos Domain not defined`);
         }
 
         return `${this.auth.iCloudPhotosAccount.photosDomain}${ICLOUD_PHOTOS.PATHS.BASE_PATH}${ext}`;
@@ -56,20 +76,20 @@ export class iCloudPhotos extends EventEmitter {
 
     /**
      * Starting iCloud Photos service, acquiring all necessary account information stored in iCloudAuth.iCloudPhotosAccount
-     * Will emit SETUP_COMPLETE or HANDLER_EVENT
+     * Will emit SETUP_COMPLETE or ERROR
+     * @returns A promise, that will resolve once the service is available or reject in case of an error
      */
     async setup() {
-        this.logger.debug(`Getting iCloud Photos account information`);
-
-        const config: AxiosRequestConfig = {
-            "headers": this.auth.getPhotosHeader(),
-            "params": {
-                "getCurrentSyncToken": `True`,
-                "remapEnums": `True`,
-            },
-        };
-
         try {
+            this.logger.debug(`Getting iCloud Photos account information`);
+
+            const config: AxiosRequestConfig = {
+                "headers": this.auth.getPhotosHeader(),
+                "params": {
+                    "getCurrentSyncToken": `True`,
+                    "remapEnums": `True`,
+                },
+            };
             //
             // For Shared library support change this to {{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/changes/database
             //
@@ -78,7 +98,9 @@ export class iCloudPhotos extends EventEmitter {
             this.logger.debug(`Successfully gathered iCloud Photos account information`);
             this.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
         } catch (err) {
-            this.emit(HANDLER_EVENT, new iCloudError(`Unexpected error while setting up iCloud Photos`, `FATAL`).addCause(err));
+            this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCloudError(`Unexpected error while setting up iCloud Photos`).addCause(err));
+        } finally {
+            return this.ready;
         }
     }
 
@@ -92,25 +114,25 @@ export class iCloudPhotos extends EventEmitter {
             const result = await this.performQuery(`CheckIndexingState`);
             const state = result[0]?.fields?.state?.value;
             if (!state) {
-                this.emit(HANDLER_EVENT, new iCloudError(`Unable to get indexing state`, `FATAL`).addContext(`icloudResult`, result));
+                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCloudError(`Unable to get indexing state`).addContext(`icloudResult`, result));
                 return;
             }
 
-            if (state === `FINISHED`) {
-                this.logger.info(`Indexing finished, sync can start!`);
-                this.emit(ICLOUD_PHOTOS.EVENTS.READY);
+            if (state !== `FINISHED`) {
+                const progress = result[0]?.fields?.progress?.value;
+                if (progress) {
+                    this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCloudError(`Indexing in progress, try again later`).addContext(`progress`, progress));
+                    return;
+                }
+
+                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCloudError(`Unknown indexing state (${state})`).addContext(`icloudResult`, result));
                 return;
             }
 
-            const progress = result[0]?.fields?.progress?.value;
-            if (progress) {
-                this.emit(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS, progress);
-                return;
-            }
-
-            this.emit(HANDLER_EVENT, new iCloudError(`Unknown state (${state})`, `FATAL`).addContext(`icloudResult`, result));
+            this.logger.info(`Indexing finished, sync can start!`);
+            this.emit(ICLOUD_PHOTOS.EVENTS.READY);
         } catch (err) {
-            this.emit(HANDLER_EVENT, new iCloudError(`Unexpected error while checking indexing status`, `FATAL`).addCause(err));
+            this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCloudError(`Unexpected error while checking indexing status`).addCause(err));
         }
     }
 
@@ -157,7 +179,7 @@ export class iCloudPhotos extends EventEmitter {
         const queryResponse = (await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config));
         const fetchedRecords = queryResponse.data.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
-            throw new iCloudError(`Fetched records have unexpected format`, `FATAL`)
+            throw new iCloudError(`Fetched records have unexpected format`)
                 .addContext(`queryResponse`, queryResponse);
         }
 
@@ -203,7 +225,7 @@ export class iCloudPhotos extends EventEmitter {
         const operationResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config);
         const fetchedRecords = operationResponse.data.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
-            throw new iCloudError(`Fetched records have unexpected format`, `FATAL`)
+            throw new iCloudError(`Fetched records have unexpected format`)
                 .addContext(`operationResponse`, operationResponse);
         }
 
@@ -231,13 +253,13 @@ export class iCloudPhotos extends EventEmitter {
 
                     albumRecords.push(next);
                 } catch (err) {
-                    throw new iCloudError(`Unable to process ${next.albumNameEnc}`, `FATAL`).addCause(err);
+                    throw new iCloudError(`Unable to process ${next.albumNameEnc}`).addCause(err);
                 }
             }
 
             return albumRecords;
         } catch (err) {
-            throw new iCloudError(`Unable to fetch folder structure`, `FATAL`).addCause(err);
+            throw new iCloudError(`Unable to fetch folder structure`).addCause(err);
         }
     }
 
@@ -263,7 +285,7 @@ export class iCloudPhotos extends EventEmitter {
         (await query).forEach(record => {
             try {
                 if (record.deleted === true) {
-                    this.emit(HANDLER_EVENT, new iCloudError(`Filtering deleted record ${record.recordName}`, `WARN`).addContext(`record`, record));
+                    this.emit(HANDLER_WARN_EVENT, new iCloudWarning(`Filtering deleted record ${record.recordName}`).addContext(`record`, record));
                     return;
                 }
 
@@ -273,7 +295,7 @@ export class iCloudPhotos extends EventEmitter {
                 }
 
                 if (!(record.fields.albumType.value === AlbumType.FOLDER || record.fields.albumType.value === AlbumType.ALBUM)) {
-                    this.emit(HANDLER_EVENT, new iCloudError(`Ignoring unknown album type ${record.fields.albumType.value}`, `WARN`).addContext(`record.fields`, record.fields));
+                    this.emit(HANDLER_WARN_EVENT, new iCloudWarning(`Ignoring unknown album type ${record.fields.albumType.value}`).addContext(`record.fields`, record.fields));
                     return;
                 }
 
@@ -293,7 +315,7 @@ export class iCloudPhotos extends EventEmitter {
                     cplAlbums.push(CPLAlbum.parseFromQuery(record));
                 }
             } catch (err) {
-                this.emit(HANDLER_EVENT, new iCloudError(`Error building CPLAlbum`, `WARN`).addCause(err).addContext(`record`, record));
+                this.emit(HANDLER_WARN_EVENT, new iCloudError(`Error building CPLAlbum`).addCause(err).addContext(`record`, record));
             }
         });
         return cplAlbums;
@@ -316,7 +338,7 @@ export class iCloudPhotos extends EventEmitter {
             );
             totalCount = countData[0].fields.itemCount.value;
         } catch (err) {
-            throw new iCloudError(`Unable to extract count data`, `WARN`)
+            throw new iCloudWarning(`Unable to extract count data`)
                 .addCause(err);
         }
 
@@ -371,17 +393,17 @@ export class iCloudPhotos extends EventEmitter {
             allRecords.forEach(record => {
                 try {
                     if (record.deleted === true) {
-                        throw new iCloudError(`Is deleted`, `WARN`)
+                        throw new iCloudWarning(`Is deleted`)
                             .addContext(`record`, record);
                     }
 
                     if (record.fields.isHidden?.value === 1) {
-                        throw new iCloudError(`Is hidden`, `WARN`)
+                        throw new iCloudWarning(`Is hidden`)
                             .addContext(`record`, record);
                     }
 
                     if (Object.prototype.hasOwnProperty.call(seen, record.recordName)) {
-                        throw new iCloudError(`Duplicate`, `WARN`)
+                        throw new iCloudWarning(`Duplicate`)
                             .addContext(`record`, record);
                     }
 
@@ -397,20 +419,20 @@ export class iCloudPhotos extends EventEmitter {
                         cplAssets.push(CPLAsset.parseFromQuery(record));
                         seen[record.recordName] = true;
                     } else {
-                        throw new iCloudError(`Unknown recordType: ${record.recordType}`, `WARN`)
+                        throw new iCloudWarning(`Unknown recordType: ${record.recordType}`)
                             .addContext(`record`, record);
                     }
                 } catch (err) {
-                    this.emit(HANDLER_EVENT, new iCloudError(`Not processing record ${record.recordName}`, `WARN`).addCause(err));
+                    this.emit(HANDLER_WARN_EVENT, new iCloudWarning(`Not processing record ${record.recordName}`).addCause(err));
                 }
             });
         } catch (err) {
-            throw new iCloudError(`Unable to fetch records for album ${parentId === undefined ? `'All photos'` : parentId}`, `FATAL`)
+            throw new iCloudError(`Unable to fetch records for album ${parentId === undefined ? `'All photos'` : parentId}`)
                 .addCause(err);
         }
 
         if (cplMasters.length !== totalCount || cplAssets.length !== totalCount) {
-            this.emit(HANDLER_EVENT, new iCloudError(`Expected ${totalCount} CPLMaster & ${totalCount} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`, `WARN`));
+            this.emit(HANDLER_WARN_EVENT, new iCloudWarning(`Expected ${totalCount} CPLMaster & ${totalCount} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`));
         } else {
             this.logger.debug(`Received expected amount (${totalCount}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
         }

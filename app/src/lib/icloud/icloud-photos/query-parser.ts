@@ -40,7 +40,7 @@ export class AssetID {
      */
     static parseFromQuery(assetId: unknown): AssetID {
         if (!isAssetIDQuery(assetId)) {
-            throw new iCloudError(`Query response cannot be parsed`, `FATAL`)
+            throw new iCloudError(`Query response cannot be parsed`)
                 .addContext(`query`, assetId);
         }
 
@@ -122,7 +122,7 @@ export class CPLAsset {
      */
     static parseFromQuery(cplRecord: unknown): CPLAsset {
         if (!isCPLAssetQuery(cplRecord)) {
-            throw new iCloudError(`Query response cannot be parsed`, `FATAL`)
+            throw new iCloudError(`Query response cannot be parsed`)
                 .addContext(`query`, cplRecord);
         }
 
@@ -243,7 +243,7 @@ export class CPLMaster {
      */
     static parseFromQuery(cplRecord: unknown): CPLMaster {
         if (!isCPLMasterQuery(cplRecord)) {
-            throw new iCloudError(`Query response cannot be parsed`, `FATAL`)
+            throw new iCloudError(`Query response cannot be parsed`)
                 .addContext(`query`, cplRecord);
         }
 
@@ -322,7 +322,7 @@ export class CPLAlbum {
 
     static parseFromQuery(cplRecord: unknown, assets?: Promise<AlbumAssets>): CPLAlbum {
         if (!isCPLAlbumQuery(cplRecord)) {
-            throw new iCloudError(`Query response cannot be parsed`, `FATAL`)
+            throw new iCloudError(`Query response cannot be parsed`)
                 .addContext(`query`, cplRecord);
         }
 

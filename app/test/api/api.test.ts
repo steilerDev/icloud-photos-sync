@@ -53,7 +53,7 @@ describe(`API E2E Tests`, () => {
                 "failOnMfa": true,
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
-            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`Username does not seem to exist`, `FATAL`));
+            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`Username does not seem to exist`));
         });
 
         test(`Login flow with invalid password`, async () => {
@@ -64,7 +64,7 @@ describe(`API E2E Tests`, () => {
                 "failOnMfa": true,
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
-            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`Username/Password does not seem to match`, `FATAL`));
+            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`Username/Password does not seem to match`));
         });
 
         test(`Login flow without token & failOnMfa`, async () => {
@@ -75,7 +75,7 @@ describe(`API E2E Tests`, () => {
                 "failOnMfa": true,
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
-            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`MFA code required, failing due to failOnMfa flag`, `FATAL`));
+            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`MFA code required, failing due to failOnMfa flag`));
         });
 
         test(`Login flow`, async () => {

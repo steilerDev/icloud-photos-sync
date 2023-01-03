@@ -15,8 +15,8 @@ import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albu
 import {spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
-import {SyncError} from '../../src/app/error/types';
-import {HANDLER_EVENT} from '../../src/app/error/handler';
+import {SyncError, SyncWarning} from '../../src/app/error/types';
+import {HANDLER_WARN_EVENT} from '../../src/app/error/handler';
 
 beforeEach(() => {
     mockfs({});
@@ -151,7 +151,7 @@ describe(`Unit Tests - Sync Engine`, () => {
             });
 
             test(`Fatal failure - Unknown error`, async () => {
-                const error = new SyncError(`Unknown error, aborting!`, `FATAL`);
+                const error = new SyncError(`Unknown error, aborting!`);
                 const syncEngine = syncEngineFactory();
                 const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
 
@@ -188,7 +188,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 syncEngine.writeState = jest.fn<() => Promise<void>>()
                     .mockRejectedValue(error);
 
-                await expect(syncEngine.sync()).rejects.toEqual(new SyncError(`Unknown network error code`, `FATAL`));
+                await expect(syncEngine.sync()).rejects.toEqual(new SyncError(`Unknown network error code`));
 
                 expect(startEvent).toHaveBeenCalled();
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
@@ -1559,7 +1559,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
             test(`Adding - HANDLER_EVENT fired on error`, async () => {
                 const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-                const handlerEvent = spyOnEvent(syncEngine, HANDLER_EVENT);
+                const handlerEvent = spyOnEvent(syncEngine, HANDLER_WARN_EVENT);
 
                 const addAlbumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
                 const addAlbumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
@@ -1585,12 +1585,12 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(2, addAlbumChild);
                 expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(3, addAlbumChildChild);
 
-                expect(handlerEvent).toHaveBeenCalledWith(new SyncError(`Unable to add album ${addAlbumParent.getDisplayName()}`, `WARN`));
+                expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to add album ${addAlbumParent.getDisplayName()}`));
             });
 
             test(`Deleting - HANDLER_EVENT fired on error`, async () => {
                 const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-                const handlerEvent = spyOnEvent(syncEngine, HANDLER_EVENT);
+                const handlerEvent = spyOnEvent(syncEngine, HANDLER_WARN_EVENT);
 
                 const removeAlbumParent = new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName4`, ``);
                 const removeAlbumChild = new Album(`someUUID2-1`, AlbumType.ALBUM, `someAlbumName5`, `someUUID2`);
@@ -1616,7 +1616,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
                 expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenCalledTimes(0);
 
-                expect(handlerEvent).toHaveBeenCalledWith(new SyncError(`Unable to delete album ${removeAlbumChildChild.getDisplayName()}`, `WARN`));
+                expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to delete album ${removeAlbumChildChild.getDisplayName()}`));
             });
 
             describe(`Archive albums`, () => {
@@ -1673,7 +1673,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                     const album1 = new Album(`someUUID1`, AlbumType.ARCHIVED, `someAlbumName1`, ``);
                     const album2 = new Album(`someUUID2`, AlbumType.ARCHIVED, `someAlbumName2`, ``);
 
-                    const handlerEvent = spyOnEvent(syncEngine, HANDLER_EVENT);
+                    const handlerEvent = spyOnEvent(syncEngine, HANDLER_WARN_EVENT);
                     syncEngine.photosLibrary.retrieveStashedAlbum = jest.fn()
                         .mockImplementationOnce(() => {
                             throw new Error(`Unable to retrieve album`);
@@ -1687,7 +1687,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
                     expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
 
-                    expect(handlerEvent).toHaveBeenCalledWith(new SyncError(`Unable to retrieve stashed archived album ${album1.getDisplayName()}`, `WARN`));
+                    expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to retrieve stashed archived album ${album1.getDisplayName()}`));
                 });
 
                 test(`Stash - ERROR_HANDLE fired on error`, async () => {
@@ -1696,7 +1696,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                     const album1 = new Album(`someUUID1`, AlbumType.ARCHIVED, `someAlbumName1`, ``);
                     const album2 = new Album(`someUUID2`, AlbumType.ARCHIVED, `someAlbumName2`, ``);
 
-                    const handlerEvent = spyOnEvent(syncEngine, HANDLER_EVENT);
+                    const handlerEvent = spyOnEvent(syncEngine, HANDLER_WARN_EVENT);
                     syncEngine.photosLibrary.stashArchivedAlbum = jest.fn()
                         .mockImplementationOnce(() => {
                             throw new Error(`Unable to retrieve album`);
@@ -1710,7 +1710,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
                     expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
 
-                    expect(handlerEvent).toHaveBeenCalledWith(new SyncError(`Unable to stash archived album ${album2.getDisplayName()}`, `WARN`));
+                    expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to stash archived album ${album2.getDisplayName()}`));
                 });
             });
         });

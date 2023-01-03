@@ -42,7 +42,7 @@ export class FileType {
      */
     static fromAssetType(descriptor: string): FileType {
         if (!EXT[descriptor]) {
-            throw new LibraryError(`Unknown filetype descriptor ${descriptor}`, `FATAL`);
+            throw new LibraryError(`Unknown filetype descriptor ${descriptor}`);
         }
 
         return new FileType(descriptor);
@@ -61,7 +61,7 @@ export class FileType {
 
         const descriptor = Object.keys(EXT).find(key => EXT[key] === ext);
         if (!descriptor) {
-            throw new LibraryError(`Unknown filetype extension: ${ext}`, `FATAL`);
+            throw new LibraryError(`Unknown filetype extension: ${ext}`);
         }
 
         return new FileType(descriptor);

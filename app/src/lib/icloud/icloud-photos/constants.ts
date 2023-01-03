@@ -7,8 +7,8 @@
  */
 export enum EVENTS {
     SETUP_COMPLETE = `setup_complete`,
-    INDEX_IN_PROGRESS = `index_in_progress`,
     READY = `ready`,
+    ERROR = `error`
 }
 
 /**

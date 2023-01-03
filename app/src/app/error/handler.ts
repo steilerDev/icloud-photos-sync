@@ -1,15 +1,15 @@
-import {iCloudApp} from "./../icloud-app.js";
 import * as bt from 'backtrace-node';
 import {EventEmitter} from 'events';
 import * as PACKAGE_INFO from '../../lib/package.js';
 import {getLogger, logFile} from "../../lib/logger.js";
 import {iCPSError, InterruptError} from "./types.js";
 import {randomUUID} from "crypto";
+import {OptionValues} from "commander";
 
 /**
- * The event emitted by classes of this application and picked up by the handler. An instance of iCPSError is expected as argument
+ * The event emitted by classes of this application and picked up by the handler.
  */
-export const HANDLER_EVENT = `error-handler`;
+export const HANDLER_WARN_EVENT = `handler-event`;
 /**
  * Event emitted in case an error was handled. Error string provided as argument.
  */
@@ -18,6 +18,10 @@ export const ERROR_EVENT = `error`;
  * Event emitted in case a warning was handled. Error string provided as argument.
  */
 export const WARN_EVENT = `warn`;
+/**
+ * Event emitted in case the app should have exited, but is running in 'scheduled' mode
+ */
+export const EXIT_EVENT = `exit`;
 
 /**
  * This class handles errors thrown or `HANDLER_EVENT` emitted by classes of this application
@@ -28,9 +32,9 @@ export class ErrorHandler extends EventEmitter {
      */
     btClient?: bt.BacktraceClient;
 
-    constructor(app: iCloudApp) {
+    constructor(options: OptionValues) {
         super();
-        if (app.options.enableCrashReporting) {
+        if (options.enableCrashReporting) {
             this.btClient = bt.initialize({
                 "endpoint": `https://submit.backtrace.io/steilerdev/92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49/json`,
                 "handlePromises": true,
@@ -45,23 +49,23 @@ export class ErrorHandler extends EventEmitter {
         // Register handlers for interrupts
         process.on(`SIGTERM`, async () => {
             await this.handle(new InterruptError(`SIGTERM`));
+            process.exit(2);
         });
 
         process.on(`SIGINT`, async () => {
             await this.handle(new InterruptError(`SIGINT`));
+            process.exit(2);
         });
     }
 
     /**
-     * Handles a given error. Fatal errors will exit the application
+     * Handles a given error. Report fatal errors and provide appropriate output.
      * @param err - The occured error
      */
     async handle(err: iCPSError) {
         let message = err.getDescription();
         // Check if the error should be reported
         const shouldReport = err.sev === `FATAL` && !(err instanceof InterruptError);
-        // Check if the program should exit execution
-        const shouldExit = err.sev === `FATAL`;
 
         // Report error and append error code
         if (shouldReport) {
@@ -81,19 +85,14 @@ export class ErrorHandler extends EventEmitter {
             getLogger(this).error(message);
             break;
         }
-
-        // Exit the process
-        if (shouldExit) {
-            process.exit(1);
-        }
     }
 
     /**
-     * Registers an event listener for `HANDLER_EVENT` on the provided object.
-     * @param object - An EventEmitter, which will emit `HANDLER_EVENT`
+     * Registers an event listener for `HANDLER_WARN_EVENT` on the provided object.
+     * @param object - An EventEmitter, which will emit `HANDLER_WARN_EVENT`
      */
-    registerHandlerForObject(object: EventEmitter) {
-        object.on(HANDLER_EVENT, async (err: unknown) => {
+    registerWarningHandlerForObject(object: EventEmitter) {
+        object.on(HANDLER_WARN_EVENT, async (err: unknown) => {
             await this.handle(iCPSError.toiCPSError(err));
         });
     }

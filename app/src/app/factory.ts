@@ -1,7 +1,7 @@
 import {Command, Option, InvalidArgumentError} from "commander";
 import * as PACKAGE_INFO from '../lib/package.js';
 import {ErrorHandler} from "./error/handler.js";
-import {TokenApp, SyncApp, ArchiveApp, iCPSApp} from "./icloud-app.js";
+import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as an integer and throw an invalid argument error in case it fails
@@ -29,6 +29,7 @@ export function appFactory(argv: string[]): iCPSApp {
         "archive": `archive`,
         "sync": `sync`,
         "token": `token`,
+        "daemon": `daemon`,
     };
 
     const program = new Command();
@@ -60,11 +61,17 @@ export function appFactory(argv: string[]): iCPSApp {
             .env(`DOWNLOAD_THREADS`)
             .default(5)
             .argParser(commanderParseInt))
+        .addOption(new Option(`-S, --schedule <cron-string>`, `In case this app is executed in daemon mode, it will use this cron schedule to perform regular syncs`)
+            .env(`SCHEDULE`)
+            .default(`0 2 * * *`))
         .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://icloud-photos-sync.steilerdev.de/user-guides/error-reporting/ for more information`)
             .env(`ENABLE_CRASH_REPORTING`)
             .default(false))
         .addOption(new Option(`--fail-on-mfa`, `If a MFA is necessary, exit the program. (This is usefull in test scenarios)`)
             .env(`FAIL_ON_MFA`)
+            .default(false))
+        .addOption(new Option(`--force`, `Force the execution of the operation, independent of an existing lock on the library. USE WITH CAUTION`)
+            .env(`FORCE`)
             .default(false))
         .addOption(new Option(`--refresh-token`, `Ignore any stored token and always refresh it`)
             .env(`REFRESH_TOKEN`)
@@ -86,6 +93,18 @@ export function appFactory(argv: string[]): iCPSApp {
             .env(`SURPRESS_WARNINGS`)
             .default(false));
 
+    program.command(AppCommands.daemon, {"isDefault": true})
+        .action(() => {
+            app = new DaemonApp(program.opts());
+        })
+        .description(`Starts the synchronization in scheduled dameon mode - continously running based on the provided cron schedule.`);
+
+    program.command(AppCommands.token)
+        .action(() => {
+            app = new TokenApp(program.opts());
+        })
+        .description(`Validates the current trust token, fetches a new one (if necessary) and prints it to the CLI.`);
+
     program.command(AppCommands.sync)
         .action(() => {
             app = new SyncApp(program.opts());
@@ -98,12 +117,6 @@ export function appFactory(argv: string[]): iCPSApp {
         })
         .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)
         .argument(`<path>`, `Path to the folder that should be archived`);
-
-    program.command(AppCommands.token)
-        .action(() => {
-            app = new TokenApp(program.opts());
-        })
-        .description(`Validates the current trust token, fetches a new one (if necessary) and prints it to the CLI`);
 
     program.parse(argv);
     ErrorHandler.cleanEnv();

@@ -12,8 +12,8 @@
       "src/**/*.ts",
       "!src/main.ts",
       "!src/app/error/*",
+      "!src/app/event/*",
       "!src/lib/package.ts",
-      "!src/lib/cli.ts",
       "!src/lib/logger.ts",
       "!src/lib/photos-library/model/photos-entity.ts"
     ],

@@ -150,14 +150,14 @@ export class iCloudAuth {
         try {
             await fs.mkdir(trustTokenPath, {"recursive": true});
         } catch (err) {
-            throw new iCloudAuthError(`Unable to create trust token directory (${trustTokenPath})`, `WARN`)
+            throw new iCloudAuthError(`Unable to create trust token directory (${trustTokenPath})`)
                 .addCause(err);
         }
 
         try {
             await fs.writeFile(this.trustTokenFile, this.iCloudAccountTokens.trustToken, {"encoding": ICLOUD.TRUST_TOKEN_FILE_ENCODING});
         } catch (err) {
-            throw new iCloudAuthError(`Unable to persist trust token to disk`, `WARN`)
+            throw new iCloudAuthError(`Unable to persist trust token to disk`)
                 .addCause(err);
         }
     }
@@ -175,7 +175,7 @@ export class iCloudAuth {
 
         const cookieHeaders = response.headers[`set-cookie`];
         if (!cookieHeaders || !Array.isArray(cookieHeaders) || cookieHeaders.length === 0) {
-            throw new iCloudAuthError(`Unable to process auth response: No set-cookie directive found`, `FATAL`)
+            throw new iCloudAuthError(`Unable to process auth response: No set-cookie directive found`)
                 .addContext(`responseHeaders`, response.headers);
         }
 
@@ -205,7 +205,7 @@ export class iCloudAuth {
     /**
      * Processing the response from acquiring the necessary trust tokens. This method is automatically storing the trust token on disk
      * @param response - The response from the trust token endpoint
-     * @throws A fatal or non fatal error in case it failed
+     * @throws A fatal error in case it failed
      */
     async processAccountTokens(response: AxiosResponse) {
         this.logger.debug(`Processing trust token response`);
@@ -236,7 +236,7 @@ export class iCloudAuth {
         this.logger.debug(`Processing iCloud setup response`);
         const cookieHeaders = response.headers[`set-cookie`];
         if (!cookieHeaders || !Array.isArray(cookieHeaders) || cookieHeaders.length === 0) {
-            throw new iCloudAuthError(`Unable to store cookies from response header, no 'set-cookie' directive found`, `FATAL`)
+            throw new iCloudAuthError(`Unable to store cookies from response header, no 'set-cookie' directive found`)
                 .addContext(`responseHeaders`, response.headers);
         }
 
@@ -249,7 +249,7 @@ export class iCloudAuth {
         });
 
         if (!response?.data?.webservices?.ckdatabasews?.url) {
-            throw new iCloudAuthError(`Unable to get photosDomain from setup response`, `FATAL`)
+            throw new iCloudAuthError(`Unable to get photosDomain from setup response`)
                 .addContext(`responseData`, response.data);
         }
 
@@ -307,7 +307,7 @@ export class iCloudAuth {
      */
     validateCloudCookies() {
         if (!this.iCloudCookies || this.iCloudCookies.length === 0) {
-            throw new iCloudAuthError(`Unable to validate cloud cookies: No cookies loaded`, `FATAL`);
+            throw new iCloudAuthError(`Unable to validate cloud cookies: No cookies loaded`);
         }
 
         const expiredCookies = this.iCloudCookies
@@ -321,7 +321,7 @@ export class iCloudAuth {
             this.iCloudCookies.forEach(cookie => {
                 cookie.value = ``;
             });
-            throw new iCloudAuthError(`Unable to validate cloud cookies: Some cookies are expired`, `FATAL`)
+            throw new iCloudAuthError(`Unable to validate cloud cookies: Some cookies are expired`)
                 .addContext(`iCloudCookies`, this.iCloudCookies);
         }
     }
@@ -333,22 +333,22 @@ export class iCloudAuth {
     validatePhotosAccount() {
         this.validateCloudCookies();
         if (!this.iCloudPhotosAccount.zoneName || this.iCloudPhotosAccount.zoneName.length === 0) {
-            throw new iCloudAuthError(`Unable to validate Photos account: ZoneName invalid`, `FATAL`)
+            throw new iCloudAuthError(`Unable to validate Photos account: ZoneName invalid`)
                 .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
         }
 
         if (!this.iCloudPhotosAccount.photosDomain || this.iCloudPhotosAccount.photosDomain.length === 0) {
-            throw new iCloudAuthError(`Unable to validate Photos account: PhotosDomain invalid`, `FATAL`)
+            throw new iCloudAuthError(`Unable to validate Photos account: PhotosDomain invalid`)
                 .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
         }
 
         if (!this.iCloudPhotosAccount.zoneType || this.iCloudPhotosAccount.zoneType.length === 0) {
-            throw new iCloudAuthError(`Unable to validate Photos account: ZoneType invalid`, `FATAL`)
+            throw new iCloudAuthError(`Unable to validate Photos account: ZoneType invalid`)
                 .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
         }
 
         if (!this.iCloudPhotosAccount.ownerName || this.iCloudPhotosAccount.ownerName.length === 0) {
-            throw new iCloudAuthError(`Unable to validate Photos account: OwnerName invalid`, `FATAL`)
+            throw new iCloudAuthError(`Unable to validate Photos account: OwnerName invalid`)
                 .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
         }
     }
@@ -359,11 +359,11 @@ export class iCloudAuth {
      */
     validateAccountSecrets() {
         if (!this.iCloudAccountSecrets.username || this.iCloudAccountSecrets.username.length === 0) {
-            throw new iCloudAuthError(`Unable to validate account secrets: Username invalid`, `FATAL`);
+            throw new iCloudAuthError(`Unable to validate account secrets: Username invalid`);
         }
 
         if (!this.iCloudAccountSecrets.password || this.iCloudAccountSecrets.password.length === 0) {
-            throw new iCloudAuthError(`Unable to validate account secrets: Password invalid`, `FATAL`);
+            throw new iCloudAuthError(`Unable to validate account secrets: Password invalid`);
         }
     }
 
@@ -373,17 +373,17 @@ export class iCloudAuth {
      */
     validateAuthSecrets() {
         if (!this.iCloudAuthSecrets.aasp || this.iCloudAuthSecrets.aasp.length === 0) {
-            throw new iCloudAuthError(`Unable to validate auth secrets: aasp invalid`, `FATAL`)
+            throw new iCloudAuthError(`Unable to validate auth secrets: aasp invalid`)
                 .addContext(`invalidAuthSecrets`, this.iCloudAuthSecrets);
         }
 
         if (!this.iCloudAuthSecrets.scnt || this.iCloudAuthSecrets.scnt.length === 0) {
-            throw new iCloudAuthError(`Unable to validate auth secrets: scnt invalid`, `FATAL`)
+            throw new iCloudAuthError(`Unable to validate auth secrets: scnt invalid`)
                 .addContext(`invalidAuthSecrets`, this.iCloudAuthSecrets);
         }
 
         if (!this.iCloudAuthSecrets.sessionId || this.iCloudAuthSecrets.sessionId.length === 0) {
-            throw new iCloudAuthError(`Unable to validate auth secrets: sessionId invalid`, `FATAL`)
+            throw new iCloudAuthError(`Unable to validate auth secrets: sessionId invalid`)
                 .addContext(`invalidAuthSecrets`, this.iCloudAuthSecrets);
         }
     }
@@ -394,11 +394,11 @@ export class iCloudAuth {
      */
     validateAccountTokens() {
         if (!this.iCloudAccountTokens.sessionToken || this.iCloudAccountTokens.sessionToken.length === 0) {
-            throw new iCloudAuthError(`Unable to validate account tokens: sessionToken invalid`, `FATAL`);
+            throw new iCloudAuthError(`Unable to validate account tokens: sessionToken invalid`);
         }
 
         if (!this.iCloudAccountTokens.trustToken || this.iCloudAccountTokens.trustToken.length === 0) {
-            throw new iCloudAuthError(`Unable to validate account tokens: trustToken invalid`, `FATAL`);
+            throw new iCloudAuthError(`Unable to validate account tokens: trustToken invalid`);
         }
     }
 }

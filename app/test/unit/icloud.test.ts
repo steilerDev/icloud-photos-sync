@@ -16,8 +16,8 @@ import {iCloud} from '../../src/lib/icloud/icloud';
 import {getICloudCookies} from '../_helpers/icloud-auth.helper';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {appWithOptions} from '../_helpers/app-factory.helper';
-import {HANDLER_EVENT} from '../../src/app/error/handler';
-import {iCloudAuthError, iCloudError} from '../../src/app/error/types';
+import {HANDLER_WARN_EVENT, WARN_EVENT} from '../../src/app/error/handler';
+import {iCloudAuthError, iCloudError, iCloudWarning} from '../../src/app/error/types';
 
 describe(`Unit Tests - iCloud`, () => {
     describe(`CLI Options`, () => {
@@ -34,12 +34,10 @@ describe(`Unit Tests - iCloud`, () => {
             cliOpts.failOnMfa = true;
 
             const icloud = new iCloud(appWithOptions(cliOpts));
-            icloud.ready.catch(() => {}); // Making sure error is catched
 
-            const event = spyOnEvent(icloud, HANDLER_EVENT);
             icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
+            expect(icloud.ready).rejects.toThrowError(new iCloudError(`MFA code required, failing due to failOnMfa flag`))
 
-            expect(event).toHaveBeenCalledWith(new iCloudError(`MFA code required, failing due to failOnMfa flag`, `FATAL`));
             expect(icloud.mfaServer.server.listening).toBeFalsy();
         });
 
@@ -48,15 +46,14 @@ describe(`Unit Tests - iCloud`, () => {
             cliOpts.failOnMfa = false;
 
             const icloud = new iCloud(appWithOptions(cliOpts));
-            icloud.ready.catch(() => {}); // Making sure error is catched
+
             icloud.mfaServer.startServer = jest.fn(() => {
                 throw new Error(`Unable to start server`);
             });
-            const event = spyOnEvent(icloud, HANDLER_EVENT);
 
             icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
+            expect(icloud.ready).rejects.toThrowError(new iCloudError(`Unable to start MFA server`))
 
-            expect(event).toHaveBeenCalledWith(new iCloudError(`Unable to start MFA server`, `FATAL`));
             expect(icloud.mfaServer.server.listening).toBeFalsy();
         });
     });
@@ -84,6 +81,33 @@ describe(`Unit Tests - iCloud`, () => {
             expect(icloudAuth.iCloudAccountTokens.trustToken).toEqual(Config.trustToken + `asdf`);
         });
     });
+
+    describe(`Control structure`, () => {
+        test('TRUSTED event triggered', () => {
+            const icloud = new iCloud(appWithOptions(_defaultCliOpts));
+            icloud.getiCloudCookies = jest.fn(() => Promise.resolve())
+
+            icloud.emit(ICLOUD.EVENTS.TRUSTED)
+
+            expect(icloud.getiCloudCookies).toHaveBeenCalled()
+        })
+        test('AUTHENTICATED event triggered', () => {
+            const icloud = new iCloud(appWithOptions(_defaultCliOpts));
+            icloud.getTokens = jest.fn(() => Promise.resolve())
+
+            icloud.emit(ICLOUD.EVENTS.AUTHENTICATED)
+
+            expect(icloud.getTokens).toHaveBeenCalled()
+        })
+        test('ACCOUNT_READY event triggered', () => {
+            const icloud = new iCloud(appWithOptions(_defaultCliOpts));
+            icloud.getiCloudPhotosReady = jest.fn(() => Promise.resolve())
+
+            icloud.emit(ICLOUD.EVENTS.ACCOUNT_READY)
+
+            expect(icloud.getiCloudPhotosReady).toHaveBeenCalled()
+        })
+    })
 
     describe(`Authenticate`, () => {
         test(`Authentication - Valid Trust Token`, async () => {
@@ -118,20 +142,15 @@ describe(`Unit Tests - iCloud`, () => {
 
         test(`Authentication - Unexpected success status code`, async () => {
             const icloud = iCloudFactory();
-            // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
-            icloud.ready = new Promise<void>((resolve, _reject) => {
-                icloud.once(HANDLER_EVENT, resolve);
-            });
             const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
             icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
                 "status": 204,
             }));
 
-            await icloud.authenticate();
+            await expect(icloud.authenticate()).rejects.toThrowError(new iCloudError("Unexpected HTTP code: 204"))
+
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unexpected HTTP code: 204`));
         });
 
         test(`Authentication - Invalid Trust Token`, async () => {
@@ -169,12 +188,7 @@ describe(`Unit Tests - iCloud`, () => {
 
         test(`Authentication - Unknown username`, async () => {
             const icloud = iCloudFactory();
-            // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
-            icloud.ready = new Promise<void>((resolve, _reject) => {
-                icloud.once(HANDLER_EVENT, resolve);
-            });
             const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
             const responseError = new Error(`Conflict`);
             (responseError as any).response = {
@@ -182,19 +196,14 @@ describe(`Unit Tests - iCloud`, () => {
             };
             icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
 
-            await icloud.authenticate();
+            await expect(icloud.authenticate()).rejects.toThrowError(new iCloudError(`Username does not seem to exist`))
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Username does not seem to exist`, `FATAL`));
         });
 
         test(`Authentication - Wrong username/password combination`, async () => {
             const icloud = iCloudFactory();
-            // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
-            icloud.ready = new Promise<void>((resolve, _reject) => {
-                icloud.once(HANDLER_EVENT, resolve);
-            });
+
             const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
             const responseError = new Error(`Unauthorized`);
             (responseError as any).response = {
@@ -202,19 +211,14 @@ describe(`Unit Tests - iCloud`, () => {
             };
             icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
 
-            await icloud.authenticate();
+            await expect(icloud.authenticate()).rejects.toThrowError(new iCloudError(`Username/Password does not seem to match`))
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Username/Password does not seem to match`, `FATAL`));
         });
 
         test(`Authentication - Unexpected failure status code`, async () => {
             const icloud = iCloudFactory();
-            // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
-            icloud.ready = new Promise<void>((resolve, _reject) => {
-                icloud.once(HANDLER_EVENT, resolve);
-            });
+
             const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
             const responseError = new Error(`Conflict`);
             (responseError as any).response = {
@@ -222,56 +226,41 @@ describe(`Unit Tests - iCloud`, () => {
             };
             icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
 
-            await icloud.authenticate();
+            await expect(icloud.authenticate()).rejects.toThrowError(new iCloudError(`Unexpected HTTP code: 500`))
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Unexpected HTTP code: 500`, `FATAL`));
         });
 
         test(`Authentication - No response`, async () => {
             const icloud = iCloudFactory();
-            // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
-            icloud.ready = new Promise<void>((resolve, _reject) => {
-                icloud.once(HANDLER_EVENT, resolve);
-            });
+
             const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
             icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(
                 new Error(`No Network`),
             ));
 
-            await icloud.authenticate();
+            await expect(icloud.authenticate()).rejects.toThrowError(new iCloudError(`No response received during authentication`))
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`No response received during authentication`, `FATAL`));
         });
 
         test(`Authentication - Auth secrets missing in authentication response`, async () => {
             const icloud = iCloudFactory();
-            // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
-            icloud.ready = new Promise<void>((resolve, _reject) => {
-                icloud.once(HANDLER_EVENT, resolve);
-            });
+
             const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
             icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
                 "status": 200,
                 "headers": {},
             }));
 
-            await icloud.authenticate();
+            await expect(icloud.authenticate()).rejects.toThrowError(new iCloudError(`Unable to process auth response: No set-cookie directive found`))
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Unable to process auth response: No set-cookie directive found`, `FATAL`));
         });
 
         test(`Authentication - Auth secrets missing in mfa response`, async () => {
             const icloud = iCloudFactory();
-            // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
-            icloud.ready = new Promise<void>((resolve, _reject) => {
-                icloud.once(HANDLER_EVENT, resolve);
-            });
+
             const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
             const responseError = new Error(`Conflict`);
             (responseError as any).response = {
@@ -280,9 +269,8 @@ describe(`Unit Tests - iCloud`, () => {
             };
             icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
 
-            await icloud.authenticate();
+            await expect(icloud.authenticate()).rejects.toThrowError(new iCloudError(`Unable to process auth response: No set-cookie directive found`))
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Unable to process auth response: No set-cookie directive found`, `FATAL`));
         });
     });
 
@@ -333,12 +321,12 @@ describe(`Unit Tests - iCloud`, () => {
                     icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error()));
 
                     // Checking if rejection is properly parsed
-                    const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
+                    const warnEvent = spyOnEvent(icloud, HANDLER_WARN_EVENT);
 
                     await icloud.resendMFA(method);
 
                     expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                    expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`No response received`, `FATAL`));
+                    expect(warnEvent).toHaveBeenCalledWith(new iCloudWarning(`Requesting MFA code failed`));
                 });
 
                 test(`Resend MFA with ${method} - Resend unsuccesful`, async () => {
@@ -351,12 +339,12 @@ describe(`Unit Tests - iCloud`, () => {
                     }));
 
                     // Checking if rejection is properly parsed
-                    const handlerEvent = spyOnEvent(icloud, HANDLER_EVENT);
+                    const warnEvent = spyOnEvent(icloud, HANDLER_WARN_EVENT);
 
                     await icloud.resendMFA(method);
 
                     expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                    expect(handlerEvent).toHaveBeenCalledWith(new iCloudError(`Unable to request new MFA code`, `FATAL`));
+                    expect(warnEvent).toHaveBeenCalledWith(new iCloudWarning(`Unable to request new MFA code`));
                 });
             });
 
@@ -392,12 +380,12 @@ describe(`Unit Tests - iCloud`, () => {
                     icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error()));
 
                     // Checking if rejection is properly parsed
-                    const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
+                    const warnEvent = spyOnEvent(icloud, HANDLER_WARN_EVENT);
 
                     await icloud.resendMFA(method);
 
                     expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                    expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`No response received`, `FATAL`));
+                    expect(warnEvent).toHaveBeenCalledWith(new iCloudWarning(`Requesting MFA code failed`));
                 });
 
                 test(`Resend MFA with ${method} - Resend unsuccesful`, async () => {
@@ -410,12 +398,12 @@ describe(`Unit Tests - iCloud`, () => {
                     }));
 
                     // Checking if rejection is properly parsed
-                    const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
+                    const warnEvent = spyOnEvent(icloud, HANDLER_WARN_EVENT);
 
                     await icloud.resendMFA(method);
 
                     expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                    expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Unable to request new MFA code`, `FATAL`));
+                    expect(warnEvent).toHaveBeenCalledWith(new iCloudWarning(`Unable to request new MFA code`));
                 });
             });
         });
@@ -444,12 +432,10 @@ describe(`Unit Tests - iCloud`, () => {
 
                     icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Unknown error`)));
 
-                    const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
-
                     await icloud.submitMFA(method, `123456`);
 
                     expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                    expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during MFA validation`, `FATAL`));
+                    await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error during MFA validation`))
                 });
 
                 test(`Enter MFA with ${method} - Send unsuccessful`, async () => {
@@ -461,12 +447,10 @@ describe(`Unit Tests - iCloud`, () => {
                         "statusText": `Not found`,
                     }));
 
-                    const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
-
                     await icloud.submitMFA(method, `123456`);
 
                     expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                    expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during MFA validation`, `FATAL`));
+                    await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error during MFA validation`))
                 });
             });
 
@@ -493,12 +477,11 @@ describe(`Unit Tests - iCloud`, () => {
 
                     icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Unknown error`)));
 
-                    const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
                     await icloud.submitMFA(method, `123456`);
 
                     expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                    expect(errorEvent).toHaveBeenCalledWith(new Error(`Received error during MFA validation`));
+                    await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error during MFA validation`))
                 });
 
                 test(`Enter MFA with ${method} - Send unsuccessful`, async () => {
@@ -510,12 +493,10 @@ describe(`Unit Tests - iCloud`, () => {
                         "statusText": `Not found`,
                     }));
 
-                    const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
-
                     await icloud.submitMFA(method, `123456`);
 
                     expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                    expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during MFA validation`, `FATAL`));
+                    await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error during MFA validation`))
                 });
             });
         });
@@ -560,8 +541,6 @@ describe(`Unit Tests - iCloud`, () => {
             const icloud = iCloudFactory();
             icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
 
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
-
             icloud.axios.get = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
                 "status": 500,
                 "headers": {},
@@ -570,17 +549,15 @@ describe(`Unit Tests - iCloud`, () => {
             await icloud.getTokens();
 
             expect(icloud.axios.get).toBeCalledWith(...expectedTokenGetCall);
+            await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error while acquiring trust tokens`))
 
             const writtenFile = fs.readFileSync(path.join(appDataDir, ICLOUD.TRUST_TOKEN_FILE_NAME)).toString();
             expect(writtenFile).toEqual(Config.trustToken);
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudAuthError(`Unable to validate account tokens: sessionToken invalid`, `FATAL`));
         });
 
         test(`Acquire trust token - Network Failure`, async () => {
             const icloud = iCloudFactory();
             icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
             const requestError = new Error(`Network Failure`);
 
@@ -589,10 +566,10 @@ describe(`Unit Tests - iCloud`, () => {
             await icloud.getTokens();
 
             expect(icloud.axios.get).toBeCalledWith(...expectedTokenGetCall);
+            await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error while acquiring trust tokens`))
 
             const writtenFile = fs.readFileSync(path.join(appDataDir, ICLOUD.TRUST_TOKEN_FILE_NAME)).toString();
             expect(writtenFile).toEqual(Config.trustToken);
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error while acquiring trust tokens`, `FATAL`));
         });
     });
 
@@ -652,7 +629,6 @@ describe(`Unit Tests - iCloud`, () => {
                 },
             }));
 
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
             await icloud.getiCloudCookies();
 
@@ -666,7 +642,7 @@ describe(`Unit Tests - iCloud`, () => {
                     "headers": expectedICloudSetupHeaders,
                 },
             );
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, `FATAL`));
+            await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error during iCloud Setup`))
             expect(icloud.photos).toBeNull();
         });
 
@@ -687,8 +663,6 @@ describe(`Unit Tests - iCloud`, () => {
                 "headers": getICloudCookieHeader(true),
             }));
 
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
-
             await icloud.getiCloudCookies();
 
             expect(icloud.axios.post).toHaveBeenCalledWith(
@@ -701,7 +675,7 @@ describe(`Unit Tests - iCloud`, () => {
                     "headers": expectedICloudSetupHeaders,
                 },
             );
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, `FATAL`));
+            await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error during iCloud Setup`))
             expect(icloud.photos).toBeNull();
         });
 
@@ -714,8 +688,6 @@ describe(`Unit Tests - iCloud`, () => {
                 "status": 500,
             }));
 
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
-
             await icloud.getiCloudCookies();
 
             expect(icloud.axios.post).toHaveBeenCalledWith(
@@ -728,7 +700,7 @@ describe(`Unit Tests - iCloud`, () => {
                     "headers": expectedICloudSetupHeaders,
                 },
             );
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, `FATAL`));
+            await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error during iCloud Setup`))
             expect(icloud.photos).toBeNull();
         });
 
@@ -743,8 +715,6 @@ describe(`Unit Tests - iCloud`, () => {
                 "headers": getICloudCookieHeader(true),
             }));
 
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
-
             await icloud.getiCloudCookies();
 
             expect(icloud.axios.post).toHaveBeenCalledWith(
@@ -757,7 +727,7 @@ describe(`Unit Tests - iCloud`, () => {
                     "headers": expectedICloudSetupHeaders,
                 },
             );
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, `FATAL`));
+            await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error during iCloud Setup`))
             expect(icloud.photos).toBeNull();
         });
 
@@ -768,8 +738,6 @@ describe(`Unit Tests - iCloud`, () => {
 
             icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Network down!`)));
 
-            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
-
             await icloud.getiCloudCookies();
 
             expect(icloud.axios.post).toHaveBeenCalledWith(
@@ -782,47 +750,45 @@ describe(`Unit Tests - iCloud`, () => {
                     "headers": expectedICloudSetupHeaders,
                 },
             );
-            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Received error during iCloud Setup`, `FATAL`));
+            await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Received error during iCloud Setup`))
             expect(icloud.photos).toBeNull();
         });
 
         describe(`Get iCloud Photos Ready`, () => {
-            test(`Get iCloud Photos Ready`, () => {
+            test(`Get iCloud Photos Ready`, async () => {
                 const icloud = iCloudFactory();
                 icloud.auth.iCloudCookies = getICloudCookies();
                 icloud.photos = new iCloudPhotos(icloud.auth);
                 icloud.photos.setup = jest.fn(() => Promise.resolve());
 
-                icloud.getiCloudPhotosReady();
+                await icloud.getiCloudPhotosReady();
+
+                expect(icloud.photos.listenerCount(HANDLER_WARN_EVENT)).toBe(1)
+                await expect(icloud.ready).resolves.not.toThrow()
 
                 expect(icloud.photos.listenerCount(ICLOUD_PHOTOS.EVENTS.READY)).toBe(1);
-                expect(icloud.photos.listenerCount(HANDLER_EVENT)).toBe(1);
-                expect(icloud.photos.listenerCount(ICLOUD_PHOTOS.EVENTS.INDEX_IN_PROGRESS)).toBe(1);
                 expect(icloud.photos.setup).toHaveBeenCalled();
             });
 
-            test(`Cookies invalid`, () => {
+            test(`Cookies invalid`, async () => {
                 const icloud = iCloudFactory();
                 icloud.auth.iCloudCookies = getICloudCookies(true);
-                const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
                 icloud.photos = new iCloudPhotos(icloud.auth);
                 icloud.photos.setup = jest.fn(() => Promise.resolve());
 
-                icloud.getiCloudPhotosReady();
+                await icloud.getiCloudPhotosReady();
 
-                expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`No valid cookies for iCloud Photos setup`, `FATAL`));
-
+                await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Unable to get iCloud Photos service ready`))
                 expect(icloud.photos.setup).not.toHaveBeenCalled();
             });
 
-            test(`Photos Object invalid`, () => {
+            test(`Photos Object invalid`, async () => {
                 const icloud = iCloudFactory();
                 icloud.auth.iCloudCookies = getICloudCookies();
-                const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
-                icloud.getiCloudPhotosReady();
+                await icloud.getiCloudPhotosReady();
 
-                expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Unable to setup iCloud Photos, object does not exist`, `FATAL`));
+                await expect(icloud.ready).rejects.toThrowError(new iCloudError(`Unable to get iCloud Photos service ready`))
             });
         });
     });

@@ -204,6 +204,6 @@ export class Album implements PEntity<Album> {
             return Album.distanceToRoot(parent, fullQueue) + 1;
         }
 
-        throw new LibraryError(`Unable to determine distance to root, no link to root!`, `FATAL`);
+        throw new LibraryError(`Unable to determine distance to root, no link to root!`);
     }
 }

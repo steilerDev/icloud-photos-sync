@@ -71,6 +71,8 @@ export enum EVENTS {
     TRUSTED = `trusted`,
     ACCOUNT_READY = `account_ready`,
     READY = `ready`,
+    ERROR = `error`, // Error - will reject 'ready' promise and be handled on top level
+    TOKEN = `token` // TokenString - only fired if needed to be picked up
 }
 
 /**

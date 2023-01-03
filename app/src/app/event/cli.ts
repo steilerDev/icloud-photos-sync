@@ -1,20 +1,24 @@
 import chalk from 'chalk';
-import * as PACKAGE_INFO from './package.js';
-import {iCloud} from './icloud/icloud.js';
-import * as ICLOUD from './icloud/constants.js';
-import * as SYNC_ENGINE from './sync-engine/constants.js';
-import * as ARCHIVE_ENGINE from './archive-engine/constants.js';
-import {SyncEngine} from './sync-engine/sync-engine.js';
+import * as PACKAGE_INFO from '../../lib/package.js';
+import {iCloud} from '../../lib/icloud/icloud.js';
+import * as ICLOUD from '../../lib/icloud/constants.js';
+import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
+import * as ARCHIVE_ENGINE from '../../lib/archive-engine/constants.js';
+import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
 import {SingleBar} from 'cli-progress';
-import {getLogger} from './logger.js';
-import {ArchiveEngine} from './archive-engine/archive-engine.js';
-import {iCloudApp} from '../app/icloud-app.js';
-import {ErrorHandler, ERROR_EVENT, HANDLER_EVENT, WARN_EVENT} from '../app/error/handler.js';
+import {getLogger} from '../../lib/logger.js';
+import {ArchiveEngine} from '../../lib/archive-engine/archive-engine.js';
+import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from '../error/handler.js';
+import {OptionValues} from 'commander';
+
+export interface EventHandler {
+    registerEventHandlerForObject(object: unknown): void
+}
 
 /**
  * This class handles the input/output to the command line
  */
-export class CLIInterface {
+export class CLIInterface implements EventHandler {
     /**
      * Default logger for the class
      */
@@ -37,7 +41,7 @@ export class CLIInterface {
      * Creates a new CLI interface based on the provided components
      * @param app - The application object, holding all necessary information
      */
-    constructor(app: iCloudApp) {
+    constructor(options: OptionValues, errorHandler: ErrorHandler) {
         this.progressBar = new SingleBar({
             "etaAsynchronousUpdate": true,
             "format": ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
@@ -46,12 +50,14 @@ export class CLIInterface {
         });
 
         // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on logToCli)
-        this.enableCLIOutput = !app.options.logToCli && !app.options.silent;
-        this.surpressWarnings = app.options.surpressWarnings;
+        this.enableCLIOutput = !options.logToCli && !options.silent;
+        this.surpressWarnings = options.surpressWarnings;
 
         if (this.enableCLIOutput) {
             console.clear();
         }
+
+        this.handleErrorHandler(errorHandler)
 
         this.print(chalk.white(this.getHorizontalLine()));
         this.print(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
@@ -70,6 +76,14 @@ export class CLIInterface {
                 this.logger.info(chalk.reset(msg));
             }
         }
+    }
+
+    /**
+     * Prints a warning
+     * @param msg - The message string
+     */
+    printWarning(msg: string) {
+        this.print(chalk.yellow(msg));
     }
 
     /**
@@ -99,10 +113,33 @@ export class CLIInterface {
     }
 
     /**
+     * Starts listening on class specific events on the provided object for status printing
+     * @param object - The EventEmitter
+     */
+    registerEventHandlerForObject(object: unknown) {
+        if (object instanceof iCloud) {
+            this.handleICloud(object);
+            return;
+        }
+
+        if (object instanceof SyncEngine) {
+            this.handleSyncEngine(object);
+            return;
+        }
+
+        if (object instanceof ArchiveEngine) {
+            this.handleArchiveEngine(object);
+            return;
+        }
+
+        this.printWarning(`Unable to find event handler for ${object.constructor.name}`);
+    }
+
+    /**
      * Listens to iCloud events and provides CLI output
      * @param iCloud - The iCloud object to listen on
      */
-    setupCLIiCloudInterface(iCloud: iCloud) {
+    private handleICloud(iCloud: iCloud) {
         iCloud.on(ICLOUD.EVENTS.AUTHENTICATION_STARTED, () => {
             this.print(chalk.white(this.getHorizontalLine()));
             this.print(chalk.white(`Authenticating user...`));
@@ -131,13 +168,17 @@ export class CLIInterface {
         iCloud.on(ICLOUD.EVENTS.READY, () => {
             this.print(chalk.greenBright(`iCloud connection established!`));
         });
+
+        iCloud.on(ICLOUD.EVENTS.TOKEN, token => {
+            this.print(chalk.green(`Validated token:\n${token}`));
+        });
     }
 
     /**
      * Listens to Sync Engine events and provides CLI output
      * @param syncEngine - The Sync Engine object to listen on
      */
-    setupCLISyncEngineInterface(syncEngine: SyncEngine) {
+    private handleSyncEngine(syncEngine: SyncEngine) {
         syncEngine.on(SYNC_ENGINE.EVENTS.START, () => {
             this.print(chalk.white(this.getHorizontalLine()));
             this.print(chalk.white.bold(`Starting sync at ${this.getDateTime()}`));
@@ -207,17 +248,13 @@ export class CLIInterface {
             this.print(chalk.magenta(`Detected recoverable error, refreshing iCloud connection & retrying (#${retryCount})...`));
             this.print(chalk.white(this.getHorizontalLine()));
         });
-
-        syncEngine.on(HANDLER_EVENT, () => {
-            this.progressBar.stop();
-        });
     }
 
     /**
      * Listens to Archive Engine events and provides CLI output
      * @param archiveEngine - The Archive Engine object to listen on
      */
-    setupCLIArchiveEngineInterface(archiveEngine: ArchiveEngine) {
+    private handleArchiveEngine(archiveEngine: ArchiveEngine) {
         archiveEngine.on(ARCHIVE_ENGINE.EVENTS.ARCHIVE_START, (path: string) => {
             this.print(chalk.white.bold(`Archiving local path ${path}`));
         });
@@ -241,7 +278,7 @@ export class CLIInterface {
      * Listens to Error Handler events and provides CLI output
      * @param errorHandler - The Error Handler object to listen on
      */
-    setupCLIErrorHandlerInterface(errorHandler: ErrorHandler) {
+    private handleErrorHandler(errorHandler: ErrorHandler) {
         errorHandler.on(ERROR_EVENT, (err: string) => {
             this.printFatalError(err);
         });

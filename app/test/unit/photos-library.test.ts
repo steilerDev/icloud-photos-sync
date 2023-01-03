@@ -12,8 +12,8 @@ import {appDataDir as photosDataDir} from '../_helpers/_config';
 import {photosLibraryFactory} from '../_helpers/photos-library.helper';
 import {appWithOptions} from '../_helpers/app-factory.helper';
 import {spyOnEvent} from '../_helpers/_general';
-import {HANDLER_EVENT} from '../../src/app/error/handler';
-import {LibraryError} from '../../src/app/error/types';
+import {HANDLER_WARN_EVENT} from '../../src/app/error/handler';
+import {LibraryWarning} from '../../src/app/error/types';
 
 const assetDir = path.join(photosDataDir, ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
@@ -158,12 +158,12 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
+                const handlerEvent = spyOnEvent(library, HANDLER_WARN_EVENT);
 
                 const albums = await library.loadAlbums();
 
                 expect(Object.keys(albums).length).toEqual(2);
-                expect(handlerEvent).toHaveBeenCalledWith(new LibraryError(`Extranous file found in folder ${path.join(photosDataDir, `.${someFolderUUID}`)}`, `WARN`));
+                expect(handlerEvent).toHaveBeenCalledWith(new LibraryWarning(`Extranous file found in folder ${path.join(photosDataDir, `.${someFolderUUID}`)}`));
             });
 
             test(`Orphaned album`, async () => {
@@ -179,12 +179,12 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                const orphanEvent = spyOnEvent(library, HANDLER_EVENT);
+                const orphanEvent = spyOnEvent(library, HANDLER_WARN_EVENT);
                 const albums = await library.loadAlbums();
 
                 expect(Object.keys(albums).length).toEqual(0);
 
-                expect(orphanEvent).toHaveBeenCalledWith(new LibraryError(`Found dead symlink at ${path.join(photosDataDir, orphanedAlbumName)} (removing it)`, `WARN`));
+                expect(orphanEvent).toHaveBeenCalledWith(new LibraryWarning(`Found dead symlink at ${path.join(photosDataDir, orphanedAlbumName)} (removing it)`));
                 expect(() => fs.lstatSync(path.join(photosDataDir, orphanedAlbumName))).toThrowError(`ENOENT: no such file or directory, lstat '/opt/icloud-photos-library/Orphan'`);
             });
 
@@ -1158,7 +1158,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     folder.assets = albumAssets;
                     const library = photosLibraryFactory();
 
-                    const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
+                    const handlerEvent = spyOnEvent(library, HANDLER_WARN_EVENT);
 
                     library.writeAlbum(folder);
 
@@ -1176,7 +1176,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
                     expect(albumAsset1Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset1Filename));
 
-                    expect(handlerEvent).toHaveBeenCalledWith(new LibraryError(`Not linking ../_All-Photos/${albumAsset2Filename} to ${photosDataDir}/.${albumUUID}/${albumAsset2PrettyFilename} in album ${albumName}`, `WARN`));
+                    expect(handlerEvent).toHaveBeenCalledWith(new LibraryWarning(`Not linking ../_All-Photos/${albumAsset2Filename} to ${photosDataDir}/.${albumUUID}/${albumAsset2PrettyFilename} in album ${albumName}`));
                 });
             });
 

@@ -2,7 +2,7 @@ import log from 'loglevel';
 import chalk from 'chalk';
 import * as fs from 'fs';
 import * as path from 'path';
-import {iCloudApp} from '../app/icloud-app.js';
+import {OptionValues} from 'commander';
 
 const LOG_FILE_NAME = `.icloud-photos-sync.log`;
 
@@ -27,9 +27,9 @@ export let logFile: string;
  * Logger setup including the configuration of logger prefix
  * @param app - The App object, holding the CLI options
  */
-export function setupLogger(app: iCloudApp): void {
+export function setupLogger(options: OptionValues): void {
     logFile = path.format({
-        "dir": app.options.dataDir,
+        "dir": options.dataDir,
         "base": LOG_FILE_NAME,
     });
 
@@ -42,7 +42,7 @@ export function setupLogger(app: iCloudApp): void {
 
     log.methodFactory = function (methodName, logLevel, loggerName) {
         return function (message) {
-            if (app.options.logToCli && !app.options.silent) {
+            if (options.logToCli && !options.silent) {
                 const prefixedMessage = `${chalk.gray(`[${new Date().toLocaleString()}]`)} ${methodName.toUpperCase()} ${chalk.green(`${String(loggerName)}: ${message}`)}`;
                 originalFactory(methodName, logLevel, loggerName)(prefixedMessage);
             } else {
@@ -52,8 +52,8 @@ export function setupLogger(app: iCloudApp): void {
         };
     };
 
-    log.setLevel(app.options.logLevel);
-    if (app.options.logLevel === `trace`) {
+    log.setLevel(options.logLevel);
+    if (options.logLevel === `trace`) {
         log.warn(`Log level set to 'trace', private data might be recorded in logs!`);
     }
 

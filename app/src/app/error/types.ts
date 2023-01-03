@@ -133,8 +133,17 @@ export class InterruptError extends iCPSError {
  * Error class for iCloud related errors
  */
 export class iCloudError extends iCPSError {
-    constructor(cause: string, sev: Severity) {
-        super(iCloudError, cause, sev);
+    constructor(cause: string) {
+        super(iCloudError, cause, `FATAL`);
+    }
+}
+
+/**
+ * Error class for iCloud related errors
+ */
+export class iCloudWarning extends iCPSError {
+    constructor(cause: string) {
+        super(iCloudWarning, cause, `WARN`);
     }
 }
 
@@ -142,8 +151,8 @@ export class iCloudError extends iCPSError {
  * Error class for iCloud Auth related errors
  */
 export class iCloudAuthError extends iCPSError {
-    constructor(cause: string, sev: Severity) {
-        super(iCloudAuthError, cause, sev);
+    constructor(cause: string) {
+        super(iCloudAuthError, cause, `FATAL`);
     }
 }
 
@@ -151,17 +160,26 @@ export class iCloudAuthError extends iCPSError {
  * Error class for the local Librarie's related errors
  */
 export class LibraryError extends iCPSError {
-    constructor(cause: string, sev: Severity) {
-        super(LibraryError, cause, sev);
+    constructor(cause: string) {
+        super(LibraryError, cause, `FATAL`);
+    }
+}
+
+/**
+ * Error class for the local Librarie's related warnings
+ */
+export class LibraryWarning extends iCPSError {
+    constructor(cause: string) {
+        super(LibraryWarning, cause, `FATAL`);
     }
 }
 
 /**
  * Error class for the MFA server's related errors
  */
-export class MFAError extends iCPSError {
-    constructor(cause: string, sev: Severity) {
-        super(MFAError, cause, sev);
+export class MFAWarning extends iCPSError {
+    constructor(cause: string) {
+        super(MFAWarning, cause, `WARN`);
     }
 }
 
@@ -169,8 +187,8 @@ export class MFAError extends iCPSError {
  * Error class for errors related to the token program
  */
 export class TokenError extends iCPSError {
-    constructor(cause: string, sev: Severity) {
-        super(TokenError, cause, sev);
+    constructor(cause: string) {
+        super(TokenError, cause, `FATAL`);
     }
 }
 
@@ -178,8 +196,17 @@ export class TokenError extends iCPSError {
  * Error class for errors related to the sync program
  */
 export class SyncError extends iCPSError {
-    constructor(cause: string, sev: Severity) {
-        super(SyncError, cause, sev);
+    constructor(cause: string) {
+        super(SyncError, cause, `FATAL`);
+    }
+}
+
+/**
+ * Error class for warnings related to the sync program
+ */
+export class SyncWarning extends iCPSError {
+    constructor(cause: string) {
+        super(SyncWarning, cause, `FATAL`);
     }
 }
 
@@ -187,7 +214,16 @@ export class SyncError extends iCPSError {
  * Error class for errors related to the archive program
  */
 export class ArchiveError extends iCPSError {
-    constructor(cause: string, sev: Severity) {
-        super(SyncError, cause, sev);
+    constructor(cause: string) {
+        super(ArchiveError, cause, `FATAL`);
+    }
+}
+
+/**
+ * Error class for errors related to the archive program
+ */
+export class ArchiveWarning extends iCPSError {
+    constructor(cause: string) {
+        super(ArchiveWarning, cause, `WARN`);
     }
 }

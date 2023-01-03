@@ -31,7 +31,7 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
             }
         } catch (err) {
             // In case missing filetype descriptor is thrown, adding asset context to error
-            throw new LibraryError(`Error while converting asset`, `FATAL`)
+            throw new LibraryError(`Error while converting asset`)
                 .addCause(err)
                 .addContext(`cplAsset`, asset)
                 .addContext(`cplMaster`, master);
