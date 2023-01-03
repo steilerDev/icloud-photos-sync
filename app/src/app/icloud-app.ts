@@ -8,8 +8,9 @@ import {ArchiveError, iCloudError, LibraryError, SyncError, TokenError} from "./
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {Album} from "../lib/photos-library/model/album.js";
 import path from "path";
-import {EventEmitter} from "stream";
+import {EventEmitter} from "events";
 import * as ICLOUD from "../lib/icloud/constants.js";
+import * as Logger from '../lib/logger.js';
 
 /**
  * Filename for library lock file located in DATA_DIR
@@ -31,6 +32,8 @@ export abstract class iCPSApp {
 
     constructor(options: OptionValues) {
         this.options = options;
+        // needs to be done here so all future objects use it
+        Logger.setupLogger(this.options);
     }
 
     /**
