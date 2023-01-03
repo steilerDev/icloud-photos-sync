@@ -8,31 +8,31 @@
 
 <p align="center">
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml">
-    <img alt="API Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/api-test.yml?branch=main&label=API%20Status&style=for-the-badge">
+    <img alt="API Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/api-test.yml?branch=main&label=API%20Status&style=for-the-badge&logo=githubactions&logoColor=white">
   </a>
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/dev-release.yml">
-    <img alt="Development Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/dev-release.yml?branch=dev&label=Dev%20Release&style=for-the-badge">
+    <img alt="Development Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/dev-release.yml?branch=dev&label=Dev%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
   </a>
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml">
-    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?branch=main&label=Prod%20Release&style=for-the-badge">
+    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?branch=main&label=Prod%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
   </a>
 </p>
 <hr>
 <p align="center">
   <a href="https://github.com/steilerDev/icloud-photos-sync/releases">
-    <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&amp;style=for-the-badge">
+    <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&style=for-the-badge&logo=github&logoColor=white">
   </a>
   <a href="https://www.npmjs.com/package/icloud-photos-sync">
-    <img alt="npm" src="https://img.shields.io/npm/dm/icloud-photos-sync?label=npm%20downloads&amp;style=for-the-badge">
+    <img alt="npm" src="https://img.shields.io/npm/dm/icloud-photos-sync?label=npm%20downloads&style=for-the-badge&logo=npm&logoColor=white">
   </a>
   <a href="https://hub.docker.com/r/steilerdev/icloud-photos-sync">
-    <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync?style=for-the-badge">
+    <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync?style=for-the-badge&logo=docker&logoColor=white">
   </a>
 </p>
 <hr>
 <p align="center">
   <a href="https://steilerdev.github.io/icloud-photos-sync/get-started/">
-    <img alt="Get Started" src="https://img.shields.io/static/v1?label=&message=Get%20Started&color=important&style=for-the-badge" style="width: 50%;">
+    <img alt="Get Started" src="https://img.shields.io/static/v1?label=&message=Get%20Started&color=important&style=for-the-badge&logo=readthedocs&logoColor=white" style="width: 50%;">
   </a>
 </p>
 <p align="center">
@@ -100,14 +100,19 @@ This CLI Application offers the following high level functionality:
 A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/icloud-photos-sync/get-started/). Additional documentation and further ressources - including my [personal use case / workflow](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/) - are published there as well
 
 ## OS Support
-![OS Support Debian](https://img.shields.io/static/v1?label=Debian-11&message=Dev%20Platform&color=informational&style=for-the-badge)
 
-[![OS Support Ubuntu](https://img.shields.io/static/v1?label=Ubuntu-latest&message=Unit%20Test&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
-
-[![OS Support MacOS](https://img.shields.io/static/v1?label=MacOS-latest&message=Unit%20Test&color=success&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
-
-[![OS Support Windows](https://img.shields.io/static/v1?label=Windows-latest&message=Not%20planned&color=inactive&style=for-the-badge)](https://github.com/actions/runner-images#available-images)
-
+<p align="center">
+  <img alt="OS Support Debian" src="https://img.shields.io/static/v1?label=Debian-11&message=Dev%20Platform&color=informational&style=for-the-badge&logo=debian&logoColor=white">
+  <a href="https://github.com/actions/runner-images#available-images">
+    <img alt="OS Support Ubuntu" src="https://img.shields.io/static/v1?label=Ubuntu-latest&message=Unit%20Test&color=success&style=for-the-badge&logo=ubuntu&logoColor=white">
+  </a>
+  <a href="https://github.com/actions/runner-images#available-images">
+    <img alt="OS Support MacOS" src="https://img.shields.io/static/v1?label=MacOS-latest&message=Unit%20Test&color=success&style=for-the-badge&logo=macos&logoColor=white">
+  </a>
+  <a href="https://github.com/actions/runner-images#available-images">
+    <img alt="OS Support Windows" src="https://img.shields.io/static/v1?label=Windows-latest&message=Not%20planned&color=inactive&style=for-the-badge&logo=windows&logoColor=white">
+  </a>
+</p>
 
 ## Contributing & Feedback
 This tool (most likely) still contains issues and edge cases, that need to be addressed. Therefore, I hope for the support of the community, to fully understand the reverse-engineered API and discover the remaining bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy, including [unit](https://steilerdev.github.io/icloud-photos-sync/dev/coverage/) & [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) tests.
