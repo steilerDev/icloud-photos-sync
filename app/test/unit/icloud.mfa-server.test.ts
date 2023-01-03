@@ -1,7 +1,7 @@
 
 import {expect, describe, test, jest} from '@jest/globals';
-import { HANDLER_WARN_EVENT } from '../../src/app/error/handler';
-import {iCloudError, iCloudWarning, MFAWarning} from '../../src/app/error/types';
+import {HANDLER_WARN_EVENT} from '../../src/app/error/handler';
+import {iCloudWarning, MFAWarning} from '../../src/app/error/types';
 import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';

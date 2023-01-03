@@ -9,8 +9,8 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
 import {spyOnEvent} from '../_helpers/_general';
 import * as ARCHIVE_ENGINE from '../../src/lib/archive-engine/constants';
-import {ArchiveError, ArchiveWarning, SyncError, SyncWarning} from '../../src/app/error/types';
-import { HANDLER_WARN_EVENT } from '../../src/app/error/handler';
+import {ArchiveWarning, SyncWarning} from '../../src/app/error/types';
+import {HANDLER_WARN_EVENT} from '../../src/app/error/handler';
 
 describe(`Unit Tests - Archive Engine`, () => {
     afterEach(() => {

@@ -8,7 +8,7 @@ import {Asset} from '../../src/lib/photos-library/model/asset';
 import {Album} from '../../src/lib/photos-library/model/album';
 import {ArchiveError, iCloudError, LibraryError, SyncError} from '../../src/app/error/types';
 import {spyOnEvent} from '../_helpers/_general';
-import { EVENTS } from '../../src/lib/icloud/constants';
+import {EVENTS} from '../../src/lib/icloud/constants';
 import path from 'path';
 
 describe(`Unit Tests - iCloud App`, () => {
@@ -41,8 +41,8 @@ describe(`Unit Tests - iCloud App`, () => {
             expect(tokenApp.icloud).toBeDefined();
             expect(tokenApp.icloud.mfaServer).toBeDefined();
             expect(tokenApp.icloud.auth).toBeDefined();
-            expect(tokenApp.needWarningHandler.length).toEqual(2)
-            expect(tokenApp.needEventHandler.length).toEqual(1)
+            expect(tokenApp.needWarningHandler.length).toEqual(2);
+            expect(tokenApp.needEventHandler.length).toEqual(1);
             expect(fs.existsSync(`/opt/icloud-photos-library`));
         });
 
@@ -54,8 +54,8 @@ describe(`Unit Tests - iCloud App`, () => {
             expect(syncApp.icloud.auth).toBeDefined();
             expect(syncApp.photosLibrary).toBeDefined();
             expect(syncApp.syncEngine).toBeDefined();
-            expect(syncApp.needWarningHandler.length).toEqual(4)
-            expect(syncApp.needEventHandler.length).toEqual(2)
+            expect(syncApp.needWarningHandler.length).toEqual(4);
+            expect(syncApp.needEventHandler.length).toEqual(2);
             expect(fs.existsSync(`/opt/icloud-photos-library`));
         });
 
@@ -68,13 +68,13 @@ describe(`Unit Tests - iCloud App`, () => {
             expect(archiveApp.photosLibrary).toBeDefined();
             expect(archiveApp.syncEngine).toBeDefined();
             expect(archiveApp.archiveEngine).toBeDefined();
-            expect(archiveApp.needWarningHandler.length).toEqual(5)
-            expect(archiveApp.needEventHandler.length).toEqual(3)
+            expect(archiveApp.needWarningHandler.length).toEqual(5);
+            expect(archiveApp.needEventHandler.length).toEqual(3);
         });
 
         test.each([
-            {options: validOptions.daemon, mode: `explicit`},
-            {options: validOptions.default, mode: `default`}
+            {"options": validOptions.daemon, "mode": `explicit`},
+            {"options": validOptions.default, "mode": `default`},
         ])(`Create Daemon App - $mode`, ({options}) => {
             const archiveApp = appFactory(options) as DaemonApp;
             expect(archiveApp).toBeInstanceOf(DaemonApp);
@@ -88,7 +88,7 @@ describe(`Unit Tests - iCloud App`, () => {
             tokenApp.icloud.authenticate = jest.fn(() => Promise.reject(new Error()));
             tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-            await expect(tokenApp.run()).rejects.toThrowError(new iCloudError(`Unable to get trust token`))
+            await expect(tokenApp.run()).rejects.toThrowError(new iCloudError(`Unable to get trust token`));
 
             expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
             expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -100,7 +100,7 @@ describe(`Unit Tests - iCloud App`, () => {
             tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
             tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-            await expect(tokenApp.run()).rejects.toThrowError(new ArchiveError(`Unable to get trust token`))
+            await expect(tokenApp.run()).rejects.toThrowError(new ArchiveError(`Unable to get trust token`));
 
             expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
             expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -115,7 +115,7 @@ describe(`Unit Tests - iCloud App`, () => {
                 tokenApp.icloud.auth.validateAccountTokens = jest.fn();
                 tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-                const tokenEvent = spyOnEvent(tokenApp.icloud, EVENTS.TOKEN)
+                const tokenEvent = spyOnEvent(tokenApp.icloud, EVENTS.TOKEN);
 
                 await tokenApp.run();
 
@@ -124,7 +124,7 @@ describe(`Unit Tests - iCloud App`, () => {
                 expect(tokenApp.icloud.auth.validateAccountTokens).toHaveBeenCalledTimes(1);
                 expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
 
-                expect(tokenEvent).toHaveBeenCalledTimes(1)
+                expect(tokenEvent).toHaveBeenCalledTimes(1);
             });
         });
 
@@ -151,7 +151,7 @@ describe(`Unit Tests - iCloud App`, () => {
                 syncApp.syncEngine.sync = jest.fn(() => Promise.reject(new Error()));
                 syncApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-                await expect(syncApp.run()).rejects.toThrowError(new SyncError(`Sync failed`))
+                await expect(syncApp.run()).rejects.toThrowError(new SyncError(`Sync failed`));
 
                 expect(syncApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
                 expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
@@ -187,7 +187,7 @@ describe(`Unit Tests - iCloud App`, () => {
                 archiveApp.archiveEngine.archivePath = jest.fn(() => Promise.reject(new Error()));
                 archiveApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-                await expect(archiveApp.run()).rejects.toThrowError(new ArchiveError(`Archive failed`))
+                await expect(archiveApp.run()).rejects.toThrowError(new ArchiveError(`Archive failed`));
 
                 expect(archiveApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
                 expect(archiveApp.icloud.authenticate).toHaveBeenCalledTimes(1);
@@ -201,96 +201,96 @@ describe(`Unit Tests - iCloud App`, () => {
     describe(`Library Lock`, () => {
         test(`Acquire lock`, async () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
-            const thisPID = process.pid.toString()
+            const thisPID = process.pid.toString();
 
-            await tokenApp.acquireLibraryLock()
+            await tokenApp.acquireLibraryLock();
 
-            const lockFile = (await fs.promises.readFile(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE), {encoding: "utf-8"})).toString()
-            expect(lockFile).toEqual(thisPID)
+            const lockFile = (await fs.promises.readFile(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE), {"encoding": `utf-8`})).toString();
+            expect(lockFile).toEqual(thisPID);
         });
 
         test(`Acquire lock error - already locked`, async () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
-            const notThisPID = (process.pid + 1).toString()
+            const notThisPID = (process.pid + 1).toString();
 
             mockfs({
                 [tokenApp.options.dataDir]: {
-                    [LIBRARY_LOCK_FILE]: notThisPID
-                }
-            })
+                    [LIBRARY_LOCK_FILE]: notThisPID,
+                },
+            });
 
-            await expect(tokenApp.acquireLibraryLock()).rejects.toThrowError(new LibraryError(`Locked by PID ${notThisPID}. Use --force (or FORCE env variable) to forcefully remove the lock`))
-            expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy()
+            await expect(tokenApp.acquireLibraryLock()).rejects.toThrowError(new LibraryError(`Locked by PID ${notThisPID}. Use --force (or FORCE env variable) to forcefully remove the lock`));
+            expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
         });
 
         test(`Acquire lock warning - already locked with --force`, async () => {
             const tokenApp = appFactory(validOptions.tokenWithForce) as TokenApp;
-            const thisPID = process.pid.toString()
-            const notThisPID = (process.pid + 1).toString()
+            const thisPID = process.pid.toString();
+            const notThisPID = (process.pid + 1).toString();
 
             mockfs({
                 [tokenApp.options.dataDir]: {
-                    [LIBRARY_LOCK_FILE]: notThisPID
-                }
-            })
+                    [LIBRARY_LOCK_FILE]: notThisPID,
+                },
+            });
 
-            await tokenApp.acquireLibraryLock()
+            await tokenApp.acquireLibraryLock();
 
-            const lockFile = (await fs.promises.readFile(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE), {encoding: "utf-8"})).toString()
-            expect(lockFile).toEqual(thisPID)
+            const lockFile = (await fs.promises.readFile(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE), {"encoding": `utf-8`})).toString();
+            expect(lockFile).toEqual(thisPID);
         });
 
         test(`Release lock`, async () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
-            const thisPID = process.pid.toString()
+            const thisPID = process.pid.toString();
 
             mockfs({
                 [tokenApp.options.dataDir]: {
-                    [LIBRARY_LOCK_FILE]: thisPID
-                }
-            })
+                    [LIBRARY_LOCK_FILE]: thisPID,
+                },
+            });
 
-            await tokenApp.releaseLibraryLock()
+            await tokenApp.releaseLibraryLock();
 
-            expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy()
+            expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
         });
 
         test(`Release lock error - not this process' lock`, async () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
-            const notThisPID = (process.pid + 1).toString()
+            const notThisPID = (process.pid + 1).toString();
 
             mockfs({
                 [tokenApp.options.dataDir]: {
-                    [LIBRARY_LOCK_FILE]: notThisPID
-                }
-            })
+                    [LIBRARY_LOCK_FILE]: notThisPID,
+                },
+            });
 
-            await expect(tokenApp.releaseLibraryLock()).rejects.toThrowError(new LibraryError(`Locked by PID ${notThisPID}, cannot release. Use --force (or FORCE env variable) to forcefully remove the lock`))
+            await expect(tokenApp.releaseLibraryLock()).rejects.toThrowError(new LibraryError(`Locked by PID ${notThisPID}, cannot release. Use --force (or FORCE env variable) to forcefully remove the lock`));
 
-            expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy()
+            expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
         });
 
         test(`Release lock error - not this process' lock --force`, async () => {
             const tokenApp = appFactory(validOptions.tokenWithForce) as TokenApp;
-            const notThisPID = (process.pid + 1).toString()
+            const notThisPID = (process.pid + 1).toString();
 
             mockfs({
                 [tokenApp.options.dataDir]: {
-                    [LIBRARY_LOCK_FILE]: notThisPID
-                }
-            })
+                    [LIBRARY_LOCK_FILE]: notThisPID,
+                },
+            });
 
-            await tokenApp.releaseLibraryLock()
-            
-            expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy()
+            await tokenApp.releaseLibraryLock();
+
+            expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
         });
 
         test(`Release lock error - no lock`, async () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
 
-            await expect(tokenApp.releaseLibraryLock()).rejects.toThrowError(new LibraryError(`Unable to release library lock, no lock exists`))
+            await expect(tokenApp.releaseLibraryLock()).rejects.toThrowError(new LibraryError(`Unable to release library lock, no lock exists`));
 
-            expect(!fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy()
+            expect(!fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
         });
     });
 });

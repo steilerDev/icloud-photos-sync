@@ -6,7 +6,6 @@ import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
 import {iCloudAuth} from "../../src/lib/icloud/auth";
 import {getICloudCookies} from "./icloud-auth.helper";
 import {appWithOptions} from "./app-factory.helper";
-import * as ICLOUD from "../../src/lib/icloud/constants";
 
 export const _defaultCliOpts = {
     "port": 0,
@@ -23,7 +22,7 @@ export function iCloudFactory(cliOpts: any = _defaultCliOpts): iCloud {
     icloud.mfaServer.startServer = () => {};
     icloud.mfaServer.stopServer = () => {};
     icloud.removeAllListeners();
-    icloud.ready = icloud.getReady()
+    icloud.ready = icloud.getReady();
     return icloud;
 }
 

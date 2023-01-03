@@ -1,11 +1,9 @@
 import {iCloud} from "../lib/icloud/icloud.js";
 import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
 import * as fs from 'fs';
-import {EventHandler} from "./event/cli.js";
 import {OptionValues} from "commander";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
-import {ErrorHandler} from "./error/handler.js";
 import {ArchiveError, iCloudError, LibraryError, SyncError, TokenError} from "./error/types.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {Album} from "../lib/photos-library/model/album.js";
@@ -95,7 +93,7 @@ export abstract class iCloudApp extends iCPSApp {
             return;
         } catch (err) {
             throw new iCloudError(`Authentication failed`).addCause(err);
-        } 
+        }
     }
 
     /**
@@ -109,6 +107,7 @@ export abstract class iCloudApp extends iCPSApp {
                 const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
                 throw new LibraryError(`Locked by PID ${lockingProcess}. Use --force (or FORCE env variable) to forcefully remove the lock`);
             }
+
             await fs.promises.rm(lockFilePath, {"force": true});
         }
 
@@ -125,7 +124,7 @@ export abstract class iCloudApp extends iCPSApp {
             throw new LibraryError(`Unable to release library lock, no lock exists`);
         }
 
-        const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString()
+        const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
         if (lockingProcess !== process.pid.toString() && !this.options.force) {
             throw new LibraryError(`Locked by PID ${lockingProcess}, cannot release. Use --force (or FORCE env variable) to forcefully remove the lock`);
         }

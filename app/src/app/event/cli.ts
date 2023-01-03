@@ -57,7 +57,7 @@ export class CLIInterface implements EventHandler {
             console.clear();
         }
 
-        this.handleErrorHandler(errorHandler)
+        this.handleErrorHandler(errorHandler);
 
         this.print(chalk.white(this.getHorizontalLine()));
         this.print(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));

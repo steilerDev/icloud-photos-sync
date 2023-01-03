@@ -370,7 +370,7 @@ export const validOptions = {
         `-1`,
         `--refresh-token`,
         `--remote-delete`,
-        `daemon`
+        `daemon`,
     ],
     "default": [
         `/usr/bin/node`,
@@ -393,6 +393,6 @@ export const validOptions = {
         `-r`,
         `-1`,
         `--refresh-token`,
-        `--remote-delete`
+        `--remote-delete`,
     ],
 };
