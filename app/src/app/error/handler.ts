@@ -62,19 +62,21 @@ export class ErrorHandler extends EventEmitter {
      * Handles a given error. Report fatal errors and provide appropriate output.
      * @param err - The occured error
      */
-    async handle(err: iCPSError) {
-        let message = err.getDescription();
+    async handle(err: unknown) {
+        const _err = iCPSError.toiCPSError(err)
+
+        let message = _err.getDescription();
         // Check if the error should be reported
-        const shouldReport = err.sev === `FATAL` && !(err instanceof InterruptError);
+        const shouldReport = _err.sev === `FATAL` && !(_err instanceof InterruptError);
 
         // Report error and append error code
         if (shouldReport) {
-            const errorId = await this.reportError(err);
+            const errorId = await this.reportError(_err);
             message += ` (Error Code: ${errorId})`;
         }
 
         // Performing output based on severity
-        switch (err.sev) {
+        switch (_err.sev) {
         case `WARN`:
             this.emit(WARN_EVENT, message);
             getLogger(this).warn(message);
@@ -93,7 +95,7 @@ export class ErrorHandler extends EventEmitter {
      */
     registerWarningHandlerForObject(object: EventEmitter) {
         object.on(HANDLER_WARN_EVENT, async (err: unknown) => {
-            await this.handle(iCPSError.toiCPSError(err));
+            await this.handle(err);
         });
     }
 
