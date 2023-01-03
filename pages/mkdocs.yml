@@ -21,7 +21,7 @@ nav:
     - 'TypeDoc Code Documentation': https://github.com/steilerDev/icloud-photos-sync/wiki/Exports
     - 'Test & Deployment':
       - 'Test Environment': dev/test-environment.md
-      - 'Coverage': dev/coverage.md
+      - 'Coverage': dev/coverage/index.html
   - 'Changelog': CHANGELOG.md
 
 theme:
