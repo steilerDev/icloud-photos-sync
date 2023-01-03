@@ -116,7 +116,7 @@ describe(`Unit Tests - iCloud`, () => {
             expect(icloud.auth.iCloudAuthSecrets).toEqual(Config.iCloudAuthSecrets);
         });
 
-        test(`Authentication - Unextected success status code`, async () => {
+        test(`Authentication - Unexpected success status code`, async () => {
             const icloud = iCloudFactory();
             // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
             icloud.ready = new Promise<void>((resolve, _reject) => {
@@ -167,6 +167,46 @@ describe(`Unit Tests - iCloud`, () => {
             expect(icloud.auth.iCloudAuthSecrets).toEqual(Config.iCloudAuthSecrets);
         });
 
+        test(`Authentication - Unknown username`, async () => {
+            const icloud = iCloudFactory();
+            // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
+            icloud.ready = new Promise<void>((resolve, _reject) => {
+                icloud.once(HANDLER_EVENT, resolve);
+            });
+            const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
+            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
+
+            const responseError = new Error(`Conflict`);
+            (responseError as any).response = {
+                "status": 403,
+            };
+            icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
+
+            await icloud.authenticate();
+            expect(authenticationEvent).toHaveBeenCalled();
+            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Username does not seem to exist`, `FATAL`));
+        });
+
+        test(`Authentication - Wrong username/password combination`, async () => {
+            const icloud = iCloudFactory();
+            // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
+            icloud.ready = new Promise<void>((resolve, _reject) => {
+                icloud.once(HANDLER_EVENT, resolve);
+            });
+            const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
+            const errorEvent = spyOnEvent(icloud, HANDLER_EVENT);
+
+            const responseError = new Error(`Unauthorized`);
+            (responseError as any).response = {
+                "status": 401,
+            };
+            icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
+
+            await icloud.authenticate();
+            expect(authenticationEvent).toHaveBeenCalled();
+            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Username/Password does not seem to match`, `FATAL`));
+        });
+
         test(`Authentication - Unexpected failure status code`, async () => {
             const icloud = iCloudFactory();
             // ICloud.authentcate returns ready promise. Need to modify in order to resolve at the end of the test
@@ -184,7 +224,7 @@ describe(`Unit Tests - iCloud`, () => {
 
             await icloud.authenticate();
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unexpected HTTP code: 500`));
+            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Unexpected HTTP code: 500`, `FATAL`));
         });
 
         test(`Authentication - No response`, async () => {
@@ -202,7 +242,7 @@ describe(`Unit Tests - iCloud`, () => {
 
             await icloud.authenticate();
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`No response received during authentication`));
+            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`No response received during authentication`, `FATAL`));
         });
 
         test(`Authentication - Auth secrets missing in authentication response`, async () => {
@@ -221,7 +261,7 @@ describe(`Unit Tests - iCloud`, () => {
 
             await icloud.authenticate();
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to process auth response: No set-cookie directive found`));
+            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Unable to process auth response: No set-cookie directive found`, `FATAL`));
         });
 
         test(`Authentication - Auth secrets missing in mfa response`, async () => {
@@ -242,7 +282,7 @@ describe(`Unit Tests - iCloud`, () => {
 
             await icloud.authenticate();
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to process auth response: No set-cookie directive found`));
+            expect(errorEvent).toHaveBeenCalledWith(new iCloudError(`Unable to process auth response: No set-cookie directive found`, `FATAL`));
         });
     });
 

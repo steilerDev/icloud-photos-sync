@@ -53,7 +53,18 @@ describe(`API E2E Tests`, () => {
                 "failOnMfa": true,
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
-            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`Unexpected HTTP code: 403`, `FATAL`));
+            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`Username does not seem to exist`, `FATAL`));
+        });
+
+        test(`Login flow with invalid password`, async () => {
+            const cliOpts = {
+                username,
+                "password": `test123`,
+                "dataDir": appDataDir,
+                "failOnMfa": true,
+            };
+            const _icloud = new iCloud(appWithOptions(cliOpts));
+            await expect(_icloud.authenticate()).rejects.toEqual(new iCloudError(`Username/Password does not seem to match`, `FATAL`));
         });
 
         test(`Login flow without token & failOnMfa`, async () => {

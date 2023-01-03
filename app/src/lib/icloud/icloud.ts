@@ -157,6 +157,14 @@ export class iCloud extends EventEmitter {
                 return;
             }
 
+            if (response.status === 401) {
+                this.emit(HANDLER_EVENT, new iCloudError(`Username/Password does not seem to match`, `FATAL`).addCause(err));
+            }
+
+            if (response.status === 403) {
+                this.emit(HANDLER_EVENT, new iCloudError(`Username does not seem to exist`, `FATAL`).addCause(err));
+            }
+
             if (response.status !== 409) {
                 this.emit(HANDLER_EVENT, new iCloudError(`Unexpected HTTP code: ${response.status}`, `FATAL`).addCause(err));
                 return;
