@@ -4,13 +4,16 @@ import * as fs from 'fs';
 import {OptionValues} from "commander";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
-import {ArchiveError, iCloudError, LibraryError, SyncError, TokenError} from "./error/types.js";
+import {ArchiveError, iCloudError, iCPSError, LibraryError, SyncError, TokenError} from "./error/types.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {Album} from "../lib/photos-library/model/album.js";
 import path from "path";
 import {EventEmitter} from "events";
 import * as ICLOUD from "../lib/icloud/constants.js";
 import * as Logger from '../lib/logger.js';
+import {Cron} from "croner";
+import {CLIInterface} from "./event/cli.js";
+import {HANDLER_WARN_EVENT} from "./error/handler.js";
 
 /**
  * Filename for library lock file located in DATA_DIR
@@ -32,7 +35,7 @@ export abstract class iCPSApp {
 
     constructor(options: OptionValues) {
         this.options = options;
-        // needs to be done here so all future objects use it
+        // Needs to be done here so all future objects use it
         Logger.setupLogger(this.options);
     }
 
@@ -46,8 +49,45 @@ export abstract class iCPSApp {
  * This app will allow running in scheduled daemon mode - where a sync is executed based on a cron schedule
  */
 export class DaemonApp extends iCPSApp {
-    run(): Promise<unknown> {
-        throw new Error(`Method not implemented.`);
+    /**
+     * This handler will foward events from within the job to the primary error handler
+     */
+    warningHandler: EventEmitter;
+
+    constructor(options: OptionValues) {
+        super(options);
+        this.warningHandler = new EventEmitter();
+        this.needWarningHandler.push(this.warningHandler);
+    }
+
+    /**
+     * Schedule the syncronisation based on the provided cron string
+     * @returns Once the job has been scheduled
+     */
+    async run(): Promise<unknown> {
+        const job : Cron = new Cron(this.options.schedule, async () => {
+            await this.performSync();
+        });
+        return job;
+    }
+
+    async performSync() {
+        let syncApp = new SyncApp(this.options);
+        const localCLIInterface = new CLIInterface(this.options);
+        // Fowarding events
+        syncApp.needWarningHandler.forEach(obj => obj.on(HANDLER_WARN_EVENT, err => this.warningHandler.emit(HANDLER_WARN_EVENT, err)));
+        // Registering event handlers for CLI output
+        syncApp.needEventHandler.forEach(obj => localCLIInterface.registerEventHandlerForObject(obj));
+
+        try {
+            await syncApp.run();
+        } catch (err) {
+            this.warningHandler.emit(HANDLER_WARN_EVENT, new iCPSError(iCPSError, `Error within scheduled sync`, `WARN`).addCause(err));
+        } finally { // Cleaning up
+            syncApp.needWarningHandler.forEach(obj => obj.removeAllListeners());
+            syncApp.needEventHandler.forEach(obj => obj.removeAllListeners());
+            syncApp = undefined;
+        }
     }
 }
 

@@ -29,9 +29,10 @@ export let logFile: string;
  * @param app - The App object, holding the CLI options
  */
 export function setupLogger(options: OptionValues): void {
-    if(logFile) {
-        return
+    if (logFile) {
+        return;
     }
+
     logFile = path.format({
         "dir": options.dataDir,
         "base": LOG_FILE_NAME,

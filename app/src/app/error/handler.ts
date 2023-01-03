@@ -63,7 +63,7 @@ export class ErrorHandler extends EventEmitter {
      * @param err - The occured error
      */
     async handle(err: unknown) {
-        const _err = iCPSError.toiCPSError(err)
+        const _err = iCPSError.toiCPSError(err);
 
         let message = _err.getDescription();
         // Check if the error should be reported

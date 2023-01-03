@@ -18,4 +18,5 @@ try {
     await app.run();
 } catch (err) {
     await errorHandler.handle(err);
+    process.exit(1);
 }

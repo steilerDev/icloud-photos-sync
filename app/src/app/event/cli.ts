@@ -39,9 +39,10 @@ export class CLIInterface implements EventHandler {
 
     /**
      * Creates a new CLI interface based on the provided components
-     * @param app - The application object, holding all necessary information
+     * @param options - Parsed CLI Options
+     * @param errorHandler - Optionally a error handler to listen for events
      */
-    constructor(options: OptionValues, errorHandler: ErrorHandler) {
+    constructor(options: OptionValues, errorHandler?: ErrorHandler) {
         this.progressBar = new SingleBar({
             "etaAsynchronousUpdate": true,
             "format": ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
@@ -57,7 +58,9 @@ export class CLIInterface implements EventHandler {
             console.clear();
         }
 
-        this.handleErrorHandler(errorHandler);
+        if (errorHandler) {
+            this.handleErrorHandler(errorHandler);
+        }
 
         this.print(chalk.white(this.getHorizontalLine()));
         this.print(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
