@@ -1,4 +1,4 @@
-import axios, {Axios, AxiosRequestConfig, AxiosResponse} from 'axios';
+import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios';
 import {EventEmitter} from 'events';
 import * as ICLOUD_PHOTOS from './constants.js';
 import * as QueryBuilder from './query-builder.js';
@@ -28,7 +28,7 @@ export class iCloudPhotos extends EventEmitter {
     /**
      * Local axios instance to handle network requests
      */
-    axios: Axios;
+    axios: AxiosInstance;
 
     /**
      * Creates a new iCloud Photos Class
@@ -37,7 +37,7 @@ export class iCloudPhotos extends EventEmitter {
     constructor(auth: iCloudAuth) {
         super();
         this.auth = auth;
-        this.axios = (axios as unknown as Axios);
+        this.axios = axios.create();
         this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, this.checkingIndexingStatus);
     }
 

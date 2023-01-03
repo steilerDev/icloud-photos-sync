@@ -1,4 +1,4 @@
-import axios, {Axios, AxiosRequestConfig, AxiosRequestHeaders} from 'axios';
+import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios';
 import EventEmitter from 'events';
 import {MFAServer} from './mfa/mfa-server.js';
 import * as ICLOUD from './constants.js';
@@ -45,7 +45,7 @@ export class iCloud extends EventEmitter {
     /**
      * Local axios instance to handle network requests
      */
-    axios: Axios;
+    axios: AxiosInstance;
 
     /**
      * Creates a new iCloud Object
@@ -56,7 +56,7 @@ export class iCloud extends EventEmitter {
         this.logger.info(`Initiating iCloud connection`);
         this.logger.trace(`  - user: ${app.options.username}`);
 
-        this.axios = (axios as unknown as Axios);
+        this.axios = axios.create()
 
         // MFA Server & lifecycle management
         this.mfaServer = new MFAServer(app.options.port);
@@ -191,7 +191,7 @@ export class iCloud extends EventEmitter {
     async resendMFA(method: MFAMethod) {
         this.logger.info(`Resending MFA code with ${method}`);
 
-        const config: AxiosRequestHeaders = {
+        const config: AxiosRequestConfig = {
             "headers": this.auth.getMFAHeaders(),
         };
 
@@ -199,7 +199,7 @@ export class iCloud extends EventEmitter {
         const url = method.getResendURL();
 
         this.logger.debug(`Requesting MFA code via URL ${url} with data ${JSON.stringify(data)}`);
-        let response: axios.AxiosResponse<any, any>;
+        let response: AxiosResponse<any, any>;
 
         try {
             response = await this.axios.put(url, data, config);
@@ -235,7 +235,7 @@ export class iCloud extends EventEmitter {
         this.mfaServer.stopServer();
         this.logger.info(`Authenticating MFA with code ${mfa}`);
 
-        const config: AxiosRequestHeaders = {
+        const config: AxiosRequestConfig = {
             "headers": this.auth.getMFAHeaders(),
         };
 
@@ -268,7 +268,7 @@ export class iCloud extends EventEmitter {
                 "headers": this.auth.getMFAHeaders(),
             };
 
-            let response: axios.AxiosResponse<any, any>;
+            let response: AxiosResponse<any, any>;
             try {
                 response = await this.axios.get(ICLOUD.URL.TRUST, config);
             } catch (err) {

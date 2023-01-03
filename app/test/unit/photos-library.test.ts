@@ -7,7 +7,7 @@ import path from 'path';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
-import axios, {Axios, AxiosRequestConfig} from 'axios';
+import axios, {AxiosRequestConfig} from 'axios';
 import {appDataDir as photosDataDir} from '../_helpers/_config';
 import {photosLibraryFactory} from '../_helpers/photos-library.helper';
 import {appWithOptions} from '../_helpers/app-factory.helper';
@@ -579,7 +579,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                const response = await (axios as unknown as Axios).get(url, config);
+                const response = await axios.get(url, config);
                 await library.writeAsset(asset, response);
                 const assetPath = path.join(assetDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeTruthy();
@@ -607,7 +607,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 const library = photosLibraryFactory();
                 library.verifyAsset = jest.fn(() => false);
 
-                const response = await (axios as unknown as Axios).get(url, config);
+                const response = await axios.get(url, config);
                 await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset ${fileName}`);
                 const assetPath = path.join(assetDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeFalsy();
