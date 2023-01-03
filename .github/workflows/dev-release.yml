@@ -16,6 +16,7 @@ jobs:
   build-workflow:
     name: Build
     uses: ./.github/workflows/build.yml
+    secrets: inherit
   
   publish-docker-dev:
     name: Publish Nightly Docker Image
