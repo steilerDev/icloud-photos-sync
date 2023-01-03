@@ -77,6 +77,10 @@ export abstract class iCloudApp implements iCPSApp {
             this.errorHandler.handle(new iCloudError(`Init failed`, `FATAL`).addCause(err));
         }
     }
+
+    async acquireLock() {
+        
+    }
 }
 
 /**

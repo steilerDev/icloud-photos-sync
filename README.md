@@ -7,18 +7,6 @@
 <h1 align="center"><strong>iCloud Photos Sync</strong></h1>
 
 <p align="center">
-  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml">
-    <img alt="API Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/api-test.yml?branch=main&label=API%20Status&style=for-the-badge&logo=githubactions&logoColor=white">
-  </a>
-  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/dev-release.yml">
-    <img alt="Development Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/dev-release.yml?branch=dev&label=Dev%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
-  </a>
-  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml">
-    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?branch=main&label=Prod%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
-  </a>
-</p>
-<hr>
-<p align="center">
   <a href="https://github.com/steilerDev/icloud-photos-sync/releases">
     <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&style=for-the-badge&logo=github&logoColor=white">
   </a>
@@ -41,6 +29,27 @@
   </a>
 </p>
 <hr>
+<p align="center">
+  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml">
+    <img alt="API Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/api-test.yml?branch=main&label=API%20Status&style=for-the-badge&logo=githubactions&logoColor=white">
+  </a>
+  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/dev-release.yml">
+    <img alt="Development Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/dev-release.yml?branch=dev&label=Dev%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
+  </a>
+  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml">
+    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?branch=main&label=Prod%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
+  </a>
+</p>
+<p align="center">
+  <a href="https://steilerdev.github.io/icloud-photos-sync/dev/coverage/">
+    <img alt="Test Coverage (Lines)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Lines%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.lines.pct&suffix=%25&url=https%3A%2F%2Fsteilergroup.net%2Fcoverage-summary.json">
+  </a>
+  <a href="https://steilerdev.github.io/icloud-photos-sync/dev/coverage/">
+    <img alt="Test Coverage (Functions)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Functions%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.functions.pct&suffix=%25&url=https%3A%2F%2Fsteilergroup.net%2Fcoverage-summary.json">
+  </a>
+</p>
+<hr>
+
 
 ## Overview
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to backup the full iCloud Photos Library to the native filesystem.
