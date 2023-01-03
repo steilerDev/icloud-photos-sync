@@ -56,7 +56,7 @@ export class iCloud extends EventEmitter {
         this.logger.info(`Initiating iCloud connection`);
         this.logger.trace(`  - user: ${app.options.username}`);
 
-        this.axios = axios.create()
+        this.axios = axios.create();
 
         // MFA Server & lifecycle management
         this.mfaServer = new MFAServer(app.options.port);
