@@ -139,7 +139,7 @@ export class iCloudError extends iCPSError {
 }
 
 /**
- * Error class for iCloud related errors
+ * Error class for iCloud related warnings
  */
 export class iCloudWarning extends iCPSError {
     constructor(cause: string) {
@@ -170,12 +170,12 @@ export class LibraryError extends iCPSError {
  */
 export class LibraryWarning extends iCPSError {
     constructor(cause: string) {
-        super(LibraryWarning, cause, `FATAL`);
+        super(LibraryWarning, cause, `WARN`);
     }
 }
 
 /**
- * Error class for the MFA server's related errors
+ * Error class for the MFA server's related warnings
  */
 export class MFAWarning extends iCPSError {
     constructor(cause: string) {
@@ -206,7 +206,7 @@ export class SyncError extends iCPSError {
  */
 export class SyncWarning extends iCPSError {
     constructor(cause: string) {
-        super(SyncWarning, cause, `FATAL`);
+        super(SyncWarning, cause, `WARN`);
     }
 }
 

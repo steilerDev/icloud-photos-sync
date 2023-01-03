@@ -25,9 +25,13 @@ export let logFile: string;
 
 /**
  * Logger setup including the configuration of logger prefix
+ * Should only be called once - has guard in place so this does not happen
  * @param app - The App object, holding the CLI options
  */
 export function setupLogger(options: OptionValues): void {
+    if(logFile) {
+        return
+    }
     logFile = path.format({
         "dir": options.dataDir,
         "base": LOG_FILE_NAME,
