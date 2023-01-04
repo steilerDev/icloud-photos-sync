@@ -72,9 +72,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version-file: 'app/.node-version'
+          node-version-file: './.node-version'
           cache: 'npm'
-          cache-dependency-path: app/
+          cache-dependency-path: ./
       - name: Prepare environment
         run: npm ci
       - uses: JS-DevTools/npm-publish@v1
