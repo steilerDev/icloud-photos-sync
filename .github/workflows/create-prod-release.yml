@@ -40,7 +40,7 @@ jobs:
 
           # Updating version references in the app
           sed -ri 's/"version": "[0-9]+\.[0-9]+\.[0-9]+"/"version": "'${NUMERIC_VERSION}'"/' app/package.json
-          sed -ri 's/VERSION = "[0-9]+\.[0-9]+\.[0-9]+"/VERSION = "'${NUMERIC_VERSION}'"/' app/src/lib/package.ts
+          sed -ri 's/VERSION = `[0-9]+\.[0-9]+\.[0-9]+`/VERSION = `'${NUMERIC_VERSION}'`/' app/src/lib/package.ts
         env:
           VERSION: ${{ github.event.inputs.version }}
       - name: Update package
