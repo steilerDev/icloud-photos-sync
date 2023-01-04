@@ -39,7 +39,7 @@ export abstract class iCPSApp {
 export class DaemonAppEvents extends EventEmitter {
     static EVENTS = {
         'SCHEDULED': `scheduled`, // Next execution
-        'DONE': `done`, // Next exection
+        'DONE': `done`, // Next execution
         'RETRY': `retry`, // Next execution
     };
 }
@@ -54,7 +54,7 @@ export class DaemonApp extends iCPSApp {
     job?: Cron;
 
     /**
-     * EventEmmiter to notify EventHandlers
+     * EventEmitter to notify EventHandlers
      */
     event: DaemonAppEvents;
 
@@ -68,7 +68,7 @@ export class DaemonApp extends iCPSApp {
     }
 
     /**
-     * Schedule the syncronisation based on the provided cron string
+     * Schedule the synchronization based on the provided cron string
      * @returns Once the job has been scheduled
      */
     async run(...eventHandlers: EventHandler[]) {
@@ -82,7 +82,7 @@ export class DaemonApp extends iCPSApp {
     /**
      * Perform a scheduled sync using the provided event handlers
      * @param eventHandlers - Event handlers of daemon app
-     * @param syncApp - Parametrizied for testability - will be freshly initiated
+     * @param syncApp - Parametrized for testability - will be freshly initiated if omitted
      */
     async performScheduledSync(eventHandlers: EventHandler[], syncApp: SyncApp = new SyncApp(this.options)) {
         try {
@@ -218,7 +218,7 @@ export class TokenApp extends iCloudApp {
 }
 
 /**
- * This application will perform a synchronisation of the provided Photos Library using the authenticated iCloud connection
+ * This application will perform a synchronization of the provided Photos Library using the authenticated iCloud connection
  */
 export class SyncApp extends iCloudApp {
     /**
@@ -242,7 +242,7 @@ export class SyncApp extends iCloudApp {
     }
 
     /**
-     * Runs the syncronization of the local Photo Library
+     * Runs the synchronization of the local Photo Library
      * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      * @returns A Promise that resolves to a tuple containing a list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync).
      * @throws A SyncError in case an error occurs
@@ -297,7 +297,7 @@ export class ArchiveApp extends SyncApp {
     }
 
     /**
-     * This function will first perform a synchronisation run and then attempt to archive the provided path
+     * This function will first perform a synchronization run and then attempt to archive the provided path
      * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      * @returns A promise that resolves once the operation has finished
      * @throws An ArchiveError in case an error occurs

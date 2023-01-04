@@ -7,19 +7,19 @@ export interface PEntity<T> {
      */
     getUUID(): string
     /**
-     * Return the display name of this enity
+     * Return the display name of this entity
      */
     getDisplayName(): string
     /**
-     * Compares this instance with a given enity
+     * Compares this instance with a given entity
      * @param entity - The entity to compare this instance to
-     * @returns True, if both enities are equal
+     * @returns True, if both entities are equal
      */
     equal(entity: T): boolean
 
     /**
      * Applies properties of the local entity to this remote entity
-     * @param localEntity - The local entitie's properties to be applied
+     * @param localEntity - The local entity's properties to be applied
      * @returns This object for convenient
      */
     apply(localEntity: T): T

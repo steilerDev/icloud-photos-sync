@@ -51,7 +51,7 @@ export function resolveHierarchicalDependencies(this: SyncEngine, queues: PLibra
     const toBeAdded = queues[1];
     let toBeKept = queues[2];
 
-    // Storing the indicies of items that need moving, so they can later be removed from the toBeKept Array
+    // Storing the indices of items that need moving, so they can later be removed from the toBeKept Array
     const removeIndexesFromKept: number[] = [];
     const localAlbums = Object.values(localAlbumEntities);
 

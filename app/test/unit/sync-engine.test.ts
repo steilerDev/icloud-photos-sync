@@ -74,7 +74,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
                 syncEngine.prepareRetry = jest.fn<() => Promise<void>>();
 
-                await expect(syncEngine.sync()).rejects.toEqual(new Error(`Sync did not complete succesfull within 4 tries`));
+                await expect(syncEngine.sync()).rejects.toEqual(new Error(`Sync did not complete successfully within 4 tries`));
 
                 expect(startEvent).toHaveBeenCalled();
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(4);

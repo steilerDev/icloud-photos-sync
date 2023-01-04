@@ -213,7 +213,7 @@ export class PhotosLibrary extends EventEmitter {
         if (directoryPresent) {
             // AlbumType.Folder cannot be archived!
             if (filePresent) {
-                this.emit(HANDLER_EVENT, new LibraryWarning(`Extranous file found in folder ${path}`));
+                this.emit(HANDLER_EVENT, new LibraryWarning(`Extraneous file found in folder ${path}`));
             }
 
             return AlbumType.FOLDER;
@@ -246,7 +246,7 @@ export class PhotosLibrary extends EventEmitter {
                 .addContext(`asset`, asset);
         }
 
-        this.logger.debug(`Asset ${asset.getDisplayName()} sucesfully downloaded`);
+        this.logger.debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
     }
 
     /**
@@ -272,7 +272,7 @@ export class PhotosLibrary extends EventEmitter {
     }
 
     /**
-     * Finds the absolut paths of the folder pair for a given album
+     * Finds the absolute paths of the folder pair for a given album
      * The path is created, by finding the parent on filesystem. The folder paths do not necessarily exist, the parent path needs to exist.
      * @param album - The album
      * @returns A tuple containing the albumNamePath, uuidPath
@@ -349,7 +349,7 @@ export class PhotosLibrary extends EventEmitter {
                 .addContext(`searchResult`, searchResult);
         }
 
-        // No match in this folder hierachy
+        // No match in this folder hierarchy
         return ``;
     }
 
@@ -393,7 +393,7 @@ export class PhotosLibrary extends EventEmitter {
             });
             // Getting asset time, in order to update link as well
             const assetTime = fs.statSync(assetPath).mtime;
-            // Relative asset path is relativ to album, not the linkedAsset
+            // Relative asset path is relative to album, not the linkedAsset
             const relativeAssetPath = path.relative(albumPath, assetPath);
             this.logger.debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
             try {
@@ -427,12 +427,12 @@ export class PhotosLibrary extends EventEmitter {
 
         // Path to real name folder
         if (!fs.existsSync(albumNamePath)) {
-            throw new LibraryError(`Unable to find albumName path, expcted ${albumNamePath}`);
+            throw new LibraryError(`Unable to find albumName path, expected ${albumNamePath}`);
         }
 
         fs.rmSync(uuidPath, {"recursive": true});
         fs.unlinkSync(albumNamePath);
-        this.logger.debug(`Sucesfully deleted album ${album.getDisplayName()} at ${albumNamePath} & ${uuidPath}`);
+        this.logger.debug(`Successfully deleted album ${album.getDisplayName()} at ${albumNamePath} & ${uuidPath}`);
     }
 
     /**
@@ -494,12 +494,12 @@ export class PhotosLibrary extends EventEmitter {
     }
 
     /**
-     * This function will look for orphaned albums and remove the unecessary UUID links to make them more manageable
+     * This function will look for orphaned albums and remove the unnecessary UUID links to make them more manageable
      */
     async cleanArchivedOrphans() {
         this.logger.debug(`Cleaning archived orphans`);
-        const archivedOphans = await this.loadAlbum(Album.getStashAlbum(), this.stashDir);
-        for (const album of archivedOphans) {
+        const archivedOrphans = await this.loadAlbum(Album.getStashAlbum(), this.stashDir);
+        for (const album of archivedOrphans) {
             this.logger.debug(`Found orphaned album ${album}`);
             const [namePath, uuidPath] = this.findStashAlbumPaths(album);
             let targetPath: string;

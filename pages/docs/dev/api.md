@@ -23,7 +23,7 @@ To execute this flow in the provided [Postman Collection](https://github.com/ste
   - To resend the MFA code to a trusted device, run `01-- Resend 2FA In-App` request
   - To resent the MFA code to a phone through a call or sms, run `01-- Resend 2FA Phone` (you may need to adjust the body of this request)
   - Use the `02-Enter 2FA` to provide a MFA code (by setting the `code` variable in the body), status code `204` expected
-  - Run `03-Trust Device` Request, expecing 204
+  - Run `03-Trust Device` Request, expecting 204
 - Acquire iCloud Cookies through `04-Setup iCloud` request
 - *optionally (and done by the application)* Check, that the Photos Library has finished indexing with `05-Check indexing State`
 - Now use the `iCloud Photos Library` folder, to execute actions against the iCloud Photos library

@@ -2,13 +2,13 @@
 
 During the sync process a couple of warnings can pop up. The primary reason for this being, that the API behaves differently than I expect. Given however the experience I gathered, the following warnings will be printed out, but are handled gracefully by the application.
 
-Warnings can be surpressed with a [configuration options](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/).
+Warnings can be suppressed with a [configuration options](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/).
 
 ## `Ignoring unknown album type 6`
 The program only syncs albums (type `0`) and folders (type `3`) - any other unexpected album type will be ignored (those are maybe smart albums?).
 
 ## `Filtering record <some-id>: duplicate`
-Because the iCloud API is arbitrarily limiting results, the application needs to send multiple queries in order to acquire the full data set. This is done in a conservative fasion (without knowing the exact limitations of the API), which sometimes leads to overlaps in the result set.
+Because the iCloud API is arbitrarily limiting results, the application needs to send multiple queries in order to acquire the full data set. This is done in a conservative fashion (without knowing the exact limitations of the API), which sometimes leads to overlaps in the result set.
 
 Therefore duplicate entries in the query are removed.
 

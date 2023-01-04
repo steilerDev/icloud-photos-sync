@@ -57,7 +57,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
     /**
      * Handles a given error. Report fatal errors and provide appropriate output.
-     * @param err - The occured error
+     * @param err - The occurred error
      */
     async handle(err: unknown) {
         const _err = iCPSError.toiCPSError(err);
@@ -100,12 +100,12 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
     /**
      * Reports the provided error to the error reporting backend
-     * @param err - The occured error
+     * @param err - The occurred error
      * @returns - An unique error code
      */
     async reportError(err: iCPSError): Promise<string> {
         if (!this.btClient) {
-            return `No error code! Pelase enable crash reporting!`;
+            return `No error code! Please enable crash reporting!`;
         }
 
         const errorUUID = randomUUID();
@@ -157,15 +157,15 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
                 process.env[confidentialEntry.env] = confidentialEntry.replacement;
             }
 
-            for (const confidentalCliValue of confidentialEntry.cli) {
-                const confidentalCliValueIndexArgV = process.argv.findIndex(value => value === confidentalCliValue);
-                if (confidentalCliValueIndexArgV !== -1) {
-                    process.argv[confidentalCliValueIndexArgV + 1] = confidentialEntry.replacement;
+            for (const confidentialCliValue of confidentialEntry.cli) {
+                const confidentialCliValueIndexArgV = process.argv.findIndex(value => value === confidentialCliValue);
+                if (confidentialCliValueIndexArgV !== -1) {
+                    process.argv[confidentialCliValueIndexArgV + 1] = confidentialEntry.replacement;
                 }
 
-                const confidentalCliValueIndexExecArgV = process.execArgv.findIndex(value => value === confidentalCliValue);
-                if (confidentalCliValueIndexExecArgV !== -1) {
-                    process.argv[confidentalCliValueIndexExecArgV + 1] = confidentialEntry.replacement;
+                const confidentialCliValueIndexExecArgV = process.execArgv.findIndex(value => value === confidentialCliValue);
+                if (confidentialCliValueIndexExecArgV !== -1) {
+                    process.argv[confidentialCliValueIndexExecArgV + 1] = confidentialEntry.replacement;
                 }
             }
         }

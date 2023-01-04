@@ -149,7 +149,7 @@ export class ArchiveEngine extends EventEmitter {
         }
 
         if (asset.isFavorite) {
-            this.logger.debug(`Not deleting fav'ed asset ${asset.getDisplayName()}`);
+            this.logger.debug(`Not deleting favorite asset ${asset.getDisplayName()}`);
             return undefined;
         }
 

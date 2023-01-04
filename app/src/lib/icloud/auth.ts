@@ -107,7 +107,7 @@ export class iCloudAuth {
      *
      * @param username - The AppleID username
      * @param password - The AppleID password
-     * @param trustToken - The trust token in string format. Will take presedence over any stored file
+     * @param trustToken - The trust token in string format. Will take precedence over any stored file
      * @param appDataDir - The directory to store authentication tokens for future re-authentication without MFA
      */
     constructor(username: string, password: string, trustToken: string, appDataDir: string) {
@@ -228,7 +228,7 @@ export class iCloudAuth {
 
     /**
      * Parses the iCloud setup response in order to acquire necessary secrets for further requests
-     * @param response - The succesfull response during iCloud Setup
+     * @param response - The successful response during iCloud Setup
      * @returns True if successful processing, false otherwise
      * @throws An iCloudAuthError in case the response cannot be processed
      */

@@ -42,7 +42,7 @@ export class SyncEngine extends EventEmitter {
      */
     downloadQueue: PQueue;
     /**
-     * The number of concurent download threads
+     * The number of concurrent download threads
      */
     downloadCCY: number;
 
@@ -95,13 +95,13 @@ export class SyncEngine extends EventEmitter {
         }
 
         // We'll only reach this, if we exceeded retryCount
-        throw new SyncError(`Sync did not complete succesfull within ${retryCount} tries`);
+        throw new SyncError(`Sync did not complete successfully within ${retryCount} tries`);
     }
 
     /**
      * Checks if a given AxiosError can be seen as 'fatal' in the context of a sync
      * @param err - An error that was thrown during 'writeState()'
-     * @throws If a fatal error occured that should NOT be retried
+     * @throws If a fatal error occurred that should NOT be retried
      */
     checkFatalError(err: any): boolean {
         if (err.name !== `AxiosError`) {
@@ -132,12 +132,12 @@ export class SyncEngine extends EventEmitter {
         this.logger.debug(`Preparing retry...`);
         if (this.downloadQueue) {
             if (this.downloadQueue.size > 0) {
-                this.logger.info(`Error occured with ${this.downloadQueue.size} asset(s) left in the download queue, clearing queue...`);
+                this.logger.info(`Error occurred with ${this.downloadQueue.size} asset(s) left in the download queue, clearing queue...`);
                 this.downloadQueue.clear();
             }
 
             if (this.downloadQueue.pending > 0) {
-                this.logger.info(`Error occured with ${this.downloadQueue.pending} pending job(s), waiting for queue to settle...`);
+                this.logger.info(`Error occurred with ${this.downloadQueue.pending} pending job(s), waiting for queue to settle...`);
                 await this.downloadQueue.onIdle();
                 this.logger.debug(`Queue has settled!`);
             }
@@ -168,7 +168,7 @@ export class SyncEngine extends EventEmitter {
         return [remoteAssets, remoteAlbums, localAssets, localAlbums];
     }
 
-    // From ./helpers/fetchAndLoad-helpters.ts
+    // From ./helpers/fetchAndLoad-helpers.ts
     static convertCPLAlbums = convertCPLAlbums;
     static convertCPLAssets = convertCPLAssets;
 

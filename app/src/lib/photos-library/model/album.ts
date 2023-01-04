@@ -148,7 +148,7 @@ export class Album implements PEntity<Album> {
     }
 
     /**
-     * Should only be called on a 'remote' entity. Will apply the local entitie's properties to the remote one
+     * Should only be called on a 'remote' entity. Will apply the local entity's properties to the remote one
      * @param localEntity - The local entity
      * @returns This object with the applied properties
      */
@@ -163,7 +163,7 @@ export class Album implements PEntity<Album> {
 
     /**
      * Check if a given album is in the chain of ancestors
-     * @param potentialAncestor - The potential ancesotr for the given album
+     * @param potentialAncestor - The potential ancestor for the given album
      * @param fullQueue - The full list of albums
      * @returns True if potentialAncestor is part of this album's directory tree
      */

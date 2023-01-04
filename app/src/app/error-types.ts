@@ -1,5 +1,5 @@
 /**
- * Thype definition for this classe's severity level
+ * Type definition for this class' severity level
  */
 export type Severity = `WARN` | `FATAL`
 
@@ -157,7 +157,7 @@ export class iCloudAuthError extends iCPSError {
 }
 
 /**
- * Error class for the local Librarie's related errors
+ * Error class for the local library's related errors
  */
 export class LibraryError extends iCPSError {
     constructor(cause: string) {
@@ -166,7 +166,7 @@ export class LibraryError extends iCPSError {
 }
 
 /**
- * Error class for the local Librarie's related warnings
+ * Error class for the local library's related warnings
  */
 export class LibraryWarning extends iCPSError {
     constructor(cause: string) {

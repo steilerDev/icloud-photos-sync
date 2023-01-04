@@ -89,7 +89,7 @@ export class MFAMethod {
 
     /**
      *
-     * @returns The approrpiate URL endpoint for resending the code, given the currently selected MFA Method
+     * @returns The appropriate URL endpoint for resending the code, given the currently selected MFA Method
      */
     getResendURL(): string {
         switch (this.type) {
@@ -104,7 +104,7 @@ export class MFAMethod {
 
     /**
      *
-     * @returns The approrpiate data for resending the code, given the currently selected MFA Method
+     * @returns The appropriate data for resending the code, given the currently selected MFA Method
      */
     getResendPayload(): any {
         switch (this.type) {
@@ -131,9 +131,9 @@ export class MFAMethod {
     /**
      *
      * @param res - The response received from the backend
-     * @returns True, if the response was succesfull, based on the curently selected MFA Method
+     * @returns True, if the response was successful, based on the currently selected MFA Method
      */
-    resendSuccesfull(res: AxiosResponse<any, any>) {
+    resendSuccessful(res: AxiosResponse<any, any>) {
         const {status} = res;
         switch (this.type) {
         case MFAMethodType.VOICE:
@@ -188,7 +188,7 @@ export class MFAMethod {
 
     /**
      * @param mfa - The MFA code, that should be send for validation
-     * @returns The approrpiate payload for entering the code, given the currently selected MFA Method
+     * @returns The appropriate payload for entering the code, given the currently selected MFA Method
      */
     getEnterPayload(mfa: string): any {
         switch (this.type) {
@@ -224,7 +224,7 @@ export class MFAMethod {
 
     /**
      *
-     * @returns The approrpiate URL endpoint for entering the code, given the currently selected MFA Method
+     * @returns The appropriate URL endpoint for entering the code, given the currently selected MFA Method
      */
     getEnterURL(): string {
         switch (this.type) {
@@ -240,9 +240,9 @@ export class MFAMethod {
     /**
      *
      * @param res - The response received from the backend
-     * @returns True, if the response was succesfull, based on the curently selected MFA Method
+     * @returns True, if the response was successful, based on the currently selected MFA Method
      */
-    enterSuccesfull(res: AxiosResponse<any, any>) {
+    enterSuccessful(res: AxiosResponse<any, any>) {
         const {status} = res;
         switch (this.type) {
         case MFAMethodType.VOICE:

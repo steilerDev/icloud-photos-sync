@@ -79,7 +79,7 @@ export function appFactory(argv: string[]): iCPSApp {
         .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://icloud-photos-sync.steilerdev.de/user-guides/error-reporting/ for more information`)
             .env(`ENABLE_CRASH_REPORTING`)
             .default(false))
-        .addOption(new Option(`--fail-on-mfa`, `If a MFA is necessary, exit the program. (This is usefull in test scenarios)`)
+        .addOption(new Option(`--fail-on-mfa`, `If a MFA is necessary, exit the program. (This might be useful in test and scheduled scenarios)`)
             .env(`FAIL_ON_MFA`)
             .default(false))
         .addOption(new Option(`--force`, `Force the execution of the operation, independent of an existing lock on the library. USE WITH CAUTION`)
@@ -88,7 +88,7 @@ export function appFactory(argv: string[]): iCPSApp {
         .addOption(new Option(`--refresh-token`, `Ignore any stored token and always refresh it`)
             .env(`REFRESH_TOKEN`)
             .default(false))
-        .addOption(new Option(`--remote-delete`, `If this flag is set, delete non-favorited photos in the iCloud Photos backend upon archiving.`)
+        .addOption(new Option(`--remote-delete`, `If this flag is set, delete non-favorite photos in the iCloud Photos backend upon archiving.`)
             .env(`REMOTE_DELETE`)
             .default(false))
         .addOption(new Option(`-l, --log-level <level>`, `Set the log level. NOTE: 'trace' might leak sensitive session data`)
@@ -101,15 +101,15 @@ export function appFactory(argv: string[]): iCPSApp {
         .addOption(new Option(`--log-to-cli`, `Disables logging to file and logs everything to the console. This will be ignored if '--silent' is set`)
             .env(`LOG_TO_CLI`)
             .default(false))
-        .addOption(new Option(`--surpress-warnings`, `Non critical warnings will not be displayed in the UI. They will still go into the log.`)
-            .env(`SURPRESS_WARNINGS`)
+        .addOption(new Option(`--suppress-warnings`, `Non critical warnings will not be displayed in the UI. They will still go into the log.`)
+            .env(`SUPPRESS_WARNINGS`)
             .default(false));
 
     program.command(AppCommands.daemon, {"isDefault": true})
         .action(() => {
             app = new DaemonApp(program.opts());
         })
-        .description(`Starts the synchronization in scheduled dameon mode - continously running based on the provided cron schedule.`);
+        .description(`Starts the synchronization in scheduled daemon mode - continuously running based on the provided cron schedule.`);
 
     program.command(AppCommands.token)
         .action(() => {

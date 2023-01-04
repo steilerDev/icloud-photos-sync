@@ -17,7 +17,7 @@ export class AssetID {
      */
     fileChecksum: string;
     /**
-     * Filesize in bytes
+     * File size in bytes
      */
     size: number;
     /**
@@ -100,15 +100,15 @@ export class CPLAsset {
      */
     masterRef: string;
     /**
-     * The 'current' ressource
+     * The 'current' resource
      */
     resource: AssetID;
     /**
-     * The type of ressource
+     * The type of resource
      */
     resourceType: string;
     /**
-     * If the ressource is faved, '1' if 'true'
+     * If the resource is favorite, '1' if 'true'
      */
     favorite: number;
     /**
@@ -226,7 +226,7 @@ export class CPLMaster {
      */
     modified: number;
 
-    // Can optionally have the following keys (indicating that this is a live foto, the following keys hold the information about the 'video' part of this):
+    // Can optionally have the following keys (indicating that this is a live photo, the following keys hold the information about the 'video' part of this):
     // resOriginalVidComplRes -> AssetID
     // resOriginalVidComplFileType -> Filetyp (seems to always be com.apple.quicktime-movie)
     //
@@ -292,7 +292,7 @@ function isCPLMasterQuery(obj: unknown): obj is CPLMasterQuery {
 }
 
 /**
- * CPLAlbum is the represantation of either a folder or an album. It might contains a list of assets.
+ * CPLAlbum is the representation of either a folder or an album. It might contains a list of assets.
  */
 export class CPLAlbum {
     /**
@@ -300,7 +300,7 @@ export class CPLAlbum {
      */
     recordName: string;
     /**
-     * AlbumType represantion (e.g. Album or Folder)
+     * AlbumType representation (e.g. Album or Folder)
      */
     albumType: number;
     /**

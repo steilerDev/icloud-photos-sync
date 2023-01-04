@@ -34,7 +34,7 @@ export class CLIInterface implements EventHandler {
     /**
      * Indicates, if non-critical warnings should be shown in the UI
      */
-    surpressWarnings: boolean;
+    suppressWarnings: boolean;
 
     /**
      * Creates a new CLI interface based on the provided components
@@ -51,7 +51,7 @@ export class CLIInterface implements EventHandler {
 
         // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on logToCli)
         this.enableCLIOutput = !options.logToCli && !options.silent;
-        this.surpressWarnings = options.surpressWarnings;
+        this.suppressWarnings = options.suppressWarnings;
 
         if (this.enableCLIOutput) {
             console.clear();
@@ -227,7 +227,7 @@ export class CLIInterface implements EventHandler {
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED, () => {
             this.progressBar.stop();
-            this.print(chalk.greenBright(`Succesfully synced assets!`));
+            this.print(chalk.greenBright(`Successfully synced assets!`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, (toBeDeletedCount, toBeAddedCount, toBeKept) => {
@@ -235,16 +235,16 @@ export class CLIInterface implements EventHandler {
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED, () => {
-            this.print(chalk.greenBright(`Succesfully synced albums!`));
+            this.print(chalk.greenBright(`Successfully synced albums!`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_COMPLETED, () => {
-            this.print(chalk.green(`Succesfully wrote diff to disk!`));
+            this.print(chalk.green(`Successfully wrote diff to disk!`));
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
             this.print(chalk.white(this.getHorizontalLine()));
-            this.print(chalk.green.bold(`Succesfully completed sync at ${this.getDateTime()}`));
+            this.print(chalk.green.bold(`Successfully completed sync at ${this.getDateTime()}`));
             this.print(chalk.white(this.getHorizontalLine()));
         });
 
@@ -274,7 +274,7 @@ export class CLIInterface implements EventHandler {
 
         archiveEngine.on(ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE, () => {
             this.print(chalk.white(this.getHorizontalLine()));
-            this.print(chalk.green.bold(`Succesfully completed archiving`));
+            this.print(chalk.green.bold(`Successfully completed archiving`));
             this.print(chalk.white(this.getHorizontalLine()));
         });
     }
@@ -288,7 +288,7 @@ export class CLIInterface implements EventHandler {
             this.printFatalError(err);
         });
 
-        if (!this.surpressWarnings) {
+        if (!this.suppressWarnings) {
             errorHandler.on(WARN_EVENT, (err: string) => {
                 this.print(chalk.yellow(err));
             });

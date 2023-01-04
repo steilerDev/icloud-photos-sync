@@ -30,7 +30,7 @@ export class Asset implements PEntity<Asset> {
      */
     fileChecksum: string;
     /**
-     * Filesize in bytes of this asset
+     * File size in bytes of this asset
      */
     size: number;
     /**
@@ -66,7 +66,7 @@ export class Asset implements PEntity<Asset> {
      */
     recordName?: string;
     /**
-     * Flag, if this asset is favorited by the user
+     * Flag, if this asset is favorite
      */
     isFavorite?: boolean;
 
@@ -151,7 +151,7 @@ export class Asset implements PEntity<Asset> {
     }
 
     /**
-     * Should only be called on a 'remote' entity. Will apply the local entitie's properties to the remote one
+     * Should only be called on a 'remote' entity. Will apply the local entity's properties to the remote one
      * @param _localEntity - The local entity
      * @returns This object with the applied properties
      */

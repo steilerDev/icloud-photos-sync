@@ -273,7 +273,7 @@ export class iCloudPhotos extends EventEmitter {
         if (parentId === undefined) {
             query = this.performQuery(QueryBuilder.RECORD_TYPES.ALBUM_RECORDS);
         } else {
-            const parentFilter = QueryBuilder.getParentFilterforParentId(parentId);
+            const parentFilter = QueryBuilder.getParentFilterForParentId(parentId);
             query = this.performQuery(
                 QueryBuilder.RECORD_TYPES.ALBUM_RECORDS,
                 [parentFilter],
@@ -352,7 +352,7 @@ export class iCloudPhotos extends EventEmitter {
         // Collecting all promise queries for parallel execution
         const promiseQueries: Promise<any>[] = [];
         for (let index = 0; index < numberOfRequests; index++) {
-            const startRank = parentId === undefined // The start rank always refers to the touple/triple of records, therefore we need to adjust the start rank based on the amount of records returned
+            const startRank = parentId === undefined // The start rank always refers to the tuple/triple of records, therefore we need to adjust the start rank based on the amount of records returned
                 ? index * Math.floor(ICLOUD_PHOTOS.MAX_RECORDS_LIMIT / 2)
                 : index * Math.floor(ICLOUD_PHOTOS.MAX_RECORDS_LIMIT / 3);
             this.logger.debug(`Building query for records of album ${parentId === undefined ? `All photos` : parentId} at index ${startRank}`);
@@ -368,7 +368,7 @@ export class iCloudPhotos extends EventEmitter {
                     QueryBuilder.QUERY_KEYS,
                 ));
             } else {
-                const parentFilter = QueryBuilder.getParentFilterforParentId(parentId);
+                const parentFilter = QueryBuilder.getParentFilterForParentId(parentId);
                 promiseQueries.push(this.performQuery(
                     QueryBuilder.RECORD_TYPES.PHOTO_RECORDS,
                     [startRankFilter, directionFilter, parentFilter],
@@ -462,7 +462,7 @@ export class iCloudPhotos extends EventEmitter {
     /**
      * Deletes the records in the remote library
      * @param recordNames - A list of record names that need to be deleted
-     * @returns A Promise, that fullfils once the operation has been performed
+     * @returns A Promise, that fulfils once the operation has been performed
      */
     async deleteAssets(recordNames: string[]) {
         this.logger.debug(`Deleting ${recordNames.length} assets: ${JSON.stringify(recordNames)}`);

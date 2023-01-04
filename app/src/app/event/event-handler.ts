@@ -1,7 +1,7 @@
 import {EventEmitter} from "events";
 
 /**
- * A generic class that can be supplied at runtime to listen for events emmitted by a list of objects
+ * A generic class that can be supplied at runtime to listen for events emitted by a list of objects
  */
 export interface EventHandler {
     /**

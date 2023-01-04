@@ -110,7 +110,7 @@ export class iCloud extends EventEmitter {
     }
 
     /**
-     * Initiatiates authentication flow
+     * Initiates authentication flow
      * Tries to directly login using trustToken, otherwise starts MFA flow
      */
     async authenticate(): Promise<void> {
@@ -135,7 +135,7 @@ export class iCloud extends EventEmitter {
         };
 
         try {
-            // Will throw error if reponse is non 2XX
+            // Will throw error if response is non 2XX
             const response = await this.axios.post(ICLOUD.URL.SIGNIN, data, config);
             if (response.status !== 200) {
                 this.emit(ICLOUD.EVENTS.ERROR, new iCloudError(`Unexpected HTTP code: ${response.status}`)
@@ -143,7 +143,7 @@ export class iCloud extends EventEmitter {
                 return;
             }
 
-            this.logger.info(`Authentication successfull`);
+            this.logger.info(`Authentication successful`);
             try {
                 this.auth.processAuthSecrets(response);
                 this.logger.debug(`Acquired secrets`);
@@ -204,18 +204,18 @@ export class iCloud extends EventEmitter {
         try {
             const response = await this.axios.put(url, data, config);
 
-            if (!method.resendSuccesfull(response)) {
+            if (!method.resendSuccessful(response)) {
                 this.emit(HANDLER_EVENT, new iCloudWarning(`Unable to request new MFA code`).addContext(`response`, response));
                 return;
             }
 
             if (method.isSMS() || method.isVoice()) {
-                this.logger.info(`Sucesfully requested new MFA code using phone ${response.data.trustedPhoneNumber.numberWithDialCode}`);
+                this.logger.info(`Successfully requested new MFA code using phone ${response.data.trustedPhoneNumber.numberWithDialCode}`);
                 return;
             }
 
             if (method.isDevice()) {
-                this.logger.info(`Sucesfully requested new MFA code using ${response.data.trustedDeviceCount} trusted device(s)`);
+                this.logger.info(`Successfully requested new MFA code using ${response.data.trustedDeviceCount} trusted device(s)`);
                 return;
             }
         } catch (err) {
@@ -240,7 +240,7 @@ export class iCloud extends EventEmitter {
 
             this.logger.debug(`Entering MFA code via URL ${url} with data ${JSON.stringify(data)}`);
             const response = await this.axios.post(url, data, config);
-            if (!method.enterSuccesfull(response)) {
+            if (!method.enterSuccessful(response)) {
                 throw new iCloudError(`Received unexpected response status code (${response.status}) during MFA validation`).addContext(`response`, response);
             }
 
@@ -252,7 +252,7 @@ export class iCloud extends EventEmitter {
     }
 
     /**
-     * Acquires sessionToken and two factor trust token after succesfull authentication
+     * Acquires sessionToken and two factor trust token after successful authentication
      */
     async getTokens() {
         try {
@@ -314,7 +314,7 @@ export class iCloud extends EventEmitter {
             }
 
             this.logger.info(`Getting iCloud Photos Service ready`);
-            // Fowarding warn events
+            // Forwarding warn events
             this.photos.on(HANDLER_EVENT, this.emit.bind(this, HANDLER_EVENT));
             await this.photos.setup();
             this.emit(ICLOUD.EVENTS.READY);

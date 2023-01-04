@@ -163,7 +163,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 const albums = await library.loadAlbums();
 
                 expect(Object.keys(albums).length).toEqual(2);
-                expect(handlerEvent).toHaveBeenCalledWith(new LibraryWarning(`Extranous file found in folder ${path.join(photosDataDir, `.${someFolderUUID}`)}`));
+                expect(handlerEvent).toHaveBeenCalledWith(new LibraryWarning(`Extraneous file found in folder ${path.join(photosDataDir, `.${someFolderUUID}`)}`));
             });
 
             test(`Orphaned album`, async () => {

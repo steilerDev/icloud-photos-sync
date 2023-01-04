@@ -25,7 +25,7 @@ export async function writeAssets(this: SyncEngine, processingQueue: PLibraryPro
 /**
  * Downloads and stores a given asset, unless file is already present on disk
  * @param asset - The asset that needs to be downloaded
- * @returns A promise that resolves, once the file has been sucesfully written to disk
+ * @returns A promise that resolves, once the file has been successfully written to disk
  */
 export async function addAsset(this: SyncEngine, asset: Asset) {
     this.logger.info(`Adding asset ${asset.getDisplayName()}`);

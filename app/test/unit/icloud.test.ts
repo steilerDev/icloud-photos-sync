@@ -310,7 +310,7 @@ describe(`Unit Tests - iCloud`, () => {
                     await icloud.resendMFA(method);
 
                     expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                    expect(icloud.logger.info).toHaveBeenLastCalledWith(`Sucesfully requested new MFA code using 1 trusted device(s)`);
+                    expect(icloud.logger.info).toHaveBeenLastCalledWith(`Successfully requested new MFA code using 1 trusted device(s)`);
                 });
 
                 test(`Resend MFA with ${method} - Network Failure`, async () => {
@@ -369,7 +369,7 @@ describe(`Unit Tests - iCloud`, () => {
                     await icloud.resendMFA(method);
 
                     expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                    expect(icloud.logger.info).toHaveBeenLastCalledWith(`Sucesfully requested new MFA code using phone +123`);
+                    expect(icloud.logger.info).toHaveBeenLastCalledWith(`Successfully requested new MFA code using phone +123`);
                 });
 
                 test(`Resend MFA with ${method} - Network Failure`, async () => {

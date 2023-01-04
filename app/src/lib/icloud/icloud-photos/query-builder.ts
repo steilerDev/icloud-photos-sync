@@ -59,7 +59,7 @@ export const QUERY_KEYS = [
  * @param parentId - The parentId (record name) of the parent album
  * @returns The filter required to perform a query
  */
-export function getParentFilterforParentId(parentId: string): any {
+export function getParentFilterForParentId(parentId: string): any {
     return {
         "fieldName": `parentId`,
         "comparator": `EQUALS`,

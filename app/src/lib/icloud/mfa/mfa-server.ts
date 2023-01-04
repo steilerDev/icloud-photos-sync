@@ -60,7 +60,7 @@ export class MFAServer extends EventEmitter {
     }
 
     /**
-     * Habdles incoming http requests
+     * Handles incoming http requests
      * @param req - The HTTP request object
      * @param res - The HTTP response object
      */
