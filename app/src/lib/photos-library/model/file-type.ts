@@ -15,6 +15,24 @@ const EXT = {
     'com.compuserve.gif': `gif`,
     'com.adobe.raw-image': `dng`,
     'public.tiff': `tiff`,
+    'public.jpeg-2000': `jp2`,
+    'com.truevision.tga-image': `tga`,
+    'com.sgi.sgi-image': `sgi`,
+    'com.adobe.photoshop-image': `psd`,
+    'public.pbm': `pbm`,
+    'public.heif': `heif`,
+    'com.microsoft.bmp': `bmp`,
+    'public.mpeg': `mpg`,
+    'com.apple.m4v-video': `m4v`,
+    'public.3gpp': `3gp`,
+    'public.mpeg-2-video': `m2v`,
+    'com.fuji.raw-image': `raf`,
+    'com.canon.cr2-raw-image': `cr2`,
+    'com.panasonic.rw2-raw-image': `rw2`,
+    'com.nikon.nrw-raw-image': `nrw`,
+    'com.pentax.raw-image': `pef`,
+    'com.nikon.raw-image': `nef`,
+    'com.olympus.raw-image': `orf`,
 };
 
 /**
@@ -37,12 +55,13 @@ export class FileType {
     /**
      * Creates the file type from the backend
      * @param descriptor - The descriptor as provided by the backend
+     * @param ext - The extension as provided by the encoded filename
      * @returns The newly created FileType
      * @throws An Error, if the provided descriptor is unknown to the script
      */
-    static fromAssetType(descriptor: string): FileType {
+    static fromAssetType(descriptor: string, ext: string): FileType {
         if (!EXT[descriptor]) {
-            throw new LibraryError(`Unknown filetype descriptor ${descriptor}`);
+            throw new LibraryError(`Unknown filetype descriptor ${descriptor} (with potential extension ${ext})`);
         }
 
         return new FileType(descriptor);
