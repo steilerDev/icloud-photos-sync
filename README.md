@@ -42,10 +42,10 @@
 </p>
 <p align="center">
   <a href="https://steilerdev.github.io/icloud-photos-sync/dev/coverage/">
-    <img alt="Test Coverage (Lines)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Lines%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.lines.pct&suffix=%25&url=https%3A%2F%2Fsteilergroup.net%2Fcoverage-summary.json">
+    <img alt="Test Coverage (Lines)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Lines%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.lines.pct&suffix=%25&url=https%3A%2F%2Fsteilerdev.github.io%2Ficloud-photos-sync%2Fdev%2Fcoverage%2Fcoverage-summary.json">
   </a>
   <a href="https://steilerdev.github.io/icloud-photos-sync/dev/coverage/">
-    <img alt="Test Coverage (Functions)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Functions%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.functions.pct&suffix=%25&url=https%3A%2F%2Fsteilergroup.net%2Fcoverage-summary.json">
+    <img alt="Test Coverage (Functions)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Functions%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.functions.pct&suffix=%25&url=https%3A%2F%2Fsteilerdev.github.io%2Ficloud-photos-sync%2Fdev%2Fcoverage%2Fcoverage-summary.json">
   </a>
 </p>
 <hr>
