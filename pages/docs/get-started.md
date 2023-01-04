@@ -15,7 +15,7 @@ Find examples for the various deployment options within this guide.
 
     === "docker compose"
         
-        Create a `docker-compose.yml` file, similar to the one below. Please add your Apple ID credentials and desired location of the library on disk.
+        Create a `docker-compose.yml` file, similar to the one below. Please add your Apple ID credentials and desired location of the library on disk. Optionally, add the timezone and your local users' `UID` and `GID`. 
         
         The [CLI Reference](../user-guides/cli/) contains all available configuration options.
 
@@ -25,7 +25,7 @@ Find examples for the various deployment options within this guide.
           photos-sync:
             image: steilerdev/icloud-photos-sync:latest
             container_name: photos-sync
-            command: "sync"
+            user: <uid>:<gid> 
             environment:
               APPLE_ID_USER: "<iCloud Username>"
               APPLE_ID_PWD: "<iCloud Password>"
