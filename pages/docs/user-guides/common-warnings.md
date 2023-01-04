@@ -12,7 +12,7 @@ Because the iCloud API is arbitrarily limiting results, the application needs to
 
 Therefore duplicate entries in the query are removed.
 
-## `Expected <n> CPLMaster & <m> CPLAsset records, but got <x> CPLMaster & <y> CPLAsset records for album <someAlbum>
+## `Expected <n> CPLMaster & <m> CPLAsset records, but got <x> CPLMaster & <y> CPLAsset records for album <someAlbum>`
 In an initial set, the API is queried for the number of assets in a given album. This is followed by a query to get all assets associated with the album. For some reason those APIs sometimes return contradicting results. (I suspect an error within the iCloud backend)
 
 ## `Warning: [...] Detected recoverable error, refreshing iCloud connection & retrying (#<n>)...`
