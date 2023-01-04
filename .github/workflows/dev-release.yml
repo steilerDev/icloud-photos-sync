@@ -5,7 +5,6 @@ name: Publish Development Release
 on: 
   push:
     branches: # Only run dev release, when pushing to the primary branches, ignore pushes with version tag (this indicates a release)
-      - 'main'
       - 'dev'
     tags-ignore:
       - 'v[0-9]+.[0-9]+.[0-9]+'

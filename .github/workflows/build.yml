@@ -18,7 +18,6 @@ on:
   pull_request:
   push: # For any other branch
     branches-ignore:
-      - 'main'
       - 'dev'
 
 permissions: {}
