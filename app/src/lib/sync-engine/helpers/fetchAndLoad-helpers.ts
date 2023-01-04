@@ -19,15 +19,17 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
     cplAssets.forEach(asset => {
         const master: CPLMaster = cplMasterRecords[asset.masterRef];
         try {
-            const origFilenameWithExt = Buffer.from(master.filenameEnc, `base64`).toString();
-            const origFilename = path.parse(origFilenameWithExt).name;
+            const parsedOrigFilename = path.parse(Buffer.from(master.filenameEnc, `base64`).toString());
+
+            const origFilename = parsedOrigFilename.name;
+            const origExt = parsedOrigFilename.ext;
 
             if (master?.resource && master?.resourceType) {
-                remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, master.modified, origFilename, AssetType.ORIG, asset.recordName, asset.favorite === 1));
+                remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, origExt, master.modified, origFilename, AssetType.ORIG, asset.recordName, asset.favorite === 1));
             }
 
             if (asset?.resource && asset?.resourceType) {
-                remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite === 1));
+                remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, origExt, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite === 1));
             }
         } catch (err) {
             // In case missing filetype descriptor is thrown, adding asset context to error

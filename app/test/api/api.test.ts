@@ -181,7 +181,7 @@ describe(`API E2E Tests`, () => {
             const assetHash = `tplrgnWiXEttU0xmKPzRWhUMrtE=`; // Pre-calculated
             const asset = new Asset(assetRecordName,
                 170384,
-                FileType.fromAssetType(`public.jpeg`),
+                FileType.fromAssetType(`public.jpeg`, `jpg`),
                 1660139199098,
                 AssetType.ORIG,
                 `test`,

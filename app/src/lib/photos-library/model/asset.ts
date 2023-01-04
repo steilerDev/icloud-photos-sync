@@ -99,17 +99,18 @@ export class Asset implements PEntity<Asset> {
     /**
      * Creates an Asset from the information provided by the backend
      * @param asset - The AssetID object returned from the backend
-     * @param assetType - The assetType string, describing the filetype
+     * @param fileTypeDescriptor - The assetType string, describing the filetype
+     * @param fileTypeExt - The assetTypes's extension as derived from the encoded filename
      * @param modified - The modified date as returned from the backend (in ms since epoch)
      * @param origFilename - The original filename, extracted from the parent object
      * @param assetType - If this asset is the original or an edit
      * @returns An Asset based on the backend objects
      */
-    static fromCPL(asset: AssetID, fileTypeDescriptor: string, modified: number, origFilename: string, assetType: AssetType, recordName: string, isFavorite: boolean): Asset {
+    static fromCPL(asset: AssetID, fileTypeDescriptor: string, fileTypeExt: string, modified: number, origFilename: string, assetType: AssetType, recordName: string, isFavorite: boolean): Asset {
         return new Asset(
             asset.fileChecksum,
             asset.size,
-            FileType.fromAssetType(fileTypeDescriptor),
+            FileType.fromAssetType(fileTypeDescriptor, fileTypeExt),
             modified,
             assetType,
             origFilename,
