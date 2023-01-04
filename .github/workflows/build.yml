@@ -158,7 +158,7 @@ jobs:
         run: npm ci
         working-directory: app/
       - name: Test All
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{ github.ref != 'refs/heads/dev' }}
         run: npm run test-all
         env:
           NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
@@ -168,7 +168,7 @@ jobs:
           TEST_TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
         working-directory: app/
       - name: Test Unit Only
-        if: ${{ github.ref != 'refs/heads/main' }}
+        if: ${{ github.ref == 'refs/heads/dev' }}
         run: npm run test
         env:
           NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility

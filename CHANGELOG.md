@@ -1,8 +1,6 @@
 # Changelog
 
-<!-- ## Nightly Changes-->
-
-## v1.0.1
+## Nightly Changes
 
 This release contains a massive amount of 'behind the scenes' changes to the development and testing process. This is a big step towards long term maintainability of this codebase.
 
