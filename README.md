@@ -54,12 +54,12 @@
 ## Overview
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to backup the full iCloud Photos Library to the native filesystem.
 
-Currently, this can only be achived, by having a Mac continously run the *Photos.app* (with `Keep originals` enabled). With this method, the files cannot be easily viewed without the *Photos.app*.
+Currently, this can only be achieved, by having a Mac continously run the *Photos.app* (with `Keep originals` enabled). With this method, the files cannot be easily viewed without the *Photos.app*.
 
 This CLI Application offers the following high level functionality:
 
 <details>
-  <summary><i>Continuously sync your remote iCloud Photos Library to your local file system effeciently</i></summary>
+  <summary><i>Continuously sync your remote iCloud Photos Library to your local file system efficiently</i></summary>
   <p>
     <ul>
       <li>Support of MFA Authentication through trusted devices, SMS and Voice authentication</li>
@@ -124,6 +124,6 @@ A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/ic
 </p>
 
 ## Contributing & Feedback
-This tool (most likely) still contains issues and edge cases, that need to be addressed. Therefore, I hope for the support of the community, to fully understand the reverse-engineered API and discover the remaining bugs. I tried to make this code base as maintainable and automated as possible, in order to make future releases and contributions quick and easy, including [unit](https://steilerdev.github.io/icloud-photos-sync/dev/coverage/) & [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) tests.
+This tool (most likely) still contains issues and edge cases, that need to be addressed. Therefore, I hope for the support of the community, to fully understand the reverse-engineered API and discover the remaining bugs. I tried to make this codebase as maintainable and automated as possible, in order to make future releases and contributions quick and easy, including [unit](https://steilerdev.github.io/icloud-photos-sync/dev/coverage/) & [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) tests.
 
-Please [open an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new) (and attach the `.icloud-photos-sync.log`, stored in the `DATA_DIR`) for any bug you are experiencing. Additionally please [enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.
+Please check [known issues](https://github.com/steilerDev/icloud-photos-sync/labels/known%20issue) before [opening an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new?assignees=&labels=open&template=issue-template.md&title=). Always [enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.

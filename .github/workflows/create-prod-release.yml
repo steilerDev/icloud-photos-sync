@@ -76,6 +76,12 @@ jobs:
           echo '```' >> $OUT_FILE
           $BIN archive --help >> $OUT_FILE
           echo '```' >> $OUT_FILE
+
+          echo '## `daemon` command' >> $OUT_FILE
+          echo '' >> $OUT_FILE
+          echo '```' >> $OUT_FILE
+          $BIN daemon --help >> $OUT_FILE
+          echo '```' >> $OUT_FILE
       - name: Commit & Tag
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
