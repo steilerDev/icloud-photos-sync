@@ -19,4 +19,3 @@ RUN chmod 755 /root/enter_mfa.sh && \
     ln -s /root/resend_mfa.sh /usr/local/bin/resend_mfa
 
 ENTRYPOINT ["icloud-photos-sync"]
-CMD ["sync"]

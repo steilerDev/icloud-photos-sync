@@ -1,9 +1,6 @@
-import EventEmitter from "events";
-import { EventHandler } from "../../src/app/event/event-handler";
 import {iCloudApp} from "../../src/app/icloud-app";
 import {iCloud} from "../../src/lib/icloud/icloud";
 import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
-import { spyOnEvent } from "./_general";
 
 /**
  * Creates an iCloudApp object populated for testing
@@ -34,7 +31,7 @@ export const rejectOptions = [
     {
         "options": [],
         "_desc": `No options`,
-        "expected": `error: required option '-u, --username <email>' not specified\n`
+        "expected": `error: required option '-u, --username <email>' not specified\n`,
     }, {
         "options": [
             `/usr/bin/node`,
@@ -56,7 +53,7 @@ export const rejectOptions = [
             `token`,
         ],
         "_desc": `Missing username & password`,
-        "expected": `error: required option '-u, --username <email>' not specified\n`
+        "expected": `error: required option '-u, --username <email>' not specified\n`,
     }, {
         "options": [
             `/usr/bin/node`,
@@ -80,7 +77,7 @@ export const rejectOptions = [
             `token`,
         ],
         "_desc": `Missing password`,
-        "expected": `error: required option '-p, --password <password>' not specified\n`
+        "expected": `error: required option '-p, --password <password>' not specified\n`,
     }, {
         "options": [
             `/usr/bin/node`,
@@ -106,7 +103,7 @@ export const rejectOptions = [
             `token`,
         ],
         "_desc": `Invalid port`,
-        "expected": `error: option '-P, --port <number>' argument 'eight' is invalid. Not a number.\n`
+        "expected": `error: option '-P, --port <number>' argument 'eight' is invalid. Not a number.\n`,
     }, {
         "options": [
             `/usr/bin/node`,
@@ -132,7 +129,7 @@ export const rejectOptions = [
             `token`,
         ],
         "_desc": `Invalid log level`,
-        "expected": `error: option '-l, --log-level <level>' argument 'superInfo' is invalid. Allowed choices are trace, debug, info, warn, error.\n`
+        "expected": `error: option '-l, --log-level <level>' argument 'superInfo' is invalid. Allowed choices are trace, debug, info, warn, error.\n`,
     }, {
         "options": [
             `/usr/bin/node`,
@@ -158,7 +155,7 @@ export const rejectOptions = [
             `token`,
         ],
         "_desc": `Invalid download threads`,
-        "expected": `error: option '-t, --download-threads <number>' argument 'five' is invalid. Not a number.\n`
+        "expected": `error: option '-t, --download-threads <number>' argument 'five' is invalid. Not a number.\n`,
     }, {
         "options": [
             `/usr/bin/node`,
@@ -184,7 +181,7 @@ export const rejectOptions = [
             `token`,
         ],
         "_desc": `Invalid retries`,
-        "expected": `error: option '-r, --max-retries <number>' argument 'inf' is invalid. Not a number.\n`
+        "expected": `error: option '-r, --max-retries <number>' argument 'inf' is invalid. Not a number.\n`,
     }, {
         "options": [
             `/usr/bin/node`,
@@ -208,8 +205,8 @@ export const rejectOptions = [
             `archive`,
         ],
         "_desc": `Missing archive path`,
-        "expected": `error: missing required argument 'path'\n`
-    },{
+        "expected": `error: missing required argument 'path'\n`,
+    }, {
         "options": [
             `/usr/bin/node`,
             `/home/icloud-photos-sync/main.js`,
@@ -234,8 +231,8 @@ export const rejectOptions = [
             `daemon`,
         ],
         "_desc": `Missformatted schedule`,
-        "expected": `error: option '-S, --schedule <cron-string>' argument 'asdf' is invalid. Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern)\n`
-    }
+        "expected": `error: option '-S, --schedule <cron-string>' argument 'asdf' is invalid. Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern)\n`,
+    },
 ];
 
 export const validOptions = {
@@ -382,26 +379,3 @@ export const validOptions = {
         `--remote-delete`,
     ],
 };
-
-export class MockedEventHandler implements EventHandler {
-    events: string[]
-    listeners: any = {}
-
-    constructor(...events: string[]) {
-        this.events = events
-    }
-
-    // Automatically creating listener functions for the desired events and puts them into the listener object
-    registerObjects(...objects: EventEmitter[]): void {
-        objects.forEach((obj) => {
-            if(!this.listeners[obj.constructor.name]) {
-                this.listeners[obj.constructor.name] = {}
-            }
-            this.events.forEach((event) => {
-                this.listeners[obj.constructor.name][event] = spyOnEvent(obj, event)
-            })
-        })
-        throw new Error("Method not implemented.");
-    }
-    
-}

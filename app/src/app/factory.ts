@@ -22,11 +22,11 @@ function commanderParseInt(value: string, _dummyPrevious: unknown): number {
 
 function commanderParseCron(value: string, _dummyPrevious: unknown): string {
     try {
-        const job = new Cron(value)
-        job.stop()
-        return value
-    } catch(err) {
-        throw new InvalidArgumentError(`Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern)`)
+        const job = new Cron(value);
+        job.stop();
+        return value;
+    } catch (err) {
+        throw new InvalidArgumentError(`Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern)`);
     }
 }
 

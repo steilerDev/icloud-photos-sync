@@ -250,7 +250,7 @@ export class SyncApp extends iCloudApp {
     async run(...eventHandlers: EventHandler[]): Promise<unknown> {
         registerObjectsToEventHandlers(eventHandlers, this.photosLibrary, this.syncEngine);
         try {
-            await super.run();
+            await super.run(...eventHandlers);
             return await this.syncEngine.sync();
         } catch (err) {
             throw new SyncError(`Sync failed`).addCause(err);
@@ -305,7 +305,7 @@ export class ArchiveApp extends SyncApp {
     async run(...eventHandlers: EventHandler[]): Promise<unknown> {
         registerObjectsToEventHandlers(eventHandlers, this.archiveEngine);
         try {
-            const [remoteAssets] = await super.run() as [Asset[], Album[]];
+            const [remoteAssets] = await super.run(...eventHandlers) as [Asset[], Album[]];
             await this.archiveEngine.archivePath(this.archivePath, remoteAssets);
             return;
         } catch (err) {
