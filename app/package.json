@@ -1,6 +1,6 @@
 {
   "name": "icloud-photos-sync",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "One-way sync engine with archiving capabilities for the iCloud Photos Library into the native file system",
   "preferGlobal": true,
   "type": "module",
