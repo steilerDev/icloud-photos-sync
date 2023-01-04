@@ -140,6 +140,5 @@ jobs:
         with:
           bodyFile: ./artifacts/changelog/CHANGELOG.latest.md
           tag: ${{github.ref_name}}
-          prerelease: true
           artifacts: ./icloud-photos-sync.${{github.ref_name}}.tar.gz
           #token: ${{ secrets.YOUR_GITHUB_TOKEN }}
