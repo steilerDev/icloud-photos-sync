@@ -3,7 +3,7 @@
  * These parsers will not try to validate data, only make it easily accessible
  */
 
-import {iCloudError} from '../../../app/error/types.js';
+import {iCloudError} from '../../../app/error-types.js';
 import {AlbumAssets} from '../../photos-library/model/album.js';
 
 /**

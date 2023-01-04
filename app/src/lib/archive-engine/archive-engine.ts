@@ -6,10 +6,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {ArchiveApp} from '../../app/icloud-app.js';
-import {ArchiveError, ArchiveWarning} from '../../app/error/types.js';
+import {ArchiveError, ArchiveWarning} from '../../app/error-types.js';
 import EventEmitter from 'events';
 import * as ARCHIVE_ENGINE from './constants.js';
-import {HANDLER_WARN_EVENT} from '../../app/error/handler.js';
+import {HANDLER_EVENT} from '../../app/event/error-handler.js';
 
 export class ArchiveEngine extends EventEmitter {
     /**
@@ -82,7 +82,7 @@ export class ArchiveEngine extends EventEmitter {
             try {
                 await this.persistAsset(assetPath, archivedAssetPath);
             } catch (err) {
-                this.emit(HANDLER_WARN_EVENT, new ArchiveError(`Unable to persist asset`)
+                this.emit(HANDLER_EVENT, new ArchiveError(`Unable to persist asset`)
                     .addCause(err)
                     .addContext(`assetPath`, assetPath)
                     .addContext(`archivedAssetPath`, archivedAssetPath),
@@ -93,7 +93,7 @@ export class ArchiveEngine extends EventEmitter {
             try {
                 return this.prepareForRemoteDeletion(assetPath, assetList);
             } catch (err) {
-                this.emit(HANDLER_WARN_EVENT, err);
+                this.emit(HANDLER_EVENT, err);
                 return undefined;
             }
         }));

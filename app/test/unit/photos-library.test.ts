@@ -12,8 +12,8 @@ import {appDataDir as photosDataDir} from '../_helpers/_config';
 import {photosLibraryFactory} from '../_helpers/photos-library.helper';
 import {appWithOptions} from '../_helpers/app-factory.helper';
 import {spyOnEvent} from '../_helpers/_general';
-import {HANDLER_WARN_EVENT} from '../../src/app/error/handler';
-import {LibraryWarning} from '../../src/app/error/types';
+import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import {LibraryWarning} from '../../src/app/error-types';
 
 const assetDir = path.join(photosDataDir, ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
@@ -158,7 +158,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                const handlerEvent = spyOnEvent(library, HANDLER_WARN_EVENT);
+                const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
 
                 const albums = await library.loadAlbums();
 
@@ -179,7 +179,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                const orphanEvent = spyOnEvent(library, HANDLER_WARN_EVENT);
+                const orphanEvent = spyOnEvent(library, HANDLER_EVENT);
                 const albums = await library.loadAlbums();
 
                 expect(Object.keys(albums).length).toEqual(0);
@@ -1158,7 +1158,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     folder.assets = albumAssets;
                     const library = photosLibraryFactory();
 
-                    const handlerEvent = spyOnEvent(library, HANDLER_WARN_EVENT);
+                    const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
 
                     library.writeAlbum(folder);
 

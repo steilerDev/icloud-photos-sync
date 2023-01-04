@@ -3,7 +3,7 @@ import * as fs from 'fs/promises';
 import {readFileSync} from 'fs';
 import * as path from 'path';
 import {Cookie} from "tough-cookie";
-import {iCloudAuthError} from "../../app/error/types.js";
+import {iCloudAuthError} from "../../app/error-types.js";
 import {getLogger} from "../logger.js";
 
 import * as ICLOUD from './constants.js';

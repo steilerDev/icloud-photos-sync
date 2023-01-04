@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import {OptionValues} from "commander";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
-import {ArchiveError, iCloudError, iCPSError, LibraryError, SyncError, TokenError} from "./error/types.js";
+import {ArchiveError, DaemonAppError, iCloudError, LibraryError, SyncError, TokenError} from "./error-types.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {Album} from "../lib/photos-library/model/album.js";
 import path from "path";
@@ -12,8 +12,8 @@ import {EventEmitter} from "events";
 import * as ICLOUD from "../lib/icloud/constants.js";
 import * as Logger from '../lib/logger.js';
 import {Cron} from "croner";
-import {CLIInterface} from "./event/cli.js";
-import {HANDLER_WARN_EVENT} from "./error/handler.js";
+import {HANDLER_EVENT} from "./event/error-handler.js";
+import {EventHandler, registerObjectsToEventHandlers, removeObjectsFromEventHandlers} from "./event/event-handler.js";
 
 /**
  * Filename for library lock file located in DATA_DIR
@@ -23,26 +23,25 @@ export const LIBRARY_LOCK_FILE = `.library.lock`;
 export abstract class iCPSApp {
     options: OptionValues;
 
-    /**
-     * Keeping track of objects that need a warning handler
-     */
-    needWarningHandler: EventEmitter[] = [];
-
-    /**
-      * Keeping track of objects that need an event handler
-      */
-    needEventHandler: EventEmitter[] = [];
-
     constructor(options: OptionValues) {
         this.options = options;
-        // Needs to be done here so all future objects use it
+        // Needs to be done here so all future objects use it / including handlers and everything created down the chain
         Logger.setupLogger(this.options);
     }
 
     /**
      * Executes this app
+     * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      */
-    abstract run(): Promise<unknown>
+    abstract run(...eventHandlers: EventHandler[]): Promise<unknown>
+}
+
+export class DaemonAppEvents extends EventEmitter {
+    static EVENTS = {
+        'SCHEDULED': `scheduled`, // Next execution
+        'DONE': `done`, // Next exection
+        'RETRY': `retry`, // Next execution
+    };
 }
 
 /**
@@ -50,42 +49,49 @@ export abstract class iCPSApp {
  */
 export class DaemonApp extends iCPSApp {
     /**
-     * This handler will foward events from within the job to the primary error handler
+     * Holds the cron job
      */
-    warningHandler: EventEmitter;
+    job?: Cron;
 
+    /**
+     * EventEmmiter to notify EventHandlers
+     */
+    event: DaemonAppEvents;
+
+    /**
+     * Builds the app
+     * @param options - CLI Options for the app
+     */
     constructor(options: OptionValues) {
         super(options);
-        this.warningHandler = new EventEmitter();
-        this.needWarningHandler.push(this.warningHandler);
+        this.event = new DaemonAppEvents();
     }
 
     /**
      * Schedule the syncronisation based on the provided cron string
      * @returns Once the job has been scheduled
      */
-    async run(): Promise<unknown> {
-        const job : Cron = new Cron(this.options.schedule, async () => {
-            await this.performSync();
+    async run(...eventHandlers: EventHandler[]) {
+        registerObjectsToEventHandlers(eventHandlers, this.event);
+        this.job = new Cron(this.options.schedule, async () => {
+            await this.performScheduledSync(eventHandlers);
         });
-        return job;
+        this.event.emit(DaemonAppEvents.EVENTS.SCHEDULED, this.job?.next());
     }
 
-    async performSync() {
-        let syncApp = new SyncApp(this.options);
-        const localCLIInterface = new CLIInterface(this.options);
-        // Fowarding events
-        syncApp.needWarningHandler.forEach(obj => obj.on(HANDLER_WARN_EVENT, err => this.warningHandler.emit(HANDLER_WARN_EVENT, err)));
-        // Registering event handlers for CLI output
-        syncApp.needEventHandler.forEach(obj => localCLIInterface.registerEventHandlerForObject(obj));
-
+    /**
+     * Perform a scheduled sync using the provided event handlers
+     * @param eventHandlers - Event handlers of daemon app
+     * @param syncApp - Parametrizied for testability - will be freshly initiated
+     */
+    async performScheduledSync(eventHandlers: EventHandler[], syncApp: SyncApp = new SyncApp(this.options)) {
         try {
-            await syncApp.run();
+            await syncApp.run(...eventHandlers);
+            this.event.emit(DaemonAppEvents.EVENTS.DONE, this.job?.next());
         } catch (err) {
-            this.warningHandler.emit(HANDLER_WARN_EVENT, new iCPSError(iCPSError, `Error within scheduled sync`, `WARN`).addCause(err));
+            this.event.emit(HANDLER_EVENT, new DaemonAppError(err));
+            this.event.emit(DaemonAppEvents.EVENTS.RETRY, this.job?.next());
         } finally { // Cleaning up
-            syncApp.needWarningHandler.forEach(obj => obj.removeAllListeners());
-            syncApp.needEventHandler.forEach(obj => obj.removeAllListeners());
             syncApp = undefined;
         }
     }
@@ -114,17 +120,17 @@ export abstract class iCloudApp extends iCPSApp {
 
         // Creating necessary objects for this scope
         this.icloud = new iCloud(this);
-        this.needWarningHandler.push(this.icloud);
-        this.needWarningHandler.push(this.icloud.mfaServer);
-        this.needEventHandler.push(this.icloud);
     }
 
     /**
      * This function acquires the library lock and establishes the iCloud connection.
+     * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      * @returns A promise that resolves once the iCloud service is fully available
      * @throws A iCPSError in case an error occurs
      */
-    async run(): Promise<unknown> {
+    async run(...eventHandlers: EventHandler[]): Promise<unknown> {
+        registerObjectsToEventHandlers(eventHandlers, this.icloud, this.icloud.mfaServer);
+
         try {
             await this.acquireLibraryLock();
         } catch (err) {
@@ -137,6 +143,14 @@ export abstract class iCloudApp extends iCPSApp {
         } catch (err) {
             throw new iCloudError(`Authentication failed`).addCause(err);
         }
+    }
+
+    /**
+     * Removes all established event listeners and releases the library lock
+     */
+    async clean() {
+        removeObjectsFromEventHandlers(this.icloud, this.icloud.mfaServer);
+        await this.releaseLibraryLock();
     }
 
     /**
@@ -182,21 +196,22 @@ export abstract class iCloudApp extends iCPSApp {
 export class TokenApp extends iCloudApp {
     /**
      * This function will validate the currently stored account token and print it afterwards
+     * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      * @returns A promise that resolves once the operation has been completed
      * @throws A TokenError in case an error occurs
      */
-    async run(): Promise<unknown> {
+    async run(...eventHandlers: EventHandler[]): Promise<unknown> {
         try {
-            await super.run();
+            await super.run(...eventHandlers);
             this.icloud.auth.validateAccountTokens();
             this.icloud.emit(ICLOUD.EVENTS.TOKEN, this.icloud.auth.iCloudAccountTokens.trustToken);
             return;
         } catch (err) {
             throw new TokenError(`Unable to get trust token`).addCause(err);
         } finally {
-            // If this is the initiated class, release the lock
+            // Only if this is the initiated class, release the lock
             if (this.constructor.name === TokenApp.name) {
-                await this.releaseLibraryLock();
+                await this.clean();
             }
         }
     }
@@ -223,18 +238,17 @@ export class SyncApp extends iCloudApp {
     constructor(options: OptionValues) {
         super(options);
         this.photosLibrary = new PhotosLibrary(this);
-        this.needWarningHandler.push(this.photosLibrary);
         this.syncEngine = new SyncEngine(this);
-        this.needWarningHandler.push(this.syncEngine);
-        this.needEventHandler.push(this.syncEngine);
     }
 
     /**
      * Runs the syncronization of the local Photo Library
+     * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      * @returns A Promise that resolves to a tuple containing a list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync).
      * @throws A SyncError in case an error occurs
      */
-    async run(): Promise<unknown> {
+    async run(...eventHandlers: EventHandler[]): Promise<unknown> {
+        registerObjectsToEventHandlers(eventHandlers, this.photosLibrary, this.syncEngine);
         try {
             await super.run();
             return await this.syncEngine.sync();
@@ -243,9 +257,17 @@ export class SyncApp extends iCloudApp {
         } finally {
             // If this is the initiated class, release the lock
             if (this.constructor.name === SyncApp.name) {
-                await this.releaseLibraryLock();
+                await this.clean();
             }
         }
+    }
+
+    /**
+     * Removes all established event listeners and releases the library lock
+     */
+    async clean() {
+        await super.clean();
+        removeObjectsFromEventHandlers(this.photosLibrary, this.syncEngine);
     }
 }
 
@@ -272,16 +294,16 @@ export class ArchiveApp extends SyncApp {
         super(options);
         this.archivePath = archivePath;
         this.archiveEngine = new ArchiveEngine(this);
-        this.needWarningHandler.push(this.archiveEngine);
-        this.needEventHandler.push(this.archiveEngine);
     }
 
     /**
      * This function will first perform a synchronisation run and then attempt to archive the provided path
+     * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      * @returns A promise that resolves once the operation has finished
      * @throws An ArchiveError in case an error occurs
      */
-    async run(): Promise<unknown> {
+    async run(...eventHandlers: EventHandler[]): Promise<unknown> {
+        registerObjectsToEventHandlers(eventHandlers, this.archiveEngine);
         try {
             const [remoteAssets] = await super.run() as [Asset[], Album[]];
             await this.archiveEngine.archivePath(this.archivePath, remoteAssets);
@@ -291,8 +313,16 @@ export class ArchiveApp extends SyncApp {
         } finally {
             // If this is the initiated class, release the lock
             if (this.constructor.name === ArchiveApp.name) {
-                await this.releaseLibraryLock();
+                await this.clean();
             }
         }
+    }
+
+    /**
+     * Removes all established event listeners and releases the library lock
+     */
+    async clean() {
+        await super.clean();
+        removeObjectsFromEventHandlers(this.archiveEngine);
     }
 }

@@ -1,5 +1,5 @@
 import path from "path";
-import {LibraryError} from "../../../app/error/types.js";
+import {LibraryError} from "../../../app/error-types.js";
 import {CPLAlbum, CPLAsset, CPLMaster} from "../../icloud/icloud-photos/query-parser.js";
 import {Album} from "../../photos-library/model/album.js";
 import {Asset, AssetType} from "../../photos-library/model/asset.js";

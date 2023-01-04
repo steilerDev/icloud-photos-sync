@@ -1,4 +1,4 @@
-import {LibraryError} from "../../../app/error/types.js";
+import {LibraryError} from "../../../app/error-types.js";
 import {CPLAlbum} from "../../icloud/icloud-photos/query-parser.js";
 import {STASH_DIR} from "../constants.js";
 import {PEntity} from "./photos-entity.js";

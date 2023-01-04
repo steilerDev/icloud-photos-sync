@@ -220,10 +220,20 @@ export class ArchiveError extends iCPSError {
 }
 
 /**
- * Error class for errors related to the archive program
+ * Error class for warnings related to the archive program
  */
 export class ArchiveWarning extends iCPSError {
     constructor(cause: string) {
         super(ArchiveWarning, cause, `WARN`);
+    }
+}
+
+/**
+ * Error class for warnings related to the DaemonApp
+ */
+export class DaemonAppError extends iCPSError {
+    constructor(cause: Error) {
+        super(ArchiveWarning, `Scheduled sync failed`, `FATAL`);
+        this.addCause(cause);
     }
 }

@@ -1,6 +1,7 @@
 import {Command, Option, InvalidArgumentError} from "commander";
+import Cron from "croner";
 import * as PACKAGE_INFO from '../lib/package.js';
-import {ErrorHandler} from "./error/handler.js";
+import {ErrorHandler} from "./event/error-handler.js";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 
 /**
@@ -17,6 +18,16 @@ function commanderParseInt(value: string, _dummyPrevious: unknown): number {
     }
 
     return parsedValue;
+}
+
+function commanderParseCron(value: string, _dummyPrevious: unknown): string {
+    try {
+        const job = new Cron(value)
+        job.stop()
+        return value
+    } catch(err) {
+        throw new InvalidArgumentError(`Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern)`)
+    }
 }
 
 /**
@@ -63,7 +74,8 @@ export function appFactory(argv: string[]): iCPSApp {
             .argParser(commanderParseInt))
         .addOption(new Option(`-S, --schedule <cron-string>`, `In case this app is executed in daemon mode, it will use this cron schedule to perform regular syncs`)
             .env(`SCHEDULE`)
-            .default(`0 2 * * *`))
+            .default(`0 2 * * *`)
+            .argParser(commanderParseCron))
         .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://icloud-photos-sync.steilerdev.de/user-guides/error-reporting/ for more information`)
             .env(`ENABLE_CRASH_REPORTING`)
             .default(false))

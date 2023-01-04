@@ -8,12 +8,11 @@ import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
 import {SingleBar} from 'cli-progress';
 import {getLogger} from '../../lib/logger.js';
 import {ArchiveEngine} from '../../lib/archive-engine/archive-engine.js';
-import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from '../error/handler.js';
+import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from './error-handler.js';
 import {OptionValues} from 'commander';
-
-export interface EventHandler {
-    registerEventHandlerForObject(object: unknown): void
-}
+import {EventHandler} from './event-handler.js';
+import EventEmitter from 'events';
+import {DaemonAppEvents} from '../icloud-app.js';
 
 /**
  * This class handles the input/output to the command line
@@ -42,7 +41,7 @@ export class CLIInterface implements EventHandler {
      * @param options - Parsed CLI Options
      * @param errorHandler - Optionally a error handler to listen for events
      */
-    constructor(options: OptionValues, errorHandler?: ErrorHandler) {
+    constructor(options: OptionValues, errorHandler: ErrorHandler) {
         this.progressBar = new SingleBar({
             "etaAsynchronousUpdate": true,
             "format": ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
@@ -58,10 +57,9 @@ export class CLIInterface implements EventHandler {
             console.clear();
         }
 
-        if (errorHandler) {
-            this.handleErrorHandler(errorHandler);
-        }
+        this.handleErrorHandler(errorHandler);
 
+        // An error handler is only supplied on the initial run, this is not needed on scheduled runs
         this.print(chalk.white(this.getHorizontalLine()));
         this.print(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
         this.print(chalk.green(`Made with <3 by steilerDev`));
@@ -108,34 +106,38 @@ export class CLIInterface implements EventHandler {
     }
 
     /**
-     *
+     * @param date - An optional date to convert instead of now()
      * @returns A local date time string
      */
-    getDateTime(): string {
-        return new Date().toLocaleString();
+    getDateTime(date: Date = new Date()): string {
+        return date.toLocaleString();
     }
 
     /**
      * Starts listening on class specific events on the provided object for status printing
-     * @param object - The EventEmitter
+     * @param objects - The EventEmitter
      */
-    registerEventHandlerForObject(object: unknown) {
-        if (object instanceof iCloud) {
-            this.handleICloud(object);
-            return;
-        }
+    registerObjects(...objects: EventEmitter[]) {
+        objects.forEach(obj => {
+            if (obj instanceof iCloud) {
+                this.handleICloud(obj);
+                return;
+            }
 
-        if (object instanceof SyncEngine) {
-            this.handleSyncEngine(object);
-            return;
-        }
+            if (obj instanceof SyncEngine) {
+                this.handleSyncEngine(obj);
+                return;
+            }
 
-        if (object instanceof ArchiveEngine) {
-            this.handleArchiveEngine(object);
-            return;
-        }
+            if (obj instanceof ArchiveEngine) {
+                this.handleArchiveEngine(obj);
+                return;
+            }
 
-        this.printWarning(`Unable to find event handler for ${object.constructor.name}`);
+            if (obj instanceof DaemonAppEvents) {
+                this.handleDaemonApp(obj);
+            }
+        });
     }
 
     /**
@@ -291,5 +293,31 @@ export class CLIInterface implements EventHandler {
                 this.print(chalk.yellow(err));
             });
         }
+    }
+
+    /**
+     * Handles events emitted from the daemon app
+     * @param daemon - The daemon app event emitter
+     */
+    private handleDaemonApp(daemon: DaemonAppEvents) {
+        daemon.on(DaemonAppEvents.EVENTS.SCHEDULED, (next: Date) => {
+            this.print(chalk.white(this.getHorizontalLine()));
+            this.print(chalk.white(`Started in daemon mode!`));
+            this.print(chalk.white(`Next execution: ${this.getDateTime(next)}`));
+            this.print(chalk.white(this.getHorizontalLine()));
+        });
+
+        daemon.on(DaemonAppEvents.EVENTS.DONE, (next: Date) => {
+            this.print(chalk.green(this.getHorizontalLine()));
+            this.print(chalk.green(`Completed scheduled sync!`));
+            this.print(chalk.white(`Next execution: ${this.getDateTime(next)}`));
+            this.print(chalk.green(this.getHorizontalLine()));
+        });
+
+        daemon.on(DaemonAppEvents.EVENTS.RETRY, (next: Date) => {
+            this.print(chalk.green(this.getHorizontalLine()));
+            this.print(chalk.white(`Sync will retry execution at ${this.getDateTime(next)}`));
+            this.print(chalk.green(this.getHorizontalLine()));
+        });
     }
 }

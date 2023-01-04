@@ -1,5 +1,5 @@
-import {HANDLER_WARN_EVENT} from "../../../app/error/handler.js";
-import {SyncError} from "../../../app/error/types.js";
+import {HANDLER_EVENT} from "../../../app/event/error-handler.js";
+import {SyncError} from "../../../app/error-types.js";
 import {Album, AlbumType} from "../../photos-library/model/album.js";
 import {PLibraryProcessingQueues} from "../../photos-library/model/photos-entity.js";
 import {SyncEngine} from "../sync-engine.js";
@@ -44,7 +44,7 @@ export function addAlbum(this: SyncEngine, album: Album) {
         try {
             this.photosLibrary.retrieveStashedAlbum(album);
         } catch (err) {
-            this.emit(HANDLER_WARN_EVENT, new SyncError(`Unable to retrieve stashed archived album ${album.getDisplayName()}`).addCause(err));
+            this.emit(HANDLER_EVENT, new SyncError(`Unable to retrieve stashed archived album ${album.getDisplayName()}`).addCause(err));
         }
 
         return;
@@ -53,7 +53,7 @@ export function addAlbum(this: SyncEngine, album: Album) {
     try {
         this.photosLibrary.writeAlbum(album);
     } catch (err) {
-        this.emit(HANDLER_WARN_EVENT, new SyncError(`Unable to add album ${album.getDisplayName()}`).addCause(err));
+        this.emit(HANDLER_EVENT, new SyncError(`Unable to add album ${album.getDisplayName()}`).addCause(err));
     }
 }
 
@@ -69,7 +69,7 @@ export function removeAlbum(this: SyncEngine, album: Album) {
         try {
             this.photosLibrary.stashArchivedAlbum(album);
         } catch (err) {
-            this.emit(HANDLER_WARN_EVENT, new SyncError(`Unable to stash archived album ${album.getDisplayName()}`).addCause(err));
+            this.emit(HANDLER_EVENT, new SyncError(`Unable to stash archived album ${album.getDisplayName()}`).addCause(err));
         }
 
         return;
@@ -78,7 +78,7 @@ export function removeAlbum(this: SyncEngine, album: Album) {
     try {
         this.photosLibrary.deleteAlbum(album);
     } catch (err) {
-        this.emit(HANDLER_WARN_EVENT, new SyncError(`Unable to delete album ${album.getDisplayName()}`).addCause(err));
+        this.emit(HANDLER_EVENT, new SyncError(`Unable to delete album ${album.getDisplayName()}`).addCause(err));
     }
 }
 

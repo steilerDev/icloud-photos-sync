@@ -8,8 +8,8 @@ import {iCloudAuth} from './auth.js';
 import {getLogger} from '../logger.js';
 import {MFAMethod} from './mfa/mfa-method.js';
 import {iCloudApp} from '../../app/icloud-app.js';
-import {HANDLER_WARN_EVENT} from '../../app/error/handler.js';
-import {iCloudError, iCloudWarning} from '../../app/error/types.js';
+import {HANDLER_EVENT} from '../../app/event/error-handler.js';
+import {iCloudError, iCloudWarning} from '../../app/error-types.js';
 
 /**
  * This class holds the iCloud connection
@@ -61,7 +61,7 @@ export class iCloud extends EventEmitter {
         this.mfaServer = new MFAServer(app.options.port);
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.submitMFA.bind(this));
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RESEND, this.resendMFA.bind(this));
-        this.mfaServer.on(HANDLER_WARN_EVENT, this.emit.bind(this, HANDLER_WARN_EVENT));
+        this.mfaServer.on(HANDLER_EVENT, this.emit.bind(this, HANDLER_EVENT));
 
         // ICloud Auth object
         this.auth = new iCloudAuth(app.options.username, app.options.password, app.options.trustToken, app.options.dataDir);
@@ -205,7 +205,7 @@ export class iCloud extends EventEmitter {
             const response = await this.axios.put(url, data, config);
 
             if (!method.resendSuccesfull(response)) {
-                this.emit(HANDLER_WARN_EVENT, new iCloudWarning(`Unable to request new MFA code`).addContext(`response`, response));
+                this.emit(HANDLER_EVENT, new iCloudWarning(`Unable to request new MFA code`).addContext(`response`, response));
                 return;
             }
 
@@ -219,7 +219,7 @@ export class iCloud extends EventEmitter {
                 return;
             }
         } catch (err) {
-            this.emit(HANDLER_WARN_EVENT, new iCloudWarning(`Requesting MFA code failed`).addCause(method.processResendError(err)));
+            this.emit(HANDLER_EVENT, new iCloudWarning(`Requesting MFA code failed`).addCause(method.processResendError(err)));
         }
     }
 
@@ -315,7 +315,7 @@ export class iCloud extends EventEmitter {
 
             this.logger.info(`Getting iCloud Photos Service ready`);
             // Fowarding warn events
-            this.photos.on(HANDLER_WARN_EVENT, this.emit.bind(this, HANDLER_WARN_EVENT));
+            this.photos.on(HANDLER_EVENT, this.emit.bind(this, HANDLER_EVENT));
             await this.photos.setup();
             this.emit(ICLOUD.EVENTS.READY);
         } catch (err) {

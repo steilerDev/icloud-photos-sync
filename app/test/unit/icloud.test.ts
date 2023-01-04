@@ -16,8 +16,8 @@ import {iCloud} from '../../src/lib/icloud/icloud';
 import {getICloudCookies} from '../_helpers/icloud-auth.helper';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {appWithOptions} from '../_helpers/app-factory.helper';
-import {HANDLER_WARN_EVENT} from '../../src/app/error/handler';
-import {iCloudError, iCloudWarning} from '../../src/app/error/types';
+import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import {iCloudError, iCloudWarning} from '../../src/app/error-types';
 
 describe(`Unit Tests - iCloud`, () => {
     describe(`CLI Options`, () => {
@@ -321,7 +321,7 @@ describe(`Unit Tests - iCloud`, () => {
                     icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error()));
 
                     // Checking if rejection is properly parsed
-                    const warnEvent = spyOnEvent(icloud, HANDLER_WARN_EVENT);
+                    const warnEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
                     await icloud.resendMFA(method);
 
@@ -339,7 +339,7 @@ describe(`Unit Tests - iCloud`, () => {
                     }));
 
                     // Checking if rejection is properly parsed
-                    const warnEvent = spyOnEvent(icloud, HANDLER_WARN_EVENT);
+                    const warnEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
                     await icloud.resendMFA(method);
 
@@ -380,7 +380,7 @@ describe(`Unit Tests - iCloud`, () => {
                     icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error()));
 
                     // Checking if rejection is properly parsed
-                    const warnEvent = spyOnEvent(icloud, HANDLER_WARN_EVENT);
+                    const warnEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
                     await icloud.resendMFA(method);
 
@@ -398,7 +398,7 @@ describe(`Unit Tests - iCloud`, () => {
                     }));
 
                     // Checking if rejection is properly parsed
-                    const warnEvent = spyOnEvent(icloud, HANDLER_WARN_EVENT);
+                    const warnEvent = spyOnEvent(icloud, HANDLER_EVENT);
 
                     await icloud.resendMFA(method);
 
@@ -761,7 +761,7 @@ describe(`Unit Tests - iCloud`, () => {
 
                 await icloud.getiCloudPhotosReady();
 
-                expect(icloud.photos.listenerCount(HANDLER_WARN_EVENT)).toBe(1);
+                expect(icloud.photos.listenerCount(HANDLER_EVENT)).toBe(1);
                 await expect(icloud.ready).resolves.not.toThrow();
 
                 expect(icloud.photos.listenerCount(ICLOUD_PHOTOS.EVENTS.READY)).toBe(1);

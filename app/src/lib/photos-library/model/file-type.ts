@@ -1,4 +1,4 @@
-import {LibraryError} from "../../../app/error/types.js";
+import {LibraryError} from "../../../app/error-types.js";
 
 /**
  * Mapping of backend provided filetype description (key) and actual file extension (value)

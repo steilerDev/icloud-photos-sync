@@ -9,8 +9,8 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
 import {spyOnEvent} from '../_helpers/_general';
 import * as ARCHIVE_ENGINE from '../../src/lib/archive-engine/constants';
-import {ArchiveWarning, SyncWarning} from '../../src/app/error/types';
-import {HANDLER_WARN_EVENT} from '../../src/app/error/handler';
+import {ArchiveWarning, SyncWarning} from '../../src/app/error-types';
+import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 
 describe(`Unit Tests - Archive Engine`, () => {
     afterEach(() => {
@@ -140,7 +140,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             const persistEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.PERSISTING_START);
             const remoteDeleteEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE);
             const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
-            const errorEvent = spyOnEvent(archiveEngine, HANDLER_WARN_EVENT);
+            const errorEvent = spyOnEvent(archiveEngine, HANDLER_EVENT);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
@@ -378,7 +378,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             const persistEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.PERSISTING_START);
             const remoteDeleteEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE);
             const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
-            const handlerEvent = spyOnEvent(archiveEngine, HANDLER_WARN_EVENT);
+            const handlerEvent = spyOnEvent(archiveEngine, HANDLER_EVENT);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve())
                 .mockRejectedValueOnce(`Persisting failed`)
@@ -452,7 +452,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             const persistEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.PERSISTING_START);
             const remoteDeleteEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE);
             const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
-            const handlerEvent = spyOnEvent(archiveEngine, HANDLER_WARN_EVENT);
+            const handlerEvent = spyOnEvent(archiveEngine, HANDLER_EVENT);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)

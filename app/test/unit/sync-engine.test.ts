@@ -15,8 +15,8 @@ import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albu
 import {spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
-import {SyncError, SyncWarning} from '../../src/app/error/types';
-import {HANDLER_WARN_EVENT} from '../../src/app/error/handler';
+import {SyncError, SyncWarning} from '../../src/app/error-types';
+import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 
 beforeEach(() => {
     mockfs({});
@@ -1559,7 +1559,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
             test(`Adding - HANDLER_EVENT fired on error`, async () => {
                 const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-                const handlerEvent = spyOnEvent(syncEngine, HANDLER_WARN_EVENT);
+                const handlerEvent = spyOnEvent(syncEngine, HANDLER_EVENT);
 
                 const addAlbumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
                 const addAlbumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
@@ -1590,7 +1590,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
             test(`Deleting - HANDLER_EVENT fired on error`, async () => {
                 const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-                const handlerEvent = spyOnEvent(syncEngine, HANDLER_WARN_EVENT);
+                const handlerEvent = spyOnEvent(syncEngine, HANDLER_EVENT);
 
                 const removeAlbumParent = new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName4`, ``);
                 const removeAlbumChild = new Album(`someUUID2-1`, AlbumType.ALBUM, `someAlbumName5`, `someUUID2`);
@@ -1673,7 +1673,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                     const album1 = new Album(`someUUID1`, AlbumType.ARCHIVED, `someAlbumName1`, ``);
                     const album2 = new Album(`someUUID2`, AlbumType.ARCHIVED, `someAlbumName2`, ``);
 
-                    const handlerEvent = spyOnEvent(syncEngine, HANDLER_WARN_EVENT);
+                    const handlerEvent = spyOnEvent(syncEngine, HANDLER_EVENT);
                     syncEngine.photosLibrary.retrieveStashedAlbum = jest.fn()
                         .mockImplementationOnce(() => {
                             throw new Error(`Unable to retrieve album`);
@@ -1696,7 +1696,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                     const album1 = new Album(`someUUID1`, AlbumType.ARCHIVED, `someAlbumName1`, ``);
                     const album2 = new Album(`someUUID2`, AlbumType.ARCHIVED, `someAlbumName2`, ``);
 
-                    const handlerEvent = spyOnEvent(syncEngine, HANDLER_WARN_EVENT);
+                    const handlerEvent = spyOnEvent(syncEngine, HANDLER_EVENT);
                     syncEngine.photosLibrary.stashArchivedAlbum = jest.fn()
                         .mockImplementationOnce(() => {
                             throw new Error(`Unable to retrieve album`);

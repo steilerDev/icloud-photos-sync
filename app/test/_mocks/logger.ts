@@ -1,37 +1,22 @@
 import log from 'loglevel';
 import {OptionValues} from 'commander';
+import {jest} from '@jest/globals';
 
 /**
  * Mocked logger setup
  * @param cliOpts - Ignored
  */
-export function setupLogger(_cliOpts: OptionValues): void {
-    log.setLevel(`INFO`);
-}
+export const setupLogger: (OptionValues) => void = jest.fn()
 
+/**
+ * Mocked log file name
+ */
 export const logFile = `test`;
 
 /**
- * Returns a mocked logger, only logging relevant information
- * @param _instance - Ignored
- * @returns A logger object
+ * @returns The default logger silenced
  */
-export function getLogger(_instance: any): log.Logger {
-    const _logger = log.default;
-    _logger.methodFactory = function (methodName, _logLevel, _loggerName) {
-        return function (message) {
-            if (process.env?.DEBUG === `true`) {
-                if (methodName === `warn`) {
-                    console.warn(`Warning: ${message}`);
-                } else if (methodName === `error`) {
-                    console.warn(`Error: ${message}`);
-                } else {
-                    console.log(message);
-                }
-            }
-        };
-    };
-
-    _logger.setLevel(`INFO`);
-    return _logger;
-}
+export const getLogger: (_instance: any) => log.Logger = jest.fn(() => {
+    log.default.setLevel(process.env?.DEBUG ? "DEBUG" : "silent")
+    return log.default
+})

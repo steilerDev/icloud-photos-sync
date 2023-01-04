@@ -1,7 +1,7 @@
 
 import {expect, describe, test, jest} from '@jest/globals';
-import {HANDLER_WARN_EVENT} from '../../src/app/error/handler';
-import {iCloudWarning, MFAWarning} from '../../src/app/error/types';
+import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import {iCloudWarning, MFAWarning} from '../../src/app/error-types';
 import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
@@ -32,7 +32,7 @@ describe(`Unit Tests - MFA Server`, () => {
 
             const server = mfaServerFactory();
             server.sendResponse = jest.fn();
-            const handlerEvent = spyOnEvent(server, HANDLER_WARN_EVENT);
+            const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
 
             const req = requestFactory(`${ENDPOINT.CODE_INPUT}?code=${code}`);
             const res = responseFactory();
@@ -119,7 +119,7 @@ describe(`Unit Tests - MFA Server`, () => {
 
             const server = mfaServerFactory();
             server.sendResponse = jest.fn();
-            const handlerEvent = spyOnEvent(server, HANDLER_WARN_EVENT);
+            const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
 
             const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
             const res = responseFactory();
@@ -268,7 +268,7 @@ describe(`Unit Tests - MFA Server`, () => {
             server.sendResponse = jest.fn();
             server.handleMFAResend = jest.fn();
             server.handleMFACode = jest.fn();
-            const handlerEvent = spyOnEvent(server, HANDLER_WARN_EVENT);
+            const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
 
             server.handleRequest(req, res);
 
@@ -287,7 +287,7 @@ describe(`Unit Tests - MFA Server`, () => {
             server.sendResponse = jest.fn();
             server.handleMFAResend = jest.fn();
             server.handleMFACode = jest.fn();
-            const handlerEvent = spyOnEvent(server, HANDLER_WARN_EVENT);
+            const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
 
             server.handleRequest(req, res);
 

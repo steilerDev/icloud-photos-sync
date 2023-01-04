@@ -2,14 +2,15 @@ import * as bt from 'backtrace-node';
 import {EventEmitter} from 'events';
 import * as PACKAGE_INFO from '../../lib/package.js';
 import {getLogger, logFile} from "../../lib/logger.js";
-import {iCPSError, InterruptError} from "./types.js";
+import {iCPSError, InterruptError} from "../error-types.js";
 import {randomUUID} from "crypto";
 import {OptionValues} from "commander";
+import {EventHandler} from './event-handler.js';
 
 /**
  * The event emitted by classes of this application and picked up by the handler.
  */
-export const HANDLER_WARN_EVENT = `handler-event`;
+export const HANDLER_EVENT = `handler-event`;
 /**
  * Event emitted in case an error was handled. Error string provided as argument.
  */
@@ -18,15 +19,11 @@ export const ERROR_EVENT = `error`;
  * Event emitted in case a warning was handled. Error string provided as argument.
  */
 export const WARN_EVENT = `warn`;
-/**
- * Event emitted in case the app should have exited, but is running in 'scheduled' mode
- */
-export const EXIT_EVENT = `exit`;
 
 /**
  * This class handles errors thrown or `HANDLER_EVENT` emitted by classes of this application
  */
-export class ErrorHandler extends EventEmitter {
+export class ErrorHandler extends EventEmitter implements EventHandler {
     /**
      * The error reporting client - if activated
      */
@@ -90,12 +87,14 @@ export class ErrorHandler extends EventEmitter {
     }
 
     /**
-     * Registers an event listener for `HANDLER_WARN_EVENT` on the provided object.
-     * @param object - An EventEmitter, which will emit `HANDLER_WARN_EVENT`
+     * Registers an event listener for `HANDLER_EVENT` on the provided object.
+     * @param objects - A list of EventEmitter, which will emit `HANDLER_EVENT`
      */
-    registerWarningHandlerForObject(object: EventEmitter) {
-        object.on(HANDLER_WARN_EVENT, async (err: unknown) => {
-            await this.handle(err);
+    registerObjects(...objects: EventEmitter[]) {
+        objects.forEach(obj => {
+            obj.on(HANDLER_EVENT, async (err: unknown) => {
+                await this.handle(err);
+            });
         });
     }
 

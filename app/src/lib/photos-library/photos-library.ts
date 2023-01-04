@@ -8,9 +8,9 @@ import {getLogger} from '../logger.js';
 import {AxiosResponse} from 'axios';
 import {pEvent} from 'p-event';
 import {iCloudApp} from '../../app/icloud-app.js';
-import {LibraryError, LibraryWarning} from '../../app/error/types.js';
+import {LibraryError, LibraryWarning} from '../../app/error-types.js';
 import EventEmitter from 'events';
-import {HANDLER_WARN_EVENT} from '../../app/error/handler.js';
+import {HANDLER_EVENT} from '../../app/event/error-handler.js';
 
 export type PathTuple = [namePath: string, uuidPath: string]
 
@@ -87,7 +87,7 @@ export class PhotosLibrary extends EventEmitter {
                     libAssets[asset.getUUID()] = asset;
                     this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
                 } catch (err) {
-                    this.emit(HANDLER_WARN_EVENT, new LibraryWarning(`Ignoring invalid file: ${fileName}`).addCause(err));
+                    this.emit(HANDLER_EVENT, new LibraryWarning(`Ignoring invalid file: ${fileName}`).addCause(err));
                 }
             });
         return libAssets;
@@ -167,7 +167,7 @@ export class PhotosLibrary extends EventEmitter {
         try {
             // Checking if there is actually a dead symlink
             if (await fs.promises.lstat(symlinkPath) && !fs.existsSync(symlinkPath)) {
-                this.emit(HANDLER_WARN_EVENT, new LibraryWarning(`Found dead symlink at ${symlinkPath} (removing it)`).addCause(cause));
+                this.emit(HANDLER_EVENT, new LibraryWarning(`Found dead symlink at ${symlinkPath} (removing it)`).addCause(cause));
                 await fs.promises.unlink(symlinkPath);
             } else {
                 throw new LibraryError(`Unknown error while processing ${symlinkPath}`);
@@ -213,7 +213,7 @@ export class PhotosLibrary extends EventEmitter {
         if (directoryPresent) {
             // AlbumType.Folder cannot be archived!
             if (filePresent) {
-                this.emit(HANDLER_WARN_EVENT, new LibraryWarning(`Extranous file found in folder ${path}`));
+                this.emit(HANDLER_EVENT, new LibraryWarning(`Extranous file found in folder ${path}`));
             }
 
             return AlbumType.FOLDER;
@@ -400,7 +400,7 @@ export class PhotosLibrary extends EventEmitter {
                 fs.symlinkSync(relativeAssetPath, linkedAsset);
                 fs.lutimesSync(linkedAsset, assetTime, assetTime);
             } catch (err) {
-                this.emit(HANDLER_WARN_EVENT, new LibraryWarning(`Not linking ${relativeAssetPath} to ${linkedAsset} in album ${album.getDisplayName()}`).addCause(err));
+                this.emit(HANDLER_EVENT, new LibraryWarning(`Not linking ${relativeAssetPath} to ${linkedAsset} in album ${album.getDisplayName()}`).addCause(err));
             }
         });
     }

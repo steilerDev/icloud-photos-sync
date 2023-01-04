@@ -1,5 +1,5 @@
 import {AxiosResponse} from 'axios';
-import {iCloudError, iCloudWarning} from '../../../app/error/types.js';
+import {iCloudError, iCloudWarning} from '../../../app/error-types.js';
 import * as ICLOUD from '../constants.js';
 
 /**

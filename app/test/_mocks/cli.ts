@@ -1,5 +1,5 @@
 import {jest} from '@jest/globals';
-import {ErrorHandler} from '../../src/app/error/handler';
+import {ErrorHandler} from '../../src/app/event/error-handler';
 import {ArchiveEngine} from '../../src/lib/archive-engine/archive-engine';
 import {iCloud} from '../../src/lib/icloud/icloud';
 import {SyncEngine} from '../../src/lib/sync-engine/sync-engine';

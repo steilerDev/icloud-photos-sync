@@ -2,18 +2,20 @@ import mockfs from 'mock-fs';
 import fs from 'fs';
 import {describe, test, expect, jest, beforeEach, afterEach} from '@jest/globals';
 import {rejectOptions, validOptions} from '../_helpers/app-factory.helper';
-import {ArchiveApp, DaemonApp, LIBRARY_LOCK_FILE, SyncApp, TokenApp} from '../../src/app/icloud-app';
+import {ArchiveApp, DaemonApp, DaemonAppEvents, LIBRARY_LOCK_FILE, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {Album} from '../../src/lib/photos-library/model/album';
-import {ArchiveError, iCloudError, LibraryError, SyncError} from '../../src/app/error/types';
+import {ArchiveError, iCloudError, LibraryError, SyncError} from '../../src/app/error-types';
 import {spyOnEvent} from '../_helpers/_general';
 import {EVENTS} from '../../src/lib/icloud/constants';
 import path from 'path';
+import { setupLogger } from '../_mocks/logger';
 
 describe(`Unit Tests - iCloud App`, () => {
     beforeEach(() => {
         mockfs();
+        jest.clearAllMocks();
     });
 
     afterEach(() => {
@@ -21,7 +23,7 @@ describe(`Unit Tests - iCloud App`, () => {
     });
 
     describe(`App Factory`, () => {
-        test.each(rejectOptions)(`Reject CLI: $_desc`, ({options, _desc}) => {
+        test.each(rejectOptions)(`Reject CLI: $_desc`, ({options, expected}) => {
             const mockExit = jest.spyOn(process, `exit`).mockImplementation(() => {
                 throw new Error(`Process Exit`);
             });
@@ -30,54 +32,52 @@ describe(`Unit Tests - iCloud App`, () => {
             expect(() => appFactory(options)).toThrowError(`Process Exit`);
 
             expect(mockExit).toHaveBeenCalledWith(1);
-            expect(mockStderr).toBeCalled();
-            mockExit.mockRestore();
-            mockStderr.mockRestore();
+            expect(mockStderr).toBeCalledWith(expected);
         });
 
         test(`Create Token App`, () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
             expect(tokenApp).toBeInstanceOf(TokenApp);
+            expect(setupLogger).toHaveBeenCalledTimes(1);
             expect(tokenApp.icloud).toBeDefined();
             expect(tokenApp.icloud.mfaServer).toBeDefined();
             expect(tokenApp.icloud.auth).toBeDefined();
-            expect(tokenApp.needWarningHandler.length).toEqual(2);
-            expect(tokenApp.needEventHandler.length).toEqual(1);
             expect(fs.existsSync(`/opt/icloud-photos-library`));
         });
 
         test(`Create Sync App`, () => {
             const syncApp = appFactory(validOptions.sync) as SyncApp;
             expect(syncApp).toBeInstanceOf(SyncApp);
+            expect(setupLogger).toHaveBeenCalledTimes(1)
             expect(syncApp.icloud).toBeDefined();
             expect(syncApp.icloud.mfaServer).toBeDefined();
             expect(syncApp.icloud.auth).toBeDefined();
             expect(syncApp.photosLibrary).toBeDefined();
             expect(syncApp.syncEngine).toBeDefined();
-            expect(syncApp.needWarningHandler.length).toEqual(4);
-            expect(syncApp.needEventHandler.length).toEqual(2);
             expect(fs.existsSync(`/opt/icloud-photos-library`));
         });
 
         test(`Create Archive App`, () => {
             const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
             expect(archiveApp).toBeInstanceOf(ArchiveApp);
+            expect(setupLogger).toHaveBeenCalledTimes(1)
             expect(archiveApp.icloud).toBeDefined();
             expect(archiveApp.icloud.mfaServer).toBeDefined();
             expect(archiveApp.icloud.auth).toBeDefined();
             expect(archiveApp.photosLibrary).toBeDefined();
             expect(archiveApp.syncEngine).toBeDefined();
             expect(archiveApp.archiveEngine).toBeDefined();
-            expect(archiveApp.needWarningHandler.length).toEqual(5);
-            expect(archiveApp.needEventHandler.length).toEqual(3);
+            expect(fs.existsSync(`/opt/icloud-photos-library`));
         });
 
         test.each([
             {"options": validOptions.daemon, "mode": `explicit`},
             {"options": validOptions.default, "mode": `default`},
         ])(`Create Daemon App - $mode`, ({options}) => {
-            const archiveApp = appFactory(options) as DaemonApp;
-            expect(archiveApp).toBeInstanceOf(DaemonApp);
+            const daemonApp = appFactory(options) as DaemonApp;
+            expect(daemonApp).toBeInstanceOf(DaemonApp);
+            expect(setupLogger).toHaveBeenCalledTimes(1)
+            expect(daemonApp.event).toBeDefined()
         });
     });
 
@@ -196,7 +196,53 @@ describe(`Unit Tests - iCloud App`, () => {
                 expect(archiveApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
             });
         });
+
+        describe(`Daemon App`, () => {
+            test(`Schedule job`, async () => {
+                const daemonApp = appFactory(validOptions.daemon) as DaemonApp
+                daemonApp.performScheduledSync = jest.fn(() => Promise.resolve())
+                daemonApp.options.schedule = "*/1 * * * * *" // Every second
+                const eventsScheduledEvent = spyOnEvent(daemonApp.event, DaemonAppEvents.EVENTS.SCHEDULED)
+
+                await daemonApp.run()
+
+                expect(eventsScheduledEvent).toHaveBeenCalledTimes(1)
+                // Waiting 2 seconds to make sure schedule ran at least once
+                await new Promise((r) => setTimeout(r, 2000));
+                expect(daemonApp.performScheduledSync).toHaveBeenCalled()
+
+                daemonApp.job?.stop()
+            })
+
+            test(`Scheduled sync succeeds`, async () => {
+                const syncApp = appFactory(validOptions.sync) as SyncApp
+                syncApp.run = jest.fn(() => Promise.resolve())
+
+                const daemonApp = appFactory(validOptions.daemon) as DaemonApp
+                const successEvent = spyOnEvent(daemonApp.event, DaemonAppEvents.EVENTS.DONE)
+
+                await daemonApp.performScheduledSync([], syncApp)
+
+                expect(syncApp.run).toHaveBeenCalled()
+                expect(successEvent).toHaveBeenCalled()
+            })
+
+            test(`Scheduled sync fails`, async () => {
+                const syncApp = appFactory(validOptions.sync) as SyncApp
+                syncApp.run = jest.fn(() => Promise.reject())
+
+                const daemonApp = appFactory(validOptions.daemon) as DaemonApp
+                const retryEvent = spyOnEvent(daemonApp.event, DaemonAppEvents.EVENTS.RETRY)
+
+                await daemonApp.performScheduledSync([], syncApp)
+
+                expect(syncApp.run).toHaveBeenCalled()
+                expect(retryEvent).toHaveBeenCalled()
+            })
+        })
     });
+
+    
 
     describe(`Library Lock`, () => {
         test(`Acquire lock`, async () => {

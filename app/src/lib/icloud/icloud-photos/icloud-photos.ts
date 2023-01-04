@@ -8,8 +8,8 @@ import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import {getLogger} from '../../logger.js';
 import {convertCPLAssets} from '../../sync-engine/helpers/fetchAndLoad-helpers.js';
-import {HANDLER_WARN_EVENT} from '../../../app/error/handler.js';
-import {iCloudError, iCloudWarning} from '../../../app/error/types.js';
+import {HANDLER_EVENT} from '../../../app/event/error-handler.js';
+import {iCloudError, iCloudWarning} from '../../../app/error-types.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -285,7 +285,7 @@ export class iCloudPhotos extends EventEmitter {
         (await query).forEach(record => {
             try {
                 if (record.deleted === true) {
-                    this.emit(HANDLER_WARN_EVENT, new iCloudWarning(`Filtering deleted record ${record.recordName}`).addContext(`record`, record));
+                    this.emit(HANDLER_EVENT, new iCloudWarning(`Filtering deleted record ${record.recordName}`).addContext(`record`, record));
                     return;
                 }
 
@@ -295,7 +295,7 @@ export class iCloudPhotos extends EventEmitter {
                 }
 
                 if (!(record.fields.albumType.value === AlbumType.FOLDER || record.fields.albumType.value === AlbumType.ALBUM)) {
-                    this.emit(HANDLER_WARN_EVENT, new iCloudWarning(`Ignoring unknown album type ${record.fields.albumType.value}`).addContext(`record.fields`, record.fields));
+                    this.emit(HANDLER_EVENT, new iCloudWarning(`Ignoring unknown album type ${record.fields.albumType.value}`).addContext(`record.fields`, record.fields));
                     return;
                 }
 
@@ -315,7 +315,7 @@ export class iCloudPhotos extends EventEmitter {
                     cplAlbums.push(CPLAlbum.parseFromQuery(record));
                 }
             } catch (err) {
-                this.emit(HANDLER_WARN_EVENT, new iCloudError(`Error building CPLAlbum`).addCause(err).addContext(`record`, record));
+                this.emit(HANDLER_EVENT, new iCloudError(`Error building CPLAlbum`).addCause(err).addContext(`record`, record));
             }
         });
         return cplAlbums;
@@ -423,7 +423,7 @@ export class iCloudPhotos extends EventEmitter {
                             .addContext(`record`, record);
                     }
                 } catch (err) {
-                    this.emit(HANDLER_WARN_EVENT, new iCloudWarning(`Not processing record ${record.recordName}`).addCause(err));
+                    this.emit(HANDLER_EVENT, new iCloudWarning(`Not processing record ${record.recordName}`).addCause(err));
                 }
             });
         } catch (err) {
@@ -432,7 +432,7 @@ export class iCloudPhotos extends EventEmitter {
         }
 
         if (cplMasters.length !== totalCount || cplAssets.length !== totalCount) {
-            this.emit(HANDLER_WARN_EVENT, new iCloudWarning(`Expected ${totalCount} CPLMaster & ${totalCount} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`));
+            this.emit(HANDLER_EVENT, new iCloudWarning(`Expected ${totalCount} CPLMaster & ${totalCount} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`));
         } else {
             this.logger.debug(`Received expected amount (${totalCount}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
         }
