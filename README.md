@@ -124,6 +124,9 @@ A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/ic
 </p>
 
 ## Contributing & Feedback
-This tool (most likely) still contains issues and edge cases, that need to be addressed. Therefore, I hope for the support of the community, to fully understand the reverse-engineered API and discover the remaining bugs. I tried to make this codebase as maintainable and automated as possible, in order to make future releases and contributions quick and easy, including [unit](https://steilerdev.github.io/icloud-photos-sync/dev/coverage/) & [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) tests.
 
 Please check [known issues](https://github.com/steilerDev/icloud-photos-sync/labels/known%20issue) before [opening an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new?assignees=&labels=open&template=issue-template.md&title=). Always [enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.
+
+Pull requests are always welcomed! I tried to make this codebase as maintainable and automated as possible, in order to make future releases and contributions quick and easy, including [unit](https://steilerdev.github.io/icloud-photos-sync/dev/coverage/) & [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) tests.
+
+I'm also looking for feedback on design, execution or oversights I had, when reverse engineering the API. Use the [discussions platform](https://github.com/steilerDev/icloud-photos-sync/discussions) to provide input on non-issue related topics.

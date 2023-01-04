@@ -36,7 +36,7 @@ jobs:
           # Updating changelog to reflect that nightly changes are now in release
           sed -i '/^## Nightly Changes/c\<!-- ## Nightly Changes-->\n\n## '${VERSION} CHANGELOG.md
 
-          # Updateding version refernces in the app
+          # Updating version references in the app
           sed -ri 's/"version": "[0-9]+\.[0-9]+\.[0-9]+"/"version": "'${NUMERIC_VERSION}'"/' app/package.json
           sed -ri 's/VERSION = "[0-9]+\.[0-9]+\.[0-9]+"/VERSION = "'${NUMERIC_VERSION}'"/' app/src/lib/package.ts
         env:
