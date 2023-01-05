@@ -4,7 +4,7 @@ name: Publish Production Release
 
 on: 
   push:
-    tags: # Only run deploy, when there is a tag matching version naming
+    tags: # Only run deploy, when there is a tag matching version naming / this is a protected tag / workflow can only deploy with approval
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
     # ${{github.ref_name}} should contain the tag name (aka version string)
@@ -22,7 +22,7 @@ jobs:
     secrets: inherit
     permissions: {}
 
-  publish-dockerhub:
+  publish-docker:
     name: Publish Docker Image
     needs: build-workflow
     runs-on: ubuntu-latest
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: 
       name: production
-      url: https://www.npmjs.com/package/icloud-photos-sync
+      url: https://www.npmjs.com/package/${{github.event.repository.name}}
     permissions: {}
     steps:
       - name: Download artifacts
@@ -141,4 +141,3 @@ jobs:
           bodyFile: ./artifacts/changelog/CHANGELOG.latest.md
           tag: ${{github.ref_name}}
           artifacts: ./icloud-photos-sync.${{github.ref_name}}.tar.gz
-          #token: ${{ secrets.YOUR_GITHUB_TOKEN }}

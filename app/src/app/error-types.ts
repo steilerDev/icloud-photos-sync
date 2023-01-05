@@ -233,7 +233,7 @@ export class ArchiveWarning extends iCPSError {
  */
 export class DaemonAppError extends iCPSError {
     constructor(cause: Error) {
-        super(ArchiveWarning, `Scheduled sync failed`, `FATAL`);
+        super(DaemonAppError, `Scheduled sync failed`, `FATAL`);
         this.addCause(cause);
     }
 }

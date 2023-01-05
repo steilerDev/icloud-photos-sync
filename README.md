@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/steilerDev/icloud-photos-sync/releases">
-    <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?include_prereleases&style=for-the-badge&logo=github&logoColor=white">
+    <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/steilerdev/icloud-photos-sync?style=for-the-badge&logo=github&logoColor=white">
   </a>
   <a href="https://www.npmjs.com/package/icloud-photos-sync">
     <img alt="npm" src="https://img.shields.io/npm/dm/icloud-photos-sync?label=npm%20downloads&style=for-the-badge&logo=npm&logoColor=white">
@@ -37,7 +37,7 @@
     <img alt="Development Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/dev-release.yml?branch=dev&label=Dev%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
   </a>
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml">
-    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?branch=main&label=Prod%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
+    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?label=Prod%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
   </a>
 </p>
 <p align="center">
