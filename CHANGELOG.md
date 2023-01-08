@@ -1,6 +1,9 @@
 # Changelog
 
-<!-- ## Nightly Changes-->
+## Nightly Changes
+
+  * Filetype support added for
+    * `avi`
 
 ## v1.0.1
 

@@ -33,6 +33,7 @@ const EXT = {
     'com.pentax.raw-image': `pef`,
     'com.nikon.raw-image': `nef`,
     'com.olympus.raw-image': `orf`,
+    'public.avi': 'avi'
 };
 
 /**
