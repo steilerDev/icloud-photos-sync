@@ -28,7 +28,7 @@ updates:
       day: "saturday"
     ignore:
       - dependency-name: "node"
-        versions: ["19.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
+        versions: ["19.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
 
   # Maintain dependencies for pip (docs site)
   - package-ecosystem: "pip"
