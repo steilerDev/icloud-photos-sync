@@ -31,7 +31,7 @@ jobs:
           node-version-file: 'app/.node-version'
           cache: 'npm'
           cache-dependency-path: app/
-      - name: Version bump
+      - name: Update files for version bump
         run: |
           NUMERIC_VERSION=${VERSION:1}
 
@@ -41,6 +41,11 @@ jobs:
           # Updating version references in the app
           sed -ri 's/"version": "[0-9]+\.[0-9]+\.[0-9]+"/"version": "'${NUMERIC_VERSION}'"/' app/package.json
           sed -ri 's/VERSION = `[0-9]+\.[0-9]+\.[0-9]+`/VERSION = `'${NUMERIC_VERSION}'`/' app/src/lib/package.ts
+
+          # Updating badge in README to show latest pipeline run
+          sed -ri 's/branch=v[0-9]+\.[0-9]+\.[0-9]+/branch=v'${NUMERIC_VERSION}'/' README.md
+
+              <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?branch=v1.0.1&label=Prod%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
         env:
           VERSION: ${{ github.event.inputs.version }}
       - name: Update package
