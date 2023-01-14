@@ -652,7 +652,186 @@
 					"response": []
 				},
 				{
-					"name": "02-Enter 2FA",
+					"name": "02-Enter 2FA (App)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.cookies.clear()"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "User-Agent",
+								"value": "{{userAgent}}"
+							},
+							{
+								"key": "Accept",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "Connection",
+								"value": "keep-alive"
+							},
+							{
+								"key": "Origin",
+								"value": "https://idmsa.apple.com"
+							},
+							{
+								"key": "Referer",
+								"value": "https://idmsa.apple.com/"
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "gzip, deflate, br"
+							},
+							{
+								"key": "Content-Type",
+								"value": "{{accept}}"
+							},
+							{
+								"key": "scnt",
+								"value": "{{scnt}}"
+							},
+							{
+								"key": "X-Apple-Widget-Key",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Id",
+								"value": "{{clientID}}"
+							},
+							{
+								"key": "X-Apple-I-FD-Client-Info",
+								"value": "{{clientInfo}}"
+							},
+							{
+								"key": "X-Apple-ID-Session-Id",
+								"value": "{{X-Apple-ID-Session-Id}}"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Type",
+								"value": "code"
+							},
+							{
+								"key": "X-Apple-OAuth-Response-Mode",
+								"value": "web_message"
+							},
+							{
+								"key": "X-Apple-OAuth-Client-Type",
+								"value": "firstPartyAuth"
+							},
+							{
+								"key": "Accept-Language",
+								"value": "en-US,en;q=0.5",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Auth-Attributes",
+								"value": "",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Frame-Id",
+								"value": "auth-cqqt5f7q-txpl-fihd-dc1n-t38s4wph",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-State",
+								"value": "auth-cqqt5f7q-txpl-fihd-dc1n-t38s4wph",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Redirect-URI",
+								"value": "https://www.icloud.com",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-OAuth-Require-Grant-Code",
+								"value": "true",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Domain-Id",
+								"value": "3",
+								"disabled": true
+							},
+							{
+								"key": "X-Apple-Locale",
+								"value": "en_US",
+								"disabled": true
+							},
+							{
+								"key": "X-Requested-With",
+								"value": "XMLHttpRequest",
+								"disabled": true
+							},
+							{
+								"key": "Cookie",
+								"value": "dslang=US-EN; site=USA; aasp=CF72548FBDF94295601A18DF46AB499B2B19F483477C72841391D8FD699A490EDA4CA9B5B3D673023BB06BA5782D4E755D344C49CAEF2BAA2BFE072CF7B2033493DA4D7EAA0366BFD5E65E52E261E801654AE975511BE5B423E55FDA5D87DA9E269AABB03811401DF330151CCEAD158D537BA25A6B943E57; geo=DE; aa=06A76DC50B9602217FE6AED4AB3802DD; acn01=nE5Xj0GPRGG6NQ5H0Dv/nn3stCNLm+5uABDFki0sDN4=",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Dest",
+								"value": "empty",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Mode",
+								"value": "cors",
+								"disabled": true
+							},
+							{
+								"key": "Sec-Fetch-Site",
+								"value": "same-origin",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"securityCode\": {\n        \"code\": \"354707\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
+							"protocol": "https",
+							"host": [
+								"idmsa",
+								"apple",
+								"com"
+							],
+							"path": [
+								"appleauth",
+								"auth",
+								"verify",
+								"trusteddevice",
+								"securitycode"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "02-Enter 2FA (Phone)",
 					"event": [
 						{
 							"listen": "test",
@@ -2123,7 +2302,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"operations\": [\n        {\n            \"operationType\": \"update\",\n            \"record\": {\n                \"recordName\": \"A6154970-BDB6-43CD-856B-9E833BBB9FAA\",\n                \"recordType\": \"CPLAsset\",\n                \"recordChangeTag\": \"21h2\",\n                \"fields\": {\n                    \"isDeleted\": {\n                        \"value\": 1\n                    }\n                }\n            }\n        }\n    ],\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"atomic\": true\n}",
+							"raw": "{\n    \"operations\": [\n        {\n            \"operationType\": \"update\",\n            \"record\": {\n                \"recordName\": \"207600C5-88ED-41EC-8DF8-C0067F82ACBA\",\n                \"recordType\": \"CPLAsset\",\n                \"fields\": {\n                    \"isDeleted\": {\n                        \"value\": 1\n                    }\n                }\n            }\n        }\n    ],\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"atomic\": true\n}",
 							"options": {
 								"raw": {
 									"language": "json"
