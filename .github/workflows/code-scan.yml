@@ -3,7 +3,6 @@ name: "CodeQL Scan"
 
 on:
   push:
-  pull_request:
   schedule:
     - cron: '30 1 * * 0'
 

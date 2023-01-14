@@ -15,7 +15,6 @@ name: Build & Test
 
 on:
   workflow_call:
-  pull_request:
   push: # For any other branch
     branches-ignore:
       - 'dev'
