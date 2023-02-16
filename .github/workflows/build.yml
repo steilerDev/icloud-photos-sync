@@ -116,32 +116,16 @@ jobs:
         with:
           name: app-artifacts
           path: ./docker/rootfs/opt/icloud-photos-sync
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
       - name: Build docker rootfs
         run: |
           # Packaging assets
           tar -C ./rootfs -czf ./rootfs.tar.gz ./
         working-directory: docker/
-      - name: Build multi arch
-        uses: docker/build-push-action@v3
-        with:
-          context: ./docker
-          outputs: type=tar,dest=docker-images
-          platforms: linux/amd64,linux/arm,linux/arm64
-          tags: ${{ github.event.repository.name }}
-      - name: Access runner to acquire token
-        uses: lhotari/action-upterm@v1
-        with:
-          limit-access-to-users: steilerDev
-          upterm-server: ssh://uptermd.upterm.dev:22
-      - name: Process docker build
+      - name: Build docker image
         run: |
-          cp ./docker/.docker-username ./
-          for filename in /docker-images/*.tar; do
-            echo "Compressing $filename"
-            gzip $filename
-          done
+          docker build ./docker --tag ${{ github.event.repository.name }}
+          docker save ${{ github.event.repository.name }} | gzip > ./docker-image.tar.gz
+          cp ./docker/.docker-username .
       - name: Upload docker artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -151,7 +135,7 @@ jobs:
             ./README.md
             ./CHANGELOG.md
             ./LICENSE
-            ./docker-images/*.tar.gz
+            ./docker-image.tar.gz
         
   test-app:
     name: Test App

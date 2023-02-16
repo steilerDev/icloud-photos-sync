@@ -38,7 +38,7 @@ jobs:
       - name: Load Docker Username
         run: echo "DOCKER_USERNAME=$(cat ./.docker-username)" >> $GITHUB_ENV
       - name: Login to DockerHub
-        run: docker login -u $DOCKER_USERNAME -p ${{ secrets.DOCKER_PWD }}
+        run: docker login -u $DOCKER_USERNAME -p ${{secrets.DOCKER_PWD}}
       - name: Load & Tag Docker Image
         run: |
           docker load --input ./docker-image.tar.gz
