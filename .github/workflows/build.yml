@@ -132,7 +132,7 @@ jobs:
           tags: ${{ github.event.repository.name }}
       - name: Process docker build
         run: |
-          cp /docker/.docker-username ./
+          cp ./docker/.docker-username ./
           for filename in /docker-images/*.tar; do
             echo "Compressing $filename"
             gzip $filename
