@@ -9,7 +9,6 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
 import {spyOnEvent} from '../_helpers/_general';
 import * as ARCHIVE_ENGINE from '../../src/lib/archive-engine/constants';
-import {ArchiveWarning, SyncWarning} from '../../src/app/error-types';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 
 describe(`Unit Tests - Archive Engine`, () => {
@@ -407,7 +406,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to persist asset`));
+            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`));
         });
 
         test(`Prepare remote delete throws error`, async () => {
@@ -457,7 +456,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
                 .mockImplementationOnce(() => {
-                    throw new ArchiveWarning(`Unable to find asset`);
+                    throw new Error(`Unable to find asset`);
                 })
                 .mockReturnValueOnce(asset2.recordName)
                 .mockReturnValueOnce(asset3.recordName);
@@ -480,7 +479,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to find asset`));
+            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to find asset`));
         });
 
         test(`Delete assets throws error`, async () => {
@@ -664,7 +663,7 @@ describe(`Unit Tests - Archive Engine`, () => {
 
             const archiveEngine = archiveEngineFactory();
 
-            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrowError(`Unable to find asset with UUID`);
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrowError(`Unable to find remote asset`);
         });
 
         test(`Unable to find remote asset's record name`, () => {
@@ -705,7 +704,7 @@ describe(`Unit Tests - Archive Engine`, () => {
 
             const archiveEngine = archiveEngineFactory();
 
-            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrowError(`Unable to get record name for asset`);
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrowError(`Unable to get record name`);
         });
 
         test(`Don't delete asset if flag is set`, () => {

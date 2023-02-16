@@ -38,6 +38,11 @@ export function setupLogger(options: OptionValues): void {
         "base": LOG_FILE_NAME,
     });
 
+    const logPath = path.dirname(logFile);
+    if (!fs.existsSync(logPath)) {
+        fs.mkdirSync(logPath, {"recursive": true});
+    }
+
     if (fs.existsSync(logFile)) {
         // Clearing file if it exists
         fs.truncateSync(logFile);

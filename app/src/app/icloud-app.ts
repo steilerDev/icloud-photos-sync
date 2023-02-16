@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import {OptionValues} from "commander";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
-import {ArchiveError, DaemonAppError, iCloudError, LibraryError, SyncError, TokenError} from "./error-types.js";
+import {iCPSError} from "./error/error.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {Album} from "../lib/photos-library/model/album.js";
 import path from "path";
@@ -14,6 +14,7 @@ import * as Logger from '../lib/logger.js';
 import {Cron} from "croner";
 import {HANDLER_EVENT} from "./event/error-handler.js";
 import {EventHandler, registerObjectsToEventHandlers, removeObjectsFromEventHandlers} from "./event/event-handler.js";
+import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 
 /**
  * Filename for library lock file located in DATA_DIR
@@ -89,7 +90,7 @@ export class DaemonApp extends iCPSApp {
             await syncApp.run(...eventHandlers);
             this.event.emit(DaemonAppEvents.EVENTS.DONE, this.job?.next());
         } catch (err) {
-            this.event.emit(HANDLER_EVENT, new DaemonAppError(err));
+            this.event.emit(HANDLER_EVENT, new iCPSError(APP_ERR.DAEMON).addCause(err));
             this.event.emit(DaemonAppEvents.EVENTS.RETRY, this.job?.next());
         } finally { // Cleaning up
             syncApp = undefined;
@@ -134,14 +135,16 @@ export abstract class iCloudApp extends iCPSApp {
         try {
             await this.acquireLibraryLock();
         } catch (err) {
-            throw new LibraryError(`Unable to acquire lock`).addCause(err);
+            throw new iCPSError(LIBRARY_ERR.LOCK_ACQUISITION)
+                .addCause(err);
         }
 
         try {
             await this.icloud.authenticate();
             return;
         } catch (err) {
-            throw new iCloudError(`Authentication failed`).addCause(err);
+            throw new iCPSError(AUTH_ERR.FAILED)
+                .addCause(err);
         }
     }
 
@@ -162,7 +165,8 @@ export abstract class iCloudApp extends iCPSApp {
         if (fs.existsSync(lockFilePath)) {
             if (!this.options.force) {
                 const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
-                throw new LibraryError(`Locked by PID ${lockingProcess}. Use --force (or FORCE env variable) to forcefully remove the lock`);
+                throw new iCPSError(LIBRARY_ERR.LOCKED)
+                    .addMessage(`Locked by PID ${lockingProcess}`);
             }
 
             await fs.promises.rm(lockFilePath, {"force": true});
@@ -178,12 +182,14 @@ export abstract class iCloudApp extends iCPSApp {
     async releaseLibraryLock() {
         const lockFilePath = path.join(this.options.dataDir, LIBRARY_LOCK_FILE);
         if (!fs.existsSync(lockFilePath)) {
-            throw new LibraryError(`Unable to release library lock, no lock exists`);
+            throw new iCPSError(LIBRARY_ERR.LOCK_RELEASE)
+                .addMessage(`No lock exists`);
         }
 
         const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
         if (lockingProcess !== process.pid.toString() && !this.options.force) {
-            throw new LibraryError(`Locked by PID ${lockingProcess}, cannot release. Use --force (or FORCE env variable) to forcefully remove the lock`);
+            throw new iCPSError(LIBRARY_ERR.LOCKED)
+                .addMessage(`Locked by PID ${lockingProcess}`);
         }
 
         await fs.promises.rm(lockFilePath, {"force": true});
@@ -207,7 +213,8 @@ export class TokenApp extends iCloudApp {
             this.icloud.emit(ICLOUD.EVENTS.TOKEN, this.icloud.auth.iCloudAccountTokens.trustToken);
             return;
         } catch (err) {
-            throw new TokenError(`Unable to get trust token`).addCause(err);
+            throw new iCPSError(APP_ERR.TOKEN)
+                .addCause(err);
         } finally {
             // Only if this is the initiated class, release the lock
             if (this.constructor.name === TokenApp.name) {
@@ -253,7 +260,8 @@ export class SyncApp extends iCloudApp {
             await super.run(...eventHandlers);
             return await this.syncEngine.sync();
         } catch (err) {
-            throw new SyncError(`Sync failed`).addCause(err);
+            throw new iCPSError(APP_ERR.SYNC)
+                .addCause(err);
         } finally {
             // If this is the initiated class, release the lock
             if (this.constructor.name === SyncApp.name) {
@@ -309,7 +317,8 @@ export class ArchiveApp extends SyncApp {
             await this.archiveEngine.archivePath(this.archivePath, remoteAssets);
             return;
         } catch (err) {
-            throw new ArchiveError(`Archive failed`).addCause(err).addContext(`archivePath`, this.archivePath);
+            throw new iCPSError(APP_ERR.ARCHIVE)
+                .addCause(err).addContext(`archivePath`, this.archivePath);
         } finally {
             // If this is the initiated class, release the lock
             if (this.constructor.name === ArchiveApp.name) {

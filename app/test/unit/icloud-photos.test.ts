@@ -2,7 +2,7 @@ import {describe, test} from '@jest/globals';
 
 describe(`Unit Tests - iCloud Photos`, () => {
     describe(`Setup iCloud Photos`, () => {
-        test.todo(`Setup Succesfull`);
+        test.todo(`Setup successful`);
         test.todo(`Response validation fails`);
         test.todo(`Network failure`);
 

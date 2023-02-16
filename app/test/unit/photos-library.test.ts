@@ -11,9 +11,8 @@ import axios, {AxiosRequestConfig} from 'axios';
 import {appDataDir as photosDataDir} from '../_helpers/_config';
 import {photosLibraryFactory} from '../_helpers/photos-library.helper';
 import {appWithOptions} from '../_helpers/app-factory.helper';
-import {spyOnEvent} from '../_helpers/_general';
+import {createNamedError, spyOnEvent} from '../_helpers/_general';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
-import {LibraryWarning} from '../../src/app/error-types';
 
 const assetDir = path.join(photosDataDir, ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
@@ -135,7 +134,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 expect(emptyAlbum.albumType).toEqual(AlbumType.ALBUM);
             });
 
-            test(`Extranous file in folder`, async () => {
+            test(`Extraneous file in folder`, async () => {
                 const someFolderName = `folder`;
                 const someFolderUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const someAlbumName = `album`;
@@ -163,7 +162,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 const albums = await library.loadAlbums();
 
                 expect(Object.keys(albums).length).toEqual(2);
-                expect(handlerEvent).toHaveBeenCalledWith(new LibraryWarning(`Extraneous file found in folder ${path.join(photosDataDir, `.${someFolderUUID}`)}`));
+                expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`LibraryError`, `Extraneous file found while processing a folder`));
             });
 
             test(`Orphaned album`, async () => {
@@ -184,7 +183,7 @@ describe(`Unit Tests - Photos Library`, () => {
 
                 expect(Object.keys(albums).length).toEqual(0);
 
-                expect(orphanEvent).toHaveBeenCalledWith(new LibraryWarning(`Found dead symlink at ${path.join(photosDataDir, orphanedAlbumName)} (removing it)`));
+                expect(orphanEvent).toHaveBeenCalledWith(createNamedError(`LibraryError`, `Found dead symlink (removing it)`));
                 expect(() => fs.lstatSync(path.join(photosDataDir, orphanedAlbumName))).toThrowError(`ENOENT: no such file or directory, lstat '/opt/icloud-photos-library/Orphan'`);
             });
 
@@ -203,8 +202,8 @@ describe(`Unit Tests - Photos Library`, () => {
 
                 const library = photosLibraryFactory();
                 library.readFolderFromDisk = jest.fn(() => Promise.resolve([{}, ``] as [Album, string]))
-                    .mockRejectedValue(new Error(`Undescriptive Error`));
-                await expect(library.loadAlbums()).rejects.toThrowError(`Unknown error while processing ${path.join(photosDataDir, orphanedAlbumName)}`);
+                    .mockRejectedValue(new Error(`Nondescriptive Error`));
+                await expect(library.loadAlbums()).rejects.toThrowError(`Unknown error while processing symlink`);
             });
 
             test(`Non-empty album`, async () => {
@@ -475,7 +474,7 @@ describe(`Unit Tests - Photos Library`, () => {
 
     describe(`Write state`, () => {
         describe(`Write assets`, () => {
-            test(`Succesfully verify asset`, () => {
+            test(`Successfully verify asset`, () => {
                 const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
                 const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
                 const assetExt = `jpeg`;
@@ -608,7 +607,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 library.verifyAsset = jest.fn(() => false);
 
                 const response = await axios.get(url, config);
-                await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset ${fileName}`);
+                await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset`);
                 const assetPath = path.join(assetDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeFalsy();
             });
@@ -680,7 +679,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     expect(relativePath).toEqual(`.${folderUUID}/.${folderedAlbumUUID}`);
                 });
 
-                test(`In multibranch sub-directory`, () => {
+                test(`In multi branch sub-directory`, () => {
                     const folder1UUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                     const folder1Name = `Memories`;
                     const folder2UUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
@@ -764,7 +763,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     expect(relativePath).toEqual(`.${folder3UUID}/.${folderedAlbum6UUID}/.${searchAlbumUUID}`);
                 });
 
-                describe(`In multibranch sub-directory`, () => {
+                describe(`In multi branch sub-directory`, () => {
                     test(`Duplicate UUIDs`, () => {
                         const folder1UUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                         const folder1Name = `Memories`;
@@ -961,7 +960,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     expect(namedFolderTarget).toEqual(`.${albumUUID}`);
                 });
 
-                test(`Folder - Subdir`, () => {
+                test(`Folder - Subdirectory`, () => {
                     const parentUUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
                     const parentName = `Memories`;
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
@@ -987,20 +986,30 @@ describe(`Unit Tests - Photos Library`, () => {
                     expect(namedFolderTarget).toEqual(`.${albumUUID}`);
                 });
 
-                test(`Folder - already exists`, () => {
+                test(`Folder - UUID path already exists`, () => {
                     const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                     const albumName = `Memories`;
                     mockfs({
                         [photosDataDir]: {
                             [`.${albumUUID}`]: {},
-                            [albumName]: mockfs.symlink({
-                                "path": `.${albumUUID}`,
-                            }),
                         },
                     });
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
                     const library = photosLibraryFactory();
-                    expect(() => library.writeAlbum(folder)).toThrowError(`already exists`);
+                    expect(() => library.writeAlbum(folder)).toThrowError(`Unable to create album: Already exists`);
+                });
+
+                test(`Folder - named path already exists`, () => {
+                    const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
+                    const albumName = `Memories`;
+                    mockfs({
+                        [photosDataDir]: {
+                            [albumName]: {},
+                        },
+                    });
+                    const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
+                    const library = photosLibraryFactory();
+                    expect(() => library.writeAlbum(folder)).toThrowError(`Unable to create album: Already exists`);
                 });
 
                 test(`Folder - Invalid parent`, () => {
@@ -1176,7 +1185,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
                     expect(albumAsset1Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset1Filename));
 
-                    expect(handlerEvent).toHaveBeenCalledWith(new LibraryWarning(`Not linking ../_All-Photos/${albumAsset2Filename} to ${photosDataDir}/.${albumUUID}/${albumAsset2PrettyFilename} in album ${albumName}`));
+                    expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to link assets`));
                 });
             });
 
@@ -1296,7 +1305,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
                     const library = photosLibraryFactory();
 
-                    expect(() => library.deleteAlbum(folder)).toThrowError(`Unable to find uuid path`);
+                    expect(() => library.deleteAlbum(folder)).toThrowError(`Unable to find path`);
 
                     expect(fs.readlinkSync(path.join(photosDataDir, albumName)).length).toBeGreaterThan(0);
                 });
@@ -1313,7 +1322,7 @@ describe(`Unit Tests - Photos Library`, () => {
                     const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
                     const library = photosLibraryFactory();
 
-                    expect(() => library.deleteAlbum(folder)).toThrowError(`Unable to find albumName path`);
+                    expect(() => library.deleteAlbum(folder)).toThrowError(`Unable to find path`);
 
                     expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeTruthy();
                 });
@@ -1394,7 +1403,7 @@ describe(`Unit Tests - Photos Library`, () => {
                         expect(() => library.movePathTuple(
                             [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
                             [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
-                        )).toThrowError(`Supposed destination uuid path already exists`);
+                        )).toThrowError(`Unable to create album: Already exists`);
 
                         expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`))).toBeTruthy();
 
@@ -1436,7 +1445,7 @@ describe(`Unit Tests - Photos Library`, () => {
                         expect(() => library.movePathTuple(
                             [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
                             [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
-                        )).toThrowError(`Supposed destination path already exists`);
+                        )).toThrowError(`Unable to create album: Already exists`);
 
                         expect(fs.existsSync(path.join(stashDir, archivedName))).toBeTruthy();
                         expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeTruthy();
@@ -1504,7 +1513,7 @@ describe(`Unit Tests - Photos Library`, () => {
                         expect(() => library.movePathTuple(
                             [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
                             [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
-                        )).toThrowError(`Unable to find source uuid path`);
+                        )).toThrowError(`Unable to find path`);
                         expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeTruthy();
                     });
                 });

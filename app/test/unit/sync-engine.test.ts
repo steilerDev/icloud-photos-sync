@@ -12,10 +12,9 @@ import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
 import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted, mockSyncEngineForAlbumQueue, fetchAndLoadStateReturnValue, diffStateReturnValue, fetchAllPictureRecordsReturnValue, convertCPLAssetsReturnValue, fetchAllAlbumRecordsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue} from '../_helpers/sync-engine.helper';
 import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albums-helper';
-import {spyOnEvent} from '../_helpers/_general';
+import {createNamedError, spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
-import {SyncError, SyncWarning} from '../../src/app/error-types';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 
 beforeEach(() => {
@@ -29,7 +28,7 @@ afterEach(() => {
 describe(`Unit Tests - Sync Engine`, () => {
     describe(`Coordination`, () => {
         describe(`Sync`, () => {
-            test(`Succesfull on first try`, async () => {
+            test(`Successful on first try`, async () => {
                 const syncEngine = syncEngineFactory();
 
                 const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
@@ -74,7 +73,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
                 syncEngine.prepareRetry = jest.fn<() => Promise<void>>();
 
-                await expect(syncEngine.sync()).rejects.toEqual(new Error(`Sync did not complete successfully within 4 tries`));
+                await expect(syncEngine.sync()).rejects.toEqual(createNamedError(`SyncError`, `Sync did not complete successfully within expected amount of tries`));
 
                 expect(startEvent).toHaveBeenCalled();
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(4);
@@ -113,13 +112,9 @@ describe(`Unit Tests - Sync Engine`, () => {
                     return {error};
                 })(),
                 (() => {
-                    const error = new Error(`Bad Request - 421`) as unknown as AxiosError;
-                    error.name = `AxiosError`;
-                    error.code = `ERR_BAD_REQUEST`;
-                    error.response = {
-                        "status": 421,
-                    } as unknown as AxiosResponse;
-
+                    const error = new Error(`getaddrinfo EAI_AGAIN`) as unknown as AxiosError;
+                    error.name = `Error`;
+                    error.code = `EAI_AGAIN`;
                     return {error};
                 })(),
             ])(`Recoverable write failure - $error.message`, async ({error}) => {
@@ -151,7 +146,7 @@ describe(`Unit Tests - Sync Engine`, () => {
             });
 
             test(`Fatal failure - Unknown error`, async () => {
-                const error = new SyncError(`Unknown error, aborting!`);
+                const error = createNamedError(`SyncError`, `Unknown network error code`);
                 const syncEngine = syncEngineFactory();
                 const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
 
@@ -188,7 +183,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 syncEngine.writeState = jest.fn<() => Promise<void>>()
                     .mockRejectedValue(error);
 
-                await expect(syncEngine.sync()).rejects.toEqual(new SyncError(`Unknown network error code`));
+                await expect(syncEngine.sync()).rejects.toEqual(new Error(`Unknown network error code`));
 
                 expect(startEvent).toHaveBeenCalled();
                 expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
@@ -232,13 +227,13 @@ describe(`Unit Tests - Sync Engine`, () => {
             ])(`Prepare Retry - $msg`, async ({queue}) => {
                 const syncEngine = syncEngineFactory();
                 syncEngine.downloadQueue = queue as unknown as PQueue;
-                syncEngine.icloud.getiCloudCookies = jest.fn<() => Promise<void>>().mockResolvedValue();
+                syncEngine.icloud.setupAccount = jest.fn<() => Promise<void>>().mockResolvedValue();
                 syncEngine.icloud.getReady = jest.fn<() => Promise<void>>().mockResolvedValue();
 
                 await syncEngine.prepareRetry();
 
                 expect.assertions(queue ? 3 : 1);
-                expect(syncEngine.icloud.getiCloudCookies).toHaveBeenCalledTimes(1);
+                expect(syncEngine.icloud.setupAccount).toHaveBeenCalledTimes(1);
                 if (syncEngine.downloadQueue) {
                     expect(syncEngine.downloadQueue.size).toEqual(0);
                     expect(syncEngine.downloadQueue.pending).toEqual(0);
@@ -412,7 +407,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 "filenameEnc": `emhlbnl1LWx1by13bWZtU054bTl5MC11bnNwbGFzaC5qcGVn`,
                 "modified": 1660139199098,
                 "recordName": `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
-                "resourceType": `random.ressourceType`,
+                "resourceType": `random.resourceType`,
                 "resource": {
                     "fileChecksum": `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
                     "referenceChecksum": `AS/OBaLJzK8dRs8QM97ikJQfJEGI`,
@@ -1502,7 +1497,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.photosLibrary.retrieveStashedAlbum).not.toHaveBeenCalled();
                 expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenCalledTimes(3);
-                // Needs to be called from the furthes node
+                // Needs to be called from the furthest node
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(1, albumChildChild);
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(2, albumChild);
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(3, albumParent);
@@ -1522,7 +1517,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.photosLibrary.retrieveStashedAlbum).not.toHaveBeenCalled();
                 expect(syncEngine.photosLibrary.deleteAlbum).not.toHaveBeenCalled();
                 expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenCalledTimes(3);
-                // Needs to be called from the furthes node
+                // Needs to be called from the furthest node
                 expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(1, albumParent);
                 expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(2, albumChild);
                 expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(3, albumChildChild);
@@ -1545,7 +1540,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.photosLibrary.retrieveStashedAlbum).not.toHaveBeenCalled();
 
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenCalledTimes(3);
-                // Needs to be called from the furthes node
+                // Needs to be called from the furthest node
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(1, removeAlbumChildChild);
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(2, removeAlbumChild);
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(3, removeAlbumParent);
@@ -1585,7 +1580,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(2, addAlbumChild);
                 expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(3, addAlbumChildChild);
 
-                expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to add album ${addAlbumParent.getDisplayName()}`));
+                expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`SyncError`, `Unable to add album`));
             });
 
             test(`Deleting - HANDLER_EVENT fired on error`, async () => {
@@ -1609,14 +1604,14 @@ describe(`Unit Tests - Sync Engine`, () => {
                 expect(syncEngine.photosLibrary.retrieveStashedAlbum).not.toHaveBeenCalled();
 
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenCalledTimes(3);
-                // Needs to be called from the furthes node
+                // Needs to be called from the furthest node
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(1, removeAlbumChildChild);
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(2, removeAlbumChild);
                 expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(3, removeAlbumParent);
 
                 expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenCalledTimes(0);
 
-                expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to delete album ${removeAlbumChildChild.getDisplayName()}`));
+                expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`SyncError`, `Unable to delete album`));
             });
 
             describe(`Archive albums`, () => {
@@ -1637,7 +1632,7 @@ describe(`Unit Tests - Sync Engine`, () => {
                     expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenNthCalledWith(1, albumChildChild);
 
                     expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenCalledTimes(2);
-                    // Needs to be called from the furthes node
+                    // Needs to be called from the furthest node
                     expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(1, albumChild);
                     expect(syncEngine.photosLibrary.deleteAlbum).toHaveBeenNthCalledWith(2, albumParent);
                 });
@@ -1687,7 +1682,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
                     expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
 
-                    expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to retrieve stashed archived album ${album1.getDisplayName()}`));
+                    expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`SyncError`, `Unable to retrieve stashed archived album`));
                 });
 
                 test(`Stash - ERROR_HANDLE fired on error`, async () => {
@@ -1710,7 +1705,7 @@ describe(`Unit Tests - Sync Engine`, () => {
 
                     expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
 
-                    expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to stash archived album ${album2.getDisplayName()}`));
+                    expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`SyncError`, `Unable to stash archived album`));
                 });
             });
         });

@@ -7,7 +7,7 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch App - Sync",
+            "name": "Launch App",
             "skipFiles": [
                 "<node_internals>/**"
             ],
@@ -43,7 +43,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/app.test.ts"
+                "test/unit/sync-engine.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

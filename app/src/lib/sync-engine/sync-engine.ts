@@ -15,7 +15,8 @@ import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 import {SyncApp} from '../../app/icloud-app.js';
 import {HANDLER_EVENT} from '../../app/event/error-handler.js';
-import {SyncError, SyncWarning} from '../../app/error-types.js';
+import {iCPSError} from '../../app/error/error.js';
+import {SYNC_ERR} from '../../app/error/error-codes.js';
 
 /**
  * This class handles the photos sync
@@ -85,7 +86,8 @@ export class SyncEngine extends EventEmitter {
                 this.emit(SYNC_ENGINE.EVENTS.DONE);
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
-                this.emit(HANDLER_EVENT, new SyncWarning(`Error while writing state`).addCause(err));
+                this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.WRITE_STATE)
+                    .addCause(err));
                 // Checking if we should retry
                 this.checkFatalError(err);
 
@@ -95,7 +97,8 @@ export class SyncEngine extends EventEmitter {
         }
 
         // We'll only reach this, if we exceeded retryCount
-        throw new SyncError(`Sync did not complete successfully within ${retryCount} tries`);
+        throw new iCPSError(SYNC_ERR.MAX_RETRY)
+            .addMessage(`${retryCount}`);
     }
 
     /**
@@ -104,13 +107,6 @@ export class SyncEngine extends EventEmitter {
      * @throws If a fatal error occurred that should NOT be retried
      */
     checkFatalError(err: any): boolean {
-        if (err.name !== `AxiosError`) {
-            throw new SyncError(`Unknown error, aborting!`)
-                .addCause(err);
-        }
-
-        this.logger.debug(`Detected Axios error`);
-
         if (err.code === `ERR_BAD_RESPONSE`) {
             this.logger.debug(`Bad server response (${err.response?.status}), retrying...`);
             return false;
@@ -121,7 +117,12 @@ export class SyncEngine extends EventEmitter {
             return false;
         }
 
-        throw new SyncError(`Unknown network error code`)
+        if (err.code === `EAI_AGAIN`) {
+            this.logger.debug(`iCloud DNS record expired, refreshing session...`);
+            return false;
+        }
+
+        throw new iCPSError(SYNC_ERR.UNKNOWN_NETWORK)
             .addCause(err);
     }
 
@@ -145,7 +146,7 @@ export class SyncEngine extends EventEmitter {
 
         this.logger.debug(`Refreshing iCloud connection`);
         const iCloudReady = this.icloud.getReady();
-        this.icloud.getiCloudCookies();
+        this.icloud.setupAccount();
         await iCloudReady;
     }
 

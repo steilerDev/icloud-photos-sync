@@ -6,10 +6,11 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {ArchiveApp} from '../../app/icloud-app.js';
-import {ArchiveError, ArchiveWarning} from '../../app/error-types.js';
+import {iCPSError} from '../../app/error/error.js';
 import EventEmitter from 'events';
 import * as ARCHIVE_ENGINE from './constants.js';
 import {HANDLER_EVENT} from '../../app/event/error-handler.js';
+import {ARCHIVE_ERR} from '../../app/error/error-codes.js';
 
 export class ArchiveEngine extends EventEmitter {
     /**
@@ -55,19 +56,19 @@ export class ArchiveEngine extends EventEmitter {
 
         const albumName = path.basename(archivePath);
         if (albumName.startsWith(`.`)) {
-            throw new ArchiveError(`UUID path selected, use named path only`);
+            throw new iCPSError(ARCHIVE_ERR.UUID_PATH);
         }
 
         const parentFolderPath = path.dirname(archivePath);
         const [archivedAlbum, archivedAlbumPath] = await this.photosLibrary.readFolderFromDisk(albumName, parentFolderPath, ``);
         if (archivedAlbum.albumType !== AlbumType.ALBUM) {
-            throw new ArchiveError(`Only able to archive non-archived albums`);
+            throw new iCPSError(ARCHIVE_ERR.NON_ALBUM);
         }
 
         const loadedAlbum = (await this.photosLibrary.loadAlbum(archivedAlbum, archivedAlbumPath)).find(album => album.albumName === albumName);
 
         if (!loadedAlbum || Object.keys(loadedAlbum.assets).length === 0) {
-            throw new ArchiveError(`Unable to load album`);
+            throw new iCPSError(ARCHIVE_ERR.LOAD_FAILED);
         }
 
         const numberOfItems = Object.keys(loadedAlbum.assets).length;
@@ -82,7 +83,7 @@ export class ArchiveEngine extends EventEmitter {
             try {
                 await this.persistAsset(assetPath, archivedAssetPath);
             } catch (err) {
-                this.emit(HANDLER_EVENT, new ArchiveError(`Unable to persist asset`)
+                this.emit(HANDLER_EVENT, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
                     .addCause(err)
                     .addContext(`assetPath`, assetPath)
                     .addContext(`archivedAssetPath`, archivedAssetPath),
@@ -105,7 +106,7 @@ export class ArchiveEngine extends EventEmitter {
                 this.emit(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, uniqueDeleteList.length);
                 await this.icloud.photos.deleteAssets(uniqueDeleteList);
             } catch (err) {
-                throw new ArchiveError(`Unable to delete remote assets`)
+                throw new iCPSError(ARCHIVE_ERR.REMOTE_DELETE_FAILED)
                     .addCause(err);
             }
         }
@@ -141,11 +142,17 @@ export class ArchiveEngine extends EventEmitter {
         const asset = assetList.find(asset => asset.getUUID() === assetUUID);
 
         if (!asset) {
-            throw new ArchiveWarning(`Unable to find asset with UUID ${assetUUID}`).addContext(`assetList`, assetList);
+            throw new iCPSError(ARCHIVE_ERR.NO_REMOTE_ASSET)
+                .addMessage(assetUUID)
+                .addContext(`assetList`, assetList)
+                .setWarning();
         }
 
         if (!asset.recordName) {
-            throw new ArchiveWarning(`Unable to get record name for asset ${asset.getDisplayName()}`).addContext(`asset`, asset);
+            throw new iCPSError(ARCHIVE_ERR.NO_REMOTE_RECORD_NAME)
+                .addMessage(asset.getDisplayName())
+                .addContext(`asset`, asset)
+                .setWarning();
         }
 
         if (asset.isFavorite) {

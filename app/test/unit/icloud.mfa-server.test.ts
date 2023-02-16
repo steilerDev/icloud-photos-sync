@@ -1,12 +1,11 @@
 
 import {expect, describe, test, jest} from '@jest/globals';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
-import {iCloudWarning, MFAWarning} from '../../src/app/error-types';
 import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
 import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
-import {spyOnEvent} from '../_helpers/_general';
+import {createNamedError, spyOnEvent} from '../_helpers/_general';
 
 describe(`Unit Tests - MFA Server`, () => {
     describe(`MFA Code`, () => {
@@ -40,7 +39,7 @@ describe(`Unit Tests - MFA Server`, () => {
             server.handleMFACode(req, res);
 
             expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
-            expect(handlerEvent).toHaveBeenCalledWith(new MFAWarning(`Received unexpected MFA code format, expecting 6 digits`));
+            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Received unexpected MFA code format, expecting 6 digits`));
         });
     });
 
@@ -126,15 +125,15 @@ describe(`Unit Tests - MFA Server`, () => {
 
             server.handleMFAResend(req, res);
 
-            expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Method does not match expected format`);
-            expect(handlerEvent).toHaveBeenCalledWith(new MFAWarning(`Method does not match expected format`));
+            expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Resend method does not match expected format`);
+            expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`MFAError`, `Resend method does not match expected format`));
         });
 
         describe(`Process resend errors`, () => {
             describe.each([`sms`, `voice`, `device`])(`Common errors`, method => {
                 test(`Unknown error`, () => {
                     const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                    expect(mfaMethod.processResendError(new Error())).toEqual(new iCloudWarning(`No response received`));
+                    expect(mfaMethod.processResendError(new Error())).toEqual(new Error(`No response received`));
                 });
 
                 test(`Timeout`, () => {
@@ -145,7 +144,7 @@ describe(`Unit Tests - MFA Server`, () => {
                             "status": 403,
                         },
                     };
-                    expect(mfaMethod.processResendError(error)).toEqual(new iCloudWarning(`Timeout`));
+                    expect(mfaMethod.processResendError(error)).toEqual(new Error(`Timeout`));
                 });
 
                 test(`No response data`, () => {
@@ -156,7 +155,7 @@ describe(`Unit Tests - MFA Server`, () => {
                             "status": 412,
                         },
                     };
-                    expect(mfaMethod.processResendError(error)).toEqual(new iCloudWarning(`Bad request, no response data`));
+                    expect(mfaMethod.processResendError(error)).toEqual(createNamedError(`MFAError`, `Precondition Failed (412) with no response`));
                 });
 
                 test(`Unexpected status code`, () => {
@@ -167,7 +166,7 @@ describe(`Unit Tests - MFA Server`, () => {
                             "status": 500,
                         },
                     };
-                    expect(mfaMethod.processResendError(error)).toEqual(new iCloudWarning(`Bad request, unknown cause with method ${mfaMethod}`));
+                    expect(mfaMethod.processResendError(error)).toEqual(createNamedError(`MFAError`, `Unknown error, while trying to resend MFA code`));
                 });
             });
 
@@ -181,7 +180,7 @@ describe(`Unit Tests - MFA Server`, () => {
                             "data": {},
                         },
                     };
-                    expect(mfaMethod.processResendError(error)).toEqual(new iCloudWarning(`No trusted phone numbers registered`));
+                    expect(mfaMethod.processResendError(error)).toEqual(new Error(`No trusted phone numbers registered`));
                 });
 
                 test(`Phone number ID does not exist`, () => {
@@ -204,7 +203,7 @@ describe(`Unit Tests - MFA Server`, () => {
                             },
                         },
                     };
-                    expect(mfaMethod.processResendError(error)).toEqual(new iCloudWarning(`Selected Phone Number ID does not exist.\nAvailable numbers:\n- 2: +49-123-456\n- 3: +49-789-123`));
+                    expect(mfaMethod.processResendError(error)).toEqual(new Error(`Selected Phone Number ID does not exist.`));
                 });
             });
         });
@@ -273,7 +272,7 @@ describe(`Unit Tests - MFA Server`, () => {
             server.handleRequest(req, res);
 
             expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Method not supported: ${method}`);
-            expect(handlerEvent).toHaveBeenCalledWith(new MFAWarning(`Received unknown method to endpoint /invalid: ${method}`));
+            expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`MFAError`, `Received request with unsupported method`));
             expect(server.handleMFAResend).not.toHaveBeenCalled();
             expect(server.handleMFACode).not.toHaveBeenCalled();
         });
@@ -292,7 +291,7 @@ describe(`Unit Tests - MFA Server`, () => {
             server.handleRequest(req, res);
 
             expect(server.sendResponse).toHaveBeenCalledWith(res, 404, `Route not found, available endpoints: ["/mfa","/resend_mfa"]`);
-            expect(handlerEvent).toHaveBeenCalledWith(new MFAWarning(`Received request to unknown endpoint /invalid`));
+            expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`MFAError`, `Received request to unknown endpoint`));
             expect(server.handleMFAResend).not.toHaveBeenCalled();
             expect(server.handleMFACode).not.toHaveBeenCalled();
         });

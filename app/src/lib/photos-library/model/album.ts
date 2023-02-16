@@ -1,4 +1,5 @@
-import {LibraryError} from "../../../app/error-types.js";
+import {LIBRARY_ERR} from "../../../app/error/error-codes.js";
+import {iCPSError} from "../../../app/error/error.js";
 import {CPLAlbum} from "../../icloud/icloud-photos/query-parser.js";
 import {STASH_DIR} from "../constants.js";
 import {PEntity} from "./photos-entity.js";
@@ -204,6 +205,6 @@ export class Album implements PEntity<Album> {
             return Album.distanceToRoot(parent, fullQueue) + 1;
         }
 
-        throw new LibraryError(`Unable to determine distance to root, no link to root!`);
+        throw new iCPSError(LIBRARY_ERR.NO_DISTANCE_TO_ROOT);
     }
 }

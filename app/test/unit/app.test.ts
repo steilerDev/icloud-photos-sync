@@ -6,7 +6,6 @@ import {ArchiveApp, DaemonApp, DaemonAppEvents, LIBRARY_LOCK_FILE, SyncApp, Toke
 import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {Album} from '../../src/lib/photos-library/model/album';
-import {ArchiveError, iCloudError, LibraryError, SyncError} from '../../src/app/error-types';
 import {spyOnEvent} from '../_helpers/_general';
 import {EVENTS} from '../../src/lib/icloud/constants';
 import path from 'path';
@@ -88,7 +87,7 @@ describe(`Unit Tests - iCloud App`, () => {
             tokenApp.icloud.authenticate = jest.fn(() => Promise.reject(new Error()));
             tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-            await expect(tokenApp.run()).rejects.toThrowError(new iCloudError(`Unable to get trust token`));
+            await expect(tokenApp.run()).rejects.toThrowError(new Error(`Unable to acquire trust token`));
 
             expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
             expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -100,7 +99,7 @@ describe(`Unit Tests - iCloud App`, () => {
             tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
             tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-            await expect(tokenApp.run()).rejects.toThrowError(new ArchiveError(`Unable to get trust token`));
+            await expect(tokenApp.run()).rejects.toThrowError(new Error(`Unable to acquire trust token`));
 
             expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
             expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -151,7 +150,7 @@ describe(`Unit Tests - iCloud App`, () => {
                 syncApp.syncEngine.sync = jest.fn(() => Promise.reject(new Error()));
                 syncApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-                await expect(syncApp.run()).rejects.toThrowError(new SyncError(`Sync failed`));
+                await expect(syncApp.run()).rejects.toThrowError(new Error(`Sync failed`));
 
                 expect(syncApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
                 expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
@@ -187,7 +186,7 @@ describe(`Unit Tests - iCloud App`, () => {
                 archiveApp.archiveEngine.archivePath = jest.fn(() => Promise.reject(new Error()));
                 archiveApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-                await expect(archiveApp.run()).rejects.toThrowError(new ArchiveError(`Archive failed`));
+                await expect(archiveApp.run()).rejects.toThrowError(new Error(`Archive failed`));
 
                 expect(archiveApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
                 expect(archiveApp.icloud.authenticate).toHaveBeenCalledTimes(1);
@@ -263,7 +262,7 @@ describe(`Unit Tests - iCloud App`, () => {
                 },
             });
 
-            await expect(tokenApp.acquireLibraryLock()).rejects.toThrowError(new LibraryError(`Locked by PID ${notThisPID}. Use --force (or FORCE env variable) to forcefully remove the lock`));
+            await expect(tokenApp.acquireLibraryLock()).rejects.toThrowError(new Error(`Library locked. Use --force (or FORCE env variable) to forcefully remove the lock`));
             expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
         });
 
@@ -309,7 +308,7 @@ describe(`Unit Tests - iCloud App`, () => {
                 },
             });
 
-            await expect(tokenApp.releaseLibraryLock()).rejects.toThrowError(new LibraryError(`Locked by PID ${notThisPID}, cannot release. Use --force (or FORCE env variable) to forcefully remove the lock`));
+            await expect(tokenApp.releaseLibraryLock()).rejects.toThrowError(new Error(`Library locked. Use --force (or FORCE env variable) to forcefully remove the lock`));
 
             expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
         });
@@ -332,7 +331,7 @@ describe(`Unit Tests - iCloud App`, () => {
         test(`Release lock error - no lock`, async () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
 
-            await expect(tokenApp.releaseLibraryLock()).rejects.toThrowError(new LibraryError(`Unable to release library lock, no lock exists`));
+            await expect(tokenApp.releaseLibraryLock()).rejects.toThrowError(new Error(`Unable to release library lock`));
 
             expect(!fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
         });

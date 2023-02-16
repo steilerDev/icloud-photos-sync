@@ -2,7 +2,7 @@
     "preset": "ts-jest/presets/default-esm-legacy",
     "testEnvironment": "node",
     "testRegex": "\\.test\\.ts$",
-    "slowTestThreshold": 10,
+    "slowTestThreshold": 30,
     "reporters": [
       "default",
       "github-actions"
@@ -12,7 +12,7 @@
       "src/**/*.ts",
       "!src/main.ts",
       "!src/app/event/*",
-      "!src/app/error-types.ts",
+      "!src/app/error/*",
       "!src/lib/package.ts",
       "!src/lib/logger.ts",
       "!src/lib/photos-library/model/photos-entity.ts"

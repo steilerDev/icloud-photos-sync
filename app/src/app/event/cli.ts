@@ -102,7 +102,7 @@ export class CLIInterface implements EventHandler {
      * @returns A horizontal line
      */
     getHorizontalLine(): string {
-        return this.enableCLIOutput ? `-`.repeat(process.stdout.columns) : `undefined`;
+        return `-`.repeat(process.stdout.columns);
     }
 
     /**

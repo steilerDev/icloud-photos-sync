@@ -17,7 +17,7 @@ describe(`Unit Tests - iCloud Auth`, () => {
                 }),
             });
             const auth = iCloudAuthFactory();
-            await expect(auth.storeTrustToken()).rejects.toThrowError(`Unable to create trust token directory`);
+            await expect(auth.storeTrustToken()).rejects.toThrowError(`Unable to store trust token`);
         });
 
         test(`Unable to store trust token`, async () => {
@@ -27,7 +27,7 @@ describe(`Unit Tests - iCloud Auth`, () => {
                 }),
             });
             const auth = iCloudAuthFactory();
-            await expect(auth.storeTrustToken()).rejects.toThrowError(`Unable to persist trust token to disk`);
+            await expect(auth.storeTrustToken()).rejects.toThrowError(`Unable to store trust token`);
         });
     });
 
@@ -35,13 +35,13 @@ describe(`Unit Tests - iCloud Auth`, () => {
         test(`No cookies loaded`, () => {
             const auth = iCloudAuthFactory();
             auth.iCloudCookies = [];
-            expect(() => auth.validateCloudCookies()).toThrowError(`Unable to validate cloud cookies: No cookies loaded`);
+            expect(() => auth.validateCloudCookies()).toThrowError(`Unable to validate cookies`);
         });
 
         test(`Expired cookies loaded`, () => {
             const auth = iCloudAuthFactory();
             auth.iCloudCookies = getICloudCookies(true);
-            expect(() => auth.validateCloudCookies()).toThrowError(`Unable to validate cloud cookies: Some cookies are expired`);
+            expect(() => auth.validateCloudCookies()).toThrowError(`Unable to validate cookies`);
         });
 
         test(`Object valid`, () => {
@@ -95,7 +95,7 @@ describe(`Unit Tests - iCloud Auth`, () => {
             auth.validateCloudCookies = jest.fn();
             Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
             auth.iCloudPhotosAccount.zoneName = undefined;
-            expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate Photos account: ZoneName invalid`);
+            expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate photos account`);
             expect(auth.validateCloudCookies).toHaveBeenCalled();
         });
 
@@ -104,7 +104,7 @@ describe(`Unit Tests - iCloud Auth`, () => {
             auth.validateCloudCookies = jest.fn();
             Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
             auth.iCloudPhotosAccount.photosDomain = ``;
-            expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate Photos account: PhotosDomain invalid`);
+            expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate photos account`);
             expect(auth.validateCloudCookies).toHaveBeenCalled();
         });
 
@@ -113,7 +113,7 @@ describe(`Unit Tests - iCloud Auth`, () => {
             auth.validateCloudCookies = jest.fn();
             Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
             auth.iCloudPhotosAccount.zoneType = ``;
-            expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate Photos account: ZoneType invalid`);
+            expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate photos account`);
             expect(auth.validateCloudCookies).toHaveBeenCalled();
         });
         test(`ownerName missing`, () => {
@@ -121,7 +121,7 @@ describe(`Unit Tests - iCloud Auth`, () => {
             auth.validateCloudCookies = jest.fn();
             Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
             auth.iCloudPhotosAccount.ownerName = ``;
-            expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate Photos account: OwnerName invalid`);
+            expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate photos account`);
             expect(auth.validateCloudCookies).toHaveBeenCalled();
         });
 
@@ -139,14 +139,14 @@ describe(`Unit Tests - iCloud Auth`, () => {
             const auth = iCloudAuthFactory();
             auth.iCloudAccountSecrets.username = ``;
             auth.iCloudAccountSecrets.password = Config.password;
-            expect(() => auth.validateAccountSecrets()).toThrowError(`Unable to validate account secrets: Username invalid`);
+            expect(() => auth.validateAccountSecrets()).toThrowError(`Unable to validate account secrets`);
         });
 
         test(`password missing`, () => {
             const auth = iCloudAuthFactory();
             auth.iCloudAccountSecrets.username = Config.username;
             auth.iCloudAccountSecrets.password = ``;
-            expect(() => auth.validateAccountSecrets()).toThrowError(`Unable to validate account secrets: Password invalid`);
+            expect(() => auth.validateAccountSecrets()).toThrowError(`Unable to validate account secrets`);
         });
 
         test(`Object valid`, () => {
@@ -162,20 +162,20 @@ describe(`Unit Tests - iCloud Auth`, () => {
             const auth = iCloudAuthFactory();
             Object.assign(auth.iCloudAuthSecrets, Config.iCloudAuthSecrets);
             auth.iCloudAuthSecrets.aasp = ``;
-            expect(() => auth.validateAuthSecrets()).toThrowError(`Unable to validate auth secrets: aasp invalid`);
+            expect(() => auth.validateAuthSecrets()).toThrowError(`Unable to validate auth secrets`);
         });
         test(`scnt missing`, () => {
             const auth = iCloudAuthFactory();
             Object.assign(auth.iCloudAuthSecrets, Config.iCloudAuthSecrets);
             auth.iCloudAuthSecrets.scnt = ``;
-            expect(() => auth.validateAuthSecrets()).toThrowError(`Unable to validate auth secrets: scnt invalid`);
+            expect(() => auth.validateAuthSecrets()).toThrowError(`Unable to validate auth secrets`);
         });
 
         test(`sessionId missing`, () => {
             const auth = iCloudAuthFactory();
             Object.assign(auth.iCloudAuthSecrets, Config.iCloudAuthSecrets);
             auth.iCloudAuthSecrets.sessionId = ``;
-            expect(() => auth.validateAuthSecrets()).toThrowError(`Unable to validate auth secrets: sessionId invalid`);
+            expect(() => auth.validateAuthSecrets()).toThrowError(`Unable to validate auth secrets`);
         });
 
         test(`Object valid`, () => {
@@ -190,14 +190,14 @@ describe(`Unit Tests - iCloud Auth`, () => {
             const auth = iCloudAuthFactory();
             auth.iCloudAccountTokens.sessionToken = ``;
             auth.iCloudAccountTokens.trustToken = Config.trustToken;
-            expect(() => auth.validateAccountTokens()).toThrowError(`Unable to validate account tokens: sessionToken invalid`);
+            expect(() => auth.validateAccountTokens()).toThrowError(`Unable to validate account tokens`);
         });
 
         test(`Trust Token missing`, () => {
             const auth = iCloudAuthFactory();
             auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
             auth.iCloudAccountTokens.trustToken = ``;
-            expect(() => auth.validateAccountTokens()).toThrowError(`Unable to validate account tokens: trustToken invalid`);
+            expect(() => auth.validateAccountTokens()).toThrowError(`Unable to validate account tokens`);
         });
 
         test(`Object valid`, () => {

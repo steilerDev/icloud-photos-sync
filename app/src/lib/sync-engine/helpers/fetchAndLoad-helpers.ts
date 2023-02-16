@@ -1,5 +1,6 @@
 import path from "path";
-import {LibraryError} from "../../../app/error-types.js";
+import {SYNC_ERR} from "../../../app/error/error-codes.js";
+import {iCPSError} from "../../../app/error/error.js";
 import {CPLAlbum, CPLAsset, CPLMaster} from "../../icloud/icloud-photos/query-parser.js";
 import {Album} from "../../photos-library/model/album.js";
 import {Asset, AssetType} from "../../photos-library/model/asset.js";
@@ -33,7 +34,7 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
             }
         } catch (err) {
             // In case missing filetype descriptor is thrown, adding asset context to error
-            throw new LibraryError(`Error while converting asset`)
+            throw new iCPSError(SYNC_ERR.CONVERSION)
                 .addCause(err)
                 .addContext(`cplAsset`, asset)
                 .addContext(`cplMaster`, master);

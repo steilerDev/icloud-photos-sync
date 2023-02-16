@@ -1,5 +1,6 @@
 import {AxiosResponse} from 'axios';
-import {iCloudError, iCloudWarning} from '../../../app/error-types.js';
+import {MFA_ERR} from '../../../app/error/error-codes.js';
+import {iCPSError} from '../../../app/error/error.js';
 import * as ICLOUD from '../constants.js';
 
 /**
@@ -148,20 +149,26 @@ export class MFAMethod {
     /**
      * Will take the Axios Error returned from the backend, and provide a user-readable string
      * @param err - The error returned
-     * @returns A iCloudWarning indicating the underlying issue
+     * @returns An iCPSError indicating the underlying issue
      */
-    processResendError(err: any): iCloudError {
-        if (!(err.name === `AxiosError`) || !err.response) {
-            return new iCloudWarning(`No response received`).addCause(err);
+    processResendError(err: any): iCPSError {
+        if (err.name !== `AxiosError` || !err.response) {
+            return new iCPSError(MFA_ERR.NO_RESPONSE)
+                .setWarning()
+                .addCause(err);
         }
 
         if (err.response.status === 403) {
-            return new iCloudWarning(`Timeout`).addCause(err);
+            return new iCPSError(MFA_ERR.TIMEOUT)
+                .setWarning()
+                .addCause(err);
         }
 
         if (err.response.status === 412) {
             if (!err.response.data) {
-                return new iCloudWarning(`Bad request, no response data`).addCause(err);
+                return new iCPSError(MFA_ERR.PRECONDITION_FAILED)
+                    .setWarning()
+                    .addCause(err);
             }
 
             if (this.type === MFAMethodType.SMS || this.type === MFAMethodType.VOICE) {
@@ -169,20 +176,25 @@ export class MFAMethod {
                 if (!trustedPhones
                     || !Array.isArray(trustedPhones)
                     || trustedPhones.length === 0) {
-                    return new iCloudWarning(`No trusted phone numbers registered`)
+                    return new iCPSError(MFA_ERR.NO_TRUSTED_NUMBERS)
+                        .setWarning()
                         .addContext(`response.data`, err.response.data)
                         .addCause(err);
                 }
 
                 if (!trustedPhones.some(number => number.id === this.numberId)) {
-                    return new iCloudWarning(`Selected Phone Number ID does not exist.\nAvailable numbers:\n${trustedPhones.map(number => `- ${number.id}: ${number.numberWithDialCode}`).join(`\n`)}`)
+                    return new iCPSError(MFA_ERR.TRUSTED_NUMBER_NOT_AVAILABLE)
+                        .setWarning()
+                        .addMessage(`available numbers:\n${trustedPhones.map(number => `- ${number.id}: ${number.numberWithDialCode}`).join(`\n`)}`)
                         .addContext(`response.data`, err.response.data)
                         .addCause(err);
                 }
             }
         }
 
-        return new iCloudWarning(`Bad request, unknown cause with method ${this}`)
+        return new iCPSError(MFA_ERR.UNKNOWN_RESEND_ERROR)
+            .setWarning()
+            .addMessage(`method ${this}`)
             .addCause(err);
     }
 

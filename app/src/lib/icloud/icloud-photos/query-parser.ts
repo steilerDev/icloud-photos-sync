@@ -3,8 +3,9 @@
  * These parsers will not try to validate data, only make it easily accessible
  */
 
-import {iCloudError} from '../../../app/error-types.js';
+import {iCPSError} from '../../../app/error/error.js';
 import {AlbumAssets} from '../../photos-library/model/album.js';
+import {QUERY_PARSER_ERR} from '../../../app/error/error-codes.js';
 
 /**
  * Represents a resources returned from the API, called 'asset id' as per API. Can be found as a record on a CPLAsset or CPLMaster
@@ -40,7 +41,7 @@ export class AssetID {
      */
     static parseFromQuery(assetId: unknown): AssetID {
         if (!isAssetIDQuery(assetId)) {
-            throw new iCloudError(`Query response cannot be parsed`)
+            throw new iCPSError(QUERY_PARSER_ERR.ASSET_ID_FORMAT)
                 .addContext(`query`, assetId);
         }
 
@@ -122,7 +123,7 @@ export class CPLAsset {
      */
     static parseFromQuery(cplRecord: unknown): CPLAsset {
         if (!isCPLAssetQuery(cplRecord)) {
-            throw new iCloudError(`Query response cannot be parsed`)
+            throw new iCPSError(QUERY_PARSER_ERR.CPLASSET_FORMAT)
                 .addContext(`query`, cplRecord);
         }
 
@@ -243,7 +244,7 @@ export class CPLMaster {
      */
     static parseFromQuery(cplRecord: unknown): CPLMaster {
         if (!isCPLMasterQuery(cplRecord)) {
-            throw new iCloudError(`Query response cannot be parsed`)
+            throw new iCPSError(QUERY_PARSER_ERR.CPLMASTER_FORMAT)
                 .addContext(`query`, cplRecord);
         }
 
@@ -322,7 +323,7 @@ export class CPLAlbum {
 
     static parseFromQuery(cplRecord: unknown, assets?: Promise<AlbumAssets>): CPLAlbum {
         if (!isCPLAlbumQuery(cplRecord)) {
-            throw new iCloudError(`Query response cannot be parsed`)
+            throw new iCPSError(QUERY_PARSER_ERR.CPLALBUM_FORMAT)
                 .addContext(`query`, cplRecord);
         }
 

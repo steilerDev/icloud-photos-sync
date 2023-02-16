@@ -1,4 +1,5 @@
-import {LibraryError} from "../../../app/error-types.js";
+import {iCPSError} from "../../../app/error/error.js";
+import {LIBRARY_ERR} from "../../../app/error/error-codes.js";
 
 /**
  * Mapping of backend provided filetype description (key) and actual file extension (value)
@@ -33,7 +34,7 @@ const EXT = {
     'com.pentax.raw-image': `pef`,
     'com.nikon.raw-image': `nef`,
     'com.olympus.raw-image': `orf`,
-    'public.avi': 'avi'
+    'public.avi': `avi`,
 };
 
 /**
@@ -62,7 +63,8 @@ export class FileType {
      */
     static fromAssetType(descriptor: string, ext: string): FileType {
         if (!EXT[descriptor]) {
-            throw new LibraryError(`Unknown filetype descriptor ${descriptor} (with potential extension ${ext})`);
+            throw new iCPSError(LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR)
+                .addMessage(`${descriptor} (with potential extension ${ext})`);
         }
 
         return new FileType(descriptor);
@@ -81,7 +83,8 @@ export class FileType {
 
         const descriptor = Object.keys(EXT).find(key => EXT[key] === ext);
         if (!descriptor) {
-            throw new LibraryError(`Unknown filetype extension: ${ext}`);
+            throw new iCPSError(LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION)
+                .addMessage(ext);
         }
 
         return new FileType(descriptor);

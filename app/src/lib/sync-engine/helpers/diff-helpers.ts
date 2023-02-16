@@ -3,10 +3,11 @@
  */
 
 import {HANDLER_EVENT} from "../../../app/event/error-handler.js";
-import {SyncError} from "../../../app/error-types.js";
+import {iCPSError} from "../../../app/error/error.js";
 import {Album} from "../../photos-library/model/album.js";
 import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../../photos-library/model/photos-entity.js";
 import {SyncEngine} from "../sync-engine.js";
+import {SYNC_ERR} from "../../../app/error/error-codes.js";
 
 /**
  * This function diffs two entity arrays (can be either Albums or Assets) and returns the corresponding processing queue
@@ -59,7 +60,9 @@ export function resolveHierarchicalDependencies(this: SyncEngine, queues: PLibra
     toBeKept.forEach((keptAlbum, index) => {
         // Check if any of the deleted is an ancestor of the kept album
         if (toBeDeleted.some(deletedAlbum => keptAlbum.hasAncestor(deletedAlbum, localAlbums))) {
-            this.emit(HANDLER_EVENT, new SyncError(`Album ${keptAlbum.getDisplayName()} has hierarchical dependency, marking it for deletion & re-addition`)
+            this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.HIERARCHICAL_DEPENDENCY)
+                .setWarning()
+                .addMessage(keptAlbum.getDisplayName())
                 .addContext(`keptAlbum`, keptAlbum)
                 .addContext(`localAlbums`, localAlbums),
             );
