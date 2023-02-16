@@ -4,6 +4,7 @@
 
   * Filetype support added for
     * `avi`
+  * Reworked error structure
 
 ## v1.0.1
 
