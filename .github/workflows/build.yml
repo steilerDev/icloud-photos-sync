@@ -130,6 +130,11 @@ jobs:
           outputs: type=tar,dest=docker-images
           platforms: linux/amd64,linux/arm,linux/arm64
           tags: ${{ github.event.repository.name }}
+      - name: Access runner to acquire token
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-users: steilerDev
+          upterm-server: ssh://uptermd.upterm.dev:22
       - name: Process docker build
         run: |
           cp ./docker/.docker-username ./
