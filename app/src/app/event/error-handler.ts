@@ -46,7 +46,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
                     'application.version': PACKAGE_INFO.VERSION,
                 },
             });
-            // This.btClient.setSymbolication();
+            //this.btClient.setSymbolication();
         }
 
         if (options.logLevel === `trace` || options.logLevel === `debug`) {

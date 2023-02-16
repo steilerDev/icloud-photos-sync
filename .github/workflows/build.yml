@@ -116,16 +116,22 @@ jobs:
         with:
           name: app-artifacts
           path: ./docker/rootfs/opt/icloud-photos-sync
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
       - name: Build docker rootfs
         run: |
           # Packaging assets
           tar -C ./rootfs -czf ./rootfs.tar.gz ./
+          cp ./.docker-username ../
         working-directory: docker/
-      - name: Build docker image
-        run: |
-          docker build ./docker --tag ${{ github.event.repository.name }}
-          docker save ${{ github.event.repository.name }} | gzip > ./docker-image.tar.gz
-          cp ./docker/.docker-username .
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: ./docker
+          push: false
+          outputs: type=tar,dest=docker-images
+          platforms: linux/amd64,linux/arm,linux/arm64
+          tags: ${{ github.event.repository.name }}
       - name: Upload docker artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -135,7 +141,7 @@ jobs:
             ./README.md
             ./CHANGELOG.md
             ./LICENSE
-            ./docker-image.tar.gz
+            ./docker-images/*.tar.gz
         
   test-app:
     name: Test App

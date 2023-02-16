@@ -44,7 +44,7 @@
   ],
   "backtrace": {
     "sourcemap": {
-      "upload": "https://steilerdev.sp.backtrace.io:6098/post?format=sourcemap&token=617cffdeec78a9060d9f10ea3973c740118b109f8731348740ca1f387be0f379"
+      "upload": "https://steilerdev.sp.backtrace.io:6098/post?format=sourcemap&token=617cffdeec78a9060d9f10ea3973c740118b109f8731348740ca1f387be0f379&project=icloud-photos-sync&universe=steilerdev"
     }
   },
   "devDependencies": {
