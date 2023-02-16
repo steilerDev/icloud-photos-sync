@@ -122,16 +122,21 @@ jobs:
         run: |
           # Packaging assets
           tar -C ./rootfs -czf ./rootfs.tar.gz ./
-          cp ./.docker-username ../
         working-directory: docker/
-      - name: Build and push
+      - name: Build multi arch
         uses: docker/build-push-action@v3
         with:
           context: ./docker
-          push: false
           outputs: type=tar,dest=docker-images
           platforms: linux/amd64,linux/arm,linux/arm64
           tags: ${{ github.event.repository.name }}
+      - name: Process docker build
+        run: |
+          cp ./.docker-username ../
+          for filename in /docker-images/*.tar; do
+            echo "Compressing $filename"
+            gzip $filename
+          done
       - name: Upload docker artifacts
         uses: actions/upload-artifact@v3
         with:
