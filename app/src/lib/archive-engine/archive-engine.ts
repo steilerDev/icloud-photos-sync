@@ -115,14 +115,18 @@ export class ArchiveEngine extends EventEmitter {
     }
 
     /**
-     * Persists a locally cached asset in the proper folder
+     * Persists a locally cached asset in the proper folder - applying original files m & a times accordingly
      * @param assetPath - Path to the assets file path in the Assets folder
      * @param archivedAssetPath - The target path of the asset (with filename)
      * @returns A Promise that resolves, once the file has been copied
      */
     async persistAsset(assetPath: string, archivedAssetPath: string): Promise<void> {
         this.logger.debug(`Persisting ${assetPath} to ${archivedAssetPath}`);
-        return fs.unlink(archivedAssetPath).then(() => fs.copyFile(assetPath, archivedAssetPath));
+        const fileStat = await fs.stat(assetPath);
+        // Const lFileStat = await fs.lstat(archivedAssetPath)
+        await fs.unlink(archivedAssetPath);
+        await fs.copyFile(assetPath, archivedAssetPath);
+        await fs.utimes(archivedAssetPath, fileStat.mtime, fileStat.mtime);
     }
 
     /**

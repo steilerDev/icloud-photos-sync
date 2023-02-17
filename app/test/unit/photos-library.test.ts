@@ -492,7 +492,7 @@ describe(`Unit Tests - Photos Library`, () => {
 
                 const library = photosLibraryFactory();
                 const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
-                await expect(library.verifyAsset(asset)).resolves.toEqual(true)
+                await expect(library.verifyAsset(asset)).resolves.toEqual(true);
             });
 
             test.each([
@@ -501,8 +501,8 @@ describe(`Unit Tests - Photos Library`, () => {
                 [100],
                 [-100],
                 [1000],
-                [-1000]
-            ])(`Successfully verify asset within range of %i ms`, async (range) => {
+                [-1000],
+            ])(`Successfully verify asset within range of %i ms`, async range => {
                 const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
                 const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
                 const assetExt = `jpeg`;
@@ -520,7 +520,7 @@ describe(`Unit Tests - Photos Library`, () => {
 
                 const library = photosLibraryFactory();
                 const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
-                await expect(library.verifyAsset(asset)).resolves.toEqual(true)
+                await expect(library.verifyAsset(asset)).resolves.toEqual(true);
             });
 
             test(`Reject unverifiable asset - Wrong Size`, async () => {
@@ -541,7 +541,7 @@ describe(`Unit Tests - Photos Library`, () => {
 
                 const library = photosLibraryFactory();
                 const asset = new Asset(assetChecksum, 1, fileType, assetMTime);
-                await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File's size does not match iCloud record`))
+                await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File's size does not match iCloud record`));
             });
 
             test.each([
@@ -551,7 +551,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 [-10000],
                 [1000000000],
                 [-1000000000],
-            ])(`Reject unverifiable asset - Wrong MTime due to range of %i ms`, async (range) => {
+            ])(`Reject unverifiable asset - Wrong MTime due to range of %i ms`, async range => {
                 const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
                 const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
                 const assetExt = `jpeg`;
@@ -569,7 +569,7 @@ describe(`Unit Tests - Photos Library`, () => {
 
                 const library = photosLibraryFactory();
                 const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
-                await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File's modification time does not match iCloud record`))
+                await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File's modification time does not match iCloud record`));
             });
 
             // Checksum verification is currently not understood/implemented. Therefore skipping
@@ -639,7 +639,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                library.verifyAsset = jest.fn(() => Promise.reject(new Error('Invalid file')));
+                library.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
 
                 const response = await axios.get(url, config);
                 await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset`);
@@ -1369,17 +1369,37 @@ describe(`Unit Tests - Photos Library`, () => {
                         const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
                         const archivedName = `2015 - 2016`;
                         const asset1Name = `stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg`;
+                        const asset1Modified = Date.now() - 10000;
                         const asset2Name = `steve-johnson-gkfvdCEbUbQ-unsplash.jpeg`;
+                        const asset2Modified = Date.now() - 15000;
                         const asset3Name = `steve-johnson-T12spiHYons-unsplash.jpeg`;
+                        const asset3Modified = Date.now() - 13000;
                         const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
+                        const asset4Modified = Date.now() - 16000;
 
                         mockfs({
                             [photosDataDir]: {
                                 [`.${archivedUUID}`]: {
-                                    [asset1Name]: Buffer.from([1, 1, 1, 1]),
-                                    [asset2Name]: Buffer.from([1, 1, 1, 1]),
-                                    [asset3Name]: Buffer.from([1, 1, 1, 1]),
-                                    [asset4Name]: Buffer.from([1, 1, 1, 1]),
+                                    [asset1Name]: mockfs.file({
+                                        "content": Buffer.from([1, 1, 1, 1]),
+                                        "ctime": new Date(asset1Modified),
+                                        "mtime": new Date(asset1Modified),
+                                    }),
+                                    [asset2Name]: mockfs.file({
+                                        "content": Buffer.from([1, 1, 1, 1]),
+                                        "atime": new Date(asset2Modified),
+                                        "mtime": new Date(asset2Modified),
+                                    }),
+                                    [asset3Name]: mockfs.file({
+                                        "content": Buffer.from([1, 1, 1, 1]),
+                                        "atime": new Date(asset3Modified),
+                                        "mtime": new Date(asset3Modified),
+                                    }),
+                                    [asset4Name]: mockfs.file({
+                                        "content": Buffer.from([1, 1, 1, 1]),
+                                        "atime": new Date(asset4Modified),
+                                        "mtime": new Date(asset4Modified),
+                                    }),
                                 },
                                 [archivedName]: mockfs.symlink({
                                     "path": `.${archivedUUID}`,
@@ -1395,9 +1415,13 @@ describe(`Unit Tests - Photos Library`, () => {
 
                         expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`))).toBeTruthy();
                         expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
+                        expect(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset1Name)).mtimeMs).toEqual(asset1Modified);
                         expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
+                        expect(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset2Name)).mtimeMs).toEqual(asset2Modified);
                         expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
+                        expect(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset3Name)).mtimeMs).toEqual(asset3Modified);
                         expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
+                        expect(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset4Name)).mtimeMs).toEqual(asset4Modified);
                         expect(fs.existsSync(path.join(stashDir, archivedName))).toBeTruthy();
 
                         expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeFalsy();

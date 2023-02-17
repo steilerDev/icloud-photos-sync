@@ -31,11 +31,11 @@ export async function addAsset(this: SyncEngine, asset: Asset) {
     this.logger.info(`Adding asset ${asset.getDisplayName()}`);
 
     try {
-        await this.photosLibrary.verifyAsset(asset)
+        await this.photosLibrary.verifyAsset(asset);
         this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
-        return
-    } catch(err) {
+        return;
+    } catch (err) {
         const data = await this.icloud.photos.downloadAsset(asset);
         await this.photosLibrary.writeAsset(asset, data);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());

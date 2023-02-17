@@ -1,12 +1,11 @@
 import path from 'path';
 import {AssetID} from '../../icloud/icloud-photos/query-parser.js';
 import {FileType} from './file-type.js';
-import { Stats } from 'fs';
-import fs from 'fs/promises'
+import {Stats} from 'fs';
+import fs from 'fs/promises';
 import {PEntity} from './photos-entity.js';
-import { iCPSApp } from '../../../app/icloud-app.js';
-import { iCPSError } from '../../../app/error/error.js';
-import { LIBRARY_ERR } from '../../../app/error/error-codes.js';
+import {iCPSError} from '../../../app/error/error.js';
+import {LIBRARY_ERR} from '../../../app/error/error-codes.js';
 
 /**
  * Representing the possible asset types
@@ -212,27 +211,27 @@ export class Asset implements PEntity<Asset> {
      * @throws An error, if verification fails
      */
     async verify(filePath: string): Promise<boolean> {
-        let fileStat: Stats
+        let fileStat: Stats;
         try {
-            fileStat = await fs.stat(filePath)
+            fileStat = await fs.stat(filePath);
         } catch (err) {
             throw new iCPSError(LIBRARY_ERR.ASSET_NOT_FOUND)
                 .addCause(err)
-                .addMessage(filePath)
+                .addMessage(filePath);
         }
 
-        if(!this.withinRange(fileStat.mtimeMs, this.modified, 1000)) {
+        if (!this.withinRange(fileStat.mtimeMs, this.modified, 1000)) {
             throw new iCPSError(LIBRARY_ERR.ASSET_MODIFICATION_TIME)
                 .addMessage(`${filePath} modification time ${fileStat.mtimeMs}, iCloud ${this.modified}`)
-                .addContext('out-of-range', fileStat.mtimeMs - this.modified)
+                .addContext(`out-of-range`, fileStat.mtimeMs - this.modified);
         }
 
-        if(fileStat.size !== this.size) {
+        if (fileStat.size !== this.size) {
             throw new iCPSError(LIBRARY_ERR.ASSET_SIZE)
-                .addMessage(`${filePath} size ${fileStat.size}, iCloud ${this.size}`)
+                .addMessage(`${filePath} size ${fileStat.size}, iCloud ${this.size}`);
         }
 
-        return true
+        return true;
     }
 
     /**
@@ -259,11 +258,11 @@ export class Asset implements PEntity<Asset> {
         Const hashes = [
             `BLAKE2b512`,
             `BLAKE2s256`,
-            //          `MD4`,
+            // `MD4`,
             `MD5`,
             `MD6`,
             `MD5-SHA1`,
-            //           `RIPEMD160`,
+            //`RIPEMD160`,
             `SHA1`,
             `SHA224`,
             `SHA256`,
@@ -275,10 +274,10 @@ export class Asset implements PEntity<Asset> {
             `SHA512`,
             `SHA512-224`,
             `SHA512-256`,
-            //           `SHAKE128`,
-            //          `SHAKE256`,
+            // `SHAKE128`,
+            // `SHAKE256`,
             `SM3`,
-            //            `whirlpool`,
+            // `whirlpool`,
         ];
         const encodings = [
         //    `ascii`,
@@ -324,8 +323,8 @@ export class Asset implements PEntity<Asset> {
                     }
                 }
             });
-        }); 
-    }*/
+        });
+    } */
 
     /**
      *

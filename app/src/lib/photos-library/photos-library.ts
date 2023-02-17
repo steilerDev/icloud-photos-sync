@@ -253,15 +253,15 @@ export class PhotosLibrary extends EventEmitter {
         await fs.promises.utimes(asset.getAssetFilePath(this.assetDir), new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
 
         try {
-            await this.verifyAsset(asset)
+            await this.verifyAsset(asset);
             this.logger.debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
-            return
-        } catch(err) {
+            return;
+        } catch (err) {
             await fs.promises.rm(asset.getAssetFilePath(this.assetDir));
             throw new iCPSError(LIBRARY_ERR.INVALID_ASSET)
                 .addMessage(asset.getDisplayName())
                 .addContext(`asset`, asset)
-                .addCause(err)
+                .addCause(err);
         }
     }
 
@@ -285,7 +285,7 @@ export class PhotosLibrary extends EventEmitter {
         this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath(this.assetDir);
 
-        return asset.verify(location)
+        return asset.verify(location);
     }
 
     /**
@@ -493,6 +493,7 @@ export class PhotosLibrary extends EventEmitter {
 
     /**
      * Moves & re-links the path tuple - if named path cannot be found, unlinking will be ignored
+     * Modified time is applied to target's modified and access time (atime is not reliable)
      * @param src - The source of folders
      * @param dest - The destination of folders
      */
@@ -504,6 +505,8 @@ export class PhotosLibrary extends EventEmitter {
             throw new iCPSError(LIBRARY_ERR.FIND_PATH)
                 .addMessage(srcUUIDPath);
         }
+
+        const srcUUIDStats = fs.statSync(srcUUIDPath);
 
         if (fs.existsSync(destNamePath)) {
             throw new iCPSError(LIBRARY_ERR.EXISTS)
@@ -517,8 +520,11 @@ export class PhotosLibrary extends EventEmitter {
 
         this.logger.debug(`Moving ${srcUUIDPath} to ${destUUIDPath}`);
         fs.renameSync(srcUUIDPath, destUUIDPath);
+        fs.utimesSync(destUUIDPath, srcUUIDStats.mtime, srcUUIDStats.mtime);
 
+        let srcNameStats: fs.Stats = srcUUIDStats;
         try {
+            srcNameStats = fs.lstatSync(srcNamePath);
             fs.unlinkSync(srcNamePath);
         } catch (err) {
             this.logger.debug(`Unable to unlink ${srcNamePath}: ${err.message}`);
@@ -526,6 +532,7 @@ export class PhotosLibrary extends EventEmitter {
 
         this.logger.debug(`Re-linking ${destNamePath}`);
         fs.symlinkSync(path.basename(destUUIDPath), destNamePath);
+        fs.lutimesSync(destNamePath, srcNameStats.mtime, srcNameStats.mtime);
     }
 
     /**

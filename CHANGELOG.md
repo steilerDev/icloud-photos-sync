@@ -11,6 +11,8 @@
     * Acceptable mtime range (before verification fails) increased to 1000ms
   * Sync reliability improvements:
     * Added recoverable `EAI_AGAIN` error (closes [#159](https://github.com/steilerDev/icloud-photos-sync/issues/159))
+  * Archive improvements:
+    * Modified time is now properly preserved upon archiving (closes [#192](https://github.com/steilerDev/icloud-photos-sync/issues/192))
 
 ## v1.0.1
 

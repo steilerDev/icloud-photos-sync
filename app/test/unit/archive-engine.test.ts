@@ -556,19 +556,31 @@ describe(`Unit Tests - Archive Engine`, () => {
         const albumUUIDPath = `.${albumUUID}`;
         const albumName = `Random`;
 
-        const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+        const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), Date.now() - 10000, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
         asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-        const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+        const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), Date.now() - 15000, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
         asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-        const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+        const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), Date.now() - 18000, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
         asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
         mockfs({
             [photosDataDir]: {
                 [ASSET_DIR]: {
-                    [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
-                    [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
-                    [asset3.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1, 1]),
+                    [asset1.getAssetFilename()]: mockfs.file({
+                        "content": Buffer.from([1, 1, 1, 1]),
+                        "ctime": new Date(asset1.modified),
+                        "mtime": new Date(asset1.modified),
+                    }),
+                    [asset2.getAssetFilename()]: mockfs.file({
+                        "content": Buffer.from([1, 1, 1, 1, 1]),
+                        "ctime": new Date(asset2.modified),
+                        "mtime": new Date(asset2.modified),
+                    }),
+                    [asset3.getAssetFilename()]: mockfs.file({
+                        "content": Buffer.from([1, 1, 1, 1, 1, 1]),
+                        "ctime": new Date(asset3.modified),
+                        "mtime": new Date(asset3.modified),
+                    }),
                 },
                 [ARCHIVE_DIR]: {},
                 [albumUUIDPath]: {
@@ -594,12 +606,26 @@ describe(`Unit Tests - Archive Engine`, () => {
         await archiveEngine.persistAsset(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
         await archiveEngine.persistAsset(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
-        expect(fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename())).isFile()).toBeTruthy();
-        expect(fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename())).isFile()).toBeTruthy();
-        expect(fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename())).isFile()).toBeTruthy();
-        expect(fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename())).isFile()).toBeTruthy();
-        expect(fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename())).isFile()).toBeTruthy();
-        expect(fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename())).isFile()).toBeTruthy();
+        const asset1AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()));
+        const asset1ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
+        expect(asset1AssetStats.isFile()).toBeTruthy();
+        expect(asset1ArchivedStats.mtimeMs).toEqual(asset1.modified);
+        expect(asset1ArchivedStats.isFile()).toBeTruthy();
+        expect(asset1ArchivedStats.mtimeMs).toEqual(asset1.modified);
+
+        const asset2AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()));
+        const asset2ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
+        expect(asset2AssetStats.isFile()).toBeTruthy();
+        expect(asset2ArchivedStats.mtimeMs).toEqual(asset2.modified);
+        expect(asset2ArchivedStats.isFile()).toBeTruthy();
+        expect(asset2ArchivedStats.mtimeMs).toEqual(asset2.modified);
+
+        const asset3AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()));
+        const asset3ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+        expect(asset3AssetStats.isFile()).toBeTruthy();
+        expect(asset3ArchivedStats.mtimeMs).toEqual(asset3.modified);
+        expect(asset3ArchivedStats.isFile()).toBeTruthy();
+        expect(asset3ArchivedStats.mtimeMs).toEqual(asset3.modified);
     });
 
     describe(`Delete remote asset`, () => {
@@ -750,7 +776,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             expect(result).toBeUndefined();
         });
 
-        test(`Don't delete favorited asset`, () => {
+        test(`Don't delete favored asset`, () => {
             const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
