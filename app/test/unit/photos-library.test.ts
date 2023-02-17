@@ -474,7 +474,7 @@ describe(`Unit Tests - Photos Library`, () => {
 
     describe(`Write state`, () => {
         describe(`Write assets`, () => {
-            test(`Successfully verify asset`, () => {
+            test(`Successfully verify asset`, async () => {
                 const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
                 const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
                 const assetExt = `jpeg`;
@@ -492,10 +492,38 @@ describe(`Unit Tests - Photos Library`, () => {
 
                 const library = photosLibraryFactory();
                 const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
-                expect(library.verifyAsset(asset)).toBeTruthy();
+                await expect(library.verifyAsset(asset)).resolves.toEqual(true)
             });
 
-            test(`Reject unverifiable asset - Wrong Size`, () => {
+            test.each([
+                [10],
+                [-10],
+                [100],
+                [-100],
+                [1000],
+                [-1000]
+            ])(`Successfully verify asset within range of %i ms`, async (range) => {
+                const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
+                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
+                const assetExt = `jpeg`;
+                const assetData = Buffer.from([1, 1, 1, 1]);
+                const assetMTime = 1640995200000; // 01.01.2022
+                const fileType = FileType.fromExtension(assetExt);
+                mockfs({
+                    [assetDir]: {
+                        [`${assetFileName}.${assetExt}`]: mockfs.file({
+                            "content": assetData,
+                            "mtime": new Date(assetMTime + range),
+                        }),
+                    },
+                });
+
+                const library = photosLibraryFactory();
+                const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
+                await expect(library.verifyAsset(asset)).resolves.toEqual(true)
+            });
+
+            test(`Reject unverifiable asset - Wrong Size`, async () => {
                 const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
                 const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
                 const assetExt = `jpeg`;
@@ -513,10 +541,17 @@ describe(`Unit Tests - Photos Library`, () => {
 
                 const library = photosLibraryFactory();
                 const asset = new Asset(assetChecksum, 1, fileType, assetMTime);
-                expect(library.verifyAsset(asset)).toBeFalsy();
+                await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File's size does not match iCloud record`))
             });
 
-            test(`Reject unverifiable asset - Wrong MTime`, () => {
+            test.each([
+                [1001],
+                [-1001],
+                [10000],
+                [-10000],
+                [1000000000],
+                [-1000000000],
+            ])(`Reject unverifiable asset - Wrong MTime due to range of %i ms`, async (range) => {
                 const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
                 const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
                 const assetExt = `jpeg`;
@@ -527,37 +562,37 @@ describe(`Unit Tests - Photos Library`, () => {
                     [assetDir]: {
                         [`${assetFileName}.${assetExt}`]: mockfs.file({
                             "content": assetData,
-                            "mtime": new Date(assetMTime),
+                            "mtime": new Date(assetMTime + range),
                         }),
                     },
                 });
 
                 const library = photosLibraryFactory();
-                const asset = new Asset(assetChecksum, assetData.length, fileType, 0);
-                expect(library.verifyAsset(asset)).toBeFalsy();
+                const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
+                await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File's modification time does not match iCloud record`))
             });
 
             // Checksum verification is currently not understood/implemented. Therefore skipping
-            test.skip(`Reject unverifiable asset - Wrong Checksum`, () => {
-                const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
-                const _assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
-                const assetExt = `jpeg`;
-                const assetData = Buffer.from([1, 1, 1, 1]);
-                const assetMTime = 1640995200000; // 01.01.2022
-                const fileType = FileType.fromExtension(assetExt);
-                mockfs({
-                    [assetDir]: {
-                        [`${assetFileName}.${assetExt}`]: mockfs.file({
-                            "content": assetData,
-                            "mtime": new Date(assetMTime),
-                        }),
-                    },
-                });
+            // test.skip(`Reject unverifiable asset - Wrong Checksum`, async () => {
+            //     const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
+            //     const _assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
+            //     const assetExt = `jpeg`;
+            //     const assetData = Buffer.from([1, 1, 1, 1]);
+            //     const assetMTime = 1640995200000; // 01.01.2022
+            //     const fileType = FileType.fromExtension(assetExt);
+            //     mockfs({
+            //         [assetDir]: {
+            //             [`${assetFileName}.${assetExt}`]: mockfs.file({
+            //                 "content": assetData,
+            //                 "mtime": new Date(assetMTime),
+            //             }),
+            //         },
+            //     });
 
-                const library = photosLibraryFactory();
-                const asset = new Asset(`asdf`, assetData.length, fileType, assetMTime);
-                expect(library.verifyAsset(asset)).toBeFalsy();
-            });
+            //     const library = photosLibraryFactory();
+            //     const asset = new Asset(`asdf`, assetData.length, fileType, assetMTime);
+            //     await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error('bla'))
+            // });
 
             test(`Write asset`, async () => {
                 // Downloading banner of this repo
@@ -604,7 +639,7 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                library.verifyAsset = jest.fn(() => false);
+                library.verifyAsset = jest.fn(() => Promise.reject(new Error('Invalid file')));
 
                 const response = await axios.get(url, config);
                 await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset`);

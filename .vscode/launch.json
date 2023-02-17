@@ -70,6 +70,7 @@
                 "--experimental-vm-modules",
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
+                //"test/unit/.*.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

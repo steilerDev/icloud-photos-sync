@@ -34,7 +34,7 @@ describe(`API E2E Tests`, () => {
         mockfs.restore();
     });
 
-    test(`API Prerequisits`, () => {
+    test(`API Prerequisite`, () => {
         expect(username).toBeDefined();
         expect(username?.length).toBeGreaterThan(0);
         expect(password).toBeDefined();
@@ -97,7 +97,7 @@ describe(`API E2E Tests`, () => {
             // _writeTestData(assets.map(postProcessAssetData), "all-assets-data")
             // _writeTestData(masters.map(postProcessMasterData), "all-master-data")
 
-            // Expecting assets, with ressource to have a download url (as this is variable)
+            // Expecting assets, with resource to have a download url (as this is variable)
             assets.forEach(asset => {
                 if (asset?.resource) {
                     expect(asset.resource.downloadURL).toBeDefined();
@@ -108,7 +108,7 @@ describe(`API E2E Tests`, () => {
             // This matches the non-variable part of the data
             expect(assets.map(postProcessAssetData).sort(sortByRecordName)).toEqual(expectedAssetsAll.sort(sortByRecordName));
 
-            // Expecting all masters to have a ressource with download url
+            // Expecting all masters to have a resource with download url
             masters.forEach(master => {
                 expect(master?.resource.downloadURL).toBeDefined();
             });

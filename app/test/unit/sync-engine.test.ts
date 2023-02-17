@@ -1202,7 +1202,7 @@ describe(`Unit Tests - Sync Engine`, () => {
             test(`Only adding - one asset present`, async () => {
                 const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
                 // Return 'true' on validation once
-                syncEngine.photosLibrary.verifyAsset = jest.fn(() => false).mockReturnValueOnce(true).mockReturnValue(false);
+                syncEngine.photosLibrary.verifyAsset = jest.fn(() => Promise.resolve(true)).mockReturnValueOnce(Promise.resolve(true)).mockReturnValue(Promise.reject(new Error('Invalid file')));
 
                 const writeAssetCompleteEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED);
 

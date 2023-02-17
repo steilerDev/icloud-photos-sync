@@ -252,14 +252,17 @@ export class PhotosLibrary extends EventEmitter {
         await pEvent(writeStream, `close`);
         await fs.promises.utimes(asset.getAssetFilePath(this.assetDir), new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
 
-        if (!this.verifyAsset(asset)) {
+        try {
+            await this.verifyAsset(asset)
+            this.logger.debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
+            return
+        } catch(err) {
             await fs.promises.rm(asset.getAssetFilePath(this.assetDir));
             throw new iCPSError(LIBRARY_ERR.INVALID_ASSET)
                 .addMessage(asset.getDisplayName())
-                .addContext(`asset`, asset);
+                .addContext(`asset`, asset)
+                .addCause(err)
         }
-
-        this.logger.debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
     }
 
     /**
@@ -276,12 +279,13 @@ export class PhotosLibrary extends EventEmitter {
      * Verifies if a given Asset object is present on disk
      * @param asset - The asset to verify
      * @returns True, if the Asset object is present on disk
+     * @throws An error, in case the object cannot be verified
      */
-    verifyAsset(asset: Asset): boolean {
+    async verifyAsset(asset: Asset): Promise<boolean> {
         this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath(this.assetDir);
-        return fs.existsSync(location)
-            && asset.verify(fs.readFileSync(location), fs.statSync(location));
+
+        return asset.verify(location)
     }
 
     /**

@@ -70,3 +70,15 @@ export const LOCK_RELEASE: ErrorStruct = buildErrorStruct(
 export const LOCKED: ErrorStruct = buildErrorStruct(
     name, prefix, `LOCKED`, `Library locked. Use --force (or FORCE env variable) to forcefully remove the lock`,
 );
+
+export const ASSET_NOT_FOUND: ErrorStruct = buildErrorStruct(
+    name, prefix, `ASSET_NOT_FOUND`, `File not found`,
+);
+
+export const ASSET_MODIFICATION_TIME: ErrorStruct = buildErrorStruct(
+    name, prefix, `ASSET_MODIFICATION_TIME`, `File's modification time does not match iCloud record`,
+);
+
+export const ASSET_SIZE: ErrorStruct = buildErrorStruct(
+    name, prefix, `ASSET_SIZE`, `File's size does not match iCloud record`,
+);

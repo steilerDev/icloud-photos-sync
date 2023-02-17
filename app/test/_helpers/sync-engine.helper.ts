@@ -34,7 +34,7 @@ export function syncEngineFactory(): SyncEngine {
 }
 
 export function mockSyncEngineForAssetQueue(syncEngine: SyncEngine): SyncEngine {
-    syncEngine.photosLibrary.verifyAsset = jest.fn(() => false);
+    syncEngine.photosLibrary.verifyAsset = jest.fn(() => Promise.reject(new Error('Invalid file')));
     syncEngine.photosLibrary.writeAsset = jest.fn(async () => {});
     syncEngine.photosLibrary.deleteAsset = jest.fn(async () => {});
     syncEngine.icloud.photos.downloadAsset = jest.fn(async () => ({} as AxiosResponse<any, any>));

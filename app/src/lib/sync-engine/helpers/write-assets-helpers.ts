@@ -30,15 +30,16 @@ export async function writeAssets(this: SyncEngine, processingQueue: PLibraryPro
 export async function addAsset(this: SyncEngine, asset: Asset) {
     this.logger.info(`Adding asset ${asset.getDisplayName()}`);
 
-    if (this.photosLibrary.verifyAsset(asset)) {
+    try {
+        await this.photosLibrary.verifyAsset(asset)
         this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
-        return;
+        return
+    } catch(err) {
+        const data = await this.icloud.photos.downloadAsset(asset);
+        await this.photosLibrary.writeAsset(asset, data);
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
     }
-
-    const data = await this.icloud.photos.downloadAsset(asset);
-    await this.photosLibrary.writeAsset(asset, data);
-    this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
 }
 
 /**
