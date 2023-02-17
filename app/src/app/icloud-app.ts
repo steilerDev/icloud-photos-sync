@@ -40,6 +40,7 @@ export abstract class iCPSApp {
 export class DaemonAppEvents extends EventEmitter {
     static EVENTS = {
         'SCHEDULED': `scheduled`, // Next execution
+        'START': `start`,
         'DONE': `done`, // Next execution
         'RETRY': `retry`, // Next execution
     };
@@ -87,6 +88,7 @@ export class DaemonApp extends iCPSApp {
      */
     async performScheduledSync(eventHandlers: EventHandler[], syncApp: SyncApp = new SyncApp(this.options)) {
         try {
+            this.event.emit(DaemonAppEvents.EVENTS.START)
             await syncApp.run(...eventHandlers);
             this.event.emit(DaemonAppEvents.EVENTS.DONE, this.job?.next());
         } catch (err) {
