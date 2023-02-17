@@ -119,22 +119,25 @@ export class iCloudPhotos extends EventEmitter {
                 return;
             }
 
-            if (state !== `FINISHED`) {
+            if (state === `RUNNING`) {
                 const progress = result[0]?.fields?.progress?.value;
+                const indexingInProgressError = new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS)
                 if (progress) {
-                    this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS)
-                        .addContext(`progress`, progress));
-                    return;
+                    indexingInProgressError.addMessage(`progress ${progress}`)
                 }
-
-                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNKNOWN)
-                    .addMessage(state)
-                    .addContext(`icloudResult`, result));
-                return;
+                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, indexingInProgressError)
+                return
             }
 
-            this.logger.info(`Indexing finished, sync can start!`);
-            this.emit(ICLOUD_PHOTOS.EVENTS.READY);
+            if(state === `FINISHED`) {
+                this.logger.info(`Indexing finished, sync can start!`);
+                this.emit(ICLOUD_PHOTOS.EVENTS.READY);
+                return
+            }
+
+            this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNKNOWN)
+                .addContext(`icloudResult`, result));
+            return;
         } catch (err) {
             this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNKNOWN).addCause(err));
         }
