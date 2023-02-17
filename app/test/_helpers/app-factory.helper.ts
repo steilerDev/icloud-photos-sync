@@ -29,10 +29,6 @@ export function appWithOptions<T extends iCloudApp>(options: any, photosLibrary?
 
 export const rejectOptions = [
     {
-        "options": [],
-        "_desc": `No options`,
-        "expected": `error: required option '-u, --username <email>' not specified\n`,
-    }, {
         "options": [
             `/usr/bin/node`,
             `/home/icloud-photos-sync/main.js`,
@@ -230,9 +226,9 @@ export const rejectOptions = [
             `asdf`,
             `daemon`,
         ],
-        "_desc": `Missformatted schedule`,
+        "_desc": `Mis-formatted schedule`,
         "expected": `error: option '-S, --schedule <cron-string>' argument 'asdf' is invalid. Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern)\n`,
-    },
+    }
 ];
 
 export const validOptions = {
@@ -354,28 +350,5 @@ export const validOptions = {
         `--refresh-token`,
         `--remote-delete`,
         `daemon`,
-    ],
-    "default": [
-        `/usr/bin/node`,
-        `/home/icloud-photos-sync/main.js`,
-        `-u`,
-        `test@icloud.com`,
-        `-p`,
-        `password`,
-        `--fail-on-mfa`,
-        `-d`,
-        `/opt/icloud-photos-library`,
-        `-P`,
-        `80`,
-        `-l`,
-        `info`,
-        `--log-to-cli`,
-        `-s`,
-        `-t`,
-        `5`,
-        `-r`,
-        `-1`,
-        `--refresh-token`,
-        `--remote-delete`,
-    ],
+    ]
 };

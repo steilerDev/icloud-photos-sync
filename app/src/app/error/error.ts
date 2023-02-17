@@ -104,7 +104,7 @@ export class iCPSError extends Error {
         let desc = `${this.name} (${this.sev}): ${this.message}`;
 
         if (this.messages.length > 0) {
-            desc += `(${this.messages.join(`, `)})`;
+            desc += ` (${this.messages.join(`, `)})`;
         }
 
         if (this.cause) {

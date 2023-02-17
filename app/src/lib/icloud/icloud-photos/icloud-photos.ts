@@ -459,6 +459,7 @@ export class iCloudPhotos extends EventEmitter {
 
         if (cplMasters.length !== totalCount || cplAssets.length !== totalCount) {
             this.emit(HANDLER_EVENT, new iCPSError(ICLOUD_PHOTOS_ERR.COUNT_MISMATCH)
+                .setWarning()
                 .addMessage(`expected ${totalCount} CPLMaster & ${totalCount} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`));
         } else {
             this.logger.debug(`Received expected amount (${totalCount}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
