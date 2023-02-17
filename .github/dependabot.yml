@@ -4,6 +4,7 @@ updates:
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
       day: "saturday"
@@ -12,6 +13,7 @@ updates:
   # Maintain dependencies for npm
   - package-ecosystem: "npm"
     directory: "/app"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
       day: "saturday"
@@ -23,6 +25,7 @@ updates:
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"
     directory: "/docker"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
       day: "saturday"
@@ -33,6 +36,7 @@ updates:
   # Maintain dependencies for pip (docs site)
   - package-ecosystem: "pip"
     directory: "/pages"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
       day: "saturday"
