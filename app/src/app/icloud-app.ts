@@ -88,7 +88,7 @@ export class DaemonApp extends iCPSApp {
      */
     async performScheduledSync(eventHandlers: EventHandler[], syncApp: SyncApp = new SyncApp(this.options)) {
         try {
-            this.event.emit(DaemonAppEvents.EVENTS.START)
+            this.event.emit(DaemonAppEvents.EVENTS.START);
             await syncApp.run(...eventHandlers);
             this.event.emit(DaemonAppEvents.EVENTS.DONE, this.job?.next());
         } catch (err) {

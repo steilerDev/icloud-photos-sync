@@ -2,6 +2,8 @@
 
 ## Nightly Changes
 
+  * BREAKING CLI CHANGE:
+    * Specifying no command will print help and not automatically start `daemon` mode
   * Filetype support added for
     * `avi`
   * Reworked error structure

@@ -105,7 +105,7 @@ export function appFactory(argv: string[]): iCPSApp {
             .env(`SUPPRESS_WARNINGS`)
             .default(false));
 
-    program.command(AppCommands.daemon, {"isDefault": true})
+    program.command(AppCommands.daemon)
         .action(() => {
             app = new DaemonApp(program.opts());
         })

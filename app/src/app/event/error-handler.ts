@@ -7,7 +7,7 @@ import {randomUUID} from "crypto";
 import {OptionValues} from "commander";
 import {EventHandler} from './event-handler.js';
 import {ERR_SIGINT, ERR_SIGTERM} from '../error/error-codes.js';
-import { DaemonAppEvents } from '../icloud-app.js';
+import {DaemonAppEvents} from '../icloud-app.js';
 
 /**
  * The event emitted by classes of this application and picked up by the handler.
@@ -110,15 +110,17 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             obj.on(HANDLER_EVENT, async (err: unknown) => {
                 await this.handle(err);
             });
-            if(this.btClient) {
+            if (this.btClient) {
                 obj.on(DaemonAppEvents.EVENTS.START, () => {
-                    const metrics = this.btClient['_backtraceMetrics']
-                    if(metrics) {
+                    /* eslint-disable */
+                    const metrics = this.btClient['_backtraceMetrics'];
+                    /* eslint-enable */
+                    if (metrics) {
                         metrics.sendUniqueEvent();
-                        metrics.sendSummedEvent('Application Launches');
-                        metrics.sendSummedEvent('Scheduled sync starts');
+                        metrics.sendSummedEvent(`Application Launches`);
+                        metrics.sendSummedEvent(`Scheduled sync starts`);
                     }
-                })
+                });
             }
         });
     }

@@ -121,18 +121,19 @@ export class iCloudPhotos extends EventEmitter {
 
             if (state === `RUNNING`) {
                 const progress = result[0]?.fields?.progress?.value;
-                const indexingInProgressError = new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS)
+                const indexingInProgressError = new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS);
                 if (progress) {
-                    indexingInProgressError.addMessage(`progress ${progress}`)
+                    indexingInProgressError.addMessage(`progress ${progress}`);
                 }
-                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, indexingInProgressError)
-                return
+
+                this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, indexingInProgressError);
+                return;
             }
 
-            if(state === `FINISHED`) {
+            if (state === `FINISHED`) {
                 this.logger.info(`Indexing finished, sync can start!`);
                 this.emit(ICLOUD_PHOTOS.EVENTS.READY);
-                return
+                return;
             }
 
             this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNKNOWN)

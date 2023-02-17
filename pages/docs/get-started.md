@@ -285,7 +285,7 @@ In order to perform a single synchronization execution, the [`sync` command](../
 
 ### Scheduled
 
-When not supplying any command, or using the [`daemon` command](../user-guides/cli/#daemon-command), the application will start scheduling synchronization executions based on the provided schedule. 
+When using the [`daemon` command](../user-guides/cli/#daemon-command), the application will start scheduling synchronization executions based on the provided schedule. 
 
 This schedule is expecting to be in [cron](https://crontab.guru) format. For more details on the specific implementation, see [Croner's pattern documentation](https://github.com/hexagon/croner#pattern).
 
@@ -302,7 +302,8 @@ This schedule is expecting to be in [cron](https://crontab.guru) format. For mor
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
-            --schedule "* 2 * * *"
+            --schedule "* 2 * * *" \
+            daemon
         ```
 
 === "node"
@@ -315,7 +316,8 @@ This schedule is expecting to be in [cron](https://crontab.guru) format. For mor
             -p "<iCloud Password>" \
             -d "</path/to/your/local/library>" \
             --enable-crash-reporting \
-            --schedule "* 2 * * *"
+            --schedule "* 2 * * *" \
+            daemon
         ```
 
     === "From Source"
@@ -326,7 +328,8 @@ This schedule is expecting to be in [cron](https://crontab.guru) format. For mor
             -p "<iCloud Password>" \
             -d "</path/to/your/local/library>" \
             --enable-crash-reporting \
-            --schedule "* 2 * * *"
+            --schedule "* 2 * * *" \
+            daemon
         ```
 
 ## Archiving

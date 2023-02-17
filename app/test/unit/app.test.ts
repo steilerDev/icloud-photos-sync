@@ -69,11 +69,8 @@ describe(`Unit Tests - iCloud App`, () => {
             expect(fs.existsSync(`/opt/icloud-photos-library`));
         });
 
-        test.each([
-            {"options": validOptions.daemon, "mode": `explicit`},
-            {"options": validOptions.default, "mode": `default`},
-        ])(`Create Daemon App - $mode`, ({options}) => {
-            const daemonApp = appFactory(options) as DaemonApp;
+        test(`Create Daemon App`, () => {
+            const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
             expect(daemonApp).toBeInstanceOf(DaemonApp);
             expect(setupLogger).toHaveBeenCalledTimes(1);
             expect(daemonApp.event).toBeDefined();
