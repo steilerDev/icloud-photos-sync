@@ -172,6 +172,7 @@ export class PhotosLibrary extends EventEmitter {
             // Checking if there is actually a dead symlink
             if (await fs.promises.lstat(symlinkPath) && !fs.existsSync(symlinkPath)) {
                 this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.DEAD_SYMLINK)
+                    .setWarning()
                     .addMessage(symlinkPath)
                     .addCause(cause));
                 await fs.promises.unlink(symlinkPath);
@@ -224,6 +225,7 @@ export class PhotosLibrary extends EventEmitter {
             // AlbumType.Folder cannot be archived!
             if (filePresent) {
                 this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.EXTRANEOUS_FILE)
+                    .setWarning()
                     .addMessage(thisPath),
                 );
             }
@@ -428,6 +430,7 @@ export class PhotosLibrary extends EventEmitter {
                 fs.lutimesSync(linkedAsset, assetTime, assetTime);
             } catch (err) {
                 this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.LINK)
+                    .setWarning()
                     .addMessage(`${relativeAssetPath} to ${linkedAsset}`)
                     .addCause(err));
             }
