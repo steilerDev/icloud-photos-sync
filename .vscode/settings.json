@@ -1,4 +1,5 @@
 {
+    "files.autoSave": "onFocusChange",
     "cSpell.words": [
         "AASP",
         "Acgr",
@@ -9,6 +10,7 @@
         "CPLALBUM",
         "CPLASSET",
         "CPLMASTER",
+        "croner",
         "dslang",
         "emhlbnl",
         "Fqhjt",
@@ -47,5 +49,13 @@
         "webmproject",
         "webservices",
         "Yons"
-    ]
+    ],
+    "jest.showCoverageOnLoad": true,
+    "jest.coverageFormatter": "GutterFormatter",
+    "jest.autoRun": "off",
+    "jest.jestCommandLine": "npm run test --",
+    "jest.rootPath": "app/",
+    "jest.nodeEnv": {
+        "NODE_NO_WARNINGS": 1
+    }
 }
