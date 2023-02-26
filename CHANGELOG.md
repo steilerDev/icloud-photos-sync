@@ -7,6 +7,7 @@
   * Filetype support added for
     * `avi`
   * Reworked error structure
+  * Added sync metrics export functionality (See [docs](https://steilerdev.github.io/icloud-photos-sync/user-guides/sync-metrics/), closes [#127](https://github.com/steilerDev/icloud-photos-sync/issues/127))
   * Asset verification improvements:
     * Removed 2GB limitation during verification (closes [#155](https://github.com/steilerDev/icloud-photos-sync/issues/155))
     * Improves output when asset verification fails (closes [#156](https://github.com/steilerDev/icloud-photos-sync/issues/156))

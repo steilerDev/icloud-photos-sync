@@ -19,6 +19,8 @@ const LOGGER = {
     "CLIInterface": `CLI-Interface`,
     "ArchiveEngine": `Archive-Engine`,
     "ErrorHandler": `Error-Handler`,
+    "MetricsExporter": `Metrics-Exporter`,
+    "InfluxLineProtocolPoint": `Influx-Line-Protocol`,
 };
 
 export let logFile: string;

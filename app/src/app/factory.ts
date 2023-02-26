@@ -103,6 +103,9 @@ export function appFactory(argv: string[]): iCPSApp {
             .default(false))
         .addOption(new Option(`--suppress-warnings`, `Non critical warnings will not be displayed in the UI. They will still go into the log.`)
             .env(`SUPPRESS_WARNINGS`)
+            .default(false))
+        .addOption(new Option(`--export-metrics`, `Enables the export of sync metrics to a file using the Influx Line Protocol.`)
+            .env(`EXPORT_METRICS`)
             .default(false));
 
     program.command(AppCommands.daemon)

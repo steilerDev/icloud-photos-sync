@@ -9,7 +9,6 @@ export enum EVENTS {
     DIFF_COMPLETED = `diff-completed`, // No arg
     WRITE = `write`, // No arg
     WRITE_ASSETS = `write-assets`, // ToBeDeletedCount, toBeAddedCount, toBeKeptCount
-    WRITE_ASSETS_ABORTED = `write-assets-aborted`, // No arg
     WRITE_ASSET_COMPLETED = `write-asset-completed`, // AssetName
     WRITE_ASSETS_COMPLETED = `write-assets-completed`, // No arg
     WRITE_ALBUMS = `write-albums`, // ToBeDeletedCount, toBeAddedCount, toBeKeptCount

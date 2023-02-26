@@ -10,6 +10,7 @@ nav:
   - 'Get Started': get-started.md
   - 'User Guides':
     - 'CLI Reference': user-guides/cli.md
+    - 'Sync Metrics': user-guides/sync-metrics.md
     - 'Common Warnings': user-guides/common-warnings.md
     - 'Error & Crash Reporting': user-guides/error-reporting.md
     - 'Security': user-guides/security.md

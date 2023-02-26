@@ -228,7 +228,7 @@ export const rejectOptions = [
         ],
         "_desc": `Mis-formatted schedule`,
         "expected": `error: option '-S, --schedule <cron-string>' argument 'asdf' is invalid. Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern)\n`,
-    }
+    },
 ];
 
 export const validOptions = {
@@ -350,5 +350,5 @@ export const validOptions = {
         `--refresh-token`,
         `--remote-delete`,
         `daemon`,
-    ]
+    ],
 };

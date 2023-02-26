@@ -39,9 +39,8 @@ export class CLIInterface implements EventHandler {
     /**
      * Creates a new CLI interface based on the provided components
      * @param options - Parsed CLI Options
-     * @param errorHandler - Optionally a error handler to listen for events
      */
-    constructor(options: OptionValues, errorHandler: ErrorHandler) {
+    constructor(options: OptionValues) {
         this.progressBar = new SingleBar({
             "etaAsynchronousUpdate": true,
             "format": ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
@@ -56,8 +55,6 @@ export class CLIInterface implements EventHandler {
         if (this.enableCLIOutput) {
             console.clear();
         }
-
-        this.handleErrorHandler(errorHandler);
 
         // An error handler is only supplied on the initial run, this is not needed on scheduled runs
         this.print(chalk.white(this.getHorizontalLine()));
@@ -136,6 +133,10 @@ export class CLIInterface implements EventHandler {
 
             if (obj instanceof DaemonAppEvents) {
                 this.handleDaemonApp(obj);
+            }
+
+            if (obj instanceof ErrorHandler) {
+                this.handleErrorHandler(obj);
             }
         });
     }
@@ -219,10 +220,6 @@ export class CLIInterface implements EventHandler {
         // RecordName would be available
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, () => {
             this.progressBar.increment();
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, () => {
-            this.progressBar.stop();
         });
 
         syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED, () => {

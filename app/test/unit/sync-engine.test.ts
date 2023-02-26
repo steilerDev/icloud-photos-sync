@@ -333,37 +333,6 @@ describe(`Unit Tests - Sync Engine`, () => {
             expect(writeAlbumCompletedEvent).toHaveBeenCalledTimes(1);
             expect(writeCompletedEvent).toHaveBeenCalledTimes(1);
         });
-
-        test(`Write state - WRITE_ASSETS_ABORTED fired`, async () => {
-            const syncEngine = syncEngineFactory();
-            const errMessage = `Unknown write error`;
-            syncEngine.writeAssets = jest.fn<() => Promise<void>>()
-                .mockRejectedValue(new Error(errMessage));
-            syncEngine.writeAlbums = jest.fn<() => Promise<void>>()
-                .mockResolvedValue();
-
-            const writeEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE);
-            const writeAssetsEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSETS);
-            const writeAssetsAbortedEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED);
-            const writeAssetsCompletedEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED);
-            const writeAlbumsEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ALBUMS);
-            const writeAlbumCompletedEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED);
-            const writeCompletedEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_COMPLETED);
-
-            await expect(syncEngine.writeState(...diffStateReturnValue)).rejects.toThrowError(errMessage);
-
-            expect(writeEvent).toHaveBeenCalledTimes(1);
-            expect(writeAssetsEvent).toHaveBeenCalledTimes(1);
-            expect(writeAssetsEvent).toHaveBeenCalledWith(1, 1, 1);
-            expect(syncEngine.writeAssets).toHaveBeenCalledTimes(1);
-            expect(syncEngine.writeAssets).toHaveBeenCalledWith(diffStateReturnValue[0]);
-            expect(writeAssetsAbortedEvent).toHaveBeenCalledWith(errMessage);
-            expect(writeAssetsCompletedEvent).toHaveBeenCalledTimes(0);
-            expect(writeAlbumsEvent).toHaveBeenCalledTimes(0);
-            expect(syncEngine.writeAlbums).toHaveBeenCalledTimes(0);
-            expect(writeAlbumCompletedEvent).toHaveBeenCalledTimes(0);
-            expect(writeCompletedEvent).toHaveBeenCalledTimes(0);
-        });
     });
 
     describe(`Processing remote records`, () => {

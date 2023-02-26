@@ -87,6 +87,7 @@ export class SyncEngine extends EventEmitter {
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
                 this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.WRITE_STATE)
+                    .setWarning()
                     .addCause(err));
                 // Checking if we should retry
                 this.checkFatalError(err);
@@ -208,18 +209,13 @@ export class SyncEngine extends EventEmitter {
         this.logger.info(`Writing state`);
 
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);
-        try {
-            await this.writeAssets(assetQueue);
-        } catch (err) {
-            this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, err.message);
-            throw err;
-        }
-
+        await this.writeAssets(assetQueue);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED);
 
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, albumQueue[0].length, albumQueue[1].length, albumQueue[2].length);
         await this.writeAlbums(albumQueue);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED);
+
         this.emit(SYNC_ENGINE.EVENTS.WRITE_COMPLETED);
     }
 
