@@ -1,4 +1,5 @@
 import mockfs from 'mock-fs';
+import * as fs from 'fs'
 import {describe, test, expect, jest, afterEach} from "@jest/globals";
 import {getICloudCookies, iCloudAuthFactory, mockValidation} from "../_helpers/icloud-auth.helper";
 import * as Config from '../_helpers/_config';
@@ -14,8 +15,15 @@ describe(`Unit Tests - iCloud Auth`, () => {
             mockfs({
                 '/opt': mockfs.directory({
                     "mode": 0o000,
+                    "uid": 0,
+                    "gid": 0
                 }),
             });
+            
+            // For some reason required
+            fs.chownSync('/opt', 0, 0)
+            fs.chmodSync('/opt', 0o000)
+            
             const auth = iCloudAuthFactory();
             await expect(auth.storeTrustToken()).rejects.toThrowError(`Unable to store trust token`);
         });
