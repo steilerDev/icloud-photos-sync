@@ -11,7 +11,7 @@ import {spyOnEvent} from '../_helpers/_general';
 import * as ARCHIVE_ENGINE from '../../src/lib/archive-engine/constants';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 
-describe(`Unit Tests - Archive Engine`, () => {
+describe(`Archive Engine`, () => {
     afterEach(() => {
         mockfs.restore();
     });

@@ -25,7 +25,7 @@ afterEach(() => {
     mockfs.restore();
 });
 
-describe(`Unit Tests - Sync Engine`, () => {
+describe(`Sync Engine`, () => {
     describe(`Coordination`, () => {
         describe(`Sync`, () => {
             test(`Successful on first try`, async () => {

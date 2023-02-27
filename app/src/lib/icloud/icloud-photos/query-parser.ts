@@ -231,7 +231,7 @@ export class CPLMaster {
     // resOriginalVidComplRes -> AssetID
     // resOriginalVidComplFileType -> Filetyp (seems to always be com.apple.quicktime-movie)
     //
-    // Asset logic should stay same, folder linking might be an issue
+    // Those two need to be parsed here and then processed in SyncEngine.convertCPLAssets
 
     // Can optionally have the following key (indicating it was edited)
     // mediaMetaDataEnc

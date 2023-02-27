@@ -11,7 +11,7 @@ import {EVENTS} from '../../src/lib/icloud/constants';
 import path from 'path';
 import {setupLogger} from '../_mocks/logger';
 
-describe(`Unit Tests - iCloud App`, () => {
+describe(`iCloud App`, () => {
     beforeEach(() => {
         mockfs();
         jest.clearAllMocks();

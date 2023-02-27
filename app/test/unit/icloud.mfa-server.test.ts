@@ -7,7 +7,7 @@ import * as PACKAGE from '../../src/lib/package';
 import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {createNamedError, spyOnEvent} from '../_helpers/_general';
 
-describe(`Unit Tests - MFA Server`, () => {
+describe(`MFA Server`, () => {
     describe(`MFA Code`, () => {
         test(`Valid Code format`, () => {
             const code = `123456`;

@@ -18,7 +18,7 @@ import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {appWithOptions} from '../_helpers/app-factory.helper';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 
-describe(`Unit Tests - iCloud`, () => {
+describe(`iCloud`, () => {
     describe(`CLI Options`, () => {
         test(`Refresh Token`, () => {
             const cliOpts = _defaultCliOpts;
@@ -28,19 +28,19 @@ describe(`Unit Tests - iCloud`, () => {
         });
 
         // For some reason this 'throws' an error
-        test(`Fail on MFA`, () => {
+        test(`Fail on MFA`, async () => {
             const cliOpts = _defaultCliOpts;
             cliOpts.failOnMfa = true;
 
             const icloud = new iCloud(appWithOptions(cliOpts));
 
             icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
-            expect(icloud.ready).rejects.toThrowError(new Error(`MFA code required, failing due to failOnMfa flag`));
+            await expect(icloud.ready).rejects.toThrowError(new Error(`MFA code required, failing due to failOnMfa flag`));
 
             expect(icloud.mfaServer.server.listening).toBeFalsy();
         });
 
-        test(`MFA Server Startup error`, () => {
+        test(`MFA Server Startup error`, async () => {
             const cliOpts = _defaultCliOpts;
             cliOpts.failOnMfa = false;
 
@@ -51,7 +51,7 @@ describe(`Unit Tests - iCloud`, () => {
             });
 
             icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
-            expect(icloud.ready).rejects.toThrowError(new Error(`Unable to start MFA server`));
+            await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to start MFA server`));
 
             expect(icloud.mfaServer.server.listening).toBeFalsy();
         });

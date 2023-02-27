@@ -5,7 +5,7 @@ import {getICloudCookies, iCloudAuthFactory, mockValidation} from "../_helpers/i
 import * as Config from '../_helpers/_config';
 import {AxiosResponse} from 'axios';
 
-describe(`Unit Tests - iCloud Auth`, () => {
+describe(`iCloud Auth`, () => {
     describe(`Storing trust token fails`, () => {
         afterEach(() => {
             mockfs.restore();

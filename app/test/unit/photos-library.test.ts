@@ -18,7 +18,7 @@ const assetDir = path.join(photosDataDir, ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
 const stashDir = path.join(photosDataDir, ARCHIVE_DIR, STASH_DIR);
 
-describe(`Unit Tests - Photos Library`, () => {
+describe(`Photos Library`, () => {
     afterEach(() => {
         mockfs.restore();
     });
