@@ -1,7 +1,7 @@
 {
   "name": "icloud-photos-sync",
   "version": "v1.0.2-beta",
-  "description": "One-way sync engine with archiving capabilities for the iCloud Photos Library into the native file system",
+  "description": "One-way sync engine for the iCloud Photos Library into the native file system with archiving capabilities",
   "preferGlobal": true,
   "type": "module",
   "main": "bin/main.js",
@@ -12,7 +12,6 @@
     "clean": "rm -rf bin/ coverage/ doc/ node_modules/ package-lock.json",
     "prebuild": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
     "build": "npx tsc",
-    "upload-sourcemap": "./node_modules/.bin/backtrace-sourcemap upload package.json bin",
     "doc": "npx typedoc",
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/unit/",
     "test-api": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/api/",
@@ -42,11 +41,6 @@
     "darwin",
     "!win32"
   ],
-  "backtrace": {
-    "sourcemap": {
-      "upload": "https://steilerdev.sp.backtrace.io:6098/post?format=sourcemap&token=617cffdeec78a9060d9f10ea3973c740118b109f8731348740ca1f387be0f379"
-    }
-  },
   "devDependencies": {
     "@types/cli-progress": "^3.11.0",
     "@types/jest": "^29.2.4",
@@ -55,7 +49,6 @@
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.37.0",
     "@typescript-eslint/parser": "^5.37.0",
-    "backtrace-sourcemap-tools": "^0.1.1",
     "eslint": "^8.8.0",
     "eslint-config-xo": "^0.43.1",
     "eslint-plugin-tsdoc": "^0.2.14",
