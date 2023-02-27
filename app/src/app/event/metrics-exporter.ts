@@ -298,9 +298,9 @@ export class MetricsExporter implements EventHandler {
                 return;
             }
 
-            if (obj instanceof DaemonAppEvents) {
-                this.handleDaemonApp(obj);
-            }
+            // If (obj instanceof DaemonAppEvents) {
+            //     this.handleDaemonApp(obj);
+            // }
 
             if (obj instanceof ErrorHandler) {
                 this.handleErrorHandler(obj);
@@ -500,14 +500,14 @@ export class MetricsExporter implements EventHandler {
      * Handles events emitted from the daemon app
      * @param daemon - The daemon app event emitter
      */
-    private handleDaemonApp(daemon: DaemonAppEvents) {
-        daemon.on(DaemonAppEvents.EVENTS.SCHEDULED, (next: Date) => {
-        });
+    // private handleDaemonApp(daemon: DaemonAppEvents) {
+    //     daemon.on(DaemonAppEvents.EVENTS.SCHEDULED, (next: Date) => {
+    //     });
 
-        daemon.on(DaemonAppEvents.EVENTS.DONE, (next: Date) => {
-        });
+    //     daemon.on(DaemonAppEvents.EVENTS.DONE, (next: Date) => {
+    //     });
 
-        daemon.on(DaemonAppEvents.EVENTS.RETRY, (next: Date) => {
-        });
-    }
+    //     daemon.on(DaemonAppEvents.EVENTS.RETRY, (next: Date) => {
+    //     });
+    // }
 }
