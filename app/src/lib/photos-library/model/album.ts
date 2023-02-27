@@ -90,14 +90,14 @@ export class Album implements PEntity<Album> {
      * @param cplAlbum - The album retrieved from the backend
      * @returns An Album based on the CPL object
      */
-    static async fromCPL(cplAlbum: CPLAlbum): Promise<Album> {
+    static fromCPL(cplAlbum: CPLAlbum): Album {
         const album = new Album(
             cplAlbum.recordName,
             cplAlbum.albumType,
             Buffer.from(cplAlbum.albumNameEnc, `base64`).toString(`utf8`),
             cplAlbum.parentId ? cplAlbum.parentId : ``,
         );
-        album.assets = await cplAlbum.assets;
+        album.assets = cplAlbum.assets;
         return album;
     }
 

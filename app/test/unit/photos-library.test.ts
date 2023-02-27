@@ -544,6 +544,20 @@ describe(`Unit Tests - Photos Library`, () => {
                 await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File's size does not match iCloud record`));
             });
 
+            test(`Reject unverifiable asset - Not exist`, async () => {
+                const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
+                const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
+                const assetMTime = 1640995200000; // 01.01.2022
+                const fileType = FileType.fromExtension(`jpeg`);
+                mockfs({
+                    [assetDir]: {},
+                });
+
+                const library = photosLibraryFactory();
+                const asset = new Asset(assetChecksum, 1, fileType, assetMTime);
+                await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File not found`));
+            });
+
             test.each([
                 [1001],
                 [-1001],
@@ -613,11 +627,18 @@ describe(`Unit Tests - Photos Library`, () => {
                 });
 
                 const library = photosLibraryFactory();
-                const response = await axios.get(url, config);
-                await library.writeAsset(asset, response);
-                const assetPath = path.join(assetDir, `${fileName}.${ext}`);
-                expect(fs.existsSync(assetPath)).toBeTruthy();
-                expect(fs.readFileSync(assetPath).length).toBeGreaterThan(0);
+
+                try {
+                    const response = await axios.get(url, config);
+                    await library.writeAsset(asset, response);
+                    const assetPath = path.join(assetDir, `${fileName}.${ext}`);
+                    expect(fs.existsSync(assetPath)).toBeTruthy();
+                    expect(fs.readFileSync(assetPath).length).toBeGreaterThan(0);
+                } catch(err) {
+                    // If there is no network connectivity, pass the test and print warning
+                    console.warn(`Unable to run test - potentially due to lacking network connectivity`)
+                    expect(err).toEqual(new Error('getaddrinfo ENOTFOUND steilerdev.github.io'))
+                }
             });
 
             test(`Write asset with failing verification`, async () => {
@@ -641,10 +662,16 @@ describe(`Unit Tests - Photos Library`, () => {
                 const library = photosLibraryFactory();
                 library.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
 
-                const response = await axios.get(url, config);
-                await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset`);
-                const assetPath = path.join(assetDir, `${fileName}.${ext}`);
-                expect(fs.existsSync(assetPath)).toBeFalsy();
+                try {
+                    const response = await axios.get(url, config);
+                    await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset`);
+                    const assetPath = path.join(assetDir, `${fileName}.${ext}`);
+                    expect(fs.existsSync(assetPath)).toBeFalsy();
+                } catch(err) {
+                    // If there is no network connectivity, pass the test and print warning
+                    console.warn(`Unable to run test - potentially due to lacking network connectivity`)
+                    expect(err).toEqual(new Error('getaddrinfo ENOTFOUND steilerdev.github.io'))
+                }
             });
 
             test(`Delete asset`, async () => {
@@ -1562,8 +1589,7 @@ describe(`Unit Tests - Photos Library`, () => {
                         const archivedName = `2015 - 2016`;
                         mockfs({
                             [photosDataDir]: {
-                                [ARCHIVE_DIR]: {
-                                },
+                                [ARCHIVE_DIR]: {},
                                 [archivedName]: {},
                             },
                         });

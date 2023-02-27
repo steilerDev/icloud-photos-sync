@@ -38,6 +38,7 @@
         "somechecksum",
         "somekey",
         "somerecordname",
+        "steilerdev",
         "Symbolication",
         "testparam",
         "testpassword",
@@ -50,6 +51,7 @@
         "webservices",
         "Yons"
     ],
+    "jest.autoRevealOutput": "on-run",
     "jest.showCoverageOnLoad": true,
     "jest.coverageFormatter": "GutterFormatter",
     "jest.autoRun": "off",

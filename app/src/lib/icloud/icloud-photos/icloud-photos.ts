@@ -113,15 +113,17 @@ export class iCloudPhotos extends EventEmitter {
         this.logger.debug(`Checking Indexing Status of iCloud Photos Account`);
         try {
             const result = await this.performQuery(`CheckIndexingState`);
-            const state = result[0]?.fields?.state?.value;
+            const state = result[0]?.fields?.state?.value as string;
+
             if (!state) {
                 this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNAVAILABLE).addContext(`icloudResult`, result));
                 return;
             }
 
             if (state === `RUNNING`) {
-                const progress = result[0]?.fields?.progress?.value;
+                this.logger.debug(`Indexing in progress, sync needs to wait!`);
                 const indexingInProgressError = new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS);
+                const progress = result[0]?.fields?.progress?.value;
                 if (progress) {
                     indexingInProgressError.addMessage(`progress ${progress}`);
                 }
@@ -137,8 +139,8 @@ export class iCloudPhotos extends EventEmitter {
             }
 
             this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNKNOWN)
-                .addContext(`icloudResult`, result));
-            return;
+                .addContext(`icloudResult`, result)
+                .addMessage(`Indexing state: ${state}`));
         } catch (err) {
             this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNKNOWN).addCause(err));
         }
@@ -152,7 +154,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param desiredKeys - The fields requested from the backend
      * @returns An array of records as returned by the backend
      */
-    async performQuery(recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
+    private async performQuery(recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
         this.auth.validatePhotosAccount();
         const config: AxiosRequestConfig = {
             "headers": this.auth.getPhotosHeader(),
@@ -201,7 +203,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param fields - The fields to be altered
      * @returns An array of records that have been altered
      */
-    async performOperation(operationType: string, fields: any, recordNames: string[]) {
+    private async performOperation(operationType: string, fields: any, recordNames: string[]) {
         this.auth.validatePhotosAccount();
         const config: AxiosRequestConfig = {
             "headers": this.auth.getPhotosHeader(),
@@ -247,23 +249,26 @@ export class iCloudPhotos extends EventEmitter {
      */
     async fetchAllAlbumRecords(): Promise<CPLAlbum[]> {
         try {
-            // Getting root folders as an initial set for the processing queue
-            const queue: CPLAlbum[] = await this.fetchAlbumRecords();
+            // Processing queue
+            const queue: Promise<CPLAlbum[]>[] = [];
+
+            // Final list of all albums
             const albumRecords: CPLAlbum[] = [];
+
+            // Getting root folders as an initial set for the processing queue
+            queue.push(this.fetchAlbumRecords());
+
             while (queue.length > 0) {
-                const next = queue.shift();
-                try {
+                // Getting next item in the queue
+                for (const nextAlbum of await queue.shift()) {
                     // If album is a folder, there is stuff in there, adding it to the queue
-                    if (next.albumType === AlbumType.FOLDER) {
-                        this.logger.debug(`Adding child elements of ${next.albumNameEnc} to the processing queue`);
-                        queue.push(...(await this.fetchAlbumRecords(next.recordName)));
+                    if (nextAlbum.albumType === AlbumType.FOLDER) {
+                        this.logger.debug(`Adding child elements of ${nextAlbum.albumNameEnc} to the processing queue`);
+                        queue.push(this.fetchAlbumRecords(nextAlbum.recordName));
                     }
 
-                    albumRecords.push(next);
-                } catch (err) {
-                    throw new iCPSError(ICLOUD_PHOTOS_ERR.ALBUM_PROCESSING)
-                        .addMessage(next.albumNameEnc)
-                        .addCause(err);
+                    // Adding completed album
+                    albumRecords.push(nextAlbum);
                 }
             }
 
@@ -274,69 +279,194 @@ export class iCloudPhotos extends EventEmitter {
     }
 
     /**
-     * Fetching a list of albums identified by their parent. If parent is undefined, all albums without parent will be returned
-     * @param parentId - The record name of the parent folder, or empty
+     * Builds the request to receive all albums and folders for the given folder from the iCloud backend
+     * @param albumId - The record name of the folder. If parent is undefined, all albums without parent will be returned.
+     * @returns A promise, that once resolved, contains all subfolders for the provided folder
+     */
+    private buildAlbumRecordsRequest(folderId?: string): Promise<any[]> {
+        return folderId === undefined
+            ? this.performQuery(QueryBuilder.RECORD_TYPES.ALBUM_RECORDS)
+            : this.performQuery(
+                QueryBuilder.RECORD_TYPES.ALBUM_RECORDS,
+                [QueryBuilder.getParentFilterForParentId(folderId)],
+            );
+    }
+
+    /**
+     * Filters unwanted picture records before post-processing
+     * @param record - The record to be filtered
+     * @throws An error, in case the provided record should be ignored
+     */
+    private filterAlbumRecord(record: any) {
+        if (record.deleted === true) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.DELETED_RECORD)
+                .addMessage(record.recordName)
+                .setWarning()
+                .addContext(`record`, record);
+        }
+
+        if (record.recordName === `----Project-Root-Folder----` || record.recordName === `----Root-Folder----`) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.UNWANTED_ALBUM)
+                .addMessage(record.recordName)
+                .setWarning()
+                .addContext(`record`, record);
+        }
+
+        if (record.fields.albumType.value !== AlbumType.FOLDER
+            && record.fields.albumType.value !== AlbumType.ALBUM) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.UNKNOWN_ALBUM)
+                .setWarning()
+                .addMessage(record.fields.albumType.value)
+                .addContext(`record.fields`, record.fields);
+        }
+    }
+
+    /**
+     * Fetching a list of albums identified by their parent.
+     * @param parentId - The record name of the parent folder. If parent is undefined, all albums without parent will be returned.
      * @returns An array of folder and album records. Unwanted folders and folder types are filtered out. Albums have their items included (as a promise)
      */
     async fetchAlbumRecords(parentId?: string): Promise<CPLAlbum[]> {
-        let query: Promise<any[]>;
-        if (parentId === undefined) {
-            query = this.performQuery(QueryBuilder.RECORD_TYPES.ALBUM_RECORDS);
-        } else {
-            const parentFilter = QueryBuilder.getParentFilterForParentId(parentId);
-            query = this.performQuery(
-                QueryBuilder.RECORD_TYPES.ALBUM_RECORDS,
-                [parentFilter],
-            );
-        }
-
         const cplAlbums: CPLAlbum[] = [];
 
-        (await query).forEach(record => {
+        for (const album of await this.buildAlbumRecordsRequest(parentId)) {
             try {
-                if (record.deleted === true) {
-                    this.emit(HANDLER_EVENT, new iCPSError(ICLOUD_PHOTOS_ERR.DELETED_RECORD)
-                        .addMessage(record.recordName)
-                        .setWarning()
-                        .addContext(`record`, record));
-                    return;
+                this.filterAlbumRecord(album);
+
+                if (album.fields.albumType.value === AlbumType.ALBUM) {
+                    const [albumCPLAssets, albumCPLMasters] = await this.fetchAllPictureRecords(album.recordName);
+
+                    const albumAssets: AlbumAssets = {};
+
+                    convertCPLAssets(albumCPLAssets, albumCPLMasters).forEach(asset => {
+                        albumAssets[asset.getAssetFilename()] = asset.getPrettyFilename();
+                    });
+
+                    cplAlbums.push(CPLAlbum.parseFromQuery(album, albumAssets));
                 }
 
-                if (record.recordName === `----Project-Root-Folder----` || record.recordName === `----Root-Folder----`) {
-                    this.logger.debug(`Filtering special folder ${record.recordName}`);
-                    return;
-                }
-
-                if (!(record.fields.albumType.value === AlbumType.FOLDER || record.fields.albumType.value === AlbumType.ALBUM)) {
-                    this.emit(HANDLER_EVENT, new iCPSError(ICLOUD_PHOTOS_ERR.UNKNOWN_ALBUM)
-                        .setWarning()
-                        .addMessage(record.fields.albumType.value)
-                        .addContext(`record.fields`, record.fields));
-                    return;
-                }
-
-                // Getting associated assets for albums
-                if (record.fields.albumType.value === AlbumType.ALBUM) {
-                    const albumAssets: Promise<AlbumAssets> = this.fetchAllPictureRecords(record.recordName)
-                        .then(cplResult => convertCPLAssets(cplResult[0], cplResult[1]))
-                        .then(assets => {
-                            const _albumAssets: AlbumAssets = {};
-                            assets.forEach(asset => {
-                                _albumAssets[asset.getAssetFilename()] = asset.getPrettyFilename();
-                            });
-                            return _albumAssets;
-                        });
-                    cplAlbums.push(CPLAlbum.parseFromQuery(record, albumAssets));
-                } else {
-                    cplAlbums.push(CPLAlbum.parseFromQuery(record));
+                if (album.fields.albumType.value === AlbumType.FOLDER) {
+                    cplAlbums.push(CPLAlbum.parseFromQuery(album));
                 }
             } catch (err) {
                 this.emit(HANDLER_EVENT, new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ALBUM)
                     .addCause(err)
-                    .addContext(`record`, record));
+                    .addContext(`record`, album));
             }
-        });
+        }
+
         return cplAlbums;
+    }
+
+    /**
+     * Returns the number of records currently present in a given album.
+     * This is necessary to properly handling splitting up the record requests (keeping iCloud API limitations in mind)
+     * @param albumId - The record name of the album, if undefined all pictures will be returned
+     * @returns The number of assets within the given album
+     * @throws An error in case the count cannot be obtained
+     */
+    private async getPictureRecordsCount(albumId?: string): Promise<number> {
+        try {
+            const indexCountFilter = QueryBuilder.getIndexCountFilter(albumId);
+            const countData = await this.performQuery(
+                QueryBuilder.RECORD_TYPES.INDEX_COUNT,
+                [indexCountFilter],
+            );
+            return Number.parseInt(countData[0].fields.itemCount.value, 10);
+        } catch (err) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.COUNT_DATA)
+                .setWarning()
+                .addCause(err);
+        }
+    }
+
+    /**
+     * The iCloud API is limiting the amount of records that can be obtained with a single request.
+     * This function will build separate requests, based on the expected size of the album.
+     * @param expectedNumberOfRecords - The amount of records expected within the given album
+     * @param albumId - The record name of the album, if undefined all pictures will be returned
+     * @returns An array of Promises, that will resolve to arrays of picture records and the amount of pictures expected from the requests.
+     */
+    private buildPictureRecordsRequests(expectedNumberOfRecords: number, albumId?: string): Promise<any[]>[] {
+        // Calculating number of concurrent requests, in order to execute in parallel
+        const numberOfRequests = albumId === undefined
+            ? Math.ceil((expectedNumberOfRecords * 2) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT) // On all pictures two records per photo are returned (CPLMaster & CPLAsset) which are counted against max
+            : Math.ceil((expectedNumberOfRecords * 3) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT); // On folders three records per photo are returned (CPLMaster, CPLAsset & CPLContainerRelation) which are counted against max
+
+        this.logger.debug(`Expecting ${expectedNumberOfRecords} records for album ${albumId === undefined ? `All photos` : albumId}, executing ${numberOfRequests} queries`);
+
+        // Collecting all promise queries for parallel execution
+        const pictureRecordsRequests: Promise<any[]>[] = [];
+        for (let index = 0; index < numberOfRequests; index++) {
+            const startRank = albumId === undefined // The start rank always refers to the tuple/triple of records, therefore we need to adjust the start rank based on the amount of records returned
+                ? index * Math.floor(ICLOUD_PHOTOS.MAX_RECORDS_LIMIT / 2)
+                : index * Math.floor(ICLOUD_PHOTOS.MAX_RECORDS_LIMIT / 3);
+            this.logger.debug(`Building query for records of album ${albumId === undefined ? `All photos` : albumId} at index ${startRank}`);
+            const startRankFilter = QueryBuilder.getStartRankFilterForStartRank(startRank);
+            const directionFilter = QueryBuilder.getDirectionFilterForDirection();
+
+            // Different queries for 'all pictures' than album pictures
+            if (albumId === undefined) {
+                pictureRecordsRequests.push(this.performQuery(
+                    QueryBuilder.RECORD_TYPES.ALL_PHOTOS,
+                    [startRankFilter, directionFilter],
+                    ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
+                    QueryBuilder.QUERY_KEYS,
+                ));
+            } else {
+                const parentFilter = QueryBuilder.getParentFilterForParentId(albumId);
+                pictureRecordsRequests.push(this.performQuery(
+                    QueryBuilder.RECORD_TYPES.PHOTO_RECORDS,
+                    [startRankFilter, directionFilter, parentFilter],
+                    ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
+                    QueryBuilder.QUERY_KEYS,
+                ));
+            }
+        }
+
+        return pictureRecordsRequests;
+    }
+
+    /**
+     * Filters unwanted picture records before post-processing
+     * @param record - The record to be filtered
+     * @param seen - An array of previously seen recordNames
+     * @throws An error, in case the provided record should be ignored
+     */
+    private filterPictureRecord(record: any, seen: string[]) {
+        if (record.deleted === true) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.DELETED_RECORD)
+                .setWarning()
+                .addContext(`record`, record);
+        }
+
+        if (record.fields.isHidden?.value === 1) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.HIDDEN_RECORD)
+                .setWarning()
+                .addContext(`record`, record);
+        }
+
+        // If (Object.prototype.hasOwnProperty.call(seen, record.recordName)) {
+        if (seen.indexOf(record.recordName) === -1) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.DUPLICATE_RECORD)
+                .setWarning()
+                .addContext(`record`, record);
+        }
+
+        if (record.recordType === QueryBuilder.RECORD_TYPES.CONTAINER_RELATION) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.UNWANTED_RECORD_TYPE)
+                .setWarning()
+                .addMessage(record.recordType)
+                .addContext(`recordType`, record.recordType);
+        }
+
+        if (record.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD
+            && record.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.UNKNOWN_RECORD_TYPE)
+                .setWarning()
+                .addMessage(record.recordType)
+                .addContext(`recordType`, record.recordType);
+        }
     }
 
     /**
@@ -346,123 +476,58 @@ export class iCloudPhotos extends EventEmitter {
      */
     async fetchAllPictureRecords(parentId?: string): Promise<[CPLAsset[], CPLMaster[]]> {
         this.logger.debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
-        // Getting number of items in folder
-        let totalCount = -1;
-        try {
-            const indexCountFilter = QueryBuilder.getIndexCountFilter(parentId);
-            const countData = await this.performQuery(
-                QueryBuilder.RECORD_TYPES.INDEX_COUNT,
-                [indexCountFilter],
-            );
-            totalCount = countData[0].fields.itemCount.value;
-        } catch (err) {
-            throw new iCPSError(ICLOUD_PHOTOS_ERR.COUNT_DATA)
-                .setWarning()
-                .addCause(err);
-        }
 
-        // Calculating number of concurrent requests, in order to execute in parallel
-        const numberOfRequests = parentId === undefined
-            ? Math.ceil((totalCount * 2) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT) // On all pictures two records per photo are returned (CPLMaster & CPLAsset) which are counted against max
-            : Math.ceil((totalCount * 3) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT); // On folders three records per photo are returned (CPLMaster, CPLAsset & CPLContainerRelation) which are counted against max
-
-        this.logger.debug(`Expecting ${totalCount} records for album ${parentId === undefined ? `All photos` : parentId}, executing ${numberOfRequests} queries`);
-
-        // Collecting all promise queries for parallel execution
-        const promiseQueries: Promise<any>[] = [];
-        for (let index = 0; index < numberOfRequests; index++) {
-            const startRank = parentId === undefined // The start rank always refers to the tuple/triple of records, therefore we need to adjust the start rank based on the amount of records returned
-                ? index * Math.floor(ICLOUD_PHOTOS.MAX_RECORDS_LIMIT / 2)
-                : index * Math.floor(ICLOUD_PHOTOS.MAX_RECORDS_LIMIT / 3);
-            this.logger.debug(`Building query for records of album ${parentId === undefined ? `All photos` : parentId} at index ${startRank}`);
-            const startRankFilter = QueryBuilder.getStartRankFilterForStartRank(startRank);
-            const directionFilter = QueryBuilder.getDirectionFilterForDirection();
-
-            // Different queries for 'all pictures' than album pictures
-            if (parentId === undefined) {
-                promiseQueries.push(this.performQuery(
-                    QueryBuilder.RECORD_TYPES.ALL_PHOTOS,
-                    [startRankFilter, directionFilter],
-                    ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
-                    QueryBuilder.QUERY_KEYS,
-                ));
-            } else {
-                const parentFilter = QueryBuilder.getParentFilterForParentId(parentId);
-                promiseQueries.push(this.performQuery(
-                    QueryBuilder.RECORD_TYPES.PHOTO_RECORDS,
-                    [startRankFilter, directionFilter, parentFilter],
-                    ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
-                    QueryBuilder.QUERY_KEYS,
-                ));
-            }
-        }
-
-        // Executing queries in parallel and afterwards collecting parsed responses
+        let expectedNumberOfRecords = -1;
         const cplMasters: CPLMaster[] = [];
         const cplAssets: CPLAsset[] = [];
         try {
+            // Getting number of items in folder
+            expectedNumberOfRecords = await this.getPictureRecordsCount(parentId);
+
+            // Creating requests, based on number of expected items
+            const pictureRecordsRequests = this.buildPictureRecordsRequests(expectedNumberOfRecords, parentId);
+
+            // Merging arrays of arrays and waiting for all promises to settle
             const allRecords: any[] = [];
-            // Merging arrays of arrays
-            (await Promise.all(promiseQueries)).forEach(records =>
+
+            (await Promise.all(pictureRecordsRequests)).forEach(records =>
                 allRecords.push(...records),
             );
 
             // Post-processing response
-            const seen = {};
-            allRecords.forEach(record => {
+            const seen = [];
+            for (const record of allRecords) {
                 try {
-                    if (record.deleted === true) {
-                        throw new iCPSError(ICLOUD_PHOTOS_ERR.DELETED_RECORD)
-                            .setWarning()
-                            .addContext(`record`, record);
-                    }
-
-                    if (record.fields.isHidden?.value === 1) {
-                        throw new iCPSError(ICLOUD_PHOTOS_ERR.HIDDEN_RECORD)
-                            .setWarning()
-                            .addContext(`record`, record);
-                    }
-
-                    if (Object.prototype.hasOwnProperty.call(seen, record.recordName)) {
-                        throw new iCPSError(ICLOUD_PHOTOS_ERR.DUPLICATE_RECORD)
-                            .setWarning()
-                            .addContext(`record`, record);
-                    }
-
-                    if (record.recordType === QueryBuilder.RECORD_TYPES.CONTAINER_RELATION) {
-                        // Expecting unnecessary container relationships and ignoring them
-                        return;
-                    }
+                    this.filterPictureRecord(record, seen);
 
                     if (record.recordType === QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
                         cplMasters.push(CPLMaster.parseFromQuery(record));
-                        seen[record.recordName] = true;
-                    } else if (record.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
+                        seen.push(record.recordName);
+                    }
+
+                    if (record.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
                         cplAssets.push(CPLAsset.parseFromQuery(record));
-                        seen[record.recordName] = true;
-                    } else {
-                        throw new iCPSError(ICLOUD_PHOTOS_ERR.UNKNOWN_RECORD_TYPE)
-                            .setWarning()
-                            .addContext(`recordType`, record.recordType);
+                        seen.push(record.recordName);
                     }
                 } catch (err) {
                     this.emit(HANDLER_EVENT, new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ASSET)
                         .setWarning()
                         .addCause(err));
                 }
-            });
+            }
         } catch (err) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.FETCH_RECORDS)
                 .addMessage(`album ${parentId === undefined ? `'All photos'` : parentId}`)
                 .addCause(err);
         }
 
-        if (cplMasters.length !== totalCount || cplAssets.length !== totalCount) {
+        // There should be one CPLMaster and one CPLAsset per record, however the iCloud response is sometimes not adhering to this.
+        if (cplMasters.length !== expectedNumberOfRecords || cplAssets.length !== expectedNumberOfRecords) {
             this.emit(HANDLER_EVENT, new iCPSError(ICLOUD_PHOTOS_ERR.COUNT_MISMATCH)
                 .setWarning()
-                .addMessage(`expected ${totalCount} CPLMaster & ${totalCount} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`));
+                .addMessage(`expected ${expectedNumberOfRecords} CPLMaster & ${expectedNumberOfRecords} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`));
         } else {
-            this.logger.debug(`Received expected amount (${totalCount}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
+            this.logger.debug(`Received expected amount (${expectedNumberOfRecords}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
         }
 
         return [cplAssets, cplMasters];

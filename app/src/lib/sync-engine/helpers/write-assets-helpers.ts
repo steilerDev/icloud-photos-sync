@@ -18,7 +18,7 @@ export async function writeAssets(this: SyncEngine, processingQueue: PLibraryPro
     this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
 
     // Deleting before downloading, in order to ensure no conflicts
-    await Promise.all(toBeDeleted.map(asset => this.removeAsset(asset)));
+    await Promise.all(toBeDeleted.map(asset => this.photosLibrary.deleteAsset(asset)));
     await Promise.all(toBeAdded.map(asset => this.downloadQueue.add(() => this.addAsset(asset))));
 }
 
@@ -33,21 +33,10 @@ export async function addAsset(this: SyncEngine, asset: Asset) {
     try {
         await this.photosLibrary.verifyAsset(asset);
         this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
-        return;
     } catch (err) {
         const data = await this.icloud.photos.downloadAsset(asset);
         await this.photosLibrary.writeAsset(asset, data);
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
     }
-}
 
-/**
- * Deletes a given asset
- * @param asset - The asset that needs to be deleted
- * @returns A promise that resolves, once the file has been deleted
- */
-export async function removeAsset(this: SyncEngine, asset: Asset) {
-    this.logger.info(`Removing asset ${asset.getDisplayName()}`);
-    await this.photosLibrary.deleteAsset(asset);
+    this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
 }

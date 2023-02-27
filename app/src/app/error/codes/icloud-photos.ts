@@ -59,12 +59,20 @@ export const DUPLICATE_RECORD: ErrorStruct = buildErrorStruct(
     name, prefix, `DUPLICATE_RECORD`, `Ignoring duplicate record`,
 );
 
+export const UNWANTED_RECORD_TYPE: ErrorStruct = buildErrorStruct(
+    name, prefix, `UNWANTED_RECORD_TYPE`, `Ignoring unwanted record type`,
+);
+
 export const UNKNOWN_RECORD_TYPE: ErrorStruct = buildErrorStruct(
     name, prefix, `UNKNOWN_RECORD_TYPE`, `Ignoring unknown record type`,
 );
 
 export const UNKNOWN_ALBUM: ErrorStruct = buildErrorStruct(
     name, prefix, `UNKNOWN_ALBUM`, `Ignoring unknown album`,
+);
+
+export const UNWANTED_ALBUM: ErrorStruct = buildErrorStruct(
+    name, prefix, `UNWANTED_ALBUM`, `Ignoring unwanted album`,
 );
 
 export const COUNT_DATA: ErrorStruct = buildErrorStruct(

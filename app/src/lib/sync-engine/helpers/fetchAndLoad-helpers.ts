@@ -48,10 +48,10 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
  * @param cplAlbums - The given CPL Album
  * @returns Once settled, a completely populated Album array
  */
-export async function convertCPLAlbums(cplAlbums: CPLAlbum[]) : Promise<Album[]> {
+export function convertCPLAlbums(cplAlbums: CPLAlbum[]) : Album[] {
     const remoteAlbums: Album[] = [];
     for (const cplAlbum of cplAlbums) {
-        remoteAlbums.push(await Album.fromCPL(cplAlbum));
+        remoteAlbums.push(Album.fromCPL(cplAlbum));
     }
 
     return remoteAlbums;

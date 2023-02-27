@@ -11,7 +11,7 @@ import {getLogger} from '../logger.js';
 // Helpers extending this class
 import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
-import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
+import {addAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 import {SyncApp} from '../../app/icloud-app.js';
 import {HANDLER_EVENT} from '../../app/event/error-handler.js';
@@ -222,7 +222,6 @@ export class SyncEngine extends EventEmitter {
     // From ./helpers/write-assets-helpers.ts
     writeAssets = writeAssets;
     addAsset = addAsset;
-    removeAsset = removeAsset;
 
     // From ./helpers/write-albums-helpers.ts
     writeAlbums = writeAlbums;

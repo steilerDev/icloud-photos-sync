@@ -319,9 +319,9 @@ export class CPLAlbum {
     /**
      * A list of assets contained in this album
      */
-    assets?: Promise<AlbumAssets>;
+    assets?: AlbumAssets;
 
-    static parseFromQuery(cplRecord: unknown, assets?: Promise<AlbumAssets>): CPLAlbum {
+    static parseFromQuery(cplRecord: unknown, assets?: AlbumAssets): CPLAlbum {
         if (!isCPLAlbumQuery(cplRecord)) {
             throw new iCPSError(QUERY_PARSER_ERR.CPLALBUM_FORMAT)
                 .addContext(`query`, cplRecord);

@@ -254,8 +254,8 @@ describe(`Unit Tests - Sync Engine`, () => {
             syncEngine.icloud.photos.fetchAllAlbumRecords = jest.fn<() => Promise<CPLAlbum[]>>()
                 .mockResolvedValue(fetchAllAlbumRecordsReturnValue);
             const convertCPLAlbumsOriginal = SyncEngine.convertCPLAlbums;
-            SyncEngine.convertCPLAlbums = jest.fn<() => Promise<Album[]>>()
-                .mockResolvedValue(convertCPLAlbumsReturnValue);
+            SyncEngine.convertCPLAlbums = jest.fn<() => Album[]>()
+                .mockReturnValue(convertCPLAlbumsReturnValue);
 
             syncEngine.photosLibrary.loadAssets = jest.fn<() => Promise<PLibraryEntities<Asset>>>()
                 .mockResolvedValue(loadAssetsReturnValue);
