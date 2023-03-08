@@ -13,7 +13,7 @@ import {appWithOptions} from './app-factory.helper';
 import * as Config from "./_config";
 
 export function syncEngineFactory(): SyncEngine {
-    const syncEngine = new SyncEngine(
+    return new SyncEngine(
         appWithOptions({
             "downloadThreads": 10,
             "maxRetries": -1,
@@ -26,11 +26,10 @@ export function syncEngineFactory(): SyncEngine {
             "password": Config.password,
             "trustToken": Config.trustToken,
             "dataDir": Config.appDataDir,
+            "metadataThreads": Config.metadataThreads
         })),
         ),
     );
-    syncEngine.icloud.photos = new iCloudPhotos(syncEngine.icloud.auth);
-    return syncEngine;
 }
 
 export function mockSyncEngineForAssetQueue(syncEngine: SyncEngine): SyncEngine {

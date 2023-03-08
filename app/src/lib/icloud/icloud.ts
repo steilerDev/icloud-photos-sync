@@ -70,6 +70,8 @@ export class iCloud extends EventEmitter {
             this.logger.info(`Clearing token due to refresh token flag`);
             this.auth.iCloudAccountTokens.trustToken = ``;
         }
+        
+        this.photos = new iCloudPhotos(app, this.auth);
 
         // ICloud lifecycle management
         if (app.options.failOnMfa) {
@@ -295,7 +297,6 @@ export class iCloud extends EventEmitter {
 
             this.auth.processCloudSetupResponse(response);
 
-            this.photos = new iCloudPhotos(this.auth);
 
             this.logger.debug(`Account ready`);
             this.emit(ICLOUD.EVENTS.ACCOUNT_READY);

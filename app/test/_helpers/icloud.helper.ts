@@ -36,7 +36,7 @@ export function iCloudPhotosFactory(removeEventListeners: boolean = true): iClou
     auth.iCloudPhotosAccount.zoneType = Config.iCloudPhotosAccount.zoneType;
     auth.getPhotosHeader = jest.fn(() => `headerValues`);
 
-    const icloudPhotos = new iCloudPhotos(auth);
+    const icloudPhotos = new iCloudPhotos(appWithOptions({metadataThreads: Config.metadataThreads}), auth);
 
     if (removeEventListeners) {
         icloudPhotos.removeAllListeners();

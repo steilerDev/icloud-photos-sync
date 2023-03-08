@@ -639,7 +639,6 @@ describe(`Setup iCloud`, () => {
             },
         );
         await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to setup iCloud Account`));
-        expect(icloud.photos).toBeNull();
     });
 
     test(`Receive expired iCloud Cookies during setup`, async () => {
@@ -672,7 +671,6 @@ describe(`Setup iCloud`, () => {
             },
         );
         await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to setup iCloud Account`));
-        expect(icloud.photos).toBeNull();
     });
 
     test(`Receive invalid status code during setup`, async () => {
@@ -697,7 +695,6 @@ describe(`Setup iCloud`, () => {
             },
         );
         await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to setup iCloud Account`));
-        expect(icloud.photos).toBeNull();
     });
 
     test(`Receive invalid response during setup`, async () => {
@@ -724,7 +721,6 @@ describe(`Setup iCloud`, () => {
             },
         );
         await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to setup iCloud Account`));
-        expect(icloud.photos).toBeNull();
     });
 
     test(`Network failure`, async () => {
@@ -747,14 +743,13 @@ describe(`Setup iCloud`, () => {
             },
         );
         await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to setup iCloud Account`));
-        expect(icloud.photos).toBeNull();
     });
 
     describe(`Get iCloud Photos Ready`, () => {
         test(`Get iCloud Photos Ready`, async () => {
             const icloud = iCloudFactory();
             icloud.auth.iCloudCookies = getICloudCookies();
-            icloud.photos = new iCloudPhotos(icloud.auth);
+            icloud.photos = new iCloudPhotos(appWithOptions({metadataThreads: Config.metadataThreads}), icloud.auth);
             icloud.photos.setup = jest.fn(() => Promise.resolve());
 
             await icloud.getPhotosReady();
@@ -769,7 +764,7 @@ describe(`Setup iCloud`, () => {
         test(`Cookies invalid`, async () => {
             const icloud = iCloudFactory();
             icloud.auth.iCloudCookies = getICloudCookies(true);
-            icloud.photos = new iCloudPhotos(icloud.auth);
+            icloud.photos = new iCloudPhotos(appWithOptions({metadataThreads: Config.metadataThreads}), icloud.auth);
             icloud.photos.setup = jest.fn(() => Promise.resolve());
 
             await icloud.getPhotosReady();

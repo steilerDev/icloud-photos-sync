@@ -11,6 +11,7 @@ import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js
  * @returns The parsed number
  */
 function commanderParseInt(value: string, _dummyPrevious: unknown): number {
+    
     // ParseInt takes a string and a radix
     const parsedValue = parseInt(value, 10);
     if (isNaN(parsedValue)) {
@@ -18,6 +19,19 @@ function commanderParseInt(value: string, _dummyPrevious: unknown): number {
     }
 
     return parsedValue;
+}
+
+/**
+ * This function can be used as a commander argParser. It will try to parse the value as an integer or the string literal 'Infinity' and throw an invalid argument error in case it fails
+ * @param value - The string literal, read from the CLI
+ * @param _dummyPrevious - Conforming to the interface - unused
+ * @returns The parsed number
+ */
+function commanderParseIntOrInfinity(value: string, _dummyPrevious): number {
+    if(value === "Infinity") {
+        return Infinity
+    }
+    return commanderParseInt(value, _dummyPrevious)
 }
 
 function commanderParseCron(value: string, _dummyPrevious: unknown): string {
@@ -71,7 +85,7 @@ export function appFactory(argv: string[]): iCPSApp {
         .addOption(new Option(`-t, --download-threads <number>`, `Sets the number of download threads`)
             .env(`DOWNLOAD_THREADS`)
             .default(5)
-            .argParser(commanderParseInt))
+            .argParser(commanderParseIntOrInfinity))
         .addOption(new Option(`-S, --schedule <cron-string>`, `In case this app is executed in daemon mode, it will use this cron schedule to perform regular syncs`)
             .env(`SCHEDULE`)
             .default(`0 2 * * *`)
@@ -106,7 +120,11 @@ export function appFactory(argv: string[]): iCPSApp {
             .default(false))
         .addOption(new Option(`--export-metrics`, `Enables the export of sync metrics to a file using the Influx Line Protocol.`)
             .env(`EXPORT_METRICS`)
-            .default(false));
+            .default(false))
+        .addOption(new Option(`--metadata-threads <number>`, `Sets the number of query threads during metadata acquisition`)
+            .env(`METADATA_THREADS`)
+            .default(Infinity)
+            .argParser(commanderParseIntOrInfinity))
 
     program.command(AppCommands.daemon)
         .action(() => {

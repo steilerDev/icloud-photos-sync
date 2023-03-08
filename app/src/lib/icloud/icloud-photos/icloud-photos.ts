@@ -11,6 +11,8 @@ import {convertCPLAssets} from '../../sync-engine/helpers/fetchAndLoad-helpers.j
 import {HANDLER_EVENT} from '../../../app/event/error-handler.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
+import PQueue from 'p-queue';
+import { iCloudApp } from '../../../app/icloud-app.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -37,13 +39,19 @@ export class iCloudPhotos extends EventEmitter {
     ready: Promise<void>;
 
     /**
+     * The queue holding all query operations. Used to rate limit metadata fetching
+     */
+    queryQueue: PQueue
+
+    /**
      * Creates a new iCloud Photos Class
      * @param auth - The populated authentication object
      */
-    constructor(auth: iCloudAuth) {
+    constructor(app: iCloudApp, auth: iCloudAuth) {
         super();
         this.auth = auth;
         this.axios = axios.create();
+        this.queryQueue = new PQueue({concurrency: app.options.metadataThreads ?? Infinity})
         this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, async () => {
             await this.checkingIndexingStatus();
         });
@@ -186,7 +194,12 @@ export class iCloudPhotos extends EventEmitter {
             data.resultsLimit = resultsLimit;
         }
 
-        const queryResponse = (await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config));
+        let queryResponse: any;
+
+        await this.queryQueue.add(async () => {
+            queryResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)
+        })
+
         const fetchedRecords = queryResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_QUERY_RESPONSE)

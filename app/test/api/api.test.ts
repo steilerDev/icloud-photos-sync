@@ -95,6 +95,7 @@ describe(`API E2E Tests`, () => {
             "trustToken": token,
             "dataDir": appDataDir,
             "failOnMfa": true,
+            "metadataThreads": 10
         }));
 
         beforeAll(async () => {

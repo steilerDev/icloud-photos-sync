@@ -43,6 +43,17 @@ describe(`App Factory`, () => {
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 
+    test(`Create Token App - Retry set to Infinity`, () => {
+        const tokenApp = appFactory(validOptions.tokenWithThreadsToInfinity) as TokenApp;
+        expect(tokenApp).toBeInstanceOf(TokenApp);
+        expect(setupLogger).toHaveBeenCalledTimes(1);
+        expect(tokenApp.icloud).toBeDefined();
+        expect(tokenApp.icloud.mfaServer).toBeDefined();
+        expect(tokenApp.icloud.auth).toBeDefined();
+        expect(tokenApp.options.downloadThreads).toEqual(Infinity)
+        expect(fs.existsSync(`/opt/icloud-photos-library`));
+    });
+
     test(`Create Sync App`, () => {
         const syncApp = appFactory(validOptions.sync) as SyncApp;
         expect(syncApp).toBeInstanceOf(SyncApp);

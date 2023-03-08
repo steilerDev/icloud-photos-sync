@@ -7,7 +7,7 @@ import {iCloudAuthFactory} from './icloud-auth.helper';
 import * as Config from './_config';
 
 export function archiveEngineFactory(_remoteDelete: boolean = true): ArchiveEngine {
-    const engine = new ArchiveEngine(
+    return new ArchiveEngine(
         appWithOptions({
             'remoteDelete': _remoteDelete,
         },
@@ -19,9 +19,8 @@ export function archiveEngineFactory(_remoteDelete: boolean = true): ArchiveEngi
             "password": Config.password,
             "trustToken": Config.trustToken,
             "dataDir": Config.appDataDir,
+            "metadataThreads": Config.metadataThreads
         })),
         ),
     );
-    engine.icloud.photos = new iCloudPhotos(iCloudAuthFactory());
-    return engine;
 }
