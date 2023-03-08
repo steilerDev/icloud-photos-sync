@@ -336,7 +336,7 @@ describe.each([
 
 describe(`Perform Operation`, () => {
 
-    test.only.each([
+    test.each([
         {
             _desc: "No records",
             operation: 'someOperation',
