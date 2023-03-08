@@ -28,7 +28,7 @@ export const INDEXING_IN_PROGRESS: ErrorStruct = buildErrorStruct(
 );
 
 export const INDEXING_STATE_UNKNOWN: ErrorStruct = buildErrorStruct(
-    name, prefix, `INDEXING_STATE_UNKNOWN`, `Unknown indexing state, try again later`,
+    name, prefix, `INDEXING_STATE_UNKNOWN`, `Unknown indexing state`,
 );
 
 export const UNEXPECTED_QUERY_RESPONSE: ErrorStruct = buildErrorStruct(

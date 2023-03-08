@@ -633,10 +633,10 @@ describe(`Write state`, () => {
                 const assetPath = path.join(assetDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeTruthy();
                 expect(fs.readFileSync(assetPath).length).toBeGreaterThan(0);
-            } catch(err) {
+            } catch (err) {
                 // If there is no network connectivity, pass the test and print warning
-                console.warn(`Unable to run test - potentially due to lacking network connectivity`)
-                expect(err).toEqual(new Error('getaddrinfo ENOTFOUND steilerdev.github.io'))
+                console.warn(`Unable to run test - potentially due to lacking network connectivity`);
+                expect(err).toEqual(new Error(`getaddrinfo ENOTFOUND steilerdev.github.io`));
             }
         });
 
@@ -666,10 +666,10 @@ describe(`Write state`, () => {
                 await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset`);
                 const assetPath = path.join(assetDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeFalsy();
-            } catch(err) {
+            } catch (err) {
                 // If there is no network connectivity, pass the test and print warning
-                console.warn(`Unable to run test - potentially due to lacking network connectivity`)
-                expect(err).toEqual(new Error('getaddrinfo ENOTFOUND steilerdev.github.io'))
+                console.warn(`Unable to run test - potentially due to lacking network connectivity`);
+                expect(err).toEqual(new Error(`getaddrinfo ENOTFOUND steilerdev.github.io`));
             }
         });
 

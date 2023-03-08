@@ -24,7 +24,7 @@ export class iCloudPhotos extends EventEmitter {
     /**
      * Cookie required to authenticate against the iCloud Services
      */
-    private auth: iCloudAuth;
+    auth: iCloudAuth;
 
     /**
      * Local axios instance to handle network requests
@@ -142,7 +142,7 @@ export class iCloudPhotos extends EventEmitter {
                 .addContext(`icloudResult`, result)
                 .addMessage(`Indexing state: ${state}`));
         } catch (err) {
-            this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNKNOWN).addCause(err));
+            this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNAVAILABLE).addCause(err));
         }
     }
 
@@ -154,7 +154,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param desiredKeys - The fields requested from the backend
      * @returns An array of records as returned by the backend
      */
-    private async performQuery(recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
+    async performQuery(recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
         this.auth.validatePhotosAccount();
         const config: AxiosRequestConfig = {
             "headers": this.auth.getPhotosHeader(),
@@ -187,7 +187,7 @@ export class iCloudPhotos extends EventEmitter {
         }
 
         const queryResponse = (await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config));
-        const fetchedRecords = queryResponse.data.records;
+        const fetchedRecords = queryResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_QUERY_RESPONSE)
                 .addContext(`queryResponse`, queryResponse);
@@ -203,7 +203,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param fields - The fields to be altered
      * @returns An array of records that have been altered
      */
-    private async performOperation(operationType: string, fields: any, recordNames: string[]) {
+    async performOperation(operationType: string, fields: any, recordNames: string[]) {
         this.auth.validatePhotosAccount();
         const config: AxiosRequestConfig = {
             "headers": this.auth.getPhotosHeader(),
@@ -233,7 +233,7 @@ export class iCloudPhotos extends EventEmitter {
         }));
 
         const operationResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config);
-        const fetchedRecords = operationResponse.data.records;
+        const fetchedRecords = operationResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)
                 .addContext(`operationResponse`, operationResponse);
@@ -283,7 +283,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param albumId - The record name of the folder. If parent is undefined, all albums without parent will be returned.
      * @returns A promise, that once resolved, contains all subfolders for the provided folder
      */
-    private buildAlbumRecordsRequest(folderId?: string): Promise<any[]> {
+    buildAlbumRecordsRequest(folderId?: string): Promise<any[]> {
         return folderId === undefined
             ? this.performQuery(QueryBuilder.RECORD_TYPES.ALBUM_RECORDS)
             : this.performQuery(
@@ -297,7 +297,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param record - The record to be filtered
      * @throws An error, in case the provided record should be ignored
      */
-    private filterAlbumRecord(record: any) {
+    filterAlbumRecord(record: any) {
         if (record.deleted === true) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.DELETED_RECORD)
                 .addMessage(record.recordName)
@@ -365,7 +365,7 @@ export class iCloudPhotos extends EventEmitter {
      * @returns The number of assets within the given album
      * @throws An error in case the count cannot be obtained
      */
-    private async getPictureRecordsCount(albumId?: string): Promise<number> {
+    async getPictureRecordsCount(albumId?: string): Promise<number> {
         try {
             const indexCountFilter = QueryBuilder.getIndexCountFilter(albumId);
             const countData = await this.performQuery(
@@ -387,7 +387,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param albumId - The record name of the album, if undefined all pictures will be returned
      * @returns An array of Promises, that will resolve to arrays of picture records and the amount of pictures expected from the requests.
      */
-    private buildPictureRecordsRequests(expectedNumberOfRecords: number, albumId?: string): Promise<any[]>[] {
+    buildPictureRecordsRequests(expectedNumberOfRecords: number, albumId?: string): Promise<any[]>[] {
         // Calculating number of concurrent requests, in order to execute in parallel
         const numberOfRequests = albumId === undefined
             ? Math.ceil((expectedNumberOfRecords * 2) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT) // On all pictures two records per photo are returned (CPLMaster & CPLAsset) which are counted against max
@@ -433,7 +433,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param seen - An array of previously seen recordNames
      * @throws An error, in case the provided record should be ignored
      */
-    private filterPictureRecord(record: any, seen: string[]) {
+    filterPictureRecord(record: any, seen: string[]) {
         if (record.deleted === true) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.DELETED_RECORD)
                 .setWarning()
@@ -447,7 +447,7 @@ export class iCloudPhotos extends EventEmitter {
         }
 
         // If (Object.prototype.hasOwnProperty.call(seen, record.recordName)) {
-        if (seen.indexOf(record.recordName) === -1) {
+        if (seen.indexOf(record.recordName) !== -1) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.DUPLICATE_RECORD)
                 .setWarning()
                 .addContext(`record`, record);
@@ -490,9 +490,9 @@ export class iCloudPhotos extends EventEmitter {
             // Merging arrays of arrays and waiting for all promises to settle
             const allRecords: any[] = [];
 
-            (await Promise.all(pictureRecordsRequests)).forEach(records =>
-                allRecords.push(...records),
-            );
+            (await Promise.all(pictureRecordsRequests)).forEach(records => {
+                allRecords.push(...records)
+            });
 
             // Post-processing response
             const seen = [];

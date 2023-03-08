@@ -9,7 +9,6 @@ import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
 import {getLogger} from '../../lib/logger.js';
 import {ArchiveEngine} from '../../lib/archive-engine/archive-engine.js';
 import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from './error-handler.js';
-import {DaemonAppEvents} from '../icloud-app.js';
 import * as fs from "fs";
 import path from "path";
 
