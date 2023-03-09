@@ -4,10 +4,10 @@ import * as PACKAGE_INFO from '../../lib/package.js';
 import {getLogger, logFile} from "../../lib/logger.js";
 import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
-import {OptionValues} from "commander";
 import {EventHandler} from './event-handler.js';
 import {ERR_SIGINT, ERR_SIGTERM} from '../error/error-codes.js';
 import {DaemonAppEvents} from '../icloud-app.js';
+import {iCPSAppOptions} from '../factory.js';
 
 /**
  * The event emitted by classes of this application and picked up by the handler.
@@ -36,7 +36,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
      */
     verbose: boolean = false;
 
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         super();
         if (options.enableCrashReporting) {
             this.btClient = bt.initialize({

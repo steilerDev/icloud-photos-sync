@@ -335,50 +335,49 @@ describe.each([
 });
 
 describe(`Perform Operation`, () => {
-
     test.each([
         {
-            _desc: "No records",
-            operation: 'someOperation',
-            fields: {
+            "_desc": `No records`,
+            "operation": `someOperation`,
+            "fields": {
                 "someField": {
-                    value: "someValue"
+                    "value": `someValue`,
                 },
             },
-            records: [],
-            expectedOperation: {
+            "records": [],
+            "expectedOperation": {
                 "atomic": true,
                 "operations": [],
                 "zoneID": {"ownerRecordName": Config.iCloudPhotosAccount.ownerName, "zoneName": Config.iCloudPhotosAccount.zoneName, "zoneType": Config.iCloudPhotosAccount.zoneType},
-            }
+            },
         }, {
-            _desc: "One record",
-            operation: 'someOperation',
-            fields: {
+            "_desc": `One record`,
+            "operation": `someOperation`,
+            "fields": {
                 "someField": {
-                    value: "someValue"
+                    "value": `someValue`,
                 },
             },
-            records: ['recordA'],
-            expectedOperation:{
+            "records": [`recordA`],
+            "expectedOperation": {
                 "atomic": true,
                 "operations": [{
                     "operationType": `someOperation`,
                     "record": {
                         "recordName": `recordA`,
                         "recordType": `CPLAsset`,
-                        "recordChangeTag": '21h2',
+                        "recordChangeTag": `21h2`,
                         "fields": {
                             "someField": {
-                                "value": "someValue"
+                                "value": `someValue`,
                             },
-                        }
+                        },
                     },
                 }],
                 "zoneID": {"ownerRecordName": Config.iCloudPhotosAccount.ownerName, "zoneName": Config.iCloudPhotosAccount.zoneName, "zoneType": Config.iCloudPhotosAccount.zoneType},
-            }
-        }
-    ])('Success $_desc', async ({operation, fields, records, expectedOperation}) => {
+            },
+        },
+    ])(`Success $_desc`, async ({operation, fields, records, expectedOperation}) => {
         const iCloudPhotos = iCloudPhotosFactory();
 
         const responseRecords = [`recordA`, `recordB`];
@@ -388,7 +387,7 @@ describe(`Perform Operation`, () => {
             },
         } as any));
 
-        const result = await iCloudPhotos.performOperation(operation, fields, records)
+        const result = await iCloudPhotos.performOperation(operation, fields, records);
 
         expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
             `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/modify`,
@@ -396,7 +395,7 @@ describe(`Perform Operation`, () => {
             {"headers": `headerValues`, "params": {"remapEnums": `True`}},
         );
         expect(result).toEqual(responseRecords);
-    })
+    });
 
     test.todo(`Without any content`);
     test.todo(`Only operationType`);

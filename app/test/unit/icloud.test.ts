@@ -749,7 +749,7 @@ describe(`Setup iCloud`, () => {
         test(`Get iCloud Photos Ready`, async () => {
             const icloud = iCloudFactory();
             icloud.auth.iCloudCookies = getICloudCookies();
-            icloud.photos = new iCloudPhotos(appWithOptions({metadataThreads: Config.metadataThreads}), icloud.auth);
+            icloud.photos = new iCloudPhotos(appWithOptions({"metadataRate": Config.metadataRate}), icloud.auth);
             icloud.photos.setup = jest.fn(() => Promise.resolve());
 
             await icloud.getPhotosReady();
@@ -764,7 +764,7 @@ describe(`Setup iCloud`, () => {
         test(`Cookies invalid`, async () => {
             const icloud = iCloudFactory();
             icloud.auth.iCloudCookies = getICloudCookies(true);
-            icloud.photos = new iCloudPhotos(appWithOptions({metadataThreads: Config.metadataThreads}), icloud.auth);
+            icloud.photos = new iCloudPhotos(appWithOptions({"metadataRate": Config.metadataRate}), icloud.auth);
             icloud.photos.setup = jest.fn(() => Promise.resolve());
 
             await icloud.getPhotosReady();

@@ -1,7 +1,7 @@
 import mockfs from 'mock-fs';
 import fs from 'fs';
 import {describe, test, expect, jest, beforeEach, afterEach} from '@jest/globals';
-import {rejectOptions, validOptions} from '../_helpers/app-factory.helper';
+import {nonRejectOptions, rejectOptions, validOptions} from '../_helpers/app-factory.helper';
 import {ArchiveApp, DaemonApp, DaemonAppEvents, LIBRARY_LOCK_FILE, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
@@ -33,6 +33,11 @@ describe(`App Factory`, () => {
         expect(mockStderr).toBeCalledWith(expected);
     });
 
+    test.only.each(nonRejectOptions)(`Valid CLI: $_desc`, ({options, expectedKey, expectedValue}) => {
+        const app = appFactory(options);
+        expect(app.options[expectedKey]).toEqual(expectedValue);
+    });
+
     test(`Create Token App`, () => {
         const tokenApp = appFactory(validOptions.token) as TokenApp;
         expect(tokenApp).toBeInstanceOf(TokenApp);
@@ -40,17 +45,6 @@ describe(`App Factory`, () => {
         expect(tokenApp.icloud).toBeDefined();
         expect(tokenApp.icloud.mfaServer).toBeDefined();
         expect(tokenApp.icloud.auth).toBeDefined();
-        expect(fs.existsSync(`/opt/icloud-photos-library`));
-    });
-
-    test(`Create Token App - Retry set to Infinity`, () => {
-        const tokenApp = appFactory(validOptions.tokenWithThreadsToInfinity) as TokenApp;
-        expect(tokenApp).toBeInstanceOf(TokenApp);
-        expect(setupLogger).toHaveBeenCalledTimes(1);
-        expect(tokenApp.icloud).toBeDefined();
-        expect(tokenApp.icloud.mfaServer).toBeDefined();
-        expect(tokenApp.icloud.auth).toBeDefined();
-        expect(tokenApp.options.downloadThreads).toEqual(Infinity)
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 

@@ -15,7 +15,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 import {appWithOptions} from '../_helpers/app-factory.helper';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
-jest.setTimeout(20 * 1000);
+jest.setTimeout(30 * 1000);
 
 const username = process.env.TEST_APPLE_ID_USER;
 const password = process.env.TEST_APPLE_ID_PWD;
@@ -48,6 +48,7 @@ describe(`API E2E Tests`, () => {
                 "password": `test123`,
                 "dataDir": appDataDir,
                 "failOnMfa": true,
+                "metadataRate": [Infinity, 0],
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
             await expect(_icloud.authenticate()).rejects.toEqual(new Error(`Username does not seem to exist`));
@@ -59,6 +60,7 @@ describe(`API E2E Tests`, () => {
                 "password": `test123`,
                 "dataDir": appDataDir,
                 "failOnMfa": true,
+                "metadataRate": [Infinity, 0],
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
             await expect(_icloud.authenticate()).rejects.toEqual(new Error(`Username/Password does not seem to match`));
@@ -70,6 +72,7 @@ describe(`API E2E Tests`, () => {
                 password,
                 "dataDir": appDataDir,
                 "failOnMfa": true,
+                "metadataRate": [Infinity, 0],
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
             await expect(_icloud.authenticate()).rejects.toEqual(new Error(`MFA code required, failing due to failOnMfa flag`));
@@ -82,25 +85,26 @@ describe(`API E2E Tests`, () => {
                 "trustToken": token,
                 "dataDir": appDataDir,
                 "failOnMfa": true,
+                "metadataRate": [Infinity, 0],
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
             await expect(_icloud.authenticate()).resolves.not.toThrow();
         });
     });
 
-    describe('Logged in test cases', () => {
+    describe(`Logged in test cases`, () => {
         const icloud: iCloud = new iCloud(appWithOptions({
             username,
             password,
             "trustToken": token,
             "dataDir": appDataDir,
             "failOnMfa": true,
-            "metadataThreads": 10
+            "metadataRate": [Infinity, 0],
         }));
 
         beforeAll(async () => {
-            await icloud.authenticate()
-        })
+            await icloud.authenticate();
+        });
 
         describe(`Fetching records`, () => {
             test(`Fetch all records`, async () => {
@@ -108,7 +112,7 @@ describe(`API E2E Tests`, () => {
                 const [assets, masters] = await icloud.photos.fetchAllPictureRecords();
                 // _writeTestData(assets.map(postProcessAssetData), "all-assets-data")
                 // _writeTestData(masters.map(postProcessMasterData), "all-master-data")
-    
+
                 // Expecting assets, with resource to have a download url (as this is variable)
                 assets.forEach(asset => {
                     if (asset?.resource) {
@@ -119,7 +123,7 @@ describe(`API E2E Tests`, () => {
                 expect(assets.length).toEqual(202);
                 // This matches the non-variable part of the data
                 expect(assets.map(postProcessAssetData).sort(sortByRecordName)).toEqual(expectedAssetsAll.sort(sortByRecordName));
-    
+
                 // Expecting all masters to have a resource with download url
                 masters.forEach(master => {
                     expect(master?.resource.downloadURL).toBeDefined();
@@ -129,12 +133,12 @@ describe(`API E2E Tests`, () => {
                 // This matches the non-variable part of the data
                 expect(masters.map(postProcessMasterData).sort(sortByRecordName)).toEqual(expectedMastersAll.sort(sortByRecordName));
             });
-    
+
             test(`Fetch all records of one album`, async () => {
                 await icloud.ready;
                 const albumRecordName = `311f9778-1f40-4762-9e57-569ebf5fb070`;
                 const [assets, masters] = await icloud.photos.fetchAllPictureRecords(albumRecordName);
-    
+
                 // _writeTestData(assets.map(postProcessAssetData), "api.expected.album-cpl-assets")
                 // _writeTestData(masters.map(postProcessMasterData), "api.expected.album-cpl-masters")
                 expect(assets.length).toEqual(202);
@@ -142,7 +146,7 @@ describe(`API E2E Tests`, () => {
                 expect(assets.map(postProcessAssetData).sort(sortByRecordName)).toEqual(expectedAssetsAlbum.sort(sortByRecordName));
                 expect(masters.map(postProcessMasterData).sort(sortByRecordName)).toEqual(expectedMastersAlbum.sort(sortByRecordName));
             });
-    
+
             test(`Fetch records of empty album`, async () => {
                 await icloud.ready;
                 const albumRecordName = `6dcb67d9-a073-40ba-9441-3a792da34cf5`;
@@ -156,17 +160,17 @@ describe(`API E2E Tests`, () => {
                 await icloud.ready;
                 const fetchedAlbums = await icloud.photos.fetchAllAlbumRecords();
                 expect(fetchedAlbums.length).toEqual(8);
-    
+
                 // Needing to wait until all promises for the album assets have settled
                 const processedAlbums: any[] = [];
                 for (const fetchedAlbum of fetchedAlbums) {
                     processedAlbums.push(await postProcessAlbumData(fetchedAlbum));
                 }
-    
+
                 // _writeTestData(processedAlbums, `all-album-data`);
                 expect(processedAlbums.sort(sortByRecordName)).toEqual(expectedAlbumsAll.sort(sortByRecordName));
             });
-    
+
             test(`Fetch empty folder`, async () => {
                 await icloud.ready;
                 const recordName = `7198a6a0-27fe-4fb6-961b-74231e425858`; // 'Stuff' folder
@@ -174,7 +178,7 @@ describe(`API E2E Tests`, () => {
                 // Verifying only structure, not content, as content was validated in the all case
                 expect(fetchedAlbum.length).toEqual(0);
             });
-    
+
             test(`Fetch folder with multiple albums`, async () => {
                 await icloud.ready;
                 const recordName = `6e7f4f44-445a-41ee-a87e-844a9109069d`; // '2022' folder
@@ -183,7 +187,7 @@ describe(`API E2E Tests`, () => {
                 expect(fetchedAlbums.length).toEqual(3);
             });
         });
-    
+
         describe(`Assets & Records`, () => {
             test(`Download an asset`, async () => {
                 await icloud.ready;
@@ -201,15 +205,15 @@ describe(`API E2E Tests`, () => {
                     ``,
                     `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
                     false);
-    
+
                 // Need to get current download URL of above defined asset
                 const masters = (await icloud.photos.fetchAllPictureRecords())[1];
                 const thisMaster = masters.find(master => master.recordName === assetRecordName);
                 asset.downloadURL = thisMaster?.resource?.downloadURL;
-    
+
                 expect(asset.downloadURL).toBeDefined();
                 expect(asset.downloadURL?.length).toBeGreaterThan(0);
-    
+
                 // Actually downloading the file
                 const stream = (await icloud.photos.downloadAsset(asset)).data;
                 const chunks: any[] = [];
@@ -219,12 +223,12 @@ describe(`API E2E Tests`, () => {
                     stream.on(`end`, () => resolve(Buffer.concat(chunks)));
                 });
                 const fileHash = crypto.createHash(`sha1`).update(file).digest(`base64`).toString();
-    
+
                 expect(file.length).toBe(asset.size);
                 expect(fileHash).toEqual(assetHash);
             });
-    
+
             // Cant really do this: test.todo(`Delete a record - How to restore state afterwards??`);
         });
-    })
+    });
 });

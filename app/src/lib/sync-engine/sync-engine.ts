@@ -73,7 +73,7 @@ export class SyncEngine extends EventEmitter {
         this.logger.info(`Starting sync`);
         this.emit(SYNC_ENGINE.EVENTS.START);
         let retryCount = 0;
-        while (this.maxRetry === -1 || this.maxRetry > retryCount) {
+        while (this.maxRetry > retryCount) {
             retryCount++;
             this.logger.info(`Performing sync, try #${retryCount}`);
 

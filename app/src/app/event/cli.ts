@@ -9,10 +9,10 @@ import {SingleBar} from 'cli-progress';
 import {getLogger} from '../../lib/logger.js';
 import {ArchiveEngine} from '../../lib/archive-engine/archive-engine.js';
 import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from './error-handler.js';
-import {OptionValues} from 'commander';
 import {EventHandler} from './event-handler.js';
 import EventEmitter from 'events';
 import {DaemonAppEvents} from '../icloud-app.js';
+import {iCPSAppOptions} from '../factory.js';
 
 /**
  * This class handles the input/output to the command line
@@ -40,7 +40,7 @@ export class CLIInterface implements EventHandler {
      * Creates a new CLI interface based on the provided components
      * @param options - Parsed CLI Options
      */
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         this.progressBar = new SingleBar({
             "etaAsynchronousUpdate": true,
             "format": ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,

@@ -16,6 +16,7 @@ export const _defaultCliOpts = {
     "dataDir": Config.appDataDir,
     "refreshToken": Config.refreshToken,
     "failOnMfa": Config.failOnMfa,
+    "metadataRate": Config.metadataRate,
 };
 
 export function iCloudFactory(cliOpts: any = _defaultCliOpts): iCloud {
@@ -36,7 +37,7 @@ export function iCloudPhotosFactory(removeEventListeners: boolean = true): iClou
     auth.iCloudPhotosAccount.zoneType = Config.iCloudPhotosAccount.zoneType;
     auth.getPhotosHeader = jest.fn(() => `headerValues`);
 
-    const icloudPhotos = new iCloudPhotos(appWithOptions({metadataThreads: Config.metadataThreads}), auth);
+    const icloudPhotos = new iCloudPhotos(appWithOptions({"metadataRate": Config.metadataRate}), auth);
 
     if (removeEventListeners) {
         icloudPhotos.removeAllListeners();

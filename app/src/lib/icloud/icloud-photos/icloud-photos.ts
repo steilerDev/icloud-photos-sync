@@ -12,7 +12,7 @@ import {HANDLER_EVENT} from '../../../app/event/error-handler.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
 import PQueue from 'p-queue';
-import { iCloudApp } from '../../../app/icloud-app.js';
+import {iCloudApp} from '../../../app/icloud-app.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -41,7 +41,7 @@ export class iCloudPhotos extends EventEmitter {
     /**
      * The queue holding all query operations. Used to rate limit metadata fetching
      */
-    queryQueue: PQueue
+    queryQueue: PQueue;
 
     /**
      * Creates a new iCloud Photos Class
@@ -51,7 +51,12 @@ export class iCloudPhotos extends EventEmitter {
         super();
         this.auth = auth;
         this.axios = axios.create();
-        this.queryQueue = new PQueue({concurrency: app.options.metadataThreads ?? Infinity})
+
+        this.queryQueue = new PQueue({
+            "intervalCap": app.options.metadataRate[0],
+            "interval": app.options.metadataRate[1],
+        });
+
         this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, async () => {
             await this.checkingIndexingStatus();
         });
@@ -197,8 +202,8 @@ export class iCloudPhotos extends EventEmitter {
         let queryResponse: any;
 
         await this.queryQueue.add(async () => {
-            queryResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config)
-        })
+            queryResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config);
+        });
 
         const fetchedRecords = queryResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
@@ -504,7 +509,7 @@ export class iCloudPhotos extends EventEmitter {
             const allRecords: any[] = [];
 
             (await Promise.all(pictureRecordsRequests)).forEach(records => {
-                allRecords.push(...records)
+                allRecords.push(...records);
             });
 
             // Post-processing response

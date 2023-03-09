@@ -1,7 +1,6 @@
 import {jest} from '@jest/globals';
 import {AxiosResponse} from 'axios';
 import {iCloud} from "../../src/lib/icloud/icloud";
-import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
 import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
@@ -16,7 +15,7 @@ export function syncEngineFactory(): SyncEngine {
     return new SyncEngine(
         appWithOptions({
             "downloadThreads": 10,
-            "maxRetries": -1,
+            "maxRetries": Infinity,
         },
         new PhotosLibrary(appWithOptions({
             "dataDir": Config.appDataDir,
@@ -26,7 +25,7 @@ export function syncEngineFactory(): SyncEngine {
             "password": Config.password,
             "trustToken": Config.trustToken,
             "dataDir": Config.appDataDir,
-            "metadataThreads": Config.metadataThreads
+            "metadataRate": Config.metadataRate,
         })),
         ),
     );

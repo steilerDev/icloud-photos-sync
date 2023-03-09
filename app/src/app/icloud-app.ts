@@ -1,7 +1,6 @@
 import {iCloud} from "../lib/icloud/icloud.js";
 import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
 import * as fs from 'fs';
-import {OptionValues} from "commander";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {iCPSError} from "./error/error.js";
@@ -15,6 +14,7 @@ import {Cron} from "croner";
 import {HANDLER_EVENT} from "./event/error-handler.js";
 import {EventHandler, registerObjectsToEventHandlers, removeObjectsFromEventHandlers} from "./event/event-handler.js";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
+import {iCPSAppOptions} from "./factory.js";
 
 /**
  * Filename for library lock file located in DATA_DIR
@@ -22,9 +22,9 @@ import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 export const LIBRARY_LOCK_FILE = `.library.lock`;
 
 export abstract class iCPSApp {
-    options: OptionValues;
+    options: iCPSAppOptions;
 
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         this.options = options;
         // Needs to be done here so all future objects use it / including handlers and everything created down the chain
         Logger.setupLogger(this.options);
@@ -64,7 +64,7 @@ export class DaemonApp extends iCPSApp {
      * Builds the app
      * @param options - CLI Options for the app
      */
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         super(options);
         this.event = new DaemonAppEvents();
     }
@@ -113,7 +113,7 @@ export abstract class iCloudApp extends iCPSApp {
      * Creates and sets up the necessary infrastructure
      * @param options - The parsed CLI options
      */
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         super(options);
 
         // It's crucial for the data dir to exist, create if it doesn't
@@ -244,7 +244,7 @@ export class SyncApp extends iCloudApp {
      * Creates and sets up the necessary infrastructure for this app
      * @param options - The parsed CLI options
      */
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         super(options);
         this.photosLibrary = new PhotosLibrary(this);
         this.syncEngine = new SyncEngine(this);
@@ -300,7 +300,7 @@ export class ArchiveApp extends SyncApp {
      * @param options - The parsed CLI options
      * @param archivePath - The path to the folder that should get archived
      */
-    constructor(options: OptionValues, archivePath: string) {
+    constructor(options: iCPSAppOptions, archivePath: string) {
         super(options);
         this.archivePath = archivePath;
         this.archiveEngine = new ArchiveEngine(this);

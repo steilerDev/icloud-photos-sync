@@ -1,4 +1,3 @@
-import {OptionValues} from "commander";
 import EventEmitter from "events";
 import {EventHandler} from "./event-handler.js";
 import {iCloud} from '../../lib/icloud/icloud.js';
@@ -11,6 +10,7 @@ import {ArchiveEngine} from '../../lib/archive-engine/archive-engine.js';
 import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from './error-handler.js';
 import * as fs from "fs";
 import path from "path";
+import {iCPSAppOptions} from "../factory.js";
 
 type InfluxLineProtocolFieldSet = {
     [fieldKey: string]: string
@@ -253,7 +253,7 @@ export class MetricsExporter implements EventHandler {
      * Creates the exporter and checks for the file
      * @param options - The CLI options
      */
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         if (!options.exportMetrics) {
             this.metricsFile = undefined;
             return;
