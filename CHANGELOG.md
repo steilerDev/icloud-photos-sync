@@ -15,7 +15,7 @@
   * Sync reliability improvements:
     * Added recoverable `EAI_AGAIN` error (closes [#159](https://github.com/steilerDev/icloud-photos-sync/issues/159))
     * Handling `RUNNING` indexing state (closes [#167](https://github.com/steilerDev/icloud-photos-sync/issues/167))
-    * Metadata rate limiting to support large libraries through `--metadata-rate`
+    * Metadata rate limiting to support large libraries through `--metadata-rate` (closes [#182](https://github.com/steilerDev/icloud-photos-sync/issues/182))
   * Archive improvements:
     * Modified time is now properly preserved upon archiving (closes [#192](https://github.com/steilerDev/icloud-photos-sync/issues/192))
 
