@@ -139,6 +139,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         const report = this.btClient.createReport(err, {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
+            'icps.rootErrorCode': err.getRootErrorCode()
         }, [logFile]);
 
         await this.btClient.sendAsync(report);

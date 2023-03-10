@@ -59,8 +59,10 @@ export class iCPSError extends Error {
     addCause(err: Error): iCPSError {
         if (err) {
             this.cause = err;
-            // Applying the causing's error stack, in order to properly fingerprint the error
-            this.stack = err.stack;
+            if(err instanceof iCPSError) {
+                // Applying the causing's error stack only for the underlying iCPSError, in order to properly fingerprint the error
+                this.stack = err.stack;
+            }
         }
 
         return this;
@@ -117,6 +119,16 @@ export class iCPSError extends Error {
         }
 
         return desc;
+    }
+
+    /**
+     * @returns the error code for the first thrown iCPSError
+     */
+    getRootErrorCode(): string {
+        if(this.cause && this.cause instanceof iCPSError) {
+            return this.cause.getRootErrorCode()
+        }
+        return this.code
     }
 
     /**
