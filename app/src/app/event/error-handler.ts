@@ -42,6 +42,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             this.btClient = bt.initialize({
                 "endpoint": `https://submit.backtrace.io/steilerdev/92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49/json`,
                 "handlePromises": true,
+                "enableMetricsSupport": true,
                 "attributes": {
                     "application": PACKAGE_INFO.NAME,
                     'application.version': PACKAGE_INFO.VERSION,
@@ -111,16 +112,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
                 await this.handle(err);
             });
             if (this.btClient) {
-                obj.on(DaemonAppEvents.EVENTS.START, () => {
-                    /* eslint-disable */
-                    const metrics = this.btClient['_backtraceMetrics'];
-                    /* eslint-enable */
-                    if (metrics) {
-                        metrics.sendUniqueEvent();
-                        metrics.sendSummedEvent(`Application Launches`);
-                        metrics.sendSummedEvent(`Scheduled sync starts`);
-                    }
-                });
+                obj.on(DaemonAppEvents.EVENTS.START, async () => await this.reportSyncStart());
             }
         });
     }
@@ -144,6 +136,22 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
         await this.btClient.sendAsync(report);
         return errorUUID;
+    }
+
+    /**
+     * Reports a scheduled sync start
+     * Only runs if this.btClient is defined (i.e. error reporting is enabled)
+     */
+    async reportSyncStart() {
+        try {
+            /* eslint-disable */
+            // Accessing private member
+            await this.btClient['_backtraceMetrics']
+                    .sendSummedEvent(`Sync`)
+            /* eslint-enable */;
+        } catch(err) {
+            await this.reportError(new iCPSError({name: "iCPSError", code: "METRIC_FAILED", message: "Unable to report sync start"}).addCause(err))
+        }
     }
 
     /**
