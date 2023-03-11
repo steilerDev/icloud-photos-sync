@@ -436,12 +436,13 @@ export class PhotosLibrary extends EventEmitter {
                 "dir": this.primaryAssetDir,
                 "base": assetUUID,
             });
-            // Getting asset time, in order to update link as well
-            const assetTime = fs.statSync(assetPath).mtime;
             // Relative asset path is relative to album, not the linkedAsset
             const relativeAssetPath = path.relative(albumPath, assetPath);
-            this.logger.debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
             try {
+                this.logger.debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
+
+                // Getting asset time, in order to update link as well
+                const assetTime = fs.statSync(assetPath).mtime;
                 fs.symlinkSync(relativeAssetPath, linkedAsset);
                 fs.lutimesSync(linkedAsset, assetTime, assetTime);
             } catch (err) {
