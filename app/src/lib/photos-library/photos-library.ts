@@ -267,9 +267,9 @@ export class PhotosLibrary extends EventEmitter {
         const writeStream = fs.createWriteStream(location);
         response.data.pipe(writeStream);
         await pEvent(writeStream, `close`);
-        await fs.promises.utimes(asset.getAssetFilePath(this.photoDataDir), new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
 
         try {
+            await fs.promises.utimes(asset.getAssetFilePath(this.photoDataDir), new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
             await this.verifyAsset(asset);
             this.logger.debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
             return;

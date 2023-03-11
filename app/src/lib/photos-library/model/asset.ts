@@ -234,15 +234,15 @@ export class Asset implements PEntity<Asset> {
                 .addMessage(filePath);
         }
 
+        if (fileStat.size !== this.size) {
+            throw new iCPSError(LIBRARY_ERR.ASSET_SIZE)
+                .addMessage(`${filePath} size ${fileStat.size}, iCloud ${this.size}`);
+        }
+
         if (!this.withinRange(fileStat.mtimeMs, this.modified, 1000)) {
             throw new iCPSError(LIBRARY_ERR.ASSET_MODIFICATION_TIME)
                 .addMessage(`${filePath} modification time ${fileStat.mtimeMs}, iCloud ${this.modified}`)
                 .addContext(`out-of-range`, fileStat.mtimeMs - this.modified);
-        }
-
-        if (fileStat.size !== this.size) {
-            throw new iCPSError(LIBRARY_ERR.ASSET_SIZE)
-                .addMessage(`${filePath} size ${fileStat.size}, iCloud ${this.size}`);
         }
 
         return true;
