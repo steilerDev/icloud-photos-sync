@@ -86,11 +86,12 @@ export class SyncEngine extends EventEmitter {
                 this.emit(SYNC_ENGINE.EVENTS.DONE);
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
+                // Checking if we should retry
+                this.checkFatalError(err);
+
                 this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.WRITE_STATE)
                     .setWarning()
                     .addCause(err));
-                // Checking if we should retry
-                this.checkFatalError(err);
 
                 this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
                 await this.prepareRetry();
@@ -109,7 +110,7 @@ export class SyncEngine extends EventEmitter {
      */
     checkFatalError(err: any): boolean {
         if (err.code === `ERR_BAD_RESPONSE`) {
-            this.logger.debug(`Bad server response (${err.response?.status}), retrying...`);
+            this.logger.debug(`Bad server response (${err.response?.status}), refreshing session...`);
             return false;
         }
 

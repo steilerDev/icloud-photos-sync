@@ -227,7 +227,7 @@ class InfluxLineProtocolPoint {
      */
     private replaceIfExists(input: string, disallowedSequence: string, replacement: string = `_`): string {
         if (input.indexOf(disallowedSequence) >= 0) {
-            this.logger.debug(`Input (${input}) contains '${disallowedSequence}': Replacing with ${replacement}`);
+            this.logger.trace(`Input **${input}** contains '${disallowedSequence}': Replacing with ${replacement}`);
             input = input.replaceAll(disallowedSequence, replacement);
         }
 

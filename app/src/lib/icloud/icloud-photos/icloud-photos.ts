@@ -381,9 +381,11 @@ export class iCloudPhotos extends EventEmitter {
                     cplAlbums.push(CPLAlbum.parseFromQuery(album));
                 }
             } catch (err) {
-                this.emit(HANDLER_EVENT, new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ALBUM)
+                this.logger.debug(new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ALBUM)
                     .addCause(err)
-                    .addContext(`record`, album));
+                    .addContext(`record`, album)
+                    .getDescription()
+                )
             }
         }
 
@@ -472,13 +474,13 @@ export class iCloudPhotos extends EventEmitter {
      * @throws An error, in case the provided record should be ignored
      */
     filterPictureRecord(record: any, seen: string[]) {
-        if (record.deleted === true) {
+        if (record?.deleted === true) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.DELETED_RECORD)
                 .setWarning()
                 .addContext(`record`, record);
         }
 
-        if (record.fields.isHidden?.value === 1) {
+        if (record.fields?.isHidden?.value === 1) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.HIDDEN_RECORD)
                 .setWarning()
                 .addContext(`record`, record);
@@ -574,9 +576,11 @@ export class iCloudPhotos extends EventEmitter {
                     seen.push(record.recordName);
                 }
             } catch (err) {
-                this.emit(HANDLER_EVENT, new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ASSET)
+                this.logger.debug(new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ASSET)
                     .setWarning()
-                    .addCause(err));
+                    .addCause(err)
+                    .getDescription()
+                );
             }
         }
 
