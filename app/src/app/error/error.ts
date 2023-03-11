@@ -60,8 +60,9 @@ export class iCPSError extends Error {
         if (err) {
             this.cause = err;
             if (err instanceof iCPSError) {
-                // Applying the causing's error stack only for the underlying iCPSError, in order to properly fingerprint the error
+                // Applying the causing's error stack and classifier only for the underlying iCPSError, in order to properly fingerprint the error
                 this.stack = err.stack;
+                this.name = err.name
             }
         }
 
@@ -103,7 +104,7 @@ export class iCPSError extends Error {
      * @returns A description for this error, containing its cause chain's description
      */
     getDescription(): string {
-        let desc = `${this.name} (${this.sev}): ${this.message}`;
+        let desc = `${this.code} (${this.sev}): ${this.message}`;
 
         if (this.messages.length > 0) {
             desc += ` (${this.messages.join(`, `)})`;
@@ -125,15 +126,15 @@ export class iCPSError extends Error {
      * @returns the error code for the first thrown iCPSError
      */
     getRootErrorCode(): string {
-        if (this.cause) {
-            if (this.cause instanceof iCPSError) {
-                return this.cause.getRootErrorCode();
-            }
-
-            return `UNKNOWN_ROOT_ERROR`;
+        if (!this.cause) {
+            return this.code;
         }
 
-        return this.code;
+        if (this.cause instanceof iCPSError) {
+            return this.cause.getRootErrorCode();
+        }
+
+        return `UNKNOWN_ROOT_ERROR`;
     }
 
     /**
