@@ -184,7 +184,7 @@ export abstract class iCloudApp extends iCPSApp {
     async releaseLibraryLock() {
         const lockFilePath = path.join(this.options.dataDir, LIBRARY_LOCK_FILE);
         if (!fs.existsSync(lockFilePath)) {
-            return
+            return;
         }
 
         const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();

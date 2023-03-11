@@ -385,8 +385,8 @@ export class iCloudPhotos extends EventEmitter {
                     .setWarning()
                     .addCause(err)
                     .addContext(`record`, album)
-                    .getDescription()
-                )
+                    .getDescription(),
+                );
             }
         }
 
@@ -581,7 +581,7 @@ export class iCloudPhotos extends EventEmitter {
                     .setWarning()
                     .addCause(err)
                     .addContext(`record`, record)
-                    .getDescription()
+                    .getDescription(),
                 );
             }
         }

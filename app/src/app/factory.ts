@@ -139,7 +139,7 @@ export function appFactory(argv: string[]): iCPSApp {
             .argParser(commanderParsePositiveInt))
         .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon an error ('Infinity' means that it will always retry).`)
             .env(`MAX_RETRIES`)
-            .default(Infinity)
+            .default(Infinity, `Infinity`)
             .argParser(commanderParsePositiveIntOrInfinity))
         .addOption(new Option(`-t, --download-threads <number>`, `Sets the number of download threads ('Infinity' will remove all limitations).`)
             .env(`DOWNLOAD_THREADS`)
@@ -182,7 +182,7 @@ export function appFactory(argv: string[]): iCPSApp {
             .default(false))
         .addOption(new Option(`--metadata-rate <interval>`, `Limits the rate of metadata fetching in order to avoid getting throttled by the API. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one request in 20ms.`)
             .env(`METADATA_RATE`)
-            .default([Infinity, 0])
+            .default([Infinity, 0], `Infinity/0`)
             .argParser(commanderParseInterval));
 
     program.command(AppCommands.daemon)

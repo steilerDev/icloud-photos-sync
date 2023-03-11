@@ -332,7 +332,7 @@ describe(`Library Lock`, () => {
     test(`Release lock error - no lock`, async () => {
         const tokenApp = appFactory(validOptions.token) as TokenApp;
 
-        await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined()
+        await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined();
 
         expect(!fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
