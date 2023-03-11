@@ -744,11 +744,13 @@ describe(`Write state`, () => {
             });
 
             const library = photosLibraryFactory();
+            const handlerEvent = spyOnEvent(library, HANDLER_EVENT)
             library.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
 
             try {
                 const response = await axios.get(url, config);
-                await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset`);
+                await library.writeAsset(asset, response)
+                expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to verify asset`))
                 const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeFalsy();
             } catch (err) {

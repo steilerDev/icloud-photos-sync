@@ -275,10 +275,12 @@ export class PhotosLibrary extends EventEmitter {
             return;
         } catch (err) {
             await fs.promises.rm(asset.getAssetFilePath(this.photoDataDir));
-            throw new iCPSError(LIBRARY_ERR.INVALID_ASSET)
+            this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.INVALID_ASSET)
                 .addMessage(asset.getDisplayName())
                 .addContext(`asset`, asset)
-                .addCause(err);
+                .addCause(err)
+                .setWarning(),
+            );
         }
     }
 

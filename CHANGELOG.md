@@ -14,6 +14,7 @@
     * Removed 2GB limitation during verification (closes [#155](https://github.com/steilerDev/icloud-photos-sync/issues/155))
     * Improves output when asset verification fails (closes [#156](https://github.com/steilerDev/icloud-photos-sync/issues/156))
     * Acceptable mtime range (before verification fails) increased to 1000ms
+    * Failed asset verification no longer fatal error, but warning
   * Sync reliability improvements:
     * Added `412` response error handling during signin (closes [#185](https://github.com/steilerDev/icloud-photos-sync/issues/185))
     * Added recoverable `EAI_AGAIN` error (closes [#159](https://github.com/steilerDev/icloud-photos-sync/issues/159))
