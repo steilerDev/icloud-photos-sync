@@ -382,6 +382,7 @@ export class iCloudPhotos extends EventEmitter {
                 }
             } catch (err) {
                 this.logger.debug(new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ALBUM)
+                    .setWarning()
                     .addCause(err)
                     .addContext(`record`, album)
                     .getDescription()
@@ -579,6 +580,7 @@ export class iCloudPhotos extends EventEmitter {
                 this.logger.debug(new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ASSET)
                     .setWarning()
                     .addCause(err)
+                    .addContext(`record`, record)
                     .getDescription()
                 );
             }
