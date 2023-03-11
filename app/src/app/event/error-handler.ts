@@ -5,7 +5,7 @@ import {getLogger, logFile} from "../../lib/logger.js";
 import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
 import {EventHandler} from './event-handler.js';
-import {ERR_SIGINT, ERR_SIGTERM} from '../error/error-codes.js';
+import {ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR} from '../error/error-codes.js';
 import {iCPSAppOptions} from '../factory.js';
 import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
 import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
@@ -22,6 +22,12 @@ export const ERROR_EVENT = `error`;
  * Event emitted in case a warning was handled. Error string provided as argument.
  */
 export const WARN_EVENT = `warn`;
+
+const reportDenyList = [
+    ERR_SIGINT.code,
+    ERR_SIGTERM.code,
+    LIBRARY_ERR.LOCKED.code
+]
 
 /**
  * This class handles errors thrown or `HANDLER_EVENT` emitted by classes of this application
@@ -68,6 +74,9 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         });
     }
 
+
+
+    
     /**
      * Handles a given error. Report fatal errors and provide appropriate output.
      * @param err - The occurred error
@@ -77,7 +86,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
         let message = _err.getDescription();
         // Check if the error should be reported
-        const shouldReport = _err.sev === `FATAL` && !(_err.code === ERR_SIGINT.code || _err.code === ERR_SIGTERM.code);
+        const shouldReport = _err.sev === `FATAL` && reportDenyList.indexOf(_err.code) === -1
 
         // Report error and append error code
         if (shouldReport) {
@@ -127,7 +136,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
      */
     async reportError(err: iCPSError): Promise<string> {
         if (!this.btClient) {
-            return `No error code! Please enable crash reporting!`;
+            return `Enable crash reporting for error code`;
         }
 
         const errorUUID = randomUUID();
