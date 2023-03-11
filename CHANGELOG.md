@@ -15,6 +15,7 @@
     * Improves output when asset verification fails (closes [#156](https://github.com/steilerDev/icloud-photos-sync/issues/156))
     * Acceptable mtime range (before verification fails) increased to 1000ms
   * Sync reliability improvements:
+    * Added `412` response error handling during signin (closes [#185](https://github.com/steilerDev/icloud-photos-sync/issues/185))
     * Added recoverable `EAI_AGAIN` error (closes [#159](https://github.com/steilerDev/icloud-photos-sync/issues/159))
     * Handling `RUNNING` indexing state (closes [#167](https://github.com/steilerDev/icloud-photos-sync/issues/167))
     * Metadata rate limiting to support large libraries through `--metadata-rate` (closes [#182](https://github.com/steilerDev/icloud-photos-sync/issues/182))

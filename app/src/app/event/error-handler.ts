@@ -8,6 +8,8 @@ import {EventHandler} from './event-handler.js';
 import {ERR_SIGINT, ERR_SIGTERM} from '../error/error-codes.js';
 import {DaemonAppEvents} from '../icloud-app.js';
 import {iCPSAppOptions} from '../factory.js';
+import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
+import { SyncEngine } from '../../lib/sync-engine/sync-engine.js';
 
 /**
  * The event emitted by classes of this application and picked up by the handler.
@@ -111,8 +113,8 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             obj.on(HANDLER_EVENT, async (err: unknown) => {
                 await this.handle(err);
             });
-            if (this.btClient) {
-                obj.on(DaemonAppEvents.EVENTS.START, async () => {
+            if (this.btClient && obj instanceof SyncEngine) {
+                obj.on(SYNC_ENGINE.EVENTS.START, async () => {
                     await this.reportSyncStart();
                 });
             }

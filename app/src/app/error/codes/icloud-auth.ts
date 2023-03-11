@@ -27,6 +27,10 @@ export const FORBIDDEN: ErrorStruct = buildErrorStruct(
     name, prefix, `FORBIDDEN`, `Username does not seem to exist`,
 );
 
+export const PRECONDITION_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `PRECONDITION_FAILED`, `iCloud refused login - you might need to update your password`,
+);
+
 export const ACQUIRE_ACCOUNT_TOKENS: ErrorStruct = buildErrorStruct(
     name, prefix, `ACQUIRE_ACCOUNT_TOKENS`, `Unable to acquire account tokens`,
 );

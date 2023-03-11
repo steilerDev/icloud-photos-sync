@@ -57,7 +57,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/app.test.ts"
+                "test/unit/icloud.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"

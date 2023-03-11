@@ -17,6 +17,7 @@ import {getICloudCookies} from '../_helpers/icloud-auth.helper';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {appWithOptions} from '../_helpers/app-factory.helper';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import exp from 'constants';
 
 describe(`CLI Options`, () => {
     test(`Refresh Token`, () => {
@@ -108,6 +109,7 @@ describe(`Control structure`, () => {
 });
 
 describe(`Authenticate`, () => {
+    test.todo('Expected call for authentication!')
     test(`Authentication - Valid Trust Token`, async () => {
         const icloud = iCloudFactory();
         // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
@@ -116,6 +118,7 @@ describe(`Authenticate`, () => {
         });
         const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
         const trustedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.TRUSTED);
+        const errorEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR)
 
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
             "status": 200,
@@ -134,24 +137,11 @@ describe(`Authenticate`, () => {
         await icloud.authenticate();
         expect(authenticationEvent).toHaveBeenCalled();
         expect(trustedEvent).toHaveBeenCalled();
-
+        expect(errorEvent).not.toHaveBeenCalled()
         expect(icloud.auth.iCloudAuthSecrets).toEqual(Config.iCloudAuthSecrets);
     });
 
-    test(`Authentication - Unexpected success status code`, async () => {
-        const icloud = iCloudFactory();
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 204,
-        }));
-
-        await expect(icloud.authenticate()).rejects.toThrowError(new Error(`Unexpected HTTP response`));
-
-        expect(authenticationEvent).toHaveBeenCalled();
-    });
-
-    test(`Authentication - Invalid Trust Token`, async () => {
+    test(`Authentication - Invalid Trust Token - MFA Required`, async () => {
         const icloud = iCloudFactory();
         // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
         icloud.ready = new Promise<void>((resolve, _reject) => {
@@ -159,7 +149,8 @@ describe(`Authenticate`, () => {
         });
         const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
         const mfaEvent = spyOnEvent(icloud, ICLOUD.EVENTS.MFA_REQUIRED);
-
+        const trustedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.TRUSTED);
+        const errorEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR)
         const responseError = new Error(`Conflict`);
 
         (responseError as any).response = {
@@ -178,68 +169,14 @@ describe(`Authenticate`, () => {
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
 
         await icloud.authenticate();
+
+        expect(trustedEvent).not.toHaveBeenCalled()
         expect(authenticationEvent).toHaveBeenCalled();
         expect(mfaEvent).toHaveBeenCalledWith(0);
-
+        expect(errorEvent).not.toHaveBeenCalled()
         expect(icloud.auth.iCloudAuthSecrets).toEqual(Config.iCloudAuthSecrets);
     });
 
-    test(`Authentication - Unknown username`, async () => {
-        const icloud = iCloudFactory();
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-
-        const responseError = new Error(`Conflict`);
-        (responseError as any).response = {
-            "status": 403,
-        };
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
-
-        await expect(icloud.authenticate()).rejects.toThrowError(new Error(`Username does not seem to exist`));
-        expect(authenticationEvent).toHaveBeenCalled();
-    });
-
-    test(`Authentication - Wrong username/password combination`, async () => {
-        const icloud = iCloudFactory();
-
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-
-        const responseError = new Error(`Unauthorized`);
-        (responseError as any).response = {
-            "status": 401,
-        };
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
-
-        await expect(icloud.authenticate()).rejects.toThrowError(new Error(`Username/Password does not seem to match`));
-        expect(authenticationEvent).toHaveBeenCalled();
-    });
-
-    test(`Authentication - Unexpected failure status code`, async () => {
-        const icloud = iCloudFactory();
-
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-
-        const responseError = new Error(`Conflict`);
-        (responseError as any).response = {
-            "status": 500,
-        };
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
-
-        await expect(icloud.authenticate()).rejects.toThrowError(new Error(`Unexpected HTTP response`));
-        expect(authenticationEvent).toHaveBeenCalled();
-    });
-
-    test(`Authentication - No response`, async () => {
-        const icloud = iCloudFactory();
-
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(
-            new Error(`No Network`),
-        ));
-
-        await expect(icloud.authenticate()).rejects.toThrowError(new Error(`No response received during authentication`));
-        expect(authenticationEvent).toHaveBeenCalled();
-    });
 
     test(`Authentication - Auth secrets missing in authentication response`, async () => {
         const icloud = iCloudFactory();
@@ -270,6 +207,83 @@ describe(`Authenticate`, () => {
         await expect(icloud.authenticate()).rejects.toThrowError(new Error(`Unable to process cookies`));
         expect(authenticationEvent).toHaveBeenCalled();
     });
+
+    test(`Authentication - Unexpected success status code`, async () => {
+        const icloud = iCloudFactory();
+        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
+        const errorEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR)
+        const trustedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.TRUSTED);
+        const mfaEvent = spyOnEvent(icloud, ICLOUD.EVENTS.MFA_REQUIRED);
+
+        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
+            "status": 204,
+        }));
+
+        const expectedError = new Error(`Unexpected HTTP response`)
+        await expect(icloud.authenticate()).rejects.toThrowError(expectedError);
+
+        expect(authenticationEvent).toHaveBeenCalled();
+        expect(trustedEvent).not.toHaveBeenCalled()
+        expect(mfaEvent).not.toHaveBeenCalled()
+        expect(errorEvent).toHaveBeenCalledWith(expectedError)
+        expect(errorEvent).toHaveBeenCalledTimes(1)
+    });
+
+    test.each([
+       {
+            desc: "Unknown username",
+            axiosErrorMessage: "Conflict",
+            axiosErrorResponse: {
+                "status": 403,
+            },
+            expectedError: new Error(`Username does not seem to exist`)
+        }, {
+            desc: "Wrong username/password combination",
+            axiosErrorMessage: "Unauthorized",
+            axiosErrorResponse: {
+                "status": 401,
+            },
+            expectedError: new Error(`Username/Password does not seem to match`)
+        }, {
+            desc: "PreCondition failed",
+            axiosErrorMessage: "PreCondition Failed",
+            axiosErrorResponse: {
+                "status": 412,
+            },
+            expectedError: new Error(`iCloud refused login - you might need to update your password`)
+        }, {
+            desc: "Unexpected failure status code",
+            axiosErrorMessage: "Conflict",
+            axiosErrorResponse: {
+                "status": 500,
+            },
+            expectedError: new Error(`Unexpected HTTP response`)
+        }, {
+            desc: "No response",
+            axiosErrorMessage: "No Network",
+            axiosErrorResponse: undefined,
+            expectedError: new Error(`No response received during authentication`)
+        }
+    ])('Authentication backend error - $desc', async ({axiosErrorMessage, axiosErrorResponse, expectedError}) => {
+        const icloud = iCloudFactory();
+        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
+        const trustedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.TRUSTED);
+        const mfaEvent = spyOnEvent(icloud, ICLOUD.EVENTS.MFA_REQUIRED);
+        const errorEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR)
+
+        const responseError = new Error(axiosErrorMessage);
+        (responseError as any).response = axiosErrorResponse;
+        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> =>Promise.reject(responseError));
+
+        await expect(icloud.authenticate()).rejects.toThrowError(expectedError);
+        expect(authenticationEvent).toHaveBeenCalled();
+        expect(trustedEvent).not.toHaveBeenCalled()
+        expect(mfaEvent).not.toHaveBeenCalled()
+        expect(errorEvent).toHaveBeenCalledWith(expectedError)
+        expect(errorEvent).toHaveBeenCalledTimes(1)
+    })
+
+
 });
 
 describe(`MFA Flow`, () => {

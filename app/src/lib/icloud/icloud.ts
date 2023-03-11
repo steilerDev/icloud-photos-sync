@@ -152,9 +152,11 @@ export class iCloud extends EventEmitter {
                 this.logger.debug(`Acquired secrets`);
                 this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
                 this.emit(ICLOUD.EVENTS.TRUSTED);
+                return
             } catch (err) {
                 this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_AUTH_SECRETS)
                     .addCause(err));
+                return
             }
         } catch (err) {
             const {response} = err;
@@ -165,10 +167,17 @@ export class iCloud extends EventEmitter {
 
             if (response.status === 401) {
                 this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
+                return
             }
 
             if (response.status === 403) {
                 this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.FORBIDDEN).addCause(err));
+                return
+            }
+
+            if (response.status === 412) {
+                this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.PRECONDITION_FAILED).addCause(err));
+                return
             }
 
             if (response.status !== 409) {
@@ -181,8 +190,10 @@ export class iCloud extends EventEmitter {
                 this.logger.debug(`Acquired secrets, requiring MFA`);
                 this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
                 this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
+                return
             } catch (err) {
                 this.emit(ICLOUD.EVENTS.ERROR, err);
+                return
             }
         } finally {
             return this.ready;
