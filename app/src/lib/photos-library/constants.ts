@@ -3,7 +3,7 @@
  */
 export const PRIMARY_ASSET_DIR = `_All-Photos`;
 export const SHARED_ASSET_DIR = `_Shared-Photos`;
-export const ARCHIVE_DIR = `__Archive`;
+export const ARCHIVE_DIR = `_Archive`;
 export const STASH_DIR = `.stash`;
 
 /**
