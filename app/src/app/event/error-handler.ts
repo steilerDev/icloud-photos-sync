@@ -26,8 +26,8 @@ export const WARN_EVENT = `warn`;
 const reportDenyList = [
     ERR_SIGINT.code,
     ERR_SIGTERM.code,
-    LIBRARY_ERR.LOCKED.code
-]
+    LIBRARY_ERR.LOCKED.code,
+];
 
 /**
  * This class handles errors thrown or `HANDLER_EVENT` emitted by classes of this application
@@ -74,9 +74,6 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         });
     }
 
-
-
-    
     /**
      * Handles a given error. Report fatal errors and provide appropriate output.
      * @param err - The occurred error
@@ -86,7 +83,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
         let message = _err.getDescription();
         // Check if the error should be reported
-        const shouldReport = _err.sev === `FATAL` && reportDenyList.indexOf(_err.code) === -1
+        const shouldReport = _err.sev === `FATAL` && reportDenyList.indexOf(_err.code) === -1;
 
         // Report error and append error code
         if (shouldReport) {

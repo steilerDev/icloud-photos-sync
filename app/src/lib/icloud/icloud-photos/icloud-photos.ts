@@ -474,7 +474,7 @@ export class iCloudPhotos extends EventEmitter {
      * @param seen - An array of previously seen recordNames
      * @throws An error, in case the provided record should be ignored
      */
-    filterPictureRecord(record: any, seen: string[]) {
+    filterPictureRecord(record: any, seen: Set<string>) {
         if (record?.deleted === true) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.DELETED_RECORD)
                 .setWarning()
@@ -488,7 +488,7 @@ export class iCloudPhotos extends EventEmitter {
         }
 
         // If (Object.prototype.hasOwnProperty.call(seen, record.recordName)) {
-        if (seen.indexOf(record.recordName) !== -1) {
+        if (seen.has(record.recordName)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.DUPLICATE_RECORD)
                 .setWarning()
                 .addContext(`record`, record);
@@ -562,19 +562,19 @@ export class iCloudPhotos extends EventEmitter {
         }
 
         // Post-processing response
-        const seen = [];
+        const seen = new Set<string>();
         for (const record of allRecords) {
             try {
                 this.filterPictureRecord(record, seen);
 
                 if (record.recordType === QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD) {
                     cplMasters.push(CPLMaster.parseFromQuery(record));
-                    seen.push(record.recordName);
+                    seen.add(record.recordName);
                 }
 
                 if (record.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
                     cplAssets.push(CPLAsset.parseFromQuery(record));
-                    seen.push(record.recordName);
+                    seen.add(record.recordName);
                 }
             } catch (err) {
                 this.logger.debug(new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ASSET)
