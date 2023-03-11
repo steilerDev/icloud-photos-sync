@@ -16,7 +16,6 @@ import {spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
-import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder';
 
 beforeEach(() => {
     mockfs({});
@@ -157,7 +156,7 @@ describe(`Coordination`, () => {
             syncEngine.writeState = jest.fn<() => Promise<void>>()
                 .mockRejectedValue(error);
 
-            await expect(syncEngine.sync()).rejects.toEqual(new Error('Unknown sync error'));
+            await expect(syncEngine.sync()).rejects.toEqual(new Error(`Unknown sync error`));
 
             expect(startEvent).toHaveBeenCalled();
             expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
@@ -384,7 +383,7 @@ describe(`Processing remote records`, () => {
                 "wrappingKey": `NQtpvztdVKKNfrb8lf482g==`,
                 "downloadURL": `https://icloud.com`,
             },
-            "zoneName": getRandomZone()
+            "zoneName": getRandomZone(),
         } as CPLMaster];
 
         const cplAssets = [{

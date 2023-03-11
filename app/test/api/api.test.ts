@@ -13,7 +13,7 @@ import {appDataDir} from '../_helpers/_config';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 import {appWithOptions} from '../_helpers/app-factory.helper';
-import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder.js';
+import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(30 * 1000);

@@ -371,11 +371,11 @@ export class iCloudAuth {
                 .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
         }
 
-        if(zone) {
-            this.validateZone(zone)
+        if (zone) {
+            this.validateZone(zone);
         } else {
-            this.validateZone(Zones.Primary)
-            this.validateZone(Zones.Shared)
+            this.validateZone(Zones.Primary);
+            this.validateZone(Zones.Shared);
         }
     }
 
@@ -384,7 +384,7 @@ export class iCloudAuth {
      */
     validateZone(zone: Zones) {
         if (zone === Zones.Primary) {
-            if(!this.iCloudPhotosAccount.primary) {
+            if (!this.iCloudPhotosAccount.primary) {
                 throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
                     .addMessage(`PrimaryZone missing`)
                     .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
@@ -410,7 +410,7 @@ export class iCloudAuth {
         }
 
         if (zone === Zones.Shared) {
-            if(!this.iCloudPhotosAccount.shared) {
+            if (!this.iCloudPhotosAccount.shared) {
                 throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
                     .addMessage(`PrimaryZone missing`)
                     .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);

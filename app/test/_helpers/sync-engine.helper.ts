@@ -10,7 +10,7 @@ import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
 import {SyncEngine} from "../../src/lib/sync-engine/sync-engine";
 import {appWithOptions} from './app-factory.helper';
 import * as Config from "./_config";
-import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder';
+import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 export function syncEngineFactory(): SyncEngine {
     return new SyncEngine(
@@ -119,5 +119,5 @@ export const resolveHierarchicalDependenciesReturnValue = [[], [], []] as PLibra
  * Returns a random zone, since it should not matter
  */
 export function getRandomZone(): Zones {
-    return Math.floor(Math.random() * 2) === 0 ? Zones.Primary : Zones.Shared
+    return Math.floor(Math.random() * 2) === 0 ? Zones.Primary : Zones.Shared;
 }

@@ -70,10 +70,11 @@ function commanderParseInterval(value: string, _dummyPrevious?: unknown): [numbe
         throw new InvalidArgumentError(`Not a valid interval pattern. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one in 20ms.`);
     }
 
-    const intervalCap = commanderParsePositiveIntOrInfinity(match[1])
-    if(typeof intervalCap === 'number' && intervalCap <= 0) {
-        throw new InvalidArgumentError(`Not a valid interval. Number of runs needs to be >0`)
+    const intervalCap = commanderParsePositiveIntOrInfinity(match[1]);
+    if (typeof intervalCap === `number` && intervalCap <= 0) {
+        throw new InvalidArgumentError(`Not a valid interval. Number of runs needs to be >0`);
     }
+
     return [
         intervalCap,
         commanderParsePositiveInt(match[2]),

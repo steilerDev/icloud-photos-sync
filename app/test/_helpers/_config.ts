@@ -28,10 +28,10 @@ export const primaryZone: PhotosAccountZone = {
     'ownerName': `_11a1a1a1a11111111a111aa1a1111a11`,
     'zoneName': `PrimarySync`,
     'zoneType': `REGULAR_CUSTOM_ZONE`,
-}
+};
 
 export const sharedZone: PhotosAccountZone = {
     'ownerName': `_11a1a1a1a11111111a111aa1a1111a11`,
     'zoneName': `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
     'zoneType': `REGULAR_CUSTOM_ZONE`,
-}
+};

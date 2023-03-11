@@ -28,14 +28,15 @@ export function iCloudFactory(cliOpts: any = _defaultCliOpts): iCloud {
     return icloud;
 }
 
-export function iCloudPhotosFactory(sharedLibrary: boolean = true, removeEventListeners: boolean = true, ): iCloudPhotos {
+export function iCloudPhotosFactory(sharedLibrary: boolean = true, removeEventListeners: boolean = true): iCloudPhotos {
     const auth = new iCloudAuth(Config.username, Config.password, Config.trustToken, Config.appDataDir);
     mockValidation(auth);
     auth.iCloudPhotosAccount.photosDomain = Config.iCloudPhotosAccount.photosDomain;
     auth.iCloudPhotosAccount.primary = Config.primaryZone;
-    if(sharedLibrary) {
-        auth.iCloudPhotosAccount.shared = Config.sharedZone
+    if (sharedLibrary) {
+        auth.iCloudPhotosAccount.shared = Config.sharedZone;
     }
+
     auth.getPhotosHeader = jest.fn(() => `headerValues`);
 
     const icloudPhotos = new iCloudPhotos(appWithOptions({"metadataRate": Config.metadataRate}), auth);

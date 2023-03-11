@@ -13,10 +13,10 @@ import {photosLibraryFactory} from '../_helpers/photos-library.helper';
 import {appWithOptions} from '../_helpers/app-factory.helper';
 import {spyOnEvent} from '../_helpers/_general';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
-import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder';
+import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 const primaryAssetDir = path.join(photosDataDir, PRIMARY_ASSET_DIR);
-const sharedAssetDir = path.join(photosDataDir, SHARED_ASSET_DIR)
+const sharedAssetDir = path.join(photosDataDir, SHARED_ASSET_DIR);
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
 const stashDir = path.join(photosDataDir, ARCHIVE_DIR, STASH_DIR);
 
@@ -73,35 +73,35 @@ describe(`Load state`, () => {
     describe(`Load assets`, () => {
         test.each([
             {
-                desc: "No asset",
-                fsTree: {},
-                expectedCount: 0,
-                expectedZones: []
+                "desc": `No asset`,
+                "fsTree": {},
+                "expectedCount": 0,
+                "expectedZones": [],
             }, {
-                desc: "Multiple assets - PrimaryZone",
-                fsTree: {
+                "desc": `Multiple assets - PrimaryZone`,
+                "fsTree": {
                     [primaryAssetDir]: {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
-                    }
+                    },
                 },
-                expectedCount: 3,
-                expectedZones: [Zones.Primary, Zones.Primary, Zones.Primary]
+                "expectedCount": 3,
+                "expectedZones": [Zones.Primary, Zones.Primary, Zones.Primary],
             }, {
-                desc: "Multiple assets - SharedZone",
-                fsTree: {
+                "desc": `Multiple assets - SharedZone`,
+                "fsTree": {
                     [sharedAssetDir]: {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
-                    }
+                    },
                 },
-                expectedCount: 3,
-                expectedZones: [Zones.Shared, Zones.Shared, Zones.Shared]
+                "expectedCount": 3,
+                "expectedZones": [Zones.Shared, Zones.Shared, Zones.Shared],
             }, {
-                desc: "Multiple assets - Mixed Zones",
-                fsTree: {
+                "desc": `Multiple assets - Mixed Zones`,
+                "fsTree": {
                     [primaryAssetDir]: {
                         "deFEyox97ecdknADe0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "deFEeee3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
@@ -113,37 +113,37 @@ describe(`Load state`, () => {
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
                     },
                 },
-                expectedCount: 6,
-                expectedZones: [Zones.Primary, Zones.Primary, Zones.Primary, Zones.Shared, Zones.Shared, Zones.Shared]
+                "expectedCount": 6,
+                "expectedZones": [Zones.Primary, Zones.Primary, Zones.Primary, Zones.Shared, Zones.Shared, Zones.Shared],
             }, {
-                desc: "Invalid assets - PrimaryZone",
-                fsTree: {
+                "desc": `Invalid assets - PrimaryZone`,
+                "fsTree": {
                     [primaryAssetDir]: {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
-                    }
+                    },
                 },
-                expectedCount: 2,
-                expectedZones: [Zones.Primary, Zones.Primary]
+                "expectedCount": 2,
+                "expectedZones": [Zones.Primary, Zones.Primary],
             }, {
-                desc: "Invalid assets - SharedZone",
-                fsTree: {
+                "desc": `Invalid assets - SharedZone`,
+                "fsTree": {
                     [sharedAssetDir]: {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
-                    }
+                    },
                 },
-                expectedCount: 2,
-                expectedZones: [Zones.Shared, Zones.Shared]
+                "expectedCount": 2,
+                "expectedZones": [Zones.Shared, Zones.Shared],
             }, {
-                desc: "Invalid assets - Mixed Zones",
-                fsTree: {
+                "desc": `Invalid assets - Mixed Zones`,
+                "fsTree": {
                     [primaryAssetDir]: {
                         "deFEyox97ecdknADe0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "deFEeee3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
@@ -156,21 +156,21 @@ describe(`Load state`, () => {
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
-                    }
+                    },
                 },
-                expectedCount: 5,
-                expectedZones: [Zones.Primary, Zones.Primary, Zones.Primary, Zones.Shared, Zones.Shared]
-            }
+                "expectedCount": 5,
+                "expectedZones": [Zones.Primary, Zones.Primary, Zones.Primary, Zones.Shared, Zones.Shared],
+            },
         ])(`$desc`, async ({fsTree, expectedCount, expectedZones}) => {
-            mockfs(fsTree as any)
+            mockfs(fsTree as any);
             const library = photosLibraryFactory();
 
             const assets = await library.loadAssets();
-            
+
             expect(Object.keys(assets).length).toEqual(expectedCount);
-            expect(Object.values(assets).map(asset => asset.zone)).toEqual(expectedZones)
-        })
-    })
+            expect(Object.values(assets).map(asset => asset.zone)).toEqual(expectedZones);
+        });
+    });
 
     describe(`Load albums`, () => {
         test(`No albums`, async () => {
@@ -548,13 +548,13 @@ describe(`Load state`, () => {
 });
 
 describe(`Write state`, () => {
-    test.todo(`The following: For each zone`)
+    test.todo(`The following: For each zone`);
     describe.each([{
-        zone: Zones.Primary,
-        zoneDir: primaryAssetDir
+        "zone": Zones.Primary,
+        "zoneDir": primaryAssetDir,
     }, {
-        zone: Zones.Shared,
-        zoneDir: sharedAssetDir
+        "zone": Zones.Shared,
+        "zoneDir": sharedAssetDir,
     }])(`Write assets - $zone`, ({zone, zoneDir}) => {
         test(`Successfully verify asset`, async () => {
             const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
@@ -703,7 +703,7 @@ describe(`Write state`, () => {
                 82215,
                 FileType.fromExtension(ext),
                 42,
-                zone
+                zone,
             );
             mockfs({
                 [zoneDir]: {},
@@ -737,7 +737,7 @@ describe(`Write state`, () => {
                 82215,
                 FileType.fromExtension(ext),
                 42,
-                zone
+                zone,
             );
             mockfs({
                 [zoneDir]: {},

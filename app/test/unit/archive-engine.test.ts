@@ -10,20 +10,19 @@ import fs from 'fs';
 import {spyOnEvent} from '../_helpers/_general';
 import * as ARCHIVE_ENGINE from '../../src/lib/archive-engine/constants';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
-import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder';
+import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 afterEach(() => {
     mockfs.restore();
 });
 
 describe.each([{
-    zone: Zones.Primary,
-    ASSET_DIR: PRIMARY_ASSET_DIR
-},{
-    zone: Zones.Shared,
-    ASSET_DIR: PRIMARY_ASSET_DIR //@remarks this should be SHARED_ASSET_DIR
-}])('Archive Engine $zone', ({zone, ASSET_DIR}) => {
-
+    "zone": Zones.Primary,
+    "ASSET_DIR": PRIMARY_ASSET_DIR,
+}, {
+    "zone": Zones.Shared,
+    "ASSET_DIR": PRIMARY_ASSET_DIR, // @remarks this should be SHARED_ASSET_DIR
+}])(`Archive Engine $zone`, ({zone, ASSET_DIR}) => {
     describe(`Archive Path`, () => {
         test(`Valid path`, async () => {
             const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
