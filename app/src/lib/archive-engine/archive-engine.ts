@@ -46,6 +46,7 @@ export class ArchiveEngine extends EventEmitter {
 
     /**
      * This will archive an Album stored in the given location and delete it's remote representation, if remoteDelete is set
+     * @remarks This function expects the asset to be located in the primary zone - shared assets in folders is currently not supported by the api
      * @param archivePath - The path to the local album. The named path is expected.
      * @param assetList - The current remote asset list
      * @returns A Promise, that resolves once the path has been archived
@@ -77,7 +78,7 @@ export class ArchiveEngine extends EventEmitter {
 
         // Iterating over all album items to persist them
         const remoteDeleteList = await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
-            const assetPath = path.join(this.photosLibrary.assetDir, uuidFilename);
+            const assetPath = path.join(this.photosLibrary.primaryAssetDir, uuidFilename);
             const archivedAssetPath = path.join(archivedAlbumPath, loadedAlbum.assets[uuidFilename]);
 
             try {

@@ -4,6 +4,7 @@ import {AxiosRequestConfig} from 'axios';
 import * as Config from '../_helpers/_config';
 import * as ICLOUD_PHOTOS from '../../src/lib/icloud/icloud-photos/constants';
 import {spyOnEvent} from '../_helpers/_general';
+import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder';
 
 test(`PhotosDomain not available`, () => {
     const iCloudPhotos = iCloudPhotosFactory();
@@ -20,18 +21,15 @@ describe(`Setup iCloud Photos`, () => {
         const axiosResponse = `Success`;
         const setupCompleteEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
         iCloudPhotos.auth.processPhotosSetupResponse = jest.fn();
-        iCloudPhotos.axios.get = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve(axiosResponse));
+        iCloudPhotos.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve(axiosResponse));
 
         await iCloudPhotos.setup();
 
-        expect(iCloudPhotos.axios.get).toHaveBeenCalledWith(
-            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/zones/list`,
+        expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
+            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
+            {},
             {
                 "headers": `headerValues`,
-                "params": {
-                    "getCurrentSyncToken": `True`,
-                    "remapEnums": `True`,
-                },
             },
         );
         expect(iCloudPhotos.auth.processPhotosSetupResponse).toHaveBeenCalledWith(axiosResponse);
@@ -48,18 +46,15 @@ describe(`Setup iCloud Photos`, () => {
             throw new Error();
         });
 
-        iCloudPhotos.axios.get = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve(axiosResponse));
+        iCloudPhotos.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve(axiosResponse));
 
         await expect(iCloudPhotos.setup()).rejects.toThrowError(new Error(`Unexpected error while setting up iCloud Photos`));
 
-        expect(iCloudPhotos.axios.get).toHaveBeenCalledWith(
-            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/zones/list`,
+        expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
+            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
+            {},
             {
                 "headers": `headerValues`,
-                "params": {
-                    "getCurrentSyncToken": `True`,
-                    "remapEnums": `True`,
-                },
             },
         );
         expect(iCloudPhotos.auth.processPhotosSetupResponse).toHaveBeenCalledWith(axiosResponse);
@@ -73,18 +68,15 @@ describe(`Setup iCloud Photos`, () => {
         const errorEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
         iCloudPhotos.auth.processPhotosSetupResponse = jest.fn();
 
-        iCloudPhotos.axios.get = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Network Error`)));
+        iCloudPhotos.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Network Error`)));
 
         await expect(iCloudPhotos.setup()).rejects.toThrowError(new Error(`Unexpected error while setting up iCloud Photos`));
 
-        expect(iCloudPhotos.axios.get).toHaveBeenCalledWith(
-            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/zones/list`,
+        expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
+            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
+            {},
             {
                 "headers": `headerValues`,
-                "params": {
-                    "getCurrentSyncToken": `True`,
-                    "remapEnums": `True`,
-                },
             },
         );
         expect(iCloudPhotos.auth.processPhotosSetupResponse).not.toHaveBeenCalled();
@@ -92,7 +84,7 @@ describe(`Setup iCloud Photos`, () => {
     });
 
     test(`Check indexing state after setup`, () => {
-        const iCloudPhotos = iCloudPhotosFactory(false);
+        const iCloudPhotos = iCloudPhotosFactory(true, false);
         iCloudPhotos.checkingIndexingStatus = jest.fn(() => Promise.resolve());
 
         iCloudPhotos.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
@@ -100,11 +92,9 @@ describe(`Setup iCloud Photos`, () => {
         expect(iCloudPhotos.checkingIndexingStatus).toHaveBeenCalledTimes(1);
     });
 
-    describe(`Check indexing state`, () => {
+    describe.each([Zones.Primary, Zones.Shared])(`Check indexing state - %o`, (zone) => {
         test(`Indexing finished`, async () => {
             const iCloudPhotos = iCloudPhotosFactory();
-            const readyEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.READY);
-            const errorEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
 
             iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
                 "fields": {
@@ -114,17 +104,13 @@ describe(`Setup iCloud Photos`, () => {
                 },
             }]));
 
-            await iCloudPhotos.checkingIndexingStatus();
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).resolves.toBeUndefined()
 
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(`CheckIndexingState`);
-            expect(readyEvent).toHaveBeenCalledTimes(1);
-            expect(errorEvent).not.toHaveBeenCalled();
+            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Indexing in progress with progress`, async () => {
             const iCloudPhotos = iCloudPhotosFactory();
-            const readyEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.READY);
-            const errorEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
 
             iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
                 "fields": {
@@ -137,17 +123,13 @@ describe(`Setup iCloud Photos`, () => {
                 },
             }]));
 
-            await iCloudPhotos.checkingIndexingStatus();
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrowError('Indexing in progress, try again later')
 
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(`CheckIndexingState`);
-            expect(readyEvent).not.toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Indexing in progress, try again later`));
+            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Indexing in progress without progress`, async () => {
             const iCloudPhotos = iCloudPhotosFactory();
-            const readyEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.READY);
-            const errorEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
 
             iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
                 "fields": {
@@ -157,17 +139,13 @@ describe(`Setup iCloud Photos`, () => {
                 },
             }]));
 
-            await iCloudPhotos.checkingIndexingStatus();
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrowError('Indexing in progress, try again later')
 
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(`CheckIndexingState`);
-            expect(readyEvent).not.toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Indexing in progress, try again later`));
+            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Unknown status`, async () => {
             const iCloudPhotos = iCloudPhotosFactory();
-            const readyEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.READY);
-            const errorEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
 
             iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
                 "fields": {
@@ -177,11 +155,9 @@ describe(`Setup iCloud Photos`, () => {
                 },
             }]));
 
-            await iCloudPhotos.checkingIndexingStatus();
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrowError('Unknown indexing state')
 
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(`CheckIndexingState`);
-            expect(readyEvent).not.toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unknown indexing state`));
+            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test.each([
@@ -191,37 +167,28 @@ describe(`Setup iCloud Photos`, () => {
             [[{"fields": {"state": {}}}]],
         ])(`Empty query - %o`, async queryResult => {
             const iCloudPhotos = iCloudPhotosFactory();
-            const readyEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.READY);
-            const errorEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
 
             iCloudPhotos.performQuery = jest.fn(() => Promise.resolve(queryResult));
 
-            await iCloudPhotos.checkingIndexingStatus();
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrowError('Unable to get indexing state')
 
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(`CheckIndexingState`);
-            expect(readyEvent).not.toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to get indexing state`));
+            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Query failure`, async () => {
             const iCloudPhotos = iCloudPhotosFactory();
-            const readyEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.READY);
-            const errorEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
+            iCloudPhotos.performQuery = jest.fn(() => Promise.reject(new Error()));
 
-            iCloudPhotos.performQuery = jest.fn(() => Promise.reject());
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrowError()
 
-            await iCloudPhotos.checkingIndexingStatus();
-
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(`CheckIndexingState`);
-            expect(readyEvent).not.toHaveBeenCalled();
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to get indexing state`));
+            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
     });
 });
 
 describe.each([
     {
-        "_desc": `recordType + filterBy + resultsLimit + desiredKeys`,
+        "desc": `recordType + filterBy + resultsLimit + desiredKeys`,
         "recordType": `recordType`,
         "filterBy": [{
             "fieldName": `someField`,
@@ -233,6 +200,7 @@ describe.each([
         }],
         "resultsLimit": 2,
         "desiredKeys": [`key1, key2`],
+        "zone": Zones.Primary,
         "expectedQuery": {
             "desiredKeys": [`key1, key2`],
             "query": {
@@ -242,10 +210,35 @@ describe.each([
                 "recordType": `recordType`,
             },
             "resultsLimit": 2,
-            "zoneID": {"ownerRecordName": Config.iCloudPhotosAccount.ownerName, "zoneName": Config.iCloudPhotosAccount.zoneName, "zoneType": Config.iCloudPhotosAccount.zoneType},
+            "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
         },
     }, {
-        "_desc": `recordType + filterBy + resultsLimit`,
+        "desc": `recordType + filterBy + resultsLimit + desiredKeys`,
+        "recordType": `recordType`,
+        "filterBy": [{
+            "fieldName": `someField`,
+            "comparator": `EQUALS`,
+            "fieldValue": {
+                "value": `someValue`,
+                "type": `STRING`,
+            },
+        }],
+        "resultsLimit": 2,
+        "desiredKeys": [`key1, key2`],
+        "zone": Zones.Shared,
+        "expectedQuery": {
+            "desiredKeys": [`key1, key2`],
+            "query": {
+                "filterBy": [
+                    {"comparator": `EQUALS`, "fieldName": `someField`, "fieldValue": {"type": `STRING`, "value": `someValue`}},
+                ],
+                "recordType": `recordType`,
+            },
+            "resultsLimit": 2,
+            "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
+        },
+    }, {
+        "desc": `recordType + filterBy + resultsLimit`,
         "recordType": `recordType`,
         "filterBy": [{
             "fieldName": `someField`,
@@ -257,6 +250,7 @@ describe.each([
         }],
         "resultsLimit": 2,
         "desiredKeys": undefined,
+        "zone": Zones.Primary,
         "expectedQuery": {
             "query": {
                 "filterBy": [
@@ -265,10 +259,34 @@ describe.each([
                 "recordType": `recordType`,
             },
             "resultsLimit": 2,
-            "zoneID": {"ownerRecordName": Config.iCloudPhotosAccount.ownerName, "zoneName": Config.iCloudPhotosAccount.zoneName, "zoneType": Config.iCloudPhotosAccount.zoneType},
+            "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
         },
     }, {
-        "_desc": `recordType + filterBy`,
+        "desc": `recordType + filterBy + resultsLimit`,
+        "recordType": `recordType`,
+        "filterBy": [{
+            "fieldName": `someField`,
+            "comparator": `EQUALS`,
+            "fieldValue": {
+                "value": `someValue`,
+                "type": `STRING`,
+            },
+        }],
+        "resultsLimit": 2,
+        "desiredKeys": undefined,
+        "zone": Zones.Shared,
+        "expectedQuery": {
+            "query": {
+                "filterBy": [
+                    {"comparator": `EQUALS`, "fieldName": `someField`, "fieldValue": {"type": `STRING`, "value": `someValue`}},
+                ],
+                "recordType": `recordType`,
+            },
+            "resultsLimit": 2,
+            "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
+        },
+    }, {
+        "desc": `recordType + filterBy`,
         "recordType": `recordType`,
         "filterBy": [{
             "fieldName": `someField`,
@@ -280,6 +298,7 @@ describe.each([
         }],
         "resultsLimit": undefined,
         "desiredKeys": undefined,
+        "zone": Zones.Primary,
         "expectedQuery": {
             "query": {
                 "filterBy": [
@@ -287,22 +306,59 @@ describe.each([
                 ],
                 "recordType": `recordType`,
             },
-            "zoneID": {"ownerRecordName": Config.iCloudPhotosAccount.ownerName, "zoneName": Config.iCloudPhotosAccount.zoneName, "zoneType": Config.iCloudPhotosAccount.zoneType},
+            "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
         },
     }, {
-        "_desc": `recordType`,
+        "desc": `recordType + filterBy`,
+        "recordType": `recordType`,
+        "filterBy": [{
+            "fieldName": `someField`,
+            "comparator": `EQUALS`,
+            "fieldValue": {
+                "value": `someValue`,
+                "type": `STRING`,
+            },
+        }],
+        "resultsLimit": undefined,
+        "desiredKeys": undefined,
+        "zone": Zones.Shared,
+        "expectedQuery": {
+            "query": {
+                "filterBy": [
+                    {"comparator": `EQUALS`, "fieldName": `someField`, "fieldValue": {"type": `STRING`, "value": `someValue`}},
+                ],
+                "recordType": `recordType`,
+            },
+            "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
+        },
+    }, {
+        "desc": `recordType`,
         "recordType": `recordType`,
         "filterBy": undefined,
         "resultsLimit": undefined,
         "desiredKeys": undefined,
+        "zone": Zones.Primary,
         "expectedQuery": {
             "query": {
                 "recordType": `recordType`,
             },
-            "zoneID": {"ownerRecordName": Config.iCloudPhotosAccount.ownerName, "zoneName": Config.iCloudPhotosAccount.zoneName, "zoneType": Config.iCloudPhotosAccount.zoneType},
+            "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
+        },
+    }, {
+        "desc": `recordType`,
+        "recordType": `recordType`,
+        "filterBy": undefined,
+        "resultsLimit": undefined,
+        "desiredKeys": undefined,
+        "zone": Zones.Shared,
+        "expectedQuery": {
+            "query": {
+                "recordType": `recordType`,
+            },
+            "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
         },
     },
-])(`Perform Query $_desc`, ({_desc, recordType, filterBy, resultsLimit, desiredKeys, expectedQuery}) => {
+])(`Perform Query $desc - $zone`, ({recordType, filterBy, resultsLimit, desiredKeys, expectedQuery, zone}) => {
     test(`Success`, async () => {
         const iCloudPhotos = iCloudPhotosFactory();
         const responseRecords = [`recordA`, `recordB`];
@@ -312,13 +368,14 @@ describe.each([
             },
         } as any));
 
-        const result = await iCloudPhotos.performQuery(recordType, filterBy, resultsLimit, desiredKeys);
+        const result = await iCloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys);
 
         expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
             `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`,
             expectedQuery,
             {"headers": `headerValues`, "params": {"remapEnums": `True`}},
         );
+        expect(iCloudPhotos.auth.validatePhotosAccount).toHaveBeenCalledWith(zone)
         expect(result).toEqual(responseRecords);
     });
 
@@ -328,8 +385,9 @@ describe.each([
             "data": {},
         } as any));
 
-        await expect(iCloudPhotos.performQuery(recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrowError(new Error(`Received unexpected query response format`));
+        await expect(iCloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrowError(new Error(`Received unexpected query response format`));
 
+        expect(iCloudPhotos.auth.validatePhotosAccount).toHaveBeenCalledWith(zone)
         expect(iCloudPhotos.axios.post).toHaveBeenCalledTimes(1);
     });
 });
@@ -337,7 +395,7 @@ describe.each([
 describe(`Perform Operation`, () => {
     test.each([
         {
-            "_desc": `No records`,
+            "_desc": `No records - PrimaryZone`,
             "operation": `someOperation`,
             "fields": {
                 "someField": {
@@ -345,13 +403,29 @@ describe(`Perform Operation`, () => {
                 },
             },
             "records": [],
+            "zone": Zones.Primary,
             "expectedOperation": {
                 "atomic": true,
                 "operations": [],
-                "zoneID": {"ownerRecordName": Config.iCloudPhotosAccount.ownerName, "zoneName": Config.iCloudPhotosAccount.zoneName, "zoneType": Config.iCloudPhotosAccount.zoneType},
+                "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
             },
         }, {
-            "_desc": `One record`,
+            "_desc": `No records - SharedZone`,
+            "operation": `someOperation`,
+            "fields": {
+                "someField": {
+                    "value": `someValue`,
+                },
+            },
+            "records": [],
+            "zone": Zones.Shared,
+            "expectedOperation": {
+                "atomic": true,
+                "operations": [],
+                "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
+            },
+        }, {
+            "_desc": `One record - PrimaryZone`,
             "operation": `someOperation`,
             "fields": {
                 "someField": {
@@ -359,6 +433,7 @@ describe(`Perform Operation`, () => {
                 },
             },
             "records": [`recordA`],
+            "zone": Zones.Primary,
             "expectedOperation": {
                 "atomic": true,
                 "operations": [{
@@ -374,10 +449,37 @@ describe(`Perform Operation`, () => {
                         },
                     },
                 }],
-                "zoneID": {"ownerRecordName": Config.iCloudPhotosAccount.ownerName, "zoneName": Config.iCloudPhotosAccount.zoneName, "zoneType": Config.iCloudPhotosAccount.zoneType},
+                "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
+            },
+        }, {
+            "_desc": `One record - SharedZone`,
+            "operation": `someOperation`,
+            "fields": {
+                "someField": {
+                    "value": `someValue`,
+                },
+            },
+            "records": [`recordA`],
+            "zone": Zones.Shared,
+            "expectedOperation": {
+                "atomic": true,
+                "operations": [{
+                    "operationType": `someOperation`,
+                    "record": {
+                        "recordName": `recordA`,
+                        "recordType": `CPLAsset`,
+                        "recordChangeTag": `21h2`,
+                        "fields": {
+                            "someField": {
+                                "value": `someValue`,
+                            },
+                        },
+                    },
+                }],
+                "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
             },
         },
-    ])(`Success $_desc`, async ({operation, fields, records, expectedOperation}) => {
+    ])(`Success $_desc`, async ({operation, fields, records, expectedOperation, zone}) => {
         const iCloudPhotos = iCloudPhotosFactory();
 
         const responseRecords = [`recordA`, `recordB`];
@@ -387,7 +489,7 @@ describe(`Perform Operation`, () => {
             },
         } as any));
 
-        const result = await iCloudPhotos.performOperation(operation, fields, records);
+        const result = await iCloudPhotos.performOperation(zone, operation, fields, records);
 
         expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
             `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/modify`,

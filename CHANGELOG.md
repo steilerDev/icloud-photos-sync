@@ -2,8 +2,10 @@
 
 ## Nightly Changes
 
-  * BREAKING CLI CHANGE:
+  * **BREAKING CLI CHANGE**:
     * Specifying no command will print help and not automatically start `daemon` mode
+    * The CLI option `-r, --max-retries` no longer uses `-1` to disable the option, but `Infinity`.
+  * Support for iCloud Shared Photo Library
   * Filetype support added for
     * `avi`
   * Reworked error structure

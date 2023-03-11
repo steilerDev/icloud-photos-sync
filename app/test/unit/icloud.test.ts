@@ -9,7 +9,7 @@ import {AxiosRequestConfig} from 'axios';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import {expectedAxiosPost, expectedAxiosPut} from '../_helpers/icloud-mfa.helper';
 import * as ICLOUD_PHOTOS from '../../src/lib/icloud/icloud-photos/constants';
-import {createNamedError, spyOnEvent} from '../_helpers/_general';
+import {spyOnEvent} from '../_helpers/_general';
 import {expectedICloudSetupHeaders, expectedTokenGetCall, getICloudCookieHeader, iCloudFactory, _defaultCliOpts} from '../_helpers/icloud.helper';
 import * as Config from '../_helpers/_config';
 import {iCloud} from '../../src/lib/icloud/icloud';
@@ -324,7 +324,7 @@ describe(`MFA Flow`, () => {
                 await icloud.resendMFA(method);
 
                 expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                expect(warnEvent).toHaveBeenCalledWith(createNamedError(`MFAError`, `Unable to request new MFA code`));
+                expect(warnEvent).toHaveBeenCalledWith(new Error(`Unable to request new MFA code`));
             });
 
             test(`Resend MFA with ${method} - Resend unsuccessful`, async () => {
@@ -383,7 +383,7 @@ describe(`MFA Flow`, () => {
                 await icloud.resendMFA(method);
 
                 expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                expect(warnEvent).toHaveBeenCalledWith(createNamedError(`MFAError`, `Unable to request new MFA code`));
+                expect(warnEvent).toHaveBeenCalledWith(new Error(`Unable to request new MFA code`));
             });
 
             test(`Resend MFA with ${method} - Resend unsuccessful`, async () => {
@@ -603,7 +603,7 @@ describe(`Setup iCloud`, () => {
             },
         );
         expect(readyEvent).toHaveBeenCalled();
-        expect(icloud.auth.iCloudCookies.length).toEqual(17);
+        expect(icloud.auth.iCloudCookies.length).toEqual(16);
         expect(icloud.photos).toBeDefined();
     });
 

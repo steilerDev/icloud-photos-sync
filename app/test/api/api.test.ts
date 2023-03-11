@@ -13,6 +13,7 @@ import {appDataDir} from '../_helpers/_config';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 import {appWithOptions} from '../_helpers/app-factory.helper';
+import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(30 * 1000);
@@ -109,7 +110,7 @@ describe(`API E2E Tests`, () => {
         describe(`Fetching records`, () => {
             test(`Fetch all records`, async () => {
                 await icloud.ready;
-                const [assets, masters] = await icloud.photos.fetchAllPictureRecords();
+                const [assets, masters] = await icloud.photos.fetchAllCPLAssetsMasters();
                 // _writeTestData(assets.map(postProcessAssetData), "all-assets-data")
                 // _writeTestData(masters.map(postProcessMasterData), "all-master-data")
 
@@ -137,7 +138,7 @@ describe(`API E2E Tests`, () => {
             test(`Fetch all records of one album`, async () => {
                 await icloud.ready;
                 const albumRecordName = `311f9778-1f40-4762-9e57-569ebf5fb070`;
-                const [assets, masters] = await icloud.photos.fetchAllPictureRecords(albumRecordName);
+                const [assets, masters] = await icloud.photos.fetchAllCPLAssetsMasters(albumRecordName);
 
                 // _writeTestData(assets.map(postProcessAssetData), "api.expected.album-cpl-assets")
                 // _writeTestData(masters.map(postProcessMasterData), "api.expected.album-cpl-masters")
@@ -150,7 +151,7 @@ describe(`API E2E Tests`, () => {
             test(`Fetch records of empty album`, async () => {
                 await icloud.ready;
                 const albumRecordName = `6dcb67d9-a073-40ba-9441-3a792da34cf5`;
-                const [assets, masters] = await icloud.photos.fetchAllPictureRecords(albumRecordName);
+                const [assets, masters] = await icloud.photos.fetchAllCPLAssetsMasters(albumRecordName);
                 expect(assets.length).toEqual(0);
                 expect(masters.length).toEqual(0);
             });
@@ -158,7 +159,7 @@ describe(`API E2E Tests`, () => {
         describe(`Fetching albums`, () => {
             test(`Fetch all albums`, async () => {
                 await icloud.ready;
-                const fetchedAlbums = await icloud.photos.fetchAllAlbumRecords();
+                const fetchedAlbums = await icloud.photos.fetchAllCPLAlbums();
                 expect(fetchedAlbums.length).toEqual(8);
 
                 // Needing to wait until all promises for the album assets have settled
@@ -174,7 +175,7 @@ describe(`API E2E Tests`, () => {
             test(`Fetch empty folder`, async () => {
                 await icloud.ready;
                 const recordName = `7198a6a0-27fe-4fb6-961b-74231e425858`; // 'Stuff' folder
-                const fetchedAlbum = await icloud.photos.fetchAlbumRecords(recordName);
+                const fetchedAlbum = await icloud.photos.fetchCPLAlbums(recordName);
                 // Verifying only structure, not content, as content was validated in the all case
                 expect(fetchedAlbum.length).toEqual(0);
             });
@@ -182,7 +183,7 @@ describe(`API E2E Tests`, () => {
             test(`Fetch folder with multiple albums`, async () => {
                 await icloud.ready;
                 const recordName = `6e7f4f44-445a-41ee-a87e-844a9109069d`; // '2022' folder
-                const fetchedAlbums = await icloud.photos.fetchAlbumRecords(recordName);
+                const fetchedAlbums = await icloud.photos.fetchCPLAlbums(recordName);
                 // Verifying only structure, not content, as content was validated in the all case
                 expect(fetchedAlbums.length).toEqual(3);
             });
@@ -198,6 +199,7 @@ describe(`API E2E Tests`, () => {
                     170384,
                     FileType.fromAssetType(`public.jpeg`, `jpg`),
                     1660139199098,
+                    Zones.Primary,
                     AssetType.ORIG,
                     `test`,
                     `NQtpvztdVKKNfrb8lf482g==`,
@@ -207,7 +209,7 @@ describe(`API E2E Tests`, () => {
                     false);
 
                 // Need to get current download URL of above defined asset
-                const masters = (await icloud.photos.fetchAllPictureRecords())[1];
+                const masters = (await icloud.photos.fetchAllCPLAssetsMasters())[1];
                 const thisMaster = masters.find(master => master.recordName === assetRecordName);
                 asset.downloadURL = thisMaster?.resource?.downloadURL;
 

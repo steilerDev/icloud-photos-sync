@@ -26,11 +26,11 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
             const origExt = parsedOrigFilename.ext;
 
             if (master?.resource && master?.resourceType) {
-                remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, origExt, master.modified, origFilename, AssetType.ORIG, asset.recordName, asset.favorite === 1));
+                remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, origExt, master.modified, origFilename, AssetType.ORIG, asset.recordName, asset.favorite, master.zoneName));
             }
 
             if (asset?.resource && asset?.resourceType) {
-                remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, origExt, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite === 1));
+                remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, origExt, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite, asset.zoneName));
             }
         } catch (err) {
             // In case missing filetype descriptor is thrown, adding asset context to error

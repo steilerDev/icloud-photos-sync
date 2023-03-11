@@ -12,6 +12,7 @@ import {iCPSError} from '../../app/error/error.js';
 import EventEmitter from 'events';
 import {HANDLER_EVENT} from '../../app/event/error-handler.js';
 import {LIBRARY_ERR} from '../../app/error/error-codes.js';
+import {Zones} from '../icloud/icloud-photos/query-builder.js';
 
 export type PathTuple = [namePath: string, uuidPath: string]
 
@@ -30,9 +31,14 @@ export class PhotosLibrary extends EventEmitter {
     photoDataDir: string;
 
     /**
-     * The full path to the sub-dir within 'photoDataDir', containing all assets
+     * The full path to the sub-dirs within 'photoDataDir', containing all assets from the primary library
      */
-    assetDir: string;
+    primaryAssetDir: string;
+
+    /**
+     * The full path to the sub-dirs within 'photoDataDir', containing all assets from the shared library
+     */
+    sharedAssetDir: string;
 
     /**
      * The full path to the sub-dir within 'photoDataDir', containing all archived folders, who have been deleted on the backend
@@ -51,7 +57,8 @@ export class PhotosLibrary extends EventEmitter {
     constructor(app: iCloudApp) {
         super();
         this.photoDataDir = this.getFullPathAndCreate([app.options.dataDir]);
-        this.assetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ASSET_DIR]);
+        this.primaryAssetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.PRIMARY_ASSET_DIR]);
+        this.sharedAssetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.SHARED_ASSET_DIR]);
         this.archiveDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR]);
         this.stashDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR, PHOTOS_LIBRARY.STASH_DIR]);
     }
@@ -76,15 +83,23 @@ export class PhotosLibrary extends EventEmitter {
      * @returns A structured list of assets, as they are currently present on disk
      */
     async loadAssets(): Promise<PLibraryEntities<Asset>> {
+        return {
+            ...await this.loadAssetsForZone(Zones.Primary),
+            ...await this.loadAssetsForZone(Zones.Shared),
+        };
+    }
+
+    async loadAssetsForZone(zone: Zones): Promise<PLibraryEntities<Asset>> {
         const libAssets: PLibraryEntities<Asset> = {};
-        (await fs.promises.readdir(this.assetDir))
+        const zonePath = zone === Zones.Primary ? this.primaryAssetDir : this.sharedAssetDir;
+        (await fs.promises.readdir(zonePath))
             .forEach(fileName => {
                 try {
                     const fileStat = fs.statSync(path.format({
-                        "dir": this.assetDir,
+                        "dir": zonePath,
                         "base": fileName,
                     }));
-                    const asset = Asset.fromFile(fileName, fileStat);
+                    const asset = Asset.fromFile(fileName, fileStat, zone);
                     libAssets[asset.getUUID()] = asset;
                     this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
                 } catch (err) {
@@ -248,18 +263,18 @@ export class PhotosLibrary extends EventEmitter {
      */
     async writeAsset(asset: Asset, response: AxiosResponse<any, any>): Promise<void> {
         this.logger.debug(`Writing asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath(this.assetDir);
+        const location = asset.getAssetFilePath(this.photoDataDir);
         const writeStream = fs.createWriteStream(location);
         response.data.pipe(writeStream);
         await pEvent(writeStream, `close`);
-        await fs.promises.utimes(asset.getAssetFilePath(this.assetDir), new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
+        await fs.promises.utimes(asset.getAssetFilePath(this.photoDataDir), new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
 
         try {
             await this.verifyAsset(asset);
             this.logger.debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
             return;
         } catch (err) {
-            await fs.promises.rm(asset.getAssetFilePath(this.assetDir));
+            await fs.promises.rm(asset.getAssetFilePath(this.photoDataDir));
             throw new iCPSError(LIBRARY_ERR.INVALID_ASSET)
                 .addMessage(asset.getDisplayName())
                 .addContext(`asset`, asset)
@@ -274,7 +289,7 @@ export class PhotosLibrary extends EventEmitter {
      */
     async deleteAsset(asset: Asset) {
         this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
-        await fs.promises.rm(asset.getAssetFilePath(this.assetDir), {"force": true});
+        await fs.promises.rm(asset.getAssetFilePath(this.photoDataDir), {"force": true});
     }
 
     /**
@@ -285,7 +300,7 @@ export class PhotosLibrary extends EventEmitter {
      */
     async verifyAsset(asset: Asset): Promise<boolean> {
         this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath(this.assetDir);
+        const location = asset.getAssetFilePath(this.photoDataDir);
 
         return asset.verify(location);
     }
@@ -407,6 +422,7 @@ export class PhotosLibrary extends EventEmitter {
 
     /**
      * Links the assets for the given album
+     * @remarks ALbums only refer to PrimaryAssets - hardcoding this
      * @param album - Album holding information about the linked assets
      * @param albumPath - Album path to link assets to
      */
@@ -417,7 +433,7 @@ export class PhotosLibrary extends EventEmitter {
                 "base": album.assets[assetUUID],
             });
             const assetPath = path.format({
-                "dir": this.assetDir,
+                "dir": this.primaryAssetDir,
                 "base": assetUUID,
             });
             // Getting asset time, in order to update link as well

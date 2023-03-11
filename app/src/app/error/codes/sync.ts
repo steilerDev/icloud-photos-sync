@@ -35,6 +35,6 @@ export const MAX_RETRY: ErrorStruct = buildErrorStruct(
     name, prefix, `MAX_RETRY`, `Sync did not complete successfully within expected amount of tries`,
 );
 
-export const UNKNOWN_NETWORK: ErrorStruct = buildErrorStruct(
-    name, prefix, `UNKNOWN_NETWORK`, `Unknown network error code`,
+export const UNKNOWN_SYNC: ErrorStruct = buildErrorStruct(
+    name, prefix, `UNKNOWN_SYNC`, `Unknown sync error`,
 );

@@ -4,6 +4,7 @@ import {describe, test, expect, jest, afterEach} from "@jest/globals";
 import {getICloudCookies, iCloudAuthFactory, mockValidation} from "../_helpers/icloud-auth.helper";
 import * as Config from '../_helpers/_config';
 import {AxiosResponse} from 'axios';
+import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder';
 
 describe(`Storing trust token fails`, () => {
     afterEach(() => {
@@ -58,27 +59,102 @@ describe(`Validate Cloud Cookies`, () => {
     });
 });
 
-test(`Setup Photos Account`, () => {
-    const auth = iCloudAuthFactory();
-    mockValidation(auth);
+describe(`Setup Photos Account`, () => {
+    test(`Only Primary Zone`, () => {
+        const auth = iCloudAuthFactory();
+        mockValidation(auth);
+    
+        auth.processPhotosSetupResponse({
+            "data": {
+                "zones": [{
+                    "zoneID": {
+                        "ownerRecordName": `someOwner`,
+                        "zoneName": `PrimarySync`,
+                        "zoneType": `someZoneType`,
+                    },
+                }],
+            },
+        } as AxiosResponse);
+    
+        expect(auth.validatePhotosAccount).toHaveBeenCalledWith(Zones.Primary);
+        expect(auth.iCloudPhotosAccount.primary?.ownerName).toEqual(`someOwner`);
+        expect(auth.iCloudPhotosAccount.primary?.zoneName).toEqual(`PrimarySync`);
+        expect(auth.iCloudPhotosAccount.primary?.zoneType).toEqual(`someZoneType`);
+    });
 
-    auth.processPhotosSetupResponse({
-        "data": {
-            "zones": [{
-                "zoneID": {
-                    "ownerRecordName": `someOwner`,
-                    "zoneName": `someZone`,
-                    "zoneType": `someZoneType`,
+    test(`Primary Zone + Shared Zone`, () => {
+        const auth = iCloudAuthFactory();
+        mockValidation(auth);
+    
+        auth.processPhotosSetupResponse({
+            "data": {
+                "zones": [{
+                    "zoneID": {
+                        "ownerRecordName": `someOwner`,
+                        "zoneName": `PrimarySync`,
+                        "zoneType": `someZoneType`,
+                    },
+                }, {
+                    "zoneID": {
+                        "ownerRecordName": `someOwner`,
+                        "zoneName": `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
+                        "zoneType": `someZoneType`,
+                    },
+                }],
+            },
+        } as AxiosResponse);
+    
+        expect(auth.validatePhotosAccount).toHaveBeenCalledWith(undefined);
+        expect(auth.iCloudPhotosAccount.primary?.ownerName).toEqual(`someOwner`);
+        expect(auth.iCloudPhotosAccount.primary?.zoneName).toEqual(`PrimarySync`);
+        expect(auth.iCloudPhotosAccount.primary?.zoneType).toEqual(`someZoneType`);
+        expect(auth.iCloudPhotosAccount.shared?.ownerName).toEqual(`someOwner`);
+        expect(auth.iCloudPhotosAccount.shared?.zoneName).toEqual(`SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`);
+        expect(auth.iCloudPhotosAccount.shared?.zoneType).toEqual(`someZoneType`);
+    });
+
+    test(`More Coming`, () => {
+        const auth = iCloudAuthFactory();
+        mockValidation(auth);
+    
+        expect(() => auth.processPhotosSetupResponse({
+            "data": {
+                "moreComing": true,
+                "zones": [{
+                    "zoneID": {
+                        "ownerRecordName": `someOwner`,
+                        "zoneName": `PrimarySync`,
+                        "zoneType": `someZoneType`,
+                    },
+                }, {
+                    "zoneID": {
+                        "ownerRecordName": `someOwner`,
+                        "zoneName": `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
+                        "zoneType": `someZoneType`,
+                    },
+                }],
+            },
+        } as AxiosResponse)).toThrowError('iCloud Photos returned more zones than expected')
+    });
+
+    test(`Invalid data format`, () => {
+        const auth = iCloudAuthFactory();
+        mockValidation(auth);
+    
+        expect(() => auth.processPhotosSetupResponse({
+            "data": {
+                "zones": {
+                    "zoneID": {
+                        "ownerRecordName": `someOwner`,
+                        "zoneName": `PrimarySync`,
+                        "zoneType": `someZoneType`,
+                    },
                 },
-            }],
-        },
-    } as AxiosResponse);
+            },
+        } as AxiosResponse)).toThrowError('Unable to setup zones: response format invalid')
+    });
+})
 
-    expect(auth.validatePhotosAccount).toHaveBeenCalled();
-    expect(auth.iCloudPhotosAccount.ownerName).toEqual(`someOwner`);
-    expect(auth.iCloudPhotosAccount.zoneName).toEqual(`someZone`);
-    expect(auth.iCloudPhotosAccount.zoneType).toEqual(`someZoneType`);
-});
 
 test(`Get Valid Photos Header`, () => {
     const auth = iCloudAuthFactory();
@@ -97,14 +173,6 @@ test(`Get Valid Photos Header`, () => {
 });
 
 describe(`Validate Photos Account`, () => {
-    test(`zoneName missing`, () => {
-        const auth = iCloudAuthFactory();
-        auth.validateCloudCookies = jest.fn();
-        Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
-        auth.iCloudPhotosAccount.zoneName = undefined;
-        expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate photos account`);
-        expect(auth.validateCloudCookies).toHaveBeenCalled();
-    });
 
     test(`photosDomain missing`, () => {
         const auth = iCloudAuthFactory();
@@ -115,30 +183,123 @@ describe(`Validate Photos Account`, () => {
         expect(auth.validateCloudCookies).toHaveBeenCalled();
     });
 
-    test(`zoneType missing`, () => {
+    test(`Validate primary zone only`, () => {
         const auth = iCloudAuthFactory();
+        auth.validateZone = jest.fn()
         auth.validateCloudCookies = jest.fn();
         Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
-        auth.iCloudPhotosAccount.zoneType = ``;
-        expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate photos account`);
-        expect(auth.validateCloudCookies).toHaveBeenCalled();
-    });
-    test(`ownerName missing`, () => {
-        const auth = iCloudAuthFactory();
-        auth.validateCloudCookies = jest.fn();
-        Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
-        auth.iCloudPhotosAccount.ownerName = ``;
-        expect(() => auth.validatePhotosAccount()).toThrowError(`Unable to validate photos account`);
-        expect(auth.validateCloudCookies).toHaveBeenCalled();
-    });
 
-    test(`Object valid`, () => {
+        auth.validatePhotosAccount(Zones.Primary)
+
+        expect(auth.validateCloudCookies).toHaveBeenCalled();
+        expect(auth.validateZone).toHaveBeenCalledWith(Zones.Primary)
+        expect(auth.validateZone).toHaveBeenCalledTimes(1)
+    })
+
+    test(`Validate shared zone only`, () => {
         const auth = iCloudAuthFactory();
+        auth.validateZone = jest.fn()
         auth.validateCloudCookies = jest.fn();
         Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
-        expect(() => auth.validatePhotosAccount()).not.toThrowError();
+
+        auth.validatePhotosAccount(Zones.Shared)
+
         expect(auth.validateCloudCookies).toHaveBeenCalled();
-    });
+        expect(auth.validateZone).toHaveBeenCalledWith(Zones.Shared)
+        expect(auth.validateZone).toHaveBeenCalledTimes(1)
+    })
+
+    test(`Validate both zones`, () => {
+        const auth = iCloudAuthFactory();
+        auth.validateZone = jest.fn()
+        auth.validateCloudCookies = jest.fn();
+        Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
+
+        auth.validatePhotosAccount()
+
+        expect(auth.validateCloudCookies).toHaveBeenCalled();
+        expect(auth.validateZone).toHaveBeenCalledWith(Zones.Primary)
+        expect(auth.validateZone).toHaveBeenCalledWith(Zones.Shared)
+        expect(auth.validateZone).toHaveBeenCalledTimes(2)
+    })
+
+    describe.each([Zones.Primary, Zones.Shared])(`Validate zone - %o`, (zone) => {
+
+        test(`zone object missing`, () => {
+            const auth = iCloudAuthFactory();
+            Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
+
+            expect(() => auth.validateZone(zone)).toThrowError(`Unable to validate photos account`);
+        });
+
+        test(`zoneName missing`, () => {
+            const auth = iCloudAuthFactory();
+            Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
+            if(zone === Zones.Primary) {
+                auth.iCloudPhotosAccount.primary = {}
+                Object.assign(auth.iCloudPhotosAccount.primary, Config.primaryZone)
+                auth.iCloudPhotosAccount.primary.zoneName = ''
+            }
+            if(zone === Zones.Shared) {
+                auth.iCloudPhotosAccount.shared = {}
+                Object.assign(auth.iCloudPhotosAccount.shared, Config.sharedZone)
+                auth.iCloudPhotosAccount.shared.zoneName = ''
+
+            }
+
+            expect(() => auth.validateZone(zone)).toThrowError(`Unable to validate photos account`);
+        });
+    
+        test(`zoneType missing`, () => {
+            const auth = iCloudAuthFactory();
+            Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
+            if(zone === Zones.Primary) {
+                auth.iCloudPhotosAccount.primary = {}
+                Object.assign(auth.iCloudPhotosAccount.primary, Config.primaryZone)
+                auth.iCloudPhotosAccount.primary.zoneType = ''
+            }
+            if(zone === Zones.Shared) {
+                auth.iCloudPhotosAccount.shared = {}
+                Object.assign(auth.iCloudPhotosAccount.shared, Config.sharedZone)
+                auth.iCloudPhotosAccount.shared.zoneType = ''
+
+            }
+
+            expect(() => auth.validateZone(zone)).toThrowError(`Unable to validate photos account`);
+        });
+        test(`ownerName missing`, () => {
+            const auth = iCloudAuthFactory();
+            Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
+            if(zone === Zones.Primary) {
+                auth.iCloudPhotosAccount.primary = {}
+                Object.assign(auth.iCloudPhotosAccount.primary, Config.primaryZone)
+                auth.iCloudPhotosAccount.primary.ownerName = ''
+            }
+            if(zone === Zones.Shared) {
+                auth.iCloudPhotosAccount.shared = {}
+                Object.assign(auth.iCloudPhotosAccount.shared, Config.sharedZone)
+                auth.iCloudPhotosAccount.shared.ownerName = ''
+
+            }
+
+            expect(() => auth.validateZone(zone)).toThrowError(`Unable to validate photos account`);
+        });
+    
+        test(`Object valid`, () => {
+            const auth = iCloudAuthFactory();
+            Object.assign(auth.iCloudPhotosAccount, Config.iCloudPhotosAccount);
+            if(zone === Zones.Primary) {
+                auth.iCloudPhotosAccount.primary = {}
+                Object.assign(auth.iCloudPhotosAccount.primary, Config.primaryZone)
+            }
+            if(zone === Zones.Shared) {
+                auth.iCloudPhotosAccount.shared = {}
+                Object.assign(auth.iCloudPhotosAccount.shared, Config.sharedZone)
+            }
+
+            expect(() => auth.validateZone(zone)).not.toThrowError();
+        });
+    })
 });
 
 describe(`Validate Account Secrets`, () => {

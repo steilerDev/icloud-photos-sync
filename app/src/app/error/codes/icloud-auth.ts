@@ -47,6 +47,14 @@ export const NO_PHOTOS_DOMAIN: ErrorStruct = buildErrorStruct(
     name, prefix, `NO_PHOTOS_DOMAIN`, `Unable to get photosDomain from setup response`,
 );
 
+export const TOO_MANY_ZONES: ErrorStruct = buildErrorStruct(
+    name, prefix, `TOO_MANY_ZONES`, `iCloud Photos returned more zones than expected`,
+);
+
+export const ZONE_RESPONSE_INVALID: ErrorStruct = buildErrorStruct(
+    name, prefix, `ZONE_RESPONSE_INVALID`, `Unable to setup zones: response format invalid`,
+);
+
 export const COOKIE_VALIDATION: ErrorStruct = buildErrorStruct(
     name, prefix, `COOKIE_VALIDATION`, `Unable to validate cookies`,
 );

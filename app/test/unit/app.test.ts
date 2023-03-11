@@ -33,7 +33,7 @@ describe(`App Factory`, () => {
         expect(mockStderr).toBeCalledWith(expected);
     });
 
-    test.only.each(nonRejectOptions)(`Valid CLI: $_desc`, ({options, expectedKey, expectedValue}) => {
+    test.each(nonRejectOptions)(`Valid CLI: $_desc`, ({options, expectedKey, expectedValue}) => {
         const app = appFactory(options);
         expect(app.options[expectedKey]).toEqual(expectedValue);
     });

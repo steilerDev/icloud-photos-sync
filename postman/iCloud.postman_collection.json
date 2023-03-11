@@ -17,7 +17,7 @@
 							"script": {
 								"exec": [
 									"if(pm.response.code == 200) {",
-									"    // No 2FA needed, straigt to Setup iCloud",
+									"    // No 2FA needed, straight to Setup iCloud",
 									"    pm.collectionVariables.set(\"X-Apple-Session-Token\", pm.response.headers.get(\"X-Apple-Session-Token\"))",
 									"} else if (pm.response.code == 409) {",
 									"    // 2FA",
@@ -631,7 +631,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\"phoneNumber\":{\"id\":1},\"mode\":\"sms\"}"
+							"raw": "{\"phoneNumber\":{\"id\":2},\"mode\":\"sms\"}"
 						},
 						"url": {
 							"raw": "https://idmsa.apple.com/appleauth/auth/verify/phone",
@@ -804,7 +804,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"securityCode\": {\n        \"code\": \"354707\"\n    }\n}",
+							"raw": "{\n    \"securityCode\": {\n        \"code\": \"545892\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -983,7 +983,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"securityCode\": {\n        \"code\": \"354707\"\n    }\n}",
+							"raw": "{\n    \"securityCode\": {\n        \"code\": \"953227\"\n    },\n    \"phoneNumber\": {\n        \"id\": 2\n    },\n    \"mode\": \"sms\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -991,7 +991,7 @@
 							}
 						},
 						"url": {
-							"raw": "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode",
+							"raw": "https://idmsa.apple.com/appleauth/auth/verify/phone/securitycode",
 							"protocol": "https",
 							"host": [
 								"idmsa",
@@ -1002,7 +1002,7 @@
 								"appleauth",
 								"auth",
 								"verify",
-								"trusteddevice",
+								"phone",
 								"securitycode"
 							]
 						}
@@ -1183,6 +1183,7 @@
 							"listen": "test",
 							"script": {
 								"exec": [
+									"pm.expect(pm.response.code).to.equal(200)",
 									"pm.collectionVariables.set(\"Photos_URL\", pm.response.json().webservices.ckdatabasews.url)",
 									"pm.collectionVariables.set(\"dsid\", pm.response.json().dsInfo.dsid)"
 								],
@@ -1267,7 +1268,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"dsWebAuthToken\": \"{{X-Apple-Session-Token}}\",\n    \"accountCountryCode\": \"DEU\",\n    \"extended_login\": false,\n    \"trustToken\": \"{{X-Apple-TwoSV-Trust-Token}}\"\n}",
+							"raw": "{\n    \"dsWebAuthToken\": \"{{X-Apple-Session-Token}}\",\n    \"trustToken\": \"{{X-Apple-TwoSV-Trust-Token}}\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1275,7 +1276,7 @@
 							}
 						},
 						"url": {
-							"raw": "https://setup.icloud.com/setup/ws/1/accountLogin?clientId={{clientID}}",
+							"raw": "https://setup.icloud.com/setup/ws/1/accountLogin",
 							"protocol": "https",
 							"host": [
 								"setup",
@@ -1301,7 +1302,8 @@
 								},
 								{
 									"key": "clientId",
-									"value": "{{clientID}}"
+									"value": "{{clientID}}",
+									"disabled": true
 								}
 							]
 						}
@@ -1309,13 +1311,32 @@
 					"response": []
 				},
 				{
-					"name": "05-Get Libraries (private)",
+					"name": "05-Setup iCloud Photos",
 					"event": [
 						{
 							"listen": "prerequest",
 							"script": {
 								"exec": [
 									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const library = pm.environment.get('sharedLibrary') === 'true' ? \"SharedSync\" : \"PrimarySync\"",
+									"",
+									"pm.expect(pm.response.code).to.equal(200)",
+									"const zones = pm.response.json().zones",
+									"for (let i = 0; i < zones.length; i++) {",
+									"    if(zones[i].zoneID.zoneName.startsWith(library)) {",
+									"        pm.collectionVariables.set(\"zoneOwner\", zones[i].zoneID.ownerRecordName)",
+									"        pm.collectionVariables.set(\"zoneName\", zones[i].zoneID.zoneName)",
+									"        pm.collectionVariables.set(\"zoneType\", zones[i].zoneID.zoneType)",
+									"    }",
+									"}"
 								],
 								"type": "text/javascript"
 							}
@@ -1348,7 +1369,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"query\": {\n        \"recordType\":\"CheckIndexingState\"\n    },\n    \"zoneID\":{\n        \"zoneName\":\"PrimarySync\"\n    }\n}",
+							"raw": "{}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1356,7 +1377,7 @@
 							}
 						},
 						"url": {
-							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query?getCurrentSyncToken=True",
+							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/changes/database",
 							"host": [
 								"{{Photos_URL}}"
 							],
@@ -1366,113 +1387,48 @@
 								"com.apple.photos.cloud",
 								"production",
 								"private",
-								"records",
-								"query"
+								"changes",
+								"database"
 							],
 							"query": [
 								{
-									"key": "getCurrentSyncToken",
-									"value": "True"
-								},
-								{
-									"key": "remapEnums",
-									"value": "True",
+									"key": "ckjsBuildVersion",
+									"value": "2310ProjectDev27",
 									"disabled": true
 								},
 								{
-									"key": "dsid",
-									"value": "{{dsid}}",
+									"key": "ckjsVersion",
+									"value": "2.6.4",
+									"disabled": true
+								},
+								{
+									"key": "getCurrentSyncToken",
+									"value": "true",
+									"disabled": true
+								},
+								{
+									"key": "remapEnums",
+									"value": "true",
+									"disabled": true
+								},
+								{
+									"key": "clientBuildNumber",
+									"value": "2310Project35",
+									"disabled": true
+								},
+								{
+									"key": "clientMasteringNumber",
+									"value": "2310B21",
 									"disabled": true
 								},
 								{
 									"key": "clientId",
-									"value": "{{clientID}}",
-									"disabled": true
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "05-Get Libraries (shared)",
-					"event": [
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "User-Agent",
-								"value": "{{userAgent}}",
-								"type": "default"
-							},
-							{
-								"key": "Accept",
-								"value": "{{accept}}",
-								"type": "default"
-							},
-							{
-								"key": "Origin",
-								"value": "https://www.icloud.com",
-								"type": "default"
-							},
-							{
-								"key": "Content-Type",
-								"value": "text/plain",
-								"type": "default",
-								"disabled": true
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"query\": {\n        \"recordType\":\"CheckIndexingState\"\n    },\n    \"zoneID\":{\n        \"zoneName\":\"PrimarySync\"\n    }\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/records/query?getCurrentSyncToken=True",
-							"host": [
-								"{{Photos_URL}}"
-							],
-							"path": [
-								"database",
-								"1",
-								"com.apple.photos.cloud",
-								"production",
-								"private",
-								"records",
-								"query"
-							],
-							"query": [
-								{
-									"key": "getCurrentSyncToken",
-									"value": "True"
-								},
-								{
-									"key": "remapEnums",
-									"value": "True",
+									"value": "1ac89c90-7f95-4c97-9f27-70bec79dc853",
 									"disabled": true
 								},
 								{
 									"key": "dsid",
-									"value": "{{dsid}}",
-									"disabled": true
-								},
-								{
-									"key": "clientId",
-									"value": "{{clientID}}",
+									"value": "18032768751",
 									"disabled": true
 								}
 							]
@@ -1520,7 +1476,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"query\": {\n        \"recordType\":\"CheckIndexingState\"\n    },\n    \"zoneID\":{\n        \"zoneName\":\"PrimarySync\"\n    }\n}",
+							"raw": "{\n    \"query\": {\n        \"recordType\":\"CheckIndexingState\"\n    },\n    \"zoneID\":{\n        \"zoneName\":\"{{zoneName}}\",\n        \"ownerRecordName\": \"{{zoneOwner}}\",\n        \"zoneType\": \"{{zoneType}}\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1572,65 +1528,6 @@
 			"name": "iCloud Photos Library",
 			"item": [
 				{
-					"name": "List Zones",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "User-Agent",
-								"value": "{{userAgent}}",
-								"type": "default"
-							},
-							{
-								"key": "Accept",
-								"value": "{{accept}}",
-								"type": "default"
-							},
-							{
-								"key": "Origin",
-								"value": "https://www.icloud.com",
-								"type": "default"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "default"
-							}
-						],
-						"url": {
-							"raw": "{{Photos_URL}}/database/1/com.apple.photos.cloud/production/private/zones/list?remapEnums=True&getCurrentSyncToken=True",
-							"host": [
-								"{{Photos_URL}}"
-							],
-							"path": [
-								"database",
-								"1",
-								"com.apple.photos.cloud",
-								"production",
-								"private",
-								"zones",
-								"list"
-							],
-							"query": [
-								{
-									"key": "remapEnums",
-									"value": "True"
-								},
-								{
-									"key": "getCurrentSyncToken",
-									"value": "True"
-								},
-								{
-									"key": "clientId",
-									"value": "61fed521-b3e2-4ca0-9e32-511d48c936bf",
-									"disabled": true
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
 					"name": "Get Photos by Album & Date",
 					"request": {
 						"method": "POST",
@@ -1658,7 +1555,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLContainerRelationLiveByAssetDate\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"startDate\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 9007199254740991,\n                    \"type\": \"TIMESTAMP\"\n                }\n            },\n            {\n                \"fieldName\": \"endDate\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 0,\n                    \"type\": \"TIMESTAMP\"\n                }\n            },\n            {\n                \"fieldName\": \"parentId\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"E54C41AD-5E1A-4768-8E89-4B39E60FD954\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"desiredKeys\": [\n        \"addedDate\",\n        \"adjustmentRenderType\",\n        \"adjustmentType\",\n        \"assetDate\",\n        \"assetHDRType\",\n        \"assetSubtype\",\n        \"assetSubtypeV2\",\n        \"burstFlags\",\n        \"burstFlagsExt\",\n        \"burstId\",\n        \"captionEnc\",\n        \"codec\",\n        \"containerId\",\n        \"customRenderedValue\",\n        \"dataClassType\",\n        \"dateExpunged\",\n        \"duration\",\n        \"filenameEnc\",\n        \"importedBy\",\n        \"isDeleted\",\n        \"isExpunged\",\n        \"isFavorite\",\n        \"isHidden\",\n        \"isKeyAsset\",\n        \"itemId\",\n        \"itemType\",\n        \"locationEnc\",\n        \"locationLatitude\",\n        \"locationLongitude\",\n        \"locationV2Enc\",\n        \"masterRef\",\n        \"mediaMetaDataEnc\",\n        \"mediaMetaDataType\",\n        \"orientation\",\n        \"originalOrientation\",\n        \"position\",\n        \"recordChangeTag\",\n        \"recordName\",\n        \"recordType\",\n        \"remappedRef\",\n        \"resJPEGFullFileType\",\n        \"resJPEGFullFingerprint\",\n        \"resJPEGFullHeight\",\n        \"resJPEGFullRes\",\n        \"resJPEGFullWidth\",\n        \"resJPEGLargeFileType\",\n        \"resJPEGLargeFingerprint\",\n        \"resJPEGLargeHeight\",\n        \"resJPEGLargeRes\",\n        \"resJPEGLargeWidth\",\n        \"resJPEGMedFileType\",\n        \"resJPEGMedFingerprint\",\n        \"resJPEGMedHeight\",\n        \"resJPEGMedRes\",\n        \"resJPEGMedWidth\",\n        \"resJPEGThumbFileType\",\n        \"resJPEGThumbFingerprint\",\n        \"resJPEGThumbHeight\",\n        \"resJPEGThumbRes\",\n        \"resJPEGThumbWidth\",\n        \"resOriginalAltFileType\",\n        \"resOriginalAltFingerprint\",\n        \"resOriginalAltHeight\",\n        \"resOriginalAltRes\",\n        \"resOriginalAltWidth\",\n        \"resOriginalFileType\",\n        \"resOriginalFingerprint\",\n        \"resOriginalHeight\",\n        \"resOriginalRes\",\n        \"resOriginalVidComplFileType\",\n        \"resOriginalVidComplFingerprint\",\n        \"resOriginalVidComplHeight\",\n        \"resOriginalVidComplRes\",\n        \"resOriginalVidComplWidth\",\n        \"resOriginalWidth\",\n        \"resSidecarFileType\",\n        \"resSidecarFingerprint\",\n        \"resSidecarHeight\",\n        \"resSidecarRes\",\n        \"resSidecarWidth\",\n        \"resVidFullFileType\",\n        \"resVidFullFingerprint\",\n        \"resVidFullHeight\",\n        \"resVidFullRes\",\n        \"resVidFullWidth\",\n        \"resVidHDRMedRes\",\n        \"resVidMedFileType\",\n        \"resVidMedFingerprint\",\n        \"resVidMedHeight\",\n        \"resVidMedRes\",\n        \"resVidMedWidth\",\n        \"resVidSmallFileType\",\n        \"resVidSmallFingerprint\",\n        \"resVidSmallHeight\",\n        \"resVidSmallRes\",\n        \"resVidSmallWidth\",\n        \"timeZoneOffset\",\n        \"vidComplDispScale\",\n        \"vidComplDispValue\",\n        \"vidComplDurScale\",\n        \"vidComplDurValue\",\n        \"vidComplVisibilityState\",\n        \"videoFrameRate\",\n        \"zoneID\"\n    ],\n    \"resultsLimit\": 3\n}",
+							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLContainerRelationLiveByAssetDate\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"startDate\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 9007199254740991,\n                    \"type\": \"TIMESTAMP\"\n                }\n            },\n            {\n                \"fieldName\": \"endDate\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 0,\n                    \"type\": \"TIMESTAMP\"\n                }\n            },\n            {\n                \"fieldName\": \"parentId\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"E54C41AD-5E1A-4768-8E89-4B39E60FD954\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"desiredKeys\": [\n        \"addedDate\",\n        \"adjustmentRenderType\",\n        \"adjustmentType\",\n        \"assetDate\",\n        \"assetHDRType\",\n        \"assetSubtype\",\n        \"assetSubtypeV2\",\n        \"burstFlags\",\n        \"burstFlagsExt\",\n        \"burstId\",\n        \"captionEnc\",\n        \"codec\",\n        \"containerId\",\n        \"customRenderedValue\",\n        \"dataClassType\",\n        \"dateExpunged\",\n        \"duration\",\n        \"filenameEnc\",\n        \"importedBy\",\n        \"isDeleted\",\n        \"isExpunged\",\n        \"isFavorite\",\n        \"isHidden\",\n        \"isKeyAsset\",\n        \"itemId\",\n        \"itemType\",\n        \"locationEnc\",\n        \"locationLatitude\",\n        \"locationLongitude\",\n        \"locationV2Enc\",\n        \"masterRef\",\n        \"mediaMetaDataEnc\",\n        \"mediaMetaDataType\",\n        \"orientation\",\n        \"originalOrientation\",\n        \"position\",\n        \"recordChangeTag\",\n        \"recordName\",\n        \"recordType\",\n        \"remappedRef\",\n        \"resJPEGFullFileType\",\n        \"resJPEGFullFingerprint\",\n        \"resJPEGFullHeight\",\n        \"resJPEGFullRes\",\n        \"resJPEGFullWidth\",\n        \"resJPEGLargeFileType\",\n        \"resJPEGLargeFingerprint\",\n        \"resJPEGLargeHeight\",\n        \"resJPEGLargeRes\",\n        \"resJPEGLargeWidth\",\n        \"resJPEGMedFileType\",\n        \"resJPEGMedFingerprint\",\n        \"resJPEGMedHeight\",\n        \"resJPEGMedRes\",\n        \"resJPEGMedWidth\",\n        \"resJPEGThumbFileType\",\n        \"resJPEGThumbFingerprint\",\n        \"resJPEGThumbHeight\",\n        \"resJPEGThumbRes\",\n        \"resJPEGThumbWidth\",\n        \"resOriginalAltFileType\",\n        \"resOriginalAltFingerprint\",\n        \"resOriginalAltHeight\",\n        \"resOriginalAltRes\",\n        \"resOriginalAltWidth\",\n        \"resOriginalFileType\",\n        \"resOriginalFingerprint\",\n        \"resOriginalHeight\",\n        \"resOriginalRes\",\n        \"resOriginalVidComplFileType\",\n        \"resOriginalVidComplFingerprint\",\n        \"resOriginalVidComplHeight\",\n        \"resOriginalVidComplRes\",\n        \"resOriginalVidComplWidth\",\n        \"resOriginalWidth\",\n        \"resSidecarFileType\",\n        \"resSidecarFingerprint\",\n        \"resSidecarHeight\",\n        \"resSidecarRes\",\n        \"resSidecarWidth\",\n        \"resVidFullFileType\",\n        \"resVidFullFingerprint\",\n        \"resVidFullHeight\",\n        \"resVidFullRes\",\n        \"resVidFullWidth\",\n        \"resVidHDRMedRes\",\n        \"resVidMedFileType\",\n        \"resVidMedFingerprint\",\n        \"resVidMedHeight\",\n        \"resVidMedRes\",\n        \"resVidMedWidth\",\n        \"resVidSmallFileType\",\n        \"resVidSmallFingerprint\",\n        \"resVidSmallHeight\",\n        \"resVidSmallRes\",\n        \"resVidSmallWidth\",\n        \"timeZoneOffset\",\n        \"vidComplDispScale\",\n        \"vidComplDispValue\",\n        \"vidComplDurScale\",\n        \"vidComplDurValue\",\n        \"vidComplVisibilityState\",\n        \"videoFrameRate\",\n        \"zoneID\"\n    ],\n    \"resultsLimit\": 3,\n    \"zoneID\":{\n        \"zoneName\":\"{{zoneName}}\",\n        \"ownerRecordName\": \"{{zoneOwner}}\",\n        \"zoneType\": \"{{zoneType}}\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1733,7 +1630,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLContainerRelationLiveByPosition\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 1,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            },\n            {\n                \"fieldName\": \"parentId\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"2A8B1430-8C76-4BA6-98FC-F4C6D13611AB\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\": {\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneName\": \"PrimarySync\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"resultsLimit\": 18\n}",
+							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLContainerRelationLiveByPosition\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 1,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            },\n            {\n                \"fieldName\": \"parentId\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"2A8B1430-8C76-4BA6-98FC-F4C6D13611AB\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\":{\n        \"zoneName\":\"{{zoneName}}\",\n        \"ownerRecordName\": \"{{zoneOwner}}\",\n        \"zoneType\": \"{{zoneType}}\"\n    },\n    \"resultsLimit\": 18\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1807,7 +1704,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLAssetAndMasterInSmartAlbumByAssetDate\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"smartAlbum\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\"type\": \"STRING\", \"value\": \"LIVE\"}\n            }\n        ]\n    },\n    \"zoneID\": {\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneName\": \"PrimarySync\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"resultsLimit\": 18\n}",
+							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLAssetAndMasterInSmartAlbumByAssetDate\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"smartAlbum\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\"type\": \"STRING\", \"value\": \"LIVE\"}\n            }\n        ]\n    },\n    \"zoneID\":{\n        \"zoneName\":\"{{zoneName}}\",\n        \"ownerRecordName\": \"{{zoneOwner}}\",\n        \"zoneType\": \"{{zoneType}}\"\n    },\n    \"resultsLimit\": 18\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1892,7 +1789,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"query\":{\n        \"recordType\":\"CPLAssetAndMasterByAddedDate\",\n        \"filterBy\":[\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 0,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\":{\"zoneName\":\"PrimarySync\",\"ownerRecordName\":\"_e8a2d278a868306ca55d7fc05a299b73\",\"zoneType\":\"REGULAR_CUSTOM_ZONE\"},\n    \"desiredKeys\":[\"rank\",\"addedDate\",\"adjustmentRenderType\",\"adjustmentType\",\"assetDate\",\"assetHDRType\",\"assetSubtype\",\"assetSubtypeV2\",\"burstFlags\",\"burstFlagsExt\",\"burstId\",\"captionEnc\",\"codec\",\"containerId\",\"customRenderedValue\",\"dataClassType\",\"dateExpunged\",\"duration\",\"filenameEnc\",\"importedBy\",\"isDeleted\",\"isExpunged\",\"isFavorite\",\"isHidden\",\"isKeyAsset\",\"itemId\",\"itemType\",\"locationEnc\",\"locationLatitude\",\"locationLongitude\",\"locationV2Enc\",\"masterRef\",\"mediaMetaDataEnc\",\"mediaMetaDataType\",\"orientation\",\"originalOrientation\",\"position\",\"recordChangeTag\",\"recordName\",\"recordType\",\"remappedRef\",\"resJPEGFullFileType\",\"resJPEGFullFingerprint\",\"resJPEGFullHeight\",\"resJPEGFullRes\",\"resJPEGFullWidth\",\"resJPEGLargeFileType\",\"resJPEGLargeFingerprint\",\"resJPEGLargeHeight\",\"resJPEGLargeRes\",\"resJPEGLargeWidth\",\"resJPEGMedFileType\",\"resJPEGMedFingerprint\",\"resJPEGMedHeight\",\"resJPEGMedRes\",\"resJPEGMedWidth\",\"resJPEGThumbFileType\",\"resJPEGThumbFingerprint\",\"resJPEGThumbHeight\",\"resJPEGThumbRes\",\"resJPEGThumbWidth\",\"resOriginalAltFileType\",\"resOriginalAltFingerprint\",\"resOriginalAltHeight\",\"resOriginalAltRes\",\"resOriginalAltWidth\",\"resOriginalFileType\",\"resOriginalFingerprint\",\"resOriginalHeight\",\"resOriginalRes\",\"resOriginalVidComplFileType\",\"resOriginalVidComplFingerprint\",\"resOriginalVidComplHeight\",\"resOriginalVidComplRes\",\"resOriginalVidComplWidth\",\"resOriginalWidth\",\"resSidecarFileType\",\"resSidecarFingerprint\",\"resSidecarHeight\",\"resSidecarRes\",\"resSidecarWidth\",\"resVidFullFileType\",\"resVidFullFingerprint\",\"resVidFullHeight\",\"resVidFullRes\",\"resVidFullWidth\",\"resVidHDRMedRes\",\"resVidMedFileType\",\"resVidMedFingerprint\",\"resVidMedHeight\",\"resVidMedRes\",\"resVidMedWidth\",\"resVidSmallFileType\",\"resVidSmallFingerprint\",\"resVidSmallHeight\",\"resVidSmallRes\",\"resVidSmallWidth\",\"timeZoneOffset\",\"vidComplDispScale\",\"vidComplDispValue\",\"vidComplDurScale\",\"vidComplDurValue\",\"vidComplVisibilityState\",\"videoFrameRate\",\"zoneID\"],\n    \"resultsLimit\":202\n}",
+							"raw": "{\n    \"query\":{\n        \"recordType\":\"CPLAssetAndMasterByAddedDate\",\n        \"filterBy\":[\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 0,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"desiredKeys\":[\"rank\",\"addedDate\",\"adjustmentRenderType\",\"adjustmentType\",\"assetDate\",\"assetHDRType\",\"assetSubtype\",\"assetSubtypeV2\",\"burstFlags\",\"burstFlagsExt\",\"burstId\",\"captionEnc\",\"codec\",\"containerId\",\"customRenderedValue\",\"dataClassType\",\"dateExpunged\",\"duration\",\"filenameEnc\",\"importedBy\",\"isDeleted\",\"isExpunged\",\"isFavorite\",\"isHidden\",\"isKeyAsset\",\"itemId\",\"itemType\",\"locationEnc\",\"locationLatitude\",\"locationLongitude\",\"locationV2Enc\",\"masterRef\",\"mediaMetaDataEnc\",\"mediaMetaDataType\",\"orientation\",\"originalOrientation\",\"position\",\"recordChangeTag\",\"recordName\",\"recordType\",\"remappedRef\",\"resJPEGFullFileType\",\"resJPEGFullFingerprint\",\"resJPEGFullHeight\",\"resJPEGFullRes\",\"resJPEGFullWidth\",\"resJPEGLargeFileType\",\"resJPEGLargeFingerprint\",\"resJPEGLargeHeight\",\"resJPEGLargeRes\",\"resJPEGLargeWidth\",\"resJPEGMedFileType\",\"resJPEGMedFingerprint\",\"resJPEGMedHeight\",\"resJPEGMedRes\",\"resJPEGMedWidth\",\"resJPEGThumbFileType\",\"resJPEGThumbFingerprint\",\"resJPEGThumbHeight\",\"resJPEGThumbRes\",\"resJPEGThumbWidth\",\"resOriginalAltFileType\",\"resOriginalAltFingerprint\",\"resOriginalAltHeight\",\"resOriginalAltRes\",\"resOriginalAltWidth\",\"resOriginalFileType\",\"resOriginalFingerprint\",\"resOriginalHeight\",\"resOriginalRes\",\"resOriginalVidComplFileType\",\"resOriginalVidComplFingerprint\",\"resOriginalVidComplHeight\",\"resOriginalVidComplRes\",\"resOriginalVidComplWidth\",\"resOriginalWidth\",\"resSidecarFileType\",\"resSidecarFingerprint\",\"resSidecarHeight\",\"resSidecarRes\",\"resSidecarWidth\",\"resVidFullFileType\",\"resVidFullFingerprint\",\"resVidFullHeight\",\"resVidFullRes\",\"resVidFullWidth\",\"resVidHDRMedRes\",\"resVidMedFileType\",\"resVidMedFingerprint\",\"resVidMedHeight\",\"resVidMedRes\",\"resVidMedWidth\",\"resVidSmallFileType\",\"resVidSmallFingerprint\",\"resVidSmallHeight\",\"resVidSmallRes\",\"resVidSmallWidth\",\"timeZoneOffset\",\"vidComplDispScale\",\"vidComplDispValue\",\"vidComplDurScale\",\"vidComplDurValue\",\"vidComplVisibilityState\",\"videoFrameRate\",\"zoneID\"],\n    \"resultsLimit\":202,\n    \"zoneID\":{\n        \"zoneName\":\"{{zoneName}}\",\n        \"ownerRecordName\": \"{{zoneOwner}}\",\n        \"zoneType\": \"{{zoneType}}\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1966,7 +1863,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"query\": {\n        \"recordType\": \"HyperionIndexCountLookup\",\n        \"filterBy\": {\n            \"fieldName\": \"indexCountID\",\n            \"comparator\": \"IN\",\n            \"fieldValue\": {\n                \"value\": [\n                    \"CPLAssetByAddedDate\"\n                ],\n                \"type\": \"STRING_LIST\"\n            }\n        }\n    },\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    }\n}",
+							"raw": "{\n    \"query\": {\n        \"recordType\": \"HyperionIndexCountLookup\",\n        \"filterBy\": {\n            \"fieldName\": \"indexCountID\",\n            \"comparator\": \"IN\",\n            \"fieldValue\": {\n                \"value\": [\n                    \"CPLAssetByAddedDate\"\n                ],\n                \"type\": \"STRING_LIST\"\n            }\n        }\n    },\n    \"zoneID\":{\n        \"zoneName\":\"{{zoneName}}\",\n        \"ownerRecordName\": \"{{zoneOwner}}\",\n        \"zoneType\": \"{{zoneType}}\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2041,7 +1938,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLContainerRelationLiveByPosition\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 0,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            },\n            {\n                \"fieldName\": \"parentId\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"CB64A80D-60A2-469A-AADF-F4306956E48C\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"desiredKeys\": [\n        \"addedDate\",\n        \"adjustmentRenderType\",\n        \"adjustmentType\",\n        \"assetDate\",\n        \"assetHDRType\",\n        \"assetSubtype\",\n        \"assetSubtypeV2\",\n        \"burstFlags\",\n        \"burstFlagsExt\",\n        \"burstId\",\n        \"captionEnc\",\n        \"codec\",\n        \"containerId\",\n        \"customRenderedValue\",\n        \"dataClassType\",\n        \"dateExpunged\",\n        \"duration\",\n        \"filenameEnc\",\n        \"importedBy\",\n        \"isDeleted\",\n        \"isExpunged\",\n        \"isFavorite\",\n        \"isHidden\",\n        \"isKeyAsset\",\n        \"itemId\",\n        \"itemType\",\n        \"locationEnc\",\n        \"locationLatitude\",\n        \"locationLongitude\",\n        \"locationV2Enc\",\n        \"masterRef\",\n        \"mediaMetaDataEnc\",\n        \"mediaMetaDataType\",\n        \"orientation\",\n        \"originalOrientation\",\n        \"position\",\n        \"recordChangeTag\",\n        \"recordName\",\n        \"recordType\",\n        \"remappedRef\",\n        \"resJPEGFullFileType\",\n        \"resJPEGFullFingerprint\",\n        \"resJPEGFullHeight\",\n        \"resJPEGFullRes\",\n        \"resJPEGFullWidth\",\n        \"resJPEGLargeFileType\",\n        \"resJPEGLargeFingerprint\",\n        \"resJPEGLargeHeight\",\n        \"resJPEGLargeRes\",\n        \"resJPEGLargeWidth\",\n        \"resJPEGMedFileType\",\n        \"resJPEGMedFingerprint\",\n        \"resJPEGMedHeight\",\n        \"resJPEGMedRes\",\n        \"resJPEGMedWidth\",\n        \"resJPEGThumbFileType\",\n        \"resJPEGThumbFingerprint\",\n        \"resJPEGThumbHeight\",\n        \"resJPEGThumbRes\",\n        \"resJPEGThumbWidth\",\n        \"resOriginalAltFileType\",\n        \"resOriginalAltFingerprint\",\n        \"resOriginalAltHeight\",\n        \"resOriginalAltRes\",\n        \"resOriginalAltWidth\",\n        \"resOriginalFileType\",\n        \"resOriginalFingerprint\",\n        \"resOriginalHeight\",\n        \"resOriginalRes\",\n        \"resOriginalVidComplFileType\",\n        \"resOriginalVidComplFingerprint\",\n        \"resOriginalVidComplHeight\",\n        \"resOriginalVidComplRes\",\n        \"resOriginalVidComplWidth\",\n        \"resOriginalWidth\",\n        \"resSidecarFileType\",\n        \"resSidecarFingerprint\",\n        \"resSidecarHeight\",\n        \"resSidecarRes\",\n        \"resSidecarWidth\",\n        \"resVidFullFileType\",\n        \"resVidFullFingerprint\",\n        \"resVidFullHeight\",\n        \"resVidFullRes\",\n        \"resVidFullWidth\",\n        \"resVidHDRMedRes\",\n        \"resVidMedFileType\",\n        \"resVidMedFingerprint\",\n        \"resVidMedHeight\",\n        \"resVidMedRes\",\n        \"resVidMedWidth\",\n        \"resVidSmallFileType\",\n        \"resVidSmallFingerprint\",\n        \"resVidSmallHeight\",\n        \"resVidSmallRes\",\n        \"resVidSmallWidth\",\n        \"timeZoneOffset\",\n        \"vidComplDispScale\",\n        \"vidComplDispValue\",\n        \"vidComplDurScale\",\n        \"vidComplDurValue\",\n        \"vidComplVisibilityState\",\n        \"videoFrameRate\",\n        \"zoneID\"\n    ],\n    \"resultsLimit\": 75\n}",
+							"raw": "{\n    \"query\": {\n        \"recordType\": \"CPLContainerRelationLiveByPosition\",\n        \"filterBy\": [\n            {\n                \"fieldName\": \"startRank\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": 0,\n                    \"type\": \"INT64\"\n                }\n            },\n            {\n                \"fieldName\": \"direction\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"ASCENDING\",\n                    \"type\": \"STRING\"\n                }\n            },\n            {\n                \"fieldName\": \"parentId\",\n                \"comparator\": \"EQUALS\",\n                \"fieldValue\": {\n                    \"value\": \"CB64A80D-60A2-469A-AADF-F4306956E48C\",\n                    \"type\": \"STRING\"\n                }\n            }\n        ]\n    },\n    \"desiredKeys\": [\n        \"addedDate\",\n        \"adjustmentRenderType\",\n        \"adjustmentType\",\n        \"assetDate\",\n        \"assetHDRType\",\n        \"assetSubtype\",\n        \"assetSubtypeV2\",\n        \"burstFlags\",\n        \"burstFlagsExt\",\n        \"burstId\",\n        \"captionEnc\",\n        \"codec\",\n        \"containerId\",\n        \"customRenderedValue\",\n        \"dataClassType\",\n        \"dateExpunged\",\n        \"duration\",\n        \"filenameEnc\",\n        \"importedBy\",\n        \"isDeleted\",\n        \"isExpunged\",\n        \"isFavorite\",\n        \"isHidden\",\n        \"isKeyAsset\",\n        \"itemId\",\n        \"itemType\",\n        \"locationEnc\",\n        \"locationLatitude\",\n        \"locationLongitude\",\n        \"locationV2Enc\",\n        \"masterRef\",\n        \"mediaMetaDataEnc\",\n        \"mediaMetaDataType\",\n        \"orientation\",\n        \"originalOrientation\",\n        \"position\",\n        \"recordChangeTag\",\n        \"recordName\",\n        \"recordType\",\n        \"remappedRef\",\n        \"resJPEGFullFileType\",\n        \"resJPEGFullFingerprint\",\n        \"resJPEGFullHeight\",\n        \"resJPEGFullRes\",\n        \"resJPEGFullWidth\",\n        \"resJPEGLargeFileType\",\n        \"resJPEGLargeFingerprint\",\n        \"resJPEGLargeHeight\",\n        \"resJPEGLargeRes\",\n        \"resJPEGLargeWidth\",\n        \"resJPEGMedFileType\",\n        \"resJPEGMedFingerprint\",\n        \"resJPEGMedHeight\",\n        \"resJPEGMedRes\",\n        \"resJPEGMedWidth\",\n        \"resJPEGThumbFileType\",\n        \"resJPEGThumbFingerprint\",\n        \"resJPEGThumbHeight\",\n        \"resJPEGThumbRes\",\n        \"resJPEGThumbWidth\",\n        \"resOriginalAltFileType\",\n        \"resOriginalAltFingerprint\",\n        \"resOriginalAltHeight\",\n        \"resOriginalAltRes\",\n        \"resOriginalAltWidth\",\n        \"resOriginalFileType\",\n        \"resOriginalFingerprint\",\n        \"resOriginalHeight\",\n        \"resOriginalRes\",\n        \"resOriginalVidComplFileType\",\n        \"resOriginalVidComplFingerprint\",\n        \"resOriginalVidComplHeight\",\n        \"resOriginalVidComplRes\",\n        \"resOriginalVidComplWidth\",\n        \"resOriginalWidth\",\n        \"resSidecarFileType\",\n        \"resSidecarFingerprint\",\n        \"resSidecarHeight\",\n        \"resSidecarRes\",\n        \"resSidecarWidth\",\n        \"resVidFullFileType\",\n        \"resVidFullFingerprint\",\n        \"resVidFullHeight\",\n        \"resVidFullRes\",\n        \"resVidFullWidth\",\n        \"resVidHDRMedRes\",\n        \"resVidMedFileType\",\n        \"resVidMedFingerprint\",\n        \"resVidMedHeight\",\n        \"resVidMedRes\",\n        \"resVidMedWidth\",\n        \"resVidSmallFileType\",\n        \"resVidSmallFingerprint\",\n        \"resVidSmallHeight\",\n        \"resVidSmallRes\",\n        \"resVidSmallWidth\",\n        \"timeZoneOffset\",\n        \"vidComplDispScale\",\n        \"vidComplDispValue\",\n        \"vidComplDurScale\",\n        \"vidComplDurValue\",\n        \"vidComplVisibilityState\",\n        \"videoFrameRate\",\n        \"zoneID\"\n    ],\n    \"resultsLimit\": 75,\n    \"zoneID\":{\n        \"zoneName\":\"{{zoneName}}\",\n        \"ownerRecordName\": \"{{zoneOwner}}\",\n        \"zoneType\": \"{{zoneType}}\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2162,7 +2059,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"records\": [\n        {\n            \"recordName\": \"E4DF0E26-AEC7-438D-B13A-ED7ACE69E329\"\n        },\n        {\n            \"recordName\": \"038B63B0-E38B-4CF2-8189-E866F28B4297\"\n        },\n        {\n            \"recordName\": \"361ABFDB-F11A-4FF9-969B-DE8FD7B38FA4\"\n        },\n        {\n            \"recordName\": \"0D34DD47-A8EC-4198-B451-8D76DBA102A9\"\n        },\n        {\n            \"recordName\": \"F7339580-C1CC-4318-B2C8-C58315AEEDD5\"\n        },\n        {\n            \"recordName\": \"97DE959B-B51F-4FB8-B020-851E854E8C5C\"\n        },\n        {\n            \"recordName\": \"8654EEB5-1074-480A-A04F-69A79561E27B\"\n        },\n        {\n            \"recordName\": \"EE3BEAFE-65E6-4568-BA6B-071DF645EFB8\"\n        },\n        {\n            \"recordName\": \"81704AA0-1B8F-43AC-8EF2-609BD59E344F\"\n        },\n        {\n            \"recordName\": \"D55CE399-B8A0-464C-B0C7-DE62A4CEBC80\"\n        },\n        {\n            \"recordName\": \"E08F4755-FB5B-4246-8C77-2FE34C3E83C7\"\n        },\n        {\n            \"recordName\": \"21A8FB06-882D-4BF6-B79B-A3D3FC4BADF4\"\n        },\n        {\n            \"recordName\": \"947B5156-1B28-49F7-93A5-1FC68B2B1CE3\"\n        },\n        {\n            \"recordName\": \"5CF10BE9-842A-4A47-9B4E-173D273B966E\"\n        },\n        {\n            \"recordName\": \"9AC57DC0-BF37-4C01-822B-4B9D9BB2A24D\"\n        },\n        {\n            \"recordName\": \"07DA69F8-C39A-4637-B6AF-3DD6AEEB13D2\"\n        },\n        {\n            \"recordName\": \"26005F2C-07A5-4904-95AF-D4BAD5E1825D\"\n        },\n        {\n            \"recordName\": \"7B8C4E94-2E4B-409C-A3DB-A52A1D761A6E\"\n        },\n        {\n            \"recordName\": \"28F14C82-2731-4490-96D2-9587EA8E234C\"\n        },\n        {\n            \"recordName\": \"8385839F-E256-4FCD-9C17-1D0D6B5F97FC\"\n        },\n        {\n            \"recordName\": \"429883B0-496A-4760-92A3-2CF2779821CA\"\n        },\n        {\n            \"recordName\": \"5B621755-8D52-4D92-B43D-1B220709BA25\"\n        },\n        {\n            \"recordName\": \"6049D5DE-7607-43B2-B435-1AFFA79432E1\"\n        },\n        {\n            \"recordName\": \"FEBF1B7C-851D-447A-BD0F-C7740F95CD19\"\n        }\n    ],\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    }\n}",
+							"raw": "{\n    \"records\": [\n        {\n            \"recordName\": \"E4DF0E26-AEC7-438D-B13A-ED7ACE69E329\"\n        },\n        {\n            \"recordName\": \"038B63B0-E38B-4CF2-8189-E866F28B4297\"\n        },\n        {\n            \"recordName\": \"361ABFDB-F11A-4FF9-969B-DE8FD7B38FA4\"\n        },\n        {\n            \"recordName\": \"0D34DD47-A8EC-4198-B451-8D76DBA102A9\"\n        },\n        {\n            \"recordName\": \"F7339580-C1CC-4318-B2C8-C58315AEEDD5\"\n        },\n        {\n            \"recordName\": \"97DE959B-B51F-4FB8-B020-851E854E8C5C\"\n        },\n        {\n            \"recordName\": \"8654EEB5-1074-480A-A04F-69A79561E27B\"\n        },\n        {\n            \"recordName\": \"EE3BEAFE-65E6-4568-BA6B-071DF645EFB8\"\n        },\n        {\n            \"recordName\": \"81704AA0-1B8F-43AC-8EF2-609BD59E344F\"\n        },\n        {\n            \"recordName\": \"D55CE399-B8A0-464C-B0C7-DE62A4CEBC80\"\n        },\n        {\n            \"recordName\": \"E08F4755-FB5B-4246-8C77-2FE34C3E83C7\"\n        },\n        {\n            \"recordName\": \"21A8FB06-882D-4BF6-B79B-A3D3FC4BADF4\"\n        },\n        {\n            \"recordName\": \"947B5156-1B28-49F7-93A5-1FC68B2B1CE3\"\n        },\n        {\n            \"recordName\": \"5CF10BE9-842A-4A47-9B4E-173D273B966E\"\n        },\n        {\n            \"recordName\": \"9AC57DC0-BF37-4C01-822B-4B9D9BB2A24D\"\n        },\n        {\n            \"recordName\": \"07DA69F8-C39A-4637-B6AF-3DD6AEEB13D2\"\n        },\n        {\n            \"recordName\": \"26005F2C-07A5-4904-95AF-D4BAD5E1825D\"\n        },\n        {\n            \"recordName\": \"7B8C4E94-2E4B-409C-A3DB-A52A1D761A6E\"\n        },\n        {\n            \"recordName\": \"28F14C82-2731-4490-96D2-9587EA8E234C\"\n        },\n        {\n            \"recordName\": \"8385839F-E256-4FCD-9C17-1D0D6B5F97FC\"\n        },\n        {\n            \"recordName\": \"429883B0-496A-4760-92A3-2CF2779821CA\"\n        },\n        {\n            \"recordName\": \"5B621755-8D52-4D92-B43D-1B220709BA25\"\n        },\n        {\n            \"recordName\": \"6049D5DE-7607-43B2-B435-1AFFA79432E1\"\n        },\n        {\n            \"recordName\": \"FEBF1B7C-851D-447A-BD0F-C7740F95CD19\"\n        }\n    ],\n    \"zoneID\":{\n        \"zoneName\":\"{{zoneName}}\",\n        \"ownerRecordName\": \"{{zoneOwner}}\",\n        \"zoneType\": \"{{zoneType}}\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2302,7 +2199,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"operations\": [\n        {\n            \"operationType\": \"update\",\n            \"record\": {\n                \"recordName\": \"207600C5-88ED-41EC-8DF8-C0067F82ACBA\",\n                \"recordType\": \"CPLAsset\",\n                \"fields\": {\n                    \"isDeleted\": {\n                        \"value\": 1\n                    }\n                }\n            }\n        }\n    ],\n    \"zoneID\": {\n        \"zoneName\": \"PrimarySync\",\n        \"ownerRecordName\": \"_e8a2d278a868306ca55d7fc05a299b73\",\n        \"zoneType\": \"REGULAR_CUSTOM_ZONE\"\n    },\n    \"atomic\": true\n}",
+							"raw": "{\n    \"operations\": [\n        {\n            \"operationType\": \"update\",\n            \"record\": {\n                \"recordName\": \"207600C5-88ED-41EC-8DF8-C0067F82ACBA\",\n                \"recordType\": \"CPLAsset\",\n                \"fields\": {\n                    \"isDeleted\": {\n                        \"value\": 1\n                    }\n                }\n            }\n        }\n    ],\n    \"atomic\": true,\n    \"zoneID\":{\n        \"zoneName\":\"{{zoneName}}\",\n        \"ownerRecordName\": \"{{zoneOwner}}\",\n        \"zoneType\": \"{{zoneType}}\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2429,6 +2326,21 @@
 			"key": "dsid",
 			"value": "",
 			"type": "default"
+		},
+		{
+			"key": "zoneOwner",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "zoneType",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "zoneName",
+			"value": "",
+			"type": "string"
 		}
 	]
 }

@@ -10,12 +10,13 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from '../../src/lib/photos-library/model/photos-entity';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
-import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted, mockSyncEngineForAlbumQueue, fetchAndLoadStateReturnValue, diffStateReturnValue, fetchAllPictureRecordsReturnValue, convertCPLAssetsReturnValue, fetchAllAlbumRecordsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue} from '../_helpers/sync-engine.helper';
+import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted, mockSyncEngineForAlbumQueue, fetchAndLoadStateReturnValue, diffStateReturnValue, convertCPLAssetsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue, fetchAllCPLAssetsMastersReturnValue, fetchAllCPLAlbumsReturnValue, getRandomZone} from '../_helpers/sync-engine.helper';
 import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albums-helper';
-import {createNamedError, spyOnEvent} from '../_helpers/_general';
+import {spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder';
 
 beforeEach(() => {
     mockfs({});
@@ -72,7 +73,7 @@ describe(`Coordination`, () => {
 
             syncEngine.prepareRetry = jest.fn<() => Promise<void>>();
 
-            await expect(syncEngine.sync()).rejects.toEqual(createNamedError(`SyncError`, `Sync did not complete successfully within expected amount of tries`));
+            await expect(syncEngine.sync()).rejects.toEqual(new Error(`Sync did not complete successfully within expected amount of tries`));
 
             expect(startEvent).toHaveBeenCalled();
             expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(4);
@@ -145,7 +146,7 @@ describe(`Coordination`, () => {
         });
 
         test(`Fatal failure - Unknown error`, async () => {
-            const error = createNamedError(`SyncError`, `Unknown network error code`);
+            const error = new Error(`Unknown network error code`);
             const syncEngine = syncEngineFactory();
             const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
 
@@ -156,7 +157,7 @@ describe(`Coordination`, () => {
             syncEngine.writeState = jest.fn<() => Promise<void>>()
                 .mockRejectedValue(error);
 
-            await expect(syncEngine.sync()).rejects.toEqual(error);
+            await expect(syncEngine.sync()).rejects.toEqual(new Error('Unknown sync error'));
 
             expect(startEvent).toHaveBeenCalled();
             expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
@@ -182,7 +183,7 @@ describe(`Coordination`, () => {
             syncEngine.writeState = jest.fn<() => Promise<void>>()
                 .mockRejectedValue(error);
 
-            await expect(syncEngine.sync()).rejects.toEqual(new Error(`Unknown network error code`));
+            await expect(syncEngine.sync()).rejects.toEqual(new Error(`Unknown sync error`));
 
             expect(startEvent).toHaveBeenCalled();
             expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
@@ -244,14 +245,14 @@ describe(`Coordination`, () => {
         const syncEngine = syncEngineFactory();
         const fetchNLoadEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
 
-        syncEngine.icloud.photos.fetchAllPictureRecords = jest.fn<() => Promise<typeof fetchAllPictureRecordsReturnValue>>()
-            .mockResolvedValue(fetchAllPictureRecordsReturnValue);
+        syncEngine.icloud.photos.fetchAllCPLAssetsMasters = jest.fn<() => Promise<typeof fetchAllCPLAssetsMastersReturnValue>>()
+            .mockResolvedValue(fetchAllCPLAssetsMastersReturnValue);
         const convertCPLAssetsOriginal = SyncEngine.convertCPLAssets;
         SyncEngine.convertCPLAssets = jest.fn<() => Asset[]>()
             .mockReturnValue(convertCPLAssetsReturnValue);
 
-        syncEngine.icloud.photos.fetchAllAlbumRecords = jest.fn<() => Promise<CPLAlbum[]>>()
-            .mockResolvedValue(fetchAllAlbumRecordsReturnValue);
+        syncEngine.icloud.photos.fetchAllCPLAlbums = jest.fn<() => Promise<CPLAlbum[]>>()
+            .mockResolvedValue(fetchAllCPLAlbumsReturnValue);
         const convertCPLAlbumsOriginal = SyncEngine.convertCPLAlbums;
         SyncEngine.convertCPLAlbums = jest.fn<() => Album[]>()
             .mockReturnValue(convertCPLAlbumsReturnValue);
@@ -267,13 +268,13 @@ describe(`Coordination`, () => {
         const result = await syncEngine.fetchAndLoadState();
 
         expect(fetchNLoadEvent).toHaveBeenCalledTimes(1);
-        expect(syncEngine.icloud.photos.fetchAllPictureRecords).toHaveBeenCalledTimes(1);
+        expect(syncEngine.icloud.photos.fetchAllCPLAssetsMasters).toHaveBeenCalledTimes(1);
         expect(SyncEngine.convertCPLAssets).toHaveBeenCalledTimes(1);
-        expect(SyncEngine.convertCPLAssets).toHaveBeenCalledWith(...fetchAllPictureRecordsReturnValue);
+        expect(SyncEngine.convertCPLAssets).toHaveBeenCalledWith(...fetchAllCPLAssetsMastersReturnValue);
         SyncEngine.convertCPLAssets = convertCPLAssetsOriginal;
-        expect(syncEngine.icloud.photos.fetchAllAlbumRecords).toHaveBeenCalledTimes(1);
+        expect(syncEngine.icloud.photos.fetchAllCPLAlbums).toHaveBeenCalledTimes(1);
         expect(SyncEngine.convertCPLAlbums).toHaveBeenCalledTimes(1);
-        expect(SyncEngine.convertCPLAlbums).toHaveBeenCalledWith(fetchAllAlbumRecordsReturnValue);
+        expect(SyncEngine.convertCPLAlbums).toHaveBeenCalledWith(fetchAllCPLAlbumsReturnValue);
         SyncEngine.convertCPLAlbums = convertCPLAlbumsOriginal;
         expect(syncEngine.photosLibrary.loadAssets).toHaveBeenCalledTimes(1);
         expect(syncEngine.photosLibrary.loadAlbums).toHaveBeenCalledTimes(1);
@@ -383,6 +384,7 @@ describe(`Processing remote records`, () => {
                 "wrappingKey": `NQtpvztdVKKNfrb8lf482g==`,
                 "downloadURL": `https://icloud.com`,
             },
+            "zoneName": getRandomZone()
         } as CPLMaster];
 
         const cplAssets = [{
@@ -409,13 +411,16 @@ describe(`Processing remote records`, () => {
 });
 
 describe(`Diffing state`, () => {
+    /**
+     * @remarks Zones should no matter for this part
+     */
     describe(`Asset state`, () => {
         test(`Add items to empty state`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             ];
             const localAssets: PLibraryEntities<Asset> = {};
 
@@ -431,10 +436,10 @@ describe(`Diffing state`, () => {
             const remoteAssets = [];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -447,14 +452,14 @@ describe(`Diffing state`, () => {
 
         test(`Only add items to existing state`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -467,15 +472,15 @@ describe(`Diffing state`, () => {
 
         test(`Add & remove items from existing state`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false),
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false),
             ];
 
             const localAssets = {
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                'somechecksum4': new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false),
+                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                'somechecksum4': new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -488,17 +493,17 @@ describe(`Diffing state`, () => {
 
         test(`No change in state`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -511,17 +516,17 @@ describe(`Diffing state`, () => {
 
         test(`Only modified changed`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 142, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 142, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 142, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 142, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -534,17 +539,17 @@ describe(`Diffing state`, () => {
 
         test(`Only content changed`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 43, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                new Asset(`somechecksum1`, 43, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                new Asset(`somechecksum`, 43, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 43, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -1123,9 +1128,9 @@ describe(`Handle processing queue`, () => {
 
             const writeAssetCompleteEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED);
 
-            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
-            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
-            const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
+            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+            const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
             const toBeDeleted = [asset1, asset2, asset3];
 
             await syncEngine.writeAssets([toBeDeleted, [], []]);
@@ -1145,9 +1150,9 @@ describe(`Handle processing queue`, () => {
 
             const writeAssetCompleteEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED);
 
-            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
-            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
-            const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
+            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+            const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
             const toBeAdded = [asset1, asset2, asset3];
 
             await syncEngine.writeAssets([[], toBeAdded, []]);
@@ -1174,8 +1179,8 @@ describe(`Handle processing queue`, () => {
 
             const writeAssetCompleteEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED);
 
-            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
-            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
             const toBeAdded = [asset1, asset2];
 
             await syncEngine.writeAssets([[], toBeAdded, []]);
@@ -1197,12 +1202,12 @@ describe(`Handle processing queue`, () => {
 
             const writeAssetCompleteEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED);
 
-            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
-            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
-            const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
-            const asset4 = new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false);
-            const asset5 = new Asset(`somechecksum5`, 42, FileType.fromExtension(`png`), 42, AssetType.EDIT, `test5`, `somekey`, `somechecksum5`, `https://icloud.com`, `somerecordname5`, false);
-            const asset6 = new Asset(`somechecksum6`, 42, FileType.fromExtension(`png`), 42, AssetType.ORIG, `test6`, `somekey`, `somechecksum6`, `https://icloud.com`, `somerecordname6`, false);
+            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+            const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
+            const asset4 = new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false);
+            const asset5 = new Asset(`somechecksum5`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test5`, `somekey`, `somechecksum5`, `https://icloud.com`, `somerecordname5`, false);
+            const asset6 = new Asset(`somechecksum6`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test6`, `somekey`, `somechecksum6`, `https://icloud.com`, `somerecordname6`, false);
             const toBeAdded = [asset1, asset2, asset3];
             const toBeDeleted = [asset4, asset5, asset6];
 
@@ -1548,7 +1553,7 @@ describe(`Handle processing queue`, () => {
             expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(2, addAlbumChild);
             expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(3, addAlbumChildChild);
 
-            expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`SyncError`, `Unable to add album`));
+            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to add album`));
         });
 
         test(`Deleting - HANDLER_EVENT fired on error`, async () => {
@@ -1579,7 +1584,7 @@ describe(`Handle processing queue`, () => {
 
             expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenCalledTimes(0);
 
-            expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`SyncError`, `Unable to delete album`));
+            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to delete album`));
         });
 
         describe(`Archive albums`, () => {
@@ -1650,7 +1655,7 @@ describe(`Handle processing queue`, () => {
 
                 expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
 
-                expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`SyncError`, `Unable to retrieve stashed archived album`));
+                expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to retrieve stashed archived album`));
             });
 
             test(`Stash - ERROR_HANDLE fired on error`, async () => {
@@ -1673,7 +1678,7 @@ describe(`Handle processing queue`, () => {
 
                 expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
 
-                expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`SyncError`, `Unable to stash archived album`));
+                expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to stash archived album`));
             });
         });
     });

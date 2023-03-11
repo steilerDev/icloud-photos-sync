@@ -118,6 +118,11 @@ export class CPLAsset {
     modified: number;
 
     /**
+     * The zone name where the asset resides
+     */
+    zoneName: string;
+
+    /**
      * Parses from a record sourced through the API
      * @param cplRecord - The plain JSON object, as returned by the API
      */
@@ -132,6 +137,7 @@ export class CPLAsset {
         asset.masterRef = cplRecord.fields.masterRef.value.recordName;
         asset.favorite = cplRecord.fields.isFavorite?.value ?? 0;
         asset.modified = cplRecord.modified.timestamp;
+        asset.zoneName = cplRecord.zoneID.zoneName;
 
         if (cplRecord.fields.adjustmentType?.value) {
             asset.adjustmentType = cplRecord.fields.adjustmentType.value;
@@ -180,7 +186,9 @@ type CPLAssetQuery = {
             value: string
         }
     }
-
+    zoneID: {
+        zoneName: string
+    }
 }
 
 /**
@@ -194,6 +202,7 @@ function isCPLAssetQuery(obj: unknown): obj is CPLAssetQuery {
         && (obj as CPLAssetQuery).fields.masterRef?.value.recordName !== undefined
         && (obj as CPLAssetQuery).recordName !== undefined
         && (obj as CPLAssetQuery).modified?.timestamp !== undefined
+        && (obj as CPLAssetQuery).zoneID.zoneName !== undefined
         && (
             (obj as CPLAssetQuery).fields.adjustmentType?.value === undefined // Adjustment Type is optional, but if it is provided one of the below needs to be true
             || (obj as CPLAssetQuery).fields.adjustmentType?.value === `com.apple.video.slomo` // No additional asset for Slo-Mo videos
@@ -227,6 +236,11 @@ export class CPLMaster {
      */
     modified: number;
 
+    /**
+     * The zone name where the asset resides
+     */
+    zoneName: string;
+
     // Can optionally have the following keys (indicating that this is a live photo, the following keys hold the information about the 'video' part of this):
     // resOriginalVidComplRes -> AssetID
     // resOriginalVidComplFileType -> Filetyp (seems to always be com.apple.quicktime-movie)
@@ -254,6 +268,7 @@ export class CPLMaster {
         master.resource = AssetID.parseFromQuery(cplRecord.fields.resOriginalRes);
         master.resourceType = cplRecord.fields.resOriginalFileType.value; // Orig could also be JPEG to save storage
         master.filenameEnc = cplRecord.fields.filenameEnc.value;
+        master.zoneName = cplRecord.zoneID.zoneName;
         return master;
     }
 }
@@ -276,6 +291,9 @@ type CPLMasterQuery = {
             value: string
         }
     }
+    zoneID: {
+        zoneName: string
+    }
 }
 
 /**
@@ -289,7 +307,8 @@ function isCPLMasterQuery(obj: unknown): obj is CPLMasterQuery {
         && (obj as CPLMasterQuery).modified.timestamp !== undefined
         && (obj as CPLMasterQuery).fields.resOriginalRes !== undefined && isAssetIDQuery((obj as CPLMasterQuery).fields.resOriginalRes)
         && (obj as CPLMasterQuery).fields.resOriginalFileType.value !== undefined
-        && (obj as CPLMasterQuery).fields.filenameEnc.value !== undefined;
+        && (obj as CPLMasterQuery).fields.filenameEnc.value !== undefined
+        && (obj as CPLMasterQuery).zoneID.zoneName !== undefined;
 }
 
 /**

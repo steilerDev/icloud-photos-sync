@@ -123,7 +123,7 @@ export class SyncEngine extends EventEmitter {
             return false;
         }
 
-        throw new iCPSError(SYNC_ERR.UNKNOWN_NETWORK)
+        throw new iCPSError(SYNC_ERR.UNKNOWN_SYNC)
             .addCause(err);
     }
 
@@ -158,9 +158,9 @@ export class SyncEngine extends EventEmitter {
     async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
         const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await Promise.all([
-            this.icloud.photos.fetchAllPictureRecords()
+            this.icloud.photos.fetchAllCPLAssetsMasters()
                 .then(([cplAssets, cplMasters]) => SyncEngine.convertCPLAssets(cplAssets, cplMasters)),
-            this.icloud.photos.fetchAllAlbumRecords()
+            this.icloud.photos.fetchAllCPLAlbums()
                 .then(cplAlbums => SyncEngine.convertCPLAlbums(cplAlbums)),
             this.photosLibrary.loadAssets(),
             this.photosLibrary.loadAlbums(),

@@ -311,10 +311,6 @@ export class iCloud extends EventEmitter {
         try {
             this.auth.validateCloudCookies();
 
-            if (!this.photos) {
-                throw new iCPSError(ICLOUD_PHOTOS_ERR.NOT_FOUND);
-            }
-
             this.logger.info(`Getting iCloud Photos Service ready`);
             // Forwarding warn events
             this.photos.on(HANDLER_EVENT, this.emit.bind(this, HANDLER_EVENT));

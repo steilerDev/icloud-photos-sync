@@ -2,7 +2,7 @@ import mockfs from 'mock-fs';
 import fs from 'fs';
 import {expect, describe, test, afterEach, jest} from '@jest/globals';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
-import {ASSET_DIR, ARCHIVE_DIR, STASH_DIR, SAFE_FILES} from '../../src/lib/photos-library/constants';
+import {PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, ARCHIVE_DIR, STASH_DIR, SAFE_FILES} from '../../src/lib/photos-library/constants';
 import path from 'path';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
@@ -11,10 +11,12 @@ import axios, {AxiosRequestConfig} from 'axios';
 import {appDataDir as photosDataDir} from '../_helpers/_config';
 import {photosLibraryFactory} from '../_helpers/photos-library.helper';
 import {appWithOptions} from '../_helpers/app-factory.helper';
-import {createNamedError, spyOnEvent} from '../_helpers/_general';
+import {spyOnEvent} from '../_helpers/_general';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder';
 
-const assetDir = path.join(photosDataDir, ASSET_DIR);
+const primaryAssetDir = path.join(photosDataDir, PRIMARY_ASSET_DIR);
+const sharedAssetDir = path.join(photosDataDir, SHARED_ASSET_DIR)
 const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
 const stashDir = path.join(photosDataDir, ARCHIVE_DIR, STASH_DIR);
 
@@ -26,7 +28,8 @@ test(`Should create missing directories`, () => {
     mockfs();
     const _library = photosLibraryFactory();
     expect(fs.existsSync(photosDataDir)).toBe(true);
-    expect(fs.existsSync(assetDir)).toBe(true);
+    expect(fs.existsSync(primaryAssetDir)).toBe(true);
+    expect(fs.existsSync(sharedAssetDir)).toBe(true);
     expect(fs.existsSync(archiveDir)).toBe(true);
     expect(fs.existsSync(stashDir)).toBe(true);
 });
@@ -35,7 +38,10 @@ test(`Should use existing directories and not overwrite content`, () => {
     mockfs({
         [photosDataDir]: {
             "testFile": `test content`,
-            [ASSET_DIR]: {
+            [PRIMARY_ASSET_DIR]: {
+                "testFile": `test content`,
+            },
+            [SHARED_ASSET_DIR]: {
                 "testFile": `test content`,
             },
             [ARCHIVE_DIR]: {
@@ -53,8 +59,10 @@ test(`Should use existing directories and not overwrite content`, () => {
     const _library = new PhotosLibrary(appWithOptions(opts));
     expect(fs.existsSync(photosDataDir)).toBe(true);
     expect(fs.existsSync(path.join(photosDataDir, `testFile`)));
-    expect(fs.existsSync(assetDir)).toBe(true);
-    expect(fs.existsSync(path.join(assetDir, `testFile`)));
+    expect(fs.existsSync(primaryAssetDir)).toBe(true);
+    expect(fs.existsSync(path.join(primaryAssetDir, `testFile`)));
+    expect(fs.existsSync(sharedAssetDir)).toBe(true);
+    expect(fs.existsSync(path.join(sharedAssetDir, `testFile`)));
     expect(fs.existsSync(archiveDir)).toBe(true);
     expect(fs.existsSync(path.join(archiveDir, `testFile`)));
     expect(fs.existsSync(stashDir)).toBe(true);
@@ -63,41 +71,106 @@ test(`Should use existing directories and not overwrite content`, () => {
 
 describe(`Load state`, () => {
     describe(`Load assets`, () => {
-        test(`No assets`, async () => {
-            mockfs();
-            const library = photosLibraryFactory();
-            const assets = await library.loadAssets();
-            expect(Object.keys(assets).length).toEqual(0);
-        });
-
-        test(`Multiple assets`, async () => {
-            mockfs({
-                [assetDir]: {
-                    "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
-                    "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
-                    "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
+        test.each([
+            {
+                desc: "No asset",
+                fsTree: {},
+                expectedCount: 0,
+                expectedZones: []
+            }, {
+                desc: "Multiple assets - PrimaryZone",
+                fsTree: {
+                    [primaryAssetDir]: {
+                        "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
+                        "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
+                    }
                 },
-            });
-            const library = photosLibraryFactory();
-            const assets = await library.loadAssets();
-            expect(Object.keys(assets).length).toEqual(3);
-        });
-
-        test(`Invalid assets`, async () => {
-            mockfs({
-                [assetDir]: {
-                    "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
-                    "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
-                    "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
-                    "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
-                    "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
+                expectedCount: 3,
+                expectedZones: [Zones.Primary, Zones.Primary, Zones.Primary]
+            }, {
+                desc: "Multiple assets - SharedZone",
+                fsTree: {
+                    [sharedAssetDir]: {
+                        "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
+                        "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
+                    }
                 },
-            });
+                expectedCount: 3,
+                expectedZones: [Zones.Shared, Zones.Shared, Zones.Shared]
+            }, {
+                desc: "Multiple assets - Mixed Zones",
+                fsTree: {
+                    [primaryAssetDir]: {
+                        "deFEyox97ecdknADe0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
+                        "deFEeee3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
+                        "kkiceenhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
+                    },
+                    [sharedAssetDir]: {
+                        "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
+                        "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
+                    },
+                },
+                expectedCount: 6,
+                expectedZones: [Zones.Primary, Zones.Primary, Zones.Primary, Zones.Shared, Zones.Shared, Zones.Shared]
+            }, {
+                desc: "Invalid assets - PrimaryZone",
+                fsTree: {
+                    [primaryAssetDir]: {
+                        "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
+                        "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
+                    }
+                },
+                expectedCount: 2,
+                expectedZones: [Zones.Primary, Zones.Primary]
+            }, {
+                desc: "Invalid assets - SharedZone",
+                fsTree: {
+                    [sharedAssetDir]: {
+                        "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
+                        "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
+                    }
+                },
+                expectedCount: 2,
+                expectedZones: [Zones.Shared, Zones.Shared]
+            }, {
+                desc: "Invalid assets - Mixed Zones",
+                fsTree: {
+                    [primaryAssetDir]: {
+                        "deFEyox97ecdknADe0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
+                        "deFEeee3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
+                        "kkiceenhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
+                        "Aah0dUnasdfejAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
+                    },
+                    [sharedAssetDir]: {
+                        "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
+                        "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
+                    }
+                },
+                expectedCount: 5,
+                expectedZones: [Zones.Primary, Zones.Primary, Zones.Primary, Zones.Shared, Zones.Shared]
+            }
+        ])(`$desc`, async ({fsTree, expectedCount, expectedZones}) => {
+            mockfs(fsTree as any)
             const library = photosLibraryFactory();
+
             const assets = await library.loadAssets();
-            expect(Object.keys(assets).length).toEqual(2);
-        });
-    });
+            
+            expect(Object.keys(assets).length).toEqual(expectedCount);
+            expect(Object.values(assets).map(asset => asset.zone)).toEqual(expectedZones)
+        })
+    })
 
     describe(`Load albums`, () => {
         test(`No albums`, async () => {
@@ -161,7 +234,7 @@ describe(`Load state`, () => {
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(2);
-            expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`LibraryError`, `Extraneous file found while processing a folder`));
+            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Extraneous file found while processing a folder`));
         });
 
         test(`Orphaned album`, async () => {
@@ -182,7 +255,7 @@ describe(`Load state`, () => {
 
             expect(Object.keys(albums).length).toEqual(0);
 
-            expect(orphanEvent).toHaveBeenCalledWith(createNamedError(`LibraryError`, `Found dead symlink (removing it)`));
+            expect(orphanEvent).toHaveBeenCalledWith(new Error(`Found dead symlink (removing it)`));
             expect(() => fs.lstatSync(path.join(photosDataDir, orphanedAlbumName))).toThrowError(`ENOENT: no such file or directory, lstat '/opt/icloud-photos-library/Orphan'`);
         });
 
@@ -324,10 +397,13 @@ describe(`Load state`, () => {
             expect(Object.keys(albums).length).toEqual(0);
         });
 
-        test(`Ignore 'All Photos' Folder`, async () => {
+        test(`Ignore 'All Photos' & 'Shared Photos' Folder`, async () => {
             mockfs({
                 [photosDataDir]: {
-                    [ASSET_DIR]: {
+                    [PRIMARY_ASSET_DIR]: {
+                        "test-file": Buffer.from([1, 1, 1]),
+                    },
+                    [SHARED_ASSET_DIR]: {
                         "test-file": Buffer.from([1, 1, 1]),
                     },
                 },
@@ -389,7 +465,7 @@ describe(`Load state`, () => {
 
             mockfs({
                 [photosDataDir]: {
-                    [ASSET_DIR]: {
+                    [PRIMARY_ASSET_DIR]: {
                         "test-file": Buffer.from([1, 1, 1]),
                     },
                     [ARCHIVE_DIR]: {
@@ -472,7 +548,14 @@ describe(`Load state`, () => {
 });
 
 describe(`Write state`, () => {
-    describe(`Write assets`, () => {
+    test.todo(`The following: For each zone`)
+    describe.each([{
+        zone: Zones.Primary,
+        zoneDir: primaryAssetDir
+    }, {
+        zone: Zones.Shared,
+        zoneDir: sharedAssetDir
+    }])(`Write assets - $zone`, ({zone, zoneDir}) => {
         test(`Successfully verify asset`, async () => {
             const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
             const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
@@ -481,7 +564,7 @@ describe(`Write state`, () => {
             const assetMTime = 1640995200000; // 01.01.2022
             const fileType = FileType.fromExtension(assetExt);
             mockfs({
-                [assetDir]: {
+                [zoneDir]: {
                     [`${assetFileName}.${assetExt}`]: mockfs.file({
                         "content": assetData,
                         "mtime": new Date(assetMTime),
@@ -490,7 +573,7 @@ describe(`Write state`, () => {
             });
 
             const library = photosLibraryFactory();
-            const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
+            const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime, zone);
             await expect(library.verifyAsset(asset)).resolves.toEqual(true);
         });
 
@@ -509,7 +592,7 @@ describe(`Write state`, () => {
             const assetMTime = 1640995200000; // 01.01.2022
             const fileType = FileType.fromExtension(assetExt);
             mockfs({
-                [assetDir]: {
+                [zoneDir]: {
                     [`${assetFileName}.${assetExt}`]: mockfs.file({
                         "content": assetData,
                         "mtime": new Date(assetMTime + range),
@@ -518,7 +601,7 @@ describe(`Write state`, () => {
             });
 
             const library = photosLibraryFactory();
-            const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
+            const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime, zone);
             await expect(library.verifyAsset(asset)).resolves.toEqual(true);
         });
 
@@ -530,7 +613,7 @@ describe(`Write state`, () => {
             const assetMTime = 1640995200000; // 01.01.2022
             const fileType = FileType.fromExtension(assetExt);
             mockfs({
-                [assetDir]: {
+                [zoneDir]: {
                     [`${assetFileName}.${assetExt}`]: mockfs.file({
                         "content": assetData,
                         "mtime": new Date(assetMTime),
@@ -539,7 +622,7 @@ describe(`Write state`, () => {
             });
 
             const library = photosLibraryFactory();
-            const asset = new Asset(assetChecksum, 1, fileType, assetMTime);
+            const asset = new Asset(assetChecksum, 1, fileType, assetMTime, zone);
             await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File's size does not match iCloud record`));
         });
 
@@ -549,11 +632,11 @@ describe(`Write state`, () => {
             const assetMTime = 1640995200000; // 01.01.2022
             const fileType = FileType.fromExtension(`jpeg`);
             mockfs({
-                [assetDir]: {},
+                [zoneDir]: {},
             });
 
             const library = photosLibraryFactory();
-            const asset = new Asset(assetChecksum, 1, fileType, assetMTime);
+            const asset = new Asset(assetChecksum, 1, fileType, assetMTime, zone);
             await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File not found`));
         });
 
@@ -572,7 +655,7 @@ describe(`Write state`, () => {
             const assetMTime = 1640995200000; // 01.01.2022
             const fileType = FileType.fromExtension(assetExt);
             mockfs({
-                [assetDir]: {
+                [zoneDir]: {
                     [`${assetFileName}.${assetExt}`]: mockfs.file({
                         "content": assetData,
                         "mtime": new Date(assetMTime + range),
@@ -581,7 +664,7 @@ describe(`Write state`, () => {
             });
 
             const library = photosLibraryFactory();
-            const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
+            const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime, zone);
             await expect(library.verifyAsset(asset)).rejects.toThrowError(new Error(`File's modification time does not match iCloud record`));
         });
 
@@ -620,9 +703,10 @@ describe(`Write state`, () => {
                 82215,
                 FileType.fromExtension(ext),
                 42,
+                zone
             );
             mockfs({
-                [assetDir]: {},
+                [zoneDir]: {},
             });
 
             const library = photosLibraryFactory();
@@ -630,7 +714,7 @@ describe(`Write state`, () => {
             try {
                 const response = await axios.get(url, config);
                 await library.writeAsset(asset, response);
-                const assetPath = path.join(assetDir, `${fileName}.${ext}`);
+                const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeTruthy();
                 expect(fs.readFileSync(assetPath).length).toBeGreaterThan(0);
             } catch (err) {
@@ -653,9 +737,10 @@ describe(`Write state`, () => {
                 82215,
                 FileType.fromExtension(ext),
                 42,
+                zone
             );
             mockfs({
-                [assetDir]: {},
+                [zoneDir]: {},
             });
 
             const library = photosLibraryFactory();
@@ -664,7 +749,7 @@ describe(`Write state`, () => {
             try {
                 const response = await axios.get(url, config);
                 await expect(library.writeAsset(asset, response)).rejects.toThrowError(`Unable to verify asset`);
-                const assetPath = path.join(assetDir, `${fileName}.${ext}`);
+                const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
                 expect(fs.existsSync(assetPath)).toBeFalsy();
             } catch (err) {
                 // If there is no network connectivity, pass the test and print warning
@@ -682,7 +767,7 @@ describe(`Write state`, () => {
             const fileType = FileType.fromExtension(assetExt);
             const assetFullFilename = `${assetFileName}.${assetExt}`;
             mockfs({
-                [assetDir]: {
+                [zoneDir]: {
                     [assetFullFilename]: mockfs.file({
                         "content": assetData,
                         "mtime": new Date(assetMTime),
@@ -691,9 +776,9 @@ describe(`Write state`, () => {
             });
 
             const library = photosLibraryFactory();
-            const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime);
+            const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime, zone);
             await library.deleteAsset(asset);
-            expect(fs.existsSync(path.join(assetDir, assetFullFilename))).toBeFalsy();
+            expect(fs.existsSync(path.join(zoneDir, assetFullFilename))).toBeFalsy();
         });
     });
 
@@ -1123,7 +1208,7 @@ describe(`Write state`, () => {
 
                 mockfs({
                     [photosDataDir]: {
-                        [ASSET_DIR]: {
+                        [PRIMARY_ASSET_DIR]: {
                             [albumAsset1Filename]: mockfs.file({
                                 "mtime": new Date(albumAsset1mTime),
                                 "content": Buffer.from([1, 1, 1, 1]),
@@ -1169,28 +1254,28 @@ describe(`Write state`, () => {
                 expect(albumAsset1Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime));
                 const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
-                expect(albumAsset1Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset1Filename));
+                expect(albumAsset1Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset1Filename));
 
                 const albumAsset2Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
                 const albumAsset2Stat = fs.lstatSync(albumAsset2Path);
                 expect(albumAsset2Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset2Stat.mtime).toEqual(new Date(albumAsset2mTime));
                 const albumAsset2Target = fs.readlinkSync(albumAsset2Path);
-                expect(albumAsset2Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset2Filename));
+                expect(albumAsset2Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset2Filename));
 
                 const albumAsset3Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset3PrettyFilename);
                 const albumAsset3Stat = fs.lstatSync(albumAsset3Path);
                 expect(albumAsset3Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset3Stat.mtime).toEqual(new Date(albumAsset3mTime));
                 const albumAsset3Target = fs.readlinkSync(albumAsset3Path);
-                expect(albumAsset3Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset3Filename));
+                expect(albumAsset3Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset3Filename));
 
                 const albumAsset4Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset4PrettyFilename);
                 const albumAsset4Stat = fs.lstatSync(albumAsset4Path);
                 expect(albumAsset4Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset4Stat.mtime).toEqual(new Date(albumAsset4mTime));
                 const albumAsset4Target = fs.readlinkSync(albumAsset4Path);
-                expect(albumAsset4Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset4Filename));
+                expect(albumAsset4Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset4Filename));
             });
 
             test(`Album - linking conflict (same pretty filename)`, () => {
@@ -1206,7 +1291,7 @@ describe(`Write state`, () => {
 
                 mockfs({
                     [photosDataDir]: {
-                        [ASSET_DIR]: {
+                        [PRIMARY_ASSET_DIR]: {
                             [albumAsset1Filename]: mockfs.file({
                                 "mtime": new Date(albumAsset1mTime),
                                 "content": Buffer.from([1, 1, 1, 1]),
@@ -1244,7 +1329,7 @@ describe(`Write state`, () => {
                 expect(albumAsset1Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime));
                 const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
-                expect(albumAsset1Target).toEqual(path.join(`..`, ASSET_DIR, albumAsset1Filename));
+                expect(albumAsset1Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset1Filename));
 
                 expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to link assets`));
             });

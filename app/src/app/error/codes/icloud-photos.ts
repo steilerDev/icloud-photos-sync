@@ -91,6 +91,10 @@ export const FETCH_RECORDS: ErrorStruct = buildErrorStruct(
     name, prefix, `FETCH_RECORDS`, `Unable to fetch records`,
 );
 
+export const FILTER_RECORDS: ErrorStruct = buildErrorStruct(
+    name, prefix, `FILTER_RECORDS`, `Unable to filter records`,
+);
+
 export const COUNT_MISMATCH: ErrorStruct = buildErrorStruct(
     name, prefix, `COUNT_MISMATCH`, `Received unexpected amount of records`,
 );

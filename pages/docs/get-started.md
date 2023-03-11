@@ -226,7 +226,7 @@ The `sync` command will perform authentication, proceed to load the local and re
   * Extraneous local files will be removed (exceptions are ['Archived Folders'](#archiving))
   * Missing remote files will be downloaded
 
-This synchronization will also create the folder structure present in the iCloud Photos Library.
+This synchronization will also create the folder structure present in the iCloud Photos Library. If iCloud Shared Photo Library is enabled, the shared assets will be stored in the `_Shared` folder.
 
 !!! warning "File Structure"
     Since this application does not use any local database, it is imperative, that the [file structure](../dev/local-file-structure/) is not changed by any other application or user.
@@ -234,7 +234,7 @@ This synchronization will also create the folder structure present in the iCloud
 During the sync process various warning could happen. A list of [common warnings](../user-guides/common-warnings/) is available.
 
 !!! tip "Syncing large libraries"
-    Initial sync of large libraries can take some time. After one hour the metadata needs to be refreshed, which will result into a warning. The tool should recover from this. Make sure `--max-retries` is set to a high number or 'Infinity'. Additionally you might need to limit the rate of metadata fetching, because the Apple API has been observed to have limitations causing `SOCKET HANGUP` errors for libraries larger 10.000 assets. Do this by setting `--metadata-rate`, it seems `1/20` ensures sufficient limitation.
+    Initial sync of large libraries can take some time. After one hour the metadata needs to be refreshed, which will result into a warning. The tool should recover from this. Make sure `--max-retries` is set to a high number or 'Infinity'. Additionally you might need to limit the rate of metadata fetching, because the Apple API has been observed to have limitations causing `SOCKET HANGUP` errors for libraries larger 10.000 assets. Do this by setting `--metadata-rate`, it seems `1/20` ensures sufficient throttling.
 
 ### Ad-hoc
 

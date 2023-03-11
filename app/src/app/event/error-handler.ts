@@ -112,7 +112,9 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
                 await this.handle(err);
             });
             if (this.btClient) {
-                obj.on(DaemonAppEvents.EVENTS.START, async () => await this.reportSyncStart());
+                obj.on(DaemonAppEvents.EVENTS.START, async () => {
+                    await this.reportSyncStart();
+                });
             }
         });
     }
@@ -131,7 +133,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         const report = this.btClient.createReport(err, {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
-            'icps.rootErrorCode': err.getRootErrorCode()
+            'icps.rootErrorCode': err.getRootErrorCode(),
         }, [logFile]);
 
         await this.btClient.sendAsync(report);
@@ -146,11 +148,10 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         try {
             /* eslint-disable */
             // Accessing private member
-            await this.btClient['_backtraceMetrics']
-                    .sendSummedEvent(`Sync`)
-            /* eslint-enable */;
-        } catch(err) {
-            await this.reportError(new iCPSError({name: "iCPSError", code: "METRIC_FAILED", message: "Unable to report sync start"}).addCause(err))
+            await this.btClient['_backtraceMetrics'].sendSummedEvent(`Sync`)
+            /* eslint-enable */
+        } catch (err) {
+            await this.reportError(new iCPSError({"name": `iCPSError`, "code": `METRIC_FAILED`, "message": `Unable to report sync start`}).addCause(err));
         }
     }
 

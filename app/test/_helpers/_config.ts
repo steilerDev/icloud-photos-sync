@@ -1,4 +1,4 @@
-import {PhotosAccount} from "../../src/lib/icloud/auth";
+import {PhotosAccount, PhotosAccountZone} from "../../src/lib/icloud/auth";
 
 /**
  * The data dir path, to be used in the tests
@@ -21,8 +21,17 @@ export const iCloudAuthSecrets = {
 };
 
 export const iCloudPhotosAccount: PhotosAccount = {
-    'ownerName': `_11a1a1a1a11111111a111aa1a1111a11`,
     'photosDomain': `https://p123-ckdatabasews.icloud.com:443`,
+};
+
+export const primaryZone: PhotosAccountZone = {
+    'ownerName': `_11a1a1a1a11111111a111aa1a1111a11`,
     'zoneName': `PrimarySync`,
     'zoneType': `REGULAR_CUSTOM_ZONE`,
-};
+}
+
+export const sharedZone: PhotosAccountZone = {
+    'ownerName': `_11a1a1a1a11111111a111aa1a1111a11`,
+    'zoneName': `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
+    'zoneType': `REGULAR_CUSTOM_ZONE`,
+}

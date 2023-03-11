@@ -38,7 +38,8 @@
         "default-case-last": "off",
         "no-debugger": "warn",
         "no-promise-executor-return": "off",
-        "no-unsafe-finally": "off"
+        "no-unsafe-finally": "off",
+        "tsdoc-undefined-tag": "off"
     },
     "overrides": [
         {

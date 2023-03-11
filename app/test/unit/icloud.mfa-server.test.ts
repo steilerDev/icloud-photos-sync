@@ -5,7 +5,7 @@ import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
 import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
-import {createNamedError, spyOnEvent} from '../_helpers/_general';
+import {spyOnEvent} from '../_helpers/_general';
 
 describe(`MFA Code`, () => {
     test(`Valid Code format`, () => {
@@ -125,7 +125,7 @@ describe(`MFA Resend`, () => {
         server.handleMFAResend(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Resend method does not match expected format`);
-        expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`MFAError`, `Resend method does not match expected format`));
+        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Resend method does not match expected format`));
     });
 
     describe(`Process resend errors`, () => {
@@ -154,7 +154,7 @@ describe(`MFA Resend`, () => {
                         "status": 412,
                     },
                 };
-                expect(mfaMethod.processResendError(error)).toEqual(createNamedError(`MFAError`, `Precondition Failed (412) with no response`));
+                expect(mfaMethod.processResendError(error)).toEqual(new Error(`Precondition Failed (412) with no response`));
             });
 
             test(`Unexpected status code`, () => {
@@ -165,7 +165,7 @@ describe(`MFA Resend`, () => {
                         "status": 500,
                     },
                 };
-                expect(mfaMethod.processResendError(error)).toEqual(createNamedError(`MFAError`, `Unknown error, while trying to resend MFA code`));
+                expect(mfaMethod.processResendError(error)).toEqual(new Error(`Unknown error, while trying to resend MFA code`));
             });
         });
 
@@ -271,7 +271,7 @@ describe(`Request routing`, () => {
         server.handleRequest(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Method not supported: ${method}`);
-        expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`MFAError`, `Received request with unsupported method`));
+        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Received request with unsupported method`));
         expect(server.handleMFAResend).not.toHaveBeenCalled();
         expect(server.handleMFACode).not.toHaveBeenCalled();
     });
@@ -290,7 +290,7 @@ describe(`Request routing`, () => {
         server.handleRequest(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 404, `Route not found, available endpoints: ["/mfa","/resend_mfa"]`);
-        expect(handlerEvent).toHaveBeenCalledWith(createNamedError(`MFAError`, `Received request to unknown endpoint`));
+        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Received request to unknown endpoint`));
         expect(server.handleMFAResend).not.toHaveBeenCalled();
         expect(server.handleMFACode).not.toHaveBeenCalled();
     });

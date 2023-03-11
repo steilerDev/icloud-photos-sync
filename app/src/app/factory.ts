@@ -14,11 +14,11 @@ import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js
 function commanderParsePositiveInt(value: string, _dummyPrevious?: unknown): number {
     const parsedValue = parseInt(value, 10);
     if (isNaN(parsedValue)) {
-        throw new InvalidArgumentError(`Not a number`);
+        throw new InvalidArgumentError(`Not a number.`);
     }
 
     if (parsedValue < 0) {
-        throw new InvalidArgumentError(`Not a positive number`);
+        throw new InvalidArgumentError(`Not a positive number.`);
     }
 
     return parsedValue;
@@ -70,8 +70,12 @@ function commanderParseInterval(value: string, _dummyPrevious?: unknown): [numbe
         throw new InvalidArgumentError(`Not a valid interval pattern. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one in 20ms.`);
     }
 
+    const intervalCap = commanderParsePositiveIntOrInfinity(match[1])
+    if(typeof intervalCap === 'number' && intervalCap <= 0) {
+        throw new InvalidArgumentError(`Not a valid interval. Number of runs needs to be >0`)
+    }
     return [
-        commanderParsePositiveIntOrInfinity(match[1]),
+        intervalCap,
         commanderParsePositiveInt(match[2]),
     ];
 }

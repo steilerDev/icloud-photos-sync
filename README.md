@@ -66,6 +66,7 @@ This CLI Application offers the following high level functionality:
       <li>Enable autonomous operation, by caching of MFA trust token</li>
       <li>Support of large libraries, through efficient diffing algorithm instead of full library pull</li>
       <li>Full iCloud Photos Library Backup with all important files in their original state + edits</li>
+      <li>iCloud Shared Photo Library support</li>
     </ul>
   </p>
 </details>
@@ -107,6 +108,17 @@ This CLI Application offers the following high level functionality:
 ## Documentation
 
 A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/icloud-photos-sync/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/) - are published there as well
+
+## Limitations
+
+As this application is using an undocumented public API, there are a couple of known limitations:
+
+- iCloud Shared Photo Library:
+  While this app is syncing all assets from the Shared Photo Library, unfortunately the API does not provide the location of shared assets within the user's folder. When navigating to a folder on the WebUI while having Shared Photo Library enabled will yield an error. Until this functionality is available, Share Photo Library assets will only be present in the `_Shared` folder and therefore cannot be archived.
+- Advanced Data Protection:
+  In order to use this app with an account that is secured through Advanced Data Protection, [access through the iCloud WebUI](https://support.apple.com/de-de/HT212523) needs to be enabled, since this tool is re-using those APIs. This currently is a minimum requirement - [I'm still waiting on confirmation that this will enable functionality](https://github.com/steilerDev/icloud-photos-sync/issues/202)
+- FileType Support:
+  The support of file types needs to be hardcoded by this application, since a full list is not available or retrievable. If you come across an `Unknown filetype descriptor` error, [please report it](https://github.com/steilerDev/icloud-photos-sync/issues/143), in order for the file type to be added to the application.
 
 ## OS Support
 

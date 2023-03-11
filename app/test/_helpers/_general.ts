@@ -16,9 +16,3 @@ export function getDateInThePast(): string {
     // 36 hours in the past
     return new Date(new Date().getTime() - (36 * 3600000)).toUTCString();
 }
-
-export function createNamedError(name: string, message: string): Error {
-    const err = new Error(message);
-    err.name = name;
-    return err;
-}

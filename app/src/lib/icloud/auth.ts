@@ -8,6 +8,7 @@ import {getLogger} from "../logger.js";
 
 import * as ICLOUD from './constants.js';
 import {AUTH_ERR} from "../../app/error/error-codes.js";
+import {Zones} from "./icloud-photos/query-builder.js";
 
 /**
  * Secrets, required to track authentication request across the MFA process
@@ -55,14 +56,19 @@ export interface AccountTokens {
     trustToken?: string
 }
 
+export interface PhotosAccountZone {
+    zoneName?: string,
+    zoneType?: string,
+    ownerName?: string,
+}
+
 /**
  * Authentication information required to interact with the iCloud Photos backend
  */
 export interface PhotosAccount {
     photosDomain?: string,
-    zoneName?: string,
-    zoneType?: string,
-    ownerName?: string,
+    primary?: PhotosAccountZone,
+    shared?: PhotosAccountZone
 }
 
 /**
@@ -110,6 +116,7 @@ export class iCloudAuth {
      * @param password - The AppleID password
      * @param trustToken - The trust token in string format. Will take precedence over any stored file
      * @param appDataDir - The directory to store authentication tokens for future re-authentication without MFA
+     * @param sharedLibrary - Specifies if the shared iCloud Photos Library should be used
      */
     constructor(username: string, password: string, trustToken: string, appDataDir: string) {
         this.iCloudAccountSecrets.username = username;
@@ -237,8 +244,11 @@ export class iCloudAuth {
 
         cookieHeaders.forEach(cookieString => {
             const cookie = Cookie.parse(cookieString);
-            this.logger.trace(`Adding cookie: ${cookie}`);
-            this.iCloudCookies.push(cookie);
+            // Filtering empty cookies
+            if (cookie.value) {
+                this.logger.trace(`Adding cookie: ${cookie}`);
+                this.iCloudCookies.push(cookie);
+            }
         });
 
         if (!response?.data?.webservices?.ckdatabasews?.url) {
@@ -288,10 +298,36 @@ export class iCloudAuth {
      */
     processPhotosSetupResponse(response: AxiosResponse) {
         this.logger.debug(`Processing Photos setup request`);
-        this.iCloudPhotosAccount.ownerName = response.data.zones[0].zoneID.ownerRecordName;
-        this.iCloudPhotosAccount.zoneName = response.data.zones[0].zoneID.zoneName;
-        this.iCloudPhotosAccount.zoneType = response.data.zones[0].zoneID.zoneType;
-        this.validatePhotosAccount();
+
+        if (response.data?.moreComing) {
+            throw new iCPSError(AUTH_ERR.TOO_MANY_ZONES);
+        }
+
+        if (!Array.isArray(response.data?.zones)) {
+            throw new iCPSError(AUTH_ERR.ZONE_RESPONSE_INVALID);
+        }
+
+        const availableZones = response.data.zones as any[];
+        this.logger.info(`Found ${availableZones.length} available zones`);
+
+        const primaryZone = availableZones.find(zone => zone.zoneID.zoneName === `PrimarySync`);
+        this.iCloudPhotosAccount.primary = {
+            "ownerName": primaryZone?.zoneID?.ownerRecordName,
+            "zoneName": primaryZone?.zoneID?.zoneName,
+            "zoneType": primaryZone?.zoneID?.zoneType,
+        };
+
+        const sharedZone = availableZones.find(zone => zone.zoneID.zoneName.startsWith(`SharedSync-`));
+        if (sharedZone) {
+            this.logger.debug(`Found shared zone ${sharedZone.zoneID?.zoneName}`);
+            this.iCloudPhotosAccount.shared = {
+                "ownerName": sharedZone.zoneID?.ownerRecordName,
+                "zoneName": sharedZone.zoneID?.zoneName,
+                "zoneType": sharedZone.zoneID?.zoneType,
+            };
+        }
+
+        this.validatePhotosAccount(!sharedZone ? Zones.Primary : undefined);
     }
 
     /**
@@ -323,15 +359,11 @@ export class iCloudAuth {
 
     /**
      * Validates that the object holds all information required to perform actions against the photos service
+     * @param zone - The zone to validate, undefined to validate both
      * @throws An iCloudAuthError, if the photos account cannot be validated
      */
-    validatePhotosAccount() {
+    validatePhotosAccount(zone?: Zones) {
         this.validateCloudCookies();
-        if (!this.iCloudPhotosAccount.zoneName || this.iCloudPhotosAccount.zoneName.length === 0) {
-            throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
-                .addMessage(`ZoneName invalid`)
-                .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
-        }
 
         if (!this.iCloudPhotosAccount.photosDomain || this.iCloudPhotosAccount.photosDomain.length === 0) {
             throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
@@ -339,16 +371,68 @@ export class iCloudAuth {
                 .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
         }
 
-        if (!this.iCloudPhotosAccount.zoneType || this.iCloudPhotosAccount.zoneType.length === 0) {
-            throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
-                .addMessage(`ZoneType invalid`)
-                .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
+        if(zone) {
+            this.validateZone(zone)
+        } else {
+            this.validateZone(Zones.Primary)
+            this.validateZone(Zones.Shared)
+        }
+    }
+
+    /**
+     * Validates a given zone
+     */
+    validateZone(zone: Zones) {
+        if (zone === Zones.Primary) {
+            if(!this.iCloudPhotosAccount.primary) {
+                throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
+                    .addMessage(`PrimaryZone missing`)
+                    .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
+            }
+
+            if (!this.iCloudPhotosAccount.primary?.zoneName || this.iCloudPhotosAccount.primary?.zoneName.length === 0) {
+                throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
+                    .addMessage(`Primary ZoneName invalid`)
+                    .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
+            }
+
+            if (!this.iCloudPhotosAccount.primary?.zoneType || this.iCloudPhotosAccount.primary?.zoneType.length === 0) {
+                throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
+                    .addMessage(`Primary ZoneType invalid`)
+                    .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
+            }
+
+            if (!this.iCloudPhotosAccount.primary?.ownerName || this.iCloudPhotosAccount.primary?.ownerName.length === 0) {
+                throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
+                    .addMessage(`Primary OwnerName invalid`)
+                    .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
+            }
         }
 
-        if (!this.iCloudPhotosAccount.ownerName || this.iCloudPhotosAccount.ownerName.length === 0) {
-            throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
-                .addMessage(`OwnerName invalid`)
-                .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
+        if (zone === Zones.Shared) {
+            if(!this.iCloudPhotosAccount.shared) {
+                throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
+                    .addMessage(`PrimaryZone missing`)
+                    .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
+            }
+
+            if (!this.iCloudPhotosAccount.shared?.zoneName || this.iCloudPhotosAccount.shared?.zoneName.length === 0) {
+                throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
+                    .addMessage(`Shared ZoneName invalid`)
+                    .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
+            }
+
+            if (!this.iCloudPhotosAccount.shared?.zoneType || this.iCloudPhotosAccount.shared?.zoneType.length === 0) {
+                throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
+                    .addMessage(`Shared ZoneType invalid`)
+                    .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
+            }
+
+            if (!this.iCloudPhotosAccount.shared?.ownerName || this.iCloudPhotosAccount.shared?.ownerName.length === 0) {
+                throw new iCPSError(AUTH_ERR.PHOTOS_ACCOUNT_VALIDATION)
+                    .addMessage(`Shared OwnerName invalid`)
+                    .addContext(`invalidPhotosAccount`, this.iCloudPhotosAccount);
+            }
         }
     }
 
@@ -406,5 +490,13 @@ export class iCloudAuth {
             throw new iCPSError(AUTH_ERR.ACCOUNT_TOKEN_VALIDATION)
                 .addMessage(`trustToken invalid`);
         }
+    }
+
+    /**
+     *
+     * @returns True if shared library is available, false otherwise
+     */
+    sharedLibraryAvailable(): boolean {
+        return Boolean(this.iCloudPhotosAccount.shared);
     }
 }
