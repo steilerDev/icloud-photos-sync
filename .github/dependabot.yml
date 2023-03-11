@@ -9,6 +9,7 @@ updates:
       interval: "weekly"
       day: "saturday"
       time: "09:00"
+      timezone: "Europe/Berlin"
 
   # Maintain dependencies for npm
   - package-ecosystem: "npm"
@@ -18,6 +19,7 @@ updates:
       interval: "weekly"
       day: "saturday"
       time: "09:00"
+      timezone: "Europe/Berlin"
     ignore:
       - dependency-name: "typedoc*"
         update-types: ["version-update:semver-minor"] # ignore minor version for something like typedoc
@@ -29,6 +31,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "saturday"
+      timezone: "Europe/Berlin"
     ignore:
       - dependency-name: "node"
         versions: ["19.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
@@ -41,6 +44,7 @@ updates:
       interval: "weekly"
       day: "saturday"
       time: "09:00"
+      timezone: "Europe/Berlin"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-minor", "version-update:semver-patch"] # only alert about major update
