@@ -6,10 +6,9 @@ import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
 import {EventHandler} from './event-handler.js';
 import {ERR_SIGINT, ERR_SIGTERM} from '../error/error-codes.js';
-import {DaemonAppEvents} from '../icloud-app.js';
 import {iCPSAppOptions} from '../factory.js';
 import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
-import { SyncEngine } from '../../lib/sync-engine/sync-engine.js';
+import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
 
 /**
  * The event emitted by classes of this application and picked up by the handler.
@@ -148,10 +147,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
      */
     async reportSyncStart() {
         try {
-            /* eslint-disable */
-            // Accessing private member
-            await this.btClient['_backtraceMetrics'].sendSummedEvent(`Sync`)
-            /* eslint-enable */
+            await (this.btClient as any)._backtraceMetrics.sendSummedEvent(`Sync`);
         } catch (err) {
             await this.reportError(new iCPSError({"name": `iCPSError`, "code": `METRIC_FAILED`, "message": `Unable to report sync start`}).addCause(err));
         }

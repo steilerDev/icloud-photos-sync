@@ -1195,7 +1195,7 @@ describe(`Write state`, () => {
 
                 const albumAsset1PrettyFilename = `2h-media-MOCpD78SHW0-unsplash.jpeg`;
                 const albumAsset1Filename = `AexevMtFb8wMSLb78udseVvLv-m2.jpeg`;
-                const albumAsset1mTime = 1640995200000; // 01.01.2022
+
                 const albumAsset2PrettyFilename = `2h-media-Q_x3Equ11Jk-unsplash.jpeg`;
                 const albumAsset2Filename = `AZmQ91f-NKAp5b67HE23Fqhjt5NO.jpeg`;
                 const albumAsset2mTime = 1609459200000; // 01.01.2021
@@ -1248,10 +1248,10 @@ describe(`Write state`, () => {
                 expect(namedFolderTarget).toEqual(`.${albumUUID}`);
 
                 const albumAsset1Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
-                expect(fs.existsSync(albumAsset1Path)).toBeFalsy()
+                expect(fs.existsSync(albumAsset1Path)).toBeFalsy();
 
                 expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to link assets`));
-                expect(handlerEvent).toHaveBeenCalledTimes(1)
+                expect(handlerEvent).toHaveBeenCalledTimes(1);
 
                 const albumAsset2Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
                 const albumAsset2Stat = fs.lstatSync(albumAsset2Path);
@@ -1417,7 +1417,7 @@ describe(`Write state`, () => {
                 expect(albumAsset1Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset1Filename));
 
                 expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to link assets`));
-                expect(handlerEvent).toHaveBeenCalledTimes(1)
+                expect(handlerEvent).toHaveBeenCalledTimes(1);
             });
         });
 

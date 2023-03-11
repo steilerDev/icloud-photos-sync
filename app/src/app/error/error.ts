@@ -62,7 +62,7 @@ export class iCPSError extends Error {
             if (err instanceof iCPSError) {
                 // Applying the causing's error stack and classifier only for the underlying iCPSError, in order to properly fingerprint the error
                 this.stack = err.stack;
-                this.name = err.name
+                this.name = err.name;
             }
         }
 
@@ -132,6 +132,10 @@ export class iCPSError extends Error {
 
         if (this.cause instanceof iCPSError) {
             return this.cause.getRootErrorCode();
+        }
+
+        if (Object.hasOwn(this.cause, `code`)) {
+            return `EXT#${(this.cause as any).code}`;
         }
 
         return `UNKNOWN_ROOT_ERROR`;
