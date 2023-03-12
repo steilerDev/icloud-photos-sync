@@ -57,7 +57,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/icloud.test.ts"
+                "test/unit/photos-library.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"

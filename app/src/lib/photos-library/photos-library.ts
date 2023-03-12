@@ -268,7 +268,7 @@ export class PhotosLibrary extends EventEmitter {
         response.data.pipe(writeStream);
         await pEvent(writeStream, `close`);
         try {
-            await fs.promises.utimes(asset.getAssetFilePath(this.photoDataDir), new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
+            await fs.promises.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
             await this.verifyAsset(asset);
             this.logger.debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
             return;
@@ -277,7 +277,7 @@ export class PhotosLibrary extends EventEmitter {
                 .addMessage(asset.getDisplayName())
                 .addContext(`asset`, asset)
                 .addCause(err)
-                .setWarning(),
+                .setWarning()
             );
         }
     }

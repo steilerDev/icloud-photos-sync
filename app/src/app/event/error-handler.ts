@@ -91,7 +91,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             message += ` (Error Code: ${errorId})`;
         }
 
-        if (this.verbose) {
+        if (this.verbose && Object.keys(_err.context).length > 0) {
             message += `\ncontext:${JSON.stringify(_err.context)}`;
         }
 
