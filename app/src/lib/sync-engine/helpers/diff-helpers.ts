@@ -60,12 +60,7 @@ export function resolveHierarchicalDependencies(this: SyncEngine, queues: PLibra
     toBeKept.forEach((keptAlbum, index) => {
         // Check if any of the deleted is an ancestor of the kept album
         if (toBeDeleted.some(deletedAlbum => keptAlbum.hasAncestor(deletedAlbum, localAlbums))) {
-            this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.HIERARCHICAL_DEPENDENCY)
-                .setWarning()
-                .addMessage(keptAlbum.getDisplayName())
-                .addContext(`keptAlbum`, keptAlbum)
-                .addContext(`localAlbums`, localAlbums),
-            );
+            this.logger.debug(`Found hierarchical dependency for album ${keptAlbum.getDisplayName()}`)
             // This means that this kept album actually needs to be deleted & added
             toBeDeleted.push(keptAlbum);
             toBeAdded.push(keptAlbum);

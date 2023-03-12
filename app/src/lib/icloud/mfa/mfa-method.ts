@@ -154,20 +154,17 @@ export class MFAMethod {
     processResendError(err: any): iCPSError {
         if (err.name !== `AxiosError` || !err.response) {
             return new iCPSError(MFA_ERR.NO_RESPONSE)
-                .setWarning()
                 .addCause(err);
         }
 
         if (err.response.status === 403) {
             return new iCPSError(MFA_ERR.TIMEOUT)
-                .setWarning()
                 .addCause(err);
         }
 
         if (err.response.status === 412) {
             if (!err.response.data) {
                 return new iCPSError(MFA_ERR.PRECONDITION_FAILED)
-                    .setWarning()
                     .addCause(err);
             }
 
@@ -177,14 +174,12 @@ export class MFAMethod {
                     || !Array.isArray(trustedPhones)
                     || trustedPhones.length === 0) {
                     return new iCPSError(MFA_ERR.NO_TRUSTED_NUMBERS)
-                        .setWarning()
                         .addContext(`response.data`, err.response.data)
                         .addCause(err);
                 }
 
                 if (!trustedPhones.some(number => number.id === this.numberId)) {
                     return new iCPSError(MFA_ERR.TRUSTED_NUMBER_NOT_AVAILABLE)
-                        .setWarning()
                         .addMessage(`available numbers:\n${trustedPhones.map(number => `- ${number.id}: ${number.numberWithDialCode}`).join(`\n`)}`)
                         .addContext(`response.data`, err.response.data)
                         .addCause(err);
@@ -193,7 +188,6 @@ export class MFAMethod {
         }
 
         return new iCPSError(MFA_ERR.UNKNOWN_RESEND_ERROR)
-            .setWarning()
             .addMessage(`method ${this}`)
             .addCause(err);
     }

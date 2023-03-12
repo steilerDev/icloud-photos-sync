@@ -329,21 +329,18 @@ export class iCloudPhotos extends EventEmitter {
         if (record.deleted === true) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.DELETED_RECORD)
                 .addMessage(record.recordName)
-                .setWarning()
                 .addContext(`record`, record);
         }
 
         if (record.recordName === `----Project-Root-Folder----` || record.recordName === `----Root-Folder----`) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNWANTED_ALBUM)
                 .addMessage(record.recordName)
-                .setWarning()
                 .addContext(`record`, record);
         }
 
         if (record.fields.albumType.value !== AlbumType.FOLDER
             && record.fields.albumType.value !== AlbumType.ALBUM) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNKNOWN_ALBUM)
-                .setWarning()
                 .addMessage(record.fields.albumType.value)
                 .addContext(`record.fields`, record.fields);
         }
@@ -381,12 +378,7 @@ export class iCloudPhotos extends EventEmitter {
                     cplAlbums.push(CPLAlbum.parseFromQuery(album));
                 }
             } catch (err) {
-                this.logger.debug(new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ALBUM)
-                    .setWarning()
-                    .addCause(err)
-                    .addContext(`record`, album)
-                    .getDescription(),
-                );
+                this.logger.info(`Error processing CPLAlbum: ${JSON.stringify(album)}: ${err.message}`)
             }
         }
 
@@ -412,7 +404,6 @@ export class iCloudPhotos extends EventEmitter {
             return Number.parseInt(countData[0].fields.itemCount.value, 10);
         } catch (err) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.COUNT_DATA)
-                .setWarning()
                 .addMessage(`zone ${zone}`)
                 .addCause(err);
         }
@@ -477,26 +468,22 @@ export class iCloudPhotos extends EventEmitter {
     filterPictureRecord(record: any, seen: Set<string>) {
         if (record?.deleted === true) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.DELETED_RECORD)
-                .setWarning()
                 .addContext(`record`, record);
         }
 
         if (record.fields?.isHidden?.value === 1) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.HIDDEN_RECORD)
-                .setWarning()
                 .addContext(`record`, record);
         }
 
         // If (Object.prototype.hasOwnProperty.call(seen, record.recordName)) {
         if (seen.has(record.recordName)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.DUPLICATE_RECORD)
-                .setWarning()
                 .addContext(`record`, record);
         }
 
         if (record.recordType === QueryBuilder.RECORD_TYPES.CONTAINER_RELATION) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNWANTED_RECORD_TYPE)
-                .setWarning()
                 .addMessage(record.recordType)
                 .addContext(`recordType`, record.recordType);
         }
@@ -504,7 +491,6 @@ export class iCloudPhotos extends EventEmitter {
         if (record.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD
             && record.recordType !== QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNKNOWN_RECORD_TYPE)
-                .setWarning()
                 .addMessage(record.recordType)
                 .addContext(`recordType`, record.recordType);
         }
@@ -577,12 +563,7 @@ export class iCloudPhotos extends EventEmitter {
                     seen.add(record.recordName);
                 }
             } catch (err) {
-                this.logger.debug(new iCPSError(ICLOUD_PHOTOS_ERR.PROCESS_ASSET)
-                    .setWarning()
-                    .addCause(err)
-                    .addContext(`record`, record)
-                    .getDescription(),
-                );
+                this.logger.info(`Error processing asset ${JSON.stringify(record)}: ${err.message}`)
             }
         }
 

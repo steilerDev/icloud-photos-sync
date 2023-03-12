@@ -1,24 +1,40 @@
 # Common Warnings
 
-During the sync process a couple of warnings can pop up. The primary reason for this being, that the API behaves differently than I expect. Given however the experience I gathered, the following warnings will be printed out, but are handled gracefully by the application.
+While using this application, warnings might appear. This is either due to the fact that the API is not completely understood and/or inconsistent. The overall goals of the application can still be achieved, however a small percentage of assets might be miss-represented. The impact can be gauged by observing the below messages.
 
 Warnings can be suppressed with a [configuration options](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/).
 
-## `Ignoring unknown album type 6`
-The program only syncs albums (type `0`) and folders (type `3`) - any other unexpected album type will be ignored (those are maybe smart albums?).
+### Authentication
 
-## `Filtering record <some-id>: duplicate`
-Because the iCloud API is arbitrarily limiting results, the application needs to send multiple queries in order to acquire the full data set. This is done in a conservative fashion (without knowing the exact limitations of the API), which sometimes leads to overlaps in the result set.
+  - `Unable to request new MFA code <cause>`
+    Requesting a new MFA code was unsuccessful. The cause should provide information about this - probably the selected method is not available. Re-try using a different method.
+  - `Received request with unsupported method` or `Received request to unknown endpoint` or `Received unexpected MFA code format, expecting 6 digits`
+    The local server, listening for commands in the context of multi-factor authentication received an unexpected request. Make sure your requests are [formatted correctly](https://steilerdev.github.io/icloud-photos-sync/get-started/#multi-factor-authentication).
 
-Therefore duplicate entries in the query are removed.
+### Syncing
 
-## `Ignoring unwanted record type (CPLContainerRelation)`
-As part of the folder sync, besides the CPLMaster and CPLAsset (which represent the actual pictures in the folder), there is also a `CPLContainerRelation` record type, which is irrelevant for this application, however this type is always returned and needs to be filtered out.
+  - Local Library:
+    - `Found invalid file <fileName>`
+      An invalid file was found in the directory tree and will be ignored - consider removing it.
+    - `Found dead symlink (removing it) <path>`
+      A dead symlink was found and removed.
+    - `Extraneous file found while processing a folder`
+      An un-safe file was found in the directory tree - consider removing it.
+  - Remote Library:
+    - `Received unexpected amount of records, expected <n> CPLMaster & <m> CPLAsset records, but got <x> CPLMaster & <y> CPLAsset records for album <albumName>`
+      In an initial set, the API is queried for the number of assets in a given album. This is followed by a query to get all assets associated with the album. For some reason those APIs sometimes return contradicting results. (I suspect an error within the iCloud backend)
+  - State write:
+    - `Unable to verify asset <assetName>`
+      After writing the asset, there is a conflict between the expected and actual state of the asset. Since this check fails, the file will be removed during the next sync execution and the retrieval of the remote asset is performed again. This might lead to temporary inconsistencies of the local library.
+    - `Unable to link assets, <pathA> to <pathB>`
+      An asset could not be linked into an album. The cause provided should indicate if this is due to an issue within the folder or a missing asset. This is probably related to previous errors and indicates temporary inconsistencies of the local library.
+    - `Unable to add album <albumName>`
+      The given album could not be added to the file tree. This does not affect the actual assets, since those are only linked to the album. The cause provided should indicate the root cause. This will lead to temporary inconsistencies of the local library.
+    - `Detected recoverable error, refreshing iCloud connection & retrying (#<retryCount>)...`
+      A recoverable error happened during execution. This is most likely due to the fact, that the iCloud metadata will be stale after 60mins.
+  
 
-## `Expected <n> CPLMaster & <m> CPLAsset records, but got <x> CPLMaster & <y> CPLAsset records for album <someAlbum>`
-In an initial set, the API is queried for the number of assets in a given album. This is followed by a query to get all assets associated with the album. For some reason those APIs sometimes return contradicting results. (I suspect an error within the iCloud backend)
+### Archiving
 
-## `Warning: [...] Detected recoverable error, refreshing iCloud connection & retrying (#<n>)...`
-Assets returned by the API are only valid for a certain amount of time (it seems to be one hour). This happens most often on an initial sync.
-
-After that the connection needs to be refreshed. The amount of retries can be configured.
+  - `Unable to find remote asset <uuid>` or `Unable to get record name <name>`
+    An asset that should be remotely deleted can not be retrieved. The remote asset will not be deleted by this process.

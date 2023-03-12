@@ -3,10 +3,6 @@ import {buildErrorStruct, ErrorStruct} from "../error-codes.js";
 const name = `SyncError`;
 const prefix = `SYNC`;
 
-export const HIERARCHICAL_DEPENDENCY: ErrorStruct = buildErrorStruct(
-    name, prefix, `HIERARCHICAL_DEPENDENCY`, `Album has hierarchical dependency, marking it for deletion & re-addition`,
-);
-
 export const CONVERSION: ErrorStruct = buildErrorStruct(
     name, prefix, `CONVERSION`, `Error while converting asset`,
 );
@@ -25,10 +21,6 @@ export const ADD_ALBUM: ErrorStruct = buildErrorStruct(
 
 export const DELETE_ALBUM: ErrorStruct = buildErrorStruct(
     name, prefix, `DELETE_ALBUM`, `Unable to delete album`,
-);
-
-export const WRITE_STATE: ErrorStruct = buildErrorStruct(
-    name, prefix, `WRITE_STATE`, `Error while writing state`,
 );
 
 export const MAX_RETRY: ErrorStruct = buildErrorStruct(

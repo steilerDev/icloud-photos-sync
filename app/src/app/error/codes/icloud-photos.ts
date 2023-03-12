@@ -79,14 +79,6 @@ export const COUNT_DATA: ErrorStruct = buildErrorStruct(
     name, prefix, `COUNT_DATA`, `Unable to extract count data`,
 );
 
-export const PROCESS_ALBUM: ErrorStruct = buildErrorStruct(
-    name, prefix, `PROCESS_CPLALBUM`, `Error processing CPLAlbum`,
-);
-
-export const PROCESS_ASSET: ErrorStruct = buildErrorStruct(
-    name, prefix, `PROCESS_ASSET`, `Error processing asset`,
-);
-
 export const FETCH_RECORDS: ErrorStruct = buildErrorStruct(
     name, prefix, `FETCH_RECORDS`, `Unable to fetch records`,
 );

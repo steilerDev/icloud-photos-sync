@@ -89,9 +89,7 @@ export class SyncEngine extends EventEmitter {
                 // Checking if we should retry
                 this.checkFatalError(err);
 
-                this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.WRITE_STATE)
-                    .setWarning()
-                    .addCause(err));
+                this.logger.info(`Detected recoverable error: ${err.message}`)
 
                 this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
                 await this.prepareRetry();

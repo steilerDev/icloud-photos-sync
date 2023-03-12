@@ -50,7 +50,6 @@
 </p>
 <hr>
 
-
 ## Overview
 This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to backup the full iCloud Photos Library to the native filesystem.
 
@@ -59,14 +58,14 @@ Currently, this can only be achieved, by having a Mac continuously run the *Phot
 This CLI Application offers the following high level functionality:
 
 <details>
-  <summary><i>Continuously sync your remote iCloud Photos Library to your local file system efficiently</i></summary>
+  <summary><i>Continuously sync your complete remote iCloud Photos Library to your local file system efficiently</i></summary>
   <p>
     <ul>
-      <li>Support of MFA Authentication through trusted devices, SMS and Voice authentication</li>
+      <li>iCloud Shared Photo Library support</li>
+      <li>Support of MFA authentication through trusted devices, SMS and voice authentication</li>
       <li>Enable autonomous operation, by caching of MFA trust token</li>
       <li>Support of large libraries, through efficient diffing algorithm instead of full library pull</li>
-      <li>Full iCloud Photos Library Backup with all important files in their original state + edits</li>
-      <li>iCloud Shared Photo Library support</li>
+      <li>Full iCloud Photos Library backup with all important files in their original state + edits</li>
     </ul>
   </p>
 </details>
@@ -89,7 +88,7 @@ This CLI Application offers the following high level functionality:
       <li>Future syncs will ignore the folder (so those assets will not be changed/deleted)</li>
       <li>If the remote album is moved, the archived folder will be moved to the same location</li>
       <li>If the remote album is deleted, the archived folder will be put into a 'lost+found' type of folder</li>
-      <li>All photos from the archived folder can be deleted from the iCloud Photos Library, unless they are *Favorites* (Reducing cloud storage needs)</li>
+      <li>Optionally all photos from the archived folder can be deleted from the iCloud Photos Library, unless they are *Favorites* (reducing cloud storage needs)</li>
     </ul>
   </p>
 </details>
@@ -117,6 +116,7 @@ As this application is using an undocumented public API, there are a couple of k
   While this app is syncing all assets from the Shared Photo Library, unfortunately the API does not provide the location of shared assets within the user's folder. When navigating to a folder on the WebUI while having Shared Photo Library enabled will yield an error. Until this functionality is available, Share Photo Library assets will only be present in the `_Shared` folder and therefore cannot be archived.
 - **Advanced Data Protection**:
   In order to use this app with an account that is secured through Advanced Data Protection, [access through the iCloud WebUI](https://support.apple.com/de-de/HT212523) needs to be enabled, since this tool is re-using those APIs. This currently is a minimum requirement - [I'm still waiting on confirmation that this will enable functionality](https://github.com/steilerDev/icloud-photos-sync/issues/202)
+
 - **FileType Support**:
   The support of file types needs to be hardcoded by this application, since a full list is not available or retrievable. If you come across an `Unknown filetype descriptor` error, [please report it](https://github.com/steilerDev/icloud-photos-sync/issues/143), in order for the file type to be added to the application.
 

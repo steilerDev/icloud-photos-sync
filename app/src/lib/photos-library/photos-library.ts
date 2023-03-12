@@ -273,7 +273,6 @@ export class PhotosLibrary extends EventEmitter {
             this.logger.debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
             return;
         } catch (err) {
-            await fs.promises.rm(asset.getAssetFilePath(this.photoDataDir));
             this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.INVALID_ASSET)
                 .addMessage(asset.getDisplayName())
                 .addContext(`asset`, asset)
