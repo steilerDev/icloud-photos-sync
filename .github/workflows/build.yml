@@ -198,6 +198,10 @@ jobs:
         run: chmod +x ./docker/test/*
       - name: Test Image
         run: run-parts -v --exit-on-error ./docker/test
+        env:
+          TEST_APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
+          TEST_APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
+          TEST_TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
 
   build-gh-pages:
     name: Build GH Pages
