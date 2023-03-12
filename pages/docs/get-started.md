@@ -102,7 +102,7 @@ In order to only perform authentication (without syncing any assets) and validat
     === "docker run"
 
         ```
-        docker run steilerdev/icloud-photos-sync:latest -v "</path/to/your/local/library>:/opt/icloud-photos-library" --name photos-sync \
+        docker run -v "</path/to/your/local/library>:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
@@ -257,7 +257,7 @@ In order to perform a single synchronization execution, the [`sync` command](../
     === "docker run"
 
         ```
-        docker run steilerdev/icloud-photos-sync:latest -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync \
+        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
@@ -303,7 +303,7 @@ This schedule is expecting to be in [cron](https://crontab.guru) format. For mor
     === "docker run"
 
         ```
-        docker run steilerdev/icloud-photos-sync:latest -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync \
+        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
@@ -364,7 +364,7 @@ In order to archive an album, the [`archive` command](../user-guides/cli/#archiv
         To automatically delete non-favorite pictures in the album from iCloud, add the `--remote-delete` flag
 
         ```
-        docker run steilerdev/icloud-photos-sync:latest -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync \
+        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
