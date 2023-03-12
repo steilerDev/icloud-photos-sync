@@ -713,16 +713,17 @@ describe(`Write state`, () => {
             try {
                 const response = await axios.get(url, config);
                 await library.writeAsset(asset, response);
-                const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
-                expect(fs.statSync(assetPath).size).toEqual(0);
             } catch (err) {
                 // If there is no network connectivity, pass the test and print warning
                 expect(err).toEqual(new Error(`getaddrinfo ENOTFOUND steilerdev.github.io`));
                 console.warn(`Unable to run test - potentially due to lacking network connectivity`);
             }
+
+            const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
+            expect(fs.statSync(assetPath).size).toEqual(82215);
         });
 
-        test.only(`Write asset with failing verification`, async () => {
+        test(`Write asset with failing verification`, async () => {
             // Downloading banner of this repo
             const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
             const config: AxiosRequestConfig = {
@@ -749,13 +750,14 @@ describe(`Write state`, () => {
                 const response = await axios.get(url, config);
                 await library.writeAsset(asset, response);
                 expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to verify asset`));
-                const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
-                expect(fs.statSync(assetPath).size).toEqual(82215);
             } catch (err) {
                 // If there is no network connectivity, pass the test and print warning
                 expect(err).toEqual(new Error(`getaddrinfo ENOTFOUND steilerdev.github.io`));
                 console.warn(`Unable to run test - potentially due to lacking network connectivity`);
             }
+
+            const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
+            expect(fs.statSync(assetPath).size).toEqual(82215);
         });
 
         test(`Delete asset`, async () => {
