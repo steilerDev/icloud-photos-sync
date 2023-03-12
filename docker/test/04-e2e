@@ -4,7 +4,41 @@ DIR=$(mktemp -d)
 METRICS_FILE="$DIR/.icloud-photos-sync.metrics"
 LOG_FILE="$DIR/.icloud-photos-sync.log"
 
-EXPECTED_CHECKSUM="26642c951885800d69c18d998214d6b5"
+EXPECTED_CHECKSUM="108db28af1a1ed81148dfd7f88449c11"
+
+###
+###
+###
+function assertChecksum {
+    # Removing variable content
+    rm -f $METRICS_FILE $LOG_FILE
+
+    CHECKSUM=$(cd $DIR && find . -type f,l -exec md5sum -b {} 2> /dev/null \; | sort -k 2 | md5sum |  head -c 32)
+    if [ "$CHECKSUM" = "$EXPECTED_CHECKSUM" ]; then
+        echo " - PASS: Checksum test"
+    else
+        echo " - FAIL: Checksum mismatch: Expected $EXPECTED_CHECKSUM but got $CHECKSUM"
+        exit 1
+    fi
+}
+
+function assertMetric {
+    if grep -Fq "$1" $METRICS_FILE; then
+        echo " - PASS: $1"
+    else
+        echo " - FAIL: $1"
+        exit 1
+    fi
+}
+
+function runSync {
+    docker run -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) icloud-photos-sync:latest \
+        -u "$TEST_APPLE_ID_USER" \
+        -p "$TEST_APPLE_ID_PWD" \
+        -T "$TEST_TRUST_TOKEN" \
+        --export-metrics \
+        sync > /dev/null 2>&1
+}
 
 ###
 ###
@@ -12,12 +46,7 @@ echo "Full sync to $DIR"
 ###
 ###
 
-docker run -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) icloud-photos-sync:latest \
-    -u "$TEST_APPLE_ID_USER" \
-    -p "$TEST_APPLE_ID_PWD" \
-    -T "$TEST_TRUST_TOKEN" \
-    --export-metrics \
-    sync > /dev/null 2>&1
+runSync
 
 # Checking if behaviour is as expected
 for VALUE in \
@@ -26,25 +55,9 @@ for VALUE in \
     "albums_to_be_added=8i,albums_to_be_deleted=0i,albums_to_be_kept=0i" \
     "SYNC_COMPLETED"
 do
-    if grep -Fq "$VALUE" $METRICS_FILE; then
-        echo " - PASS: $VALUE"
-    else
-        echo " - FAIL: $VALUE"
-        exit 1
-    fi
+    assertMetric "$VALUE"
 done
-
-# Removing variable content
-rm -f $METRICS_FILE $LOG_FILE
-
-# Creating md5 checksum
-CHECKSUM=$(cd $DIR && find . -type f,l -exec md5sum {} 2> /dev/null \; | sort -k 2 | md5sum |  head -c 32)
-if [ "$CHECKSUM" = "$EXPECTED_CHECKSUM" ]; then
-    echo " - PASS: Checksum test"
-else
-    echo " - FAIL: Checksum mismatch: Expected $EXPECTED_CHECKSUM but got $CHECKSUM"
-    exit 1
-fi
+assertChecksum
 
 ###
 ###
@@ -52,6 +65,7 @@ echo "Delete 5 assets and perform re-sync"
 ###
 ###
 
+# Remove files from library
 for FILE in \
     "ali-kazal-6YyuNu1lCBE-unsplash.jpeg" \
     "andrea-de-santis-cRi_VYej6lE-unsplash.jpeg" \
@@ -77,12 +91,7 @@ do
     done
 done
 
-docker run -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) steilerdev/icloud-photos-sync:nightly \
-    -u "$TEST_APPLE_ID_USER" \
-    -p "$TEST_APPLE_ID_PWD" \
-    -T "$TEST_TRUST_TOKEN" \
-    --export-metrics \
-    sync > /dev/null 2>&1
+runSync
 
 # Checking if behaviour is as expected
 for VALUE in \
@@ -91,25 +100,9 @@ for VALUE in \
     "albums_to_be_added=5i,albums_to_be_deleted=5i,albums_to_be_kept=3i" \
     "SYNC_COMPLETED"
 do
-    if grep -Fq "$VALUE" $METRICS_FILE; then
-        echo " - PASS: $VALUE"
-    else
-        echo " - FAIL: $VALUE"
-        exit 1
-    fi
+    assertMetric "$VALUE"
 done
-
-# Removing variable content
-rm -f $METRICS_FILE $LOG_FILE
-
-# Creating md5 checksum
-CHECKSUM=$(cd $DIR && find . -type f,l -exec md5sum {} 2> /dev/null \; | sort -k 2 | md5sum |  head -c 32)
-if [ "$CHECKSUM" = "$EXPECTED_CHECKSUM" ]; then
-    echo " - PASS: Checksum test"
-else
-    echo " - FAIL: Checksum mismatch: Expected $EXPECTED_CHECKSUM but got $CHECKSUM"
-    exit 1
-fi
+assertChecksum
 
 # Cleaning up
 rm -rf $DIR
