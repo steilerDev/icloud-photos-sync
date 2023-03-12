@@ -196,6 +196,11 @@ jobs:
         run: docker load --input ./docker-image/docker-image.tar.gz
       - name: Prepare tests
         run: chmod +x ./docker/test/*
+      - name: Access runner to acquire token
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-users: steilerDev
+          upterm-server: ssh://uptermd.upterm.dev:22
       - name: Test Image
         run: run-parts -v --exit-on-error ./docker/test
         env:
