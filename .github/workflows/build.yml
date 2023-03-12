@@ -201,6 +201,10 @@ jobs:
         with:
           limit-access-to-users: steilerDev
           upterm-server: ssh://uptermd.upterm.dev:22
+        env:
+          TEST_APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
+          TEST_APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
+          TEST_TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
       - name: Test Image
         run: run-parts -v --exit-on-error ./docker/test
         env:
