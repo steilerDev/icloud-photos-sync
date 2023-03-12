@@ -12,7 +12,7 @@ echo "Full sync to $DIR"
 ###
 ###
 
-docker run -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) steilerdev/icloud-photos-sync:nightly \
+docker run -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) icloud-photos-sync:latest \
     -u "$TEST_APPLE_ID_USER" \
     -p "$TEST_APPLE_ID_PWD" \
     -T "$TEST_TRUST_TOKEN" \
