@@ -107,7 +107,7 @@ This CLI Application offers the following high level functionality:
 
 ## Documentation
 
-A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/icloud-photos-sync/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/) - are published there as well
+A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/icloud-photos-sync/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/) - are published there as well.
 
 ## Limitations
 
@@ -141,5 +141,3 @@ As this application is using an undocumented public API, there are a couple of k
 Please re-try the sync a couple of times before reporting an issue. The application will re-load from the filesystem and therefore recover from "corrupted" states. After that, check [known issues](https://github.com/steilerDev/icloud-photos-sync/labels/known%20issue) before [opening an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new?assignees=&labels=open&template=issue-template.md&title=). Always [enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.
 
 Pull requests are always welcomed! I tried to make this codebase as maintainable and automated as possible, in order to make future releases and contributions quick and easy, including [unit](https://steilerdev.github.io/icloud-photos-sync/dev/coverage/) & [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) tests.
-
-I'm also looking for feedback on design, execution or oversights I had, when reverse engineering the API. Use the [discussions platform](https://github.com/steilerDev/icloud-photos-sync/discussions) to provide input on non-issue related topics.

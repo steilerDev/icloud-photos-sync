@@ -25,5 +25,11 @@ To execute this flow in the provided [Postman Collection](https://github.com/ste
   - Use the `02-Enter 2FA` to provide a MFA code (by setting the `code` variable in the body), status code `204` expected
   - Run `03-Trust Device` Request, expecting 204
 - Acquire iCloud Cookies through `04-Setup iCloud` request
-- *optionally (and done by the application)* Check, that the Photos Library has finished indexing with `05-Check indexing State`
+- Setup the Photos Library (and select either the primary or shared library through the environment variable `sharedLibrary`) through `05-Setup iCloud Photos` request
+- *optionally (and done by the application)* Check, that the Photos Library has finished indexing with `06-Check indexing State`
 - Now use the `iCloud Photos Library` folder, to execute actions against the iCloud Photos library
+
+The Postman Collection expects the following Environmental variables to be defined:
+- `username` set to the iCloud username
+- `password` set to the iCloud password
+- `sharedLibrary` set to `true` in case the share library should be used

@@ -3,14 +3,20 @@ This documentation describes the local file structure, that is written by this a
 
 ## Root folder
 The root folder is specified through environment variable `DATA_DIR`. All assets and information are stored here:
-  * `_All-Photos` Folder (aka. `ASSET_DIR`, [see src](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/src/lib/photos-library/constants.ts))
-  * `_Archive` Folder (aka. `ARCHIVE_DIR`, [see src](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/src/lib/photos-library/constants.ts))
-  * `.icloud-photos-sync.log`: Log file, overwritten upon application restart
-  * `.trust-token.icloud`: The MFA trust token
+  * `_All-Photos` folder (aka. `PRIMARY_ASSET_DIR`, [see src](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/src/lib/photos-library/constants.ts))
+  * `_Shared-Photos` folder (aka. `SHARED_ASSET_DIR`, [see src](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/src/lib/photos-library/constants.ts))
+  * `_Archive` folder (aka. `ARCHIVE_DIR`, [see src](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/src/lib/photos-library/constants.ts))
+  * `.icloud-photos-sync.log` log file (overwritten upon application restart)
+  * `.trust-token.icloud` file ( MFA trust token used for re-authentication)
   * User created folders from the iCloud Library
 
-### Asset Dir
-The asset dir contains all assets stored in the iCloud Photos Library. Their filename is the checksum, as provided by the iCloud backend, together with the correct file extension.
+### Primary Asset Dir
+The asset dir contains all assets stored in the primary iCloud Photos Library. Their filename is the checksum, as provided by the iCloud backend, together with the correct file extension.
+
+The m-time is set, based on the returned 'modified' timestamp.
+
+### Shared Asset Dir
+The asset dir contains all assets stored in the shared iCloud Photos Library. Their filename is the checksum, as provided by the iCloud backend, together with the correct file extension.
 
 The m-time is set, based on the returned 'modified' timestamp.
 
@@ -23,5 +29,7 @@ Every user folder has two components:
   * A folder containing the data, named after the UUID of the folder (and hidden: `.{UUID}`)
 
 For each asset within an album, a link to the asset dir is created. Naming is based on the filename, provided by iCloud. Original files don't have a suffix, edits are suffixed with `-edited`, live photos are suffixed with `-live` ([see src](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/src/lib/photos-library/model/asset.ts#L190)).
+
+Due to current limitations of the iCloud Web API, user folders only contain assets from the primary library, assets from the shared library cannot be linked to user folders.
 
 If a user folder contains a non-safe file (see [Safe Files](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/src/lib/photos-library/constants.ts)), this marks the folder as archived, and its content is ignored upon future syncs.
