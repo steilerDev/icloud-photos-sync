@@ -4,7 +4,7 @@ DIR=$(mktemp -d)
 METRICS_FILE="$DIR/.icloud-photos-sync.metrics"
 LOG_FILE="$DIR/.icloud-photos-sync.log"
 
-EXPECTED_CHECKSUM="c920a1ba6d4ec1ab81c559c782d8ce2f04217858"
+EXPECTED_CHECKSUM="e6b69510e98120fd656bdb1702192a7fa0a5e4b9"
 
 ###
 ###
@@ -12,7 +12,7 @@ EXPECTED_CHECKSUM="c920a1ba6d4ec1ab81c559c782d8ce2f04217858"
 function assertChecksum {
     # Removing variable content
     rm -f $METRICS_FILE $LOG_FILE
-    CHECKSUM=$(cd $DIR && find -L . -type f -print0 | sort -z | xargs -0 sha1sum -b | awk '{ print $1 }' | sha1sum | awk '{ print $1 }')
+    CHECKSUM=$(cd $DIR && find -L . -type f -exec sha1sum -b '{}' \;| awk '{ print $1 }' | sort | sha1sum | awk '{ print $1 }')
     if [ "$CHECKSUM" = "$EXPECTED_CHECKSUM" ]; then
         echo " - PASS: Checksum test"
     else
