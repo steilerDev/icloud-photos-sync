@@ -58,7 +58,8 @@ export function addAlbum(this: SyncEngine, album: Album) {
     } catch (err) {
         this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.ADD_ALBUM)
             .addMessage(album.getDisplayName())
-            .addCause(err));
+            .addCause(err)
+            .setWarning());
     }
 }
 
