@@ -4,7 +4,7 @@ DIR=$(mktemp -d)
 METRICS_FILE="$DIR/.icloud-photos-sync.metrics"
 LOG_FILE="$DIR/.icloud-photos-sync.log"
 
-EXPECTED_CHECKSUM="108db28af1a1ed81148dfd7f88449c11"
+EXPECTED_CHECKSUM="0d65dd61180acc99634a717d9a1e7e2f"
 
 ###
 ###
@@ -12,8 +12,7 @@ EXPECTED_CHECKSUM="108db28af1a1ed81148dfd7f88449c11"
 function assertChecksum {
     # Removing variable content
     rm -f $METRICS_FILE $LOG_FILE
-
-    CHECKSUM=$(cd $DIR && find . -type f,l -exec md5sum -b {} 2> /dev/null \; | sort -k 2 | md5sum |  head -c 32)
+    CHECKSUM=$(cd $DIR && find -L . -type f -print0 | sort -z | xargs -0 -I {} sh -c "md5sum -b '{}' | head -c 32" | md5sum | head -c 32)
     if [ "$CHECKSUM" = "$EXPECTED_CHECKSUM" ]; then
         echo " - PASS: Checksum test"
     else
@@ -32,6 +31,7 @@ function assertMetric {
 }
 
 function runSync {
+    #docker run -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) steilerdev/icloud-photos-sync:nightly \
     docker run -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) icloud-photos-sync:latest \
         -u "$TEST_APPLE_ID_USER" \
         -p "$TEST_APPLE_ID_PWD" \
