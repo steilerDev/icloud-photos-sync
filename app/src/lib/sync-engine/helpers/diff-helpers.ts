@@ -2,12 +2,9 @@
  * This file contains functions that will be included in the SyncEngine class, related to the diffing of Entities
  */
 
-import {HANDLER_EVENT} from "../../../app/event/error-handler.js";
-import {iCPSError} from "../../../app/error/error.js";
 import {Album} from "../../photos-library/model/album.js";
 import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../../photos-library/model/photos-entity.js";
 import {SyncEngine} from "../sync-engine.js";
-import {SYNC_ERR} from "../../../app/error/error-codes.js";
 
 /**
  * This function diffs two entity arrays (can be either Albums or Assets) and returns the corresponding processing queue
@@ -60,7 +57,7 @@ export function resolveHierarchicalDependencies(this: SyncEngine, queues: PLibra
     toBeKept.forEach((keptAlbum, index) => {
         // Check if any of the deleted is an ancestor of the kept album
         if (toBeDeleted.some(deletedAlbum => keptAlbum.hasAncestor(deletedAlbum, localAlbums))) {
-            this.logger.debug(`Found hierarchical dependency for album ${keptAlbum.getDisplayName()}`)
+            this.logger.debug(`Found hierarchical dependency for album ${keptAlbum.getDisplayName()}`);
             // This means that this kept album actually needs to be deleted & added
             toBeDeleted.push(keptAlbum);
             toBeAdded.push(keptAlbum);

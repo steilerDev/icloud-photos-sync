@@ -378,7 +378,7 @@ export class iCloudPhotos extends EventEmitter {
                     cplAlbums.push(CPLAlbum.parseFromQuery(album));
                 }
             } catch (err) {
-                this.logger.info(`Error processing CPLAlbum: ${JSON.stringify(album)}: ${err.message}`)
+                this.logger.info(`Error processing CPLAlbum: ${JSON.stringify(album)}: ${err.message}`);
             }
         }
 
@@ -563,7 +563,7 @@ export class iCloudPhotos extends EventEmitter {
                     seen.add(record.recordName);
                 }
             } catch (err) {
-                this.logger.info(`Error processing asset ${JSON.stringify(record)}: ${err.message}`)
+                this.logger.info(`Error processing asset ${JSON.stringify(record)}: ${err.message}`);
             }
         }
 

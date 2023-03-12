@@ -14,7 +14,6 @@ import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers
 import {addAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 import {SyncApp} from '../../app/icloud-app.js';
-import {HANDLER_EVENT} from '../../app/event/error-handler.js';
 import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
 
@@ -89,7 +88,7 @@ export class SyncEngine extends EventEmitter {
                 // Checking if we should retry
                 this.checkFatalError(err);
 
-                this.logger.info(`Detected recoverable error: ${err.message}`)
+                this.logger.info(`Detected recoverable error: ${err.message}`);
 
                 this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
                 await this.prepareRetry();

@@ -277,7 +277,7 @@ export class PhotosLibrary extends EventEmitter {
                 .addMessage(asset.getDisplayName())
                 .addContext(`asset`, asset)
                 .addCause(err)
-                .setWarning()
+                .setWarning(),
             );
         }
     }
@@ -415,6 +415,7 @@ export class PhotosLibrary extends EventEmitter {
         this.logger.debug(`Linking ${albumNamePath} to ${path.basename(uuidPath)}`);
         fs.symlinkSync(path.basename(uuidPath), albumNamePath);
 
+        // @remarks Something is wrong here - see E2E test
         if (album.albumType === AlbumType.ALBUM) {
             this.linkAlbumAssets(album, uuidPath);
         }
