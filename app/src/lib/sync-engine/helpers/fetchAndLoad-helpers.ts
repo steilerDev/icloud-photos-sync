@@ -1,5 +1,6 @@
 import path from "path";
-import {LibraryError} from "../../../app/error-types.js";
+import {SYNC_ERR} from "../../../app/error/error-codes.js";
+import {iCPSError} from "../../../app/error/error.js";
 import {CPLAlbum, CPLAsset, CPLMaster} from "../../icloud/icloud-photos/query-parser.js";
 import {Album} from "../../photos-library/model/album.js";
 import {Asset, AssetType} from "../../photos-library/model/asset.js";
@@ -25,15 +26,15 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
             const origExt = parsedOrigFilename.ext;
 
             if (master?.resource && master?.resourceType) {
-                remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, origExt, master.modified, origFilename, AssetType.ORIG, asset.recordName, asset.favorite === 1));
+                remoteAssets.push(Asset.fromCPL(master.resource, master.resourceType, origExt, master.modified, origFilename, AssetType.ORIG, asset.recordName, asset.favorite, master.zoneName));
             }
 
             if (asset?.resource && asset?.resourceType) {
-                remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, origExt, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite === 1));
+                remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, origExt, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite, asset.zoneName));
             }
         } catch (err) {
             // In case missing filetype descriptor is thrown, adding asset context to error
-            throw new LibraryError(`Error while converting asset`)
+            throw new iCPSError(SYNC_ERR.CONVERSION)
                 .addCause(err)
                 .addContext(`cplAsset`, asset)
                 .addContext(`cplMaster`, master);
@@ -47,10 +48,10 @@ export function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[])
  * @param cplAlbums - The given CPL Album
  * @returns Once settled, a completely populated Album array
  */
-export async function convertCPLAlbums(cplAlbums: CPLAlbum[]) : Promise<Album[]> {
+export function convertCPLAlbums(cplAlbums: CPLAlbum[]) : Album[] {
     const remoteAlbums: Album[] = [];
     for (const cplAlbum of cplAlbums) {
-        remoteAlbums.push(await Album.fromCPL(cplAlbum));
+        remoteAlbums.push(Album.fromCPL(cplAlbum));
     }
 
     return remoteAlbums;

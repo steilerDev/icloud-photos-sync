@@ -1,13 +1,11 @@
 import {ArchiveEngine} from '../../src/lib/archive-engine/archive-engine';
 import {iCloud} from '../../src/lib/icloud/icloud';
-import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 import {appWithOptions} from './app-factory.helper';
-import {iCloudAuthFactory} from './icloud-auth.helper';
 import * as Config from './_config';
 
 export function archiveEngineFactory(_remoteDelete: boolean = true): ArchiveEngine {
-    const engine = new ArchiveEngine(
+    return new ArchiveEngine(
         appWithOptions({
             'remoteDelete': _remoteDelete,
         },
@@ -19,9 +17,8 @@ export function archiveEngineFactory(_remoteDelete: boolean = true): ArchiveEngi
             "password": Config.password,
             "trustToken": Config.trustToken,
             "dataDir": Config.appDataDir,
+            "metadataRate": Config.metadataRate,
         })),
         ),
     );
-    engine.icloud.photos = new iCloudPhotos(iCloudAuthFactory());
-    return engine;
 }

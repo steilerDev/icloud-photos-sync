@@ -22,7 +22,7 @@ export const PATHS = {
     "EXT": {
         "QUERY": `/records/query`,
         "MODIFY": `/records/modify`,
-        "LIST": `/zones/list`,
+        "ZONES": `/changes/database`,
     },
 };
 

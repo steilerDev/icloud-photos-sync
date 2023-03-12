@@ -1,6 +1,27 @@
 # Changelog
 
-<!-- ## Nightly Changes-->
+## Nightly Changes
+
+  * **BREAKING CLI CHANGE**:
+    * Specifying no command will print help and not automatically start `daemon` mode
+    * The CLI option `-r, --max-retries` no longer uses `-1` to disable the option, but `Infinity`.
+  * **Support for iCloud Shared Photo Library**
+  * Filetype support added for
+    * `avi`
+  * Reworked error structure
+  * Added sync metrics export functionality (See [docs](https://steilerdev.github.io/icloud-photos-sync/user-guides/sync-metrics/), closes [#127](https://github.com/steilerDev/icloud-photos-sync/issues/127))
+  * Asset verification improvements:
+    * Removed 2GB limitation during verification (closes [#155](https://github.com/steilerDev/icloud-photos-sync/issues/155))
+    * Improves output when asset verification fails (closes [#156](https://github.com/steilerDev/icloud-photos-sync/issues/156))
+    * Acceptable mtime range (before verification fails) increased to 1000ms
+    * Failed asset verification no longer fatal error, but warning
+  * Sync reliability improvements:
+    * Added `412` response error handling during signin (closes [#185](https://github.com/steilerDev/icloud-photos-sync/issues/185))
+    * Added recoverable `EAI_AGAIN` error (closes [#159](https://github.com/steilerDev/icloud-photos-sync/issues/159))
+    * Handling `RUNNING` indexing state (closes [#167](https://github.com/steilerDev/icloud-photos-sync/issues/167))
+    * Metadata rate limiting to support large libraries through `--metadata-rate` (closes [#182](https://github.com/steilerDev/icloud-photos-sync/issues/182))
+  * Archive improvements:
+    * Modified time is now properly preserved upon archiving (closes [#192](https://github.com/steilerDev/icloud-photos-sync/issues/192))
 
 ## v1.0.1
 

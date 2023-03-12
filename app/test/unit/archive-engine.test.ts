@@ -2,32 +2,38 @@ import mockfs from 'mock-fs';
 import {describe, test, afterEach, expect, jest} from '@jest/globals';
 import {archiveEngineFactory} from '../_helpers/archive-engine.helper';
 import {appDataDir as photosDataDir} from '../_helpers/_config';
-import {ASSET_DIR, ARCHIVE_DIR} from '../../src/lib/photos-library/constants';
+import {PRIMARY_ASSET_DIR, ARCHIVE_DIR} from '../../src/lib/photos-library/constants';
 import path from 'path';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
 import {spyOnEvent} from '../_helpers/_general';
 import * as ARCHIVE_ENGINE from '../../src/lib/archive-engine/constants';
-import {ArchiveWarning, SyncWarning} from '../../src/app/error-types';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
-describe(`Unit Tests - Archive Engine`, () => {
-    afterEach(() => {
-        mockfs.restore();
-    });
+afterEach(() => {
+    mockfs.restore();
+});
 
+describe.each([{
+    "zone": Zones.Primary,
+    "ASSET_DIR": PRIMARY_ASSET_DIR,
+}, {
+    "zone": Zones.Shared,
+    "ASSET_DIR": PRIMARY_ASSET_DIR, // @remarks this should be SHARED_ASSET_DIR
+}])(`Archive Engine $zone`, ({zone, ASSET_DIR}) => {
     describe(`Archive Path`, () => {
         test(`Valid path`, async () => {
             const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
 
-            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
             asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
@@ -97,13 +103,13 @@ describe(`Unit Tests - Archive Engine`, () => {
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
 
-            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-            const asset1Edit = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKd`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.EDIT, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset1Edit = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKd`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.EDIT, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1Edit.recordName = asset1.recordName;
-            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
             asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
@@ -183,11 +189,11 @@ describe(`Unit Tests - Archive Engine`, () => {
                 const albumUUIDPath = `.${albumUUID}`;
                 const albumName = `Random`;
 
-                const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+                const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
                 asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-                const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+                const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
                 asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-                const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+                const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
                 asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
                 mockfs({
@@ -239,11 +245,11 @@ describe(`Unit Tests - Archive Engine`, () => {
                 const albumUUIDPath2 = `.${albumUUID2}`;
                 const albumName2 = `Random2`;
 
-                const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+                const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
                 asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-                const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+                const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
                 asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-                const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+                const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
                 asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
                 mockfs({
@@ -297,11 +303,11 @@ describe(`Unit Tests - Archive Engine`, () => {
                 const albumUUIDPath = `.${albumUUID}`;
                 const albumName = `Random`;
 
-                const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+                const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
                 asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-                const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+                const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
                 asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-                const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+                const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
                 asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
                 mockfs({
@@ -341,11 +347,11 @@ describe(`Unit Tests - Archive Engine`, () => {
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
 
-            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
             asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
@@ -407,7 +413,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to persist asset`));
+            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`));
         });
 
         test(`Prepare remote delete throws error`, async () => {
@@ -415,11 +421,11 @@ describe(`Unit Tests - Archive Engine`, () => {
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
 
-            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
             asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
@@ -457,7 +463,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
                 .mockImplementationOnce(() => {
-                    throw new ArchiveWarning(`Unable to find asset`);
+                    throw new Error(`Unable to find asset`);
                 })
                 .mockReturnValueOnce(asset2.recordName)
                 .mockReturnValueOnce(asset3.recordName);
@@ -480,7 +486,7 @@ describe(`Unit Tests - Archive Engine`, () => {
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(handlerEvent).toHaveBeenCalledWith(new SyncWarning(`Unable to find asset`));
+            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to find asset`));
         });
 
         test(`Delete assets throws error`, async () => {
@@ -488,11 +494,11 @@ describe(`Unit Tests - Archive Engine`, () => {
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
 
-            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
             asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
@@ -557,19 +563,31 @@ describe(`Unit Tests - Archive Engine`, () => {
         const albumUUIDPath = `.${albumUUID}`;
         const albumName = `Random`;
 
-        const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+        const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), Date.now() - 10000, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
         asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-        const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+        const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), Date.now() - 15000, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
         asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-        const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+        const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), Date.now() - 18000, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
         asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
         mockfs({
             [photosDataDir]: {
                 [ASSET_DIR]: {
-                    [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
-                    [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
-                    [asset3.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1, 1]),
+                    [asset1.getAssetFilename()]: mockfs.file({
+                        "content": Buffer.from([1, 1, 1, 1]),
+                        "ctime": new Date(asset1.modified),
+                        "mtime": new Date(asset1.modified),
+                    }),
+                    [asset2.getAssetFilename()]: mockfs.file({
+                        "content": Buffer.from([1, 1, 1, 1, 1]),
+                        "ctime": new Date(asset2.modified),
+                        "mtime": new Date(asset2.modified),
+                    }),
+                    [asset3.getAssetFilename()]: mockfs.file({
+                        "content": Buffer.from([1, 1, 1, 1, 1, 1]),
+                        "ctime": new Date(asset3.modified),
+                        "mtime": new Date(asset3.modified),
+                    }),
                 },
                 [ARCHIVE_DIR]: {},
                 [albumUUIDPath]: {
@@ -595,21 +613,35 @@ describe(`Unit Tests - Archive Engine`, () => {
         await archiveEngine.persistAsset(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
         await archiveEngine.persistAsset(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
-        expect(fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename())).isFile()).toBeTruthy();
-        expect(fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename())).isFile()).toBeTruthy();
-        expect(fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename())).isFile()).toBeTruthy();
-        expect(fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename())).isFile()).toBeTruthy();
-        expect(fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename())).isFile()).toBeTruthy();
-        expect(fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename())).isFile()).toBeTruthy();
+        const asset1AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()));
+        const asset1ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
+        expect(asset1AssetStats.isFile()).toBeTruthy();
+        expect(asset1ArchivedStats.mtimeMs).toEqual(asset1.modified);
+        expect(asset1ArchivedStats.isFile()).toBeTruthy();
+        expect(asset1ArchivedStats.mtimeMs).toEqual(asset1.modified);
+
+        const asset2AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()));
+        const asset2ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
+        expect(asset2AssetStats.isFile()).toBeTruthy();
+        expect(asset2ArchivedStats.mtimeMs).toEqual(asset2.modified);
+        expect(asset2ArchivedStats.isFile()).toBeTruthy();
+        expect(asset2ArchivedStats.mtimeMs).toEqual(asset2.modified);
+
+        const asset3AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()));
+        const asset3ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+        expect(asset3AssetStats.isFile()).toBeTruthy();
+        expect(asset3ArchivedStats.mtimeMs).toEqual(asset3.modified);
+        expect(asset3ArchivedStats.isFile()).toBeTruthy();
+        expect(asset3ArchivedStats.mtimeMs).toEqual(asset3.modified);
     });
 
     describe(`Delete remote asset`, () => {
         test(`Delete remote asset`, () => {
-            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
             asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({});
@@ -630,11 +662,11 @@ describe(`Unit Tests - Archive Engine`, () => {
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
 
-            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
-            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
             asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
@@ -664,7 +696,7 @@ describe(`Unit Tests - Archive Engine`, () => {
 
             const archiveEngine = archiveEngineFactory();
 
-            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrowError(`Unable to find asset with UUID`);
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrowError(`Unable to find remote asset`);
         });
 
         test(`Unable to find remote asset's record name`, () => {
@@ -672,10 +704,10 @@ describe(`Unit Tests - Archive Engine`, () => {
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
 
-            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
-            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
             asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
@@ -705,7 +737,7 @@ describe(`Unit Tests - Archive Engine`, () => {
 
             const archiveEngine = archiveEngineFactory();
 
-            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrowError(`Unable to get record name for asset`);
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrowError(`Unable to get record name`);
         });
 
         test(`Don't delete asset if flag is set`, () => {
@@ -713,10 +745,10 @@ describe(`Unit Tests - Archive Engine`, () => {
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
 
-            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
-            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
             asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
@@ -751,17 +783,17 @@ describe(`Unit Tests - Archive Engine`, () => {
             expect(result).toBeUndefined();
         });
 
-        test(`Don't delete favorited asset`, () => {
+        test(`Don't delete favored asset`, () => {
             const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
 
-            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
+            const asset1 = new Asset(`Aa7/yox97ecSUNmVw0xP4YzIDDKf`, 4, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `stephen-leonardi-xx6ZyOeyJtI-unsplash`);
             asset1.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1843`;
             asset1.isFavorite = true;
-            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
+            const asset2 = new Asset(`AaGv15G3Cp9LPMQQfFZiHRryHgjU`, 5, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-gkfvdCEbUbQ-unsplash`);
             asset2.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1888`;
-            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
+            const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({

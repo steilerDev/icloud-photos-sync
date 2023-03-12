@@ -5,7 +5,8 @@ import {getLogger} from '../../logger.js';
 import {MFAMethod} from './mfa-method.js';
 import * as PACKAGE from '../../package.js';
 import {HANDLER_EVENT} from '../../../app/event/error-handler.js';
-import {MFAWarning} from '../../../app/error-types.js';
+import {iCPSError} from '../../../app/error/error.js';
+import {MFA_ERR} from '../../../app/error/error-codes.js';
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
@@ -71,7 +72,10 @@ export class MFAServer extends EventEmitter {
         }
 
         if (req.method !== `POST`) {
-            this.emit(HANDLER_EVENT, new MFAWarning(`Received unknown method to endpoint ${req.url}: ${req.method}`).addContext(`request`, req));
+            this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.METHOD_NOT_FOUND)
+                .setWarning()
+                .addMessage(`endpoint ${req.url}, method ${req.method}`)
+                .addContext(`request`, req));
             this.sendResponse(res, 400, `Method not supported: ${req.method}`);
             return;
         }
@@ -81,7 +85,10 @@ export class MFAServer extends EventEmitter {
         } else if (req.url.startsWith(MFA_SERVER.ENDPOINT.RESEND_CODE)) {
             this.handleMFAResend(req, res);
         } else {
-            this.emit(HANDLER_EVENT, new MFAWarning(`Received request to unknown endpoint ${req.url}`).addContext(`request`, req));
+            this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.ROUTE_NOT_FOUND)
+                .addMessage(req.url)
+                .setWarning()
+                .addContext(`request`, req));
             this.sendResponse(res, 404, `Route not found, available endpoints: ${JSON.stringify(Object.values(MFA_SERVER.ENDPOINT))}`);
         }
     }
@@ -93,7 +100,10 @@ export class MFAServer extends EventEmitter {
      */
     handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!req.url.match(/\?code=\d{6}$/)) {
-            this.emit(HANDLER_EVENT, new MFAWarning(`Received unexpected MFA code format, expecting 6 digits`).addContext(`request`, req));
+            this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.CODE_FORMAT)
+                .addMessage(req.url)
+                .setWarning()
+                .addContext(`request`, req));
             this.sendResponse(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
             return;
         }
@@ -113,8 +123,9 @@ export class MFAServer extends EventEmitter {
     handleMFAResend(req: http.IncomingMessage, res: http.ServerResponse) {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
         if (!methodMatch) {
-            this.sendResponse(res, 400, `Method does not match expected format`);
-            this.emit(HANDLER_EVENT, new MFAWarning(`Method does not match expected format`).addContext(`requestURL`, req.url));
+            this.sendResponse(res, 400, `Resend method does not match expected format`);
+            this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_METHOD_FORMAT)
+                .addContext(`requestURL`, req.url));
             return;
         }
 

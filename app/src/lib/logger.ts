@@ -2,7 +2,7 @@ import log from 'loglevel';
 import chalk from 'chalk';
 import * as fs from 'fs';
 import * as path from 'path';
-import {OptionValues} from 'commander';
+import {iCPSAppOptions} from '../app/factory.js';
 
 const LOG_FILE_NAME = `.icloud-photos-sync.log`;
 
@@ -19,6 +19,8 @@ const LOGGER = {
     "CLIInterface": `CLI-Interface`,
     "ArchiveEngine": `Archive-Engine`,
     "ErrorHandler": `Error-Handler`,
+    "MetricsExporter": `Metrics-Exporter`,
+    "InfluxLineProtocolPoint": `Influx-Line-Protocol`,
 };
 
 export let logFile: string;
@@ -28,7 +30,7 @@ export let logFile: string;
  * Should only be called once - has guard in place so this does not happen
  * @param app - The App object, holding the CLI options
  */
-export function setupLogger(options: OptionValues): void {
+export function setupLogger(options: iCPSAppOptions): void {
     if (logFile) {
         return;
     }
@@ -37,6 +39,11 @@ export function setupLogger(options: OptionValues): void {
         "dir": options.dataDir,
         "base": LOG_FILE_NAME,
     });
+
+    const logPath = path.dirname(logFile);
+    if (!fs.existsSync(logPath)) {
+        fs.mkdirSync(logPath, {"recursive": true});
+    }
 
     if (fs.existsSync(logFile)) {
         // Clearing file if it exists
@@ -57,7 +64,7 @@ export function setupLogger(options: OptionValues): void {
         };
     };
 
-    log.setLevel(options.logLevel);
+    log.setLevel(options.logLevel as log.LogLevelDesc);
     if (options.logLevel === `trace`) {
         log.warn(`Log level set to 'trace', private data might be recorded in logs!`);
     }

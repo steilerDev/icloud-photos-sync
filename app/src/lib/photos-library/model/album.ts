@@ -1,4 +1,5 @@
-import {LibraryError} from "../../../app/error-types.js";
+import {LIBRARY_ERR} from "../../../app/error/error-codes.js";
+import {iCPSError} from "../../../app/error/error.js";
 import {CPLAlbum} from "../../icloud/icloud-photos/query-parser.js";
 import {STASH_DIR} from "../constants.js";
 import {PEntity} from "./photos-entity.js";
@@ -89,14 +90,14 @@ export class Album implements PEntity<Album> {
      * @param cplAlbum - The album retrieved from the backend
      * @returns An Album based on the CPL object
      */
-    static async fromCPL(cplAlbum: CPLAlbum): Promise<Album> {
+    static fromCPL(cplAlbum: CPLAlbum): Album {
         const album = new Album(
             cplAlbum.recordName,
             cplAlbum.albumType,
             Buffer.from(cplAlbum.albumNameEnc, `base64`).toString(`utf8`),
             cplAlbum.parentId ? cplAlbum.parentId : ``,
         );
-        album.assets = await cplAlbum.assets;
+        album.assets = cplAlbum.assets;
         return album;
     }
 
@@ -204,6 +205,6 @@ export class Album implements PEntity<Album> {
             return Album.distanceToRoot(parent, fullQueue) + 1;
         }
 
-        throw new LibraryError(`Unable to determine distance to root, no link to root!`);
+        throw new iCPSError(LIBRARY_ERR.NO_DISTANCE_TO_ROOT);
     }
 }

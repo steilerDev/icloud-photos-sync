@@ -2,7 +2,12 @@ import path from 'path';
 import {AssetID} from '../../icloud/icloud-photos/query-parser.js';
 import {FileType} from './file-type.js';
 import {Stats} from 'fs';
+import fs from 'fs/promises';
 import {PEntity} from './photos-entity.js';
+import {iCPSError} from '../../../app/error/error.js';
+import {LIBRARY_ERR} from '../../../app/error/error-codes.js';
+import {Zones} from '../../icloud/icloud-photos/query-builder.js';
+import {PRIMARY_ASSET_DIR, SHARED_ASSET_DIR} from '../constants.js';
 
 /**
  * Representing the possible asset types
@@ -49,6 +54,12 @@ export class Asset implements PEntity<Asset> {
      * The original filename of this asset
      */
     origFilename: string;
+
+    /**
+     * The zone this file is belonging to
+     */
+    zone: Zones;
+
     /**
      * The wrapping key of this asset (unknown usage, taken from backend, only present if fetched from CPL)
      */
@@ -76,17 +87,19 @@ export class Asset implements PEntity<Asset> {
      * @param size -
      * @param fileType -
      * @param modified -
+     * @param zone - Which zone is this asset belonging to
      * @param assetType - If this asset is the original or an edit
      * @param origFilename - The original filename, extracted from the parent object
      * @param wrappingKey -
      * @param referenceChecksum -
      * @param downloadURL -
      */
-    constructor(fileChecksum: string, size: number, fileType: FileType, modified: number, assetType?: AssetType, origFilename?: string, wrappingKey?: string, referenceChecksum?: string, downloadURL?: string, recordName?: string, isFavorite?: boolean) {
+    constructor(fileChecksum: string, size: number, fileType: FileType, modified: number, zone: Zones, assetType?: AssetType, origFilename?: string, wrappingKey?: string, referenceChecksum?: string, downloadURL?: string, recordName?: string, isFavorite?: boolean) {
         this.fileChecksum = fileChecksum;
         this.size = size;
         this.fileType = fileType;
         this.modified = modified;
+        this.zone = zone;
         this.assetType = assetType;
         this.origFilename = origFilename;
         this.wrappingKey = wrappingKey;
@@ -104,21 +117,23 @@ export class Asset implements PEntity<Asset> {
      * @param modified - The modified date as returned from the backend (in ms since epoch)
      * @param origFilename - The original filename, extracted from the parent object
      * @param assetType - If this asset is the original or an edit
+     * @param zone - Specifies the zone this asset is belonging to
      * @returns An Asset based on the backend objects
      */
-    static fromCPL(asset: AssetID, fileTypeDescriptor: string, fileTypeExt: string, modified: number, origFilename: string, assetType: AssetType, recordName: string, isFavorite: boolean): Asset {
+    static fromCPL(asset: AssetID, fileTypeDescriptor: string, fileTypeExt: string, modified: number, origFilename: string, assetType: AssetType, recordName: string, isFavorite: number, zone: string): Asset {
         return new Asset(
             asset.fileChecksum,
             asset.size,
             FileType.fromAssetType(fileTypeDescriptor, fileTypeExt),
             modified,
+            zone === `PrimarySync` ? Zones.Primary : Zones.Shared,
             assetType,
             origFilename,
             asset.wrappingKey,
             asset.referenceChecksum,
             asset.downloadURL,
             recordName,
-            isFavorite,
+            isFavorite === 1,
         );
     }
 
@@ -126,14 +141,16 @@ export class Asset implements PEntity<Asset> {
      * Creates an Asset from a given file
      * @param fileName - The file name of the file
      * @param stats - The metadata associated with the file
+     * @param zone - Specifies the zone this asset is belonging to
      * @returns An Asset based on the file information
      */
-    static fromFile(fileName: string, stats: Stats): Asset {
+    static fromFile(fileName: string, stats: Stats, zone: Zones): Asset {
         return new Asset(
             Buffer.from(path.basename(fileName, path.extname(fileName)), `base64url`).toString(`base64`),
             stats.size,
             FileType.fromExtension(path.extname(fileName)),
             stats.mtimeMs,
+            zone,
         );
     }
 
@@ -161,12 +178,12 @@ export class Asset implements PEntity<Asset> {
 
     /**
      *
-     * @param dir - The directory, where the file path should be based on
+     * @param dataDir - The photos data dir
      * @returns The full asset file path under the provided directory
      */
     getAssetFilePath(dir: string) {
         return path.format({
-            dir,
+            "dir": path.join(dir, this.zone === Zones.Primary ? PRIMARY_ASSET_DIR : SHARED_ASSET_DIR),
             "name": this.getAssetFilename(),
         });
     }
@@ -203,22 +220,32 @@ export class Asset implements PEntity<Asset> {
 
     /**
      * Verifies that the object representation matches the given file
-     * @param file - The read file
-     * @param fileStats - The file stats object to investigate the metadata
+     * @param filePath - The path, where the file is expected
      * @returns True if the provided file matches this object representation
+     * @throws An error, if verification fails
      */
-    verify(file: Buffer, fileStats: Stats): boolean {
-        return this.verifyChecksum(file) && this.verifySize(file) && this.verifyMTime(fileStats);
-    }
+    async verify(filePath: string): Promise<boolean> {
+        let fileStat: Stats;
+        try {
+            fileStat = await fs.stat(filePath);
+        } catch (err) {
+            throw new iCPSError(LIBRARY_ERR.ASSET_NOT_FOUND)
+                .addCause(err)
+                .addMessage(filePath);
+        }
 
-    /**
-     * Verifies that the modified timestamps matches the one of the given file
-     * (due to potential rounding errors, we are checking if the timestamp is within 10ms)
-     * @param fileStats - The file stats object to investigate the metadata
-     * @returns True if the modified time matches
-     */
-    private verifyMTime(fileStats: Stats): boolean {
-        return this.withinRange(fileStats.mtimeMs, this.modified, 10);
+        if (fileStat.size !== this.size) {
+            throw new iCPSError(LIBRARY_ERR.ASSET_SIZE)
+                .addMessage(`${filePath} size ${fileStat.size}, iCloud ${this.size}`);
+        }
+
+        if (!this.withinRange(fileStat.mtimeMs, this.modified, 1000)) {
+            throw new iCPSError(LIBRARY_ERR.ASSET_MODIFICATION_TIME)
+                .addMessage(`${filePath} modification time ${fileStat.mtimeMs}, iCloud ${this.modified}`)
+                .addContext(`out-of-range`, fileStat.mtimeMs - this.modified);
+        }
+
+        return true;
     }
 
     /**
@@ -229,17 +256,8 @@ export class Asset implements PEntity<Asset> {
      * @returns true if within range, false otherwise
      */
     private withinRange(x: number, y: number, range: number): boolean {
-        return x > y - range
-            && x < y + range;
-    }
-
-    /**
-     * Compares the size of the file on disk with the size in this object
-     * @param file - The read file
-     * @returns True if the size matches
-     */
-    private verifySize(file: Buffer): boolean {
-        return file.byteLength === this.size;
+        return x >= y - range
+            && x <= y + range;
     }
 
     /**
@@ -248,17 +266,17 @@ export class Asset implements PEntity<Asset> {
      * @param file - The read file
      * @returns True if checksum matches
      */
+    /*
     private verifyChecksum(file: Buffer): boolean {
         return file !== undefined;
-        /*
         Const hashes = [
             `BLAKE2b512`,
             `BLAKE2s256`,
-            //          `MD4`,
+            // `MD4`,
             `MD5`,
             `MD6`,
             `MD5-SHA1`,
-            //           `RIPEMD160`,
+            //`RIPEMD160`,
             `SHA1`,
             `SHA224`,
             `SHA256`,
@@ -270,10 +288,10 @@ export class Asset implements PEntity<Asset> {
             `SHA512`,
             `SHA512-224`,
             `SHA512-256`,
-            //           `SHAKE128`,
-            //          `SHAKE256`,
+            // `SHAKE128`,
+            // `SHAKE256`,
             `SM3`,
-            //            `whirlpool`,
+            // `whirlpool`,
         ];
         const encodings = [
         //    `ascii`,
@@ -319,8 +337,8 @@ export class Asset implements PEntity<Asset> {
                     }
                 }
             });
-        }); */
-    }
+        });
+    } */
 
     /**
      *

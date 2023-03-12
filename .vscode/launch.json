@@ -7,7 +7,7 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch App - Sync",
+            "name": "Launch App",
             "skipFiles": [
                 "<node_internals>/**"
             ],
@@ -18,36 +18,6 @@
                 "${workspaceFolder}/app/bin/**/*.js",
             ],
             "envFile": "${workspaceFolder}/.vscode/private-account.env"
-        }, {
-            "type": "node",
-            "request": "launch",
-            "name": "Launch App - Archive",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "preLaunchTask": "Build App",
-            "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["archive", "/media/files/Documents/Frank/Photos Library/Supiii"],
-            "outFiles": [
-                "${workspaceFolder}/app/bin/**/*.js",
-            ],
-            "envFile": "${workspaceFolder}/.vscode/private-account.env"
-        }, {
-            "name": "Debug Test",
-            "type": "node",
-            "request": "launch",
-            "runtimeArgs": [
-                "--experimental-vm-modules",
-                "--inspect-brk",
-                "node_modules/.bin/jest",
-                "--runInBand",
-                "--config", "jest.config.json",
-                //"--detectOpenHandles",
-                "test/unit/app.test.ts"
-            ],
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "cwd": "${workspaceFolder}/app",
         }, {
             "name": "Run API Tests",
             "type": "node",
@@ -70,11 +40,49 @@
                 "--experimental-vm-modules",
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
+                //"test/unit/.*.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
             "envFile": "${workspaceFolder}/.vscode/test.env"
-        }
+        }, {
+            "name": "Debug Test",
+            "type": "node",
+            "request": "launch",
+            "runtimeArgs": [
+                "--experimental-vm-modules",
+                "--inspect-brk",
+                "node_modules/.bin/jest",
+                "--runInBand",
+                "--config", "jest.config.json",
+                //"--detectOpenHandles",
+                "test/unit/photos-library.test.ts"
+            ],
+            "env": {
+                "NODE_NO_WARNINGS": "1"
+            },
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "${workspaceFolder}/app",
+        }, {
+            "name": "vscode-jest-tests",
+            "type": "node",
+            "request": "launch",
+            "runtimeArgs": [
+                "--experimental-vm-modules",
+                "--inspect-brk",
+                "node_modules/.bin/jest",
+                "--runInBand",
+                "--config", "jest.config.json",
+                //"--detectOpenHandles",
+            ],
+            "env": {
+                "NODE_NO_WARNINGS": "1"
+            },
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "${workspaceFolder}/app",
+        },
     ]
 }

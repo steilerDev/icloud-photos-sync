@@ -8,9 +8,11 @@ import {getLogger} from '../logger.js';
 import {AxiosResponse} from 'axios';
 import {pEvent} from 'p-event';
 import {iCloudApp} from '../../app/icloud-app.js';
-import {LibraryError, LibraryWarning} from '../../app/error-types.js';
+import {iCPSError} from '../../app/error/error.js';
 import EventEmitter from 'events';
 import {HANDLER_EVENT} from '../../app/event/error-handler.js';
+import {LIBRARY_ERR} from '../../app/error/error-codes.js';
+import {Zones} from '../icloud/icloud-photos/query-builder.js';
 
 export type PathTuple = [namePath: string, uuidPath: string]
 
@@ -29,9 +31,14 @@ export class PhotosLibrary extends EventEmitter {
     photoDataDir: string;
 
     /**
-     * The full path to the sub-dir within 'photoDataDir', containing all assets
+     * The full path to the sub-dirs within 'photoDataDir', containing all assets from the primary library
      */
-    assetDir: string;
+    primaryAssetDir: string;
+
+    /**
+     * The full path to the sub-dirs within 'photoDataDir', containing all assets from the shared library
+     */
+    sharedAssetDir: string;
 
     /**
      * The full path to the sub-dir within 'photoDataDir', containing all archived folders, who have been deleted on the backend
@@ -50,7 +57,8 @@ export class PhotosLibrary extends EventEmitter {
     constructor(app: iCloudApp) {
         super();
         this.photoDataDir = this.getFullPathAndCreate([app.options.dataDir]);
-        this.assetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ASSET_DIR]);
+        this.primaryAssetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.PRIMARY_ASSET_DIR]);
+        this.sharedAssetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.SHARED_ASSET_DIR]);
         this.archiveDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR]);
         this.stashDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR, PHOTOS_LIBRARY.STASH_DIR]);
     }
@@ -75,19 +83,30 @@ export class PhotosLibrary extends EventEmitter {
      * @returns A structured list of assets, as they are currently present on disk
      */
     async loadAssets(): Promise<PLibraryEntities<Asset>> {
+        return {
+            ...await this.loadAssetsForZone(Zones.Primary),
+            ...await this.loadAssetsForZone(Zones.Shared),
+        };
+    }
+
+    async loadAssetsForZone(zone: Zones): Promise<PLibraryEntities<Asset>> {
         const libAssets: PLibraryEntities<Asset> = {};
-        (await fs.promises.readdir(this.assetDir))
+        const zonePath = zone === Zones.Primary ? this.primaryAssetDir : this.sharedAssetDir;
+        (await fs.promises.readdir(zonePath))
             .forEach(fileName => {
                 try {
                     const fileStat = fs.statSync(path.format({
-                        "dir": this.assetDir,
+                        "dir": zonePath,
                         "base": fileName,
                     }));
-                    const asset = Asset.fromFile(fileName, fileStat);
+                    const asset = Asset.fromFile(fileName, fileStat, zone);
                     libAssets[asset.getUUID()] = asset;
                     this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
                 } catch (err) {
-                    this.emit(HANDLER_EVENT, new LibraryWarning(`Ignoring invalid file: ${fileName}`).addCause(err));
+                    this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.INVALID_FILE)
+                        .setWarning()
+                        .addMessage(fileName)
+                        .addCause(err));
                 }
             });
         return libAssets;
@@ -167,13 +186,20 @@ export class PhotosLibrary extends EventEmitter {
         try {
             // Checking if there is actually a dead symlink
             if (await fs.promises.lstat(symlinkPath) && !fs.existsSync(symlinkPath)) {
-                this.emit(HANDLER_EVENT, new LibraryWarning(`Found dead symlink at ${symlinkPath} (removing it)`).addCause(cause));
+                this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.DEAD_SYMLINK)
+                    .setWarning()
+                    .addMessage(symlinkPath)
+                    .addCause(cause));
                 await fs.promises.unlink(symlinkPath);
             } else {
-                throw new LibraryError(`Unknown error while processing ${symlinkPath}`);
+                throw new iCPSError(LIBRARY_ERR.UNKNOWN_SYMLINK_ERROR)
+                    .addMessage(symlinkPath)
+                    .addCause(cause);
             }
         } catch (err) {
-            throw new LibraryError(`Unknown error while processing ${symlinkPath}`).addCause(cause);
+            throw new iCPSError(LIBRARY_ERR.UNKNOWN_SYMLINK_ERROR)
+                .addMessage(symlinkPath)
+                .addCause(err);
         }
     }
 
@@ -195,17 +221,17 @@ export class PhotosLibrary extends EventEmitter {
 
     /**
      * Derives the album type of a given folder, based on its content
-     * @param path - The path to the folder on disk
+     * @param thisPath - The path to the folder on disk
      * @returns The album type of the folder
      */
-    async readAlbumTypeFromPath(path: string): Promise<AlbumType> {
+    async readAlbumTypeFromPath(thisPath: string): Promise<AlbumType> {
         // If the folder contains other folders, it will be of AlbumType.Folder
-        const directoryPresent = (await fs.promises.readdir(path, {
+        const directoryPresent = (await fs.promises.readdir(thisPath, {
             "withFileTypes": true,
         })).some(file => file.isDirectory());
 
         // If there are files in the folders, the folder is treated as archived
-        const filePresent = (await fs.promises.readdir(path, {
+        const filePresent = (await fs.promises.readdir(thisPath, {
             "withFileTypes": true,
         })).filter(file => !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name)) // Filter out files that are safe to ignore
             .some(file => file.isFile());
@@ -213,7 +239,10 @@ export class PhotosLibrary extends EventEmitter {
         if (directoryPresent) {
             // AlbumType.Folder cannot be archived!
             if (filePresent) {
-                this.emit(HANDLER_EVENT, new LibraryWarning(`Extraneous file found in folder ${path}`));
+                this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.EXTRANEOUS_FILE)
+                    .setWarning()
+                    .addMessage(thisPath),
+                );
             }
 
             return AlbumType.FOLDER;
@@ -234,19 +263,23 @@ export class PhotosLibrary extends EventEmitter {
      */
     async writeAsset(asset: Asset, response: AxiosResponse<any, any>): Promise<void> {
         this.logger.debug(`Writing asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath(this.assetDir);
+        const location = asset.getAssetFilePath(this.photoDataDir);
         const writeStream = fs.createWriteStream(location);
         response.data.pipe(writeStream);
         await pEvent(writeStream, `close`);
-        await fs.promises.utimes(asset.getAssetFilePath(this.assetDir), new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
-
-        if (!this.verifyAsset(asset)) {
-            await fs.promises.rm(asset.getAssetFilePath(this.assetDir));
-            throw new LibraryError(`Unable to verify asset ${asset.getDisplayName()}`)
-                .addContext(`asset`, asset);
+        try {
+            await fs.promises.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
+            await this.verifyAsset(asset);
+            this.logger.debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
+            return;
+        } catch (err) {
+            this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.INVALID_ASSET)
+                .addMessage(asset.getDisplayName())
+                .addContext(`asset`, asset)
+                .addCause(err)
+                .setWarning(),
+            );
         }
-
-        this.logger.debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
     }
 
     /**
@@ -256,19 +289,20 @@ export class PhotosLibrary extends EventEmitter {
      */
     async deleteAsset(asset: Asset) {
         this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
-        await fs.promises.rm(asset.getAssetFilePath(this.assetDir), {"force": true});
+        await fs.promises.rm(asset.getAssetFilePath(this.photoDataDir), {"force": true});
     }
 
     /**
      * Verifies if a given Asset object is present on disk
      * @param asset - The asset to verify
      * @returns True, if the Asset object is present on disk
+     * @throws An error, in case the object cannot be verified
      */
-    verifyAsset(asset: Asset): boolean {
+    async verifyAsset(asset: Asset): Promise<boolean> {
         this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath(this.assetDir);
-        return fs.existsSync(location)
-            && asset.verify(fs.readFileSync(location), fs.statSync(location));
+        const location = asset.getAssetFilePath(this.photoDataDir);
+
+        return asset.verify(location);
     }
 
     /**
@@ -284,7 +318,8 @@ export class PhotosLibrary extends EventEmitter {
         if (album.parentAlbumUUID) {
             const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, this.photoDataDir);
             if (parentPathExt.length === 0) {
-                throw new LibraryError(`Unable to find parent of album ${album.getDisplayName()}`)
+                throw new iCPSError(LIBRARY_ERR.NO_PARENT)
+                    .addMessage(album.getDisplayName())
                     .addContext(`album`, album);
             }
 
@@ -345,7 +380,8 @@ export class PhotosLibrary extends EventEmitter {
         }
 
         if (searchResult.length > 1) {
-            throw new LibraryError(`Unable to find album ${albumUUID} in path ${rootPath}: Multiple matches`)
+            throw new iCPSError(LIBRARY_ERR.MULTIPLE_MATCHES)
+                .addMessage(`${albumUUID} in path ${rootPath}`)
                 .addContext(`searchResult`, searchResult);
         }
 
@@ -360,8 +396,16 @@ export class PhotosLibrary extends EventEmitter {
     writeAlbum(album: Album) {
         const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
 
-        if (fs.existsSync(uuidPath) || fs.existsSync(albumNamePath)) {
-            throw new LibraryError(`Unable to create album ${album.getDisplayName()}: ${uuidPath} or ${albumNamePath} already exists!`);
+        if (fs.existsSync(uuidPath)) {
+            throw new iCPSError(LIBRARY_ERR.EXISTS)
+                .addMessage(uuidPath)
+                .addContext(`album`, album);
+        }
+
+        if (fs.existsSync(albumNamePath)) {
+            throw new iCPSError(LIBRARY_ERR.EXISTS)
+                .addMessage(albumNamePath)
+                .addContext(`album`, album);
         }
 
         // Creating album
@@ -371,6 +415,7 @@ export class PhotosLibrary extends EventEmitter {
         this.logger.debug(`Linking ${albumNamePath} to ${path.basename(uuidPath)}`);
         fs.symlinkSync(path.basename(uuidPath), albumNamePath);
 
+        // @remarks Something is wrong here - see E2E test
         if (album.albumType === AlbumType.ALBUM) {
             this.linkAlbumAssets(album, uuidPath);
         }
@@ -378,6 +423,7 @@ export class PhotosLibrary extends EventEmitter {
 
     /**
      * Links the assets for the given album
+     * @remarks ALbums only refer to PrimaryAssets - hardcoding this
      * @param album - Album holding information about the linked assets
      * @param albumPath - Album path to link assets to
      */
@@ -388,19 +434,23 @@ export class PhotosLibrary extends EventEmitter {
                 "base": album.assets[assetUUID],
             });
             const assetPath = path.format({
-                "dir": this.assetDir,
+                "dir": this.primaryAssetDir,
                 "base": assetUUID,
             });
-            // Getting asset time, in order to update link as well
-            const assetTime = fs.statSync(assetPath).mtime;
             // Relative asset path is relative to album, not the linkedAsset
             const relativeAssetPath = path.relative(albumPath, assetPath);
-            this.logger.debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
             try {
+                this.logger.debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
+
+                // Getting asset time, in order to update link as well
+                const assetTime = fs.statSync(assetPath).mtime;
                 fs.symlinkSync(relativeAssetPath, linkedAsset);
                 fs.lutimesSync(linkedAsset, assetTime, assetTime);
             } catch (err) {
-                this.emit(HANDLER_EVENT, new LibraryWarning(`Not linking ${relativeAssetPath} to ${linkedAsset} in album ${album.getDisplayName()}`).addCause(err));
+                this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.LINK)
+                    .setWarning()
+                    .addMessage(`${relativeAssetPath} to ${linkedAsset}`)
+                    .addCause(err));
             }
         });
     }
@@ -414,20 +464,23 @@ export class PhotosLibrary extends EventEmitter {
         const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
         // Path to album
         if (!fs.existsSync(uuidPath)) {
-            throw new LibraryError(`Unable to find uuid path, expected ${uuidPath}`);
+            throw new iCPSError(LIBRARY_ERR.FIND_PATH)
+                .addMessage(uuidPath);
         }
 
         // Checking content
         const pathContent = fs.readdirSync(uuidPath, {"withFileTypes": true})
             .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
         if (pathContent.length > 0) {
-            throw new LibraryError(`Album in path ${uuidPath} not empty`)
+            throw new iCPSError(LIBRARY_ERR.NOT_EMPTY)
+                .addMessage(uuidPath)
                 .addContext(`pathContent`, pathContent);
         }
 
         // Path to real name folder
         if (!fs.existsSync(albumNamePath)) {
-            throw new LibraryError(`Unable to find albumName path, expected ${albumNamePath}`);
+            throw new iCPSError(LIBRARY_ERR.FIND_PATH)
+                .addMessage(albumNamePath);
         }
 
         fs.rmSync(uuidPath, {"recursive": true});
@@ -461,6 +514,7 @@ export class PhotosLibrary extends EventEmitter {
 
     /**
      * Moves & re-links the path tuple - if named path cannot be found, unlinking will be ignored
+     * Modified time is applied to target's modified and access time (atime is not reliable)
      * @param src - The source of folders
      * @param dest - The destination of folders
      */
@@ -469,21 +523,29 @@ export class PhotosLibrary extends EventEmitter {
         const [destNamePath, destUUIDPath] = dest;
 
         if (!fs.existsSync(srcUUIDPath)) {
-            throw new LibraryError(`Unable to find source uuid path, expected ${srcUUIDPath}`);
+            throw new iCPSError(LIBRARY_ERR.FIND_PATH)
+                .addMessage(srcUUIDPath);
         }
 
+        const srcUUIDStats = fs.statSync(srcUUIDPath);
+
         if (fs.existsSync(destNamePath)) {
-            throw new LibraryError(`Supposed destination path already exists: ${destNamePath}`);
+            throw new iCPSError(LIBRARY_ERR.EXISTS)
+                .addMessage(destNamePath);
         }
 
         if (fs.existsSync(destUUIDPath)) {
-            throw new LibraryError(`Supposed destination uuid path already exists: ${destUUIDPath}`);
+            throw new iCPSError(LIBRARY_ERR.EXISTS)
+                .addMessage(destUUIDPath);
         }
 
         this.logger.debug(`Moving ${srcUUIDPath} to ${destUUIDPath}`);
         fs.renameSync(srcUUIDPath, destUUIDPath);
+        fs.utimesSync(destUUIDPath, srcUUIDStats.mtime, srcUUIDStats.mtime);
 
+        let srcNameStats: fs.Stats = srcUUIDStats;
         try {
+            srcNameStats = fs.lstatSync(srcNamePath);
             fs.unlinkSync(srcNamePath);
         } catch (err) {
             this.logger.debug(`Unable to unlink ${srcNamePath}: ${err.message}`);
@@ -491,6 +553,7 @@ export class PhotosLibrary extends EventEmitter {
 
         this.logger.debug(`Re-linking ${destNamePath}`);
         fs.symlinkSync(path.basename(destUUIDPath), destNamePath);
+        fs.lutimesSync(destNamePath, srcNameStats.mtime, srcNameStats.mtime);
     }
 
     /**

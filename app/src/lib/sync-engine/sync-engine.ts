@@ -11,11 +11,11 @@ import {getLogger} from '../logger.js';
 // Helpers extending this class
 import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
-import {addAsset, removeAsset, writeAssets} from './helpers/write-assets-helpers.js';
+import {addAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 import {SyncApp} from '../../app/icloud-app.js';
-import {HANDLER_EVENT} from '../../app/event/error-handler.js';
-import {SyncError, SyncWarning} from '../../app/error-types.js';
+import {iCPSError} from '../../app/error/error.js';
+import {SYNC_ERR} from '../../app/error/error-codes.js';
 
 /**
  * This class handles the photos sync
@@ -72,7 +72,7 @@ export class SyncEngine extends EventEmitter {
         this.logger.info(`Starting sync`);
         this.emit(SYNC_ENGINE.EVENTS.START);
         let retryCount = 0;
-        while (this.maxRetry === -1 || this.maxRetry > retryCount) {
+        while (this.maxRetry > retryCount) {
             retryCount++;
             this.logger.info(`Performing sync, try #${retryCount}`);
 
@@ -85,9 +85,10 @@ export class SyncEngine extends EventEmitter {
                 this.emit(SYNC_ENGINE.EVENTS.DONE);
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
-                this.emit(HANDLER_EVENT, new SyncWarning(`Error while writing state`).addCause(err));
                 // Checking if we should retry
                 this.checkFatalError(err);
+
+                this.logger.info(`Detected recoverable error: ${err.message}`);
 
                 this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
                 await this.prepareRetry();
@@ -95,7 +96,8 @@ export class SyncEngine extends EventEmitter {
         }
 
         // We'll only reach this, if we exceeded retryCount
-        throw new SyncError(`Sync did not complete successfully within ${retryCount} tries`);
+        throw new iCPSError(SYNC_ERR.MAX_RETRY)
+            .addMessage(`${retryCount}`);
     }
 
     /**
@@ -104,15 +106,8 @@ export class SyncEngine extends EventEmitter {
      * @throws If a fatal error occurred that should NOT be retried
      */
     checkFatalError(err: any): boolean {
-        if (err.name !== `AxiosError`) {
-            throw new SyncError(`Unknown error, aborting!`)
-                .addCause(err);
-        }
-
-        this.logger.debug(`Detected Axios error`);
-
         if (err.code === `ERR_BAD_RESPONSE`) {
-            this.logger.debug(`Bad server response (${err.response?.status}), retrying...`);
+            this.logger.debug(`Bad server response (${err.response?.status}), refreshing session...`);
             return false;
         }
 
@@ -121,7 +116,12 @@ export class SyncEngine extends EventEmitter {
             return false;
         }
 
-        throw new SyncError(`Unknown network error code`)
+        if (err.code === `EAI_AGAIN`) {
+            this.logger.debug(`iCloud DNS record expired, refreshing session...`);
+            return false;
+        }
+
+        throw new iCPSError(SYNC_ERR.UNKNOWN_SYNC)
             .addCause(err);
     }
 
@@ -145,7 +145,7 @@ export class SyncEngine extends EventEmitter {
 
         this.logger.debug(`Refreshing iCloud connection`);
         const iCloudReady = this.icloud.getReady();
-        this.icloud.getiCloudCookies();
+        this.icloud.setupAccount();
         await iCloudReady;
     }
 
@@ -156,9 +156,9 @@ export class SyncEngine extends EventEmitter {
     async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
         const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await Promise.all([
-            this.icloud.photos.fetchAllPictureRecords()
+            this.icloud.photos.fetchAllCPLAssetsMasters()
                 .then(([cplAssets, cplMasters]) => SyncEngine.convertCPLAssets(cplAssets, cplMasters)),
-            this.icloud.photos.fetchAllAlbumRecords()
+            this.icloud.photos.fetchAllCPLAlbums()
                 .then(cplAlbums => SyncEngine.convertCPLAlbums(cplAlbums)),
             this.photosLibrary.loadAssets(),
             this.photosLibrary.loadAlbums(),
@@ -207,25 +207,19 @@ export class SyncEngine extends EventEmitter {
         this.logger.info(`Writing state`);
 
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);
-        try {
-            await this.writeAssets(assetQueue);
-        } catch (err) {
-            this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_ABORTED, err.message);
-            throw err;
-        }
-
+        await this.writeAssets(assetQueue);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED);
 
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, albumQueue[0].length, albumQueue[1].length, albumQueue[2].length);
         await this.writeAlbums(albumQueue);
         this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED);
+
         this.emit(SYNC_ENGINE.EVENTS.WRITE_COMPLETED);
     }
 
     // From ./helpers/write-assets-helpers.ts
     writeAssets = writeAssets;
     addAsset = addAsset;
-    removeAsset = removeAsset;
 
     // From ./helpers/write-albums-helpers.ts
     writeAlbums = writeAlbums;

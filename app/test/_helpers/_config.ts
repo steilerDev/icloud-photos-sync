@@ -1,4 +1,4 @@
-import {PhotosAccount} from "../../src/lib/icloud/auth";
+import {PhotosAccount, PhotosAccountZone} from "../../src/lib/icloud/auth";
 
 /**
  * The data dir path, to be used in the tests
@@ -9,6 +9,7 @@ export const username = `test@steilerdev.de`;
 export const password = `somepass`;
 export const refreshToken = false;
 export const failOnMfa = false;
+export const metadataRate = [Infinity, 0];
 
 export const trustToken = `HSARMTKNSRVWFlaje+uXQGSn7KqxCHcGvTYF5r7F6j8wnFOsemu+g20/1mNJmE+hfNgaB09Bt3RDLzU4kWCsjQUvEsv3C//DrFvldh26AGf9sSv8QyRkUFNJjSHH7fHHiWaZRlWIZk9viZVnxiAh+NE/cA9ZGpbshwkVErwD5/cHN+Ek69ufbIS0O5P0eA==SRVX`;
 export const trustTokenModified = `asefaTKNSRVWFlaje+uXQGSn7KqxCHcGvTYF5r7F6j8wnFOsemu+g20/1mNJmE+hfNgaB09Bt3RDLzU4kWCsjQUvEsv3C//DrFvldh26AGf9sSv8QyRkUFNJjSHH7fHHiWaZRlWIZk9viZVnxiAh+NE/cA9ZGpbshwkVErwD5/cHN+Ek69ufbIS0O5P0eA==SRVX`;
@@ -20,8 +21,17 @@ export const iCloudAuthSecrets = {
 };
 
 export const iCloudPhotosAccount: PhotosAccount = {
-    'ownerName': `_11a1a1a1a11111111a111aa1a1111a11`,
     'photosDomain': `https://p123-ckdatabasews.icloud.com:443`,
+};
+
+export const primaryZone: PhotosAccountZone = {
+    'ownerName': `_11a1a1a1a11111111a111aa1a1111a11`,
     'zoneName': `PrimarySync`,
+    'zoneType': `REGULAR_CUSTOM_ZONE`,
+};
+
+export const sharedZone: PhotosAccountZone = {
+    'ownerName': `_11a1a1a1a11111111a111aa1a1111a11`,
+    'zoneName': `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
     'zoneType': `REGULAR_CUSTOM_ZONE`,
 };

@@ -2,10 +2,13 @@ import * as bt from 'backtrace-node';
 import {EventEmitter} from 'events';
 import * as PACKAGE_INFO from '../../lib/package.js';
 import {getLogger, logFile} from "../../lib/logger.js";
-import {iCPSError, InterruptError} from "../error-types.js";
+import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
-import {OptionValues} from "commander";
 import {EventHandler} from './event-handler.js';
+import {ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR} from '../error/error-codes.js';
+import {iCPSAppOptions} from '../factory.js';
+import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
+import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
 
 /**
  * The event emitted by classes of this application and picked up by the handler.
@@ -20,6 +23,12 @@ export const ERROR_EVENT = `error`;
  */
 export const WARN_EVENT = `warn`;
 
+const reportDenyList = [
+    ERR_SIGINT.code,
+    ERR_SIGTERM.code,
+    LIBRARY_ERR.LOCKED.code,
+];
+
 /**
  * This class handles errors thrown or `HANDLER_EVENT` emitted by classes of this application
  */
@@ -29,12 +38,18 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
      */
     btClient?: bt.BacktraceClient;
 
-    constructor(options: OptionValues) {
+    /**
+     * Flag to indicate verbose error output
+     */
+    verbose: boolean = false;
+
+    constructor(options: iCPSAppOptions) {
         super();
         if (options.enableCrashReporting) {
             this.btClient = bt.initialize({
                 "endpoint": `https://submit.backtrace.io/steilerdev/92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49/json`,
                 "handlePromises": true,
+                "enableMetricsSupport": true,
                 "attributes": {
                     "application": PACKAGE_INFO.NAME,
                     'application.version': PACKAGE_INFO.VERSION,
@@ -43,14 +58,18 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             // This.btClient.setSymbolication();
         }
 
+        if (options.logLevel === `trace` || options.logLevel === `debug`) {
+            this.verbose = true;
+        }
+
         // Register handlers for interrupts
         process.on(`SIGTERM`, async () => {
-            await this.handle(new InterruptError(`SIGTERM`));
+            await this.handle(new iCPSError(ERR_SIGTERM));
             process.exit(2);
         });
 
         process.on(`SIGINT`, async () => {
-            await this.handle(new InterruptError(`SIGINT`));
+            await this.handle(new iCPSError(ERR_SIGINT));
             process.exit(2);
         });
     }
@@ -64,12 +83,16 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
         let message = _err.getDescription();
         // Check if the error should be reported
-        const shouldReport = _err.sev === `FATAL` && !(_err instanceof InterruptError);
+        const shouldReport = _err.sev === `FATAL` && reportDenyList.indexOf(_err.code) === -1;
 
         // Report error and append error code
         if (shouldReport) {
             const errorId = await this.reportError(_err);
             message += ` (Error Code: ${errorId})`;
+        }
+
+        if (this.verbose && Object.keys(_err.context).length > 0) {
+            message += `\ncontext:${JSON.stringify(_err.context)}`;
         }
 
         // Performing output based on severity
@@ -95,6 +118,11 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             obj.on(HANDLER_EVENT, async (err: unknown) => {
                 await this.handle(err);
             });
+            if (this.btClient && obj instanceof SyncEngine) {
+                obj.on(SYNC_ENGINE.EVENTS.START, async () => {
+                    await this.reportSyncStart();
+                });
+            }
         });
     }
 
@@ -105,27 +133,34 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
      */
     async reportError(err: iCPSError): Promise<string> {
         if (!this.btClient) {
-            return `No error code! Please enable crash reporting!`;
+            return `Enable crash reporting for error code`;
         }
 
         const errorUUID = randomUUID();
         const report = this.btClient.createReport(err, {
             'icps.description': err.getDescription(),
-            'icps.severity': err.sev,
-            'icps.ctx': JSON.stringify(err.getContext()),
             'icps.uuid': errorUUID,
+            'icps.rootErrorCode': err.getRootErrorCode(),
         }, [logFile]);
-
-        if (err.cause) {
-            report.addAttribute(`icps.cause`, err.cause);
-        }
 
         await this.btClient.sendAsync(report);
         return errorUUID;
     }
 
     /**
-    * This function removes confidental data from the environment after parsing arguments, to make sure, nothing is collected.
+     * Reports a scheduled sync start
+     * Only runs if this.btClient is defined (i.e. error reporting is enabled)
+     */
+    async reportSyncStart() {
+        try {
+            await (this.btClient as any)._backtraceMetrics.sendSummedEvent(`Sync`);
+        } catch (err) {
+            await this.reportError(new iCPSError({"name": `iCPSError`, "code": `METRIC_FAILED`, "message": `Unable to report sync start`}).addCause(err));
+        }
+    }
+
+    /**
+    * This function removes confidential data from the environment after parsing arguments, to make sure, nothing is collected.
     */
     static cleanEnv() {
         const confidentialData = {

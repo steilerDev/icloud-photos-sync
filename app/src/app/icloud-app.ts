@@ -1,10 +1,9 @@
 import {iCloud} from "../lib/icloud/icloud.js";
 import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
 import * as fs from 'fs';
-import {OptionValues} from "commander";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
-import {ArchiveError, DaemonAppError, iCloudError, LibraryError, SyncError, TokenError} from "./error-types.js";
+import {iCPSError} from "./error/error.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {Album} from "../lib/photos-library/model/album.js";
 import path from "path";
@@ -14,6 +13,8 @@ import * as Logger from '../lib/logger.js';
 import {Cron} from "croner";
 import {HANDLER_EVENT} from "./event/error-handler.js";
 import {EventHandler, registerObjectsToEventHandlers, removeObjectsFromEventHandlers} from "./event/event-handler.js";
+import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
+import {iCPSAppOptions} from "./factory.js";
 
 /**
  * Filename for library lock file located in DATA_DIR
@@ -21,9 +22,9 @@ import {EventHandler, registerObjectsToEventHandlers, removeObjectsFromEventHand
 export const LIBRARY_LOCK_FILE = `.library.lock`;
 
 export abstract class iCPSApp {
-    options: OptionValues;
+    options: iCPSAppOptions;
 
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         this.options = options;
         // Needs to be done here so all future objects use it / including handlers and everything created down the chain
         Logger.setupLogger(this.options);
@@ -39,6 +40,7 @@ export abstract class iCPSApp {
 export class DaemonAppEvents extends EventEmitter {
     static EVENTS = {
         'SCHEDULED': `scheduled`, // Next execution
+        'START': `start`,
         'DONE': `done`, // Next execution
         'RETRY': `retry`, // Next execution
     };
@@ -62,7 +64,7 @@ export class DaemonApp extends iCPSApp {
      * Builds the app
      * @param options - CLI Options for the app
      */
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         super(options);
         this.event = new DaemonAppEvents();
     }
@@ -86,10 +88,11 @@ export class DaemonApp extends iCPSApp {
      */
     async performScheduledSync(eventHandlers: EventHandler[], syncApp: SyncApp = new SyncApp(this.options)) {
         try {
+            this.event.emit(DaemonAppEvents.EVENTS.START);
             await syncApp.run(...eventHandlers);
             this.event.emit(DaemonAppEvents.EVENTS.DONE, this.job?.next());
         } catch (err) {
-            this.event.emit(HANDLER_EVENT, new DaemonAppError(err));
+            this.event.emit(HANDLER_EVENT, new iCPSError(APP_ERR.DAEMON).addCause(err));
             this.event.emit(DaemonAppEvents.EVENTS.RETRY, this.job?.next());
         } finally { // Cleaning up
             syncApp = undefined;
@@ -110,7 +113,7 @@ export abstract class iCloudApp extends iCPSApp {
      * Creates and sets up the necessary infrastructure
      * @param options - The parsed CLI options
      */
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         super(options);
 
         // It's crucial for the data dir to exist, create if it doesn't
@@ -134,14 +137,16 @@ export abstract class iCloudApp extends iCPSApp {
         try {
             await this.acquireLibraryLock();
         } catch (err) {
-            throw new LibraryError(`Unable to acquire lock`).addCause(err);
+            throw new iCPSError(LIBRARY_ERR.LOCK_ACQUISITION)
+                .addCause(err);
         }
 
         try {
             await this.icloud.authenticate();
             return;
         } catch (err) {
-            throw new iCloudError(`Authentication failed`).addCause(err);
+            throw new iCPSError(AUTH_ERR.FAILED)
+                .addCause(err);
         }
     }
 
@@ -162,7 +167,8 @@ export abstract class iCloudApp extends iCPSApp {
         if (fs.existsSync(lockFilePath)) {
             if (!this.options.force) {
                 const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
-                throw new LibraryError(`Locked by PID ${lockingProcess}. Use --force (or FORCE env variable) to forcefully remove the lock`);
+                throw new iCPSError(LIBRARY_ERR.LOCKED)
+                    .addMessage(`Locked by PID ${lockingProcess}`);
             }
 
             await fs.promises.rm(lockFilePath, {"force": true});
@@ -178,12 +184,13 @@ export abstract class iCloudApp extends iCPSApp {
     async releaseLibraryLock() {
         const lockFilePath = path.join(this.options.dataDir, LIBRARY_LOCK_FILE);
         if (!fs.existsSync(lockFilePath)) {
-            throw new LibraryError(`Unable to release library lock, no lock exists`);
+            return;
         }
 
         const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
         if (lockingProcess !== process.pid.toString() && !this.options.force) {
-            throw new LibraryError(`Locked by PID ${lockingProcess}, cannot release. Use --force (or FORCE env variable) to forcefully remove the lock`);
+            throw new iCPSError(LIBRARY_ERR.LOCKED)
+                .addMessage(`Locked by PID ${lockingProcess}`);
         }
 
         await fs.promises.rm(lockFilePath, {"force": true});
@@ -207,7 +214,8 @@ export class TokenApp extends iCloudApp {
             this.icloud.emit(ICLOUD.EVENTS.TOKEN, this.icloud.auth.iCloudAccountTokens.trustToken);
             return;
         } catch (err) {
-            throw new TokenError(`Unable to get trust token`).addCause(err);
+            throw new iCPSError(APP_ERR.TOKEN)
+                .addCause(err);
         } finally {
             // Only if this is the initiated class, release the lock
             if (this.constructor.name === TokenApp.name) {
@@ -235,7 +243,7 @@ export class SyncApp extends iCloudApp {
      * Creates and sets up the necessary infrastructure for this app
      * @param options - The parsed CLI options
      */
-    constructor(options: OptionValues) {
+    constructor(options: iCPSAppOptions) {
         super(options);
         this.photosLibrary = new PhotosLibrary(this);
         this.syncEngine = new SyncEngine(this);
@@ -253,7 +261,8 @@ export class SyncApp extends iCloudApp {
             await super.run(...eventHandlers);
             return await this.syncEngine.sync();
         } catch (err) {
-            throw new SyncError(`Sync failed`).addCause(err);
+            throw new iCPSError(APP_ERR.SYNC)
+                .addCause(err);
         } finally {
             // If this is the initiated class, release the lock
             if (this.constructor.name === SyncApp.name) {
@@ -290,7 +299,7 @@ export class ArchiveApp extends SyncApp {
      * @param options - The parsed CLI options
      * @param archivePath - The path to the folder that should get archived
      */
-    constructor(options: OptionValues, archivePath: string) {
+    constructor(options: iCPSAppOptions, archivePath: string) {
         super(options);
         this.archivePath = archivePath;
         this.archiveEngine = new ArchiveEngine(this);
@@ -309,7 +318,8 @@ export class ArchiveApp extends SyncApp {
             await this.archiveEngine.archivePath(this.archivePath, remoteAssets);
             return;
         } catch (err) {
-            throw new ArchiveError(`Archive failed`).addCause(err).addContext(`archivePath`, this.archivePath);
+            throw new iCPSError(APP_ERR.ARCHIVE)
+                .addCause(err).addContext(`archivePath`, this.archivePath);
         } finally {
             // If this is the initiated class, release the lock
             if (this.constructor.name === ArchiveApp.name) {

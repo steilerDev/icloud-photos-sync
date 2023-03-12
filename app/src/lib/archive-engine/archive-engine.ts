@@ -6,10 +6,11 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {ArchiveApp} from '../../app/icloud-app.js';
-import {ArchiveError, ArchiveWarning} from '../../app/error-types.js';
+import {iCPSError} from '../../app/error/error.js';
 import EventEmitter from 'events';
 import * as ARCHIVE_ENGINE from './constants.js';
 import {HANDLER_EVENT} from '../../app/event/error-handler.js';
+import {ARCHIVE_ERR} from '../../app/error/error-codes.js';
 
 export class ArchiveEngine extends EventEmitter {
     /**
@@ -45,6 +46,7 @@ export class ArchiveEngine extends EventEmitter {
 
     /**
      * This will archive an Album stored in the given location and delete it's remote representation, if remoteDelete is set
+     * @remarks This function expects the asset to be located in the primary zone - shared assets in folders is currently not supported by the api
      * @param archivePath - The path to the local album. The named path is expected.
      * @param assetList - The current remote asset list
      * @returns A Promise, that resolves once the path has been archived
@@ -55,19 +57,19 @@ export class ArchiveEngine extends EventEmitter {
 
         const albumName = path.basename(archivePath);
         if (albumName.startsWith(`.`)) {
-            throw new ArchiveError(`UUID path selected, use named path only`);
+            throw new iCPSError(ARCHIVE_ERR.UUID_PATH);
         }
 
         const parentFolderPath = path.dirname(archivePath);
         const [archivedAlbum, archivedAlbumPath] = await this.photosLibrary.readFolderFromDisk(albumName, parentFolderPath, ``);
         if (archivedAlbum.albumType !== AlbumType.ALBUM) {
-            throw new ArchiveError(`Only able to archive non-archived albums`);
+            throw new iCPSError(ARCHIVE_ERR.NON_ALBUM);
         }
 
         const loadedAlbum = (await this.photosLibrary.loadAlbum(archivedAlbum, archivedAlbumPath)).find(album => album.albumName === albumName);
 
         if (!loadedAlbum || Object.keys(loadedAlbum.assets).length === 0) {
-            throw new ArchiveError(`Unable to load album`);
+            throw new iCPSError(ARCHIVE_ERR.LOAD_FAILED);
         }
 
         const numberOfItems = Object.keys(loadedAlbum.assets).length;
@@ -76,13 +78,13 @@ export class ArchiveEngine extends EventEmitter {
 
         // Iterating over all album items to persist them
         const remoteDeleteList = await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
-            const assetPath = path.join(this.photosLibrary.assetDir, uuidFilename);
+            const assetPath = path.join(this.photosLibrary.primaryAssetDir, uuidFilename);
             const archivedAssetPath = path.join(archivedAlbumPath, loadedAlbum.assets[uuidFilename]);
 
             try {
                 await this.persistAsset(assetPath, archivedAssetPath);
             } catch (err) {
-                this.emit(HANDLER_EVENT, new ArchiveError(`Unable to persist asset`)
+                this.emit(HANDLER_EVENT, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
                     .addCause(err)
                     .addContext(`assetPath`, assetPath)
                     .addContext(`archivedAssetPath`, archivedAssetPath),
@@ -105,7 +107,7 @@ export class ArchiveEngine extends EventEmitter {
                 this.emit(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, uniqueDeleteList.length);
                 await this.icloud.photos.deleteAssets(uniqueDeleteList);
             } catch (err) {
-                throw new ArchiveError(`Unable to delete remote assets`)
+                throw new iCPSError(ARCHIVE_ERR.REMOTE_DELETE_FAILED)
                     .addCause(err);
             }
         }
@@ -114,14 +116,18 @@ export class ArchiveEngine extends EventEmitter {
     }
 
     /**
-     * Persists a locally cached asset in the proper folder
+     * Persists a locally cached asset in the proper folder - applying original files m & a times accordingly
      * @param assetPath - Path to the assets file path in the Assets folder
      * @param archivedAssetPath - The target path of the asset (with filename)
      * @returns A Promise that resolves, once the file has been copied
      */
     async persistAsset(assetPath: string, archivedAssetPath: string): Promise<void> {
         this.logger.debug(`Persisting ${assetPath} to ${archivedAssetPath}`);
-        return fs.unlink(archivedAssetPath).then(() => fs.copyFile(assetPath, archivedAssetPath));
+        const fileStat = await fs.stat(assetPath);
+        // Const lFileStat = await fs.lstat(archivedAssetPath)
+        await fs.unlink(archivedAssetPath);
+        await fs.copyFile(assetPath, archivedAssetPath);
+        await fs.utimes(archivedAssetPath, fileStat.mtime, fileStat.mtime);
     }
 
     /**
@@ -141,11 +147,17 @@ export class ArchiveEngine extends EventEmitter {
         const asset = assetList.find(asset => asset.getUUID() === assetUUID);
 
         if (!asset) {
-            throw new ArchiveWarning(`Unable to find asset with UUID ${assetUUID}`).addContext(`assetList`, assetList);
+            throw new iCPSError(ARCHIVE_ERR.NO_REMOTE_ASSET)
+                .addMessage(assetUUID)
+                .addContext(`assetList`, assetList)
+                .setWarning();
         }
 
         if (!asset.recordName) {
-            throw new ArchiveWarning(`Unable to get record name for asset ${asset.getDisplayName()}`).addContext(`asset`, asset);
+            throw new iCPSError(ARCHIVE_ERR.NO_REMOTE_RECORD_NAME)
+                .addMessage(asset.getDisplayName())
+                .addContext(`asset`, asset)
+                .setWarning();
         }
 
         if (asset.isFavorite) {

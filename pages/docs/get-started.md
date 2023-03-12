@@ -102,7 +102,7 @@ In order to only perform authentication (without syncing any assets) and validat
     === "docker run"
 
         ```
-        docker run steilerdev/icloud-photos-sync:latest -v "</path/to/your/local/library>:/opt/icloud-photos-library" --name photos-sync \
+        docker run -v "</path/to/your/local/library>:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
@@ -226,12 +226,17 @@ The `sync` command will perform authentication, proceed to load the local and re
   * Extraneous local files will be removed (exceptions are ['Archived Folders'](#archiving))
   * Missing remote files will be downloaded
 
-This synchronization will also create the folder structure present in the iCloud Photos Library.
+This synchronization will also create the folder structure present in the iCloud Photos Library. If iCloud Shared Photo Library is enabled, the shared assets will be stored in the `_Shared-Photos` folder.
 
 !!! warning "File Structure"
     Since this application does not use any local database, it is imperative, that the [file structure](../dev/local-file-structure/) is not changed by any other application or user.
 
 During the sync process various warning could happen. A list of [common warnings](../user-guides/common-warnings/) is available.
+
+!!! tip "Syncing large libraries"
+    Initial sync of large libraries can take some time. After one hour the initially fetched metadata expires, which will lead to a failure of the ongoing sync. The tool should recover from this with a warning and reload the metadata. Make sure `--max-retries` is set to a high number or `Infinity`, otherwise the process might prematurely fail.
+
+    Additionally you might need to limit the rate of metadata fetching, because the iCloud API has been observed to have limitations causing `SOCKET HANGUP` errors for libraries holding more than 10.000 assets. Do this by setting `--metadata-rate` - it seems `1/20` ensures sufficient throttling.
 
 ### Ad-hoc
 
@@ -252,7 +257,7 @@ In order to perform a single synchronization execution, the [`sync` command](../
     === "docker run"
 
         ```
-        docker run steilerdev/icloud-photos-sync:latest -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync \
+        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
@@ -285,7 +290,7 @@ In order to perform a single synchronization execution, the [`sync` command](../
 
 ### Scheduled
 
-When not supplying any command, or using the [`daemon` command](../user-guides/cli/#daemon-command), the application will start scheduling synchronization executions based on the provided schedule. 
+When using the [`daemon` command](../user-guides/cli/#daemon-command), the application will start scheduling synchronization executions based on the provided schedule. 
 
 This schedule is expecting to be in [cron](https://crontab.guru) format. For more details on the specific implementation, see [Croner's pattern documentation](https://github.com/hexagon/croner#pattern).
 
@@ -298,11 +303,12 @@ This schedule is expecting to be in [cron](https://crontab.guru) format. For mor
     === "docker run"
 
         ```
-        docker run steilerdev/icloud-photos-sync:latest -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync \
+        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
-            --schedule "* 2 * * *"
+            --schedule "* 2 * * *" \
+            daemon
         ```
 
 === "node"
@@ -315,7 +321,8 @@ This schedule is expecting to be in [cron](https://crontab.guru) format. For mor
             -p "<iCloud Password>" \
             -d "</path/to/your/local/library>" \
             --enable-crash-reporting \
-            --schedule "* 2 * * *"
+            --schedule "* 2 * * *" \
+            daemon
         ```
 
     === "From Source"
@@ -326,7 +333,8 @@ This schedule is expecting to be in [cron](https://crontab.guru) format. For mor
             -p "<iCloud Password>" \
             -d "</path/to/your/local/library>" \
             --enable-crash-reporting \
-            --schedule "* 2 * * *"
+            --schedule "* 2 * * *" \
+            daemon
         ```
 
 ## Archiving
@@ -356,7 +364,7 @@ In order to archive an album, the [`archive` command](../user-guides/cli/#archiv
         To automatically delete non-favorite pictures in the album from iCloud, add the `--remote-delete` flag
 
         ```
-        docker run steilerdev/icloud-photos-sync:latest -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync \
+        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \

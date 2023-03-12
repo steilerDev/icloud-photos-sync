@@ -1,10 +1,11 @@
 import {iCloud} from "../../src/lib/icloud/icloud";
+import {jest} from "@jest/globals";
 import * as Config from './_config';
 import {expectedMFAHeaders} from "./icloud-mfa.helper";
 import {addHoursToCurrentDate, getDateInThePast} from "./_general";
 import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
 import {iCloudAuth} from "../../src/lib/icloud/auth";
-import {getICloudCookies} from "./icloud-auth.helper";
+import {mockValidation} from "./icloud-auth.helper";
 import {appWithOptions} from "./app-factory.helper";
 
 export const _defaultCliOpts = {
@@ -15,6 +16,7 @@ export const _defaultCliOpts = {
     "dataDir": Config.appDataDir,
     "refreshToken": Config.refreshToken,
     "failOnMfa": Config.failOnMfa,
+    "metadataRate": Config.metadataRate,
 };
 
 export function iCloudFactory(cliOpts: any = _defaultCliOpts): iCloud {
@@ -26,11 +28,23 @@ export function iCloudFactory(cliOpts: any = _defaultCliOpts): iCloud {
     return icloud;
 }
 
-export function iCloudPhotosFactory(): iCloudPhotos {
+export function iCloudPhotosFactory(sharedLibrary: boolean = true, removeEventListeners: boolean = true): iCloudPhotos {
     const auth = new iCloudAuth(Config.username, Config.password, Config.trustToken, Config.appDataDir);
-    auth.iCloudCookies = getICloudCookies();
+    mockValidation(auth);
     auth.iCloudPhotosAccount.photosDomain = Config.iCloudPhotosAccount.photosDomain;
-    const icloudPhotos = new iCloudPhotos(auth);
+    auth.iCloudPhotosAccount.primary = Config.primaryZone;
+    if (sharedLibrary) {
+        auth.iCloudPhotosAccount.shared = Config.sharedZone;
+    }
+
+    auth.getPhotosHeader = jest.fn(() => `headerValues`);
+
+    const icloudPhotos = new iCloudPhotos(appWithOptions({"metadataRate": Config.metadataRate}), auth);
+
+    if (removeEventListeners) {
+        icloudPhotos.removeAllListeners();
+    }
+
     return icloudPhotos;
 }
 

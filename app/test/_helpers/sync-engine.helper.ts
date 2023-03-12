@@ -1,7 +1,6 @@
 import {jest} from '@jest/globals';
 import {AxiosResponse} from 'axios';
 import {iCloud} from "../../src/lib/icloud/icloud";
-import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
 import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
@@ -11,12 +10,13 @@ import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
 import {SyncEngine} from "../../src/lib/sync-engine/sync-engine";
 import {appWithOptions} from './app-factory.helper';
 import * as Config from "./_config";
+import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 export function syncEngineFactory(): SyncEngine {
-    const syncEngine = new SyncEngine(
+    return new SyncEngine(
         appWithOptions({
             "downloadThreads": 10,
-            "maxRetries": -1,
+            "maxRetries": Infinity,
         },
         new PhotosLibrary(appWithOptions({
             "dataDir": Config.appDataDir,
@@ -26,15 +26,14 @@ export function syncEngineFactory(): SyncEngine {
             "password": Config.password,
             "trustToken": Config.trustToken,
             "dataDir": Config.appDataDir,
+            "metadataRate": Config.metadataRate,
         })),
         ),
     );
-    syncEngine.icloud.photos = new iCloudPhotos(syncEngine.icloud.auth);
-    return syncEngine;
 }
 
 export function mockSyncEngineForAssetQueue(syncEngine: SyncEngine): SyncEngine {
-    syncEngine.photosLibrary.verifyAsset = jest.fn(() => false);
+    syncEngine.photosLibrary.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
     syncEngine.photosLibrary.writeAsset = jest.fn(async () => {});
     syncEngine.photosLibrary.deleteAsset = jest.fn(async () => {});
     syncEngine.icloud.photos.downloadAsset = jest.fn(async () => ({} as AxiosResponse<any, any>));
@@ -70,17 +69,17 @@ export function queueIsSorted(albumQueue: Album[]): boolean {
 }
 
 export const fetchAndLoadStateReturnValue = [
-    [new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10)],
+    [new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10, Zones.Primary)],
     [new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``)],
-    {'someChecksum': new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10)},
+    {'someChecksum': new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10, Zones.Primary)},
     {'someUUID': new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``)},
 ] as [Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>];
 
 export const diffStateReturnValue = [
     [
-        [new Asset(`someChecksum1`, 50, FileType.fromExtension(`png`), 10)],
-        [new Asset(`someChecksum2`, 60, FileType.fromExtension(`png`), 20)],
-        [new Asset(`someChecksum3`, 70, FileType.fromExtension(`png`), 30)],
+        [new Asset(`someChecksum1`, 50, FileType.fromExtension(`png`), 10, Zones.Primary)],
+        [new Asset(`someChecksum2`, 60, FileType.fromExtension(`png`), 20, Zones.Primary)],
+        [new Asset(`someChecksum3`, 70, FileType.fromExtension(`png`), 30, Zones.Primary)],
     ], [
         [new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``)],
         [new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName2`, ``)],
@@ -88,16 +87,16 @@ export const diffStateReturnValue = [
     ],
 ] as [PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>];
 
-export const fetchAllPictureRecordsReturnValue = [
+export const fetchAllCPLAssetsMastersReturnValue = [
     [new CPLAsset()],
     [new CPLMaster()],
 ] as [CPLAsset[], CPLMaster[]];
 
 export const convertCPLAssetsReturnValue = [
-    new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10),
+    new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10, Zones.Primary),
 ] as Asset[];
 
-export const fetchAllAlbumRecordsReturnValue = [
+export const fetchAllCPLAlbumsReturnValue = [
     new CPLAlbum(),
 ] as CPLAlbum[];
 
@@ -106,7 +105,7 @@ export const convertCPLAlbumsReturnValue = [
 ] as Album[];
 
 export const loadAssetsReturnValue = {
-    'someChecksum': new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10),
+    'someChecksum': new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10, Zones.Primary),
 } as PLibraryEntities<Asset>;
 
 export const loadAlbumsReturnValue = {
@@ -115,3 +114,10 @@ export const loadAlbumsReturnValue = {
 
 export const getProcessingQueuesReturnValue = [[], [], []];
 export const resolveHierarchicalDependenciesReturnValue = [[], [], []] as PLibraryProcessingQueues<Album>;
+
+/**
+ * Returns a random zone, since it should not matter
+ */
+export function getRandomZone(): Zones {
+    return Math.floor(Math.random() * 2) === 0 ? Zones.Primary : Zones.Shared;
+}
