@@ -9,6 +9,7 @@ EXPECTED_CHECKSUM="e6b69510e98120fd656bdb1702192a7fa0a5e4b9"
 ###
 ###
 ###
+
 function assertChecksum {
     # Removing variable content
     rm -f $METRICS_FILE $LOG_FILE
