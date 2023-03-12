@@ -101,6 +101,7 @@ export class MFAServer extends EventEmitter {
     handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!req.url.match(/\?code=\d{6}$/)) {
             this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.CODE_FORMAT)
+                .addMessage(req.url)
                 .setWarning()
                 .addContext(`request`, req));
             this.sendResponse(res, 400, `Unexpected MFA code format! Expecting 6 digits`);

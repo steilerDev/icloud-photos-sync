@@ -11,6 +11,10 @@ export const STARTUP_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `STARTUP_FAILED`, `Unable to start MFA server`,
 );
 
+export const RESEND_REQUEST_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `RESEND_REQUEST_FAILED`, `Resending request failed`,
+);
+
 export const RESEND_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `RESEND_FAILED`, `Unable to request new MFA code`,
 );

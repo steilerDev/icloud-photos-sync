@@ -220,8 +220,7 @@ export class iCloud extends EventEmitter {
             const response = await this.axios.put(url, data, config);
 
             if (!method.resendSuccessful(response)) {
-                this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_FAILED).setWarning().addContext(`response`, response));
-                return;
+                throw new iCPSError(MFA_ERR.RESEND_REQUEST_FAILED).addContext(`response`, response);
             }
 
             if (method.isSMS() || method.isVoice()) {
