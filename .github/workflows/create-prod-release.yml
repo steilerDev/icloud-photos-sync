@@ -37,7 +37,7 @@ jobs:
           NUMERIC_VERSION=${VERSION:1}
 
           # Updating changelog to reflect that nightly changes are now in release
-          sed -i '/^## Nightly Changes/c\<!-- ## Nightly Changes-->\n\n## '${VERSION} CHANGELOG.md
+          sed -ri '/^## v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]*)?/c\<!-- ## v0.0.0-nightly -->\n\n## '${VERSION} CHANGELOG.md
 
           # Updating version references in the app
           sed -ri 's/"version": "[0-9]+\.[0-9]+\.[0-9]+(-[a-z]*)?"/"version": "'${NUMERIC_VERSION}'"/' app/package.json

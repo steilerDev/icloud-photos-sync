@@ -1,6 +1,4 @@
-# Changelog
-
-<!-- ## Nightly Changes-->
+## v1.2.0-nightly
 
 ## v1.1.0
 
