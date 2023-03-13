@@ -15,6 +15,7 @@ name: Build & Test
 
 on:
   workflow_call:
+  workflow_dispatch:
   push: # For any other branch
     branches-ignore:
       - 'dev'
@@ -182,7 +183,7 @@ jobs:
     name: Test Docker Image
     needs: build-docker
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/dev'
+    if: ${{ !( github.ref == 'refs/heads/dev' || github.actor == 'dependabot[bot]' ) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
