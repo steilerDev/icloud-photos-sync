@@ -62,7 +62,7 @@ This CLI Application offers the following high level functionality:
   <p>
     <ul>
       <li>iCloud Shared Photo Library support</li>
-      <li>Support of MFA authentication through trusted devices, SMS and voice authentication - [Security Key Support pending, please help out if you have this use case!](https://github.com/steilerDev/icloud-photos-sync/issues/207)</li>
+      <li>Support of MFA authentication through trusted devices, SMS and voice authentication - [Security Key Support pending, please help out if you have this use case](https://github.com/steilerDev/icloud-photos-sync/issues/207)!</li>
       <li>Enable autonomous operation, by caching of MFA trust token</li>
       <li>Support of large libraries, through efficient diffing algorithm instead of full library pull</li>
       <li>Full iCloud Photos Library backup with all important files in their original state and edits - [Live Photos support pending](https://github.com/steilerDev/icloud-photos-sync/issues/121)</li>

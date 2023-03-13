@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: 
       name: production
-      url: https://github.com/steilerDev/icloud-photos-sync/tree/main
+      url: https://github.com/steilerDev/icloud-photos-sync/commit/${{ steps.auto-commit.outputs.commit_hash }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -89,6 +89,7 @@ jobs:
           $BIN daemon --help >> $OUT_FILE
           echo '```' >> $OUT_FILE
       - name: Commit & Tag
+        id: auto-commit
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           branch: main
