@@ -1,8 +1,6 @@
 # Changelog
 
-<!-- ## Nightly Changes-->
-
-## v1.1.0
+## Nightly Changes
 
   * **BREAKING CLI CHANGE**:
     * Specifying no command will print help and not automatically start `daemon` mode
