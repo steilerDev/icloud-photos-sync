@@ -12,17 +12,21 @@ assignees: ''
 - [ ] Checked out [known issues](https://github.com/steilerDev/icloud-photos-sync/labels/known%20issue)
 - [ ] Enabled [crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/)
 
-
 **Describe the bug**
 
 A clear and concise description of what the bug is.
 
 **Error code**
-Share the Error Code generated upon the crash: `10000000-0000-0000-0000-000000000000`
+
+Share the Error Code generated upon the crash
+
+```
+e.g. `10000000-0000-0000-0000-000000000000`
+```
 
 **Logs**
 
-Please paste the log file (preferably with `LOG_LEVEL=debug`), located in `.icloud-photos-sync.log`, stored in the DATA_DIR.
+Please paste the log file (preferably with `LOG_LEVEL=debug`), located in `.icloud-photos-sync.log`, stored in the `DATA_DIR`.
 
 ```
 .icloud-photos-sync.log

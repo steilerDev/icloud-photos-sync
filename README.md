@@ -62,10 +62,10 @@ This CLI Application offers the following high level functionality:
   <p>
     <ul>
       <li>iCloud Shared Photo Library support</li>
-      <li>Support of MFA authentication through trusted devices, SMS and voice authentication</li>
+      <li>Support of MFA authentication through trusted devices, SMS and voice authentication - [Security Key Support pending, please help out if you have this use case!](https://github.com/steilerDev/icloud-photos-sync/issues/207)</li>
       <li>Enable autonomous operation, by caching of MFA trust token</li>
       <li>Support of large libraries, through efficient diffing algorithm instead of full library pull</li>
-      <li>Full iCloud Photos Library backup with all important files in their original state + edits</li>
+      <li>Full iCloud Photos Library backup with all important files in their original state and edits - [Live Photos support pending](https://github.com/steilerDev/icloud-photos-sync/issues/121)</li>
     </ul>
   </p>
 </details>
@@ -113,13 +113,11 @@ A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/ic
 As this application is using an undocumented public API, there are a couple of known limitations:
 
 - **iCloud Shared Photo Library**:
-  While this app is syncing all assets from the Shared Photo Library, unfortunately the API does not provide the location of shared assets within the user's folder. When navigating to a folder on the WebUI while having Shared Photo Library enabled will yield an error. Until this functionality is available, Share Photo Library assets will only be present in the `_Shared` folder and therefore cannot be archived.
+  While this app is syncing all assets from the *Shared Photo Library*, unfortunately the API does not provide the location of shared assets within the user's folder hierarchy (when navigating to a folder on the WebUI while having *Shared Photo Library* enabled will yield an error). Until this functionality is available, *Shared Photo Library* assets will only be present in the `_Shared-Photos` folder and therefore cannot be archived.
 - **Advanced Data Protection**:
-  In order to use this app with an account that is secured through Advanced Data Protection, [access through the iCloud WebUI](https://support.apple.com/de-de/HT212523) needs to be enabled, since this tool is re-using those APIs. This currently is a minimum requirement - [I'm still waiting on confirmation that this will enable functionality](https://github.com/steilerDev/icloud-photos-sync/issues/202)
-
+  In order to use this app with an account that is secured through *Advanced Data Protection*, please make sure [access through the iCloud WebUI](https://support.apple.com/de-de/HT212523) is enabled. This  is a minimum requirement since this tool is re-using those APIs - [I'm still waiting on confirmation that this will enable functionality, please report your experience!](https://github.com/steilerDev/icloud-photos-sync/issues/202)
 - **FileType Support**:
   The support of file types needs to be hardcoded by this application, since a full list is not available or retrievable. If you come across an `Unknown filetype descriptor` error, [please report it](https://github.com/steilerDev/icloud-photos-sync/issues/143), in order for the file type to be added to the application.
-
 
 ## OS Support
 
@@ -138,6 +136,6 @@ As this application is using an undocumented public API, there are a couple of k
 
 ## Contributing & Feedback
 
-Please re-try the sync a couple of times before reporting an issue. The application will re-load from the filesystem and therefore recover from "corrupted" states. After that, check [known issues](https://github.com/steilerDev/icloud-photos-sync/labels/known%20issue) before [opening an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new?assignees=&labels=open&template=issue-template.md&title=). Always [enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.
+Please re-try the sync a couple of times before reporting an issue. The application will reload from the filesystem and therefore recover from "corrupted" states. After that, check [known issues](https://github.com/steilerDev/icloud-photos-sync/labels/known%20issue) before [opening an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new?assignees=&labels=open&template=issue-template.md&title=). Always [enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.
 
-Pull requests are always welcomed! Please open them against the `dev` branch for quick consideration. I tried to make this codebase as maintainable and automated as possible, in order to make future releases and contributions quick and easy, while ensuring functionality, including [unit](https://steilerdev.github.io/icloud-photos-sync/dev/coverage/) & [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) tests.
+Pull requests are always welcomed! Please open them against the `dev` branch for quick consideration. I tried to make this codebase as maintainable and automated as possible, in order to make future releases and contributions quick and easy, while ensuring functionality. This includes [unit](https://steilerdev.github.io/icloud-photos-sync/dev/coverage/), [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) & [E2E](https://github.com/steilerDev/icloud-photos-sync/tree/main/docker/test) tests.
