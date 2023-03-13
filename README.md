@@ -37,7 +37,7 @@
     <img alt="Development Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/dev-release.yml?branch=dev&label=Dev%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
   </a>
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml">
-    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?branch=v1.1.0-nightly&label=Prod%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
+    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?branch=v1.1.0&label=Prod%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
   </a>
 </p>
 <p align="center">
