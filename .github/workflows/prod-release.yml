@@ -1,4 +1,5 @@
 name: Publish Production Release
+run-name: Publish Production Release (${{ github.ref_name }})
 # This workflow will run on every push containing a tag, that is matching version naming
 # If the app builds and passes tests, it will release to the production channel (Docker's 'latest' tag, npm release...)
 

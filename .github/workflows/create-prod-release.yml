@@ -1,4 +1,5 @@
 name: Create Production Release
+run-name: Create Production Release (${{ github.event.inputs.version }})
 # A manually triggered workflow to create a new release
 
 on:
