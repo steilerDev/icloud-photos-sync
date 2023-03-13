@@ -82,7 +82,6 @@ jobs:
             ./app/CHANGELOG.md
             ./app/LICENSE
             ./app/doc/
-  
 
   build-changelog:
     name: Build Changelog
@@ -143,6 +142,10 @@ jobs:
       matrix:
         os: ${{ fromJSON(github.ref == 'refs/heads/dev' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }} # Skipping macOS on 'dev' branch, due to slow performance
     runs-on: ${{ matrix.os }}
+    env: 
+      TEST_APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
+      TEST_APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
+      TEST_TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -156,20 +159,18 @@ jobs:
         run: npm ci
         working-directory: app/
       - name: Test All
-        if: ${{ !( github.ref == 'refs/heads/dev' || github.actor == 'dependabot[bot]' ) }}
+        if: ${{ github.ref != 'refs/heads/dev' && env.TEST_TRUST_TOKEN != '' }}
         run: npm run test-all
         env:
           NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
           NODE_NO_WARNINGS: 1
-          TEST_APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
-          TEST_APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
-          TEST_TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
         working-directory: app/
       - name: Test Unit Only
-        if: ${{ github.ref == 'refs/heads/dev' || github.actor == 'dependabot[bot]' }}
+        if: ${{ github.ref == 'refs/heads/dev' || env.TEST_TRUST_TOKEN == '' }}
         run: npm run test
         env:
           NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
+          NODE_NO_WARNINGS: 1
         working-directory: app/
       - name: Collect test coverage
         if: matrix.os == 'ubuntu-latest'
@@ -183,7 +184,11 @@ jobs:
     name: Test Docker Image
     needs: build-docker
     runs-on: ubuntu-latest
-    if: ${{ !( github.ref == 'refs/heads/dev' || github.actor == 'dependabot[bot]' ) }}
+    if: github.ref != 'refs/heads/dev'
+    env:
+      TEST_APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
+      TEST_APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
+      TEST_TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -197,11 +202,8 @@ jobs:
       - name: Prepare tests
         run: chmod +x ./docker/test/*
       - name: Test Image
+        if: ${{ env.TEST_TRUST_TOKEN != '' }}
         run: run-parts -v --exit-on-error ./docker/test
-        env:
-          TEST_APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
-          TEST_APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
-          TEST_TRUST_TOKEN: ${{ secrets.TEST_TRUST_TOKEN }}
 
   build-gh-pages:
     name: Build GH Pages
