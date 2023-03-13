@@ -19,6 +19,8 @@ on:
   push: # For any other branch
     branches-ignore:
       - 'dev'
+    tags-ignore:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 permissions: {}
 
@@ -161,16 +163,10 @@ jobs:
       - name: Test All
         if: ${{ github.ref != 'refs/heads/dev' && env.TEST_TRUST_TOKEN != '' }}
         run: npm run test-all
-        env:
-          NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
-          NODE_NO_WARNINGS: 1
         working-directory: app/
       - name: Test Unit Only
         if: ${{ github.ref == 'refs/heads/dev' || env.TEST_TRUST_TOKEN == '' }}
         run: npm run test
-        env:
-          NODE_OPTIONS: --experimental-vm-modules # Needed for JEST / ESM compatibility
-          NODE_NO_WARNINGS: 1
         working-directory: app/
       - name: Collect test coverage
         if: matrix.os == 'ubuntu-latest'
