@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import * as fs from 'fs';
 import * as path from 'path';
 import {iCPSAppOptions} from '../app/factory.js';
+import { getDefaultSettings } from 'http2';
 
 const LOG_FILE_NAME = `.icloud-photos-sync.log`;
 
@@ -23,7 +24,7 @@ const LOGGER = {
     "InfluxLineProtocolPoint": `Influx-Line-Protocol`,
 };
 
-export let logFile: string;
+export let logFilePath: string;
 
 /**
  * Logger setup including the configuration of logger prefix
@@ -31,38 +32,46 @@ export let logFile: string;
  * @param app - The App object, holding the CLI options
  */
 export function setupLogger(options: iCPSAppOptions): void {
-    if (logFile) {
+    if (logFilePath) {
         return;
     }
 
-    logFile = path.format({
+    logFilePath = path.format({
         "dir": options.dataDir,
         "base": LOG_FILE_NAME,
     });
 
-    const logPath = path.dirname(logFile);
-    if (!fs.existsSync(logPath)) {
-        fs.mkdirSync(logPath, {"recursive": true});
-    }
 
-    if (fs.existsSync(logFile)) {
-        // Clearing file if it exists
-        fs.truncateSync(logFile);
-    }
+    try {
+        if(options.logToCli && !options.silent) {
+            throw new Error(`Disabling logging to file, due to logToCli flag`)
+        }
 
-    const originalFactory = log.methodFactory;
+        const logPath = path.dirname(logFilePath);
+        if (!fs.existsSync(logPath)) {
+            fs.mkdirSync(logPath, {"recursive": true});
+        }
 
-    log.methodFactory = function (methodName, logLevel, loggerName) {
-        return function (message) {
-            if (options.logToCli && !options.silent) {
+        // Try opening the file - truncate if exists
+        const logFd = fs.openSync(logFilePath, "w")
+
+        log.methodFactory = function (methodName, _logLevel, loggerName) {
+            return function (message) {
+                const prefixedMessage = `[${new Date().toISOString()}] ${methodName.toUpperCase()} ${String(loggerName)}: ${message}\n`;
+                fs.appendFileSync(logFd, prefixedMessage);
+            };
+        };
+
+    } catch (err) {
+        console.warn(`Unable to write log to file ${logFilePath}: ${err.message} - using console output`)
+        const originalFactory = log.methodFactory;
+        log.methodFactory = function(methodName, logLevel, loggerName) {
+            return function(...message: any[]) {
                 const prefixedMessage = `${chalk.gray(`[${new Date().toLocaleString()}]`)} ${methodName.toUpperCase()} ${chalk.green(`${String(loggerName)}: ${message}`)}`;
                 originalFactory(methodName, logLevel, loggerName)(prefixedMessage);
-            } else {
-                const prefixedMessage = `[${new Date().toISOString()}] ${methodName.toUpperCase()} ${String(loggerName)}: ${message}\n`;
-                fs.appendFileSync(logFile, prefixedMessage);
             }
-        };
-    };
+        }
+    }
 
     log.setLevel(options.logLevel as log.LogLevelDesc);
     if (options.logLevel === `trace`) {
