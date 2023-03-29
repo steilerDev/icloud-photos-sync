@@ -538,7 +538,7 @@ export class iCloudPhotos extends EventEmitter {
             if (this.auth.sharedLibraryAvailable()) {
                 this.logger.debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
                 const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared);
-                allRecords.push(...sharedRecords);
+                allRecords = [...allRecords, ...sharedRecords];
                 expectedNumberOfRecords += sharedExpectedCount;
             }
         } catch (err) {

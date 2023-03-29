@@ -35,6 +35,7 @@ const EXT = {
     'com.nikon.raw-image': `nef`,
     'com.olympus.raw-image': `orf`,
     'public.avi': `avi`,
+    'com.adobe.pdf': `pdf`,
 };
 
 /**
