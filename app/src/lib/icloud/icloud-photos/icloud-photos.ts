@@ -535,7 +535,8 @@ export class iCloudPhotos extends EventEmitter {
             [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, parentId);
 
             // Merging assets of shared library, if available
-            if (this.auth.sharedLibraryAvailable()) {
+            if (this.auth.sharedLibraryAvailable() && typeof parentId === 'undefined') {
+                // only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
                 this.logger.debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
                 const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared);
                 allRecords = [...allRecords, ...sharedRecords];
