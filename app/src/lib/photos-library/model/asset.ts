@@ -164,7 +164,7 @@ export class Asset implements PEntity<Asset> {
                 && this.fileChecksum === asset.fileChecksum
                 && this.fileType.equal(asset.fileType)
                 && this.size === asset.size
-                && this.withinRange(this.modified, asset.modified, 10);
+                && this.withinRange(this.modified, asset.modified, 1000);
     }
 
     /**
