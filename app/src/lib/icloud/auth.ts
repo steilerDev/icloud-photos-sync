@@ -1,6 +1,6 @@
 import {AxiosResponse} from "axios";
 import * as fs from 'fs/promises';
-import {readFileSync} from 'fs';
+import {readFileSync, writeFileSync} from 'fs';
 import * as path from 'path';
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
@@ -9,6 +9,7 @@ import {getLogger} from "../logger.js";
 import * as ICLOUD from './constants.js';
 import {AUTH_ERR} from "../../app/error/error-codes.js";
 import {Zones} from "./icloud-photos/query-builder.js";
+import {sanitized, serializeCookies, deserializeCookies} from "./utils.js";
 
 /**
  * Secrets, required to track authentication request across the MFA process
@@ -109,6 +110,7 @@ export class iCloudAuth {
      * File path to the location, where the trust token is persisted on disk to circumvent future MFA requests
      */
     trustTokenFile: string;
+    cookieStoreFile: string;
 
     /**
      *
@@ -121,14 +123,45 @@ export class iCloudAuth {
     constructor(username: string, password: string, trustToken: string, appDataDir: string) {
         this.iCloudAccountSecrets.username = username;
         this.iCloudAccountSecrets.password = password;
+        this.cookieStoreFile = path.format({
+            "dir": appDataDir,
+            "base": `.${sanitized(username)}.cookies`,
+        });
+
         this.trustTokenFile = path.format({
             "dir": appDataDir,
             "base": ICLOUD.TRUST_TOKEN_FILE_NAME,
         });
+
+        this.loadPersistedCloudCookies();
+
         if (!trustToken) {
             this.loadTrustToken();
         } else {
             this.iCloudAccountTokens.trustToken = trustToken;
+        }
+    }
+
+    loadPersistedCloudCookies() {
+        this.logger.debug(`Trying to load cookies from disk`);
+        try {
+            const serializedCookies = readFileSync(this.cookieStoreFile, {"encoding": ICLOUD.TRUST_TOKEN_FILE_ENCODING});
+            this.logger.debug(`Loaded cookies from file`);
+            this.logger.trace(`  - token: ${serializedCookies}`);
+
+            this.iCloudCookies = deserializeCookies(serializedCookies);
+            this.validateCloudCookies()
+        } catch (err) {
+            this.logger.debug(`Unable to load cookies from file: ${err.message}`);
+        }
+    }
+
+    persistCloudCookies(cookies:Array<Cookie>) {
+        this.logger.debug(`Trying to persist cookies to disk`);
+        try {
+            writeFileSync(this.cookieStoreFile, serializeCookies(cookies), {"encoding": ICLOUD.TRUST_TOKEN_FILE_ENCODING});
+        } catch (err) {
+            this.logger.debug(`Unable to persist cookies to file: ${err.message}`);
         }
     }
 
@@ -259,6 +292,7 @@ export class iCloudAuth {
         this.iCloudPhotosAccount.photosDomain = response.data.webservices.ckdatabasews.url;
 
         this.validateCloudCookies();
+        this.persistCloudCookies(this.iCloudCookies);
     }
 
     /**
