@@ -150,7 +150,7 @@ export class iCloudAuth {
             this.logger.trace(`  - token: ${serializedCookies}`);
 
             this.iCloudCookies = deserializeCookies(serializedCookies);
-            this.validateCloudCookies()
+            this.validateCloudCookies();
         } catch (err) {
             this.logger.debug(`Unable to load cookies from file: ${err.message}`);
         }
@@ -228,7 +228,7 @@ export class iCloudAuth {
      */
     getMFAHeaders(): any {
         this.validateAuthSecrets();
-        return {...ICLOUD.DEFAULT_AUTH_HEADER,
+        return {...this.getPhotosHeader(ICLOUD.DEFAULT_AUTH_HEADER),
             "scnt": this.iCloudAuthSecrets.scnt,
             'X-Apple-ID-Session-Id': this.iCloudAuthSecrets.sessionId,
             "Cookie": `aasp=${this.iCloudAuthSecrets.aasp}`,
@@ -300,8 +300,8 @@ export class iCloudAuth {
      * @returns A fully authenticated header, to be used with the iCloud Photos Service
      * @throws An iCloudAuthError in case the returned headers would be expired
      */
-    getPhotosHeader(): any {
-        return {...ICLOUD.DEFAULT_HEADER,
+    getPhotosHeader(baseHeader = ICLOUD.DEFAULT_HEADER): any {
+        return {...baseHeader,
             "Cookie": this.getCookiesHeaderString(),
         };
     }
@@ -313,15 +313,21 @@ export class iCloudAuth {
      */
     getCookiesHeaderString(): string {
         let cookieString: string = ``;
-        this.validateCloudCookies();
-        this.iCloudCookies.forEach(cookie => {
-            if (cookieString.length === 0) {
-                cookieString = cookie.cookieString();
-            } else {
-                cookieString = `${cookieString}; ${cookie.cookieString()}`;
-            }
-        });
-        this.logger.trace(`Build cookie string: ${cookieString}`);
+        try {
+            this.validateCloudCookies();
+
+            this.iCloudCookies.forEach(cookie => {
+                if (cookieString.length === 0) {
+                    cookieString = cookie.cookieString();
+                } else {
+                    cookieString = `${cookieString}; ${cookie.cookieString()}`;
+                }
+            });
+            this.logger.trace(`Build cookie string: ${cookieString}`);
+        } catch (err) {
+            this.logger.trace(err.message);
+        }
+
         return cookieString;
     }
 

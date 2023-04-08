@@ -123,7 +123,7 @@ export class iCloud extends EventEmitter {
         this.auth.validateAccountSecrets();
 
         const config: AxiosRequestConfig = {
-            "headers": ICLOUD.DEFAULT_AUTH_HEADER,
+            "headers": {...this.auth.getPhotosHeader(ICLOUD.DEFAULT_AUTH_HEADER)},
             "params": {
                 "isRememberMeEnabled": true,
             },
