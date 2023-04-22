@@ -78,7 +78,7 @@ jobs:
           cache-dependency-path: ./
       - name: Prepare environment
         run: npm ci
-      - uses: JS-DevTools/npm-publish@v1
+      - uses: JS-DevTools/npm-publish@v2
         with:
           token: ${{ secrets.NPM_TOKEN }}
   
