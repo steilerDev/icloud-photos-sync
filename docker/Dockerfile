@@ -1,4 +1,4 @@
-FROM node:18.15.0-alpine
+FROM node:20.1.0-alpine
 
 # Applying fs patch for assets
 ADD rootfs.tar.gz /
