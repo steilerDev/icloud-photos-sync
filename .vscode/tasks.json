@@ -19,7 +19,7 @@
 				"reveal": "always"
 			},
 			"options": {
-				"cwd": "/home/coder/project/icloud-photos-sync/pages/"
+				"cwd": "pages/"
 			},
 			"label": "Build Page",
 			"group": "build"
