@@ -92,20 +92,21 @@ export class PhotosLibrary extends EventEmitter {
     async loadAssetsForZone(zone: Zones): Promise<PLibraryEntities<Asset>> {
         const libAssets: PLibraryEntities<Asset> = {};
         const zonePath = zone === Zones.Primary ? this.primaryAssetDir : this.sharedAssetDir;
-        (await fs.promises.readdir(zonePath))
-            .forEach(fileName => {
+        (await fs.promises.readdir(zonePath, { withFileTypes: true }))
+            .filter(file => file.isFile() && !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name))
+            .forEach(file => {
                 try {
                     const fileStat = fs.statSync(path.format({
                         "dir": zonePath,
-                        "base": fileName,
+                        "base": file.name,
                     }));
-                    const asset = Asset.fromFile(fileName, fileStat, zone);
+                    const asset = Asset.fromFile(file.name, fileStat, zone);
                     libAssets[asset.getUUID()] = asset;
                     this.logger.debug(`Loaded asset ${asset.getDisplayName()}`);
                 } catch (err) {
                     this.emit(HANDLER_EVENT, new iCPSError(LIBRARY_ERR.INVALID_FILE)
                         .setWarning()
-                        .addMessage(fileName)
+                        .addMessage(file.name)
                         .addCause(err));
                 }
             });

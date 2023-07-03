@@ -515,8 +515,8 @@ describe(`Diffing state`, () => {
 
         test(`Only modified changed`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 142, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 142, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 1420, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 1420, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
                 new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
                 new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             ];
