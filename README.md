@@ -132,7 +132,7 @@ As this application is using an undocumented public API, there are a couple of k
 
 Please check the [contributing guidelines](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md) to learn how to engage with this project.
 
-### Workflow Status
+### Release Workflow
 
 <p align="center">
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/event_push.yml">
@@ -145,6 +145,9 @@ Please check the [contributing guidelines](https://github.com/steilerDev/icloud-
     <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/event_push.yml?branch=main&label=Production&style=for-the-badge&logo=githubactions&logoColor=white">
   </a>
 </p>
+
+### Monitoring Workflow
+
 <p align="center">
   <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/monitor_api.yml">
     <img alt="API Status" src="https://img.shields.io/github/actions/workflow/status/steilerdev/icloud-photos-sync/monitor_api.yml?branch=main&event=schedule&style=for-the-badge&logo=githubactions&logoColor=white&label=API%20Status">
