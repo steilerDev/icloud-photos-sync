@@ -2,7 +2,7 @@
 name: Issue Template
 about: General issue template for icloud-photos-sync
 title: ''
-labels: open
+labels: new
 assignees: ''
 
 ---
@@ -18,7 +18,7 @@ A clear and concise description of what the bug is.
 
 **Error code**
 
-Share the Error Code generated upon the crash
+[Enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/) and share the Error Code generated upon the crash.
 
 ```
 e.g. `10000000-0000-0000-0000-000000000000`
@@ -26,7 +26,7 @@ e.g. `10000000-0000-0000-0000-000000000000`
 
 **Logs**
 
-Please paste the log file (preferably with `LOG_LEVEL=debug`), located in `.icloud-photos-sync.log`, stored in the `DATA_DIR`.
+Please paste the log file (with `LOG_LEVEL=debug`), located in `.icloud-photos-sync.log`, stored in the `DATA_DIR`.
 
 ```
 .icloud-photos-sync.log

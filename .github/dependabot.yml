@@ -5,6 +5,8 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "dev"
+    commit-message:
+      prefix: "chore: [ci] "
     schedule:
       interval: "weekly"
       day: "saturday"
@@ -15,6 +17,8 @@ updates:
   - package-ecosystem: "npm"
     directory: "/app"
     target-branch: "dev"
+    commit-message:
+      prefix: "chore: [app] "
     schedule:
       interval: "weekly"
       day: "saturday"
@@ -28,6 +32,8 @@ updates:
   - package-ecosystem: "docker"
     directory: "/docker"
     target-branch: "dev"
+    commit-message:
+      prefix: "chore: [docker] "
     schedule:
       interval: "weekly"
       day: "saturday"
@@ -38,8 +44,10 @@ updates:
 
   # Maintain dependencies for pip (docs site)
   - package-ecosystem: "pip"
-    directory: "/pages"
+    directory: "/docs"
     target-branch: "dev"
+    commit-message:
+      prefix: "chore: [docs] "
     schedule:
       interval: "weekly"
       day: "saturday"

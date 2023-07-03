@@ -1,0 +1,22 @@
+name: build-wiki-setup
+description: Sets up the environment for the wiki build action
+inputs:
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+runs:
+  using: composite
+  steps:
+    - id: setup-node
+      uses: actions/setup-node@v3
+      with:
+        node-version-file: ${{ inputs.app-path }}/node-version
+        cache: npm
+        cache-dependency-path: ${{ inputs.app-path }}
+    - id: setup-npm
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm ci)
+    - id: setup-fs
+      shell: bash
+      run: cp README.md LICENSE ${{ inputs.app-path }}/  

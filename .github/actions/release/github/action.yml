@@ -1,0 +1,38 @@
+name: release-github
+description: Pushes the git tag and updates Github appropriately
+inputs:
+  gh-token:
+    description: The GH token used for performing the release
+    required: true
+  release-dir:
+    description: Directory, where the semantic release binary and configuration is located
+    required: false
+    default: release
+outputs:
+  release-url:
+    description: The URL to the created release
+    value: ${{ steps.get-release-url.outputs.url }}
+  
+runs:
+  using: composite
+  steps:
+    - id: release-github
+      shell: bash
+      run: |
+        export GH_TOKEN=${{ inputs.gh-token }}
+        (cd ${{ inputs.release-dir }}; npx semantic-release)
+    - id: clean-after-prod-release
+      if: github.ref_name == 'main'
+      uses: ./.github/actions/helper/clean-after-prod-release
+      with:
+        gh-token: ${{ inputs.gh-token }}
+    - id: get-git-metadata
+      uses: ./.github/actions/helper/git-metadata
+    - id: get-release-url
+      shell: bash
+      run: |
+        if [ "${{ steps.get-git-metadata.outputs.current-tag }}" != "" ]; then
+           echo "url=https://github.com/${{ steps.get-git-metadata.outputs.owner }}/${{ steps.get-git-metadata.outputs.name }}/releases/tag/${{ steps.get-git-metadata.outputs.current-tag }}" >> $GITHUB_OUTPUT
+        else
+          echo "url=no-release" >> $GITHUB_OUTPUT
+        fi

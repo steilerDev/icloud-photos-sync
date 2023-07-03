@@ -1,0 +1,17 @@
+name: release-docs
+description: Releases the docs on Github Pages
+inputs:
+  gh-token:
+    description: The GH token used for performing the release
+    required: true
+outputs:
+  release-url:
+    description: The URL to the created release
+    value: ${{ steps.release-docs.outputs.page_url }}
+runs:
+  using: composite
+  steps:
+    - id: release-docs
+      uses: actions/deploy-pages@v2
+      with:
+        token: ${{ inputs.gh-token }}

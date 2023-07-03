@@ -1,0 +1,10 @@
+{
+  "description": "dependencies for creating a Github release",
+  "devDependencies": {
+    "@semantic-release/github": "^9.0.3",
+    "@semantic-release/release-notes-generator": "^11.0.3",
+    "conventional-changelog": "^4.0.0",
+    "conventional-changelog-conventionalcommits": "^6.1.0",
+    "semantic-release": "^21.0.5"
+  }
+}

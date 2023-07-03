@@ -1,0 +1,10 @@
+{
+    "plugins": [
+        [
+            "@semantic-release-plus/docker",
+            {
+                "name": "<updated within CI>"
+            }
+        ]
+    ]
+}

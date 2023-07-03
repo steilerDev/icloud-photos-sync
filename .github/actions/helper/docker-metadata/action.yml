@@ -1,0 +1,21 @@
+name: docker-metadata
+description: Retrieves the relevant Docker metadata
+outputs:
+  image-namespace:
+    description: The image namespace for CI built Docker images
+    value: ${{ steps.get-config.outputs.image-namespace }}
+  image-repository:
+    description: The image repository name for CI built Docker images
+    value: ${{ steps.get-config.outputs.image-repository }}
+  image-tag:
+    description: The image tag for CI built Docker images
+    value: ${{ steps.get-config.outputs.image-tag }}
+runs:
+  using: composite
+  steps:
+    - id: get-config
+      shell: bash
+      run: |
+        echo "image-namespace=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+        echo "image-repository=${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
+        echo "image-tag=latest-ci-build" >> $GITHUB_OUTPUT

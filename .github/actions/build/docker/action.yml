@@ -1,0 +1,45 @@
+name: build-docker
+description: Builds the cross platform docker containers and uploads the artifact
+inputs:
+  docker-path:
+    description: The path to the docker directory
+    required: false
+    default: docker
+  artifact-name:
+    description: The name of the uploaded docker artifact
+    required: false
+    default: docker-artifact
+runs:
+  using: composite
+  steps:
+    - id: get-docker-metadata
+      uses: ./.github/actions/helper/docker-metadata
+    - id: build-rootfs
+      shell: bash
+      run: tar -C ${{ inputs.docker-path }}/rootfs -czf ${{ inputs.docker-path }}/rootfs.tar.gz ./
+    - id: build-docker-amd64
+      uses: docker/build-push-action@v4
+      with:
+        context: ${{ inputs.docker-path }}
+        platforms: linux/amd64
+        tags: ${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
+        outputs: type=docker,dest=docker-amd64.tar
+    - id: build-docker-arm64
+      uses: docker/build-push-action@v4
+      with:
+        context: ${{ inputs.docker-path }}
+        platforms: linux/arm64
+        tags: ${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
+        outputs: type=docker,dest=docker-arm64.tar
+    - id: package-artifact
+      shell: bash
+      run: |
+        mkdir docker-artifact
+        gzip docker-*.tar
+        mv docker-*.tar.gz docker-artifact/
+        echo "artifact-path=docker-artifact/" >> $GITHUB_OUTPUT
+    - name: upload-artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.package-artifact.outputs.artifact-path }}

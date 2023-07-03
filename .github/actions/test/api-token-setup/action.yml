@@ -1,0 +1,32 @@
+name: test-api-token-setup
+description: Sets up the environment for acquiring an API token for GH runners
+inputs:
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+runs:
+  using: composite
+  steps:
+    - id: setup-node
+      uses: actions/setup-node@v3
+      with:
+        node-version-file: ${{ inputs.app-path }}/node-version
+        cache: npm
+        cache-dependency-path: ${{ inputs.app-path }}
+    - id: setup-npm
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm ci)
+    - id: build-app
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm run build)
+    - id: install-app
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm link)
+    - id: install-helper
+      shell: bash
+      run: |
+        chmod 755 $(pwd)/docker/rootfs/root/enter_mfa.sh
+        ln -s $(pwd)/docker/rootfs/root/enter_mfa.sh /usr/local/bin/enter_mfa
+        chmod 755 $(pwd)/docker/rootfs/root/resend_mfa.sh
+        ln -s $(pwd)/docker/rootfs/root/resend_mfa.sh /usr/local/bin/resend_mfa

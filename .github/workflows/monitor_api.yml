@@ -1,0 +1,39 @@
+name: '[monitor] iCloud API'
+run-name: "[${{ github.event_name == 'schedule' && 'monitor' || 'action' }}] iCloud API${{ github.event_name == 'workflow_dispatch' && ' token acqusition' || '' }}"
+# This workflow continuously runs the API Tests for this project twice a day, in order to check, if the remote API is still compatible with this tool.
+# If the MFA token of the account expires, this workflow can be executed manually in order to acquire a new token.
+
+on:
+  schedule:
+    - cron: '20 5,17 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  api-test:
+    name: api-test
+    if: github.event_name == 'schedule'
+    uses: ./.github/workflows/artifacts_test.yml
+    with:
+      methods: '["api"]'
+    secrets:
+      test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
+      test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
+      test-trust-token: ${{ secrets.TEST_TRUST_TOKEN }}
+  
+  acquire-token:
+    name: acquire-token
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    env:
+      APPLE_ID_USER: ${{ secrets.TEST_APPLE_ID_USER }}
+      APPLE_ID_PWD: ${{ secrets.TEST_APPLE_ID_PWD }}
+      PORT: 8080
+    steps:
+    - name: setup/checkout
+      uses: actions/checkout@v3
+    - name: setup/api-token
+      uses: ./.github/actions/test/api-token-setup
+    - name: action/api-token
+      uses: ./.github/actions/test/api-token

@@ -1,0 +1,30 @@
+name: '[event] PR'
+run-name: '[event] ${{ github.event.action }} "${{ github.event.pull_request.title }}" targeting {${{ github.event.pull_request.base.ref }}}'
+# Upon receiving a PR, this workflow will run all build and test checks required
+
+on:
+  pull_request:
+    branches:    
+      - main
+      - beta
+      - dev
+
+jobs:
+  build:
+    name: build
+    uses: ./.github/workflows/artifacts_build-release.yml
+    with:
+      all-artifacts: ${{ github.ref_name != 'dev' }} # Skip building associated artifacts on dev channel
+      release: false
+
+  test:
+    name: test
+    needs: build
+    uses: ./.github/workflows/artifacts_test.yml
+    permissions: {}
+    with:
+      methods: ${{ github.ref_name == 'dev' && '["unit"]' || '["unit", "e2e", "api"]' }}
+    secrets:
+      test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
+      test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
+      test-trust-token: ${{ secrets.TEST_TRUST_TOKEN }}

@@ -1,0 +1,45 @@
+name: build-docs
+description: Builds the docs using mkdocs
+inputs:
+  docs-path:
+    description: The path to the docs directory
+    required: false
+    default: docs
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+runs:
+  using: composite
+  steps:
+    - id: get-docs-config
+      shell: bash
+      run: | 
+        echo "site-dir=$(grep -oP "site_dir: '\K.+'" ${{ inputs.docs-path }}/mkdocs.yml | head -c-2)" >> $GITHUB_OUTPUT
+        echo "docs-dir=$(grep -oP "docs_dir: '\K.+'" ${{ inputs.docs-path }}/mkdocs.yml | head -c-2)" >> $GITHUB_OUTPUT
+    - id: get-npm-metadata
+      uses: ./.github/actions/helper/npm-metadata
+      with:
+        package: ${{ inputs.app-path }}/package.json
+    - id: setup-fs
+      shell: bash
+      run: cp README.md LICENSE ${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.docs-dir }}/
+    - id: build-cli-reference
+      shell: bash
+      run: ${{ github.action_path }}/build_cli.sh "${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.docs-dir }}" "${{ steps.get-npm-metadata.outputs.command }}"
+    - id: build-mkdocs
+      shell: bash
+      run: (cd ${{ inputs.docs-path }}; mkdocs build)
+    - id: bundle-coverage
+      uses: dawidd6/action-download-artifact@v2
+      with:
+        name: coverage-artifact
+        path: ${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.site-dir }}/dev/coverage
+        workflow: event_pr.yml
+        workflow_conclusion: ""
+        branch: beta
+        if_no_artifact_found: warn
+    - id: upload-artifact
+      uses: actions/upload-pages-artifact@v1
+      with:
+        path: ${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.site-dir }}

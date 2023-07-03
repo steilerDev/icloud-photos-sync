@@ -1,0 +1,51 @@
+name: release-github-setup
+description: Sets up the Github release environment
+inputs:
+  release-dir:
+    description: Directory, where the semantic release binary and configuration is located
+    required: false
+    default: release
+runs:
+  using: composite
+  steps:
+    - id: prepare-semantic-release
+      uses: ./.github/actions/helper/prepare-semantic-release
+      with:
+        release-config-dir: ${{ github.action_path }}
+        release-dir: ${{ inputs.release-dir }}
+    - id: configure-release
+      shell: bash
+      run: |
+        cat ${{ inputs.release-dir }}/.releaserc.json |\
+          jq '.plugins[0][1].assets[0].name = "${{ github.event.repository.name }}.npm.<%= nextRelease.version %>.tgz"' |\
+          jq '.plugins[0][1].assets[1].name = "${{ github.event.repository.name }}.docker.amd64.<%= nextRelease.version %>.tar.gz"' |\
+          jq '.plugins[0][1].assets[2].name = "${{ github.event.repository.name }}.docker.arm64.<%= nextRelease.version %>.tar.gz"' |\
+          sponge ${{ inputs.release-dir }}/.releaserc.json
+    - id: configure-dev-release
+      shell: bash
+      if: github.ref_name == 'dev'
+      run: |
+        # Disabling Github release plugin on dev release
+        cat ${{ inputs.release-dir }}/.releaserc.json |\
+          jq 'del(.plugins[0])' |\
+          sponge ${{ inputs.release-dir }}/.releaserc.json
+    - id: configure-beta-release
+      shell: bash
+      if: github.ref_name == 'beta'
+      run: |
+        cat ${{ inputs.release-dir }}/.releaserc.json |\
+          jq ".plugins[0][1].successComment = \"This \${issue.pull_request ? 'pull request' : 'issue'} should be resolved with version [v\${nextRelease.version}](\${releases[0].url}), please confirm.\"" |\
+          jq '.plugins[0][1].releasedLabels = "previewed <%= nextRelease.version %>"' |\
+          sponge ${{ inputs.release-dir }}/.releaserc.json
+    - id: configure-main-release
+      shell: bash
+      if: github.ref_name == 'main'
+      run: |
+        cat ${{ inputs.release-dir }}/.releaserc.json |\
+          jq ".plugins[0][1].successComment = \"This \${issue.pull_request ? 'pull request' : 'issue'} was resolved with version [v\${nextRelease.version}](\${releases[0].url}).\"" |\
+          jq '.plugins[0][1].releasedLabels = "released <%= nextRelease.version %>"' |\
+          sponge ${{ inputs.release-dir }}/.releaserc.json
+    - id: download-artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: ${{ inputs.release-dir }}/artifacts

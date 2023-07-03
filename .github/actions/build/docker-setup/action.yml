@@ -1,0 +1,26 @@
+name: build-docker-setup
+description: Sets up the environment for cross platform docker build action
+inputs:
+  docker-path:
+    description: The path to the docker directory
+    required: false
+    default: docker
+  app-artifact-name:
+    description: The name of the uploaded app artifact
+    required: false
+    default: app-artifact
+runs:
+  using: composite
+  steps:
+    - id: setup-qemu
+      uses: docker/setup-qemu-action@v2
+    - id: setup-buildx
+      uses: docker/setup-buildx-action@v2
+    - id: setup-app-artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.app-artifact-name }}
+        path: ${{ inputs.docker-path }}/rootfs/opt/
+    - id: debug
+      shell: bash
+      run: ls -al ${{ inputs.docker-path }}/rootfs/opt/
