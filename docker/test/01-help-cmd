@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Help command working"
-docker run icloud-photos-sync:latest help > /dev/null
+docker run $IMAGE_NAME help > /dev/null
 if [ $? -eq 0 ]; then
     echo " - Pass"
 else

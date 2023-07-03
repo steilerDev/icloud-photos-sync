@@ -6,7 +6,7 @@ export const setupLogger: () => void = jest.fn();
 /**
  * Mocked log file name
  */
-export const logFile = `test`;
+export const logFilePath = `test`;
 
 /**
  * @returns The default logger silenced

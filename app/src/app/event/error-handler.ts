@@ -1,7 +1,7 @@
 import * as bt from 'backtrace-node';
 import {EventEmitter} from 'events';
 import * as PACKAGE_INFO from '../../lib/package.js';
-import {getLogger, logFile} from "../../lib/logger.js";
+import {getLogger, logFilePath} from "../../lib/logger.js";
 import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
 import {EventHandler} from './event-handler.js';
@@ -141,7 +141,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
             'icps.rootErrorCode': err.getRootErrorCode(),
-        }, [logFile]);
+        }, [logFilePath]);
 
         await this.btClient.sendAsync(report);
         return errorUUID;

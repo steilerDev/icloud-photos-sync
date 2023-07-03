@@ -3,7 +3,6 @@ import chalk from 'chalk';
 import * as fs from 'fs';
 import * as path from 'path';
 import {iCPSAppOptions} from '../app/factory.js';
-import { getDefaultSettings } from 'http2';
 
 const LOG_FILE_NAME = `.icloud-photos-sync.log`;
 
@@ -41,10 +40,9 @@ export function setupLogger(options: iCPSAppOptions): void {
         "base": LOG_FILE_NAME,
     });
 
-
     try {
-        if(options.logToCli && !options.silent) {
-            throw new Error(`Disabling logging to file, due to logToCli flag`)
+        if (options.logToCli && !options.silent) {
+            throw new Error(`Disabling logging to file, due to logToCli flag`);
         }
 
         const logPath = path.dirname(logFilePath);
@@ -53,7 +51,7 @@ export function setupLogger(options: iCPSAppOptions): void {
         }
 
         // Try opening the file - truncate if exists
-        const logFd = fs.openSync(logFilePath, "w")
+        const logFd = fs.openSync(logFilePath, `w`);
 
         log.methodFactory = function (methodName, _logLevel, loggerName) {
             return function (message) {
@@ -61,16 +59,15 @@ export function setupLogger(options: iCPSAppOptions): void {
                 fs.appendFileSync(logFd, prefixedMessage);
             };
         };
-
     } catch (err) {
-        console.warn(`Unable to write log to file ${logFilePath}: ${err.message} - using console output`)
+        console.warn(`Unable to write log to file ${logFilePath}: ${err.message} - using console output`);
         const originalFactory = log.methodFactory;
-        log.methodFactory = function(methodName, logLevel, loggerName) {
-            return function(...message: any[]) {
+        log.methodFactory = function (methodName, logLevel, loggerName) {
+            return function (...message: any[]) {
                 const prefixedMessage = `${chalk.gray(`[${new Date().toLocaleString()}]`)} ${methodName.toUpperCase()} ${chalk.green(`${String(loggerName)}: ${message}`)}`;
                 originalFactory(methodName, logLevel, loggerName)(prefixedMessage);
-            }
-        }
+            };
+        };
     }
 
     log.setLevel(options.logLevel as log.LogLevelDesc);
