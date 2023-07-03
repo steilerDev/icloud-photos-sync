@@ -36,6 +36,10 @@ const EXT = {
     'com.olympus.raw-image': `orf`,
     'public.avi': `avi`,
     'com.adobe.pdf': `pdf`,
+    'public.avchd-mpeg-2-transport-stream': `mts`,
+    'com.adobe.illustrator.ai-image': `ai`,
+    'com.canon.cr3-raw-image': `cr3`,
+    'com.olympus.or-raw-image': `orf`,
 };
 
 /**
