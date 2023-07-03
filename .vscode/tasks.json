@@ -11,7 +11,7 @@
 		},
 		{
 			"type": "shell",
-			"command": "/home/coder/.local/bin/mkdocs",
+			"command": "python -m mkdocs",
 			"args": [
 				"build"
 			],
@@ -19,7 +19,7 @@
 				"reveal": "always"
 			},
 			"options": {
-				"cwd": "pages/"
+				"cwd": "docs/"
 			},
 			"label": "Build Page",
 			"group": "build"
