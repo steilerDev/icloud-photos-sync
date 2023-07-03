@@ -142,8 +142,7 @@ export abstract class iCloudApp extends iCPSApp {
         }
 
         try {
-            await this.icloud.authenticate();
-            return;
+            return await this.icloud.authenticate();
         } catch (err) {
             throw new iCPSError(AUTH_ERR.FAILED)
                 .addCause(err);
@@ -212,7 +211,6 @@ export class TokenApp extends iCloudApp {
             await super.run(...eventHandlers);
             this.icloud.auth.validateAccountTokens();
             this.icloud.emit(ICLOUD.EVENTS.TOKEN, this.icloud.auth.iCloudAccountTokens.trustToken);
-            return;
         } catch (err) {
             throw new iCPSError(APP_ERR.TOKEN)
                 .addCause(err);
@@ -222,6 +220,9 @@ export class TokenApp extends iCloudApp {
                 await this.clean();
             }
         }
+
+        // Has to return something (TS2355)
+        return true;
     }
 }
 
@@ -315,8 +316,7 @@ export class ArchiveApp extends SyncApp {
         registerObjectsToEventHandlers(eventHandlers, this.archiveEngine);
         try {
             const [remoteAssets] = await super.run(...eventHandlers) as [Asset[], Album[]];
-            await this.archiveEngine.archivePath(this.archivePath, remoteAssets);
-            return;
+            return await this.archiveEngine.archivePath(this.archivePath, remoteAssets);
         } catch (err) {
             throw new iCPSError(APP_ERR.ARCHIVE)
                 .addCause(err).addContext(`archivePath`, this.archivePath);
