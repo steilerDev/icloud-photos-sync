@@ -11,7 +11,9 @@ Find examples for the various deployment options within this guide.
 
     Docker images are available on [DockerHub](https://hub.docker.com/r/steilerdev/icloud-photos-sync).
 
-    The `latest` tag should always represent the latest stable release, whereas the `nightly` tag offers the latest development build, which might not be stable.
+    The `latest` tag should always represent the latest stable release, whereas the `beta` tag provides a semi-stable preview of the upcoming release, while the `nightly` tag offers the latest development build, which might not be stable.
+
+    The Docker image is also build for the arm64 platform (however [publishing this version is not possible through the current CI setup](https://github.com/docker/buildx/issues/1152)). The tar archive of the image is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be loaded using `docker load --input <fileName>`.
 
     === "docker compose"
         
@@ -51,9 +53,14 @@ Find examples for the various deployment options within this guide.
         docker pull steilerdev/icloud-photos-sync:latest
         ```
 
+        Alternatively the docker image tar archive is available for download from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be installed using `docker load --input <fileName>`
+
 === "node"
 
-    When setting up the environment, please keep the [currently recommended NodeJS version](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/.node-version) in mind.
+    When setting up the environment, please keep the [currently recommended NodeJS version](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/node-version) in mind.
+
+    The `latest` tag should always represent the latest stable release, whereas the `beta` tag provides a semi-stable preview of the upcoming release, while the `nightly` tag offers the latest development build, which might not be stable.
+
 
     === "NPM"
 
@@ -62,6 +69,8 @@ Find examples for the various deployment options within this guide.
         ```
         npm install -g icloud-photos-sync
         ```
+
+        Alternatively the `npm pack` tar archive is available for download from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be installed using `npm install -g <fileName>`
 
     === "From Source"
 
@@ -73,6 +82,7 @@ Find examples for the various deployment options within this guide.
         npm install
         npm run build
         ```
+
 
 ## Authentication
 

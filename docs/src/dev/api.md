@@ -4,7 +4,7 @@ This is a high level documentation of the reverse engineered iCloud API, used in
 
 ## Postman Collection
 
-In the debugging process, a [Postman Collection](https://github.com/steilerDev/icloud-photos-sync/tree/main/postman) has been created, in order to interact freely with the API.
+In the debugging process, a [Postman Collection](https://github.com/steilerDev/icloud-photos-sync/tree/main/docs/postman) has been created, in order to interact freely with the API.
 
 In order to use it, `username` and `password` variables have to be set in the selected environment. Make sure that the Collection Variables are reset upon changing the environment. Also if you want to reset the current session, reset those variables and restart the authentication process
 

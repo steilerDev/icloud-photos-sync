@@ -5,6 +5,8 @@ site_author: Frank Steiler
 copyright: steilerDev
 repo_url: https://github.com/steilerDev/icloud-photos-sync
 edit_uri: ""
+docs_dir: 'src'
+site_dir: 'site'
 nav:
   - 'Home': README.md
   - 'Get Started': get-started.md
@@ -23,7 +25,6 @@ nav:
     - 'Test & Deployment':
       - 'Test Environment': dev/test-environment.md
       - 'Coverage': dev/coverage/index.html
-  - 'Changelog': CHANGELOG.md
 
 theme:
   name: material

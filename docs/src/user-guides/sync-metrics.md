@@ -14,7 +14,7 @@ Set the `export-metrics` flag, in order to activate the exporter. The file will 
 
 ## Grafana Dashboard
 
-After importing the metrics into an InfluxDB through telegraf, you can use Grafana to visualize the data. The following example is [available for download](https://github.com/steilerDev/icloud-photos-sync/tree/main/grafana):
+After importing the metrics into an InfluxDB through telegraf, you can use Grafana to visualize the data. The following example is [available for download](https://github.com/steilerDev/icloud-photos-sync/tree/main/docs/grafana):
 
 [![Dashboard](../assets/grafana-dashboard.png)](../assets/grafana-dashboard.png)
 
