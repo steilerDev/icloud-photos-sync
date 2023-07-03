@@ -122,7 +122,7 @@ describe(`Load state`, () => {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
-                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
                     },
                 },
@@ -135,7 +135,7 @@ describe(`Load state`, () => {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
-                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
                     },
                 },
@@ -148,13 +148,13 @@ describe(`Load state`, () => {
                         "deFEyox97ecdknADe0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "deFEeee3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
                         "kkiceenhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
-                        "Aah0dUnasdfejAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
+                        "Aah0dUnasdfejAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                     },
                     [sharedAssetDir]: {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
-                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.pdf": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
                     },
                 },
