@@ -12,7 +12,7 @@
     "clean": "rm -rf bin/ coverage/ doc/ node_modules/ package-lock.json",
     "prebuild": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
     "build": "npx tsc",
-    "doc": "npx typedoc",
+    "typedoc": "npx typedoc --plugin typedoc-plugin-markdown --plugin typedoc-github-wiki-theme",
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/unit/",
     "test-api": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/api/",
     "execute": "node bin/main.js"

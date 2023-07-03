@@ -12,11 +12,17 @@ import * as fs from "fs";
 import path from "path";
 import {iCPSAppOptions} from "../factory.js";
 
-type InfluxLineProtocolFieldSet = {
+/**
+ * The InfluxLineProtocol field set type
+ */
+export type InfluxLineProtocolFieldSet = {
     [fieldKey: string]: string
 }
 
-type InfluxLineProtocolTagSet = {
+/**
+ * The InfluxLineProtocol tag set type
+ */
+export type InfluxLineProtocolTagSet = {
     [tagKey: string]: string
 }
 
@@ -74,7 +80,7 @@ const FIELDS = {
 /**
  * This class represents a measurement point using the Influx Line Protocol
  */
-class InfluxLineProtocolPoint {
+export class InfluxLineProtocolPoint {
     /**
      * Default logger for the class
      */
