@@ -78,7 +78,7 @@ export class DaemonApp extends iCPSApp {
         this.job = new Cron(this.options.schedule, async () => {
             await this.performScheduledSync(eventHandlers);
         });
-        this.event.emit(DaemonAppEvents.EVENTS.SCHEDULED, this.job?.next());
+        this.event.emit(DaemonAppEvents.EVENTS.SCHEDULED, this.job?.nextRun());
     }
 
     /**
@@ -90,10 +90,10 @@ export class DaemonApp extends iCPSApp {
         try {
             this.event.emit(DaemonAppEvents.EVENTS.START);
             await syncApp.run(...eventHandlers);
-            this.event.emit(DaemonAppEvents.EVENTS.DONE, this.job?.next());
+            this.event.emit(DaemonAppEvents.EVENTS.DONE, this.job?.nextRun());
         } catch (err) {
             this.event.emit(HANDLER_EVENT, new iCPSError(APP_ERR.DAEMON).addCause(err));
-            this.event.emit(DaemonAppEvents.EVENTS.RETRY, this.job?.next());
+            this.event.emit(DaemonAppEvents.EVENTS.RETRY, this.job?.nextRun());
         } finally { // Cleaning up
             syncApp = undefined;
         }
