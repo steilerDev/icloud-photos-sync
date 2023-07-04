@@ -9,6 +9,8 @@ import {ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR} from '../error/error-codes.js';
 import {iCPSAppOptions} from '../factory.js';
 import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
 import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
+import fs from 'fs/promises'
+import path from 'path';
 
 /**
  * The event emitted by classes of this application and picked up by the handler.
@@ -137,14 +139,60 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         }
 
         const errorUUID = randomUUID();
+
+        const attachment = await this.prepareLogFile(logFilePath)
+
         const report = this.btClient.createReport(err, {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
             'icps.rootErrorCode': err.getRootErrorCode(),
-        }, [logFilePath]);
+        }, attachment);
 
         await this.btClient.sendAsync(report);
         return errorUUID;
+    }
+
+    /**
+     * This function extracts relevant parts of the log file, in order to streamline error reporting
+     * @param currentLogFilePath - The file path to the current log file
+     * @returns - An array, containing the file path to the processed log file, or an empty array if the log file could not be prepared
+     */
+    async prepareLogFile(currentLogFilePath: string): Promise<string[]> {
+        const maxNumberOfLines = 200
+        let tmpLogFileFd: fs.FileHandle
+        const result: string[] = []
+
+        try {
+            // Reading current log file and determining length
+            const data = (await fs.readFile(currentLogFilePath, {encoding: 'utf8'})).split('\n')
+            const totalNumberOfLines = data.length
+            
+            // If there is nothing to truncate, we return the original log file
+            if(totalNumberOfLines < maxNumberOfLines) {
+                return [currentLogFilePath]
+            }
+
+            // Creating temp log file, overwriting existing
+            const tmpLogFile = `${currentLogFilePath}.tmp`
+            tmpLogFileFd = await fs.open(tmpLogFile, 'w')
+
+            // Noting how many lines will be truncated
+            await fs.appendFile(tmpLogFileFd, `########################`)
+            await fs.appendFile(tmpLogFileFd, `# Truncated ${totalNumberOfLines - maxNumberOfLines} lines`)
+            await fs.appendFile(tmpLogFileFd, `########################`)
+
+            // Writing temp file
+            for (let i = 0; i < totalNumberOfLines; i++) {
+                if(i > (totalNumberOfLines - maxNumberOfLines)) {
+                    await fs.appendFile(tmpLogFileFd, data[i])
+                }
+            }
+            
+            result.push(tmpLogFile)
+        } finally {
+            await tmpLogFileFd?.close()
+            return result
+        }
     }
 
     /**
