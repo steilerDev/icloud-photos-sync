@@ -18,11 +18,14 @@
             "scope": "workspace"
         }
     },
+    "github-actions.remote-name": "origin",
+    "github-actions.workflows.pinned.refresh.enabled": true,
+    "github-actions.workflows.pinned.refresh.interval": 90,
     "github-actions.workflows.pinned.workflows": [
         ".github/workflows/event_pr.yml",
         ".github/workflows/event_push.yml"
     ],
     "jest.jestCommandLine": "npm run test --",
     "jest.autoRun": "off",
-    "jest.rootPath": "app"
+    "jest.rootPath": "app",
 }

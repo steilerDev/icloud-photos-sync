@@ -17,7 +17,6 @@ nav:
     - 'Error & Crash Reporting': user-guides/error-reporting.md
     - 'Security': user-guides/security.md
   - 'Development Resources':
-    - 'Milestone Plan': https://github.com/steilerDev/icloud-photos-sync/milestones
     - 'Motivation': dev/motivation.md
     - 'iCloud API': dev/api.md
     - 'Local File Structure': dev/local-file-structure.md
