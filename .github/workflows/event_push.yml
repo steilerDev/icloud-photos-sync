@@ -1,0 +1,24 @@
+name: '[event] push'
+run-name: '[event] push to {${{ github.ref_name }}}: ${{ github.event.head_commit.message }}'
+# Upon receiving a push, this workflow will deploy to the appropriate channels
+
+on: 
+  push:
+    branches: # Run on every push to dev
+      - 'dev'
+      - 'beta'
+      - 'main'
+    tags-ignore:
+      - '**'
+
+jobs:
+  ci:
+    name: ci
+    uses: ./.github/workflows/artifacts_build-release.yml
+    with:
+      all-artifacts: ${{ github.ref_name == 'main' }} # Build and release all artifacts only on main branch
+      release: true
+    secrets:
+      docker-token: ${{ secrets.DOCKER_TOKEN }}
+      npm-token: ${{ secrets.NPM_TOKEN }}
+      gh-token: ${{ secrets.GITHUB_TOKEN }}

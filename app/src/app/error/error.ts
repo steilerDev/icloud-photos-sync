@@ -1,6 +1,9 @@
 import {ErrorStruct, ERR_UNKNOWN} from "./error-codes.js";
 
-type Severity = `WARN` | `FATAL`
+/**
+ * Severity of the error
+ */
+export type Severity = `WARN` | `FATAL`
 
 /**
  * Base class for this tool's error type

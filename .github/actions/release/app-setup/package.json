@@ -1,0 +1,10 @@
+{
+  "description": "dependencies for releasing the npm application through semantic release",
+  "devDependencies": {
+    "@google/semantic-release-replace-plugin": "^1.2.0",
+    "@semantic-release/release-notes-generator": "^11.0.3",
+    "conventional-changelog": "^4.0.0",
+    "conventional-changelog-conventionalcommits": "^6.1.0",
+    "semantic-release": "^21.0.5"
+  }
+}

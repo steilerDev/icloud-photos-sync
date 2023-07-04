@@ -1,0 +1,54 @@
+{
+    "plugins": [
+      [
+        "@semantic-release/github",
+        {
+          "assets": [
+            { 
+                "path": "artifacts/app-artifact/npm-pack.tgz", 
+                "name": "<updated within CI>",
+                "label": "NPM Package Tarball" 
+            },{ 
+                "path": "artifacts/docker-artifact/docker-amd64.tar.gz", 
+                "name": "<updated within CI>",
+                "label": "Docker Image Tarball (amd64)" 
+            },{ 
+                "path": "artifacts/docker-artifact/docker-arm64.tar.gz", 
+                "name": "<updated within CI>",
+                "label": "Docker Image Tarball (arm64)" 
+            }
+          ],
+          "successComment": "<updated within CI>",
+          "releasedLabels": "<updated within CI>",
+          "failComment": false,
+          "failTitle": false,
+          "labels": false,
+          "addReleases": "bottom"
+        }
+      ],[
+        "@semantic-release/release-notes-generator",
+        {
+            "writerOpts": {
+                "commitsSort": ["subject"]
+            },
+            "preset": "conventionalcommits",
+            "presetConfig": {
+              "types": [
+                  { "type": "majorfeat",  "section": "Features",                 "hidden": false},
+                  { "type": "feat",       "section": "Features",                 "hidden": false},
+                  { "type": "fix",        "section": "Bug Fixes",                "hidden": false},
+                  { "type": "refactor",   "section": "Code Refactoring",         "hidden": false},
+                  { "type": "perf",       "section": "Performance Improvements", "hidden": false},
+                  { "type": "test",       "section": "Tests",                    "hidden": false},
+                  { "type": "build",      "section": "Build System",             "hidden": false},
+                  { "type": "ci",         "section": "CI Pipeline",              "hidden": false},
+                  { "type": "chore",      "section": "Maintenance",              "hidden": false},
+                  { "type": "docs",       "section": "Documentation",            "hidden": false},
+                  { "type": "revert",     "section": "Reverts",                  "hidden": false},
+                  { "type": "style",      "section": "Styles",                   "hidden": true}
+              ]
+            }
+        }
+      ]
+    ]
+}

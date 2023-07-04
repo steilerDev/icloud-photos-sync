@@ -1,0 +1,41 @@
+name: build-docs-setup
+description: Sets up the environment for the docs build action using mkdocs
+inputs:
+  docs-path:
+    description: The path to the mkdocs directory
+    required: false
+    default: docs
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+  app-artifact-name:
+    description: The name of the uploaded app artifact
+    required: false
+    default: app-artifact
+runs:
+  using: composite
+  steps:
+    - id: setup-python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9
+        cache: pip
+        cache-dependency-path: ${{ inputs.docs-path }}
+    - id: setup-pip
+      shell: bash
+      run: pip install -r ${{ inputs.docs-path }}/requirements.txt
+    - id: setup-node
+      uses: actions/setup-node@v3
+      with:
+        node-version-file: ${{ inputs.app-path }}/node-version
+    - id: download-app-artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.app-artifact-name }}
+        path: ${{ inputs.app-path }}
+    - id: install-app-artifact
+      shell: bash
+      run: |
+        tree -a ${{ inputs.app-path }}
+        npm install -g ./${{ inputs.app-path }}/npm-pack.tgz

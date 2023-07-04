@@ -1,0 +1,25 @@
+name: test-e2e-setup
+description: Sets up the environment for the E2E docker test action
+inputs:
+  docker-path:
+    description: The path to the docker directory
+    required: false
+    default: docker
+  artifact-name:
+    description: The name of the uploaded docker artifact
+    required: false
+    default: docker-artifact
+runs:
+  using: composite
+  steps:
+    - id: download-docker-artifact 
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: docker-artifact
+    - id: setup-docker-artifact
+      shell: bash
+      run: docker load --input docker-artifact/docker-amd64.tar.gz
+    - name: setup-tests
+      shell: bash
+      run: chmod +x ${{ inputs.docker-path }}/test/*

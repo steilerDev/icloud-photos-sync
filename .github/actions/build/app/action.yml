@@ -1,0 +1,27 @@
+name: build-app
+description: Builds the JS application and uploads the artifact
+inputs:
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+  artifact-name:
+    description: The name of the uploaded app artifact
+    required: false
+    default: app-artifact
+runs:
+  using: composite
+  steps:
+    - id: build-app
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm run build)
+    - id: package-artifact
+      shell: bash
+      run: |
+        fileName=$(cd ${{ inputs.app-path }}; npm pack)
+        mv ${{ inputs.app-path }}/$fileName npm-pack.tgz
+    - id: upload-artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: npm-pack.tgz

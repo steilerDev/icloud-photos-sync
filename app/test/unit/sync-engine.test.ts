@@ -393,7 +393,7 @@ describe(`Processing remote records`, () => {
             "recordName": `4E921FD1-74AA-42EE-8601-C3E9B96DA089`,
         } as CPLAsset];
 
-        expect(() => SyncEngine.convertCPLAssets(cplAssets, cplMasters)).toThrowError(`Error while converting asset`);
+        expect(() => SyncEngine.convertCPLAssets(cplAssets, cplMasters)).toThrow(/^Error while converting asset$/);
     });
 
     test(`Converting Albums - E2E Flow`, async () => {
@@ -515,8 +515,8 @@ describe(`Diffing state`, () => {
 
         test(`Only modified changed`, () => {
             const remoteAssets = [
-                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 142, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 142, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 1420, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 1420, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
                 new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
                 new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             ];
@@ -1330,7 +1330,7 @@ describe(`Handle processing queue`, () => {
                         new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
                         new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-2`),
                     ];
-                    expect(() => Album.distanceToRoot(new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-2`), brokenQueue)).toThrowError(`Unable to determine distance to root, no link to root!`);
+                    expect(() => Album.distanceToRoot(new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-2`), brokenQueue)).toThrow(/^Unable to determine distance to root, no link to root!$/);
                 });
             });
 

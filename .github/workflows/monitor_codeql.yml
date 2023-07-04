@@ -1,0 +1,22 @@
+name: '[monitor] CodeQL'
+# Continuous CodeQL scans, to catch any potential security issues
+
+on:
+  schedule:
+    - cron: '30 1 * * 0'
+
+permissions:
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/codeql
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+      - name: action/codeql
+        uses: github/codeql-action/analyze@v2

@@ -1,0 +1,15 @@
+name: test-api-token
+description: Retrieves a valid API token for GH runners
+inputs:
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+runs:
+  using: composite
+  steps:
+    - id: access-runner
+      uses: lhotari/action-upterm@v1
+      with:
+        limit-access-to-users: steilerDev
+        upterm-server: ssh://uptermd.upterm.dev:22

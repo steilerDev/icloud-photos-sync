@@ -5,6 +5,8 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "dev"
+    commit-message:
+      prefix: "chore: [ci] "
     schedule:
       interval: "weekly"
       day: "saturday"
@@ -15,6 +17,8 @@ updates:
   - package-ecosystem: "npm"
     directory: "/app"
     target-branch: "dev"
+    commit-message:
+      prefix: "chore: [app] "
     schedule:
       interval: "weekly"
       day: "saturday"
@@ -23,23 +27,29 @@ updates:
     ignore:
       - dependency-name: "typedoc*"
         update-types: ["version-update:semver-minor"] # ignore minor version for something like typedoc
+      - dependency-name: "@types/node"
+        versions: ["19.x.x", "20.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
   
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"
     directory: "/docker"
     target-branch: "dev"
+    commit-message:
+      prefix: "chore: [docker] "
     schedule:
       interval: "weekly"
       day: "saturday"
       timezone: "Europe/Berlin"
     ignore:
       - dependency-name: "node"
-        versions: ["19.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
+        versions: ["19.x.x", "20.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
 
   # Maintain dependencies for pip (docs site)
   - package-ecosystem: "pip"
-    directory: "/pages"
+    directory: "/docs"
     target-branch: "dev"
+    commit-message:
+      prefix: "chore: [docs] "
     schedule:
       interval: "weekly"
       day: "saturday"

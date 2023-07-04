@@ -1,0 +1,29 @@
+name: test-e2e
+description: E2E tests the docker application
+inputs:
+  docker-path:
+    description: The path to the docker directory
+    required: false
+    default: docker
+  test-apple-id-user:
+    description: The test user's Apple ID
+    required: true
+  test-apple-id-pwd:
+    description: The test user's Apple ID password
+    required: true
+  test-trust-token:
+    description: The test user's trust token
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: get-docker-metadata
+      uses: ./.github/actions/helper/docker-metadata
+    - id: test-docker
+      shell: bash
+      run: |
+        export TEST_APPLE_ID_USER=${{ inputs.test-apple-id-user }}
+        export TEST_APPLE_ID_PWD=${{ inputs.test-apple-id-pwd }}
+        export TEST_TRUST_TOKEN=${{ inputs.test-trust-token }}
+        export IMAGE_NAME=${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
+        run-parts -v --exit-on-error ${{ inputs.docker-path }}/test

@@ -26,14 +26,14 @@ function assertMetric {
     if grep -Fq "$1" $METRICS_FILE; then
         echo " - PASS: $1"
     else
-        echo " - FAIL: $1"
+        echo " - FAIL: Expected '$1', but got:"
+        cat $METRICS_FILE
         exit 1
     fi
 }
 
 function runSync {
-    #docker run -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) steilerdev/icloud-photos-sync:nightly \
-    docker run -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) icloud-photos-sync:latest \
+    docker run -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) $IMAGE_NAME \
         -u "$TEST_APPLE_ID_USER" \
         -p "$TEST_APPLE_ID_PWD" \
         -T "$TEST_TRUST_TOKEN" \

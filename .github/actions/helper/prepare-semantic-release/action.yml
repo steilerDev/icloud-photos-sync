@@ -1,0 +1,63 @@
+name: prepare-semantic-release
+description: Extracts metadata from the npm package
+inputs:
+  release-config-dir:
+    description: The location of the release configuration
+    required: true
+  release-dir:
+    description: The target dir, in which the release will be performed
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: setup-dependencies
+      shell: bash
+      run: sudo apt-get install -y moreutils
+    - id: setup-fs
+      shell: bash
+      run: |
+        mkdir ${{ inputs.release-dir }}
+
+        cp ${{ inputs.release-config-dir }}/package.json \
+          ${{ inputs.release-config-dir }}/package-lock.json \
+          ${{ inputs.release-config-dir }}//../node-version \
+          ${{ inputs.release-dir }}/
+
+        cat ${{ inputs.release-config-dir}}/releaserc.json |\
+          jq '.branches = [
+              "main",
+              {
+                  "name": "beta", "prerelease": true 
+              }, {
+                  "name": "dev", "channel": "nightly", "prerelease": "nightly"
+              }
+            ]' |\
+          jq '.plugins += [[
+            "@semantic-release/commit-analyzer",
+            {
+                "preset": "conventionalcommits",
+                "releaseRules": [
+                    { "type": "majorfeat",    "release": "major" },
+                    { "type": "feat",         "release": "minor" },
+                    { "type": "fix",          "release": "patch" },
+                    { "type": "refactor",     "release": "patch" },
+                    { "type": "perf",         "release": "patch" },
+                    { "type": "test",         "release": "patch" },
+                    { "type": "build",        "release": "patch" },
+                    { "type": "ci",           "release": "patch" },
+                    { "type": "chore",        "release": "patch" },
+                    { "type": "docs",         "release": "patch" },
+                    { "type": "style",        "release": false }
+                ]
+            }
+        ]]' |\
+        sponge ${{ inputs.release-dir }}/.releaserc.json
+    - id: setup-node
+      uses: actions/setup-node@v3
+      with:
+        node-version-file: ${{ inputs.release-dir }}/node-version
+        cache: npm
+        cache-dependency-path: ${{ inputs.release-dir }}
+    - id: setup-npm
+      shell: bash
+      run: (cd ${{ inputs.release-dir }}; npm ci)

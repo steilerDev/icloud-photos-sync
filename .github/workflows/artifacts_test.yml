@@ -1,0 +1,64 @@
+name: 'Artifacts: Test'
+# This workflow will test the requested artifacts
+
+on:
+  workflow_call:
+    inputs:
+      methods:
+        description: 'An array of test methods that need to be run. Will be read using fromJSON(). Allowed values: ["e2e", "unit"]'
+        required: true
+        type: string
+    secrets:
+      test-apple-id-user: 
+        description: The username of the Apple ID test user, used during E2E tests
+        required: false
+      test-apple-id-pwd:
+        description: The password of the Apple ID test user, used during E2E tests
+        required: false
+      test-trust-token: 
+        description: The validated trust token of the Apple ID test user
+        required: false
+
+permissions: {}
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    if: contains(fromJSON(inputs.methods), 'unit')
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/test-unit
+        uses: ./.github/actions/test/unit-setup
+      - name: action/test-unit
+        uses: ./.github/actions/test/unit
+
+  e2e:
+    runs-on: ubuntu-latest
+    if: contains(fromJSON(inputs.methods), 'e2e')
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/test-e2e
+        uses: ./.github/actions/test/e2e-setup
+      - name: action/test-e2e
+        uses: ./.github/actions/test/e2e
+        with:
+          test-apple-id-user: ${{ secrets.test-apple-id-user }}
+          test-apple-id-pwd: ${{ secrets.test-apple-id-pwd }}
+          test-trust-token: ${{ secrets.test-trust-token }}
+  
+  api:
+    runs-on: ubuntu-latest
+    if: contains(fromJSON(inputs.methods), 'api')
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/test-api
+        uses: ./.github/actions/test/api-setup
+      - name: action/test-api
+        uses: ./.github/actions/test/api
+        with:
+          test-apple-id-user: ${{ secrets.test-apple-id-user }}
+          test-apple-id-pwd: ${{ secrets.test-apple-id-pwd }}
+          test-trust-token: ${{ secrets.test-trust-token }}

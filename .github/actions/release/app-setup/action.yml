@@ -1,0 +1,28 @@
+name: release-app-setup
+description: Sets up the app release environment
+inputs:
+  release-dir:
+    description: Directory, where the semantic release binary and configuration is located
+    required: false
+    default: release
+  artifact-name:
+    description: The name of the uploaded app artifact
+    required: false
+    default: app-artifact
+runs:
+  using: composite
+  steps:
+    - id: prepare-semantic-release
+      uses: ./.github/actions/helper/prepare-semantic-release
+      with:
+        release-config-dir: ${{ github.action_path }}
+        release-dir: ${{ inputs.release-dir }}
+    - id: download-app-artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.release-dir }}/app
+    - id: setup-app-artifact
+      shell: bash
+      run: (cd ${{ inputs.release-dir }}/app; tar --strip-components 1 -xf *.tgz package/; rm -f *.tgz;)
+

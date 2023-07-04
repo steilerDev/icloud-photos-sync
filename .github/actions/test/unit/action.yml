@@ -1,0 +1,25 @@
+name: test-unit
+description: Unit tests the JS application and uploads the coverage report
+inputs:
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+  artifact-name:
+    description: The name of the uploaded coverage artifact
+    required: false
+    default: coverage-artifact
+runs:
+  using: composite
+  steps:
+    - id: test-unit
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm run test)
+    - id: make-artifact-unique
+      shell: bash
+      run: echo $(date) > ${{ inputs.app-path }}/coverage/builddate.txt
+    - id: upload-artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.app-path }}/coverage/

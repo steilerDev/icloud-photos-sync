@@ -1,7 +1,7 @@
 /**
  * Possible error names
  */
-type ErrorName =
+export type ErrorName =
     `ArchiveError` |
     `iCPSError` |
     `InterruptError` |

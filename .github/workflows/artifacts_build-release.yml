@@ -1,0 +1,179 @@
+name: 'Artifacts: Build & Release'
+# This workflow will build the requested artifacts and optionally release them
+
+on:
+  workflow_call:
+    inputs:
+      all-artifacts:
+        description: This flag indicates if only the app artifacts should be build/released or all available artifacts
+        required: true
+        type: boolean
+      release:
+        description: Flag to indicate if the respective artifacts should be deployed
+        required: true
+        type: boolean
+    secrets:
+        docker-token:
+          description: The Docker token used for releasing the image
+          required: false
+        npm-token:
+          description: The npm token used for releasing the package
+          required: false
+        gh-token:
+          description: The Github Token, in order to deploy the wiki asset
+          required: false
+
+jobs:
+  app-build:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/build-app
+        uses: ./.github/actions/build/app-setup
+      - name: action/build-app
+        uses: ./.github/actions/build/app
+        id: build-app
+  
+  app-release:
+    runs-on: ubuntu-latest
+    if: inputs.release
+    needs: app-build
+    permissions: # for semantic release with provenance
+      contents: write
+      id-token: write
+    environment:
+      name: ${{ github.ref_name }}
+      url: ${{ steps.release-app.outputs.release-url }}
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/release-app
+        uses: ./.github/actions/release/app-setup
+      - name: action/release-app
+        id: release-app
+        uses: ./.github/actions/release/app
+        with:
+          npm-token: ${{ secrets.npm-token }}
+
+  docker-build:
+    runs-on: ubuntu-latest
+    if: always() && needs.app-build.result == 'success' && (needs.app-release.result == 'skipped' || needs.app-release.result == 'success')
+    needs: [app-build, app-release] # needs app-release, because this will provide a properly versioned app
+    permissions: {}
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/build-docker
+        uses: ./.github/actions/build/docker-setup
+      - name: action/build-docker
+        uses: ./.github/actions/build/docker
+
+  docker-release:
+    runs-on: ubuntu-latest
+    if: inputs.release
+    needs: docker-build
+    permissions: # for semantic release
+      contents: write
+    environment:
+      name: ${{ github.ref_name }}
+      url: ${{ steps.release-docker.outputs.release-url }}
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/release-docker
+        uses: ./.github/actions/release/docker-setup
+      - name: action/release-docker
+        id: release-docker
+        uses: ./.github/actions/release/docker
+        with:
+          docker-token: ${{ secrets.docker-token }}
+  
+  wiki-build:
+    runs-on: ubuntu-latest
+    if: inputs.all-artifacts
+    permissions: {}
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/build-wiki
+        uses: ./.github/actions/build/wiki-setup
+      - name: action/build-wiki
+        uses: ./.github/actions/build/wiki
+
+  wiki-release:
+    runs-on: ubuntu-latest
+    if: inputs.release && inputs.all-artifacts
+    needs: wiki-build
+    permissions:
+      contents: write
+    environment:
+      name: ${{ github.ref_name }}
+      url: ${{ steps.release-wiki.outputs.release-url }}
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/release-wiki
+        uses: ./.github/actions/release/wiki-setup
+      - name: action/release-wiki
+        id: release-wiki
+        uses: ./.github/actions/release/wiki
+        with:
+          gh-token: ${{ secrets.gh-token }}
+
+  docs-build:
+    runs-on: ubuntu-latest
+    if: always() && inputs.all-artifacts && needs.app-build.result == 'success' && (needs.app-release.result == 'skipped' || needs.app-release.result == 'success')
+    needs: [app-build, app-release] # to generate the properly versioned CLI reference
+    permissions: {}
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/build-docs
+        uses: ./.github/actions/build/docs-setup
+      - name: action/build-docs
+        uses: ./.github/actions/build/docs
+
+  docs-release:
+    runs-on: ubuntu-latest
+    if: inputs.release && inputs.all-artifacts
+    needs: docs-build
+    permissions: # to deploy GH pages
+      pages: write
+      id-token: write
+    environment:
+      name: ${{ github.ref_name }}
+      url: ${{ steps.release-docs.outputs.release-url }}
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/release-docs
+        uses: ./.github/actions/release/docs-setup
+      - name: action/release-docs
+        id: release-docs
+        uses: ./.github/actions/release/docs
+        with:
+          gh-token: ${{ secrets.gh-token }}
+
+  github-release:
+    runs-on: ubuntu-latest
+    if: inputs.release
+    needs: [app-release, docker-release]
+    permissions: # for semantic release
+      contents: write
+      issues: write
+      pull-requests: write
+    environment:
+      name: ${{ github.ref_name }}
+      url: ${{ steps.release-github.outputs.release-url }}
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/release-github
+        uses: ./.github/actions/release/github-setup
+      - name: action/release-github
+        id: release-github
+        uses: ./.github/actions/release/github
+        with:
+          gh-token: ${{ secrets.gh-token }}

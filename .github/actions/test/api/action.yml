@@ -1,0 +1,26 @@
+name: test-api
+description: Runs API tests against the iCloud backend
+inputs:
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+  test-apple-id-user:
+    description: The test user's Apple ID
+    required: true
+  test-apple-id-pwd:
+    description: The test user's Apple ID password
+    required: true
+  test-trust-token:
+    description: The test user's trust token
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: test-api
+      shell: bash
+      run: |
+        export TEST_APPLE_ID_USER=${{ inputs.test-apple-id-user }}
+        export TEST_APPLE_ID_PWD=${{ inputs.test-apple-id-pwd }}
+        export TEST_TRUST_TOKEN=${{ inputs.test-trust-token }}
+        (cd ${{ inputs.app-path }}; npm run test-api)

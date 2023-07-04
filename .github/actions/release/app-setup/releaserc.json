@@ -1,0 +1,32 @@
+{
+    "plugins": [
+        [
+            "@google/semantic-release-replace-plugin",
+            {
+                "replacements": [
+                    {
+                        "files": ["app/bin/lib/package.js"],
+                        "from": "export const VERSION = .*$",
+                        "to": "export const VERSION = `${nextRelease.version}`;",
+                        "results": [
+                            {
+                                "file": "app/bin/lib/package.js",
+                                "hasChanged": true,
+                                "numMatches": 1,
+                                "numReplacements": 1
+                            }
+                        ],
+                        "countMatches": true
+                    }
+                ]
+            }
+        ],[
+            "@semantic-release/npm",
+            {
+                "npmPublish": true,
+                "pkgRoot": "app/",
+                "tarballDir": "./"
+            }
+        ]
+    ]
+}

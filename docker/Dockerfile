@@ -1,4 +1,4 @@
-FROM node:18.15.0-alpine
+FROM node:18.16.1-alpine
 
 # Applying fs patch for assets
 ADD rootfs.tar.gz /
@@ -7,10 +7,8 @@ RUN apk update && \
     apk add curl vim bash jq && \
     rm -rf /var/cache/apk/*
 
-# Installing icloud-photos-sync 
-RUN cd /opt/icloud-photos-sync/ && \
-    npm install --omit dev && \
-    npm link
+# Installing application binary
+RUN npm install -g /opt/*.tgz
 
 # Installing helper scripts
 RUN chmod 755 /root/enter_mfa.sh && \
