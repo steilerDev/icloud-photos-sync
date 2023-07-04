@@ -263,6 +263,9 @@ In order to perform a single synchronization execution, the [`sync` command](../
         ```
         docker exec -t photos-sync icloud-photos-sync sync
         ```
+
+        !!! tip "File limits"
+            Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be set [in the `docker-compose.yml`](https://docs.docker.com/compose/compose-file/05-services/#ulimits), but might require an increase of the [system limits](https://linuxhint.com/permanently_set_ulimit_value/).
     
     === "docker run"
 
@@ -273,6 +276,9 @@ In order to perform a single synchronization execution, the [`sync` command](../
             --enable-crash-reporting \
             sync
         ```
+
+        !!! tip "File limits"
+            Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be set through [a CLI argument](https://docs.docker.com/engine/reference/commandline/run/#ulimit), but might require an increase of the [system limits](https://linuxhint.com/permanently_set_ulimit_value/).
 
 === "node"
 
@@ -287,6 +293,9 @@ In order to perform a single synchronization execution, the [`sync` command](../
             sync
         ```
 
+        !!! tip "File limits"
+            Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be [increased temporarily or permanently](https://linuxhint.com/permanently_set_ulimit_value/).
+
     === "From Source"
         
         ```
@@ -297,6 +306,9 @@ In order to perform a single synchronization execution, the [`sync` command](../
             --enable-crash-reporting \
             sync
         ```
+
+        !!! tip "File limits"
+            Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be [increased temporarily or permanently](https://linuxhint.com/permanently_set_ulimit_value/).
 
 ### Scheduled
 
