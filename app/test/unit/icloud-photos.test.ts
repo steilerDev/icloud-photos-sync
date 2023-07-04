@@ -10,7 +10,7 @@ test(`PhotosDomain not available`, () => {
     const iCloudPhotos = iCloudPhotosFactory();
     iCloudPhotos.auth.iCloudPhotosAccount.photosDomain = ``;
 
-    expect(() => iCloudPhotos.getServiceEndpoint(`someExt`)).toThrowError(new Error(`Unable to get service endpoint: Photos Domain not defined`));
+    expect(() => iCloudPhotos.getServiceEndpoint(`someExt`)).toThrow(/^Unable to get service endpoint: Photos Domain not defined$/);
 });
 
 describe(`Setup iCloud Photos`, () => {
@@ -48,7 +48,7 @@ describe(`Setup iCloud Photos`, () => {
 
         iCloudPhotos.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve(axiosResponse));
 
-        await expect(iCloudPhotos.setup()).rejects.toThrowError(new Error(`Unexpected error while setting up iCloud Photos`));
+        await expect(iCloudPhotos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
 
         expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
             `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
@@ -70,7 +70,7 @@ describe(`Setup iCloud Photos`, () => {
 
         iCloudPhotos.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Network Error`)));
 
-        await expect(iCloudPhotos.setup()).rejects.toThrowError(new Error(`Unexpected error while setting up iCloud Photos`));
+        await expect(iCloudPhotos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
 
         expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
             `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
@@ -123,7 +123,7 @@ describe(`Setup iCloud Photos`, () => {
                 },
             }]));
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrowError(`Indexing in progress, try again later`);
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
 
             expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
@@ -139,7 +139,7 @@ describe(`Setup iCloud Photos`, () => {
                 },
             }]));
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrowError(`Indexing in progress, try again later`);
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
 
             expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
@@ -155,7 +155,7 @@ describe(`Setup iCloud Photos`, () => {
                 },
             }]));
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrowError(`Unknown indexing state`);
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Unknown indexing state$/);
 
             expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
@@ -170,7 +170,7 @@ describe(`Setup iCloud Photos`, () => {
 
             iCloudPhotos.performQuery = jest.fn(() => Promise.resolve(queryResult));
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrowError(`Unable to get indexing state`);
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Unable to get indexing state$/);
 
             expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
@@ -179,7 +179,7 @@ describe(`Setup iCloud Photos`, () => {
             const iCloudPhotos = iCloudPhotosFactory();
             iCloudPhotos.performQuery = jest.fn(() => Promise.reject(new Error()));
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrowError();
+            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^$/);
 
             expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
@@ -385,7 +385,7 @@ describe.each([
             "data": {},
         } as any));
 
-        await expect(iCloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrowError(new Error(`Received unexpected query response format`));
+        await expect(iCloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Received unexpected query response format$/);
 
         expect(iCloudPhotos.auth.validatePhotosAccount).toHaveBeenCalledWith(zone);
         expect(iCloudPhotos.axios.post).toHaveBeenCalledTimes(1);

@@ -27,7 +27,7 @@ describe(`App Factory`, () => {
         });
         const mockStderr = jest.spyOn(process.stderr, `write`).mockImplementation(() => true);
 
-        expect(() => appFactory(options)).toThrowError(`Process Exit`);
+        expect(() => appFactory(options)).toThrow(/^Process Exit$/);
 
         expect(mockExit).toHaveBeenCalledWith(1);
         expect(mockStderr).toBeCalledWith(expected);
@@ -88,7 +88,7 @@ describe(`App control flow`, () => {
         tokenApp.icloud.authenticate = jest.fn(() => Promise.reject(new Error()));
         tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-        await expect(tokenApp.run()).rejects.toThrowError(new Error(`Unable to acquire trust token`));
+        await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
 
         expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
         expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -100,7 +100,7 @@ describe(`App control flow`, () => {
         tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
         tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-        await expect(tokenApp.run()).rejects.toThrowError(new Error(`Unable to acquire trust token`));
+        await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
 
         expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
         expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -151,7 +151,7 @@ describe(`App control flow`, () => {
             syncApp.syncEngine.sync = jest.fn(() => Promise.reject(new Error()));
             syncApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-            await expect(syncApp.run()).rejects.toThrowError(new Error(`Sync failed`));
+            await expect(syncApp.run()).rejects.toThrow(/^Sync failed$/);
 
             expect(syncApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
             expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
@@ -187,7 +187,7 @@ describe(`App control flow`, () => {
             archiveApp.archiveEngine.archivePath = jest.fn(() => Promise.reject(new Error()));
             archiveApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-            await expect(archiveApp.run()).rejects.toThrowError(new Error(`Archive failed`));
+            await expect(archiveApp.run()).rejects.toThrow(/^Archive failed$/);
 
             expect(archiveApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
             expect(archiveApp.icloud.authenticate).toHaveBeenCalledTimes(1);
@@ -263,7 +263,7 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await expect(tokenApp.acquireLibraryLock()).rejects.toThrowError(new Error(`Library locked. Use --force (or FORCE env variable) to forcefully remove the lock`));
+        await expect(tokenApp.acquireLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
         expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 
@@ -309,7 +309,7 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await expect(tokenApp.releaseLibraryLock()).rejects.toThrowError(new Error(`Library locked. Use --force (or FORCE env variable) to forcefully remove the lock`));
+        await expect(tokenApp.releaseLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
 
         expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });

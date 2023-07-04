@@ -393,7 +393,7 @@ describe(`Processing remote records`, () => {
             "recordName": `4E921FD1-74AA-42EE-8601-C3E9B96DA089`,
         } as CPLAsset];
 
-        expect(() => SyncEngine.convertCPLAssets(cplAssets, cplMasters)).toThrowError(`Error while converting asset`);
+        expect(() => SyncEngine.convertCPLAssets(cplAssets, cplMasters)).toThrow(/^Error while converting asset$/);
     });
 
     test(`Converting Albums - E2E Flow`, async () => {
@@ -1330,7 +1330,7 @@ describe(`Handle processing queue`, () => {
                         new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
                         new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-2`),
                     ];
-                    expect(() => Album.distanceToRoot(new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-2`), brokenQueue)).toThrowError(`Unable to determine distance to root, no link to root!`);
+                    expect(() => Album.distanceToRoot(new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-2`), brokenQueue)).toThrow(/^Unable to determine distance to root, no link to root!$/);
                 });
             });
 

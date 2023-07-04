@@ -228,7 +228,7 @@ describe.each([{
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
                 archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/.cc40a239-2beb-483e-acee-e897db1b818a`, [asset1, asset2, asset3])).rejects.toThrowError(`UUID path selected, use named path only`);
+                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/.cc40a239-2beb-483e-acee-e897db1b818a`, [asset1, asset2, asset3])).rejects.toThrow(/^UUID path selected, use named path only$/);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
                 expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
@@ -289,7 +289,7 @@ describe.each([{
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
                 archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random1`, [asset1, asset2, asset3])).rejects.toThrowError(`Only able to archive non-archived albums`);
+                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random1`, [asset1, asset2, asset3])).rejects.toThrow(/^Only able to archive non-archived albums$/);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
                 expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
@@ -332,7 +332,7 @@ describe.each([{
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
                 archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                await expect(archiveEngine.archivePath(`${photosDataDir}/${albumName}`, [asset1, asset2, asset3])).rejects.toThrowError(`Unable to load album`);
+                await expect(archiveEngine.archivePath(`${photosDataDir}/${albumName}`, [asset1, asset2, asset3])).rejects.toThrow(/^Unable to load album$/);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
                 expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
@@ -539,7 +539,7 @@ describe.each([{
                 .mockReturnValueOnce(asset3.recordName);
             archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.reject());
 
-            await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3])).rejects.toThrowError(`Unable to delete remote assets`);
+            await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3])).rejects.toThrow(/^Unable to delete remote assets$/);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
             expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
@@ -696,7 +696,7 @@ describe.each([{
 
             const archiveEngine = archiveEngineFactory();
 
-            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrowError(`Unable to find remote asset`);
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrow(/^Unable to find remote asset$/);
         });
 
         test(`Unable to find remote asset's record name`, () => {
@@ -737,7 +737,7 @@ describe.each([{
 
             const archiveEngine = archiveEngineFactory();
 
-            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrowError(`Unable to get record name`);
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrow(/^Unable to get record name$/);
         });
 
         test(`Don't delete asset if flag is set`, () => {
