@@ -51,5 +51,6 @@ runs:
         if [ "${{ steps.get-git-metadata.outputs.current-tag }}" != "" ]; then
           echo "url=https://www.npmjs.com/package/${{ steps.get-npm-metadata.outputs.name }}/v/${{ steps.get-npm-metadata.outputs.version }}" >> $GITHUB_OUTPUT
         else
+          echo "::warning title=No release::There are no relevant changes based on conventional commit, so no new version is released."
           echo "url=no-release" >> $GITHUB_OUTPUT
         fi
