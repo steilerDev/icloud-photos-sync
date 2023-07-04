@@ -22,6 +22,7 @@ nav:
     - 'iCloud API': dev/api.md
     - 'Local File Structure': dev/local-file-structure.md
     - 'TypeDoc Code Documentation': https://github.com/steilerDev/icloud-photos-sync/wiki/Exports
+    - 'Development Environment': dev/dev-environment.md
     - 'Test & Deployment':
       - 'Test Environment': dev/test-environment.md
       - 'Coverage': dev/coverage/index.html
