@@ -13,7 +13,8 @@ Find examples for the various deployment options within this guide.
 
     The `latest` tag should always represent the latest stable release, whereas the `beta` tag provides a semi-stable preview of the upcoming release, while the `nightly` tag offers the latest development build, which might not be stable.
 
-    The Docker image is also build for the arm64 platform (however [publishing this version is not possible through the current CI setup](https://github.com/docker/buildx/issues/1152)). The tar archive of the image is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be loaded using `docker load --input <fileName>`.
+    !!! tip "ARM Support"
+            The Docker image is also build for the arm64 platform (however [publishing this version is not possible through the current CI setup](https://github.com/docker/buildx/issues/1152)). The tar archive of the image is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be loaded using `docker load --input <fileName>`.
 
     === "docker compose"
         
@@ -44,6 +45,8 @@ Find examples for the various deployment options within this guide.
         ```
         docker compose pull
         ```
+
+        Alternatively the docker image tar archive is available for download from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be installed using `docker load --input <fileName>`
     
     === "docker run"
         

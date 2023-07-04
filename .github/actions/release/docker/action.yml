@@ -33,10 +33,10 @@ runs:
       shell: bash
       run: |
         if [ "${{ steps.get-git-metadata.outputs.current-tag }}" != "" ]; then
-           echo "url=https://hub.docker.com/r/${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}/tags?page=1&ordering=last_updated" >> $GITHUB_OUTPUT
+          echo "url=https://hub.docker.com/r/${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}/tags?page=1&ordering=last_updated" >> $GITHUB_OUTPUT
         else
           echo "::warning title=No docker release::There are no relevant changes based on conventional commit, so no new version is released."
-           echo "url=https://hub.docker.com/r/${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}" >> $GITHUB_OUTPUT
+          echo "url=https://hub.docker.com/r/${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}" >> $GITHUB_OUTPUT
         fi
     - id: update-readme
       uses: peter-evans/dockerhub-description@v3
