@@ -21,6 +21,7 @@ datasource
 dedup
 Disp
 dockerhub
+Driessen
 dsid
 dslang
 emhlbnl
@@ -41,12 +42,14 @@ lhotari
 loglevel
 LPMQ
 majorfeat
+materialx
 mkdocs
 mockfs
 ncipollo
 Nerb
 Nfrb
 nofile
+Orta
 photoshop
 photoslibrary
 prerequest
@@ -76,10 +79,12 @@ tplrgn
 truevision
 trusteddevice
 tsdoc
+twemoji
 typedoc
 udse
 upterm
 uptermd
+vivaxy
 Vvye
 vyas
 WEBAUTH
