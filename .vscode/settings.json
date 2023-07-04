@@ -19,7 +19,7 @@
         }
     },
     "github-actions.remote-name": "origin",
-    "github-actions.workflows.pinned.refresh.enabled": false,
+    "github-actions.workflows.pinned.refresh.enabled": true,
     "github-actions.workflows.pinned.refresh.interval": 90,
     "github-actions.workflows.pinned.workflows": [
         ".github/workflows/event_pr.yml",
