@@ -40,6 +40,9 @@ Find examples for the various deployment options within this guide.
               - <photos-dir>:/opt/icloud-photos-library
         ```
 
+        !!! warning "Password containing dollar sign '`$`'"
+            In case your password contains a dollar sign, this might be mis-handled by docker compose. You can use [`$$` (double-dollar sign) in order to escape it](https://stackoverflow.com/a/40621373/3763870). E.g. `pas$word` would become `pas$$word`.
+
         Get the latest image by running:
 
         ```
@@ -111,6 +114,8 @@ In order to only perform authentication (without syncing any assets) and validat
             Depending on the defined schedule, the container service might already perform a sync. In order to avoid sync collisions two instances of this application cannot access the same library concurrently, which might lead to `LibraryError (FATAL): Locked by PID 1, cannot release.` errors.
             
             In case you are certain that there is no instance running (and the lock is still there, because it was not released properly previously), use the `--force` flag upon the next run to remove it.
+        
+        
     
     === "docker run"
 
@@ -121,6 +126,9 @@ In order to only perform authentication (without syncing any assets) and validat
             --enable-crash-reporting \
             token
         ```
+
+        !!! warning "Password containing dollar sign '`$`'"
+            In case your password contains a dollar sign, this might be mis-handled by your shell. You should [wrap the password string in single quotes](https://stackoverflow.com/a/33353687/3763870) in order to preserve the string literal. E.g. `[...] -p pas$word [...]` would become `[...] -p 'pas$word' [...]`.
 
 === "node"
 
@@ -135,6 +143,9 @@ In order to only perform authentication (without syncing any assets) and validat
             token
         ```
 
+        !!! warning "Password containing dollar sign '`$`'"
+            In case your password contains a dollar sign, this might be mis-handled by your shell. You should [wrap the password string in single quotes](https://stackoverflow.com/a/33353687/3763870) in order to preserve the string literal. E.g. `[...] -p pas$word [...]` would become `[...] -p 'pas$word' [...]`.
+
     === "From Source"
         
         ```
@@ -145,6 +156,9 @@ In order to only perform authentication (without syncing any assets) and validat
             --enable-crash-reporting \
             token
         ```
+
+        !!! warning "Password containing dollar sign '`$`'"
+            In case your password contains a dollar sign, this might be mis-handled by your shell. You should [wrap the password string in single quotes](https://stackoverflow.com/a/33353687/3763870) in order to preserve the string literal. E.g. `[...] -p pas$word [...]` would become `[...] -p 'pas$word' [...]`.
 
 ### Multi-Factor-Authentication
 
