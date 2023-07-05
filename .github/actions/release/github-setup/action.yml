@@ -34,7 +34,7 @@ runs:
       if: github.ref_name == 'beta'
       run: |
         cat ${{ inputs.release-dir }}/.releaserc.json |\
-          jq ".plugins[0][1].successComment = \"This \${issue.pull_request ? 'pull request' : 'issue'} should be resolved with version [v\${nextRelease.version}](\${releases[0].url}), please confirm.\"" |\
+          jq ".plugins[0][1].successComment = \"This \${issue.pull_request ? 'pull request was merged and released' : 'issue should be resolved'} with version [v\${nextRelease.version}](\${releases[0].url})\${issue.pull_request ? '.' : ', please confirm.'}\"" |\
           jq '.plugins[0][1].releasedLabels = "status(previewed)"' |\
           sponge ${{ inputs.release-dir }}/.releaserc.json
     - id: configure-main-release
@@ -42,7 +42,7 @@ runs:
       if: github.ref_name == 'main'
       run: |
         cat ${{ inputs.release-dir }}/.releaserc.json |\
-          jq ".plugins[0][1].successComment = \"This \${issue.pull_request ? 'pull request' : 'issue'} was resolved with version [v\${nextRelease.version}](\${releases[0].url}).\"" |\
+          jq ".plugins[0][1].successComment = \"This \${issue.pull_request ? 'pull request was released' : 'issue was resolved'} with version [v\${nextRelease.version}](\${releases[0].url}).\"" |\
           jq '.plugins[0][1].releasedLabels = "status(released)"' |\
           sponge ${{ inputs.release-dir }}/.releaserc.json
     - id: download-artifacts
