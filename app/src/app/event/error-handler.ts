@@ -84,12 +84,10 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         const _err = iCPSError.toiCPSError(err);
 
         let message = _err.getDescription();
-        // Check if the error should be reported
-        const shouldReport = _err.sev === `FATAL` && reportDenyList.indexOf(_err.code) === -1;
 
         // Report error and append error code
-        if (_err.sev === `FATAL` &&                                           // report only fatal errors
-                reportDenyList.indexOf(_err.getRootErrorCode(true)) === -1) { // Report only, if root error code is not in deny list
+        if (_err.sev === `FATAL` // Report only fatal errors
+                && reportDenyList.indexOf(_err.getRootErrorCode(true)) === -1) { // Report only, if root error code is not in deny list
             const errorId = await this.reportError(_err);
             message += ` (Error Code: ${errorId})`;
         }
@@ -147,7 +145,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
             'icps.rootErrorCode': err.getRootErrorCode(),
-            'icps.errorCodeStack': err.getErrorCodeStack().join('->')
+            'icps.errorCodeStack': err.getErrorCodeStack().join(`->`),
         }, attachment);
 
         await this.btClient.sendAsync(report);
@@ -175,7 +173,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             }
 
             // Creating temp log file, overwriting existing
-            const currentLogFile = path.parse(currentLogFilePath)
+            const currentLogFile = path.parse(currentLogFilePath);
             const tmpLogFilePath = `${currentLogFile.dir}/${currentLogFile.name}-reported.log`;
             tmpLogFileFd = await fs.open(tmpLogFilePath, `w`);
 
