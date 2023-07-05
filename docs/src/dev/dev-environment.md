@@ -23,3 +23,8 @@ The following extensions are used during development and are configured as part 
   - *Description*: GitHub Actions workflows and runs for github.com hosted repositories in VS Code
   - *Publisher*: GitHub
   - [VS Marketplace Link](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-github-actions)
+- **GitHub Pull Requests and Issues**
+  - *Id*: `GitHub.vscode-pull-request-github`
+  - *Description*: Pull Request and Issue Provider for GitHub
+  - *Publisher*: GitHub
+  - [VS Marketplace](https://open-vsx.org/vscode/item?itemName=GitHub.vscode-pull-request-github)

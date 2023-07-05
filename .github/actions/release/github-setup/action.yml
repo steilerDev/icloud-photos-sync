@@ -35,7 +35,7 @@ runs:
       run: |
         cat ${{ inputs.release-dir }}/.releaserc.json |\
           jq ".plugins[0][1].successComment = \"This \${issue.pull_request ? 'pull request' : 'issue'} should be resolved with version [v\${nextRelease.version}](\${releases[0].url}), please confirm.\"" |\
-          jq '.plugins[0][1].releasedLabels = "previewed <%= nextRelease.version %>"' |\
+          jq '.plugins[0][1].releasedLabels = "status(previewed)"' |\
           sponge ${{ inputs.release-dir }}/.releaserc.json
     - id: configure-main-release
       shell: bash
@@ -43,7 +43,7 @@ runs:
       run: |
         cat ${{ inputs.release-dir }}/.releaserc.json |\
           jq ".plugins[0][1].successComment = \"This \${issue.pull_request ? 'pull request' : 'issue'} was resolved with version [v\${nextRelease.version}](\${releases[0].url}).\"" |\
-          jq '.plugins[0][1].releasedLabels = "released <%= nextRelease.version %>"' |\
+          jq '.plugins[0][1].releasedLabels = "status(released)"' |\
           sponge ${{ inputs.release-dir }}/.releaserc.json
     - id: download-artifacts
       uses: actions/download-artifact@v3
