@@ -65,24 +65,6 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-        }, {
-            "name": "vscode-jest-tests",
-            "type": "node",
-            "request": "launch",
-            "runtimeArgs": [
-                "--experimental-vm-modules",
-                "--inspect-brk",
-                "node_modules/.bin/jest",
-                "--runInBand",
-                "--config", "jest.config.json",
-                //"--detectOpenHandles",
-            ],
-            "env": {
-                "NODE_NO_WARNINGS": "1"
-            },
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "cwd": "${workspaceFolder}/app",
         },
     ]
 }

@@ -11,7 +11,7 @@
 		},
 		{
 			"type": "shell",
-			"command": "python -m mkdocs",
+			"command": "python3 -m mkdocs",
 			"args": [
 				"build"
 			],
