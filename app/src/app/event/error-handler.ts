@@ -10,6 +10,7 @@ import {iCPSAppOptions} from '../factory.js';
 import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
 import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
 import fs from 'fs/promises';
+import path from 'path';
 
 /**
  * The event emitted by classes of this application and picked up by the handler.
@@ -87,7 +88,8 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         const shouldReport = _err.sev === `FATAL` && reportDenyList.indexOf(_err.code) === -1;
 
         // Report error and append error code
-        if (shouldReport) {
+        if (_err.sev === `FATAL` &&                                           // report only fatal errors
+                reportDenyList.indexOf(_err.getRootErrorCode(true)) === -1) { // Report only, if root error code is not in deny list
             const errorId = await this.reportError(_err);
             message += ` (Error Code: ${errorId})`;
         }
@@ -145,6 +147,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
             'icps.rootErrorCode': err.getRootErrorCode(),
+            'icps.errorCodeStack': err.getErrorCodeStack().join('->')
         }, attachment);
 
         await this.btClient.sendAsync(report);
@@ -172,22 +175,23 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
             }
 
             // Creating temp log file, overwriting existing
-            const tmpLogFile = `${currentLogFilePath}.tmp`;
-            tmpLogFileFd = await fs.open(tmpLogFile, `w`);
+            const currentLogFile = path.parse(currentLogFilePath)
+            const tmpLogFilePath = `${currentLogFile.dir}/${currentLogFile.name}-reported.log`;
+            tmpLogFileFd = await fs.open(tmpLogFilePath, `w`);
 
             // Noting how many lines will be truncated
-            await fs.appendFile(tmpLogFileFd, `########################`);
-            await fs.appendFile(tmpLogFileFd, `# Truncated ${totalNumberOfLines - maxNumberOfLines} lines`);
-            await fs.appendFile(tmpLogFileFd, `########################`);
+            await fs.appendFile(tmpLogFileFd, `########################\n`);
+            await fs.appendFile(tmpLogFileFd, `# Truncated ${totalNumberOfLines - maxNumberOfLines} lines\n`);
+            await fs.appendFile(tmpLogFileFd, `########################\n`);
 
             // Writing temp file
             for (let i = 0; i < totalNumberOfLines; i++) {
                 if (i > (totalNumberOfLines - maxNumberOfLines)) {
-                    await fs.appendFile(tmpLogFileFd, data[i]);
+                    await fs.appendFile(tmpLogFileFd, `${data[i]}\n`);
                 }
             }
 
-            result.push(tmpLogFile);
+            result.push(tmpLogFilePath);
         } finally {
             await tmpLogFileFd?.close();
             return result;
