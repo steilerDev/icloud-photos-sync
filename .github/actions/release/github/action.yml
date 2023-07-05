@@ -34,5 +34,6 @@ runs:
         if [ "${{ steps.get-git-metadata.outputs.current-tag }}" != "" ]; then
            echo "url=https://github.com/${{ steps.get-git-metadata.outputs.owner }}/${{ steps.get-git-metadata.outputs.name }}/releases/tag/${{ steps.get-git-metadata.outputs.current-tag }}" >> $GITHUB_OUTPUT
         else
-          echo "url=no-release" >> $GITHUB_OUTPUT
+          echo "::warning title=No github release::There are no relevant changes based on conventional commit, so no new version is released."
+          echo "url=https://github.com/${{ steps.get-git-metadata.outputs.owner }}/${{ steps.get-git-metadata.outputs.name }}/releases" >> $GITHUB_OUTPUT
         fi

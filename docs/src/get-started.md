@@ -13,7 +13,8 @@ Find examples for the various deployment options within this guide.
 
     The `latest` tag should always represent the latest stable release, whereas the `beta` tag provides a semi-stable preview of the upcoming release, while the `nightly` tag offers the latest development build, which might not be stable.
 
-    The Docker image is also build for the arm64 platform (however [publishing this version is not possible through the current CI setup](https://github.com/docker/buildx/issues/1152)). The tar archive of the image is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be loaded using `docker load --input <fileName>`.
+    !!! tip "ARM Support"
+            The Docker image is also build for the arm64 platform (however [publishing this version is not possible through the current CI setup](https://github.com/docker/buildx/issues/1152)). The tar archive of the image is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be loaded using `docker load --input <fileName>`.
 
     === "docker compose"
         
@@ -39,11 +40,16 @@ Find examples for the various deployment options within this guide.
               - <photos-dir>:/opt/icloud-photos-library
         ```
 
+        !!! warning "Password containing dollar sign '`$`'"
+            In case your password contains a dollar sign, this might be mis-handled by docker compose. You can use [`$$` (double-dollar sign) in order to escape it](https://stackoverflow.com/a/40621373/3763870). E.g. `pas$word` would become `pas$$word`.
+
         Get the latest image by running:
 
         ```
         docker compose pull
         ```
+
+        Alternatively the docker image tar archive is available for download from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be installed using `docker load --input <fileName>`
     
     === "docker run"
         
@@ -108,6 +114,8 @@ In order to only perform authentication (without syncing any assets) and validat
             Depending on the defined schedule, the container service might already perform a sync. In order to avoid sync collisions two instances of this application cannot access the same library concurrently, which might lead to `LibraryError (FATAL): Locked by PID 1, cannot release.` errors.
             
             In case you are certain that there is no instance running (and the lock is still there, because it was not released properly previously), use the `--force` flag upon the next run to remove it.
+        
+        
     
     === "docker run"
 
@@ -118,6 +126,9 @@ In order to only perform authentication (without syncing any assets) and validat
             --enable-crash-reporting \
             token
         ```
+
+        !!! warning "Password containing dollar sign '`$`'"
+            In case your password contains a dollar sign, this might be mis-handled by your shell. You should [wrap the password string in single quotes](https://stackoverflow.com/a/33353687/3763870) in order to preserve the string literal. E.g. `[...] -p pas$word [...]` would become `[...] -p 'pas$word' [...]`.
 
 === "node"
 
@@ -132,6 +143,9 @@ In order to only perform authentication (without syncing any assets) and validat
             token
         ```
 
+        !!! warning "Password containing dollar sign '`$`'"
+            In case your password contains a dollar sign, this might be mis-handled by your shell. You should [wrap the password string in single quotes](https://stackoverflow.com/a/33353687/3763870) in order to preserve the string literal. E.g. `[...] -p pas$word [...]` would become `[...] -p 'pas$word' [...]`.
+
     === "From Source"
         
         ```
@@ -142,6 +156,9 @@ In order to only perform authentication (without syncing any assets) and validat
             --enable-crash-reporting \
             token
         ```
+
+        !!! warning "Password containing dollar sign '`$`'"
+            In case your password contains a dollar sign, this might be mis-handled by your shell. You should [wrap the password string in single quotes](https://stackoverflow.com/a/33353687/3763870) in order to preserve the string literal. E.g. `[...] -p pas$word [...]` would become `[...] -p 'pas$word' [...]`.
 
 ### Multi-Factor-Authentication
 
@@ -263,6 +280,9 @@ In order to perform a single synchronization execution, the [`sync` command](../
         ```
         docker exec -t photos-sync icloud-photos-sync sync
         ```
+
+        !!! tip "File limits"
+            Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be set [in the `docker-compose.yml`](https://docs.docker.com/compose/compose-file/05-services/#ulimits), but might require an increase of the [system limits](https://linuxhint.com/permanently_set_ulimit_value/).
     
     === "docker run"
 
@@ -273,6 +293,9 @@ In order to perform a single synchronization execution, the [`sync` command](../
             --enable-crash-reporting \
             sync
         ```
+
+        !!! tip "File limits"
+            Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be set through [a CLI argument](https://docs.docker.com/engine/reference/commandline/run/#ulimit), but might require an increase of the [system limits](https://linuxhint.com/permanently_set_ulimit_value/).
 
 === "node"
 
@@ -287,6 +310,9 @@ In order to perform a single synchronization execution, the [`sync` command](../
             sync
         ```
 
+        !!! tip "File limits"
+            Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be [increased temporarily or permanently](https://linuxhint.com/permanently_set_ulimit_value/).
+
     === "From Source"
         
         ```
@@ -297,6 +323,9 @@ In order to perform a single synchronization execution, the [`sync` command](../
             --enable-crash-reporting \
             sync
         ```
+
+        !!! tip "File limits"
+            Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be [increased temporarily or permanently](https://linuxhint.com/permanently_set_ulimit_value/).
 
 ### Scheduled
 

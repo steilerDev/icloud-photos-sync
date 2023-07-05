@@ -17,11 +17,11 @@ nav:
     - 'Error & Crash Reporting': user-guides/error-reporting.md
     - 'Security': user-guides/security.md
   - 'Development Resources':
-    - 'Milestone Plan': https://github.com/steilerDev/icloud-photos-sync/milestones
     - 'Motivation': dev/motivation.md
     - 'iCloud API': dev/api.md
     - 'Local File Structure': dev/local-file-structure.md
     - 'TypeDoc Code Documentation': https://github.com/steilerDev/icloud-photos-sync/wiki/Exports
+    - 'Development Environment': dev/dev-environment.md
     - 'Test & Deployment':
       - 'Test Environment': dev/test-environment.md
       - 'Coverage': dev/coverage/index.html

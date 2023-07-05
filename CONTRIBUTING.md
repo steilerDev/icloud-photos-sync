@@ -27,8 +27,7 @@ Instead, we recommend using [Github Discussions](https://github.com/steilerDev/i
 
 ## <a name="issue"></a> Found a Bug?
 
-If you find a bug in the source code, you can help us by [submitting an issue](#submit-issue).
-Even better, you can [submit a Pull Request](#submit-pr) with a fix.
+If you find a bug in the application, you can help us by [submitting an issue](#submit-issue). Even better, you can [submit a Pull Request](#submit-pr) with a fix.
 
 
 ## <a name="feature"></a> Missing a Feature?
@@ -48,10 +47,11 @@ If you would like to *implement* a new feature, please consider the size of the 
 
 Before you submit an issue, please search the [issue tracker](https://github.com/steilerDev/icloud-photos-sync/issues). An issue for your problem might already exist and the discussion might inform you of workarounds readily available.
 
-We want to fix all the issues as soon as possible, but before fixing a bug, we need to reproduce and confirm it.
-In order to reproduce bugs, we require that you provide the error code displayed during runtime as well as the log file generated during the execution (preferably at `DEBUG` level).
+We want to fix all the issues as soon as possible, but before fixing a bug, we need to reproduce and confirm it. In order to reproduce bugs, we require that you provide the error code displayed during runtime as well as the log file generated during the execution (preferably at `DEBUG` level).
 
 You can file new issues by selecting from our [new issue templates](https://github.com/steilerDev/icloud-photos-sync/issues/new/choose) and filling out the issue template.
+
+In case you are experiencing multiple issues, please make sure to open a separate issue for each of them, so we can properly track and address them!
 
 
 ### <a name="submit-pr"></a> Submitting a Pull Request (PR)

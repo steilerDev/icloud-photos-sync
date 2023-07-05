@@ -1,135 +1,5 @@
 {
     "files.autoSave": "onFocusChange",
-    "cSpell.words": [
-        "AASP",
-        "Acgr",
-        "aditya",
-        "Aexev",
-        "appleauth",
-        "ASSETID",
-        "avchd",
-        "AXDMJG",
-        "barchart",
-        "buildx",
-        "ckdatabasews",
-        "ckjs",
-        "Compl",
-        "conventionalcommits",
-        "CPLALBUM",
-        "CPLASSET",
-        "CPLMASTER",
-        "croner",
-        "datasource",
-        "dedup",
-        "Disp",
-        "dockerhub",
-        "dsid",
-        "dslang",
-        "emhlbnl",
-        "fcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-        "foldered",
-        "fontawesome",
-        "Fqhjt",
-        "FVJQ",
-        "GBIE",
-        "gkfvd",
-        "icps",
-        "idmsa",
-        "JEGI",
-        "KNYDBI",
-        "leonardi",
-        "Lfyc",
-        "lhotari",
-        "loglevel",
-        "LPMQ",
-        "majorfeat",
-        "mkdocs",
-        "mockfs",
-        "ncipollo",
-        "Nerb",
-        "Nfrb",
-        "photoshop",
-        "photoslibrary",
-        "prerequest",
-        "pymdownx",
-        "Qtpvztd",
-        "quicktime",
-        "releaserc",
-        "rgba",
-        "RIPEMD",
-        "rootfs",
-        "SCNT",
-        "securitycode",
-        "SIGNIN",
-        "somechecksum",
-        "somekey",
-        "somerecordname",
-        "stefanzweifel",
-        "Steiler",
-        "steilerdev",
-        "superfences",
-        "Symbolication",
-        "templating",
-        "testparam",
-        "testpassword",
-        "timepicker",
-        "tplrgn",
-        "truevision",
-        "trusteddevice",
-        "tsdoc",
-        "typedoc",
-        "udse",
-        "upterm",
-        "uptermd",
-        "Vvye",
-        "vyas",
-        "WEBAUTH",
-        "webmproject",
-        "webservices",
-        "Yons"
-    ],
-    "jest.autoRevealOutput": "on-run",
-    "jest.showCoverageOnLoad": true,
-    "jest.coverageFormatter": "GutterFormatter",
-    "jest.autoRun": "off",
-    "jest.jestCommandLine": "npm run test --",
-    "jest.rootPath": "app/",
-    "jest.nodeEnv": {
-        "NODE_NO_WARNINGS": 1
-    },
-    "cSpell.enableFiletypes": [
-        "!asciidoc",
-        "!c",
-        "!cpp",
-        "!csharp",
-        "!css",
-        "!elixir",
-        "!erlang",
-        "!go",
-        "!graphql",
-        "!handlebars",
-        "!haskell",
-        "!html",
-        "!jade",
-        "!java",
-        "!javascriptreact",
-        "!jupyter",
-        "!latex",
-        "!less",
-        "!php",
-        "!pug",
-        "!python",
-        "!restructuredtext",
-        "!rust",
-        "!scala",
-        "!scminput",
-        "!scss",
-        "!swift",
-        "!typescriptreact",
-        "!vue",
-        "dockerfile",
-        "jest-snapshot"
-    ],
     "conventionalCommits.gitmoji": false,
     "conventionalCommits.promptBody": false,
     "conventionalCommits.autoCommit": false,
@@ -139,5 +9,80 @@
     "conventionalCommits.promptScopes": false,
     "conventionalCommits.showEditor": false,
     "conventionalCommits.showNewVersionNotes": false,
-    "conventionalCommits.silentAutoCommit": false
+    "conventionalCommits.silentAutoCommit": false,
+    "cSpell.customDictionaries": {
+        "custom-dictionary-workspace": {
+            "name": "icloud-photos-sync",
+            "path": "${workspaceFolder:icloud-photos-sync}/.vscode/icloud-photos-sync.cspell",
+            "addWords": true,
+            "scope": "workspace"
+        }
+    },
+    "github-actions.remote-name": "origin",
+    "github-actions.workflows.pinned.refresh.enabled": true,
+    "github-actions.workflows.pinned.refresh.interval": 90,
+    "github-actions.workflows.pinned.workflows": [
+        ".github/workflows/event_pr.yml",
+        ".github/workflows/event_push.yml"
+    ],
+    "jest.jestCommandLine": "npm run test --",
+    "jest.autoRun": "off",
+    "jest.rootPath": "app",
+    "githubPullRequests.pullBranch": "never",
+    "githubPullRequests.createOnPublishBranch": "never",
+    "githubPullRequests.queries": [
+        {
+            "label": "Dependabot",
+            "query": "is:open is:pr author:app/dependabot"
+        },
+        {
+            "label": "Created By Me",
+            "query": "is:open author:${user}"
+        },
+        {
+            "label": "Released",
+            "query": "is:open is:pr label:status(released)"
+        },
+        {
+            "label": "Truly Open",
+            "query": "is:open is:pr -label:status(released) -label:status(previewed)"
+        }
+    ],
+    "githubPullRequests.notifications": "pullRequests",
+    "githubPullRequests.remotes": [
+        "origin"
+    ],
+    "githubPullRequests.showPullRequestNumberInTree": true,
+    "githubIssues.queries": [
+        {
+            "label": "No Classification",
+            "query": "is:open is:issue -label:class(bug),class(documentation),class(duplicate),class(feature),class(improvement),class(invalid),\"class(known issue)\" repo:${owner}/${repository}"
+        },
+        {
+            "label": "No Status",
+            "query": "is:open is:issue -label:status(wontfix),status(released),status(previewed),status(open),status(investigating),\"status(in progress)\",\"status(help needed)\",status(backlog) repo:${owner}/${repository}"
+        },
+        {
+            "label": "Ongoing",
+            "query": "is:open is:issue -label:status(released),status(previewed) label:status(open),\"status(in progress)\",status(investigating) repo:${owner}/${repository}"
+        },
+        {
+            "label": "Next",
+            "query": "is:open is:issue -label:status(released),status(previewed) label:status(backlog),\"status(help needed)\" repo:${owner}/${repository}"
+        },
+        {
+            "label": "Never",
+            "query": "is:open is:issue -label:status(released),status(previewed) label:status(wontfix) repo:${owner}/${repository}"
+        },
+        {
+            "label": "Released",
+            "query": "is:open is:issue label:status(released) repo:${owner}/${repository}"
+        },
+        {
+            "label": "Previewed",
+            "query": "is:open is:issue label:status(previewed) repo:${owner}/${repository}"
+        }
+    ],
+    "githubIssues.useBranchForIssues": "off",
+    "githubIssues.workingIssueFormatScm": "fix: ${issueTitle} \n\nFixes ${issueNumberLabel}",
 }

@@ -9,7 +9,7 @@ import {ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR} from '../error/error-codes.js';
 import {iCPSAppOptions} from '../factory.js';
 import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
 import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
-import fs from 'fs/promises'
+import fs from 'fs/promises';
 import path from 'path';
 
 /**
@@ -84,11 +84,10 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         const _err = iCPSError.toiCPSError(err);
 
         let message = _err.getDescription();
-        // Check if the error should be reported
-        const shouldReport = _err.sev === `FATAL` && reportDenyList.indexOf(_err.code) === -1;
 
         // Report error and append error code
-        if (shouldReport) {
+        if (_err.sev === `FATAL` // Report only fatal errors
+                && reportDenyList.indexOf(_err.getRootErrorCode(true)) === -1) { // Report only, if root error code is not in deny list
             const errorId = await this.reportError(_err);
             message += ` (Error Code: ${errorId})`;
         }
@@ -140,12 +139,13 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
         const errorUUID = randomUUID();
 
-        const attachment = await this.prepareLogFile(logFilePath)
+        const attachment = await this.prepareLogFile(logFilePath);
 
         const report = this.btClient.createReport(err, {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
             'icps.rootErrorCode': err.getRootErrorCode(),
+            'icps.errorCodeStack': err.getErrorCodeStack().join(`->`),
         }, attachment);
 
         await this.btClient.sendAsync(report);
@@ -158,40 +158,41 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
      * @returns - An array, containing the file path to the processed log file, or an empty array if the log file could not be prepared
      */
     async prepareLogFile(currentLogFilePath: string): Promise<string[]> {
-        const maxNumberOfLines = 200
-        let tmpLogFileFd: fs.FileHandle
-        const result: string[] = []
+        const maxNumberOfLines = 200;
+        let tmpLogFileFd: fs.FileHandle;
+        const result: string[] = [];
 
         try {
             // Reading current log file and determining length
-            const data = (await fs.readFile(currentLogFilePath, {encoding: 'utf8'})).split('\n')
-            const totalNumberOfLines = data.length
-            
+            const data = (await fs.readFile(currentLogFilePath, {"encoding": `utf8`})).split(`\n`);
+            const totalNumberOfLines = data.length;
+
             // If there is nothing to truncate, we return the original log file
-            if(totalNumberOfLines < maxNumberOfLines) {
-                return [currentLogFilePath]
+            if (totalNumberOfLines < maxNumberOfLines) {
+                return [currentLogFilePath];
             }
 
             // Creating temp log file, overwriting existing
-            const tmpLogFile = `${currentLogFilePath}.tmp`
-            tmpLogFileFd = await fs.open(tmpLogFile, 'w')
+            const currentLogFile = path.parse(currentLogFilePath);
+            const tmpLogFilePath = `${currentLogFile.dir}/${currentLogFile.name}-reported.log`;
+            tmpLogFileFd = await fs.open(tmpLogFilePath, `w`);
 
             // Noting how many lines will be truncated
-            await fs.appendFile(tmpLogFileFd, `########################`)
-            await fs.appendFile(tmpLogFileFd, `# Truncated ${totalNumberOfLines - maxNumberOfLines} lines`)
-            await fs.appendFile(tmpLogFileFd, `########################`)
+            await fs.appendFile(tmpLogFileFd, `########################\n`);
+            await fs.appendFile(tmpLogFileFd, `# Truncated ${totalNumberOfLines - maxNumberOfLines} lines\n`);
+            await fs.appendFile(tmpLogFileFd, `########################\n`);
 
             // Writing temp file
             for (let i = 0; i < totalNumberOfLines; i++) {
-                if(i > (totalNumberOfLines - maxNumberOfLines)) {
-                    await fs.appendFile(tmpLogFileFd, data[i])
+                if (i > (totalNumberOfLines - maxNumberOfLines)) {
+                    await fs.appendFile(tmpLogFileFd, `${data[i]}\n`);
                 }
             }
-            
-            result.push(tmpLogFile)
+
+            result.push(tmpLogFilePath);
         } finally {
-            await tmpLogFileFd?.close()
-            return result
+            await tmpLogFileFd?.close();
+            return result;
         }
     }
 

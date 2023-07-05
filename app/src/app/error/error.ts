@@ -126,22 +126,42 @@ export class iCPSError extends Error {
     }
 
     /**
-     * @returns the error code for the first thrown iCPSError
+     * Returns the root error code for this error.
+     * @param onlyICPSError - If set to true, will only take iCPS Errors into consideration
+     * @returns the error code for the first thrown error
      */
-    getRootErrorCode(): string {
+    getRootErrorCode(onlyICPSError: boolean = false): string {
+        return this.getErrorCodeStack(onlyICPSError).pop();
+    }
+
+    /**
+     * Returns the list of error codes associated to this error.
+     * @param onlyICPSError - If set to true, will only take iCPS Errors into consideration
+     * @returns The stack of thrown errors, where 'last()' is the root cause
+     */
+    getErrorCodeStack(onlyICPSError: boolean = false): string[] {
+        const errorCodeStack = [this.code];
         if (!this.cause) {
-            return this.code;
+            return errorCodeStack;
         }
 
         if (this.cause instanceof iCPSError) {
-            return this.cause.getRootErrorCode();
+            errorCodeStack.push(...this.getErrorCodeStack());
+            return errorCodeStack;
+        }
+
+        // If we only want to get iCPSError codes, at this point the root cause is non-iCPS - therefore returning only this error's code
+        if (onlyICPSError) {
+            return errorCodeStack;
         }
 
         if (Object.hasOwn(this.cause, `code`)) {
-            return `EXT#${(this.cause as any).code}`;
+            errorCodeStack.push(`EXT#${(this.cause as any).code}`);
+            return errorCodeStack;
         }
 
-        return `UNKNOWN_ROOT_ERROR`;
+        errorCodeStack.push(`NO_ROOT_ERROR_CODE`);
+        return errorCodeStack;
     }
 
     /**

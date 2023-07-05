@@ -22,8 +22,7 @@
           "releasedLabels": "<updated within CI>",
           "failComment": false,
           "failTitle": false,
-          "labels": false,
-          "addReleases": "bottom"
+          "labels": false
         }
       ],[
         "@semantic-release/release-notes-generator",
