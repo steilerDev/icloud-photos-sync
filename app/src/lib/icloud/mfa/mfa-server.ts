@@ -43,6 +43,15 @@ export class MFAServer extends EventEmitter {
 
         this.logger.debug(`Preparing MFA server on port ${this.port}`);
         this.server = http.createServer(this.handleRequest.bind(this));
+        this.server.on(`error`, err => {
+            const icpsErr = Object.hasOwn(err, `code`) && (err as any).code === `EADDRINUSE`
+                ? new iCPSError(MFA_ERR.ADDR_IN_USE_ERR).addContext(`port`, this.port)
+                : new iCPSError(MFA_ERR.SERVER_ERR);
+
+            icpsErr.addCause(err);
+
+            this.emit(HANDLER_EVENT, icpsErr);
+        });
 
         // Default MFA request always goes to device
         this.mfaMethod = new MFAMethod();

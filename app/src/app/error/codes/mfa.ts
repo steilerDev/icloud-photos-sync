@@ -11,6 +11,14 @@ export const STARTUP_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `STARTUP_FAILED`, `Unable to start MFA server`,
 );
 
+export const SERVER_ERR: ErrorStruct = buildErrorStruct(
+    name, prefix, `SERVER_ERR`, `HTTP Server Error`,
+);
+
+export const ADDR_IN_USE_ERR: ErrorStruct = buildErrorStruct(
+    name, prefix, `ADDR_IN_USE`, `HTTP Server could not start, because address/port is in use`,
+);
+
 export const RESEND_REQUEST_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `RESEND_REQUEST_FAILED`, `Resending request failed`,
 );

@@ -5,7 +5,7 @@ import {getLogger, logFilePath} from "../../lib/logger.js";
 import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
 import {EventHandler} from './event-handler.js';
-import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR} from '../error/error-codes.js';
+import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
 import {iCPSAppOptions} from '../factory.js';
 import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
 import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
@@ -28,8 +28,9 @@ export const WARN_EVENT = `warn`;
 const reportDenyList = [
     ERR_SIGINT.code,
     ERR_SIGTERM.code,
+    MFA_ERR.ADDR_IN_USE_ERR.code, // Only happens if port/address is in use
     // LIBRARY_ERR.LOCKED.code,
-    AUTH_ERR.UNAUTHORIZED.code,
+    AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
 ];
 
 const BACKTRACE_SUBMISSION = {
