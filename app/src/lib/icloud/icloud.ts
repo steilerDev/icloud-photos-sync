@@ -102,12 +102,13 @@ export class iCloud extends EventEmitter {
 
     /**
      *
-     * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR'
+     * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR' or the MFA server times out
      */
     getReady(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             this.once(ICLOUD.EVENTS.READY, () => resolve());
             this.once(ICLOUD.EVENTS.ERROR, err => reject(err));
+            this.mfaServer.once(MFA_SERVER.EVENTS.MFA_NOT_PROVIDED, err => reject(err));
         });
     }
 

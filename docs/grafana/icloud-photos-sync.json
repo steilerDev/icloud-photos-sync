@@ -140,6 +140,11 @@
                   "index": 6,
                   "text": "iCloud Ready"
                 },
+                "MFA_NOT_PROVIDED": {
+                  "color": "dark-purple",
+                  "index": 21,
+                  "text": "MFA Not Provided"
+                },
                 "MFA_RECEIVED": {
                   "color": "yellow",
                   "index": 3,
@@ -149,6 +154,21 @@
                   "color": "purple",
                   "index": 2,
                   "text": "MFA Required"
+                },
+                "SCHEDULED": {
+                  "color": "super-light-green",
+                  "index": 22,
+                  "text": "Run scheduled"
+                },
+                "SCHEDULED_FAILURE": {
+                  "color": "red",
+                  "index": 24,
+                  "text": "Scheduled Run Failed"
+                },
+                "SCHEDULED_SUCCESS": {
+                  "color": "semi-dark-green",
+                  "index": 23,
+                  "text": "Scheduled Run Succeeded"
                 },
                 "SYNC_COMPLETED": {
                   "color": "green",
@@ -226,7 +246,7 @@
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 4,
         "w": 5,
         "x": 0,
         "y": 0
@@ -332,7 +352,6 @@
           "tags": []
         }
       ],
-      "title": "Status",
       "type": "stat"
     },
     {
@@ -708,6 +727,97 @@
       ],
       "title": "Status Timeline",
       "type": "state-timeline"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_MONITORING}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "dateTimeFromNow"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 5,
+        "x": 0,
+        "y": 4
+      },
+      "id": 18,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "pluginVersion": "9.2.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "next_schedule"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "Next Run",
+      "type": "stat"
     },
     {
       "datasource": {

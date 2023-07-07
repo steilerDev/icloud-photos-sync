@@ -29,6 +29,7 @@ The following fields will be written:
     - `AUTHENTICATED`
     - `MFA_REQUIRED`
     - `MFA_RECEIVED`
+    - `MFA_NOT_PROVIDED`
     - `DEVICE_TRUSTED`
     - `ACCOUNT_READY`
     - `ICLOUD_READY`

@@ -4,6 +4,7 @@ import {iCloud} from '../../lib/icloud/icloud.js';
 import * as ICLOUD from '../../lib/icloud/constants.js';
 import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
 import * as ARCHIVE_ENGINE from '../../lib/archive-engine/constants.js';
+import * as MFA_SERVER from '../../lib/icloud/mfa/constants.js';
 import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
 import {getLogger} from '../../lib/logger.js';
 import {ArchiveEngine} from '../../lib/archive-engine/archive-engine.js';
@@ -11,6 +12,7 @@ import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from './error-handler.js';
 import * as fs from "fs";
 import path from "path";
 import {iCPSAppOptions} from "../factory.js";
+import {MFAServer} from "../../lib/icloud/mfa/mfa-server.js";
 import {DaemonAppEvents} from "../icloud-app.js";
 
 /**
@@ -50,6 +52,7 @@ const FIELDS = {
     "ERROR": `errors`,
     "WARNING": `warnings`,
     "STATUS_TIME": `status_time`,
+    "NEXT_SCHEDULE": `next_schedule`,
     "STATUS": {
         "name": `status`,
         "values": {
@@ -57,6 +60,7 @@ const FIELDS = {
             "AUTHENTICATED": `AUTHENTICATED`,
             "MFA_REQUIRED": `MFA_REQUIRED`,
             "MFA_RECEIVED": `MFA_RECEIVED`,
+            "MFA_NOT_PROVIDED": `MFA_NOT_PROVIDED`,
             "DEVICE_TRUSTED": `DEVICE_TRUSTED`,
             "ACCOUNT_READY": `ACCOUNT_READY`,
             "ICLOUD_READY": `ICLOUD_READY`,
@@ -74,6 +78,9 @@ const FIELDS = {
             "SYNC_COMPLETED": `SYNC_COMPLETED`,
             "SYNC_RETRY": `SYNC_RETRY`,
             "ERROR": `ERROR`,
+            "SCHEDULED": `SCHEDULED`,
+            "SCHEDULED_SUCCESS": `SCHEDULED_SUCCESS`,
+            "SCHEDULED_FAILURE": `SCHEDULED_FAILURE`,
         },
     },
 };
@@ -304,6 +311,10 @@ export class MetricsExporter implements EventHandler {
                 return;
             }
 
+            if (obj instanceof MFAServer) {
+                this.handleMFAServer(obj);
+                return;
+            }
 
             if (obj instanceof DaemonAppEvents) {
                 this.handleDaemonApp(obj);
@@ -320,7 +331,19 @@ export class MetricsExporter implements EventHandler {
     }
 
     /**
-     * Listens to iCloud events and provides CLI output
+     * Listens to MFA Server events and provides metrics output
+     * @param mfaServer - The MFA server to listen on
+     */
+    private handleMFAServer(mfaServer: MFAServer) {
+        mfaServer.on(MFA_SERVER.EVENTS.MFA_NOT_PROVIDED, () => {
+            this.logDataPoint(new InfluxLineProtocolPoint()
+                .addField(FIELDS.STATUS_TIME, Date.now())
+                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.MFA_NOT_PROVIDED));
+        });
+    }
+
+    /**
+     * Listens to iCloud events and provides metrics output
      * @param iCloud - The iCloud object to listen on
      */
     private handleICloud(iCloud: iCloud) {
@@ -525,7 +548,7 @@ export class MetricsExporter implements EventHandler {
         daemon.on(DaemonAppEvents.EVENTS.RETRY, (next: Date) => {
             this.logDataPoint(new InfluxLineProtocolPoint()
                 .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED_SUCCESS)
+                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED_FAILURE)
                 .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
         });
     }
