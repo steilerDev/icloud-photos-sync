@@ -31,7 +31,9 @@ If you find a bug in the application, you can help us by [submitting an issue](#
 
 
 ## <a name="feature"></a> Missing a Feature?
-You can *request* a new feature by [submitting an issue](#submit-issue).
+
+You can *request* a new feature by [submitting a feature request](#submit-feature-request).
+
 If you would like to *implement* a new feature, please consider the size of the change in order to determine the right steps to proceed:
 
 * For a **Major Feature**, first open an issue and outline your proposal so that it can be discussed.
@@ -49,10 +51,17 @@ Before you submit an issue, please search the [issue tracker](https://github.com
 
 We want to fix all the issues as soon as possible, but before fixing a bug, we need to reproduce and confirm it. In order to reproduce bugs, we require that you provide the error code displayed during runtime as well as the log file generated during the execution (preferably at `DEBUG` level).
 
-You can file new issues by selecting from our [new issue templates](https://github.com/steilerDev/icloud-photos-sync/issues/new/choose) and filling out the issue template.
+You can file a new issue by selecting the [bug report template from the issue templates](https://github.com/steilerDev/icloud-photos-sync/issues/new/choose) and filling it out.
 
 In case you are experiencing multiple issues, please make sure to open a separate issue for each of them, so we can properly track and address them!
 
+### <a name="submit-feature-request"></a> Submitting a Feature Request
+
+Before you submit a feature request, please search the [issue tracker](https://github.com/steilerDev/icloud-photos-sync/issues). An similar request for your ultimate goal might already exist.
+
+As this is a personal project, not all feature request will be considered. Additionally achieving your ultimate goal might be done in various ways, be open to possible implementations and make sure you can formulate your use case precisely.
+
+You can file new feature request by selecting the [feature request template from the issue templates](https://github.com/steilerDev/icloud-photos-sync/issues/new/choose) and fill it out.
 
 ### <a name="submit-pr"></a> Submitting a Pull Request (PR)
 

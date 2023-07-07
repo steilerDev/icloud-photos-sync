@@ -1,0 +1,26 @@
+name: Feature Request
+description: Suggest an idea for this project
+labels: ["class(feature)", "status(open)"]
+body:
+  - type: textarea
+    id: ultimate-goal
+    attributes:
+      label: Describe the ultimate goal you want to achieve
+      description: Describe the use case and motivation for this request.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: How do you think the feature should be implemented
+      description: Describe the user facing and/or technical implementation approaches (if applicable).
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Before submitting this issue, make sure you completed the following steps
+      options:
+        - label: This is a [feature request](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#feature), not an [issue](https://github.com/steilerDev/icloud-photos-sync/blob/beta/CONTRIBUTING.md#issue) or [a question](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#question)
+          required: true
+        - label: I accept the [Code of Conduct](https://github.com/steilerDev/icloud-photos-sync/blob/main/CODE_OF_CONDUCT.md)
+          required: true

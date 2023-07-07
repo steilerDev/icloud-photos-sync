@@ -1,0 +1,69 @@
+name: Bug Report
+description: Create a report to help us improve
+labels: ["class(bug)", "status(open)"]
+body:
+  - type: textarea
+    id: describe-issue
+    attributes:
+      label: Describe the issue
+      description: A clear and concise description of what the issue is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How to reproduce the behavior?
+      description: Steps how to reproduce the bug you are experiencing, also consider the properties of your iCloud Photo Library (e.g. size, age).
+    validations:
+      required: false
+  - type: input
+    id: error-code
+    attributes:
+      label: Error Code
+      description: Provide the error code, generate upon crash
+      placeholder: ex. 01234567-89ab-cdef-0123-456789abcdef
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: 'Please copy and paste any relevant log output (with `LOG_LEVEL=debug`), located in `.icloud-photos-sync.log`, stored in the user specified `DATA_DIR`'
+      render: shell-script
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: ex. Debian 10
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Execution environment
+      placeholder: ex. docker
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: icloud-photos-sync version
+      placeholder: ex. 1.0.1-beta.1
+    validations:
+      required: true
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Before submitting this issue, make sure you completed the following steps
+      options:
+        - label: This is an [issue](https://github.com/steilerDev/icloud-photos-sync/blob/beta/CONTRIBUTING.md#-found-a-bug) and not [a question](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#question) or [feature request](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#feature)
+          required: true
+        - label: The sync was performed a couple of times and the issue is persisting and consistent
+          required: true
+        - label: Checked out [known issues](https://github.com/steilerDev/icloud-photos-sync/labels/class(known%20issue))
+          required: true
+        - label: Enabled [crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/)
+          required: true
