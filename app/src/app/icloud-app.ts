@@ -56,7 +56,7 @@ export class DaemonApp extends iCPSApp {
     job?: Cron;
 
     /**
-     * EventEmitter to notify EventHandlers
+     * EventEmitter to notify EventHandlers, needed because we cannot extend two classes
      */
     event: DaemonAppEvents;
 

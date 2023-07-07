@@ -6,6 +6,7 @@ import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
 import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {spyOnEvent} from '../_helpers/_general';
+import {MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
 
 describe(`MFA Code`, () => {
     test(`Valid Code format`, () => {
@@ -143,7 +144,7 @@ describe(`MFA Resend`, () => {
                         "status": 403,
                     },
                 };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`Timeout`));
+                expect(mfaMethod.processResendError(error)).toEqual(new Error(`iCloud timeout`));
             });
 
             test(`No response data`, () => {
@@ -297,12 +298,16 @@ describe(`Request routing`, () => {
 });
 
 describe(`Server lifecycle`, () => {
+    jest.useFakeTimers();
+
     test(`Startup`, () => {
         const server = mfaServerFactory();
         server.server.listen = jest.fn() as any;
 
         server.startServer();
         expect((server.server.listen as any).mock.lastCall[0]).toEqual(80);
+        expect(server.mfaTimeout).toBeDefined();
+        clearTimeout(server.mfaTimeout);
     });
 
     test(`Shutdown`, () => {
@@ -322,4 +327,48 @@ describe(`Server lifecycle`, () => {
         expect(res.writeHead).toHaveBeenCalledWith(200, {"Content-Type": `application/json`});
         expect(res.end).toHaveBeenCalledWith(`{"message":"test"}`);
     });
+
+    test(`Handle unknown server error`, () => {
+        const server = mfaServerFactory();
+        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        server.server.emit(`error`, new Error(`some server error`));
+
+        expect(handlerEvent).toHaveBeenCalledWith(new Error(`HTTP Server Error`));
+    });
+
+    test(`Handle address in use error`, () => {
+        const server = mfaServerFactory();
+        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        const error = new Error(`Address in use`);
+        (error as any).code = `EADDRINUSE`;
+        server.server.emit(`error`, new Error(`Address in use`));
+
+        expect(handlerEvent).toHaveBeenCalledWith(new Error(`HTTP Server Error`));
+    });
+
+    test(`Handle MFA timeout`, () => {
+        const server = mfaServerFactory();
+        server.server.listen = jest.fn() as any;
+        server.stopServer = jest.fn();
+        server.removeAllListeners(); // On listener event process.exit would be called
+
+        const timeoutEvent = spyOnEvent(server, EVENTS.MFA_NOT_PROVIDED);
+
+        server.startServer();
+
+        // Not called on start server
+        expect(timeoutEvent).not.toHaveBeenCalled();
+        expect(server.stopServer).not.toHaveBeenCalled();
+
+        // Advancing time slightly before timeout occurs
+        jest.advanceTimersByTime(MFA_TIMEOUT_VALUE - 1);
+        expect(timeoutEvent).not.toHaveBeenCalled();
+        expect(server.stopServer).not.toHaveBeenCalled();
+
+        // Timers should have been called now
+        jest.advanceTimersByTime(2);
+        expect(timeoutEvent).toHaveBeenCalledWith(new Error(`MFA server timeout (code needs to be provided within 10 minutes)`));
+        expect(server.stopServer).toHaveBeenCalled();
+    });
+    // Test(`Timeout`)
 });

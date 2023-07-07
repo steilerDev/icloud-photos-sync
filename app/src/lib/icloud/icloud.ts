@@ -62,7 +62,6 @@ export class iCloud extends EventEmitter {
         this.mfaServer = new MFAServer(app.options.port);
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.submitMFA.bind(this));
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RESEND, this.resendMFA.bind(this));
-        this.mfaServer.on(HANDLER_EVENT, this.emit.bind(this, HANDLER_EVENT));
 
         // ICloud Auth object
         this.auth = new iCloudAuth(app.options.username, app.options.password, app.options.trustToken, app.options.dataDir);
@@ -103,12 +102,13 @@ export class iCloud extends EventEmitter {
 
     /**
      *
-     * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR'
+     * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR' or the MFA server times out
      */
     getReady(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             this.once(ICLOUD.EVENTS.READY, () => resolve());
             this.once(ICLOUD.EVENTS.ERROR, err => reject(err));
+            this.mfaServer.once(MFA_SERVER.EVENTS.MFA_NOT_PROVIDED, err => reject(err));
         });
     }
 

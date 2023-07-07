@@ -29,6 +29,7 @@ The following fields will be written:
     - `AUTHENTICATED`
     - `MFA_REQUIRED`
     - `MFA_RECEIVED`
+    - `MFA_NOT_PROVIDED`
     - `DEVICE_TRUSTED`
     - `ACCOUNT_READY`
     - `ICLOUD_READY`
@@ -46,6 +47,9 @@ The following fields will be written:
     - `SYNC_COMPLETED`
     - `SYNC_RETRY`
     - `ERROR`
+    - `SCHEDULED` (no previous run)
+    - `SCHEDULED_SUCCESS` (last run successful)
+    - `SCHEDULED_FAILURE` (error during last run)
   - `assetsArchived`: The amount of assets archived during an archive operation
   - `remoteAssetsDeleted`: The amount of remote assets deleted during an archive operation (if remote delete is enabled)
   - `localAssetsLoaded`: Gives the amount of local assets loaded during a sync

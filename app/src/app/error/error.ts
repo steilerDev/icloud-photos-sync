@@ -146,7 +146,7 @@ export class iCPSError extends Error {
         }
 
         if (this.cause instanceof iCPSError) {
-            errorCodeStack.push(...this.getErrorCodeStack());
+            errorCodeStack.push(...this.cause.getErrorCodeStack(onlyICPSError));
             return errorCodeStack;
         }
 

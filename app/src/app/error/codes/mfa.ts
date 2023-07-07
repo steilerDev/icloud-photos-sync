@@ -11,6 +11,18 @@ export const STARTUP_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `STARTUP_FAILED`, `Unable to start MFA server`,
 );
 
+export const SERVER_ERR: ErrorStruct = buildErrorStruct(
+    name, prefix, `SERVER_ERR`, `HTTP Server Error`,
+);
+
+export const SERVER_TIMEOUT: ErrorStruct = buildErrorStruct(
+    name, prefix, `TIMEOUT`, `MFA server timeout (code needs to be provided within 10 minutes)`,
+);
+
+export const ADDR_IN_USE_ERR: ErrorStruct = buildErrorStruct(
+    name, prefix, `ADDR_IN_USE`, `HTTP Server could not start, because address/port is in use`,
+);
+
 export const RESEND_REQUEST_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `RESEND_REQUEST_FAILED`, `Resending request failed`,
 );
@@ -44,7 +56,7 @@ export const NO_RESPONSE: ErrorStruct = buildErrorStruct(
 );
 
 export const TIMEOUT: ErrorStruct = buildErrorStruct(
-    name, prefix, `TIMEOUT`, `Timeout`,
+    name, prefix, `TIMEOUT`, `iCloud timeout`,
 );
 
 export const PRECONDITION_FAILED: ErrorStruct = buildErrorStruct(

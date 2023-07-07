@@ -5,7 +5,7 @@ import {getLogger, logFilePath} from "../../lib/logger.js";
 import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
 import {EventHandler} from './event-handler.js';
-import {ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR} from '../error/error-codes.js';
+import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, MFA_ERR} from '../error/error-codes.js';
 import {iCPSAppOptions} from '../factory.js';
 import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
 import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
@@ -28,8 +28,21 @@ export const WARN_EVENT = `warn`;
 const reportDenyList = [
     ERR_SIGINT.code,
     ERR_SIGTERM.code,
-    LIBRARY_ERR.LOCKED.code,
+    MFA_ERR.ADDR_IN_USE_ERR.code, // Only happens if port/address is in use
+    MFA_ERR.SERVER_TIMEOUT.code, // Only happens if user does not interact within 10 minutes
+    // LIBRARY_ERR.LOCKED.code,
+    AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
 ];
+
+const BACKTRACE_SUBMISSION = {
+    "DOMAIN": `https://submit.backtrace.io`,
+    "UNIVERSE": `steilerdev`,
+    "TOKEN": {
+        "PROD": `92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49`,
+        "DEV": `bf2e718ef569a1421ba4f3c9b36a8e4b84b1c4043265533f204e5759f7f4edee`,
+    },
+    "TYPE": `json`,
+};
 
 /**
  * This class handles errors thrown or `HANDLER_EVENT` emitted by classes of this application
@@ -48,8 +61,12 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
     constructor(options: iCPSAppOptions) {
         super();
         if (options.enableCrashReporting) {
+            const endpoint = `${BACKTRACE_SUBMISSION.DOMAIN}/${BACKTRACE_SUBMISSION.UNIVERSE}/`
+                                + `${PACKAGE_INFO.VERSION === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
+                                + BACKTRACE_SUBMISSION.TYPE;
+
             this.btClient = bt.initialize({
-                "endpoint": `https://submit.backtrace.io/steilerdev/92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49/json`,
+                endpoint,
                 "handlePromises": true,
                 "enableMetricsSupport": true,
                 "attributes": {
@@ -86,10 +103,14 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         let message = _err.getDescription();
 
         // Report error and append error code
-        if (_err.sev === `FATAL` // Report only fatal errors
-                && reportDenyList.indexOf(_err.getRootErrorCode(true)) === -1) { // Report only, if root error code is not in deny list
-            const errorId = await this.reportError(_err);
-            message += ` (Error Code: ${errorId})`;
+        if (_err.sev === `FATAL`) { // Report only fatal errors
+            const rootErrorCode = _err.getRootErrorCode(true);
+            if (reportDenyList.indexOf(rootErrorCode) === -1) { // Report only, if root error code is not in deny list
+                const errorId = await this.reportError(_err);
+                message += ` (Error Code: ${errorId})`;
+            } else {
+                message += ` (Not reporting ${rootErrorCode})`;
+            }
         }
 
         if (this.verbose && Object.keys(_err.context).length > 0) {

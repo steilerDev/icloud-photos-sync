@@ -9,6 +9,11 @@ import {iCPSError} from '../../../app/error/error.js';
 import {MFA_ERR} from '../../../app/error/error-codes.js';
 
 /**
+ * The MFA timeout value in milliseconds
+ */
+export const MFA_TIMEOUT_VALUE = 1000 * 60 * 10; // 10 minutes
+
+/**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
  * todo - Implement re-request of MFA code
  */
@@ -34,6 +39,11 @@ export class MFAServer extends EventEmitter {
     mfaMethod: MFAMethod;
 
     /**
+     * Timer object to track timeout of MFA request
+     */
+    mfaTimeout: NodeJS.Timeout;
+
+    /**
      * Creates the server object
      * @param port - The port to listen on, defaults to 80
      */
@@ -43,6 +53,23 @@ export class MFAServer extends EventEmitter {
 
         this.logger.debug(`Preparing MFA server on port ${this.port}`);
         this.server = http.createServer(this.handleRequest.bind(this));
+        this.server.on(`error`, err => {
+            const icpsErr = (Object.hasOwn(err, `code`) && (err as any).code === `EADDRINUSE`)
+                ? new iCPSError(MFA_ERR.ADDR_IN_USE_ERR).addContext(`port`, this.port)
+                : new iCPSError(MFA_ERR.SERVER_ERR);
+
+            icpsErr.addCause(err);
+
+            this.emit(HANDLER_EVENT, icpsErr);
+        });
+
+        // Exiting application on MFA_NOT_PROVIDED
+        // this.on(MFA_SERVER.EVENTS.MFA_NOT_PROVIDED, () => {
+        //     /* c8 ignore start */
+        //     // Not testing process.exit
+        //     process.exit(MFA_TIMEOUT);
+        //     /* c8 ignore stop */
+        // });
 
         // Default MFA request always goes to device
         this.mfaMethod = new MFAMethod();
@@ -58,6 +85,12 @@ export class MFAServer extends EventEmitter {
             this.logger.info(`Exposing endpoints: ${JSON.stringify(Object.values(MFA_SERVER.ENDPOINT))}`);
             /* c8 ignore stop */
         });
+
+        // MFA code needs to be provided within timeout period
+        this.mfaTimeout = setTimeout(() => {
+            this.emit(MFA_SERVER.EVENTS.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
+            this.stopServer();
+        }, MFA_TIMEOUT_VALUE);
     }
 
     /**
@@ -162,6 +195,10 @@ export class MFAServer extends EventEmitter {
         if (this.server) {
             this.server.close();
             this.server = undefined;
+        }
+
+        if (this.mfaTimeout) {
+            clearTimeout(this.mfaTimeout);
         }
     }
 }

@@ -166,6 +166,8 @@ In case no valid trust token is available, a MFA code is required in order to su
 
 The CLI application will pause execution, in case it detects that a MFA code is necessary, open a web server (default on port `80`) and wait for user input. At this point, a MFA code should have already been sent to the primary device. 
 
+The MFA code needs to be submitted within 10 minutes, before the session expires. If this has not happened the execution will fail with an error and needs to be restarted.
+
 #### Submit MFA Code
 
 The MFA code can be entered through the exposed API:
