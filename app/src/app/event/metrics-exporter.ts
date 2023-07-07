@@ -11,6 +11,7 @@ import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from './error-handler.js';
 import * as fs from "fs";
 import path from "path";
 import {iCPSAppOptions} from "../factory.js";
+import {DaemonAppEvents} from "../icloud-app.js";
 
 /**
  * The InfluxLineProtocol field set type
@@ -303,9 +304,10 @@ export class MetricsExporter implements EventHandler {
                 return;
             }
 
-            // If (obj instanceof DaemonAppEvents) {
-            //     this.handleDaemonApp(obj);
-            // }
+
+            if (obj instanceof DaemonAppEvents) {
+                this.handleDaemonApp(obj);
+            }
 
             if (obj instanceof ErrorHandler) {
                 this.handleErrorHandler(obj);
@@ -505,14 +507,26 @@ export class MetricsExporter implements EventHandler {
      * Handles events emitted from the daemon app
      * @param daemon - The daemon app event emitter
      */
-    // private handleDaemonApp(daemon: DaemonAppEvents) {
-    //     daemon.on(DaemonAppEvents.EVENTS.SCHEDULED, (next: Date) => {
-    //     });
+    private handleDaemonApp(daemon: DaemonAppEvents) {
+        daemon.on(DaemonAppEvents.EVENTS.SCHEDULED, (next: Date) => {
+            this.logDataPoint(new InfluxLineProtocolPoint()
+                .addField(FIELDS.STATUS_TIME, Date.now())
+                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED)
+                .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+        });
 
-    //     daemon.on(DaemonAppEvents.EVENTS.DONE, (next: Date) => {
-    //     });
+        daemon.on(DaemonAppEvents.EVENTS.DONE, (next: Date) => {
+            this.logDataPoint(new InfluxLineProtocolPoint()
+                .addField(FIELDS.STATUS_TIME, Date.now())
+                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED_SUCCESS)
+                .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+        });
 
-    //     daemon.on(DaemonAppEvents.EVENTS.RETRY, (next: Date) => {
-    //     });
-    // }
+        daemon.on(DaemonAppEvents.EVENTS.RETRY, (next: Date) => {
+            this.logDataPoint(new InfluxLineProtocolPoint()
+                .addField(FIELDS.STATUS_TIME, Date.now())
+                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED_SUCCESS)
+                .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+        });
+    }
 }
