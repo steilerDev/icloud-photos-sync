@@ -30,13 +30,21 @@ The following extensions are used during development and are configured as part 
   - *Description*: Pull Request and Issue Provider for GitHub
   - *Publisher*: GitHub
   - [VS Marketplace](https://open-vsx.org/vscode/item?itemName=GitHub.vscode-pull-request-github)
+- **Live Server**
+  - *Id*: `ritwickdey.LiveServer`
+  - *Description*: Launch a development local Server with live reload feature for static & dynamic pages
+  - *Publisher*: ritwickdey
+  - [VS Marketplace](https://open-vsx.org/vscode/item?itemName=ritwickdey.LiveServer)
 
 ## Running in a development environment
 
-This repository defines VSCode tasks and debug configurations. The latter references `.env` files from the `.vscode` directory in order to access secrets while executing. Alternatively the basic authentication credentials (username, password and trust token) could be exported.
+This repository defines VSCode tasks and debug configurations. The latter references the `test.env` file from the `.vscode` directory in order to access secrets while executing. Alternatively the basic authentication credentials (username, password and trust token) could be exported.
 
 ```
-APPLE_ID_USER=<username>
-APPLE_ID_PWD=<password>
-TRUST_TOKEN=<token>
+APPLE_ID_USER=<test-user>
+APPLE_ID_PWD=<test-password>
+TRUST_TOKEN=<test-trust-token>
+ENABLE_CRASH_REPORTING=true
+FORCE=true
+DATA_DIR=<projectFolder>/app-data-dir/
 ```

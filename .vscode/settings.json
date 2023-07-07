@@ -85,4 +85,5 @@
     ],
     "githubIssues.useBranchForIssues": "off",
     "githubIssues.workingIssueFormatScm": "fix: ${issueTitle} \n\nFixes ${issueNumberLabel}",
+    "liveServer.settings.donotShowInfoMsg": true,
 }

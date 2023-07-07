@@ -14,6 +14,7 @@
     "build": "npx tsc",
     "typedoc": "npx typedoc --plugin typedoc-plugin-markdown --plugin typedoc-github-wiki-theme",
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/unit/",
+    "test-single": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json",
     "test-api": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/api/",
     "execute": "node bin/main.js"
   },
