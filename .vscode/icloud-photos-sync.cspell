@@ -43,6 +43,7 @@ loglevel
 LPMQ
 majorfeat
 materialx
+mimo
 mkdocs
 mockfs
 ncipollo
@@ -50,6 +51,7 @@ Nerb
 Nfrb
 nofile
 Orta
+pano
 parens
 photoshop
 photoslibrary

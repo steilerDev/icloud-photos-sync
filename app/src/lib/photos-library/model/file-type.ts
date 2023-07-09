@@ -42,6 +42,7 @@ const EXT = {
     'com.olympus.or-raw-image': `orf`,
     'public.item': `largeThumbnail`,
     'public.mpo-image': `mpo`,
+    'com.dji.mimo.pano.jpeg' : `jpg`,
 };
 
 /**
