@@ -47,7 +47,7 @@ If you would like to *implement* a new feature, please consider the size of the 
 
 ### <a name="submit-issue"></a> Submitting an Issue
 
-Before you submit an issue, please search the [issue tracker](https://github.com/steilerDev/icloud-photos-sync/issues). An issue for your problem might already exist and the discussion might inform you of workarounds readily available.
+Before you submit an issue, please search the [issue tracker](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3Aclass%28bug%29%2Cclass%28improvement%29%2C%22class%28known+issue%29%22). An issue for your problem might already exist and the discussion might inform you of workarounds readily available.
 
 We want to fix all the issues as soon as possible, but before fixing a bug, we need to reproduce and confirm it. In order to reproduce bugs, we require that you provide the error code displayed during runtime as well as the log file generated during the execution (preferably at `DEBUG` level).
 
@@ -57,7 +57,7 @@ In case you are experiencing multiple issues, please make sure to open a separat
 
 ### <a name="submit-feature-request"></a> Submitting a Feature Request
 
-Before you submit a feature request, please search the [issue tracker](https://github.com/steilerDev/icloud-photos-sync/issues). An similar request for your ultimate goal might already exist.
+Before you submit a feature request, please search the [issue tracker](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3Aclass%28feature%29+label%3Astatus%28open%29%2Cstatus%28wontfix%29%2Cstatus%28backlog%29%2C%22status%28help+needed%29%22%2C%22status%28in+progress%29%22%2Cstatus%28investigating%29%2Cstatus%28previewed%29+). A similar request for your ultimate goal might already exist.
 
 As this is a personal project, not all feature request will be considered. Additionally achieving your ultimate goal might be done in various ways, be open to possible implementations and make sure you can formulate your use case precisely.
 
