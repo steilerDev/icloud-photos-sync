@@ -111,15 +111,7 @@ If we ask for changes via code reviews then:
 
 2. Re-run the unit tests to ensure they are still passing.
 
-3. Create a fixup commit and push to your GitHub repository (this will update your Pull Request):
-
-    ```shell
-    git commit --all --fixup HEAD
-    git push
-    ```
-
-That's it! Thank you for your contribution!
-
+3. Synchronize your PR request.
 
 ##### Updating the commit message
 
