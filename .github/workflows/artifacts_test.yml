@@ -5,7 +5,7 @@ on:
   workflow_call:
     inputs:
       methods:
-        description: 'An array of test methods that need to be run. Will be read using fromJSON(). Allowed values: ["e2e", "unit"]'
+        description: 'An array of test methods that need to be run. Will be read using fromJSON(). Allowed values: ["e2e", "unit", "api"]'
         required: true
         type: string
     secrets:
