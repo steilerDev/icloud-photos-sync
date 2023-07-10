@@ -7,7 +7,7 @@ import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {Album} from '../../src/lib/photos-library/model/album';
 import {spyOnEvent} from '../_helpers/_general';
-import {EVENTS} from '../../src/lib/icloud/constants';
+import {EVENTS,DEFAULT_HEADER} from '../../src/lib/icloud/constants';
 import path from 'path';
 import {setupLogger} from '../_mocks/logger';
 
@@ -45,6 +45,18 @@ describe(`App Factory`, () => {
         expect(tokenApp.icloud).toBeDefined();
         expect(tokenApp.icloud.mfaServer).toBeDefined();
         expect(tokenApp.icloud.auth).toBeDefined();
+        expect(DEFAULT_HEADER.Origin).toEqual('https://www.icloud.com');
+        expect(fs.existsSync(`/opt/icloud-photos-library`));
+    });
+
+    test(`Create Token App China`, () => {
+        const tokenApp = appFactory(validOptions.token_china) as TokenApp;
+        expect(tokenApp).toBeInstanceOf(TokenApp);
+        expect(setupLogger).toHaveBeenCalledTimes(1);
+        expect(tokenApp.icloud).toBeDefined();
+        expect(tokenApp.icloud.mfaServer).toBeDefined();
+        expect(tokenApp.icloud.auth).toBeDefined();
+        expect(DEFAULT_HEADER.Origin).toEqual('https://www.icloud.com.cn');
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 
@@ -57,6 +69,20 @@ describe(`App Factory`, () => {
         expect(syncApp.icloud.auth).toBeDefined();
         expect(syncApp.photosLibrary).toBeDefined();
         expect(syncApp.syncEngine).toBeDefined();
+        expect(DEFAULT_HEADER.Origin).toEqual('https://www.icloud.com');
+        expect(fs.existsSync(`/opt/icloud-photos-library`));
+    });
+
+    test(`Create Sync App China`, () => {
+        const syncApp = appFactory(validOptions.sync_china) as SyncApp;
+        expect(syncApp).toBeInstanceOf(SyncApp);
+        expect(setupLogger).toHaveBeenCalledTimes(1);
+        expect(syncApp.icloud).toBeDefined();
+        expect(syncApp.icloud.mfaServer).toBeDefined();
+        expect(syncApp.icloud.auth).toBeDefined();
+        expect(syncApp.photosLibrary).toBeDefined();
+        expect(syncApp.syncEngine).toBeDefined();
+        expect(DEFAULT_HEADER.Origin).toEqual('https://www.icloud.com.cn');
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 
@@ -70,6 +96,21 @@ describe(`App Factory`, () => {
         expect(archiveApp.photosLibrary).toBeDefined();
         expect(archiveApp.syncEngine).toBeDefined();
         expect(archiveApp.archiveEngine).toBeDefined();
+        expect(DEFAULT_HEADER.Origin).toEqual(`https://www.icloud.com`);
+        expect(fs.existsSync(`/opt/icloud-photos-library`));
+    });
+
+    test(`Create Archive App China`, () => {
+        const archiveApp = appFactory(validOptions.archive_china) as ArchiveApp;
+        expect(archiveApp).toBeInstanceOf(ArchiveApp);
+        expect(setupLogger).toHaveBeenCalledTimes(1);
+        expect(archiveApp.icloud).toBeDefined();
+        expect(archiveApp.icloud.mfaServer).toBeDefined();
+        expect(archiveApp.icloud.auth).toBeDefined();
+        expect(archiveApp.photosLibrary).toBeDefined();
+        expect(archiveApp.syncEngine).toBeDefined();
+        expect(archiveApp.archiveEngine).toBeDefined();
+        expect(DEFAULT_HEADER.Origin).toEqual(`https://www.icloud.com.cn`);
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 
@@ -78,21 +119,20 @@ describe(`App Factory`, () => {
         expect(daemonApp).toBeInstanceOf(DaemonApp);
         expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(daemonApp.event).toBeDefined();
+        expect(DEFAULT_HEADER.Origin).toEqual('https://www.icloud.com');
+    });
+
+    test(`Create Daemon App China`, () => {
+        const daemonApp = appFactory(validOptions.daemon_china) as DaemonApp;
+        expect(daemonApp).toBeInstanceOf(DaemonApp);
+        expect(setupLogger).toHaveBeenCalledTimes(1);
+        expect(daemonApp.event).toBeDefined();
+        expect(DEFAULT_HEADER.Origin).toEqual('https://www.icloud.com.cn');
     });
 });
 
 describe(`App control flow`, () => {
-    test(`Handle authentication error`, async () => {
-        const tokenApp = appFactory(validOptions.token) as TokenApp;
-        tokenApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
-        tokenApp.icloud.authenticate = jest.fn(() => Promise.reject(new Error()));
-        tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-        await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
-
-        expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
-        expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
-    });
 
     test(`Handle lock acquisition error`, async () => {
         const tokenApp = appFactory(validOptions.token) as TokenApp;

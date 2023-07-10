@@ -54,6 +54,8 @@ export const DEFAULT_HEADER = {
 export function setupDefaultHeader(options: iCPSAppOptions): void {
     if (options.icloudChina) {
         DEFAULT_HEADER.Origin = `https://www.icloud.com.cn`;
+    } else {
+        DEFAULT_HEADER.Origin = `https://www.icloud.com`;
     }
 }
 
