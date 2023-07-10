@@ -1,3 +1,4 @@
+import {iCPSAppOptions} from "../../app/factory.js";
 /**
  * File holding constant values for the iCloud class
  */
@@ -49,6 +50,12 @@ export const DEFAULT_HEADER = {
     'Content-Type': `application/json`,
     "Origin": `https://www.icloud.com`,
 };
+
+export function setupDefaultHeader(options: iCPSAppOptions): void {
+    if (options.icloudChina) {
+        DEFAULT_HEADER.Origin = `https://www.icloud.com.cn`;
+    }
+}
 
 /**
  * Values extracted from auth response headers
