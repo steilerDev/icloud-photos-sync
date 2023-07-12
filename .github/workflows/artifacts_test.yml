@@ -23,7 +23,10 @@ permissions: {}
 
 jobs:
   unit:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os:  ["ubuntu-latest", "macos-latest"]
+    runs-on: ${{ matrix.os }}
     if: contains(fromJSON(inputs.methods), 'unit')
     steps:
       - name: setup/checkout

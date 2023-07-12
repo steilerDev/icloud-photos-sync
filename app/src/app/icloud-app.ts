@@ -94,8 +94,6 @@ export class DaemonApp extends iCPSApp {
         } catch (err) {
             this.event.emit(HANDLER_EVENT, new iCPSError(APP_ERR.DAEMON).addCause(err));
             this.event.emit(DaemonAppEvents.EVENTS.RETRY, this.job?.nextRun());
-        } finally { // Cleaning up
-            syncApp = undefined;
         }
     }
 }

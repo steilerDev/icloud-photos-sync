@@ -10,6 +10,7 @@ import {spyOnEvent} from '../_helpers/_general';
 import {EVENTS} from '../../src/lib/icloud/constants';
 import path from 'path';
 import {setupLogger} from '../_mocks/logger';
+import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 
 beforeEach(() => {
     mockfs();
@@ -45,6 +46,7 @@ describe(`App Factory`, () => {
         expect(tokenApp.icloud).toBeDefined();
         expect(tokenApp.icloud.mfaServer).toBeDefined();
         expect(tokenApp.icloud.auth).toBeDefined();
+        expect(ResourceManager._instance).toBeDefined();
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 
@@ -55,6 +57,7 @@ describe(`App Factory`, () => {
         expect(syncApp.icloud).toBeDefined();
         expect(syncApp.icloud.mfaServer).toBeDefined();
         expect(syncApp.icloud.auth).toBeDefined();
+        expect(ResourceManager._instance).toBeDefined();
         expect(syncApp.photosLibrary).toBeDefined();
         expect(syncApp.syncEngine).toBeDefined();
         expect(fs.existsSync(`/opt/icloud-photos-library`));
@@ -67,6 +70,7 @@ describe(`App Factory`, () => {
         expect(archiveApp.icloud).toBeDefined();
         expect(archiveApp.icloud.mfaServer).toBeDefined();
         expect(archiveApp.icloud.auth).toBeDefined();
+        expect(ResourceManager._instance).toBeDefined();
         expect(archiveApp.photosLibrary).toBeDefined();
         expect(archiveApp.syncEngine).toBeDefined();
         expect(archiveApp.archiveEngine).toBeDefined();
@@ -76,6 +80,7 @@ describe(`App Factory`, () => {
     test(`Create Daemon App`, () => {
         const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
         expect(daemonApp).toBeInstanceOf(DaemonApp);
+        expect(ResourceManager._instance).toBeDefined();
         expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(daemonApp.event).toBeDefined();
     });

@@ -21,6 +21,7 @@ const LOGGER = {
     "ErrorHandler": `Error-Handler`,
     "MetricsExporter": `Metrics-Exporter`,
     "InfluxLineProtocolPoint": `Influx-Line-Protocol`,
+    "ResourceManager": `Resource-Manager`,
 };
 
 export let logFilePath: string;

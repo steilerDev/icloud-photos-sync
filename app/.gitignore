@@ -2,3 +2,4 @@ bin/
 node_modules/
 docs/
 coverage/
+*.schema.json

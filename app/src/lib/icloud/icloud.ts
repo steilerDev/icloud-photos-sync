@@ -35,7 +35,7 @@ export class iCloud extends EventEmitter {
     /**
      * Access to the iCloud Photos service
      */
-    photos: iCloudPhotos = null;
+    photos: iCloudPhotos;
 
     /**
      * A promise that will resolve, once the object is ready or reject, in case there is an error

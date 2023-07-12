@@ -3,6 +3,7 @@ import Cron from "croner";
 import * as PACKAGE_INFO from '../lib/package.js';
 import {ErrorHandler} from "./event/error-handler.js";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
+import {ResourceManager} from "../lib/resource-manager/resource-manager.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -211,6 +212,7 @@ export function appFactory(argv: string[]): iCPSApp {
         .argument(`<path>`, `Path to the folder that should be archived`);
 
     program.parse(argv);
+    ResourceManager.setup(program.opts() as iCPSAppOptions);
     ErrorHandler.cleanEnv();
     return app;
 }

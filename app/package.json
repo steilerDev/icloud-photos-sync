@@ -9,8 +9,10 @@
     "icloud-photos-sync": "bin/main.js"
   },
   "scripts": {
-    "clean": "rm -rf bin/ coverage/ doc/ node_modules/ package-lock.json",
-    "prebuild": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
+    "clean": "rm -rf bin/ coverage/ doc/ node_modules/ package-lock.json && find src/ -name \"*.schema.json\" -type f -delete",
+    "lint": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
+    "schema": "npx ts-json-schema-generator --type ResourceFile --path src/lib/resource-manager/resource-file.ts > src/lib/resource-manager/resource-file.schema.json",
+    "prebuild": "npm run lint && npm run schema",
     "build": "npx tsc",
     "typedoc": "npx typedoc --plugin typedoc-plugin-markdown --plugin typedoc-github-wiki-theme",
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.json test/unit/",
@@ -56,6 +58,7 @@
     "jest-summarizing-reporter": "^1.1.4",
     "mock-fs": "^5.2.0",
     "ts-jest": "^29.1.1",
+    "ts-json-schema-generator": "^1.2.0",
     "ts-node": "^10.9.1",
     "typedoc": "^0.24.8",
     "typedoc-github-wiki-theme": "^1.1.0",
@@ -63,6 +66,7 @@
     "typescript": "^5.1.3"
   },
   "dependencies": {
+    "ajv": "^8.12.0",
     "axios": "^1.2.2",
     "backtrace-node": "^1.2.0",
     "chalk": "^5.0.0",
