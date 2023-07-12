@@ -93,6 +93,7 @@ export type iCPSAppOptions = {
     enableCrashReporting: boolean,
     failOnMfa: boolean,
     force: boolean,
+    icloudChina: boolean,
     refreshToken: boolean,
     remoteDelete: boolean,
     logLevel: string,
@@ -157,6 +158,9 @@ export function appFactory(argv: string[]): iCPSApp {
             .default(false))
         .addOption(new Option(`--force`, `Force the execution of the operation, independent of an existing lock on the library. USE WITH CAUTION!`)
             .env(`FORCE`)
+            .default(false))
+        .addOption(new Option(`--icloud-china`, `Use icloud.com.cn instead of icloud.com as the download source.`)
+            .env(`ICLOUD_CHINA`)
             .default(false))
         .addOption(new Option(`--refresh-token`, `Ignore any stored token and always refresh it.`)
             .env(`REFRESH_TOKEN`)

@@ -28,6 +28,7 @@ export abstract class iCPSApp {
         this.options = options;
         // Needs to be done here so all future objects use it / including handlers and everything created down the chain
         Logger.setupLogger(this.options);
+        ICLOUD.setupDefaultHeader(this.options);
     }
 
     /**
