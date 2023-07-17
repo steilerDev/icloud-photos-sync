@@ -23,7 +23,7 @@ jobs:
     uses: ./.github/workflows/artifacts_test.yml
     permissions: {}
     with:
-      methods: ${{ (github.ref_name == 'beta' || github.ref_name == 'main') && '["unit", "e2e", "api"]' || '["unit"]' }} # Only running full suite when targeting main or beta
+      methods: ${{ (github.ref_name == 'beta' || github.ref_name == 'main') && '["unit-ubuntu", "unit-macos", "e2e", "api"]' || '["unit-ubuntu"]' }} # Only running full suite when targeting main or beta
     secrets:
       test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
       test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
