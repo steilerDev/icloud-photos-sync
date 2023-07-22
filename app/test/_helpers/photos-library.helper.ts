@@ -9,7 +9,7 @@ import {appDataDir} from './_config';
  */
 export function photosLibraryFactory(): PhotosLibrary {
     const opts = {
-        "dataDir": appDataDir,
+        dataDir: appDataDir,
     };
     return new PhotosLibrary(appWithOptions(opts));
 }

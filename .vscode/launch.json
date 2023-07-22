@@ -11,9 +11,13 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
+            "runtimeArgs": [
+                "--experimental-vm-modules",
+                "--experimental-json-modules"
+            ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["token"],
+            "args": ["sync"],
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",
             ],
@@ -24,6 +28,7 @@
             "request": "launch",
             "runtimeArgs": [
                 "--experimental-vm-modules",
+                "--experimental-json-modules",
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
                 "test/api/api.test.ts"
@@ -38,6 +43,7 @@
             "request": "launch",
             "runtimeArgs": [
                 "--experimental-vm-modules",
+                "--experimental-json-modules",
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
                 //"test/unit/.*.test.ts"
@@ -52,6 +58,7 @@
             "request": "launch",
             "runtimeArgs": [
                 "--experimental-vm-modules",
+                "--experimental-json-modules",
                 "--inspect-brk",
                 "node_modules/.bin/jest",
                 "--runInBand",

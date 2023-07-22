@@ -13,9 +13,9 @@ import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/di
 import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
 import {addAsset, writeAssets} from './helpers/write-assets-helpers.js';
 import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
-import {SyncApp} from '../../app/icloud-app.js';
 import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
+import {ResourceManager} from '../resource-manager/resource-manager.js';
 
 /**
  * This class handles the photos sync
@@ -41,27 +41,16 @@ export class SyncEngine extends EventEmitter {
      * Initialized in writeAssets()
      */
     downloadQueue: PQueue;
-    /**
-     * The number of concurrent download threads
-     */
-    downloadCCY: number;
-
-    /**
-     * If the sync experiences an expected / recoverable error (e.g. after 1hr the cookies need to be refreshed), how often should the tool retry
-     * Set this to -1 if retry should happen infinitely
-     */
-    maxRetry: number;
 
     /**
      * Creates a new sync engine from the previously created objects and CLI options
-     * @param app - The application object, holding references to the iCloud object, the Photos Library object and CLI options
+     * @param icloud - The iCloud object
+     * @param photosLibrary - The photos library object
      */
-    constructor(app: SyncApp) {
+    constructor(icloud: iCloud, photosLibrary: PhotosLibrary) {
         super();
-        this.icloud = app.icloud;
-        this.photosLibrary = app.photosLibrary;
-        this.downloadCCY = app.options.downloadThreads;
-        this.maxRetry = app.options.maxRetries;
+        this.icloud = icloud;
+        this.photosLibrary = photosLibrary;
     }
 
     /**
@@ -72,7 +61,7 @@ export class SyncEngine extends EventEmitter {
         this.logger.info(`Starting sync`);
         this.emit(SYNC_ENGINE.EVENTS.START);
         let retryCount = 0;
-        while (this.maxRetry > retryCount) {
+        while (ResourceManager.maxRetries > retryCount) {
             retryCount++;
             this.logger.info(`Performing sync, try #${retryCount}`);
 

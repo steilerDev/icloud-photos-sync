@@ -61,7 +61,7 @@ describe(`Coordination`, () => {
             error.name = `AxiosError`;
             error.code = `ERR_BAD_REQUEST`;
             error.response = {
-                "status": 421,
+                status: 421,
             } as unknown as AxiosResponse;
             syncEngine.writeState = jest.fn<() => Promise<void>>()
                 .mockRejectedValueOnce(error)
@@ -95,7 +95,7 @@ describe(`Coordination`, () => {
                 error.name = `AxiosError`;
                 error.code = `ERR_BAD_RESPONSE`;
                 error.response = {
-                    "status": 500,
+                    status: 500,
                 } as unknown as AxiosResponse;
 
                 return {error};
@@ -105,7 +105,7 @@ describe(`Coordination`, () => {
                 error.name = `AxiosError`;
                 error.code = `ERR_BAD_REQUEST`;
                 error.response = {
-                    "status": 410,
+                    status: 410,
                 } as unknown as AxiosResponse;
 
                 return {error};
@@ -168,9 +168,9 @@ describe(`Coordination`, () => {
 
         test(`Fatal failure - Unknown Axios Error`, async () => {
             const error = {
-                "name": `AxiosError`,
-                "message": `Server Error`,
-                "code": `SERVER_ERROR`,
+                name: `AxiosError`,
+                message: `Server Error`,
+                code: `SERVER_ERROR`,
             };
             const syncEngine = syncEngineFactory();
             const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
@@ -194,34 +194,34 @@ describe(`Coordination`, () => {
 
         test.each([
             {
-                "queue": undefined,
-                "msg": `Undefined queue`,
+                queue: undefined,
+                msg: `Undefined queue`,
             },
             {
-                "queue": new PQueue(),
-                "msg": `Empty queue`,
+                queue: new PQueue(),
+                msg: `Empty queue`,
             },
             {
-                "queue": (() => {
-                    const queue = new PQueue({"concurrency": 2, "autoStart": true});
+                queue: (() => {
+                    const queue = new PQueue({concurrency: 2, autoStart: true});
                     for (let i = 0; i < 10; i++) {
                         queue.add(() => new Promise(resolve => setTimeout(resolve, 40)));
                     }
 
                     return queue;
                 })(),
-                "msg": `Non-Empty queue`,
+                msg: `Non-Empty queue`,
             },
             {
-                "queue": (() => {
-                    const queue = new PQueue({"concurrency": 2, "autoStart": true});
+                queue: (() => {
+                    const queue = new PQueue({concurrency: 2, autoStart: true});
                     for (let i = 0; i < 10; i++) {
                         queue.add(() => new Promise(resolve => setTimeout(resolve, 40)));
                     }
 
                     return queue;
                 })(),
-                "msg": `Started queue`,
+                msg: `Started queue`,
             },
         ])(`Prepare Retry - $msg`, async ({queue}) => {
             const syncEngine = syncEngineFactory();
@@ -372,25 +372,25 @@ describe(`Processing remote records`, () => {
 
     test(`Converting Asset - Invalid File Extension`, () => {
         const cplMasters = [{
-            "filenameEnc": `emhlbnl1LWx1by13bWZtU054bTl5MC11bnNwbGFzaC5qcGVn`,
-            "modified": 1660139199098,
-            "recordName": `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
-            "resourceType": `random.resourceType`,
-            "resource": {
-                "fileChecksum": `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
-                "referenceChecksum": `AS/OBaLJzK8dRs8QM97ikJQfJEGI`,
-                "size": 170384,
-                "wrappingKey": `NQtpvztdVKKNfrb8lf482g==`,
-                "downloadURL": `https://icloud.com`,
+            filenameEnc: `emhlbnl1LWx1by13bWZtU054bTl5MC11bnNwbGFzaC5qcGVn`,
+            modified: 1660139199098,
+            recordName: `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
+            resourceType: `random.resourceType`,
+            resource: {
+                fileChecksum: `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
+                referenceChecksum: `AS/OBaLJzK8dRs8QM97ikJQfJEGI`,
+                size: 170384,
+                wrappingKey: `NQtpvztdVKKNfrb8lf482g==`,
+                downloadURL: `https://icloud.com`,
             },
-            "zoneName": getRandomZone(),
+            zoneName: getRandomZone(),
         } as CPLMaster];
 
         const cplAssets = [{
-            "favorite": 0,
-            "masterRef": `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
-            "modified": 1660139199099,
-            "recordName": `4E921FD1-74AA-42EE-8601-C3E9B96DA089`,
+            favorite: 0,
+            masterRef: `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
+            modified: 1660139199099,
+            recordName: `4E921FD1-74AA-42EE-8601-C3E9B96DA089`,
         } as CPLAsset];
 
         expect(() => SyncEngine.convertCPLAssets(cplAssets, cplMasters)).toThrow(/^Error while converting asset$/);
@@ -435,10 +435,10 @@ describe(`Diffing state`, () => {
             const remoteAssets = [];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                somechecksum: new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                somechecksum1: new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -458,7 +458,7 @@ describe(`Diffing state`, () => {
             ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                somechecksum: new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -477,9 +477,9 @@ describe(`Diffing state`, () => {
             ];
 
             const localAssets = {
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                'somechecksum4': new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false),
+                somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                somechecksum4: new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -499,10 +499,10 @@ describe(`Diffing state`, () => {
             ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                somechecksum: new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                somechecksum1: new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -522,10 +522,10 @@ describe(`Diffing state`, () => {
             ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                somechecksum: new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                somechecksum1: new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -545,10 +545,10 @@ describe(`Diffing state`, () => {
             ];
 
             const localAssets = {
-                'somechecksum': new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                'somechecksum1': new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                'somechecksum2': new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                'somechecksum3': new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
+                somechecksum: new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
+                somechecksum1: new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
+                somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
+                somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
             };
 
             const syncEngine = syncEngineFactory();
@@ -582,10 +582,10 @@ describe(`Diffing state`, () => {
             const remoteAlbums: PEntity<Album>[] = [];
 
             const localAlbums = {
-                'somechecksum1': new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
-                'somechecksum2': new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``),
-                'somechecksum3': new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
-                'somechecksum4': new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
+                somechecksum1: new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
+                somechecksum2: new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``),
+                somechecksum3: new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
+                somechecksum4: new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
             };
 
             const syncEngine = syncEngineFactory();
@@ -605,7 +605,7 @@ describe(`Diffing state`, () => {
             ];
 
             const localAlbums = {
-                'somechecksum1': new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
+                somechecksum1: new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
             };
 
             const syncEngine = syncEngineFactory();
@@ -624,9 +624,9 @@ describe(`Diffing state`, () => {
             ];
 
             const localAlbums = {
-                'somechecksum3': new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
-                'somechecksum4': new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
-                'somechecksum5': new Album(`somechecksum5`, AlbumType.ALBUM, `testAlbum5`, ``),
+                somechecksum3: new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
+                somechecksum4: new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
+                somechecksum5: new Album(`somechecksum5`, AlbumType.ALBUM, `testAlbum5`, ``),
             };
 
             const syncEngine = syncEngineFactory();
@@ -646,10 +646,10 @@ describe(`Diffing state`, () => {
             ];
 
             const localAlbums = {
-                'somechecksum1': new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
-                'somechecksum2': new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``),
-                'somechecksum3': new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
-                'somechecksum4': new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
+                somechecksum1: new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
+                somechecksum2: new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``),
+                somechecksum3: new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
+                somechecksum4: new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
             };
 
             const syncEngine = syncEngineFactory();
@@ -723,10 +723,10 @@ describe(`Diffing state`, () => {
             ];
 
             const localAlbums = {
-                'somechecksum1': localAlbum1,
-                'somechecksum2': localAlbum2,
-                'somechecksum3': localAlbum3,
-                'somechecksum4': localAlbum4,
+                somechecksum1: localAlbum1,
+                somechecksum2: localAlbum2,
+                somechecksum3: localAlbum3,
+                somechecksum4: localAlbum4,
             };
 
             const syncEngine = syncEngineFactory();
@@ -800,10 +800,10 @@ describe(`Diffing state`, () => {
             ];
 
             const localAlbums = {
-                'somechecksum1': localAlbum1,
-                'somechecksum2': localAlbum2,
-                'somechecksum3': localAlbum3,
-                'somechecksum4': localAlbum4,
+                somechecksum1: localAlbum1,
+                somechecksum2: localAlbum2,
+                somechecksum3: localAlbum3,
+                somechecksum4: localAlbum4,
             };
 
             const syncEngine = syncEngineFactory();
@@ -817,11 +817,11 @@ describe(`Diffing state`, () => {
         describe(`Hierarchical dependencies`, () => {
             test(`Album moved`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
-                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
-                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
+                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
+                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
+                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
                 };
                 // AlbumUUID2 is moved from folderUUID1 to root
                 const toBeAdded = [
@@ -847,12 +847,12 @@ describe(`Diffing state`, () => {
 
             test(`Folder with albums moved`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    "folderUUID2": new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID2`),
-                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID2`),
+                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    folderUUID2: new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID2`),
+                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID2`),
                 };
                 // FolderUUID2 (with all albums) is moved from folderUUID1 to root
                 const toBeAdded = [
@@ -895,14 +895,14 @@ describe(`Diffing state`, () => {
 
             test(`Folder with folders moved`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    "folderUUID2": new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    "folderUUID3": new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    "folderUUID4": new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    folderUUID2: new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    folderUUID3: new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    folderUUID4: new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
                 };
                 // FolderUUID2 (with all albums & folders) is moved from folderUUID1 to root
                 const toBeAdded = [
@@ -951,11 +951,11 @@ describe(`Diffing state`, () => {
 
             test(`Folder with albums deleted, albums kept`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
-                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
-                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
+                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
+                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
+                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
                 };
                 // FolderUUID1 is deleted and all albums within are moved from folderUUID1 to root
                 const toBeAdded = [
@@ -983,11 +983,11 @@ describe(`Diffing state`, () => {
 
             test(`Folder with albums deleted, albums deleted`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
-                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
-                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
+                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
+                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
+                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
                 };
                 // FolderUUID1 is deleted and all albums within are also deleted
                 const toBeAdded = [];
@@ -1011,14 +1011,14 @@ describe(`Diffing state`, () => {
 
             test(`Folder with folders deleted, nested folder kept`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    "folderUUID2": new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    "folderUUID3": new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    "folderUUID4": new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    folderUUID2: new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    folderUUID3: new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    folderUUID4: new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
                 };
                 // FolderUUID2 is deleted and its albums & folder are moved to root
                 const toBeAdded = [
@@ -1067,14 +1067,14 @@ describe(`Diffing state`, () => {
 
             test(`Folder with folders deleted, nested folder deleted`, () => {
                 const localAlbumEntities = {
-                    "folderUUID1": new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    "folderUUID2": new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    "folderUUID3": new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    "folderUUID4": new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    "albumUUID1": new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    "albumUUID2": new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    "albumUUID3": new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    "albumUUID4": new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
+                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
+                    folderUUID2: new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
+                    folderUUID3: new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
+                    folderUUID4: new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
+                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
+                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
+                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
+                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
                 };
                 // FolderUUID2, folderUUID3 and folderUUID4 are deleted and its albums are moved to root
                 const toBeAdded = [
@@ -1249,10 +1249,10 @@ describe(`Handle processing queue`, () => {
 
             test.each([
                 {
-                    "queue": [],
-                    "desc": `Empty queue`,
+                    queue: [],
+                    desc: `Empty queue`,
                 }, {
-                    "queue": [
+                    queue: [
                         new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
                         new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
                         new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
@@ -1264,9 +1264,9 @@ describe(`Handle processing queue`, () => {
                         new Album(`someUUID3-1`, AlbumType.ALBUM, `someAlbumName3.1`, `someUUID3`),
                         new Album(`someUUID3-2`, AlbumType.ALBUM, `someAlbumName3.2`, `someUUID3`),
                     ],
-                    "desc": `Sorted queue`,
+                    desc: `Sorted queue`,
                 }, {
-                    "queue": [
+                    queue: [
                         new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1.2`, `someUUID1`),
                         new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
                         new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
@@ -1278,9 +1278,9 @@ describe(`Handle processing queue`, () => {
                         new Album(`someUUID3`, AlbumType.ALBUM, `someAlbumName3`, ``),
                         new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
                     ],
-                    "desc": `Unsorted queue`,
+                    desc: `Unsorted queue`,
                 }, {
-                    "queue": [
+                    queue: [
                         new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
                         new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
                         new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
@@ -1294,7 +1294,7 @@ describe(`Handle processing queue`, () => {
                         new Album(`someUUID3-2`, AlbumType.ALBUM, `someAlbumName3.2`, `someUUID3`),
                         new Album(`someUUID4-1`, AlbumType.ALBUM, `someAlbumName4.1`, `someUUID4`),
                     ],
-                    "desc": `Unsorted queue (missing ancestor link)`,
+                    desc: `Unsorted queue (missing ancestor link)`,
                 },
             ])(`$desc`, ({queue}) => {
                 const syncEngine = syncEngineFactory();
@@ -1309,16 +1309,16 @@ describe(`Handle processing queue`, () => {
             describe(`Distance to root`, () => {
                 test.each([
                     {
-                        "a": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        "expectedDistance": 0,
+                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        expectedDistance: 0,
                     },
                     {
-                        "a": new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        "expectedDistance": 1,
+                        a: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
+                        expectedDistance: 1,
                     },
                     {
-                        "a": new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                        "expectedDistance": 2,
+                        a: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
+                        expectedDistance: 2,
                     },
                 ])(`Calculating distance to root - Expecting $expectedDistance`, ({a, expectedDistance}) => {
                     expect(Album.distanceToRoot(a, defaultFullQueue)).toEqual(expectedDistance);
@@ -1337,20 +1337,20 @@ describe(`Handle processing queue`, () => {
             describe(`Album compare function`, () => {
                 test.each([
                     {
-                        "a": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        "b": new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
+                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        b: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
                     },
                     {
-                        "a": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        "b": new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
+                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        b: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
                     },
                     {
-                        "a": new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
-                        "b": new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1-1`),
+                        a: new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
+                        b: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1-1`),
                     },
                     {
-                        "a": new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
-                        "b": new Album(`someUUID3-2-1`, AlbumType.ALBUM, `someAlbumName3.2.1`, `someUUID3-2`),
+                        a: new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
+                        b: new Album(`someUUID3-2-1`, AlbumType.ALBUM, `someAlbumName3.2.1`, `someUUID3-2`),
                     },
                 ])(`Compare function returns negative value - %#`, ({a, b}) => {
                     const result = compareQueueElements(defaultFullQueue, a, b);
@@ -1359,20 +1359,20 @@ describe(`Handle processing queue`, () => {
 
                 test.each([
                     {
-                        "a": new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        "b": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        a: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
+                        b: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
                     },
                     {
-                        "a": new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                        "b": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        a: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
+                        b: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
                     },
                     {
-                        "a": new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1-1`),
-                        "b": new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
+                        a: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1-1`),
+                        b: new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
                     },
                     {
-                        "a": new Album(`someUUID3-2-1`, AlbumType.ALBUM, `someAlbumName3.2.1`, `someUUID3-2`),
-                        "b": new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
+                        a: new Album(`someUUID3-2-1`, AlbumType.ALBUM, `someAlbumName3.2.1`, `someUUID3-2`),
+                        b: new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
                     },
                 ])(`Compare function returns positive value - %#`, ({a, b}) => {
                     const result = compareQueueElements(defaultFullQueue, a, b);
@@ -1387,16 +1387,16 @@ describe(`Handle processing queue`, () => {
 
                 test.each([
                     {
-                        "a": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        "b": new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
+                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        b: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
                     },
                     {
-                        "a": new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        "b": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        a: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
+                        b: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
                     },
                     {
-                        "a": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        "b": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        b: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
                     },
                 ])(`Compare Function is symmetric - %#`, ({a, b}) => {
                     const result1 = compareQueueElements(defaultFullQueue, a, b);
@@ -1413,19 +1413,19 @@ describe(`Handle processing queue`, () => {
 
                 test.each([
                     {
-                        "a": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        "b": new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        "c": new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
+                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        b: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
+                        c: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
                     },
                     {
-                        "a": new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                        "b": new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        "c": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        a: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
+                        b: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
+                        c: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
                     },
                     {
-                        "a": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        "b": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        "c": new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        b: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
+                        c: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
                     },
                 ])(`Compare Function is reflexive - %#`, ({a, b, c}) => {
                     const result1 = compareQueueElements(defaultFullQueue, a, b);

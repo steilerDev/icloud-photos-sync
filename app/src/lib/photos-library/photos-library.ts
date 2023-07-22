@@ -7,12 +7,12 @@ import {PLibraryEntities} from './model/photos-entity.js';
 import {getLogger} from '../logger.js';
 import {AxiosResponse} from 'axios';
 import {pEvent} from 'p-event';
-import {iCloudApp} from '../../app/icloud-app.js';
 import {iCPSError} from '../../app/error/error.js';
 import EventEmitter from 'events';
 import {HANDLER_EVENT} from '../../app/event/error-handler.js';
 import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
+import {ResourceManager} from '../resource-manager/resource-manager.js';
 
 export type PathTuple = [namePath: string, uuidPath: string]
 
@@ -24,11 +24,6 @@ export class PhotosLibrary extends EventEmitter {
      * Default logger for the class
      */
     private logger = getLogger(this);
-
-    /**
-     * The full path to the data dir, where all information & data is persisted
-     */
-    photoDataDir: string;
 
     /**
      * The full path to the sub-dirs within 'photoDataDir', containing all assets from the primary library
@@ -54,9 +49,8 @@ export class PhotosLibrary extends EventEmitter {
      * Creates the local PhotoLibrary, based on the provided CLI options
      * @param app - The app object holding CLI options
      */
-    constructor(app: iCloudApp) {
+    constructor() {
         super();
-        this.photoDataDir = this.getFullPathAndCreate([app.options.dataDir]);
         this.primaryAssetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.PRIMARY_ASSET_DIR]);
         this.sharedAssetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.SHARED_ASSET_DIR]);
         this.archiveDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR]);
@@ -64,15 +58,15 @@ export class PhotosLibrary extends EventEmitter {
     }
 
     /**
-     * Joins the subpaths & photosDataDir together (if photosDataDir is set) and creates the folder if it does not exist
+     * Joins the subpaths & photosDataDir together and creates the folder recursively if it does not exist
      * @param subpaths - An array of subpaths
      * @returns The full path
      */
     getFullPathAndCreate(subpaths: string[]) {
-        const thisDir = this.photoDataDir ? path.join(this.photoDataDir, ...subpaths) : path.join(...subpaths);
+        const thisDir = path.join(ResourceManager.dataDir, ...subpaths);
         if (!fs.existsSync(thisDir)) {
             this.logger.debug(`${thisDir} does not exist, creating`);
-            fs.mkdirSync(thisDir, {"recursive": true});
+            fs.mkdirSync(thisDir, {recursive: true});
         }
 
         return thisDir;
@@ -92,13 +86,13 @@ export class PhotosLibrary extends EventEmitter {
     async loadAssetsForZone(zone: Zones): Promise<PLibraryEntities<Asset>> {
         const libAssets: PLibraryEntities<Asset> = {};
         const zonePath = zone === Zones.Primary ? this.primaryAssetDir : this.sharedAssetDir;
-        (await fs.promises.readdir(zonePath, {"withFileTypes": true}))
+        (await fs.promises.readdir(zonePath, {withFileTypes: true}))
             .filter(file => file.isFile() && !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name))
             .forEach(file => {
                 try {
                     const fileStat = fs.statSync(path.format({
-                        "dir": zonePath,
-                        "base": file.name,
+                        dir: zonePath,
+                        base: file.name,
                     }));
                     const asset = Asset.fromFile(file.name, fileStat, zone);
                     libAssets[asset.getUUID()] = asset;
@@ -120,7 +114,7 @@ export class PhotosLibrary extends EventEmitter {
     async loadAlbums(): Promise<PLibraryEntities<Album>> {
         // Loading folders
         const libAlbums: PLibraryEntities<Album> = {};
-        (await this.loadAlbum(Album.getRootAlbum(), this.photoDataDir))
+        (await this.loadAlbum(Album.getRootAlbum(), ResourceManager.dataDir))
             .forEach(album => {
                 libAlbums[album.getUUID()] = album;
             });
@@ -148,7 +142,7 @@ export class PhotosLibrary extends EventEmitter {
         this.logger.info(`Loading album ${album.getDisplayName()}`);
 
         const symbolicLinks = (await fs.promises.readdir(albumPath, {
-            "withFileTypes": true,
+            withFileTypes: true,
         })).filter(file => file.isSymbolicLink());
 
         this.logger.debug(`Found ${symbolicLinks.length} symbolic links in ${album.getDisplayName()}`);
@@ -228,12 +222,12 @@ export class PhotosLibrary extends EventEmitter {
     async readAlbumTypeFromPath(thisPath: string): Promise<AlbumType> {
         // If the folder contains other folders, it will be of AlbumType.Folder
         const directoryPresent = (await fs.promises.readdir(thisPath, {
-            "withFileTypes": true,
+            withFileTypes: true,
         })).some(file => file.isDirectory());
 
         // If there are files in the folders, the folder is treated as archived
         const filePresent = (await fs.promises.readdir(thisPath, {
-            "withFileTypes": true,
+            withFileTypes: true,
         })).filter(file => !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name)) // Filter out files that are safe to ignore
             .some(file => file.isFile());
 
@@ -264,7 +258,7 @@ export class PhotosLibrary extends EventEmitter {
      */
     async writeAsset(asset: Asset, response: AxiosResponse<any, any>): Promise<void> {
         this.logger.debug(`Writing asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath(this.photoDataDir);
+        const location = asset.getAssetFilePath();
         const writeStream = fs.createWriteStream(location);
         response.data.pipe(writeStream);
         await pEvent(writeStream, `close`);
@@ -289,7 +283,7 @@ export class PhotosLibrary extends EventEmitter {
      */
     async deleteAsset(asset: Asset) {
         this.logger.info(`Deleting asset ${asset.getDisplayName()}`);
-        await fs.promises.rm(asset.getAssetFilePath(this.photoDataDir), {"force": true});
+        await fs.promises.rm(asset.getAssetFilePath(), {force: true});
     }
 
     /**
@@ -300,7 +294,7 @@ export class PhotosLibrary extends EventEmitter {
      */
     async verifyAsset(asset: Asset): Promise<boolean> {
         this.logger.debug(`Verifying asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath(this.photoDataDir);
+        const location = asset.getAssetFilePath();
 
         return asset.verify(location);
     }
@@ -314,9 +308,9 @@ export class PhotosLibrary extends EventEmitter {
      */
     findAlbumPaths(album: Album): PathTuple {
         // Directory path of the parent folder
-        let parentPath = this.photoDataDir;
+        let parentPath = ResourceManager.dataDir;
         if (album.parentAlbumUUID) {
-            const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, this.photoDataDir);
+            const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, ResourceManager.dataDir);
             if (parentPathExt.length === 0) {
                 throw new iCPSError(LIBRARY_ERR.NO_PARENT)
                     .addMessage(album.getDisplayName())
@@ -353,7 +347,7 @@ export class PhotosLibrary extends EventEmitter {
     findAlbumByUUIDInPath(albumUUID: string, rootPath: string): string {
         this.logger.trace(`Checking ${rootPath} for folder ${albumUUID}`);
         // Get all folders in the path
-        const foldersInPath = fs.readdirSync(rootPath, {"withFileTypes": true}).filter(dirent => dirent.isDirectory());
+        const foldersInPath = fs.readdirSync(rootPath, {withFileTypes: true}).filter(dirent => dirent.isDirectory());
 
         // See if the searched folder is in the path
         const filteredFolder = foldersInPath.filter(folder => folder.name === `.${albumUUID}`); // Since the folder is hidden, a dot is prefacing it
@@ -410,7 +404,7 @@ export class PhotosLibrary extends EventEmitter {
 
         // Creating album
         this.logger.debug(`Creating folder ${uuidPath}`);
-        fs.mkdirSync(uuidPath, {"recursive": true});
+        fs.mkdirSync(uuidPath, {recursive: true});
         // Symlinking to correctly named album
         this.logger.debug(`Linking ${albumNamePath} to ${path.basename(uuidPath)}`);
         fs.symlinkSync(path.basename(uuidPath), albumNamePath);
@@ -430,12 +424,12 @@ export class PhotosLibrary extends EventEmitter {
     linkAlbumAssets(album: Album, albumPath: string) {
         Object.keys(album.assets).forEach(assetUUID => {
             const linkedAsset = path.format({
-                "dir": albumPath,
-                "base": album.assets[assetUUID],
+                dir: albumPath,
+                base: album.assets[assetUUID],
             });
             const assetPath = path.format({
-                "dir": this.primaryAssetDir,
-                "base": assetUUID,
+                dir: this.primaryAssetDir,
+                base: assetUUID,
             });
             // Relative asset path is relative to album, not the linkedAsset
             const relativeAssetPath = path.relative(albumPath, assetPath);
@@ -469,7 +463,7 @@ export class PhotosLibrary extends EventEmitter {
         }
 
         // Checking content
-        const pathContent = fs.readdirSync(uuidPath, {"withFileTypes": true})
+        const pathContent = fs.readdirSync(uuidPath, {withFileTypes: true})
             .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
         if (pathContent.length > 0) {
             throw new iCPSError(LIBRARY_ERR.NOT_EMPTY)
@@ -483,7 +477,7 @@ export class PhotosLibrary extends EventEmitter {
                 .addMessage(albumNamePath);
         }
 
-        fs.rmSync(uuidPath, {"recursive": true});
+        fs.rmSync(uuidPath, {recursive: true});
         fs.unlinkSync(albumNamePath);
         this.logger.debug(`Successfully deleted album ${album.getDisplayName()} at ${albumNamePath} & ${uuidPath}`);
     }

@@ -2,7 +2,7 @@ import log from 'loglevel';
 import chalk from 'chalk';
 import * as fs from 'fs';
 import * as path from 'path';
-import {iCPSAppOptions} from '../app/factory.js';
+import {ResourceManager} from './resource-manager/resource-manager.js';
 
 const LOG_FILE_NAME = `.icloud-photos-sync.log`;
 
@@ -10,18 +10,20 @@ const LOG_FILE_NAME = `.icloud-photos-sync.log`;
  * The list of loggers and their respective names
  */
 const LOGGER = {
-    "iCloud": `i-Cloud`,
-    "iCloudPhotos": `i-Cloud-Photos`,
-    "iCloudAuth": `i-Cloud-Auth`,
-    "MFAServer": `MFA-Server`,
-    "PhotosLibrary": `Photos-Library`,
-    "SyncEngine": `Sync-Engine`,
-    "CLIInterface": `CLI-Interface`,
-    "ArchiveEngine": `Archive-Engine`,
-    "ErrorHandler": `Error-Handler`,
-    "MetricsExporter": `Metrics-Exporter`,
-    "InfluxLineProtocolPoint": `Influx-Line-Protocol`,
-    "ResourceManager": `Resource-Manager`,
+    iCloud: `i-Cloud`,
+    iCloudPhotos: `i-Cloud-Photos`,
+    iCloudAuth: `i-Cloud-Auth`,
+    MFAServer: `MFA-Server`,
+    PhotosLibrary: `Photos-Library`,
+    SyncEngine: `Sync-Engine`,
+    CLIInterface: `CLI-Interface`,
+    ArchiveEngine: `Archive-Engine`,
+    ErrorHandler: `Error-Handler`,
+    MetricsExporter: `Metrics-Exporter`,
+    InfluxLineProtocolPoint: `Influx-Line-Protocol`,
+    ResourceManager: `Resource-Manager`,
+    NetworkManager: `Network-Manager`,
+    Validator: `Validator`,
 };
 
 export let logFilePath: string;
@@ -31,24 +33,24 @@ export let logFilePath: string;
  * Should only be called once - has guard in place so this does not happen
  * @param app - The App object, holding the CLI options
  */
-export function setupLogger(options: iCPSAppOptions): void {
+export function setupLogger(): void {
     if (logFilePath) {
         return;
     }
 
     logFilePath = path.format({
-        "dir": options.dataDir,
-        "base": LOG_FILE_NAME,
+        dir: ResourceManager.dataDir,
+        base: LOG_FILE_NAME,
     });
 
     try {
-        if (options.logToCli && !options.silent) {
+        if (ResourceManager.logToCli && !ResourceManager.silent) {
             throw new Error(`Disabling logging to file, due to logToCli flag`);
         }
 
         const logPath = path.dirname(logFilePath);
         if (!fs.existsSync(logPath)) {
-            fs.mkdirSync(logPath, {"recursive": true});
+            fs.mkdirSync(logPath, {recursive: true});
         }
 
         // Try opening the file - truncate if exists
@@ -71,8 +73,8 @@ export function setupLogger(options: iCPSAppOptions): void {
         };
     }
 
-    log.setLevel(options.logLevel as log.LogLevelDesc);
-    if (options.logLevel === `trace`) {
+    log.setLevel(ResourceManager.logLevel);
+    if (ResourceManager.logLevel === `trace`) {
         log.warn(`Log level set to 'trace', private data might be recorded in logs!`);
     }
 

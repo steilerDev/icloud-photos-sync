@@ -6,14 +6,14 @@ import {ArchiveApp, DaemonApp, DaemonAppEvents, LIBRARY_LOCK_FILE, SyncApp, Toke
 import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {Album} from '../../src/lib/photos-library/model/album';
-import {spyOnEvent} from '../_helpers/_general';
+import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import {EVENTS} from '../../src/lib/icloud/constants';
 import path from 'path';
 import {setupLogger} from '../_mocks/logger';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 
 beforeEach(() => {
-    mockfs();
+    prepareResourceManager(false);
     jest.clearAllMocks();
 });
 
@@ -23,6 +23,8 @@ afterEach(() => {
 
 describe(`App Factory`, () => {
     test.each(rejectOptions)(`Reject CLI: $_desc`, ({options, expected}) => {
+        const originalFunction = ResourceManager.setup;
+        ResourceManager.setup = jest.fn<typeof ResourceManager.setup>();
         const mockExit = jest.spyOn(process, `exit`).mockImplementation(() => {
             throw new Error(`Process Exit`);
         });
@@ -32,15 +34,34 @@ describe(`App Factory`, () => {
 
         expect(mockExit).toHaveBeenCalledWith(1);
         expect(mockStderr).toBeCalledWith(expected);
+        expect(ResourceManager.setup).not.toHaveBeenCalled();
+
+        ResourceManager.setup = originalFunction;
     });
 
-    test.each(nonRejectOptions)(`Valid CLI: $_desc`, ({options, expectedKey, expectedValue}) => {
-        const app = appFactory(options);
-        expect(app.options[expectedKey]).toEqual(expectedValue);
+    describe.each([{
+        command: [`token`],
+        _appType: `token`,
+    }, {
+        command: [`sync`],
+        _appType: `sync`,
+    }, {
+        command: [`daemon`],
+        _appType: `daemon`,
+    }, {
+        command: [`archive`, `/some/valid/path`],
+        _appType: `archive`,
+    }])(`Valid CLI for $_appType app`, ({command}) => {
+        test.each(nonRejectOptions)(`$_desc`, ({options, expectedOptions}) => {
+            const setupSpy = jest.spyOn(ResourceManager, `setup`);
+            appFactory([...options, ...command]);
+            expect(setupSpy).toHaveBeenCalledWith(expectedOptions);
+        });
     });
 
     test(`Create Token App`, () => {
         const tokenApp = appFactory(validOptions.token) as TokenApp;
+
         expect(tokenApp).toBeInstanceOf(TokenApp);
         expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(tokenApp.icloud).toBeDefined();
@@ -52,6 +73,7 @@ describe(`App Factory`, () => {
 
     test(`Create Sync App`, () => {
         const syncApp = appFactory(validOptions.sync) as SyncApp;
+
         expect(syncApp).toBeInstanceOf(SyncApp);
         expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(syncApp.icloud).toBeDefined();
@@ -65,6 +87,7 @@ describe(`App Factory`, () => {
 
     test(`Create Archive App`, () => {
         const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
+
         expect(archiveApp).toBeInstanceOf(ArchiveApp);
         expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(archiveApp.icloud).toBeDefined();
@@ -79,6 +102,7 @@ describe(`App Factory`, () => {
 
     test(`Create Daemon App`, () => {
         const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
+
         expect(daemonApp).toBeInstanceOf(DaemonApp);
         expect(ResourceManager._instance).toBeDefined();
         expect(setupLogger).toHaveBeenCalledTimes(1);
@@ -170,7 +194,7 @@ describe(`App control flow`, () => {
             const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
             archiveApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
             archiveApp.icloud.authenticate = jest.fn(() => Promise.resolve());
-            const remoteState = [{"fileChecksum": `someChecksum`}] as Asset[];
+            const remoteState = [{fileChecksum: `someChecksum`}] as Asset[];
             archiveApp.syncEngine.sync = jest.fn(() => Promise.resolve([remoteState, []] as [Asset[], Album[]]));
             archiveApp.archiveEngine.archivePath = jest.fn(() => Promise.resolve());
             archiveApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
@@ -206,7 +230,7 @@ describe(`App control flow`, () => {
         test(`Schedule job`, async () => {
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
             daemonApp.performScheduledSync = jest.fn(() => Promise.resolve());
-            daemonApp.options.schedule = `*/1 * * * * *`; // Every second
+            ResourceManager.instance._appOptions.schedule = `*/1 * * * * *`; // Every second
             const eventsScheduledEvent = spyOnEvent(daemonApp.event, DaemonAppEvents.EVENTS.SCHEDULED);
 
             await daemonApp.run();
@@ -220,11 +244,11 @@ describe(`App control flow`, () => {
         });
 
         test(`Scheduled sync succeeds`, async () => {
-            const syncApp = appFactory(validOptions.sync) as SyncApp;
-            syncApp.run = jest.fn(() => Promise.resolve());
-
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
             const successEvent = spyOnEvent(daemonApp.event, DaemonAppEvents.EVENTS.DONE);
+
+            const syncApp = new SyncApp();
+            syncApp.run = jest.fn(() => Promise.resolve());
 
             await daemonApp.performScheduledSync([], syncApp);
 
@@ -233,11 +257,11 @@ describe(`App control flow`, () => {
         });
 
         test(`Scheduled sync fails`, async () => {
-            const syncApp = appFactory(validOptions.sync) as SyncApp;
-            syncApp.run = jest.fn(() => Promise.reject());
-
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
             const retryEvent = spyOnEvent(daemonApp.event, DaemonAppEvents.EVENTS.RETRY);
+
+            const syncApp = new SyncApp();
+            syncApp.run = jest.fn(() => Promise.reject());
 
             await daemonApp.performScheduledSync([], syncApp);
 
@@ -254,7 +278,7 @@ describe(`Library Lock`, () => {
 
         await tokenApp.acquireLibraryLock();
 
-        const lockFile = (await fs.promises.readFile(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE), {"encoding": `utf-8`})).toString();
+        const lockFile = (await fs.promises.readFile(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
     });
 
@@ -263,13 +287,13 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [tokenApp.options.dataDir]: {
+            [ResourceManager.instance.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await expect(tokenApp.acquireLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
-        expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(fs.existsSync(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 
     test(`Acquire lock warning - already locked with --force`, async () => {
@@ -278,14 +302,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [tokenApp.options.dataDir]: {
+            [ResourceManager.instance.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await tokenApp.acquireLibraryLock();
 
-        const lockFile = (await fs.promises.readFile(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE), {"encoding": `utf-8`})).toString();
+        const lockFile = (await fs.promises.readFile(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
     });
 
@@ -294,14 +318,14 @@ describe(`Library Lock`, () => {
         const thisPID = process.pid.toString();
 
         mockfs({
-            [tokenApp.options.dataDir]: {
+            [ResourceManager.instance.dataDir]: {
                 [LIBRARY_LOCK_FILE]: thisPID,
             },
         });
 
         await tokenApp.releaseLibraryLock();
 
-        expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
+        expect(fs.existsSync(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
     });
 
     test(`Release lock error - not this process' lock`, async () => {
@@ -309,14 +333,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [tokenApp.options.dataDir]: {
+            [ResourceManager.instance.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await expect(tokenApp.releaseLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
 
-        expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(fs.existsSync(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 
     test(`Release lock error - not this process' lock --force`, async () => {
@@ -324,14 +348,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [tokenApp.options.dataDir]: {
+            [ResourceManager.instance.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await tokenApp.releaseLibraryLock();
 
-        expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
+        expect(fs.existsSync(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
     });
 
     test(`Release lock error - no lock`, async () => {
@@ -339,6 +363,6 @@ describe(`Library Lock`, () => {
 
         await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined();
 
-        expect(!fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(!fs.existsSync(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 });

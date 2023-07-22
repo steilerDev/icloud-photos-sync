@@ -3,6 +3,7 @@ import {Asset} from "../../photos-library/model/asset.js";
 import {PLibraryProcessingQueues} from "../../photos-library/model/photos-entity.js";
 import {SyncEngine} from "../sync-engine.js";
 import * as SYNC_ENGINE from '../constants.js';
+import {ResourceManager} from "../../resource-manager/resource-manager.js";
 
 /**
  * Writes the asset changes defined in the processing queue to to disk (by downloading the asset or deleting it)
@@ -13,7 +14,7 @@ export async function writeAssets(this: SyncEngine, processingQueue: PLibraryPro
     const toBeDeleted = processingQueue[0];
     const toBeAdded = processingQueue[1];
     // Initializing sync queue
-    this.downloadQueue = new PQueue({"concurrency": this.downloadCCY});
+    this.downloadQueue = new PQueue({concurrency: ResourceManager.downloadThreads});
 
     this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
 

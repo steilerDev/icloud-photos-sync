@@ -1,5 +1,5 @@
 import mockfs from 'mock-fs';
-import {describe, test, afterEach, expect, jest} from '@jest/globals';
+import {describe, test, beforeEach, afterEach, expect, jest} from '@jest/globals';
 import {archiveEngineFactory} from '../_helpers/archive-engine.helper';
 import {appDataDir as photosDataDir} from '../_helpers/_config';
 import {PRIMARY_ASSET_DIR, ARCHIVE_DIR} from '../../src/lib/photos-library/constants';
@@ -7,21 +7,25 @@ import path from 'path';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
-import {spyOnEvent} from '../_helpers/_general';
+import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import * as ARCHIVE_ENGINE from '../../src/lib/archive-engine/constants';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
+
+beforeEach(() => {
+    prepareResourceManager();
+});
 
 afterEach(() => {
     mockfs.restore();
 });
 
 describe.each([{
-    "zone": Zones.Primary,
-    "ASSET_DIR": PRIMARY_ASSET_DIR,
+    zone: Zones.Primary,
+    ASSET_DIR: PRIMARY_ASSET_DIR,
 }, {
-    "zone": Zones.Shared,
-    "ASSET_DIR": PRIMARY_ASSET_DIR, // @remarks this should be SHARED_ASSET_DIR
+    zone: Zones.Shared,
+    ASSET_DIR: PRIMARY_ASSET_DIR, // @remarks this should be SHARED_ASSET_DIR
 }])(`Archive Engine $zone`, ({zone, ASSET_DIR}) => {
     describe(`Archive Path`, () => {
         test(`Valid path`, async () => {
@@ -46,17 +50,17 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
@@ -123,20 +127,20 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset1Edit.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1Edit.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1Edit.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
@@ -206,17 +210,17 @@ describe.each([{
                         [ARCHIVE_DIR]: {},
                         [albumUUIDPath]: {
                             [asset1.getPrettyFilename()]: mockfs.symlink({
-                                "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                                path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                             }),
                             [asset2.getPrettyFilename()]: mockfs.symlink({
-                                "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                                path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                             }),
                             [asset3.getPrettyFilename()]: mockfs.symlink({
-                                "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                                path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                             }),
                         },
                         [albumName]: mockfs.symlink({
-                            "path": albumUUIDPath,
+                            path: albumUUIDPath,
                         }),
                     },
                 });
@@ -263,21 +267,21 @@ describe.each([{
                         [albumUUIDPath1]: {
                             [albumUUIDPath2]: {
                                 [asset1.getPrettyFilename()]: mockfs.symlink({
-                                    "path": `../../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                                    path: `../../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                                 }),
                                 [asset2.getPrettyFilename()]: mockfs.symlink({
-                                    "path": `../../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                                    path: `../../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                                 }),
                                 [asset3.getPrettyFilename()]: mockfs.symlink({
-                                    "path": `../../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                                    path: `../../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                                 }),
                             },
                             [albumName2]: mockfs.symlink({
-                                "path": albumUUIDPath2,
+                                path: albumUUIDPath2,
                             }),
                         },
                         [albumName1]: mockfs.symlink({
-                            "path": albumUUIDPath1,
+                            path: albumUUIDPath1,
                         }),
                     },
                 });
@@ -320,7 +324,7 @@ describe.each([{
                         [ARCHIVE_DIR]: {},
                         [albumUUIDPath]: {},
                         [albumName]: mockfs.symlink({
-                            "path": albumUUIDPath,
+                            path: albumUUIDPath,
                         }),
                     },
                 });
@@ -364,17 +368,17 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
@@ -438,17 +442,17 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
@@ -511,17 +515,17 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
@@ -574,35 +578,35 @@ describe.each([{
             [photosDataDir]: {
                 [ASSET_DIR]: {
                     [asset1.getAssetFilename()]: mockfs.file({
-                        "content": Buffer.from([1, 1, 1, 1]),
-                        "ctime": new Date(asset1.modified),
-                        "mtime": new Date(asset1.modified),
+                        content: Buffer.from([1, 1, 1, 1]),
+                        ctime: new Date(asset1.modified),
+                        mtime: new Date(asset1.modified),
                     }),
                     [asset2.getAssetFilename()]: mockfs.file({
-                        "content": Buffer.from([1, 1, 1, 1, 1]),
-                        "ctime": new Date(asset2.modified),
-                        "mtime": new Date(asset2.modified),
+                        content: Buffer.from([1, 1, 1, 1, 1]),
+                        ctime: new Date(asset2.modified),
+                        mtime: new Date(asset2.modified),
                     }),
                     [asset3.getAssetFilename()]: mockfs.file({
-                        "content": Buffer.from([1, 1, 1, 1, 1, 1]),
-                        "ctime": new Date(asset3.modified),
-                        "mtime": new Date(asset3.modified),
+                        content: Buffer.from([1, 1, 1, 1, 1, 1]),
+                        ctime: new Date(asset3.modified),
+                        mtime: new Date(asset3.modified),
                     }),
                 },
                 [ARCHIVE_DIR]: {},
                 [albumUUIDPath]: {
                     [asset1.getPrettyFilename()]: mockfs.symlink({
-                        "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                        path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                     }),
                     [asset2.getPrettyFilename()]: mockfs.symlink({
-                        "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                        path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                     }),
                     [asset3.getPrettyFilename()]: mockfs.symlink({
-                        "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                        path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                     }),
                 },
                 [albumName]: mockfs.symlink({
-                    "path": albumUUIDPath,
+                    path: albumUUIDPath,
                 }),
             },
         });
@@ -679,17 +683,17 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
@@ -720,17 +724,17 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
@@ -761,23 +765,22 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
 
-            const archiveEngine = archiveEngineFactory();
-            archiveEngine.remoteDelete = false;
+            const archiveEngine = archiveEngineFactory(false);
 
             const result = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
             expect(result).toBeUndefined();
@@ -806,17 +809,17 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });

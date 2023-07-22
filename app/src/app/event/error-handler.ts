@@ -6,11 +6,11 @@ import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
 import {EventHandler} from './event-handler.js';
 import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, MFA_ERR} from '../error/error-codes.js';
-import {iCPSAppOptions} from '../factory.js';
 import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
 import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
 import fs from 'fs/promises';
 import path from 'path';
+import {ResourceManager} from '../../lib/resource-manager/resource-manager.js';
 
 /**
  * The event emitted by classes of this application and picked up by the handler.
@@ -35,13 +35,13 @@ const reportDenyList = [
 ];
 
 const BACKTRACE_SUBMISSION = {
-    "DOMAIN": `https://submit.backtrace.io`,
-    "UNIVERSE": `steilerdev`,
-    "TOKEN": {
-        "PROD": `92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49`,
-        "DEV": `bf2e718ef569a1421ba4f3c9b36a8e4b84b1c4043265533f204e5759f7f4edee`,
+    DOMAIN: `https://submit.backtrace.io`,
+    UNIVERSE: `steilerdev`,
+    TOKEN: {
+        PROD: `92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49`,
+        DEV: `bf2e718ef569a1421ba4f3c9b36a8e4b84b1c4043265533f204e5759f7f4edee`,
     },
-    "TYPE": `json`,
+    TYPE: `json`,
 };
 
 /**
@@ -58,26 +58,26 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
      */
     verbose: boolean = false;
 
-    constructor(options: iCPSAppOptions) {
+    constructor() {
         super();
-        if (options.enableCrashReporting) {
+        if (ResourceManager.enableCrashReporting) {
             const endpoint = `${BACKTRACE_SUBMISSION.DOMAIN}/${BACKTRACE_SUBMISSION.UNIVERSE}/`
                                 + `${PACKAGE_INFO.VERSION === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
                                 + BACKTRACE_SUBMISSION.TYPE;
 
             this.btClient = bt.initialize({
                 endpoint,
-                "handlePromises": true,
-                "enableMetricsSupport": true,
-                "attributes": {
-                    "application": PACKAGE_INFO.NAME,
+                handlePromises: true,
+                enableMetricsSupport: true,
+                attributes: {
+                    application: PACKAGE_INFO.NAME,
                     'application.version': PACKAGE_INFO.VERSION,
                 },
             });
             // This.btClient.setSymbolication();
         }
 
-        if (options.logLevel === `trace` || options.logLevel === `debug`) {
+        if (ResourceManager.logLevel === `trace` || ResourceManager.logLevel === `debug`) {
             this.verbose = true;
         }
 
@@ -185,7 +185,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
         try {
             // Reading current log file and determining length
-            const data = (await fs.readFile(currentLogFilePath, {"encoding": `utf8`})).split(`\n`);
+            const data = (await fs.readFile(currentLogFilePath, {encoding: `utf8`})).split(`\n`);
             const totalNumberOfLines = data.length;
 
             // If there is nothing to truncate, we return the original log file
@@ -225,7 +225,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         try {
             await (this.btClient as any)._backtraceMetrics.sendSummedEvent(`Sync`);
         } catch (err) {
-            await this.reportError(new iCPSError({"name": `iCPSError`, "code": `METRIC_FAILED`, "message": `Unable to report sync start`}).addCause(err));
+            await this.reportError(new iCPSError({name: `iCPSError`, code: `METRIC_FAILED`, message: `Unable to report sync start`}).addCause(err));
         }
     }
 
@@ -234,26 +234,26 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
     */
     static cleanEnv() {
         const confidentialData = {
-            "username": {
-                "env": `APPLE_ID_USER`,
-                "cli": [
+            username: {
+                env: `APPLE_ID_USER`,
+                cli: [
                     `-u`, `--username`,
                 ],
-                "replacement": `<APPLE ID USERNAME>`,
+                replacement: `<APPLE ID USERNAME>`,
             },
-            "password": {
-                "env": `APPLE_ID_PWD`,
-                "cli": [
+            password: {
+                env: `APPLE_ID_PWD`,
+                cli: [
                     `-p`, `--password`,
                 ],
-                "replacement": `<APPLE ID PASSWORD>`,
+                replacement: `<APPLE ID PASSWORD>`,
             },
             "trust-token": {
-                "env": `TRUST_TOKEN`,
-                "cli": [
+                env: `TRUST_TOKEN`,
+                cli: [
                     `-T`, `--trust-token`,
                 ],
-                "replacement": `<TRUST TOKEN>`,
+                replacement: `<TRUST TOKEN>`,
             },
         };
 

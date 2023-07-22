@@ -1,10 +1,14 @@
-import {describe, test, expect, jest} from '@jest/globals';
+import {describe, test, expect, jest, beforeEach} from '@jest/globals';
 import {iCloudPhotosFactory} from '../_helpers/icloud.helper';
 import {AxiosRequestConfig} from 'axios';
 import * as Config from '../_helpers/_config';
 import * as ICLOUD_PHOTOS from '../../src/lib/icloud/icloud-photos/constants';
-import {spyOnEvent} from '../_helpers/_general';
+import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
+
+beforeEach(() => {
+    prepareResourceManager();
+});
 
 test(`PhotosDomain not available`, () => {
     const iCloudPhotos = iCloudPhotosFactory();
@@ -29,7 +33,7 @@ describe(`Setup iCloud Photos`, () => {
             `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
             {},
             {
-                "headers": `headerValues`,
+                headers: `headerValues`,
             },
         );
         expect(iCloudPhotos.auth.processPhotosSetupResponse).toHaveBeenCalledWith(axiosResponse);
@@ -54,7 +58,7 @@ describe(`Setup iCloud Photos`, () => {
             `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
             {},
             {
-                "headers": `headerValues`,
+                headers: `headerValues`,
             },
         );
         expect(iCloudPhotos.auth.processPhotosSetupResponse).toHaveBeenCalledWith(axiosResponse);
@@ -76,7 +80,7 @@ describe(`Setup iCloud Photos`, () => {
             `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
             {},
             {
-                "headers": `headerValues`,
+                headers: `headerValues`,
             },
         );
         expect(iCloudPhotos.auth.processPhotosSetupResponse).not.toHaveBeenCalled();
@@ -84,7 +88,7 @@ describe(`Setup iCloud Photos`, () => {
     });
 
     test(`Check indexing state after setup`, () => {
-        const iCloudPhotos = iCloudPhotosFactory(true, false);
+        const iCloudPhotos = iCloudPhotosFactory(false);
         iCloudPhotos.checkingIndexingStatus = jest.fn(() => Promise.resolve());
 
         iCloudPhotos.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
@@ -97,9 +101,9 @@ describe(`Setup iCloud Photos`, () => {
             const iCloudPhotos = iCloudPhotosFactory();
 
             iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
-                "fields": {
-                    "state": {
-                        "value": `FINISHED`,
+                fields: {
+                    state: {
+                        value: `FINISHED`,
                     },
                 },
             }]));
@@ -113,12 +117,12 @@ describe(`Setup iCloud Photos`, () => {
             const iCloudPhotos = iCloudPhotosFactory();
 
             iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
-                "fields": {
-                    "state": {
-                        "value": `RUNNING`,
+                fields: {
+                    state: {
+                        value: `RUNNING`,
                     },
-                    "progress": {
-                        "value": 20,
+                    progress: {
+                        value: 20,
                     },
                 },
             }]));
@@ -132,9 +136,9 @@ describe(`Setup iCloud Photos`, () => {
             const iCloudPhotos = iCloudPhotosFactory();
 
             iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
-                "fields": {
-                    "state": {
-                        "value": `RUNNING`,
+                fields: {
+                    state: {
+                        value: `RUNNING`,
                     },
                 },
             }]));
@@ -148,9 +152,9 @@ describe(`Setup iCloud Photos`, () => {
             const iCloudPhotos = iCloudPhotosFactory();
 
             iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
-                "fields": {
-                    "state": {
-                        "value": `UNKNOWN_STATE`,
+                fields: {
+                    state: {
+                        value: `UNKNOWN_STATE`,
                     },
                 },
             }]));
@@ -163,8 +167,8 @@ describe(`Setup iCloud Photos`, () => {
         test.each([
             [[]],
             [[{}]],
-            [[{"fields": {}}]],
-            [[{"fields": {"state": {}}}]],
+            [[{fields: {}}]],
+            [[{fields: {state: {}}}]],
         ])(`Empty query - %o`, async queryResult => {
             const iCloudPhotos = iCloudPhotosFactory();
 
@@ -188,174 +192,174 @@ describe(`Setup iCloud Photos`, () => {
 
 describe.each([
     {
-        "desc": `recordType + filterBy + resultsLimit + desiredKeys`,
-        "recordType": `recordType`,
-        "filterBy": [{
-            "fieldName": `someField`,
-            "comparator": `EQUALS`,
-            "fieldValue": {
-                "value": `someValue`,
-                "type": `STRING`,
+        desc: `recordType + filterBy + resultsLimit + desiredKeys`,
+        recordType: `recordType`,
+        filterBy: [{
+            fieldName: `someField`,
+            comparator: `EQUALS`,
+            fieldValue: {
+                value: `someValue`,
+                type: `STRING`,
             },
         }],
-        "resultsLimit": 2,
-        "desiredKeys": [`key1, key2`],
-        "zone": Zones.Primary,
-        "expectedQuery": {
-            "desiredKeys": [`key1, key2`],
-            "query": {
-                "filterBy": [
-                    {"comparator": `EQUALS`, "fieldName": `someField`, "fieldValue": {"type": `STRING`, "value": `someValue`}},
+        resultsLimit: 2,
+        desiredKeys: [`key1, key2`],
+        zone: Zones.Primary,
+        expectedQuery: {
+            desiredKeys: [`key1, key2`],
+            query: {
+                filterBy: [
+                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
                 ],
-                "recordType": `recordType`,
+                recordType: `recordType`,
             },
-            "resultsLimit": 2,
-            "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
+            resultsLimit: 2,
+            zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
         },
     }, {
-        "desc": `recordType + filterBy + resultsLimit + desiredKeys`,
-        "recordType": `recordType`,
-        "filterBy": [{
-            "fieldName": `someField`,
-            "comparator": `EQUALS`,
-            "fieldValue": {
-                "value": `someValue`,
-                "type": `STRING`,
+        desc: `recordType + filterBy + resultsLimit + desiredKeys`,
+        recordType: `recordType`,
+        filterBy: [{
+            fieldName: `someField`,
+            comparator: `EQUALS`,
+            fieldValue: {
+                value: `someValue`,
+                type: `STRING`,
             },
         }],
-        "resultsLimit": 2,
-        "desiredKeys": [`key1, key2`],
-        "zone": Zones.Shared,
-        "expectedQuery": {
-            "desiredKeys": [`key1, key2`],
-            "query": {
-                "filterBy": [
-                    {"comparator": `EQUALS`, "fieldName": `someField`, "fieldValue": {"type": `STRING`, "value": `someValue`}},
+        resultsLimit: 2,
+        desiredKeys: [`key1, key2`],
+        zone: Zones.Shared,
+        expectedQuery: {
+            desiredKeys: [`key1, key2`],
+            query: {
+                filterBy: [
+                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
                 ],
-                "recordType": `recordType`,
+                recordType: `recordType`,
             },
-            "resultsLimit": 2,
-            "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
+            resultsLimit: 2,
+            zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
         },
     }, {
-        "desc": `recordType + filterBy + resultsLimit`,
-        "recordType": `recordType`,
-        "filterBy": [{
-            "fieldName": `someField`,
-            "comparator": `EQUALS`,
-            "fieldValue": {
-                "value": `someValue`,
-                "type": `STRING`,
+        desc: `recordType + filterBy + resultsLimit`,
+        recordType: `recordType`,
+        filterBy: [{
+            fieldName: `someField`,
+            comparator: `EQUALS`,
+            fieldValue: {
+                value: `someValue`,
+                type: `STRING`,
             },
         }],
-        "resultsLimit": 2,
-        "desiredKeys": undefined,
-        "zone": Zones.Primary,
-        "expectedQuery": {
-            "query": {
-                "filterBy": [
-                    {"comparator": `EQUALS`, "fieldName": `someField`, "fieldValue": {"type": `STRING`, "value": `someValue`}},
+        resultsLimit: 2,
+        desiredKeys: undefined,
+        zone: Zones.Primary,
+        expectedQuery: {
+            query: {
+                filterBy: [
+                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
                 ],
-                "recordType": `recordType`,
+                recordType: `recordType`,
             },
-            "resultsLimit": 2,
-            "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
+            resultsLimit: 2,
+            zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
         },
     }, {
-        "desc": `recordType + filterBy + resultsLimit`,
-        "recordType": `recordType`,
-        "filterBy": [{
-            "fieldName": `someField`,
-            "comparator": `EQUALS`,
-            "fieldValue": {
-                "value": `someValue`,
-                "type": `STRING`,
+        desc: `recordType + filterBy + resultsLimit`,
+        recordType: `recordType`,
+        filterBy: [{
+            fieldName: `someField`,
+            comparator: `EQUALS`,
+            fieldValue: {
+                value: `someValue`,
+                type: `STRING`,
             },
         }],
-        "resultsLimit": 2,
-        "desiredKeys": undefined,
-        "zone": Zones.Shared,
-        "expectedQuery": {
-            "query": {
-                "filterBy": [
-                    {"comparator": `EQUALS`, "fieldName": `someField`, "fieldValue": {"type": `STRING`, "value": `someValue`}},
+        resultsLimit: 2,
+        desiredKeys: undefined,
+        zone: Zones.Shared,
+        expectedQuery: {
+            query: {
+                filterBy: [
+                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
                 ],
-                "recordType": `recordType`,
+                recordType: `recordType`,
             },
-            "resultsLimit": 2,
-            "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
+            resultsLimit: 2,
+            zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
         },
     }, {
-        "desc": `recordType + filterBy`,
-        "recordType": `recordType`,
-        "filterBy": [{
-            "fieldName": `someField`,
-            "comparator": `EQUALS`,
-            "fieldValue": {
-                "value": `someValue`,
-                "type": `STRING`,
+        desc: `recordType + filterBy`,
+        recordType: `recordType`,
+        filterBy: [{
+            fieldName: `someField`,
+            comparator: `EQUALS`,
+            fieldValue: {
+                value: `someValue`,
+                type: `STRING`,
             },
         }],
-        "resultsLimit": undefined,
-        "desiredKeys": undefined,
-        "zone": Zones.Primary,
-        "expectedQuery": {
-            "query": {
-                "filterBy": [
-                    {"comparator": `EQUALS`, "fieldName": `someField`, "fieldValue": {"type": `STRING`, "value": `someValue`}},
+        resultsLimit: undefined,
+        desiredKeys: undefined,
+        zone: Zones.Primary,
+        expectedQuery: {
+            query: {
+                filterBy: [
+                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
                 ],
-                "recordType": `recordType`,
+                recordType: `recordType`,
             },
-            "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
+            zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
         },
     }, {
-        "desc": `recordType + filterBy`,
-        "recordType": `recordType`,
-        "filterBy": [{
-            "fieldName": `someField`,
-            "comparator": `EQUALS`,
-            "fieldValue": {
-                "value": `someValue`,
-                "type": `STRING`,
+        desc: `recordType + filterBy`,
+        recordType: `recordType`,
+        filterBy: [{
+            fieldName: `someField`,
+            comparator: `EQUALS`,
+            fieldValue: {
+                value: `someValue`,
+                type: `STRING`,
             },
         }],
-        "resultsLimit": undefined,
-        "desiredKeys": undefined,
-        "zone": Zones.Shared,
-        "expectedQuery": {
-            "query": {
-                "filterBy": [
-                    {"comparator": `EQUALS`, "fieldName": `someField`, "fieldValue": {"type": `STRING`, "value": `someValue`}},
+        resultsLimit: undefined,
+        desiredKeys: undefined,
+        zone: Zones.Shared,
+        expectedQuery: {
+            query: {
+                filterBy: [
+                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
                 ],
-                "recordType": `recordType`,
+                recordType: `recordType`,
             },
-            "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
+            zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
         },
     }, {
-        "desc": `recordType`,
-        "recordType": `recordType`,
-        "filterBy": undefined,
-        "resultsLimit": undefined,
-        "desiredKeys": undefined,
-        "zone": Zones.Primary,
-        "expectedQuery": {
-            "query": {
-                "recordType": `recordType`,
+        desc: `recordType`,
+        recordType: `recordType`,
+        filterBy: undefined,
+        resultsLimit: undefined,
+        desiredKeys: undefined,
+        zone: Zones.Primary,
+        expectedQuery: {
+            query: {
+                recordType: `recordType`,
             },
-            "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
+            zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
         },
     }, {
-        "desc": `recordType`,
-        "recordType": `recordType`,
-        "filterBy": undefined,
-        "resultsLimit": undefined,
-        "desiredKeys": undefined,
-        "zone": Zones.Shared,
-        "expectedQuery": {
-            "query": {
-                "recordType": `recordType`,
+        desc: `recordType`,
+        recordType: `recordType`,
+        filterBy: undefined,
+        resultsLimit: undefined,
+        desiredKeys: undefined,
+        zone: Zones.Shared,
+        expectedQuery: {
+            query: {
+                recordType: `recordType`,
             },
-            "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
+            zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
         },
     },
 ])(`Perform Query $desc - $zone`, ({recordType, filterBy, resultsLimit, desiredKeys, expectedQuery, zone}) => {
@@ -363,8 +367,8 @@ describe.each([
         const iCloudPhotos = iCloudPhotosFactory();
         const responseRecords = [`recordA`, `recordB`];
         iCloudPhotos.axios.post = jest.fn(() => Promise.resolve({
-            "data": {
-                "records": responseRecords,
+            data: {
+                records: responseRecords,
             },
         } as any));
 
@@ -373,7 +377,7 @@ describe.each([
         expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
             `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`,
             expectedQuery,
-            {"headers": `headerValues`, "params": {"remapEnums": `True`}},
+            {headers: `headerValues`, params: {remapEnums: `True`}},
         );
         expect(iCloudPhotos.auth.validatePhotosAccount).toHaveBeenCalledWith(zone);
         expect(result).toEqual(responseRecords);
@@ -382,7 +386,7 @@ describe.each([
     test(`No data returned`, async () => {
         const iCloudPhotos = iCloudPhotosFactory();
         iCloudPhotos.axios.post = jest.fn(() => Promise.resolve({
-            "data": {},
+            data: {},
         } as any));
 
         await expect(iCloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Received unexpected query response format$/);
@@ -395,88 +399,88 @@ describe.each([
 describe(`Perform Operation`, () => {
     test.each([
         {
-            "_desc": `No records - PrimaryZone`,
-            "operation": `someOperation`,
-            "fields": {
-                "someField": {
-                    "value": `someValue`,
+            _desc: `No records - PrimaryZone`,
+            operation: `someOperation`,
+            fields: {
+                someField: {
+                    value: `someValue`,
                 },
             },
-            "records": [],
-            "zone": Zones.Primary,
-            "expectedOperation": {
-                "atomic": true,
-                "operations": [],
-                "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
+            records: [],
+            zone: Zones.Primary,
+            expectedOperation: {
+                atomic: true,
+                operations: [],
+                zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
             },
         }, {
-            "_desc": `No records - SharedZone`,
-            "operation": `someOperation`,
-            "fields": {
-                "someField": {
-                    "value": `someValue`,
+            _desc: `No records - SharedZone`,
+            operation: `someOperation`,
+            fields: {
+                someField: {
+                    value: `someValue`,
                 },
             },
-            "records": [],
-            "zone": Zones.Shared,
-            "expectedOperation": {
-                "atomic": true,
-                "operations": [],
-                "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
+            records: [],
+            zone: Zones.Shared,
+            expectedOperation: {
+                atomic: true,
+                operations: [],
+                zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
             },
         }, {
-            "_desc": `One record - PrimaryZone`,
-            "operation": `someOperation`,
-            "fields": {
-                "someField": {
-                    "value": `someValue`,
+            _desc: `One record - PrimaryZone`,
+            operation: `someOperation`,
+            fields: {
+                someField: {
+                    value: `someValue`,
                 },
             },
-            "records": [`recordA`],
-            "zone": Zones.Primary,
-            "expectedOperation": {
-                "atomic": true,
-                "operations": [{
-                    "operationType": `someOperation`,
-                    "record": {
-                        "recordName": `recordA`,
-                        "recordType": `CPLAsset`,
-                        "recordChangeTag": `21h2`,
-                        "fields": {
-                            "someField": {
-                                "value": `someValue`,
+            records: [`recordA`],
+            zone: Zones.Primary,
+            expectedOperation: {
+                atomic: true,
+                operations: [{
+                    operationType: `someOperation`,
+                    record: {
+                        recordName: `recordA`,
+                        recordType: `CPLAsset`,
+                        recordChangeTag: `21h2`,
+                        fields: {
+                            someField: {
+                                value: `someValue`,
                             },
                         },
                     },
                 }],
-                "zoneID": {"ownerRecordName": Config.primaryZone.ownerName, "zoneName": Config.primaryZone.zoneName, "zoneType": Config.primaryZone.zoneType},
+                zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
             },
         }, {
-            "_desc": `One record - SharedZone`,
-            "operation": `someOperation`,
-            "fields": {
-                "someField": {
-                    "value": `someValue`,
+            _desc: `One record - SharedZone`,
+            operation: `someOperation`,
+            fields: {
+                someField: {
+                    value: `someValue`,
                 },
             },
-            "records": [`recordA`],
-            "zone": Zones.Shared,
-            "expectedOperation": {
-                "atomic": true,
-                "operations": [{
-                    "operationType": `someOperation`,
-                    "record": {
-                        "recordName": `recordA`,
-                        "recordType": `CPLAsset`,
-                        "recordChangeTag": `21h2`,
-                        "fields": {
-                            "someField": {
-                                "value": `someValue`,
+            records: [`recordA`],
+            zone: Zones.Shared,
+            expectedOperation: {
+                atomic: true,
+                operations: [{
+                    operationType: `someOperation`,
+                    record: {
+                        recordName: `recordA`,
+                        recordType: `CPLAsset`,
+                        recordChangeTag: `21h2`,
+                        fields: {
+                            someField: {
+                                value: `someValue`,
                             },
                         },
                     },
                 }],
-                "zoneID": {"ownerRecordName": Config.sharedZone.ownerName, "zoneName": Config.sharedZone.zoneName, "zoneType": Config.sharedZone.zoneType},
+                zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
             },
         },
     ])(`Success $_desc`, async ({operation, fields, records, expectedOperation, zone}) => {
@@ -484,8 +488,8 @@ describe(`Perform Operation`, () => {
 
         const responseRecords = [`recordA`, `recordB`];
         iCloudPhotos.axios.post = jest.fn(() => Promise.resolve({
-            "data": {
-                "records": responseRecords,
+            data: {
+                records: responseRecords,
             },
         } as any));
 
@@ -494,7 +498,7 @@ describe(`Perform Operation`, () => {
         expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
             `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/modify`,
             expectedOperation,
-            {"headers": `headerValues`, "params": {"remapEnums": `True`}},
+            {headers: `headerValues`, params: {remapEnums: `True`}},
         );
         expect(result).toEqual(responseRecords);
     });

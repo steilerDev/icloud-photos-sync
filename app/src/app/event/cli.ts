@@ -12,7 +12,7 @@ import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from './error-handler.js';
 import {EventHandler} from './event-handler.js';
 import EventEmitter from 'events';
 import {DaemonAppEvents} from '../icloud-app.js';
-import {iCPSAppOptions} from '../factory.js';
+import {ResourceManager} from '../../lib/resource-manager/resource-manager.js';
 
 /**
  * This class handles the input/output to the command line
@@ -40,17 +40,17 @@ export class CLIInterface implements EventHandler {
      * Creates a new CLI interface based on the provided components
      * @param options - Parsed CLI Options
      */
-    constructor(options: iCPSAppOptions) {
+    constructor() {
         this.progressBar = new SingleBar({
-            "etaAsynchronousUpdate": true,
-            "format": ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
-            "barCompleteChar": `\u25A0`,
-            "barIncompleteChar": ` `,
+            etaAsynchronousUpdate: true,
+            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
+            barCompleteChar: `\u25A0`,
+            barIncompleteChar: ` `,
         });
 
         // If both are false it display will happen, otherwise output will go to log (and log might print it to the console, depending on logToCli)
-        this.enableCLIOutput = !options.logToCli && !options.silent;
-        this.suppressWarnings = options.suppressWarnings;
+        this.enableCLIOutput = !ResourceManager.logToCli && !ResourceManager.silent;
+        this.suppressWarnings = ResourceManager.suppressWarnings;
 
         if (this.enableCLIOutput) {
             console.clear();

@@ -8,6 +8,7 @@ import {iCPSError} from '../../../app/error/error.js';
 import {LIBRARY_ERR} from '../../../app/error/error-codes.js';
 import {Zones} from '../../icloud/icloud-photos/query-builder.js';
 import {PRIMARY_ASSET_DIR, SHARED_ASSET_DIR} from '../constants.js';
+import {ResourceManager} from '../../resource-manager/resource-manager.js';
 
 /**
  * Representing the possible asset types
@@ -178,13 +179,12 @@ export class Asset implements PEntity<Asset> {
 
     /**
      *
-     * @param dataDir - The photos data dir
      * @returns The full asset file path under the provided directory
      */
-    getAssetFilePath(dir: string) {
+    getAssetFilePath() {
         return path.format({
-            "dir": path.join(dir, this.zone === Zones.Primary ? PRIMARY_ASSET_DIR : SHARED_ASSET_DIR),
-            "name": this.getAssetFilename(),
+            dir: path.join(ResourceManager.dataDir, this.zone === Zones.Primary ? PRIMARY_ASSET_DIR : SHARED_ASSET_DIR),
+            name: this.getAssetFilename(),
         });
     }
 
@@ -194,8 +194,8 @@ export class Asset implements PEntity<Asset> {
      */
     getAssetFilename(): string {
         return path.format({
-            "name": Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
-            "ext": this.fileType.getExtension(),
+            name: Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
+            ext: this.fileType.getExtension(),
         });
     }
 
@@ -205,8 +205,8 @@ export class Asset implements PEntity<Asset> {
      */
     getPrettyFilename(): string {
         return path.format({
-            "name": this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``) + (this.assetType === AssetType.LIVE ? `-live` : ``),
-            "ext": this.fileType.getExtension(),
+            name: this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``) + (this.assetType === AssetType.LIVE ? `-live` : ``),
+            ext: this.fileType.getExtension(),
         });
     }
 

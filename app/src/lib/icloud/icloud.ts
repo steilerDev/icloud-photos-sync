@@ -1,16 +1,16 @@
-import axios, {AxiosInstance, AxiosRequestConfig} from 'axios';
+import {AxiosRequestConfig} from 'axios';
 import EventEmitter from 'events';
 import {MFAServer} from './mfa/mfa-server.js';
 import * as ICLOUD from './constants.js';
 import * as MFA_SERVER from './mfa/constants.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
-import {iCloudAuth} from './auth.js';
 import {getLogger} from '../logger.js';
 import {MFAMethod} from './mfa/mfa-method.js';
-import {iCloudApp} from '../../app/icloud-app.js';
 import {HANDLER_EVENT} from '../../app/event/error-handler.js';
 import {iCPSError} from '../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
+import {ResourceManager} from '../resource-manager/resource-manager.js';
+import {ENDPOINTS, HEADER} from '../resource-manager/network.js';
 
 /**
  * This class holds the iCloud connection
@@ -21,11 +21,6 @@ export class iCloud extends EventEmitter {
      * Default logger for the class
      */
     logger = getLogger(this);
-
-    /**
-     * Authentication object of the current iCloud session
-     */
-    auth: iCloudAuth;
 
     /**
      * Server object to input MFA code
@@ -43,37 +38,19 @@ export class iCloud extends EventEmitter {
     ready: Promise<void>;
 
     /**
-     * Local axios instance to handle network requests
-     */
-    axios: AxiosInstance;
-
-    /**
      * Creates a new iCloud Object
-     * @param app - The app object holding CLI options containing username, password and MFA server port
      */
-    constructor(app: iCloudApp) {
+    constructor() {
         super();
-        this.logger.info(`Initiating iCloud connection`);
-        this.logger.trace(`  - user: ${app.options.username}`);
-
-        this.axios = axios.create();
-
         // MFA Server & lifecycle management
-        this.mfaServer = new MFAServer(app.options.port);
+        this.mfaServer = new MFAServer();
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RECEIVED, this.submitMFA.bind(this));
         this.mfaServer.on(MFA_SERVER.EVENTS.MFA_RESEND, this.resendMFA.bind(this));
 
-        // ICloud Auth object
-        this.auth = new iCloudAuth(app.options.username, app.options.password, app.options.trustToken, app.options.dataDir);
-        if (app.options.refreshToken) {
-            this.logger.info(`Clearing token due to refresh token flag`);
-            this.auth.iCloudAccountTokens.trustToken = ``;
-        }
-
-        this.photos = new iCloudPhotos(app, this.auth);
+        this.photos = new iCloudPhotos();
 
         // ICloud lifecycle management
-        if (app.options.failOnMfa) {
+        if (ResourceManager.failOnMfa) {
             this.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
                 this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(MFA_ERR.FAIL_ON_MFA));
             });
@@ -118,80 +95,68 @@ export class iCloud extends EventEmitter {
      */
     async authenticate(): Promise<void> {
         this.logger.info(`Authenticating user`);
+        this.logger.trace(`  - user: ${ResourceManager.username}`);
         this.emit(ICLOUD.EVENTS.AUTHENTICATION_STARTED);
 
-        this.auth.validateAccountSecrets();
+        const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.SIGNIN;
 
         const config: AxiosRequestConfig = {
-            "headers": ICLOUD.DEFAULT_AUTH_HEADER,
-            "params": {
-                "isRememberMeEnabled": true,
+            headers: HEADER.AUTH,
+            params: {
+                isRememberMeEnabled: true,
             },
+            // 409 is expected, if MFA is required - 200 is expected, if authentication succeeds immediately
+            validateStatus: status => status === 409 || status === 200,
         };
 
         const data = {
-            "accountName": this.auth.iCloudAccountSecrets.username,
-            "password": this.auth.iCloudAccountSecrets.password,
-            "trustTokens": [
-                this.auth.iCloudAccountTokens.trustToken,
+            accountName: ResourceManager.username,
+            password: ResourceManager.password,
+            trustTokens: [
+                ResourceManager.trustToken,
             ],
         };
 
         try {
-            // Will throw error if response is non 2XX
-            const response = await this.axios.post(ICLOUD.URL.SIGNIN, data, config);
-            if (response.status !== 200) {
-                this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.UNEXPECTED_RESPONSE)
-                    .addContext(`response`, response));
+            const response = await ResourceManager.network.post(url, data, config);
+
+            const validatedResponse = ResourceManager.validator.validateSigninResponse(response);
+            ResourceManager.network.applySigninResponse(validatedResponse);
+
+            this.logger.debug(`Acquired signin secrets`);
+
+            if (response.status === 409) {
+                this.logger.debug(`Response status is 409, requiring MFA`);
+                this.emit(ICLOUD.EVENTS.MFA_REQUIRED, ResourceManager.mfaServerPort);
                 return;
             }
 
-            this.logger.info(`Authentication successful`);
-            try {
-                this.auth.processAuthSecrets(response);
-                this.logger.debug(`Acquired secrets`);
-                this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
+            if (response.status === 200) {
+                this.logger.debug(`Response status is 200, authentication successful - device trusted`);
                 this.emit(ICLOUD.EVENTS.TRUSTED);
-            } catch (err) {
-                this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_AUTH_SECRETS)
-                    .addCause(err));
+                return;
             }
+
+            this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_AUTH_SECRETS));
         } catch (err) {
             const {response} = err;
-            if (!response) {
+            if (!response || !response.status) {
                 this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.NO_RESPONSE).addCause(err));
                 return;
             }
 
-            if (response.status === 401) {
+            switch (response.status) {
+            case 401:
                 this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
-                return;
-            }
-
-            if (response.status === 403) {
+                break;
+            case 403:
                 this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.FORBIDDEN).addCause(err));
-                return;
-            }
-
-            if (response.status === 412) {
+                break;
+            case 412:
                 this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.PRECONDITION_FAILED).addCause(err));
-                return;
-            }
-
-            if (response.status !== 409) {
+                break;
+            default:
                 this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.UNEXPECTED_RESPONSE).addCause(err));
-                return;
-            }
-
-            try {
-                this.auth.processAuthSecrets(response);
-                this.logger.debug(`Acquired secrets, requiring MFA`);
-                this.logger.trace(`  - secrets: ${JSON.stringify(this.auth.iCloudAuthSecrets)}`);
-                this.emit(ICLOUD.EVENTS.MFA_REQUIRED, this.mfaServer.port);
-                return;
-            } catch (err) {
-                this.emit(ICLOUD.EVENTS.ERROR, err);
-                return;
             }
         } finally {
             return this.ready;
@@ -206,28 +171,27 @@ export class iCloud extends EventEmitter {
     async resendMFA(method: MFAMethod) {
         this.logger.info(`Resending MFA code with ${method}`);
 
+        const url = method.getResendURL();
         const config: AxiosRequestConfig = {
-            "headers": this.auth.getMFAHeaders(),
+            headers: HEADER.AUTH,
+            validateStatus: method.resendSuccessful.bind(method),
         };
         const data = method.getResendPayload();
-        const url = method.getResendURL();
 
         this.logger.debug(`Requesting MFA code via URL ${url} with data ${JSON.stringify(data)}`);
 
         try {
-            const response = await this.axios.put(url, data, config);
+            const response = await ResourceManager.network.put(url, data, config);
 
-            if (!method.resendSuccessful(response)) {
-                throw new iCPSError(MFA_ERR.RESEND_REQUEST_FAILED).addContext(`response`, response);
-            }
-
-            if (method.isSMS() || method.isVoice()) {
-                this.logger.info(`Successfully requested new MFA code using phone ${response.data.trustedPhoneNumber.numberWithDialCode}`);
+            if (method.isSMS || method.isVoice) {
+                const validatedResponse = ResourceManager.validator.validateResendMFAPhoneResponse(response);
+                this.logger.info(`Successfully requested new MFA code using phone ${validatedResponse.data.trustedPhoneNumber.numberWithDialCode}`);
                 return;
             }
 
-            if (method.isDevice()) {
-                this.logger.info(`Successfully requested new MFA code using ${response.data.trustedDeviceCount} trusted device(s)`);
+            if (method.isDevice) {
+                const validatedResponse = ResourceManager.validator.validateResendMFADeviceResponse(response);
+                this.logger.info(`Successfully requested new MFA code using ${validatedResponse.data.trustedDeviceCount} trusted device(s)`);
             }
         } catch (err) {
             this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_FAILED).setWarning().addCause(method.processResendError(err)));
@@ -243,17 +207,15 @@ export class iCloud extends EventEmitter {
             this.mfaServer.stopServer();
             this.logger.info(`Authenticating MFA with code ${mfa}`);
 
+            const url = method.getEnterURL();
             const config: AxiosRequestConfig = {
-                "headers": this.auth.getMFAHeaders(),
+                headers: HEADER.AUTH,
+                validateStatus: method.enterSuccessful.bind(method),
             };
             const data = method.getEnterPayload(mfa);
-            const url = method.getEnterURL();
 
             this.logger.debug(`Entering MFA code via URL ${url} with data ${JSON.stringify(data)}`);
-            const response = await this.axios.post(url, data, config);
-            if (!method.enterSuccessful(response)) {
-                throw new iCPSError(MFA_ERR.SUBMIT_FAILED).addContext(`response`, response);
-            }
+            await ResourceManager.network.post(url, data, config);
 
             this.logger.info(`MFA code correct!`);
             this.emit(ICLOUD.EVENTS.AUTHENTICATED);
@@ -268,18 +230,18 @@ export class iCloud extends EventEmitter {
     async getTokens() {
         try {
             this.logger.info(`Trusting device and acquiring trust tokens`);
-            this.auth.validateAuthSecrets();
 
+            const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.TRUST;
             const config: AxiosRequestConfig = {
-                "headers": this.auth.getMFAHeaders(),
+                headers: HEADER.AUTH,
+                validateStatus: status => status === 204,
             };
 
-            const response = await this.axios.get(ICLOUD.URL.TRUST, config);
-
-            await this.auth.processAccountTokens(response);
+            const response = await ResourceManager.network.get(url, config);
+            const validatedResponse = ResourceManager.validator.validateTrustResponse(response);
+            ResourceManager.network.applyTrustResponse(validatedResponse);
 
             this.logger.debug(`Acquired account tokens`);
-            this.logger.trace(`  - tokens: ${JSON.stringify(this.auth.iCloudAccountTokens)}`);
             this.emit(ICLOUD.EVENTS.TRUSTED);
         } catch (err) {
             this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_ACCOUNT_TOKENS).addCause(err));
@@ -293,16 +255,16 @@ export class iCloud extends EventEmitter {
     async setupAccount() {
         try {
             this.logger.info(`Setting up iCloud connection`);
-            this.auth.validateAccountTokens();
 
-            const config: AxiosRequestConfig = {
-                "headers": ICLOUD.DEFAULT_HEADER,
+            const url = ENDPOINTS.SETUP.BASE + ENDPOINTS.SETUP.PATH.ACCOUNT;
+            const data = {
+                dsWebAuthToken: ResourceManager.network.session,
+                trustToken: ResourceManager.network.trustToken,
             };
-            const data = this.auth.getSetupData();
 
-            const response = await this.axios.post(ICLOUD.URL.SETUP, data, config);
-
-            this.auth.processCloudSetupResponse(response);
+            const response = await ResourceManager.network.post(url, data);
+            const validatedResponse = ResourceManager.validator.validateSetupResponse(response);
+            ResourceManager.network.applySetupResponse(validatedResponse);
 
             this.logger.debug(`Account ready`);
             this.emit(ICLOUD.EVENTS.ACCOUNT_READY);
@@ -316,8 +278,6 @@ export class iCloud extends EventEmitter {
     */
     async getPhotosReady() {
         try {
-            this.auth.validateCloudCookies();
-
             this.logger.info(`Getting iCloud Photos Service ready`);
             // Forwarding warn events
             this.photos.on(HANDLER_EVENT, this.emit.bind(this, HANDLER_EVENT));

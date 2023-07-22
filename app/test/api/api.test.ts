@@ -45,11 +45,11 @@ describe(`API E2E Tests`, () => {
     describe(`Login flow`, () => {
         test(`Login flow with invalid username/password`, async () => {
             const cliOpts = {
-                "username": `testuser@apple.com`,
-                "password": `test123`,
-                "dataDir": appDataDir,
-                "failOnMfa": true,
-                "metadataRate": [Infinity, 0],
+                username: `testuser@apple.com`,
+                password: `test123`,
+                dataDir: appDataDir,
+                failOnMfa: true,
+                metadataRate: [Infinity, 0],
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
             await expect(_icloud.authenticate()).rejects.toEqual(new Error(`Username does not seem to exist`));
@@ -58,10 +58,10 @@ describe(`API E2E Tests`, () => {
         test(`Login flow with invalid password`, async () => {
             const cliOpts = {
                 username,
-                "password": `test123`,
-                "dataDir": appDataDir,
-                "failOnMfa": true,
-                "metadataRate": [Infinity, 0],
+                password: `test123`,
+                dataDir: appDataDir,
+                failOnMfa: true,
+                metadataRate: [Infinity, 0],
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
             await expect(_icloud.authenticate()).rejects.toEqual(new Error(`Username/Password does not seem to match`));
@@ -71,9 +71,9 @@ describe(`API E2E Tests`, () => {
             const cliOpts = {
                 username,
                 password,
-                "dataDir": appDataDir,
-                "failOnMfa": true,
-                "metadataRate": [Infinity, 0],
+                dataDir: appDataDir,
+                failOnMfa: true,
+                metadataRate: [Infinity, 0],
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
             await expect(_icloud.authenticate()).rejects.toEqual(new Error(`MFA code required, failing due to failOnMfa flag`));
@@ -83,10 +83,10 @@ describe(`API E2E Tests`, () => {
             const cliOpts = {
                 username,
                 password,
-                "trustToken": token,
-                "dataDir": appDataDir,
-                "failOnMfa": true,
-                "metadataRate": [Infinity, 0],
+                trustToken: token,
+                dataDir: appDataDir,
+                failOnMfa: true,
+                metadataRate: [Infinity, 0],
             };
             const _icloud = new iCloud(appWithOptions(cliOpts));
             await expect(_icloud.authenticate()).resolves.not.toThrow();
@@ -97,10 +97,10 @@ describe(`API E2E Tests`, () => {
         const icloud: iCloud = new iCloud(appWithOptions({
             username,
             password,
-            "trustToken": token,
-            "dataDir": appDataDir,
-            "failOnMfa": true,
-            "metadataRate": [Infinity, 0],
+            trustToken: token,
+            dataDir: appDataDir,
+            failOnMfa: true,
+            metadataRate: [Infinity, 0],
         }));
 
         beforeAll(async () => {

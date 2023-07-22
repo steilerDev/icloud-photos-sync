@@ -4,23 +4,14 @@ import * as Config from './_config';
 import {expectedMFAHeaders} from "./icloud-mfa.helper";
 import {addHoursToCurrentDate, getDateInThePast} from "./_general";
 import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
-import {iCloudAuth} from "../../src/lib/icloud/auth";
-import {mockValidation} from "./icloud-auth.helper";
-import {appWithOptions} from "./app-factory.helper";
+import {iCloudAuthFactory} from "./icloud-auth.helper";
 
-export const _defaultCliOpts = {
-    "port": 0,
-    "username": Config.username,
-    "password": Config.password,
-    "trustToken": Config.trustToken,
-    "dataDir": Config.appDataDir,
-    "refreshToken": Config.refreshToken,
-    "failOnMfa": Config.failOnMfa,
-    "metadataRate": Config.metadataRate,
-};
-
-export function iCloudFactory(cliOpts: any = _defaultCliOpts): iCloud {
-    const icloud = new iCloud(appWithOptions(cliOpts));
+/**
+ * This function creates a new instance of the iCloud class, mocks unecessary functions and removes all event listeners.
+ * @returns An iCloud instance, ready to be used in tests.
+ */
+export function iCloudFactory(): iCloud {
+    const icloud = new iCloud();
     icloud.mfaServer.startServer = () => {};
     icloud.mfaServer.stopServer = () => {};
     icloud.removeAllListeners();
@@ -28,9 +19,14 @@ export function iCloudFactory(cliOpts: any = _defaultCliOpts): iCloud {
     return icloud;
 }
 
-export function iCloudPhotosFactory(sharedLibrary: boolean = true, removeEventListeners: boolean = true): iCloudPhotos {
-    const auth = new iCloudAuth(Config.username, Config.password, Config.trustToken, Config.appDataDir);
-    mockValidation(auth);
+/**
+ * This function creates a new instance of the iCloudPhotos class, mocks unecessary functions and removes all event listeners.
+ * @param removeEventListeners - Whether to remove all event listeners from the instance. Defaults to true.
+ * @param sharedLibrary - Whether to add a shared library to the iCloudPhotosAccount. Defaults to true.
+ * @returns An iCloudPhotos instance, ready to be used in tests.
+ */
+export function iCloudPhotosFactory(removeEventListeners: boolean = true, sharedLibrary: boolean = true): iCloudPhotos {
+    const auth = iCloudAuthFactory(true);
     auth.iCloudPhotosAccount.photosDomain = Config.iCloudPhotosAccount.photosDomain;
     auth.iCloudPhotosAccount.primary = Config.primaryZone;
     if (sharedLibrary) {
@@ -39,7 +35,7 @@ export function iCloudPhotosFactory(sharedLibrary: boolean = true, removeEventLi
 
     auth.getPhotosHeader = jest.fn(() => `headerValues`);
 
-    const icloudPhotos = new iCloudPhotos(appWithOptions({"metadataRate": Config.metadataRate}), auth);
+    const icloudPhotos = new iCloudPhotos(auth);
 
     if (removeEventListeners) {
         icloudPhotos.removeAllListeners();
@@ -51,7 +47,7 @@ export function iCloudPhotosFactory(sharedLibrary: boolean = true, removeEventLi
 export const expectedTokenGetCall = [
     `https://idmsa.apple.com/appleauth/auth/2sv/trust`,
     {
-        "headers": expectedMFAHeaders(),
+        headers: expectedMFAHeaders(),
     },
 ];
 
@@ -84,8 +80,8 @@ export function getICloudCookieHeader(expired: boolean = false) {
 }
 
 export const expectedICloudSetupHeaders = {
-    "Accept": `application/json`,
+    Accept: `application/json`,
     "Content-Type": `application/json`,
-    "Origin": `https://www.icloud.com`,
+    Origin: `https://www.icloud.com`,
     "User-Agent": `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`,
 };

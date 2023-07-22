@@ -17,7 +17,7 @@
     ],
     "rules": {
         "quotes": ["error", "backtick"],
-        "quote-props": ["error", "always"],
+        "quote-props": ["error", "as-needed"],
         "indent": ["error", 4],
         "eol-last": ["error", "never"],
         "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudPhotos", "iCloudAuth", "iCloudError", "iCloudWarning", "iCloudAuthError", "iCPSError", "default"], "capIsNewExceptions": ["TTL"] }],

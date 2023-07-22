@@ -5,23 +5,18 @@ import {PhotosLibrary} from '../photos-library/photos-library.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
-import {ArchiveApp} from '../../app/icloud-app.js';
 import {iCPSError} from '../../app/error/error.js';
 import EventEmitter from 'events';
 import * as ARCHIVE_ENGINE from './constants.js';
 import {HANDLER_EVENT} from '../../app/event/error-handler.js';
 import {ARCHIVE_ERR} from '../../app/error/error-codes.js';
+import {ResourceManager} from '../resource-manager/resource-manager.js';
 
 export class ArchiveEngine extends EventEmitter {
     /**
      * Default logger for the class
      */
     protected logger = getLogger(this);
-
-    /**
-     * True if remote assets should be deleted upon archiving
-     */
-    remoteDelete: boolean;
 
     /**
      * The local photos library
@@ -35,13 +30,13 @@ export class ArchiveEngine extends EventEmitter {
 
     /**
      * Creates a new Archive Engine object
-     * @param app - The application holding references to necessary objects (iCloud connection, Photos Library & CLI options)
+     * @param icloud - The iCloud connection
+     * @param photosLibrary - The local photos library
      */
-    constructor(app: ArchiveApp) {
+    constructor(icloud: iCloud, photosLibrary: PhotosLibrary) {
         super();
-        this.remoteDelete = app.options.remoteDelete;
-        this.icloud = app.icloud;
-        this.photosLibrary = app.photosLibrary;
+        this.icloud = icloud;
+        this.photosLibrary = photosLibrary;
     }
 
     /**
@@ -102,7 +97,7 @@ export class ArchiveEngine extends EventEmitter {
 
         // Filtering for unique & undefined entries
         const uniqueDeleteList = [...new Set(remoteDeleteList.filter(obj => obj !== undefined))];
-        if (uniqueDeleteList && uniqueDeleteList.length > 0 && this.remoteDelete) {
+        if (uniqueDeleteList && uniqueDeleteList.length > 0 && ResourceManager.remoteDelete) {
             try {
                 this.emit(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, uniqueDeleteList.length);
                 await this.icloud.photos.deleteAssets(uniqueDeleteList);
@@ -138,7 +133,7 @@ export class ArchiveEngine extends EventEmitter {
      * @throws An ArchiveWarning if loading fails
      */
     prepareForRemoteDeletion(assetPath: string, assetList: Asset[]): string | undefined {
-        if (!this.remoteDelete) {
+        if (!ResourceManager.remoteDelete) {
             return undefined;
         }
 

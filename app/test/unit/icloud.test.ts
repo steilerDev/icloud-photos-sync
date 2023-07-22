@@ -4,34 +4,33 @@ import path from 'path';
 import * as ICLOUD from '../../src/lib/icloud/constants';
 import {appDataDir} from '../_helpers/_config';
 import fs from 'fs';
-import {iCloudAuth} from '../../src/lib/icloud/auth';
 import {AxiosRequestConfig} from 'axios';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import {expectedAxiosPost, expectedAxiosPut} from '../_helpers/icloud-mfa.helper';
 import * as ICLOUD_PHOTOS from '../../src/lib/icloud/icloud-photos/constants';
-import {spyOnEvent} from '../_helpers/_general';
-import {expectedICloudSetupHeaders, expectedTokenGetCall, getICloudCookieHeader, iCloudFactory, _defaultCliOpts} from '../_helpers/icloud.helper';
+import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
+import {expectedICloudSetupHeaders, expectedTokenGetCall, getICloudCookieHeader, iCloudFactory} from '../_helpers/icloud.helper';
 import * as Config from '../_helpers/_config';
 import {iCloud} from '../../src/lib/icloud/icloud';
 import {getICloudCookies} from '../_helpers/icloud-auth.helper';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
-import {appWithOptions} from '../_helpers/app-factory.helper';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
+
+beforeEach(() => {
+    prepareResourceManager();
+});
+
+afterEach(() => {
+    mockfs.restore();
+});
 
 describe(`CLI Options`, () => {
-    test(`Refresh Token`, () => {
-        const cliOpts = _defaultCliOpts;
-        cliOpts.refreshToken = true;
-        const icloud = iCloudFactory(cliOpts);
-        expect(icloud.auth.iCloudAccountTokens.trustToken).toEqual(``);
-    });
-
     // For some reason this 'throws' an error
     test(`Fail on MFA`, async () => {
-        const cliOpts = _defaultCliOpts;
-        cliOpts.failOnMfa = true;
+        ResourceManager.instance._appOptions.failOnMfa = true;
 
-        const icloud = new iCloud(appWithOptions(cliOpts));
+        const icloud = new iCloud();
 
         icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
         await expect(icloud.ready).rejects.toThrow(/^MFA code required, failing due to failOnMfa flag$/);
@@ -40,10 +39,7 @@ describe(`CLI Options`, () => {
     });
 
     test(`MFA Server Startup error`, async () => {
-        const cliOpts = _defaultCliOpts;
-        cliOpts.failOnMfa = false;
-
-        const icloud = new iCloud(appWithOptions(cliOpts));
+        const icloud = new iCloud();
 
         icloud.mfaServer.startServer = jest.fn(() => {
             throw new Error(`Unable to start server`);
@@ -56,49 +52,27 @@ describe(`CLI Options`, () => {
     });
 });
 
-describe(`Load Trust Token File`, () => {
-    beforeEach(() => {
-        mockfs({
-            [appDataDir]: {
-                [ICLOUD.TRUST_TOKEN_FILE_NAME]: Config.trustToken,
-            },
-        });
-    });
-
-    afterEach(() => {
-        mockfs.restore();
-    });
-
-    test(`Read token from file if no trust token is supplied`, () => {
-        const icloudAuth = new iCloudAuth(`testuser@steilerdev.de`, `testpassword`, ``, appDataDir);
-        expect(icloudAuth.iCloudAccountTokens.trustToken).toEqual(Config.trustToken);
-    });
-
-    test(`Don't read token file, if token is supplied`, () => {
-        const icloudAuth = new iCloudAuth(`testuser@steilerdev.de`, `testpassword`, Config.trustToken + `asdf`, appDataDir);
-        expect(icloudAuth.iCloudAccountTokens.trustToken).toEqual(Config.trustToken + `asdf`);
-    });
-});
-
 describe(`Control structure`, () => {
     test(`TRUSTED event triggered`, () => {
-        const icloud = new iCloud(appWithOptions(_defaultCliOpts));
+        const icloud = new iCloud();
         icloud.setupAccount = jest.fn(() => Promise.resolve());
 
         icloud.emit(ICLOUD.EVENTS.TRUSTED);
 
         expect(icloud.setupAccount).toHaveBeenCalled();
     });
+
     test(`AUTHENTICATED event triggered`, () => {
-        const icloud = new iCloud(appWithOptions(_defaultCliOpts));
+        const icloud = new iCloud();
         icloud.getTokens = jest.fn(() => Promise.resolve());
 
         icloud.emit(ICLOUD.EVENTS.AUTHENTICATED);
 
         expect(icloud.getTokens).toHaveBeenCalled();
     });
+
     test(`ACCOUNT_READY event triggered`, () => {
-        const icloud = new iCloud(appWithOptions(_defaultCliOpts));
+        const icloud = new iCloud();
         icloud.getPhotosReady = jest.fn(() => Promise.resolve());
 
         icloud.emit(ICLOUD.EVENTS.ACCOUNT_READY);
@@ -108,7 +82,6 @@ describe(`Control structure`, () => {
 });
 
 describe(`Authenticate`, () => {
-    test.todo(`Expected call for authentication!`);
     test(`Authentication - Valid Trust Token`, async () => {
         const icloud = iCloudFactory();
         // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
@@ -120,10 +93,10 @@ describe(`Authenticate`, () => {
         const errorEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR);
 
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "headers": {
-                "x-apple-session-token": Config.iCloudAuthSecrets.sessionId,
-                "scnt": Config.iCloudAuthSecrets.scnt,
+            status: 200,
+            headers: {
+                "x-apple-session-token": Config.iCloudAuthSecrets.sessionSecret,
+                scnt: Config.iCloudAuthSecrets.scnt,
                 "set-cookie": [
                     `dslang=US-EN; Domain=apple.com; Path=/; Secure; HttpOnly`,
                     `site=USA; Domain=apple.com; Path=/; Secure; HttpOnly`,
@@ -153,10 +126,10 @@ describe(`Authenticate`, () => {
         const responseError = new Error(`Conflict`);
 
         (responseError as any).response = {
-            "status": 409,
-            "headers": {
-                "x-apple-session-token": Config.iCloudAuthSecrets.sessionId,
-                "scnt": Config.iCloudAuthSecrets.scnt,
+            status: 409,
+            headers: {
+                "x-apple-session-token": Config.iCloudAuthSecrets.sessionSecret,
+                scnt: Config.iCloudAuthSecrets.scnt,
                 "set-cookie": [
                     `dslang=US-EN; Domain=apple.com; Path=/; Secure; HttpOnly`,
                     `site=USA; Domain=apple.com; Path=/; Secure; HttpOnly`,
@@ -182,8 +155,8 @@ describe(`Authenticate`, () => {
         const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
 
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "headers": {},
+            status: 200,
+            headers: {},
         }));
 
         await expect(icloud.authenticate()).rejects.toThrow(/^Unable to process auth secrets$/);
@@ -197,8 +170,8 @@ describe(`Authenticate`, () => {
 
         const responseError = new Error(`Conflict`);
         (responseError as any).response = {
-            "status": 409,
-            "headers": {},
+            status: 409,
+            headers: {},
         };
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
 
@@ -214,7 +187,7 @@ describe(`Authenticate`, () => {
         const mfaEvent = spyOnEvent(icloud, ICLOUD.EVENTS.MFA_REQUIRED);
 
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 204,
+            status: 204,
         }));
 
         const expectedError = /^Unexpected HTTP response$/;
@@ -228,38 +201,38 @@ describe(`Authenticate`, () => {
 
     test.each([
         {
-            "desc": `Unknown username`,
-            "axiosErrorMessage": `Conflict`,
-            "axiosErrorResponse": {
-                "status": 403,
+            desc: `Unknown username`,
+            axiosErrorMessage: `Conflict`,
+            axiosErrorResponse: {
+                status: 403,
             },
-            "expectedError": /^Username does not seem to exist$/,
+            expectedError: /^Username does not seem to exist$/,
         }, {
-            "desc": `Wrong username/password combination`,
-            "axiosErrorMessage": `Unauthorized`,
-            "axiosErrorResponse": {
-                "status": 401,
+            desc: `Wrong username/password combination`,
+            axiosErrorMessage: `Unauthorized`,
+            axiosErrorResponse: {
+                status: 401,
             },
-            "expectedError": /^Username\/Password does not seem to match$/,
+            expectedError: /^Username\/Password does not seem to match$/,
         }, {
-            "desc": `PreCondition failed`,
-            "axiosErrorMessage": `PreCondition Failed`,
-            "axiosErrorResponse": {
-                "status": 412,
+            desc: `PreCondition failed`,
+            axiosErrorMessage: `PreCondition Failed`,
+            axiosErrorResponse: {
+                status: 412,
             },
-            "expectedError": /^iCloud refused login - you might need to update your password$/,
+            expectedError: /^iCloud refused login - you might need to update your password$/,
         }, {
-            "desc": `Unexpected failure status code`,
-            "axiosErrorMessage": `Conflict`,
-            "axiosErrorResponse": {
-                "status": 500,
+            desc: `Unexpected failure status code`,
+            axiosErrorMessage: `Conflict`,
+            axiosErrorResponse: {
+                status: 500,
             },
-            "expectedError": /^Unexpected HTTP response$/,
+            expectedError: /^Unexpected HTTP response$/,
         }, {
-            "desc": `No response`,
-            "axiosErrorMessage": `No Network`,
-            "axiosErrorResponse": undefined,
-            "expectedError": /^No response received during authentication$/,
+            desc: `No response`,
+            axiosErrorMessage: `No Network`,
+            axiosErrorResponse: undefined,
+            expectedError: /^No response received during authentication$/,
         },
     ])(`Authentication backend error - $desc`, async ({axiosErrorMessage, axiosErrorResponse, expectedError}) => {
         const icloud = iCloudFactory();
@@ -282,14 +255,7 @@ describe(`Authenticate`, () => {
 
 describe(`MFA Flow`, () => {
     test(`Start MFA Server`, () => {
-        const icloud = new iCloud(
-            appWithOptions(
-                {
-                    ..._defaultCliOpts,
-                    "failOnMfa": false,
-                },
-            ),
-        );
+        const icloud = new iCloud();
 
         icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
         expect(icloud.mfaServer.server.listening).toBeTruthy();
@@ -304,9 +270,9 @@ describe(`MFA Flow`, () => {
 
                 // Mocking actual network request
                 icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 202,
-                    "data": {
-                        "trustedDeviceCount": 1,
+                    status: 202,
+                    data: {
+                        trustedDeviceCount: 1,
                     },
                 }));
 
@@ -341,7 +307,7 @@ describe(`MFA Flow`, () => {
 
                 // Mocking actual network request
                 icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 404,
+                    status: 404,
                 }));
 
                 // Checking if rejection is properly parsed
@@ -361,10 +327,10 @@ describe(`MFA Flow`, () => {
 
                 // Mocking actual network request
                 icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 200,
-                    "data": {
-                        "trustedPhoneNumber": {
-                            "numberWithDialCode": `+123`,
+                    status: 200,
+                    data: {
+                        trustedPhoneNumber: {
+                            numberWithDialCode: `+123`,
                         },
                     },
                 }));
@@ -400,7 +366,7 @@ describe(`MFA Flow`, () => {
 
                 // Mocking actual network request
                 icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 404,
+                    status: 404,
                 }));
 
                 // Checking if rejection is properly parsed
@@ -421,7 +387,7 @@ describe(`MFA Flow`, () => {
                 icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
 
                 icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 204,
+                    status: 204,
                 }));
 
                 const authenticatedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATED);
@@ -449,8 +415,8 @@ describe(`MFA Flow`, () => {
                 icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
 
                 icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 404,
-                    "statusText": `Not found`,
+                    status: 404,
+                    statusText: `Not found`,
                 }));
 
                 await icloud.submitMFA(method, `123456`);
@@ -466,7 +432,7 @@ describe(`MFA Flow`, () => {
                 icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
 
                 icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 200,
+                    status: 200,
                 }));
 
                 const authenticatedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATED);
@@ -494,8 +460,8 @@ describe(`MFA Flow`, () => {
                 icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
 
                 icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 404,
-                    "statusText": `Not found`,
+                    status: 404,
+                    statusText: `Not found`,
                 }));
 
                 await icloud.submitMFA(method, `123456`);
@@ -508,28 +474,18 @@ describe(`MFA Flow`, () => {
 });
 
 describe(`Trust Token`, () => {
-    beforeEach(() => {
-        mockfs({
-            [appDataDir]: {
-                [ICLOUD.TRUST_TOKEN_FILE_NAME]: Config.trustToken,
-            },
-        });
-    });
-
-    afterEach(() => {
-        mockfs.restore();
-    });
-
     test(`Acquire trust token`, async () => {
+        ResourceManager.instance.writeResourceFile = jest.fn<typeof ResourceManager.instance.writeResourceFile>();
+
         const icloud = iCloudFactory();
         icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
 
         const trustedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.TRUSTED);
 
         icloud.axios.get = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "headers": {
-                [ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()]: Config.iCloudAuthSecrets.sessionId,
+            status: 200,
+            headers: {
+                [ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()]: Config.iCloudAuthSecrets.sessionSecret,
                 [ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN.toLowerCase()]: Config.trustTokenModified,
             },
         }));
@@ -537,8 +493,8 @@ describe(`Trust Token`, () => {
         await icloud.getTokens();
 
         expect(icloud.axios.get).toBeCalledWith(...expectedTokenGetCall);
-        const writtenFile = fs.readFileSync(path.join(appDataDir, ICLOUD.TRUST_TOKEN_FILE_NAME)).toString();
-        expect(writtenFile).toEqual(Config.trustTokenModified);
+        expect(ResourceManager.instance.writeResourceFile).toHaveBeenCalledTimes(1);
+        expect(ResourceManager.instance.trustToken).toEqual(Config.trustTokenModified);
         expect(trustedEvent).toHaveBeenCalled();
     });
 
@@ -547,8 +503,8 @@ describe(`Trust Token`, () => {
         icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
 
         icloud.axios.get = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 500,
-            "headers": {},
+            status: 500,
+            headers: {},
         }));
 
         await icloud.getTokens();
@@ -581,19 +537,18 @@ describe(`Trust Token`, () => {
 describe(`Setup iCloud`, () => {
     test(`Acquire iCloud Cookies & Photos Account Data`, async () => {
         const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
+        icloud.auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionSecret;
 
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "data": { // Actual response contains significant more -potential useful- data, only the following is really necessary
-                "webservices": {
-                    "ckdatabasews": {
-                        "url": `https://p00-ckdatabasews.icloud.com:443`,
+            status: 200,
+            data: { // Actual response contains significant more -potential useful- data, only the following is really necessary
+                webservices: {
+                    ckdatabasews: {
+                        url: `https://p00-ckdatabasews.icloud.com:443`,
                     },
                 },
             },
-            "headers": getICloudCookieHeader(),
+            headers: getICloudCookieHeader(),
         }));
 
         const readyEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ACCOUNT_READY);
@@ -603,11 +558,11 @@ describe(`Setup iCloud`, () => {
         expect(icloud.axios.post).toHaveBeenCalledWith(
             `https://setup.icloud.com/setup/ws/1/accountLogin`,
             {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
+                dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
+                trustToken: Config.trustToken,
             },
             {
-                "headers": expectedICloudSetupHeaders,
+                headers: expectedICloudSetupHeaders,
             },
         );
         expect(readyEvent).toHaveBeenCalled();
@@ -617,19 +572,18 @@ describe(`Setup iCloud`, () => {
 
     test(`Receive empty set-cookies during setup`, async () => {
         const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
+        icloud.auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionSecret;
 
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "data": { // Actual response contains significant more -potential useful- data, only the following is really necessary
-                "webservices": {
-                    "ckdatabasews": {
-                        "url": `https://p00-ckdatabasews.icloud.com:443`,
+            status: 200,
+            data: { // Actual response contains significant more -potential useful- data, only the following is really necessary
+                webservices: {
+                    ckdatabasews: {
+                        url: `https://p00-ckdatabasews.icloud.com:443`,
                     },
                 },
             },
-            "headers": {
+            headers: {
                 'set-cookie': [],
             },
         }));
@@ -639,11 +593,11 @@ describe(`Setup iCloud`, () => {
         expect(icloud.axios.post).toHaveBeenCalledWith(
             `https://setup.icloud.com/setup/ws/1/accountLogin`,
             {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
+                dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
+                trustToken: Config.trustToken,
             },
             {
-                "headers": expectedICloudSetupHeaders,
+                headers: expectedICloudSetupHeaders,
             },
         );
         await expect(icloud.ready).rejects.toThrow(/^Unable to setup iCloud Account$/);
@@ -651,19 +605,18 @@ describe(`Setup iCloud`, () => {
 
     test(`Receive expired iCloud Cookies during setup`, async () => {
         const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
+        icloud.auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionSecret;
 
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "data": { // Actual response contains significant more -potential useful- data, only the following is really necessary
-                "webservices": {
-                    "ckdatabasews": {
-                        "url": `https://p00-ckdatabasews.icloud.com:443`,
+            status: 200,
+            data: { // Actual response contains significant more -potential useful- data, only the following is really necessary
+                webservices: {
+                    ckdatabasews: {
+                        url: `https://p00-ckdatabasews.icloud.com:443`,
                     },
                 },
             },
-            "headers": getICloudCookieHeader(true),
+            headers: getICloudCookieHeader(true),
         }));
 
         await icloud.setupAccount();
@@ -671,11 +624,11 @@ describe(`Setup iCloud`, () => {
         expect(icloud.axios.post).toHaveBeenCalledWith(
             `https://setup.icloud.com/setup/ws/1/accountLogin`,
             {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
+                dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
+                trustToken: Config.trustToken,
             },
             {
-                "headers": expectedICloudSetupHeaders,
+                headers: expectedICloudSetupHeaders,
             },
         );
         await expect(icloud.ready).rejects.toThrow(/^Unable to setup iCloud Account$/);
@@ -683,11 +636,10 @@ describe(`Setup iCloud`, () => {
 
     test(`Receive invalid status code during setup`, async () => {
         const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
+        icloud.auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionSecret;
 
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 500,
+            status: 500,
         }));
 
         await icloud.setupAccount();
@@ -695,11 +647,11 @@ describe(`Setup iCloud`, () => {
         expect(icloud.axios.post).toHaveBeenCalledWith(
             `https://setup.icloud.com/setup/ws/1/accountLogin`,
             {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
+                dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
+                trustToken: Config.trustToken,
             },
             {
-                "headers": expectedICloudSetupHeaders,
+                headers: expectedICloudSetupHeaders,
             },
         );
         await expect(icloud.ready).rejects.toThrow(/^Unable to setup iCloud Account$/);
@@ -707,13 +659,12 @@ describe(`Setup iCloud`, () => {
 
     test(`Receive invalid response during setup`, async () => {
         const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
+        icloud.auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionSecret;
 
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "data": {},
-            "headers": getICloudCookieHeader(true),
+            status: 200,
+            data: {},
+            headers: getICloudCookieHeader(true),
         }));
 
         await icloud.setupAccount();
@@ -721,11 +672,11 @@ describe(`Setup iCloud`, () => {
         expect(icloud.axios.post).toHaveBeenCalledWith(
             `https://setup.icloud.com/setup/ws/1/accountLogin`,
             {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
+                dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
+                trustToken: Config.trustToken,
             },
             {
-                "headers": expectedICloudSetupHeaders,
+                headers: expectedICloudSetupHeaders,
             },
         );
         await expect(icloud.ready).rejects.toThrow(/^Unable to setup iCloud Account$/);
@@ -733,8 +684,7 @@ describe(`Setup iCloud`, () => {
 
     test(`Network failure`, async () => {
         const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
+        icloud.auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionSecret;
 
         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Network down!`)));
 
@@ -743,11 +693,11 @@ describe(`Setup iCloud`, () => {
         expect(icloud.axios.post).toHaveBeenCalledWith(
             `https://setup.icloud.com/setup/ws/1/accountLogin`,
             {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
+                dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
+                trustToken: Config.trustToken,
             },
             {
-                "headers": expectedICloudSetupHeaders,
+                headers: expectedICloudSetupHeaders,
             },
         );
         await expect(icloud.ready).rejects.toThrow(/^Unable to setup iCloud Account$/);
@@ -757,7 +707,7 @@ describe(`Setup iCloud`, () => {
         test(`Get iCloud Photos Ready`, async () => {
             const icloud = iCloudFactory();
             icloud.auth.iCloudCookies = getICloudCookies();
-            icloud.photos = new iCloudPhotos(appWithOptions({"metadataRate": Config.metadataRate}), icloud.auth);
+            icloud.photos = new iCloudPhotos(icloud.auth);
             icloud.photos.setup = jest.fn(() => Promise.resolve());
 
             await icloud.getPhotosReady();
@@ -772,7 +722,7 @@ describe(`Setup iCloud`, () => {
         test(`Cookies invalid`, async () => {
             const icloud = iCloudFactory();
             icloud.auth.iCloudCookies = getICloudCookies(true);
-            icloud.photos = new iCloudPhotos(appWithOptions({"metadataRate": Config.metadataRate}), icloud.auth);
+            icloud.photos = new iCloudPhotos(icloud.auth);
             icloud.photos.setup = jest.fn(() => Promise.resolve());
 
             await icloud.getPhotosReady();

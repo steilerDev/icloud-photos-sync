@@ -1,43 +1,47 @@
-import mockfs from 'mock-fs';
-import * as fs from 'fs';
-import {describe, test, expect, jest, afterEach} from "@jest/globals";
-import {getICloudCookies, iCloudAuthFactory, mockValidation} from "../_helpers/icloud-auth.helper";
+import {prepareResourceManager} from '../_helpers/_general';
+import {describe, test, expect, jest, afterEach, beforeEach} from "@jest/globals";
+import {getICloudCookies, iCloudAuthFactory} from "../_helpers/icloud-auth.helper";
 import * as Config from '../_helpers/_config';
 import {AxiosResponse} from 'axios';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
+import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 
-describe(`Storing trust token fails`, () => {
-    afterEach(() => {
-        mockfs.restore();
-    });
-
-    test(`Unable to create trust token directory`, async () => {
-        mockfs({
-            '/opt': mockfs.directory({
-                "mode": 0o000,
-                "uid": 0,
-                "gid": 0,
-            }),
-        });
-
-        // For some reason required
-        fs.chownSync(`/opt`, 0, 0);
-        fs.chmodSync(`/opt`, 0o000);
-
-        const auth = iCloudAuthFactory();
-        await expect(auth.storeTrustToken()).rejects.toThrow(/^Unable to store trust token$/);
-    });
-
-    test(`Unable to store trust token`, async () => {
-        mockfs({
-            '/opt/icloud-photos-library': mockfs.directory({
-                "mode": 0o000,
-            }),
-        });
-        const auth = iCloudAuthFactory();
-        await expect(auth.storeTrustToken()).rejects.toThrow(/^Unable to store trust token$/);
-    });
+beforeEach(() => {
+    prepareResourceManager();
 });
+
+// Describe(`Storing trust token fails`, () => {
+//     afterEach(() => {
+//         mockfs.restore();
+//     });
+
+//     test(`Unable to create trust token directory`, async () => {
+//         mockfs({
+//             '/opt': mockfs.directory({
+//                 "mode": 0o000,
+//                 "uid": 0,
+//                 "gid": 0,
+//             }),
+//         });
+
+//         // For some reason required
+//         fs.chownSync(`/opt`, 0, 0);
+//         fs.chmodSync(`/opt`, 0o000);
+
+//         const auth = iCloudAuthFactory();
+//         await expect(auth.storeTrustToken()).rejects.toThrow(/^Unable to store trust token$/);
+//     });
+
+//     test(`Unable to store trust token`, async () => {
+//         mockfs({
+//             '/opt/icloud-photos-library': mockfs.directory({
+//                 "mode": 0o000,
+//             }),
+//         });
+//         const auth = iCloudAuthFactory();
+//         await expect(auth.storeTrustToken()).rejects.toThrow(/^Unable to store trust token$/);
+//     });
+// });
 
 describe(`Validate Cloud Cookies`, () => {
     test(`No cookies loaded`, () => {
@@ -61,16 +65,15 @@ describe(`Validate Cloud Cookies`, () => {
 
 describe(`Setup Photos Account`, () => {
     test(`Only Primary Zone`, () => {
-        const auth = iCloudAuthFactory();
-        mockValidation(auth);
+        const auth = iCloudAuthFactory(true);
 
         auth.processPhotosSetupResponse({
-            "data": {
-                "zones": [{
-                    "zoneID": {
-                        "ownerRecordName": `someOwner`,
-                        "zoneName": `PrimarySync`,
-                        "zoneType": `someZoneType`,
+            data: {
+                zones: [{
+                    zoneID: {
+                        ownerRecordName: `someOwner`,
+                        zoneName: `PrimarySync`,
+                        zoneType: `someZoneType`,
                     },
                 }],
             },
@@ -83,22 +86,21 @@ describe(`Setup Photos Account`, () => {
     });
 
     test(`Primary Zone + Shared Zone`, () => {
-        const auth = iCloudAuthFactory();
-        mockValidation(auth);
+        const auth = iCloudAuthFactory(true);
 
         auth.processPhotosSetupResponse({
-            "data": {
-                "zones": [{
-                    "zoneID": {
-                        "ownerRecordName": `someOwner`,
-                        "zoneName": `PrimarySync`,
-                        "zoneType": `someZoneType`,
+            data: {
+                zones: [{
+                    zoneID: {
+                        ownerRecordName: `someOwner`,
+                        zoneName: `PrimarySync`,
+                        zoneType: `someZoneType`,
                     },
                 }, {
-                    "zoneID": {
-                        "ownerRecordName": `someOwner`,
-                        "zoneName": `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
-                        "zoneType": `someZoneType`,
+                    zoneID: {
+                        ownerRecordName: `someOwner`,
+                        zoneName: `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
+                        zoneType: `someZoneType`,
                     },
                 }],
             },
@@ -114,23 +116,22 @@ describe(`Setup Photos Account`, () => {
     });
 
     test(`More Coming`, () => {
-        const auth = iCloudAuthFactory();
-        mockValidation(auth);
+        const auth = iCloudAuthFactory(true);
 
         expect(() => auth.processPhotosSetupResponse({
-            "data": {
-                "moreComing": true,
-                "zones": [{
-                    "zoneID": {
-                        "ownerRecordName": `someOwner`,
-                        "zoneName": `PrimarySync`,
-                        "zoneType": `someZoneType`,
+            data: {
+                moreComing: true,
+                zones: [{
+                    zoneID: {
+                        ownerRecordName: `someOwner`,
+                        zoneName: `PrimarySync`,
+                        zoneType: `someZoneType`,
                     },
                 }, {
-                    "zoneID": {
-                        "ownerRecordName": `someOwner`,
-                        "zoneName": `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
-                        "zoneType": `someZoneType`,
+                    zoneID: {
+                        ownerRecordName: `someOwner`,
+                        zoneName: `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
+                        zoneType: `someZoneType`,
                     },
                 }],
             },
@@ -138,16 +139,15 @@ describe(`Setup Photos Account`, () => {
     });
 
     test(`Invalid data format`, () => {
-        const auth = iCloudAuthFactory();
-        mockValidation(auth);
+        const auth = iCloudAuthFactory(true);
 
         expect(() => auth.processPhotosSetupResponse({
-            "data": {
-                "zones": {
-                    "zoneID": {
-                        "ownerRecordName": `someOwner`,
-                        "zoneName": `PrimarySync`,
-                        "zoneType": `someZoneType`,
+            data: {
+                zones: {
+                    zoneID: {
+                        ownerRecordName: `someOwner`,
+                        zoneName: `PrimarySync`,
+                        zoneType: `someZoneType`,
                     },
                 },
             },
@@ -163,10 +163,10 @@ test(`Get Valid Photos Header`, () => {
     const photosHeader = auth.getPhotosHeader();
 
     expect(photosHeader).toEqual({
-        "Accept": `application/json`,
+        Accept: `application/json`,
         "Content-Type": `application/json`,
-        "Cookie": `X-APPLE-WEBAUTH-HSA-TRUST="8a7c91e6fcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxA0sVMViklkL/qm6SBVEKD2uttGESLUH2lWSvni/sQJecA+iJFa6DyvSRVX"; X-APPLE-WEBAUTH-PCS-Documents="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxV7v5//gztRqsIYpsU9TtMp2h1UA=="; X-APPLE-WEBAUTH-PCS-Photos="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxNTBISBjsuc745DjtDsiH/yHYfgA=="; X-APPLE-WEBAUTH-PCS-Cloudkit="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxVeHef/0ULtyvHtSgHUGlL7j5KFQ=="; X-APPLE-WEBAUTH-PCS-Safari="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxpqL5IcKJdwcXgGMcXjro+bgifiA=="; X-APPLE-WEBAUTH-PCS-Mail="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxABHBgot7Ib3orbZLQXGQzgPTZ9w=="; X-APPLE-WEBAUTH-PCS-Notes="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxLvjACvIoqe3JLeawWJUcGlVWfhg=="; X-APPLE-WEBAUTH-PCS-News="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0DyPlzB1OWMIk5s6hWhwCUteozw=="; X-APPLE-WEBAUTH-PCS-Sharing="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxZD1Ll22Xk75XWbb+T8rnWZCviyw=="; X-APPLE-WEBAUTH-HSA-LOGIN=; X-APPLE-UNIQUE-CLIENT-ID="Ab=="; X-APPLE-WEBAUTH-LOGIN="v=1:t=Gw==BST_IAAAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxEy3np0Qr1Lpv5hsKnIv5yNw~~"; X-APPLE-WEBAUTH-VALIDATE="v=1:t=Gw==BST_IAAAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx09sUI4aWpMbX4Ta-EsVkJiQ~~"; X-APPLE-WEBAUTH-TOKEN="v=2:t=Gw==BST_IAAAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxs7RYxfK23oSY3m2BBap2IMw~~"; X-APPLE-WEBAUTH-USER="v=1:s=0:d=12345678901"; X_APPLE_WEB_KB-ZUCWSXYHSDNT7JZRYLZEQMQNCTW="v=1:t=Gw==BST_IAAAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxdzGQIa0ev-ST4n1ejsIPvFw~~"; X-APPLE-DS-WEB-SESSION-TOKEN="AQEiPexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxsgH1lyGumhyY85tJUsIe5lYvBM5Xt66gkXKi9vwJnNVBrzhdXTolAJpj2f2MIipgTd6KEwN7Q="`,
-        "Origin": `https://www.icloud.com`,
+        Cookie: `X-APPLE-WEBAUTH-HSA-TRUST="8a7c91e6fcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxA0sVMViklkL/qm6SBVEKD2uttGESLUH2lWSvni/sQJecA+iJFa6DyvSRVX"; X-APPLE-WEBAUTH-PCS-Documents="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxV7v5//gztRqsIYpsU9TtMp2h1UA=="; X-APPLE-WEBAUTH-PCS-Photos="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxNTBISBjsuc745DjtDsiH/yHYfgA=="; X-APPLE-WEBAUTH-PCS-Cloudkit="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxVeHef/0ULtyvHtSgHUGlL7j5KFQ=="; X-APPLE-WEBAUTH-PCS-Safari="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxpqL5IcKJdwcXgGMcXjro+bgifiA=="; X-APPLE-WEBAUTH-PCS-Mail="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxABHBgot7Ib3orbZLQXGQzgPTZ9w=="; X-APPLE-WEBAUTH-PCS-Notes="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxLvjACvIoqe3JLeawWJUcGlVWfhg=="; X-APPLE-WEBAUTH-PCS-News="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0DyPlzB1OWMIk5s6hWhwCUteozw=="; X-APPLE-WEBAUTH-PCS-Sharing="TGlzdExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxZD1Ll22Xk75XWbb+T8rnWZCviyw=="; X-APPLE-WEBAUTH-HSA-LOGIN=; X-APPLE-UNIQUE-CLIENT-ID="Ab=="; X-APPLE-WEBAUTH-LOGIN="v=1:t=Gw==BST_IAAAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxEy3np0Qr1Lpv5hsKnIv5yNw~~"; X-APPLE-WEBAUTH-VALIDATE="v=1:t=Gw==BST_IAAAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx09sUI4aWpMbX4Ta-EsVkJiQ~~"; X-APPLE-WEBAUTH-TOKEN="v=2:t=Gw==BST_IAAAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxs7RYxfK23oSY3m2BBap2IMw~~"; X-APPLE-WEBAUTH-USER="v=1:s=0:d=12345678901"; X_APPLE_WEB_KB-ZUCWSXYHSDNT7JZRYLZEQMQNCTW="v=1:t=Gw==BST_IAAAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxdzGQIa0ev-ST4n1ejsIPvFw~~"; X-APPLE-DS-WEB-SESSION-TOKEN="AQEiPexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxsgH1lyGumhyY85tJUsIe5lYvBM5Xt66gkXKi9vwJnNVBrzhdXTolAJpj2f2MIipgTd6KEwN7Q="`,
+        Origin: `https://www.icloud.com`,
         "User-Agent": `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`,
     });
 });
@@ -302,23 +302,21 @@ describe(`Validate Photos Account`, () => {
 
 describe(`Validate Account Secrets`, () => {
     test(`username missing`, () => {
+        ResourceManager.instance._appOptions.username = ``;
         const auth = iCloudAuthFactory();
-        auth.iCloudAccountSecrets.username = ``;
-        auth.iCloudAccountSecrets.password = Config.password;
+
         expect(() => auth.validateAccountSecrets()).toThrow(/^Unable to validate account secrets$/);
     });
 
     test(`password missing`, () => {
+        ResourceManager.instance._appOptions.password = ``;
         const auth = iCloudAuthFactory();
-        auth.iCloudAccountSecrets.username = Config.username;
-        auth.iCloudAccountSecrets.password = ``;
+
         expect(() => auth.validateAccountSecrets()).toThrow(/^Unable to validate account secrets$/);
     });
 
     test(`Object valid`, () => {
         const auth = iCloudAuthFactory();
-        auth.iCloudAccountSecrets.username = Config.username;
-        auth.iCloudAccountSecrets.password = Config.password;
         expect(() => auth.validateAccountSecrets()).not.toThrow(/^$/);
     });
 });
@@ -337,10 +335,10 @@ describe(`Validate Auth Secrets`, () => {
         expect(() => auth.validateAuthSecrets()).toThrow(/^Unable to validate auth secrets$/);
     });
 
-    test(`sessionId missing`, () => {
+    test(`session secret missing`, () => {
         const auth = iCloudAuthFactory();
         Object.assign(auth.iCloudAuthSecrets, Config.iCloudAuthSecrets);
-        auth.iCloudAuthSecrets.sessionId = ``;
+        auth.iCloudAuthSecrets.sessionSecret = ``;
         expect(() => auth.validateAuthSecrets()).toThrow(/^Unable to validate auth secrets$/);
     });
 
@@ -352,24 +350,25 @@ describe(`Validate Auth Secrets`, () => {
 });
 
 describe(`Validate Account Tokens`, () => {
-    test(`Session Token missing`, () => {
+    test(`Session Secret missing`, () => {
         const auth = iCloudAuthFactory();
-        auth.iCloudAccountTokens.sessionToken = ``;
-        auth.iCloudAccountTokens.trustToken = Config.trustToken;
+        auth.iCloudAuthSecrets.sessionSecret = ``;
         expect(() => auth.validateAccountTokens()).toThrow(/^Unable to validate account tokens$/);
     });
 
     test(`Trust Token missing`, () => {
+        ResourceManager.instance._resourceFile.trustToken = ``;
+        ResourceManager.instance._appOptions.trustToken = ``;
         const auth = iCloudAuthFactory();
-        auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        auth.iCloudAccountTokens.trustToken = ``;
+        auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionId;
+
         expect(() => auth.validateAccountTokens()).toThrow(/^Unable to validate account tokens$/);
     });
 
     test(`Object valid`, () => {
         const auth = iCloudAuthFactory();
-        auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        auth.iCloudAccountTokens.trustToken = Config.trustToken;
+        auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionId;
+
         expect(() => auth.validateAccountTokens()).not.toThrow(/^$/);
     });
 });

@@ -37,24 +37,24 @@ test(`Should create missing directories`, () => {
 test(`Should use existing directories and not overwrite content`, () => {
     mockfs({
         [photosDataDir]: {
-            "testFile": `test content`,
+            testFile: `test content`,
             [PRIMARY_ASSET_DIR]: {
-                "testFile": `test content`,
+                testFile: `test content`,
             },
             [SHARED_ASSET_DIR]: {
-                "testFile": `test content`,
+                testFile: `test content`,
             },
             [ARCHIVE_DIR]: {
                 [STASH_DIR]: {
-                    "testFile": `test content`,
+                    testFile: `test content`,
                 },
-                "testFile": `test content`,
+                testFile: `test content`,
             },
 
         },
     });
     const opts = {
-        "dataDir": photosDataDir,
+        dataDir: photosDataDir,
     };
     const _library = new PhotosLibrary(appWithOptions(opts));
     expect(fs.existsSync(photosDataDir)).toBe(true);
@@ -73,35 +73,35 @@ describe(`Load state`, () => {
     describe(`Load assets`, () => {
         test.each([
             {
-                "desc": `No asset`,
-                "fsTree": {},
-                "expectedCount": 0,
-                "expectedZones": [],
+                desc: `No asset`,
+                fsTree: {},
+                expectedCount: 0,
+                expectedZones: [],
             }, {
-                "desc": `Multiple assets - PrimaryZone`,
-                "fsTree": {
+                desc: `Multiple assets - PrimaryZone`,
+                fsTree: {
                     [primaryAssetDir]: {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
                     },
                 },
-                "expectedCount": 3,
-                "expectedZones": [Zones.Primary, Zones.Primary, Zones.Primary],
+                expectedCount: 3,
+                expectedZones: [Zones.Primary, Zones.Primary, Zones.Primary],
             }, {
-                "desc": `Multiple assets - SharedZone`,
-                "fsTree": {
+                desc: `Multiple assets - SharedZone`,
+                fsTree: {
                     [sharedAssetDir]: {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
                     },
                 },
-                "expectedCount": 3,
-                "expectedZones": [Zones.Shared, Zones.Shared, Zones.Shared],
+                expectedCount: 3,
+                expectedZones: [Zones.Shared, Zones.Shared, Zones.Shared],
             }, {
-                "desc": `Multiple assets - Mixed Zones`,
-                "fsTree": {
+                desc: `Multiple assets - Mixed Zones`,
+                fsTree: {
                     [primaryAssetDir]: {
                         "deFEyox97ecdknADe0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "deFEeee3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
@@ -113,37 +113,37 @@ describe(`Load state`, () => {
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.jpeg": Buffer.from([1, 1, 1, 1, 1, 1]),
                     },
                 },
-                "expectedCount": 6,
-                "expectedZones": [Zones.Primary, Zones.Primary, Zones.Primary, Zones.Shared, Zones.Shared, Zones.Shared],
+                expectedCount: 6,
+                expectedZones: [Zones.Primary, Zones.Primary, Zones.Primary, Zones.Shared, Zones.Shared, Zones.Shared],
             }, {
-                "desc": `Invalid assets - PrimaryZone`,
-                "fsTree": {
+                desc: `Invalid assets - PrimaryZone`,
+                fsTree: {
                     [primaryAssetDir]: {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
-                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // eslint-disable-line
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
                     },
                 },
-                "expectedCount": 2,
-                "expectedZones": [Zones.Primary, Zones.Primary],
+                expectedCount: 2,
+                expectedZones: [Zones.Primary, Zones.Primary],
             }, {
-                "desc": `Invalid assets - SharedZone`,
-                "fsTree": {
+                desc: `Invalid assets - SharedZone`,
+                fsTree: {
                     [sharedAssetDir]: {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
-                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // eslint-disable-line
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
                     },
                 },
-                "expectedCount": 2,
-                "expectedZones": [Zones.Shared, Zones.Shared],
+                expectedCount: 2,
+                expectedZones: [Zones.Shared, Zones.Shared],
             }, {
-                "desc": `Invalid assets - Mixed Zones`,
-                "fsTree": {
+                desc: `Invalid assets - Mixed Zones`,
+                fsTree: {
                     [primaryAssetDir]: {
                         "deFEyox97ecdknADe0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "deFEeee3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
@@ -153,13 +153,13 @@ describe(`Load state`, () => {
                     [sharedAssetDir]: {
                         "Aa7_yox97ecSUNmVw0xP4YzIDDKf.jpeg": Buffer.from([1, 1, 1, 1]),
                         "AaGv15G3Cp9LPMQQfFZiHRryHgjU.jpeg": Buffer.from([1, 1, 1, 1, 1]),
-                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // No file extension
+                        "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // eslint-disable-line
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
                     },
                 },
-                "expectedCount": 5,
-                "expectedZones": [Zones.Primary, Zones.Primary, Zones.Primary, Zones.Shared, Zones.Shared],
+                expectedCount: 5,
+                expectedZones: [Zones.Primary, Zones.Primary, Zones.Primary, Zones.Shared, Zones.Shared],
             },
         ])(`$desc`, async ({fsTree, expectedCount, expectedZones}) => {
             mockfs(fsTree as any);
@@ -188,7 +188,7 @@ describe(`Load state`, () => {
                 [photosDataDir]: {
                     [`.${emptyAlbumUUID}`]: {},
                     [emptyAlbumName]: mockfs.symlink({
-                        "path": `.${emptyAlbumUUID}`,
+                        path: `.${emptyAlbumUUID}`,
                     }),
                 },
             });
@@ -218,12 +218,12 @@ describe(`Load state`, () => {
                     [`.${someFolderUUID}`]: {
                         [`.${someAlbumUUID}`]: {},
                         [someAlbumName]: mockfs.symlink({
-                            "path": `.${someAlbumUUID}`,
+                            path: `.${someAlbumUUID}`,
                         }),
                         [someFileName]: Buffer.from([1, 1, 1]),
                     },
                     [someFolderName]: mockfs.symlink({
-                        "path": `.${someFolderUUID}`,
+                        path: `.${someFolderUUID}`,
                     }),
                 },
             });
@@ -244,7 +244,7 @@ describe(`Load state`, () => {
             mockfs({
                 [photosDataDir]: {
                     [orphanedAlbumName]: mockfs.symlink({
-                        "path": `.${orphanedAlbumUUID}`,
+                        path: `.${orphanedAlbumUUID}`,
                     }),
                 },
             });
@@ -267,7 +267,7 @@ describe(`Load state`, () => {
                 [photosDataDir]: {
                     [`.${orphanedAlbumUUID}`]: {},
                     [orphanedAlbumName]: mockfs.symlink({
-                        "path": `.${orphanedAlbumUUID}`,
+                        path: `.${orphanedAlbumUUID}`,
                     }),
                 },
             });
@@ -286,20 +286,20 @@ describe(`Load state`, () => {
                 [photosDataDir]: {
                     [`.${nonEmptyAlbumUUID}`]: {
                         "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": mockfs.symlink({
-                            "path": `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
+                            path: `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
                         }),
                         "steve-johnson-gkfvdCEbUbQ-unsplash.jpeg": mockfs.symlink({
-                            "path": `../_All-Photos/AQ-qACkUB_yOBUVvye9kJSVdxZEc.jpeg`,
+                            path: `../_All-Photos/AQ-qACkUB_yOBUVvye9kJSVdxZEc.jpeg`,
                         }),
                         "steve-johnson-T12spiHYons-unsplash.jpeg": mockfs.symlink({
-                            "path": `../_All-Photos/Acgr2fdPRy7x4l16nE6wwBNKrOzf.jpeg`,
+                            path: `../_All-Photos/Acgr2fdPRy7x4l16nE6wwBNKrOzf.jpeg`,
                         }),
                         "steve-johnson-YLfycNerbPo-unsplash.jpeg": mockfs.symlink({
-                            "path": `./_All-Photos/AfFUy6toSMWpB1FVJQThs4Y-rVHJ.jpeg`,
+                            path: `./_All-Photos/AfFUy6toSMWpB1FVJQThs4Y-rVHJ.jpeg`,
                         }),
                     },
                     [nonEmptyAlbumName]: mockfs.symlink({
-                        "path": `.${nonEmptyAlbumUUID}`,
+                        path: `.${nonEmptyAlbumUUID}`,
                     }),
                 },
             });
@@ -327,11 +327,11 @@ describe(`Load state`, () => {
                     [`.${folderUUID}`]: {
                         [`.${folderedAlbumUUID}`]: {},
                         [folderedAlbumName]: mockfs.symlink({
-                            "path": `.${folderedAlbumUUID}`,
+                            path: `.${folderedAlbumUUID}`,
                         }),
                     },
                     [folderName]: mockfs.symlink({
-                        "path": `.${folderUUID}`,
+                        path: `.${folderUUID}`,
                     }),
                 },
             });
@@ -365,7 +365,7 @@ describe(`Load state`, () => {
                         "steve-johnson-YLfycNerbPo-unsplash.jpeg": Buffer.from([1, 1, 1, 1]),
                     },
                     [archivedName]: mockfs.symlink({
-                        "path": `.${archivedUUID}`,
+                        path: `.${archivedUUID}`,
                     }),
                 },
             });
@@ -428,7 +428,7 @@ describe(`Load state`, () => {
                 [photosDataDir]: {
                     [`.${emptyAlbumUUID}`]: files,
                     [emptyAlbumName]: mockfs.symlink({
-                        "path": `.${emptyAlbumUUID}`,
+                        path: `.${emptyAlbumUUID}`,
                     }),
                 },
             });
@@ -473,26 +473,26 @@ describe(`Load state`, () => {
                     },
                     [`.${emptyAlbumUUID}`]: files,
                     [emptyAlbumName]: mockfs.symlink({
-                        "path": `.${emptyAlbumUUID}`,
+                        path: `.${emptyAlbumUUID}`,
                     }),
                     [`.${folderUUID}`]: {
                         [`.${folderedFolderUUID}`]: {
                             [`.${nonEmptyAlbumUUID}`]: {
                                 "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": mockfs.symlink({
-                                    "path": `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
+                                    path: `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
                                 }),
                                 "steve-johnson-gkfvdCEbUbQ-unsplash.jpeg": mockfs.symlink({
-                                    "path": `../_All-Photos/AQ-qACkUB_yOBUVvye9kJSVdxZEc.jpeg`,
+                                    path: `../_All-Photos/AQ-qACkUB_yOBUVvye9kJSVdxZEc.jpeg`,
                                 }),
                                 "steve-johnson-T12spiHYons-unsplash.jpeg": mockfs.symlink({
-                                    "path": `../_All-Photos/Acgr2fdPRy7x4l16nE6wwBNKrOzf.jpeg`,
+                                    path: `../_All-Photos/Acgr2fdPRy7x4l16nE6wwBNKrOzf.jpeg`,
                                 }),
                                 "steve-johnson-YLfycNerbPo-unsplash.jpeg": mockfs.symlink({
-                                    "path": `./_All-Photos/AfFUy6toSMWpB1FVJQThs4Y-rVHJ.jpeg`,
+                                    path: `./_All-Photos/AfFUy6toSMWpB1FVJQThs4Y-rVHJ.jpeg`,
                                 }),
                             },
                             [nonEmptyAlbumName]: mockfs.symlink({
-                                "path": `.${nonEmptyAlbumUUID}`,
+                                path: `.${nonEmptyAlbumUUID}`,
                             }),
                             [`.${archivedUUID}`]: {
                                 "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": Buffer.from([1, 1, 1, 1]),
@@ -501,15 +501,15 @@ describe(`Load state`, () => {
                                 "steve-johnson-YLfycNerbPo-unsplash.jpeg": Buffer.from([1, 1, 1, 1]),
                             },
                             [archivedName]: mockfs.symlink({
-                                "path": `.${archivedUUID}`,
+                                path: `.${archivedUUID}`,
                             }),
                         },
                         [folderedFolderName]: mockfs.symlink({
-                            "path": `.${folderedFolderUUID}`,
+                            path: `.${folderedFolderUUID}`,
                         }),
                     },
                     [folderName]: mockfs.symlink({
-                        "path": `.${folderUUID}`,
+                        path: `.${folderUUID}`,
                     }),
                 },
             });
@@ -549,11 +549,11 @@ describe(`Load state`, () => {
 
 describe(`Write state`, () => {
     describe.each([{
-        "zone": Zones.Primary,
-        "zoneDir": primaryAssetDir,
+        zone: Zones.Primary,
+        zoneDir: primaryAssetDir,
     }, {
-        "zone": Zones.Shared,
-        "zoneDir": sharedAssetDir,
+        zone: Zones.Shared,
+        zoneDir: sharedAssetDir,
     }])(`Write assets - $zone`, ({zone, zoneDir}) => {
         test(`Successfully verify asset`, async () => {
             const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
@@ -565,8 +565,8 @@ describe(`Write state`, () => {
             mockfs({
                 [zoneDir]: {
                     [`${assetFileName}.${assetExt}`]: mockfs.file({
-                        "content": assetData,
-                        "mtime": new Date(assetMTime),
+                        content: assetData,
+                        mtime: new Date(assetMTime),
                     }),
                 },
             });
@@ -593,8 +593,8 @@ describe(`Write state`, () => {
             mockfs({
                 [zoneDir]: {
                     [`${assetFileName}.${assetExt}`]: mockfs.file({
-                        "content": assetData,
-                        "mtime": new Date(assetMTime + range),
+                        content: assetData,
+                        mtime: new Date(assetMTime + range),
                     }),
                 },
             });
@@ -614,8 +614,8 @@ describe(`Write state`, () => {
             mockfs({
                 [zoneDir]: {
                     [`${assetFileName}.${assetExt}`]: mockfs.file({
-                        "content": assetData,
-                        "mtime": new Date(assetMTime),
+                        content: assetData,
+                        mtime: new Date(assetMTime),
                     }),
                 },
             });
@@ -656,8 +656,8 @@ describe(`Write state`, () => {
             mockfs({
                 [zoneDir]: {
                     [`${assetFileName}.${assetExt}`]: mockfs.file({
-                        "content": assetData,
-                        "mtime": new Date(assetMTime + range),
+                        content: assetData,
+                        mtime: new Date(assetMTime + range),
                     }),
                 },
             });
@@ -693,7 +693,7 @@ describe(`Write state`, () => {
             // Downloading banner of this repo
             const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
             const config: AxiosRequestConfig = {
-                "responseType": `stream`,
+                responseType: `stream`,
             };
             const fileName = `asdf`;
             const ext = `png`;
@@ -727,7 +727,7 @@ describe(`Write state`, () => {
             // Downloading banner of this repo
             const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
             const config: AxiosRequestConfig = {
-                "responseType": `stream`,
+                responseType: `stream`,
             };
             const fileName = `asdf`;
             const ext = `png`;
@@ -771,8 +771,8 @@ describe(`Write state`, () => {
             mockfs({
                 [zoneDir]: {
                     [assetFullFilename]: mockfs.file({
-                        "content": assetData,
-                        "mtime": new Date(assetMTime),
+                        content: assetData,
+                        mtime: new Date(assetMTime),
                     }),
                 },
             });
@@ -794,7 +794,7 @@ describe(`Write state`, () => {
                     [photosDataDir]: {
                         [`.${albumUUID}`]: {},
                         [albumName]: mockfs.symlink({
-                            "path": `.${albumName}`,
+                            path: `.${albumName}`,
                         }),
                     },
                 });
@@ -813,11 +813,11 @@ describe(`Write state`, () => {
                         [`.${folderUUID}`]: {
                             [`.${folderedAlbumUUID}`]: {},
                             [folderedAlbumName]: mockfs.symlink({
-                                "path": `.${folderedAlbumUUID}`,
+                                path: `.${folderedAlbumUUID}`,
                             }),
                         },
                         [folderName]: mockfs.symlink({
-                            "path": `.${folderUUID}`,
+                            path: `.${folderUUID}`,
                         }),
                     },
                 });
@@ -858,50 +858,50 @@ describe(`Write state`, () => {
                                 [`.${folderedAlbum2UUID}`]: {
                                 },
                                 [folderedAlbum2Name]: mockfs.symlink({
-                                    "path": `.${folderedAlbum2UUID}`,
+                                    path: `.${folderedAlbum2UUID}`,
                                 }),
                             },
                             [folderedAlbum1Name]: mockfs.symlink({
-                                "path": `.${folderedAlbum1UUID}`,
+                                path: `.${folderedAlbum1UUID}`,
                             }),
                         },
                         [folder1Name]: mockfs.symlink({
-                            "path": `.${folder1UUID}`,
+                            path: `.${folder1UUID}`,
                         }),
                         [`.${folder2UUID}`]: {
                             [`.${folderedAlbum3UUID}`]: {
                             },
                             [folderedAlbum3Name]: mockfs.symlink({
-                                "path": `.${folderedAlbum3UUID}`,
+                                path: `.${folderedAlbum3UUID}`,
                             }),
                             [`.${folderedAlbum4UUID}`]: {
                             },
                             [folderedAlbum4Name]: mockfs.symlink({
-                                "path": `.${folderedAlbum4UUID}`,
+                                path: `.${folderedAlbum4UUID}`,
                             }),
                         },
                         [folder2Name]: mockfs.symlink({
-                            "path": `.${folder2UUID}`,
+                            path: `.${folder2UUID}`,
                         }),
                         [`.${folder3UUID}`]: {
                             [`.${folderedAlbum5UUID}`]: {
                             },
                             [folderedAlbum5Name]: mockfs.symlink({
-                                "path": `.${folderedAlbum5UUID}`,
+                                path: `.${folderedAlbum5UUID}`,
                             }),
                             [`.${folderedAlbum6UUID}`]: {
                                 [`.${searchAlbumUUID}`]: {
                                 },
                                 [searchAlbumName]: mockfs.symlink({
-                                    "path": `.${searchAlbumUUID}`,
+                                    path: `.${searchAlbumUUID}`,
                                 }),
                             },
                             [folderedAlbum6Name]: mockfs.symlink({
-                                "path": `.${folderedAlbum6UUID}`,
+                                path: `.${folderedAlbum6UUID}`,
                             }),
                         },
                         [folder3Name]: mockfs.symlink({
-                            "path": `.${folder3UUID}`,
+                            path: `.${folder3UUID}`,
                         }),
                     },
                 });
@@ -927,21 +927,21 @@ describe(`Write state`, () => {
                                 [`.${searchAlbumUUID}`]: {
                                 },
                                 [searchAlbumName]: mockfs.symlink({
-                                    "path": `.${searchAlbumUUID}`,
+                                    path: `.${searchAlbumUUID}`,
                                 }),
                             },
                             [folder1Name]: mockfs.symlink({
-                                "path": `.${folder1UUID}`,
+                                path: `.${folder1UUID}`,
                             }),
                             [`.${folder2UUID}`]: {
                                 [`.${searchAlbumUUID}`]: {
                                 },
                                 [searchAlbumName]: mockfs.symlink({
-                                    "path": `.${searchAlbumUUID}`,
+                                    path: `.${searchAlbumUUID}`,
                                 }),
                             },
                             [folder2Name]: mockfs.symlink({
-                                "path": `.${folder2UUID}`,
+                                path: `.${folder2UUID}`,
                             }),
                         },
                     });
@@ -980,45 +980,45 @@ describe(`Write state`, () => {
                                     [`.${folderedAlbum2UUID}`]: {
                                     },
                                     [folderedAlbum2Name]: mockfs.symlink({
-                                        "path": `.${folderedAlbum2UUID}`,
+                                        path: `.${folderedAlbum2UUID}`,
                                     }),
                                 },
                                 [folderedAlbum1Name]: mockfs.symlink({
-                                    "path": `.${folderedAlbum1UUID}`,
+                                    path: `.${folderedAlbum1UUID}`,
                                 }),
                             },
                             [folder1Name]: mockfs.symlink({
-                                "path": `.${folder1UUID}`,
+                                path: `.${folder1UUID}`,
                             }),
                             [`.${folder2UUID}`]: {
                                 [`.${folderedAlbum3UUID}`]: {
                                 },
                                 [folderedAlbum3Name]: mockfs.symlink({
-                                    "path": `.${folderedAlbum3UUID}`,
+                                    path: `.${folderedAlbum3UUID}`,
                                 }),
                                 [`.${folderedAlbum4UUID}`]: {
                                 },
                                 [folderedAlbum4Name]: mockfs.symlink({
-                                    "path": `.${folderedAlbum4UUID}`,
+                                    path: `.${folderedAlbum4UUID}`,
                                 }),
                             },
                             [folder2Name]: mockfs.symlink({
-                                "path": `.${folder2UUID}`,
+                                path: `.${folder2UUID}`,
                             }),
                             [`.${folder3UUID}`]: {
                                 [`.${folderedAlbum5UUID}`]: {
                                 },
                                 [folderedAlbum5Name]: mockfs.symlink({
-                                    "path": `.${folderedAlbum5UUID}`,
+                                    path: `.${folderedAlbum5UUID}`,
                                 }),
                                 [`.${folderedAlbum6UUID}`]: {
                                 },
                                 [folderedAlbum6Name]: mockfs.symlink({
-                                    "path": `.${folderedAlbum6UUID}`,
+                                    path: `.${folderedAlbum6UUID}`,
                                 }),
                             },
                             [folder3Name]: mockfs.symlink({
-                                "path": `.${folder3UUID}`,
+                                path: `.${folder3UUID}`,
                             }),
                         },
                     });
@@ -1039,7 +1039,7 @@ describe(`Write state`, () => {
                         [photosDataDir]: {
                             [`.${albumUUID}`]: {},
                             [albumName]: mockfs.symlink({
-                                "path": `.${albumName}`,
+                                path: `.${albumName}`,
                             }),
                         },
                     });
@@ -1061,11 +1061,11 @@ describe(`Write state`, () => {
                             [`.${folderUUID}`]: {
                                 [`.${albumUUID}`]: {},
                                 [albumName]: mockfs.symlink({
-                                    "path": `.${albumName}`,
+                                    path: `.${albumName}`,
                                 }),
                             },
                             [folderName]: mockfs.symlink({
-                                "path": `.${folderUUID}`,
+                                path: `.${folderUUID}`,
                             }),
                         },
                     });
@@ -1117,7 +1117,7 @@ describe(`Write state`, () => {
                     [photosDataDir]: {
                         [`.${parentUUID}`]: {},
                         [parentName]: mockfs.symlink({
-                            "path": `.${parentUUID}`,
+                            path: `.${parentUUID}`,
                         }),
                     },
                 });
@@ -1212,16 +1212,16 @@ describe(`Write state`, () => {
                     [photosDataDir]: {
                         [PRIMARY_ASSET_DIR]: {
                             [albumAsset2Filename]: mockfs.file({
-                                "mtime": new Date(albumAsset2mTime),
-                                "content": Buffer.from([1, 1, 1, 1]),
+                                mtime: new Date(albumAsset2mTime),
+                                content: Buffer.from([1, 1, 1, 1]),
                             }),
                             [albumAsset3Filename]: mockfs.file({
-                                "mtime": new Date(albumAsset3mTime),
-                                "content": Buffer.from([1, 1, 1, 1]),
+                                mtime: new Date(albumAsset3mTime),
+                                content: Buffer.from([1, 1, 1, 1]),
                             }),
                             [albumAsset4Filename]: mockfs.file({
-                                "mtime": new Date(albumAsset4mTime),
-                                "content": Buffer.from([1, 1, 1, 1]),
+                                mtime: new Date(albumAsset4mTime),
+                                content: Buffer.from([1, 1, 1, 1]),
                             }),
                         },
                     },
@@ -1298,20 +1298,20 @@ describe(`Write state`, () => {
                     [photosDataDir]: {
                         [PRIMARY_ASSET_DIR]: {
                             [albumAsset1Filename]: mockfs.file({
-                                "mtime": new Date(albumAsset1mTime),
-                                "content": Buffer.from([1, 1, 1, 1]),
+                                mtime: new Date(albumAsset1mTime),
+                                content: Buffer.from([1, 1, 1, 1]),
                             }),
                             [albumAsset2Filename]: mockfs.file({
-                                "mtime": new Date(albumAsset2mTime),
-                                "content": Buffer.from([1, 1, 1, 1]),
+                                mtime: new Date(albumAsset2mTime),
+                                content: Buffer.from([1, 1, 1, 1]),
                             }),
                             [albumAsset3Filename]: mockfs.file({
-                                "mtime": new Date(albumAsset3mTime),
-                                "content": Buffer.from([1, 1, 1, 1]),
+                                mtime: new Date(albumAsset3mTime),
+                                content: Buffer.from([1, 1, 1, 1]),
                             }),
                             [albumAsset4Filename]: mockfs.file({
-                                "mtime": new Date(albumAsset4mTime),
-                                "content": Buffer.from([1, 1, 1, 1]),
+                                mtime: new Date(albumAsset4mTime),
+                                content: Buffer.from([1, 1, 1, 1]),
                             }),
                         },
                     },
@@ -1380,12 +1380,12 @@ describe(`Write state`, () => {
                     [photosDataDir]: {
                         [PRIMARY_ASSET_DIR]: {
                             [albumAsset1Filename]: mockfs.file({
-                                "mtime": new Date(albumAsset1mTime),
-                                "content": Buffer.from([1, 1, 1, 1]),
+                                mtime: new Date(albumAsset1mTime),
+                                content: Buffer.from([1, 1, 1, 1]),
                             }),
                             [albumAsset2Filename]: mockfs.file({
-                                "mtime": new Date(albumAsset2mTime),
-                                "content": Buffer.from([1, 1, 1, 1]),
+                                mtime: new Date(albumAsset2mTime),
+                                content: Buffer.from([1, 1, 1, 1]),
                             }),
                         },
                     },
@@ -1431,7 +1431,7 @@ describe(`Write state`, () => {
                     [photosDataDir]: {
                         [`.${albumUUID}`]: {},
                         [albumName]: mockfs.symlink({
-                            "path": `.${albumUUID}`,
+                            path: `.${albumUUID}`,
                         }),
                     },
                 });
@@ -1451,20 +1451,20 @@ describe(`Write state`, () => {
                     [photosDataDir]: {
                         [`.${albumUUID}`]: {
                             "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": mockfs.symlink({
-                                "path": `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
+                                path: `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
                             }),
                             "steve-johnson-gkfvdCEbUbQ-unsplash.jpeg": mockfs.symlink({
-                                "path": `../_All-Photos/AQ-qACkUB_yOBUVvye9kJSVdxZEc.jpeg`,
+                                path: `../_All-Photos/AQ-qACkUB_yOBUVvye9kJSVdxZEc.jpeg`,
                             }),
                             "steve-johnson-T12spiHYons-unsplash.jpeg": mockfs.symlink({
-                                "path": `../_All-Photos/Acgr2fdPRy7x4l16nE6wwBNKrOzf.jpeg`,
+                                path: `../_All-Photos/Acgr2fdPRy7x4l16nE6wwBNKrOzf.jpeg`,
                             }),
                             "steve-johnson-YLfycNerbPo-unsplash.jpeg": mockfs.symlink({
-                                "path": `./_All-Photos/AfFUy6toSMWpB1FVJQThs4Y-rVHJ.jpeg`,
+                                path: `./_All-Photos/AfFUy6toSMWpB1FVJQThs4Y-rVHJ.jpeg`,
                             }),
                         },
                         [albumName]: mockfs.symlink({
-                            "path": `.${albumUUID}`,
+                            path: `.${albumUUID}`,
                         }),
                     },
                 });
@@ -1486,7 +1486,7 @@ describe(`Write state`, () => {
                             "test-picture": Buffer.from([1, 1, 1, 1]),
                         },
                         [albumName]: mockfs.symlink({
-                            "path": `.${albumUUID}`,
+                            path: `.${albumUUID}`,
                         }),
                     },
                 });
@@ -1512,7 +1512,7 @@ describe(`Write state`, () => {
                     [photosDataDir]: {
                         [`.${albumUUID}`]: files,
                         [albumName]: mockfs.symlink({
-                            "path": `.${albumUUID}`,
+                            path: `.${albumUUID}`,
                         }),
                     },
                 });
@@ -1532,7 +1532,7 @@ describe(`Write state`, () => {
                 mockfs({
                     [photosDataDir]: {
                         [albumName]: mockfs.symlink({
-                            "path": `.${albumUUID}`,
+                            path: `.${albumUUID}`,
                         }),
                     },
                 });
@@ -1580,28 +1580,28 @@ describe(`Write state`, () => {
                         [photosDataDir]: {
                             [`.${archivedUUID}`]: {
                                 [asset1Name]: mockfs.file({
-                                    "content": Buffer.from([1, 1, 1, 1]),
-                                    "ctime": new Date(asset1Modified),
-                                    "mtime": new Date(asset1Modified),
+                                    content: Buffer.from([1, 1, 1, 1]),
+                                    ctime: new Date(asset1Modified),
+                                    mtime: new Date(asset1Modified),
                                 }),
                                 [asset2Name]: mockfs.file({
-                                    "content": Buffer.from([1, 1, 1, 1]),
-                                    "atime": new Date(asset2Modified),
-                                    "mtime": new Date(asset2Modified),
+                                    content: Buffer.from([1, 1, 1, 1]),
+                                    atime: new Date(asset2Modified),
+                                    mtime: new Date(asset2Modified),
                                 }),
                                 [asset3Name]: mockfs.file({
-                                    "content": Buffer.from([1, 1, 1, 1]),
-                                    "atime": new Date(asset3Modified),
-                                    "mtime": new Date(asset3Modified),
+                                    content: Buffer.from([1, 1, 1, 1]),
+                                    atime: new Date(asset3Modified),
+                                    mtime: new Date(asset3Modified),
                                 }),
                                 [asset4Name]: mockfs.file({
-                                    "content": Buffer.from([1, 1, 1, 1]),
-                                    "atime": new Date(asset4Modified),
-                                    "mtime": new Date(asset4Modified),
+                                    content: Buffer.from([1, 1, 1, 1]),
+                                    atime: new Date(asset4Modified),
+                                    mtime: new Date(asset4Modified),
                                 }),
                             },
                             [archivedName]: mockfs.symlink({
-                                "path": `.${archivedUUID}`,
+                                path: `.${archivedUUID}`,
                             }),
                         },
                     });
@@ -1652,7 +1652,7 @@ describe(`Write state`, () => {
                                 [asset4Name]: Buffer.from([1, 1, 1, 1]),
                             },
                             [archivedName]: mockfs.symlink({
-                                "path": `.${archivedUUID}`,
+                                path: `.${archivedUUID}`,
                             }),
                         },
                     });
@@ -1694,7 +1694,7 @@ describe(`Write state`, () => {
                                 [asset4Name]: Buffer.from([1, 1, 1, 1]),
                             },
                             [archivedName]: mockfs.symlink({
-                                "path": `.${archivedUUID}`,
+                                path: `.${archivedUUID}`,
                             }),
                         },
                     });
@@ -1827,7 +1827,7 @@ describe(`Write state`, () => {
                                         [asset4Name]: Buffer.from([1, 1, 1, 1]),
                                     },
                                     [archivedName]: mockfs.symlink({
-                                        "path": `.${archivedUUID}`,
+                                        path: `.${archivedUUID}`,
                                     }),
                                 },
                             },
@@ -1864,7 +1864,7 @@ describe(`Write state`, () => {
                                         [asset4Name]: Buffer.from([1, 1, 1, 1]),
                                     },
                                     [archived1Name]: mockfs.symlink({
-                                        "path": `.${archived1UUID}`,
+                                        path: `.${archived1UUID}`,
                                     }),
                                     [`.${archived2UUID}`]: {
                                         [asset1Name]: Buffer.from([1, 1, 1, 1]),
@@ -1873,7 +1873,7 @@ describe(`Write state`, () => {
                                         [asset4Name]: Buffer.from([1, 1, 1, 1]),
                                     },
                                     [archived2Name]: mockfs.symlink({
-                                        "path": `.${archived2UUID}`,
+                                        path: `.${archived2UUID}`,
                                     }),
                                 },
                             },
@@ -1917,7 +1917,7 @@ describe(`Write state`, () => {
                                         [asset4Name]: Buffer.from([1, 1, 1, 1]),
                                     },
                                     [archivedName]: mockfs.symlink({
-                                        "path": `.${archivedUUID}`,
+                                        path: `.${archivedUUID}`,
                                     }),
                                 },
                                 [archivedName]: {},

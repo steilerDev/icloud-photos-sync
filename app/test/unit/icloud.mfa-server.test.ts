@@ -1,12 +1,16 @@
 
-import {expect, describe, test, jest} from '@jest/globals';
+import {expect, describe, test, jest, beforeEach, afterEach} from '@jest/globals';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
 import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
-import {spyOnEvent} from '../_helpers/_general';
+import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import {MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
+
+beforeEach(() => {
+    prepareResourceManager();
+});
 
 describe(`MFA Code`, () => {
     test(`Valid Code format`, () => {
@@ -139,9 +143,9 @@ describe(`MFA Resend`, () => {
             test(`Timeout`, () => {
                 const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
                 const error = {
-                    "name": `AxiosError`,
-                    "response": {
-                        "status": 403,
+                    name: `AxiosError`,
+                    response: {
+                        status: 403,
                     },
                 };
                 expect(mfaMethod.processResendError(error)).toEqual(new Error(`iCloud timeout`));
@@ -150,9 +154,9 @@ describe(`MFA Resend`, () => {
             test(`No response data`, () => {
                 const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
                 const error = {
-                    "name": `AxiosError`,
-                    "response": {
-                        "status": 412,
+                    name: `AxiosError`,
+                    response: {
+                        status: 412,
                     },
                 };
                 expect(mfaMethod.processResendError(error)).toEqual(new Error(`Precondition Failed (412) with no response`));
@@ -161,9 +165,9 @@ describe(`MFA Resend`, () => {
             test(`Unexpected status code`, () => {
                 const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
                 const error = {
-                    "name": `AxiosError`,
-                    "response": {
-                        "status": 500,
+                    name: `AxiosError`,
+                    response: {
+                        status: 500,
                     },
                 };
                 expect(mfaMethod.processResendError(error)).toEqual(new Error(`Unknown error, while trying to resend MFA code`));
@@ -174,10 +178,10 @@ describe(`MFA Resend`, () => {
             test(`No trusted phone numbers`, () => {
                 const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
                 const error = {
-                    "name": `AxiosError`,
-                    "response": {
-                        "status": 412,
-                        "data": {},
+                    name: `AxiosError`,
+                    response: {
+                        status: 412,
+                        data: {},
                     },
                 };
                 expect(mfaMethod.processResendError(error)).toEqual(new Error(`No trusted phone numbers registered`));
@@ -186,18 +190,18 @@ describe(`MFA Resend`, () => {
             test(`Phone number ID does not exist`, () => {
                 const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
                 const error = {
-                    "name": `AxiosError`,
-                    "response": {
-                        "status": 412,
-                        "data": {
-                            "trustedPhoneNumbers": [
+                    name: `AxiosError`,
+                    response: {
+                        status: 412,
+                        data: {
+                            trustedPhoneNumbers: [
                                 {
-                                    "id": 2,
-                                    "numberWithDialCode": `+49-123-456`,
+                                    id: 2,
+                                    numberWithDialCode: `+49-123-456`,
                                 },
                                 {
-                                    "id": 3,
-                                    "numberWithDialCode": `+49-789-123`,
+                                    id: 3,
+                                    numberWithDialCode: `+49-789-123`,
                                 },
                             ],
                         },

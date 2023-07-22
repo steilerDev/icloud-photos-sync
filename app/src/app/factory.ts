@@ -4,6 +4,7 @@ import * as PACKAGE_INFO from '../lib/package.js';
 import {ErrorHandler} from "./event/error-handler.js";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 import {ResourceManager} from "../lib/resource-manager/resource-manager.js";
+import {LogLevelDesc} from "loglevel";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -85,7 +86,7 @@ function commanderParseInterval(value: string, _dummyPrevious?: unknown): [numbe
 export type iCPSAppOptions = {
     username: string,
     password: string,
-    trustToken: string,
+    trustToken?: string,
     dataDir: string,
     port: number,
     maxRetries: number,
@@ -96,7 +97,7 @@ export type iCPSAppOptions = {
     force: boolean,
     refreshToken: boolean,
     remoteDelete: boolean,
-    logLevel: string,
+    logLevel: LogLevelDesc,
     silent: boolean,
     logToCli: boolean,
     suppressWarnings: boolean,
@@ -111,10 +112,10 @@ export type iCPSAppOptions = {
  */
 export function appFactory(argv: string[]): iCPSApp {
     const AppCommands = {
-        "archive": `archive`,
-        "sync": `sync`,
-        "token": `token`,
-        "daemon": `daemon`,
+        archive: `archive`,
+        sync: `sync`,
+        token: `token`,
+        daemon: `daemon`,
     };
 
     const program = new Command();
@@ -187,32 +188,35 @@ export function appFactory(argv: string[]): iCPSApp {
             .argParser(commanderParseInterval));
 
     program.command(AppCommands.daemon)
-        .action(() => {
-            app = new DaemonApp(program.opts() as iCPSAppOptions);
+        .action((_, command) => {
+            ResourceManager.setup(command.parent.opts());
+            app = new DaemonApp();
         })
         .description(`Starts the synchronization in scheduled daemon mode - continuously running based on the provided cron schedule.`);
 
     program.command(AppCommands.token)
-        .action(() => {
-            app = new TokenApp(program.opts() as iCPSAppOptions);
+        .action((_, command) => {
+            ResourceManager.setup(command.parent.opts());
+            app = new TokenApp();
         })
         .description(`Validates the current trust token, fetches a new one (if necessary) and prints it to the CLI.`);
 
     program.command(AppCommands.sync)
-        .action(() => {
-            app = new SyncApp(program.opts() as iCPSAppOptions);
+        .action((_, command) => {
+            ResourceManager.setup(command.parent.opts());
+            app = new SyncApp();
         })
         .description(`This command will fetch the remote state and persist it to the local disk.`);
 
     program.command(AppCommands.archive)
-        .action(archivePath => {
-            app = new ArchiveApp(program.opts() as iCPSAppOptions, archivePath);
+        .action((archivePath, _, command) => {
+            ResourceManager.setup(command.parent.opts());
+            app = new ArchiveApp(archivePath);
         })
         .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)
         .argument(`<path>`, `Path to the folder that should be archived`);
 
     program.parse(argv);
-    ResourceManager.setup(program.opts() as iCPSAppOptions);
     ErrorHandler.cleanEnv();
     return app;
 }

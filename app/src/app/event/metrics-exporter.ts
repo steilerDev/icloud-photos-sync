@@ -11,9 +11,9 @@ import {ArchiveEngine} from '../../lib/archive-engine/archive-engine.js';
 import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from './error-handler.js';
 import * as fs from "fs";
 import path from "path";
-import {iCPSAppOptions} from "../factory.js";
 import {MFAServer} from "../../lib/icloud/mfa/mfa-server.js";
 import {DaemonAppEvents} from "../icloud-app.js";
+import {ResourceManager} from "../../lib/resource-manager/resource-manager.js";
 
 /**
  * The InfluxLineProtocol field set type
@@ -36,51 +36,51 @@ const MEASUREMENT_NAME = `icloud_photos_sync`;
  * An object holding all possible fields as well as their discrete values (if applicable)
  */
 const FIELDS = {
-    "LOCAL_ASSETS_LOADED": `local_assets_loaded`,
-    "LOCAL_ALBUMS_LOADED": `local_albums_loaded`,
-    "REMOTE_ASSETS_FETCHED": `remote_assets_fetched`,
-    "REMOTE_ALBUMS_FETCHED": `remote_albums_fetched`,
-    "ASSETS_TO_BE_ADDED": `assets_to_be_added`,
-    "ASSETS_TO_BE_KEPT": `assets_to_be_kept`,
-    "ASSETS_TO_BE_DELETED": `assets_to_be_deleted`,
-    "ASSETS_ARCHIVED": `assets_archived`,
-    "REMOTE_ASSETS_DELETED": `remote_assets_deleted`,
-    "ASSET_WRITTEN": `asset_written`,
-    "ALBUMS_TO_BE_ADDED": `albums_to_be_added`,
-    "ALBUMS_TO_BE_KEPT": `albums_to_be_kept`,
-    "ALBUMS_TO_BE_DELETED": `albums_to_be_deleted`,
-    "ERROR": `errors`,
-    "WARNING": `warnings`,
-    "STATUS_TIME": `status_time`,
-    "NEXT_SCHEDULE": `next_schedule`,
-    "STATUS": {
-        "name": `status`,
-        "values": {
-            "AUTHENTICATION_STARTED": `AUTHENTICATION_STARTED`,
-            "AUTHENTICATED": `AUTHENTICATED`,
-            "MFA_REQUIRED": `MFA_REQUIRED`,
-            "MFA_RECEIVED": `MFA_RECEIVED`,
-            "MFA_NOT_PROVIDED": `MFA_NOT_PROVIDED`,
-            "DEVICE_TRUSTED": `DEVICE_TRUSTED`,
-            "ACCOUNT_READY": `ACCOUNT_READY`,
-            "ICLOUD_READY": `ICLOUD_READY`,
-            "SYNC_START": `SYNC_START`,
-            "FETCH_N_LOAD_STARTED": `FETCH_N_LOAD_STARTED`,
-            "FETCH_N_LOAD_COMPLETED": `FETCH_N_LOAD_COMPLETED`,
-            "DIFF_STARTED": `DIFF_STARTED`,
-            "DIFF_COMPLETED": `DIFF_COMPLETED`,
-            "WRITE_STARTED": `WRITE_STARTED`,
-            "WRITE_ASSETS_STARTED": `WRITE_ASSETS_STARTED`,
-            "WRITE_ASSETS_COMPLETED": `WRITE_ASSETS_COMPLETED`,
-            "WRITE_ALBUMS_STARTED": `WRITE_ALBUMS_STARTED`,
-            "WRITE_ALBUMS_COMPLETED": `WRITE_ALBUMS_COMPLETED`,
-            "WRITE_COMPLETED": `WRITE_COMPLETED`,
-            "SYNC_COMPLETED": `SYNC_COMPLETED`,
-            "SYNC_RETRY": `SYNC_RETRY`,
-            "ERROR": `ERROR`,
-            "SCHEDULED": `SCHEDULED`,
-            "SCHEDULED_SUCCESS": `SCHEDULED_SUCCESS`,
-            "SCHEDULED_FAILURE": `SCHEDULED_FAILURE`,
+    LOCAL_ASSETS_LOADED: `local_assets_loaded`,
+    LOCAL_ALBUMS_LOADED: `local_albums_loaded`,
+    REMOTE_ASSETS_FETCHED: `remote_assets_fetched`,
+    REMOTE_ALBUMS_FETCHED: `remote_albums_fetched`,
+    ASSETS_TO_BE_ADDED: `assets_to_be_added`,
+    ASSETS_TO_BE_KEPT: `assets_to_be_kept`,
+    ASSETS_TO_BE_DELETED: `assets_to_be_deleted`,
+    ASSETS_ARCHIVED: `assets_archived`,
+    REMOTE_ASSETS_DELETED: `remote_assets_deleted`,
+    ASSET_WRITTEN: `asset_written`,
+    ALBUMS_TO_BE_ADDED: `albums_to_be_added`,
+    ALBUMS_TO_BE_KEPT: `albums_to_be_kept`,
+    ALBUMS_TO_BE_DELETED: `albums_to_be_deleted`,
+    ERROR: `errors`,
+    WARNING: `warnings`,
+    STATUS_TIME: `status_time`,
+    NEXT_SCHEDULE: `next_schedule`,
+    STATUS: {
+        name: `status`,
+        values: {
+            AUTHENTICATION_STARTED: `AUTHENTICATION_STARTED`,
+            AUTHENTICATED: `AUTHENTICATED`,
+            MFA_REQUIRED: `MFA_REQUIRED`,
+            MFA_RECEIVED: `MFA_RECEIVED`,
+            MFA_NOT_PROVIDED: `MFA_NOT_PROVIDED`,
+            DEVICE_TRUSTED: `DEVICE_TRUSTED`,
+            ACCOUNT_READY: `ACCOUNT_READY`,
+            ICLOUD_READY: `ICLOUD_READY`,
+            SYNC_START: `SYNC_START`,
+            FETCH_N_LOAD_STARTED: `FETCH_N_LOAD_STARTED`,
+            FETCH_N_LOAD_COMPLETED: `FETCH_N_LOAD_COMPLETED`,
+            DIFF_STARTED: `DIFF_STARTED`,
+            DIFF_COMPLETED: `DIFF_COMPLETED`,
+            WRITE_STARTED: `WRITE_STARTED`,
+            WRITE_ASSETS_STARTED: `WRITE_ASSETS_STARTED`,
+            WRITE_ASSETS_COMPLETED: `WRITE_ASSETS_COMPLETED`,
+            WRITE_ALBUMS_STARTED: `WRITE_ALBUMS_STARTED`,
+            WRITE_ALBUMS_COMPLETED: `WRITE_ALBUMS_COMPLETED`,
+            WRITE_COMPLETED: `WRITE_COMPLETED`,
+            SYNC_COMPLETED: `SYNC_COMPLETED`,
+            SYNC_RETRY: `SYNC_RETRY`,
+            ERROR: `ERROR`,
+            SCHEDULED: `SCHEDULED`,
+            SCHEDULED_SUCCESS: `SCHEDULED_SUCCESS`,
+            SCHEDULED_FAILURE: `SCHEDULED_FAILURE`,
         },
     },
 };
@@ -267,15 +267,15 @@ export class MetricsExporter implements EventHandler {
      * Creates the exporter and checks for the file
      * @param options - The CLI options
      */
-    constructor(options: iCPSAppOptions) {
-        if (!options.exportMetrics) {
+    constructor() {
+        if (!ResourceManager.exportMetrics) {
             this.metricsFile = undefined;
             return;
         }
 
         this.metricsFile = path.format({
-            "dir": options.dataDir,
-            "base": METRICS_FILE_NAME,
+            dir: ResourceManager.dataDir,
+            base: METRICS_FILE_NAME,
         });
 
         if (fs.existsSync(this.metricsFile)) {
@@ -327,7 +327,7 @@ export class MetricsExporter implements EventHandler {
     }
 
     logDataPoint(dataPoint: InfluxLineProtocolPoint) {
-        fs.appendFileSync(this.metricsFile, dataPoint.toString(), {"encoding": `utf8`});
+        fs.appendFileSync(this.metricsFile, dataPoint.toString(), {encoding: `utf8`});
     }
 
     /**

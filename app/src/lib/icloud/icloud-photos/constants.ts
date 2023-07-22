@@ -12,21 +12,6 @@ export enum EVENTS {
 }
 
 /**
- * URL paths required to perform queries
- */
-export const PATHS = {
-    /**
-     * Base Path (between Domain & EXT)
-     */
-    "BASE_PATH": `/database/1/com.apple.photos.cloud/production/private`,
-    "EXT": {
-        "QUERY": `/records/query`,
-        "MODIFY": `/records/modify`,
-        "ZONES": `/changes/database`,
-    },
-};
-
-/**
  * To perform an operation, a record change tag is required. Hardcoding it for now
  */
 export const RECORD_CHANGE_TAG = `21h2`;

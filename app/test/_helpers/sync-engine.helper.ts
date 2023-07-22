@@ -15,18 +15,18 @@ import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 export function syncEngineFactory(): SyncEngine {
     return new SyncEngine(
         appWithOptions({
-            "downloadThreads": 10,
-            "maxRetries": Infinity,
+            downloadThreads: 10,
+            maxRetries: Infinity,
         },
         new PhotosLibrary(appWithOptions({
-            "dataDir": Config.appDataDir,
+            dataDir: Config.appDataDir,
         })),
         new iCloud(appWithOptions({
-            "username": Config.username,
-            "password": Config.password,
-            "trustToken": Config.trustToken,
-            "dataDir": Config.appDataDir,
-            "metadataRate": Config.metadataRate,
+            username: Config.username,
+            password: Config.password,
+            trustToken: Config.trustToken,
+            dataDir: Config.appDataDir,
+            metadataRate: Config.metadataRate,
         })),
         ),
     );
@@ -71,8 +71,8 @@ export function queueIsSorted(albumQueue: Album[]): boolean {
 export const fetchAndLoadStateReturnValue = [
     [new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10, Zones.Primary)],
     [new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``)],
-    {'someChecksum': new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10, Zones.Primary)},
-    {'someUUID': new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``)},
+    {someChecksum: new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10, Zones.Primary)},
+    {someUUID: new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``)},
 ] as [Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>];
 
 export const diffStateReturnValue = [
@@ -105,11 +105,11 @@ export const convertCPLAlbumsReturnValue = [
 ] as Album[];
 
 export const loadAssetsReturnValue = {
-    'someChecksum': new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10, Zones.Primary),
+    someChecksum: new Asset(`someChecksum`, 50, FileType.fromExtension(`png`), 10, Zones.Primary),
 } as PLibraryEntities<Asset>;
 
 export const loadAlbumsReturnValue = {
-    'someUUID': new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``),
+    someUUID: new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``),
 } as PLibraryEntities<Album>;
 
 export const getProcessingQueuesReturnValue = [[], [], []];

@@ -2,4 +2,4 @@ bin/
 node_modules/
 docs/
 coverage/
-*.schema.json
+src/lib/resource-manager/schemas/

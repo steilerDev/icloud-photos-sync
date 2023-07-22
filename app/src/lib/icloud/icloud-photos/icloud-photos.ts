@@ -1,8 +1,7 @@
-import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios';
+import {AxiosRequestConfig, AxiosResponse} from 'axios';
 import {EventEmitter} from 'events';
 import * as ICLOUD_PHOTOS from './constants.js';
 import * as QueryBuilder from './query-builder.js';
-import {iCloudAuth} from '../auth.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
@@ -12,7 +11,8 @@ import {HANDLER_EVENT} from '../../../app/event/error-handler.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
 import PQueue from 'p-queue';
-import {iCloudApp} from '../../../app/icloud-app.js';
+import {ResourceManager} from '../../resource-manager/resource-manager.js';
+import {ENDPOINTS} from '../../resource-manager/network.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -22,16 +22,6 @@ export class iCloudPhotos extends EventEmitter {
      * Default logger for this class
      */
     private logger = getLogger(this);
-
-    /**
-     * Cookie required to authenticate against the iCloud Services
-     */
-    auth: iCloudAuth;
-
-    /**
-     * Local axios instance to handle network requests
-     */
-    axios: AxiosInstance;
 
     /**
      * A promise that will resolve, once the object is ready or reject, in case there is an error
@@ -47,14 +37,12 @@ export class iCloudPhotos extends EventEmitter {
      * Creates a new iCloud Photos Class
      * @param auth - The populated authentication object
      */
-    constructor(app: iCloudApp, auth: iCloudAuth) {
+    constructor() {
         super();
-        this.auth = auth;
-        this.axios = axios.create();
 
         this.queryQueue = new PQueue({
-            "intervalCap": app.options.metadataRate[0],
-            "interval": app.options.metadataRate[1],
+            intervalCap: ResourceManager.metadataRate[0],
+            interval: ResourceManager.metadataRate[1],
         });
 
         this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, async () => {
@@ -76,19 +64,6 @@ export class iCloudPhotos extends EventEmitter {
     }
 
     /**
-     * Builds the full service endpoint URL based on currently assigned iCP domain
-     * @param ext - The service endpoint extension applied to the base domain
-     * @returns The full URL to the current active service endpoint
-     */
-    getServiceEndpoint(ext: string): string {
-        if (!this.auth.iCloudPhotosAccount.photosDomain || this.auth.iCloudPhotosAccount.photosDomain.length === 0) {
-            throw new iCPSError(ICLOUD_PHOTOS_ERR.DOMAIN_MISSING);
-        }
-
-        return `${this.auth.iCloudPhotosAccount.photosDomain}${ICLOUD_PHOTOS.PATHS.BASE_PATH}${ext}`;
-    }
-
-    /**
      * Starting iCloud Photos service, acquiring all necessary account information stored in iCloudAuth.iCloudPhotosAccount. This includes information about a shared library
      * Will emit SETUP_COMPLETE or ERROR
      * @returns A promise, that will resolve once the service is available or reject in case of an error
@@ -97,13 +72,10 @@ export class iCloudPhotos extends EventEmitter {
         try {
             this.logger.debug(`Getting iCloud Photos account information`);
 
-            const config: AxiosRequestConfig = {
-                "headers": this.auth.getPhotosHeader(),
-            };
+            const response = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.ZONES, {});
+            const validatedResponse = ResourceManager.validator.validatePhotosSetupResponse(response);
+            ResourceManager.network.applyPhotosSetupResponse(validatedResponse);
 
-            const setupResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.ZONES), {}, config);
-
-            this.auth.processPhotosSetupResponse(setupResponse);
             this.logger.debug(`Successfully gathered iCloud Photos account information`);
             this.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
         } catch (err) {
@@ -121,7 +93,7 @@ export class iCloudPhotos extends EventEmitter {
         this.logger.debug(`Checking Indexing Status of iCloud Photos Account`);
         try {
             await this.checkIndexingStatusForZone(QueryBuilder.Zones.Primary);
-            if (this.auth.sharedLibraryAvailable()) {
+            if (ResourceManager.sharedZoneAvailable) {
                 await this.checkIndexingStatusForZone(QueryBuilder.Zones.Shared);
             }
 
@@ -182,19 +154,17 @@ export class iCloudPhotos extends EventEmitter {
      * @returns An array of records as returned by the backend
      */
     async performQuery(zone: QueryBuilder.Zones, recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
-        this.auth.validatePhotosAccount(zone);
         const config: AxiosRequestConfig = {
-            "headers": this.auth.getPhotosHeader(),
-            "params": {
-                "remapEnums": `True`,
+            params: {
+                remapEnums: `True`,
             },
         };
 
         const data: any = {
-            "query": {
-                "recordType": `${recordType}`,
+            query: {
+                recordType: `${recordType}`,
             },
-            "zoneID": QueryBuilder.getZoneID(zone, this.auth),
+            zoneID: QueryBuilder.getZoneID(zone),
         };
 
         if (filterBy) {
@@ -212,7 +182,7 @@ export class iCloudPhotos extends EventEmitter {
         let queryResponse: any;
 
         await this.queryQueue.add(async () => {
-            queryResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config);
+            queryResponse = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config);
         });
 
         const fetchedRecords = queryResponse?.data?.records;
@@ -233,31 +203,29 @@ export class iCloudPhotos extends EventEmitter {
      * @returns An array of records that have been altered
      */
     async performOperation(zone: QueryBuilder.Zones, operationType: string, fields: any, recordNames: string[]) {
-        this.auth.validatePhotosAccount(zone);
         const config: AxiosRequestConfig = {
-            "headers": this.auth.getPhotosHeader(),
-            "params": {
-                "remapEnums": `True`,
+            params: {
+                remapEnums: `True`,
             },
         };
 
         const data: any = {
-            "operations": [],
-            "zoneID": QueryBuilder.getZoneID(zone, this.auth),
-            "atomic": true,
+            operations: [],
+            zoneID: QueryBuilder.getZoneID(zone),
+            atomic: true,
         };
 
         data.operations = recordNames.map(recordName => ({
-            "operationType": `${operationType}`,
-            "record": {
-                "recordName": `${recordName}`,
-                "recordType": `CPLAsset`,
-                "recordChangeTag": ICLOUD_PHOTOS.RECORD_CHANGE_TAG,
+            operationType: `${operationType}`,
+            record: {
+                recordName: `${recordName}`,
+                recordType: `CPLAsset`,
+                recordChangeTag: ICLOUD_PHOTOS.RECORD_CHANGE_TAG,
                 fields,
             },
         }));
 
-        const operationResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config);
+        const operationResponse = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config);
         const fetchedRecords = operationResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)
@@ -535,7 +503,7 @@ export class iCloudPhotos extends EventEmitter {
             [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, parentId);
 
             // Merging assets of shared library, if available
-            if (this.auth.sharedLibraryAvailable() && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
+            if (ResourceManager.sharedZoneAvailable && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
                 this.logger.debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
                 const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared);
                 allRecords = [...allRecords, ...sharedRecords];
@@ -588,11 +556,10 @@ export class iCloudPhotos extends EventEmitter {
         this.logger.debug(`Starting download of asset ${asset.getDisplayName()}`);
 
         const config: AxiosRequestConfig = {
-            "headers": this.auth.getPhotosHeader(),
-            "responseType": `stream`,
+            responseType: `stream`,
         };
 
-        return this.axios.get(
+        return ResourceManager.network.get(
             asset.downloadURL,
             config,
         );

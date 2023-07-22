@@ -7,6 +7,7 @@ import * as PACKAGE from '../../package.js';
 import {HANDLER_EVENT} from '../../../app/event/error-handler.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {MFA_ERR} from '../../../app/error/error-codes.js';
+import {ResourceManager} from '../../resource-manager/resource-manager.js';
 
 /**
  * The MFA timeout value in milliseconds
@@ -29,11 +30,6 @@ export class MFAServer extends EventEmitter {
     server: http.Server;
 
     /**
-     * Port to start server on
-     */
-    port: number;
-
-    /**
      * Holds the MFA method used for this server
      */
     mfaMethod: MFAMethod;
@@ -45,31 +41,21 @@ export class MFAServer extends EventEmitter {
 
     /**
      * Creates the server object
-     * @param port - The port to listen on, defaults to 80
      */
-    constructor(port: number = 80) {
+    constructor() {
         super();
-        this.port = port;
 
-        this.logger.debug(`Preparing MFA server on port ${this.port}`);
+        this.logger.debug(`Preparing MFA server on port ${ResourceManager.mfaServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
         this.server.on(`error`, err => {
             const icpsErr = (Object.hasOwn(err, `code`) && (err as any).code === `EADDRINUSE`)
-                ? new iCPSError(MFA_ERR.ADDR_IN_USE_ERR).addContext(`port`, this.port)
+                ? new iCPSError(MFA_ERR.ADDR_IN_USE_ERR).addContext(`port`, ResourceManager.mfaServerPort)
                 : new iCPSError(MFA_ERR.SERVER_ERR);
 
             icpsErr.addCause(err);
 
             this.emit(HANDLER_EVENT, icpsErr);
         });
-
-        // Exiting application on MFA_NOT_PROVIDED
-        // this.on(MFA_SERVER.EVENTS.MFA_NOT_PROVIDED, () => {
-        //     /* c8 ignore start */
-        //     // Not testing process.exit
-        //     process.exit(MFA_TIMEOUT);
-        //     /* c8 ignore stop */
-        // });
 
         // Default MFA request always goes to device
         this.mfaMethod = new MFAMethod();
@@ -79,7 +65,7 @@ export class MFAServer extends EventEmitter {
      * Starts the server and listens for incoming requests to perform MFA actions
      */
     startServer() {
-        this.server.listen(this.port, () => {
+        this.server.listen(ResourceManager.mfaServerPort, () => {
             /* c8 ignore start */
             // Never starting the server just to see logger message
             this.logger.info(`Exposing endpoints: ${JSON.stringify(Object.values(MFA_SERVER.ENDPOINT))}`);
@@ -184,7 +170,7 @@ export class MFAServer extends EventEmitter {
      */
     sendResponse(res: http.ServerResponse, code: number, msg: string) {
         res.writeHead(code, {"Content-Type": `application/json`});
-        res.end(JSON.stringify({"message": msg}));
+        res.end(JSON.stringify({message: msg}));
     }
 
     /**
