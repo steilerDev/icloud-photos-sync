@@ -1,7 +1,6 @@
 /**
  * This file helps building queries for the iCloud Photos backend service
  */
-
 import {ResourceManager} from "../../resource-manager/resource-manager.js";
 import {PhotosAccountZone} from "../../resource-manager/resources.js";
 

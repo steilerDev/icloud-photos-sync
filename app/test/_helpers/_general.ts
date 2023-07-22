@@ -1,10 +1,16 @@
-
 import mockfs from 'mock-fs';
 import {jest} from '@jest/globals';
 import EventEmitter from 'events';
 import * as Config from './_config';
 import {iCPSAppOptions} from '../../src/app/factory';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
+import MockAdapter from 'axios-mock-adapter';
+import { NetworkManager } from '../../src/lib/resource-manager/network-manager';
+import { NetworkResources } from '../../src/lib/resource-manager/network';
+
+export type MockedNetworkManager = NetworkManager & {
+    mock: MockAdapter;
+};
 
 /**
  * This function resets the ResourceManager singleton and optionally creates a new instance using the supplied configuration.
@@ -13,16 +19,19 @@ import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
  */
 export function prepareResourceManager(initiate: boolean = true, appOptions: iCPSAppOptions = Config.defaultConfig) {
     ResourceManager._instance = undefined;
-    mockfs({
-        '/opt/icloud-photos-library/.icloud-photos.sync': JSON.stringify({
+
+    ResourceManager.prototype.readResourceFile = jest.fn<typeof ResourceManager.prototype.readResourceFile>()
+        .mockReturnValue({
             trustToken: Config.trustToken,
             libraryVersion: 1,
-        }),
-    });
+        });
+
+    ResourceManager.prototype.writeResourceFile = jest.fn<typeof ResourceManager.prototype.writeResourceFile>()
+        .mockReturnValue();
 
     if (initiate) {
         ResourceManager.setup(appOptions);
-        mockfs.restore();
+        (ResourceManager.network as MockedNetworkManager).mock = new MockAdapter(ResourceManager.network._axios, {onNoMatch: `throwException`});
     }
 }
 

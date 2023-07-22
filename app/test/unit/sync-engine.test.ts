@@ -12,12 +12,14 @@ import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
 import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted, mockSyncEngineForAlbumQueue, fetchAndLoadStateReturnValue, diffStateReturnValue, convertCPLAssetsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue, fetchAllCPLAssetsMastersReturnValue, fetchAllCPLAlbumsReturnValue, getRandomZone} from '../_helpers/sync-engine.helper';
 import {compareQueueElements} from '../../src/lib/sync-engine/helpers/write-albums-helper';
-import {spyOnEvent} from '../_helpers/_general';
+import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 
 beforeEach(() => {
+    prepareResourceManager();
     mockfs({});
 });
 
@@ -49,7 +51,7 @@ describe(`Coordination`, () => {
 
         test(`Reach maximum retries`, async () => {
             const syncEngine = syncEngineFactory();
-            syncEngine.maxRetry = 4;
+            ResourceManager.instance._resources.maxRetries = 4;
 
             const startEvent = spyOnEvent(syncEngine, SYNC_ENGINE.EVENTS.START);
             syncEngine.fetchAndLoadState = jest.fn<() => Promise<typeof fetchAndLoadStateReturnValue>>()

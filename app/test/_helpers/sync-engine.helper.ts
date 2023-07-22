@@ -8,28 +8,10 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PLibraryEntities, PLibraryProcessingQueues} from '../../src/lib/photos-library/model/photos-entity';
 import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
 import {SyncEngine} from "../../src/lib/sync-engine/sync-engine";
-import {appWithOptions} from './app-factory.helper';
-import * as Config from "./_config";
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 export function syncEngineFactory(): SyncEngine {
-    return new SyncEngine(
-        appWithOptions({
-            downloadThreads: 10,
-            maxRetries: Infinity,
-        },
-        new PhotosLibrary(appWithOptions({
-            dataDir: Config.appDataDir,
-        })),
-        new iCloud(appWithOptions({
-            username: Config.username,
-            password: Config.password,
-            trustToken: Config.trustToken,
-            dataDir: Config.appDataDir,
-            metadataRate: Config.metadataRate,
-        })),
-        ),
-    );
+    return new SyncEngine(new iCloud(), new PhotosLibrary());
 }
 
 export function mockSyncEngineForAssetQueue(syncEngine: SyncEngine): SyncEngine {

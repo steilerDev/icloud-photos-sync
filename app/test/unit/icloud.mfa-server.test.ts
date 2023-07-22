@@ -1,12 +1,12 @@
 
 import {expect, describe, test, jest, beforeEach, afterEach} from '@jest/globals';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
-import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
+import {EVENTS} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
 import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
-import {MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
+import {MFA_SERVER_ENDPOINTS, MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
 
 beforeEach(() => {
     prepareResourceManager();
@@ -21,7 +21,7 @@ describe(`MFA Code`, () => {
         server.sendResponse = jest.fn();
         const mfaReceivedEvent = spyOnEvent(server, EVENTS.MFA_RECEIVED);
 
-        const req = requestFactory(`${ENDPOINT.CODE_INPUT}?code=${code}`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?code=${code}`);
         const res = responseFactory();
 
         server.handleMFACode(req, res);
@@ -37,7 +37,7 @@ describe(`MFA Code`, () => {
         server.sendResponse = jest.fn();
         const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
 
-        const req = requestFactory(`${ENDPOINT.CODE_INPUT}?code=${code}`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?code=${code}`);
         const res = responseFactory();
 
         server.handleMFACode(req, res);
@@ -56,7 +56,7 @@ describe(`MFA Resend`, () => {
         server.sendResponse = jest.fn();
         const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
-        const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
         const res = responseFactory();
 
         server.handleMFAResend(req, res);
@@ -73,7 +73,7 @@ describe(`MFA Resend`, () => {
             server.sendResponse = jest.fn();
             const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
-            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
+            const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
             const res = responseFactory();
 
             server.handleMFAResend(req, res);
@@ -90,7 +90,7 @@ describe(`MFA Resend`, () => {
             server.sendResponse = jest.fn();
             const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
-            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
+            const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
             const res = responseFactory();
 
             server.handleMFAResend(req, res);
@@ -107,7 +107,7 @@ describe(`MFA Resend`, () => {
             server.sendResponse = jest.fn();
             const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
-            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
+            const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
             const res = responseFactory();
 
             server.handleMFAResend(req, res);
@@ -124,7 +124,7 @@ describe(`MFA Resend`, () => {
         server.sendResponse = jest.fn();
         const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
 
-        const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
         const res = responseFactory();
 
         server.handleMFAResend(req, res);
@@ -231,7 +231,7 @@ describe(`Request routing`, () => {
     });
 
     test(`POST /ENDPOINT.CODE_INPUT`, () => {
-        const req = requestFactory(`${ENDPOINT.CODE_INPUT}?testparam=abc`, `POST`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?testparam=abc`, `POST`);
         const res = responseFactory();
 
         const server = mfaServerFactory();
@@ -247,7 +247,7 @@ describe(`Request routing`, () => {
     });
 
     test(`POST /ENDPOINT.RESEND_CODE`, () => {
-        const req = requestFactory(`${ENDPOINT.RESEND_CODE}?testparam=abc`, `POST`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?testparam=abc`, `POST`);
         const res = responseFactory();
 
         const server = mfaServerFactory();
@@ -374,5 +374,4 @@ describe(`Server lifecycle`, () => {
         expect(timeoutEvent).toHaveBeenCalledWith(new Error(`MFA server timeout (code needs to be provided within 10 minutes)`));
         expect(server.stopServer).toHaveBeenCalled();
     });
-    // Test(`Timeout`)
 });

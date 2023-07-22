@@ -1,4 +1,4 @@
-import {AxiosRequestConfig} from 'axios';
+import {AxiosError, AxiosRequestConfig} from 'axios';
 import EventEmitter from 'events';
 import {MFAServer} from './mfa/mfa-server.js';
 import * as ICLOUD from './constants.js';
@@ -11,6 +11,7 @@ import {iCPSError} from '../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
 import {ResourceManager} from '../resource-manager/resource-manager.js';
 import {ENDPOINTS, HEADER} from '../resource-manager/network.js';
+import {Validator} from '../resource-manager/validator.js';
 
 /**
  * This class holds the iCloud connection
@@ -139,25 +140,31 @@ export class iCloud extends EventEmitter {
 
             this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_AUTH_SECRETS));
         } catch (err) {
-            const {response} = err;
-            if (!response || !response.status) {
-                this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.NO_RESPONSE).addCause(err));
+            if (err instanceof iCPSError) {
+                this.emit(ICLOUD.EVENTS.ERROR, err);
                 return;
             }
 
-            switch (response.status) {
-            case 401:
-                this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
-                break;
-            case 403:
-                this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.FORBIDDEN).addCause(err));
-                break;
-            case 412:
-                this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.PRECONDITION_FAILED).addCause(err));
-                break;
-            default:
-                this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.UNEXPECTED_RESPONSE).addCause(err));
+            if (err?.response?.status) {
+                switch (err.response.status) {
+                case 401:
+                    this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
+                    break;
+                case 403:
+                    this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.FORBIDDEN).addCause(err));
+                    break;
+                case 412:
+                    this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.PRECONDITION_FAILED).addCause(err));
+                    break;
+                default:
+                    this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.UNEXPECTED_RESPONSE).addCause(err));
+                }
+
+                return;
             }
+
+            this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.UNKNOWN).addCause(err));
+            return;
         } finally {
             return this.ready;
         }

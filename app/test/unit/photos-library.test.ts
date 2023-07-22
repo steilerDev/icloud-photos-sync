@@ -1,6 +1,6 @@
 import mockfs from 'mock-fs';
 import fs from 'fs';
-import {expect, describe, test, afterEach, jest} from '@jest/globals';
+import {expect, describe, test, afterEach, jest, beforeEach} from '@jest/globals';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 import {PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, ARCHIVE_DIR, STASH_DIR, SAFE_FILES} from '../../src/lib/photos-library/constants';
 import path from 'path';
@@ -8,17 +8,19 @@ import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import axios, {AxiosRequestConfig} from 'axios';
-import {appDataDir as photosDataDir} from '../_helpers/_config';
-import {photosLibraryFactory} from '../_helpers/photos-library.helper';
-import {appWithOptions} from '../_helpers/app-factory.helper';
-import {spyOnEvent} from '../_helpers/_general';
+import * as Config from '../_helpers/_config';
+import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
-const primaryAssetDir = path.join(photosDataDir, PRIMARY_ASSET_DIR);
-const sharedAssetDir = path.join(photosDataDir, SHARED_ASSET_DIR);
-const archiveDir = path.join(photosDataDir, ARCHIVE_DIR);
-const stashDir = path.join(photosDataDir, ARCHIVE_DIR, STASH_DIR);
+const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
+const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR);
+const archiveDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR);
+const stashDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR, STASH_DIR);
+
+beforeEach(() => {
+    prepareResourceManager();
+});
 
 afterEach(() => {
     mockfs.restore();
@@ -26,8 +28,8 @@ afterEach(() => {
 
 test(`Should create missing directories`, () => {
     mockfs();
-    const _library = photosLibraryFactory();
-    expect(fs.existsSync(photosDataDir)).toBe(true);
+    const _library = new PhotosLibrary();
+    expect(fs.existsSync(Config.defaultConfig.dataDir)).toBe(true);
     expect(fs.existsSync(primaryAssetDir)).toBe(true);
     expect(fs.existsSync(sharedAssetDir)).toBe(true);
     expect(fs.existsSync(archiveDir)).toBe(true);
@@ -36,7 +38,7 @@ test(`Should create missing directories`, () => {
 
 test(`Should use existing directories and not overwrite content`, () => {
     mockfs({
-        [photosDataDir]: {
+        [Config.defaultConfig.dataDir]: {
             testFile: `test content`,
             [PRIMARY_ASSET_DIR]: {
                 testFile: `test content`,
@@ -54,11 +56,11 @@ test(`Should use existing directories and not overwrite content`, () => {
         },
     });
     const opts = {
-        dataDir: photosDataDir,
+        dataDir: Config.defaultConfig.dataDir,
     };
-    const _library = new PhotosLibrary(appWithOptions(opts));
-    expect(fs.existsSync(photosDataDir)).toBe(true);
-    expect(fs.existsSync(path.join(photosDataDir, `testFile`)));
+    const _library = new PhotosLibrary();
+    expect(fs.existsSync(Config.defaultConfig.dataDir)).toBe(true);
+    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `testFile`)));
     expect(fs.existsSync(primaryAssetDir)).toBe(true);
     expect(fs.existsSync(path.join(primaryAssetDir, `testFile`)));
     expect(fs.existsSync(sharedAssetDir)).toBe(true);
@@ -163,7 +165,7 @@ describe(`Load state`, () => {
             },
         ])(`$desc`, async ({fsTree, expectedCount, expectedZones}) => {
             mockfs(fsTree as any);
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
 
             const assets = await library.loadAssets();
 
@@ -175,7 +177,7 @@ describe(`Load state`, () => {
     describe(`Load albums`, () => {
         test(`No albums`, async () => {
             mockfs();
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const albums = await library.loadAlbums();
             expect(Object.keys(albums).length).toEqual(0);
         });
@@ -185,7 +187,7 @@ describe(`Load state`, () => {
             const emptyAlbumName = `Stuff`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [`.${emptyAlbumUUID}`]: {},
                     [emptyAlbumName]: mockfs.symlink({
                         path: `.${emptyAlbumUUID}`,
@@ -193,7 +195,7 @@ describe(`Load state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(1);
@@ -214,7 +216,7 @@ describe(`Load state`, () => {
             const someFileName = `file`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [`.${someFolderUUID}`]: {
                         [`.${someAlbumUUID}`]: {},
                         [someAlbumName]: mockfs.symlink({
@@ -228,7 +230,7 @@ describe(`Load state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
 
             const albums = await library.loadAlbums();
@@ -242,21 +244,21 @@ describe(`Load state`, () => {
             const orphanedAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [orphanedAlbumName]: mockfs.symlink({
                         path: `.${orphanedAlbumUUID}`,
                     }),
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const orphanEvent = spyOnEvent(library, HANDLER_EVENT);
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(0);
 
             expect(orphanEvent).toHaveBeenCalledWith(new Error(`Found dead symlink (removing it)`));
-            expect(() => fs.lstatSync(path.join(photosDataDir, orphanedAlbumName))).toThrow(/^ENOENT: no such file or directory, lstat '\/opt\/icloud-photos-library\/Orphan'$/);
+            expect(() => fs.lstatSync(path.join(Config.defaultConfig.dataDir, orphanedAlbumName))).toThrow(/^ENOENT: no such file or directory, lstat '\/opt\/icloud-photos-library\/Orphan'$/);
         });
 
         test(`Unexpected loading error`, async () => {
@@ -264,7 +266,7 @@ describe(`Load state`, () => {
             const orphanedAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [`.${orphanedAlbumUUID}`]: {},
                     [orphanedAlbumName]: mockfs.symlink({
                         path: `.${orphanedAlbumUUID}`,
@@ -272,7 +274,7 @@ describe(`Load state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             library.readFolderFromDisk = jest.fn(() => Promise.resolve([{}, ``] as [Album, string]))
                 .mockRejectedValue(new Error(`Nondescriptive Error`));
             await expect(library.loadAlbums()).rejects.toThrow(/^Unknown error while processing symlink$/);
@@ -283,7 +285,7 @@ describe(`Load state`, () => {
             const nonEmptyAlbumName = `Random`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [`.${nonEmptyAlbumUUID}`]: {
                         "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": mockfs.symlink({
                             path: `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
@@ -304,7 +306,7 @@ describe(`Load state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(1);
@@ -323,7 +325,7 @@ describe(`Load state`, () => {
             const folderedAlbumUUID = `6e7f4f44-445a-41ee-a87e-844a9109069d`;
             const folderedAlbumName = `2022`;
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [`.${folderUUID}`]: {
                         [`.${folderedAlbumUUID}`]: {},
                         [folderedAlbumName]: mockfs.symlink({
@@ -336,7 +338,7 @@ describe(`Load state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(2);
@@ -357,7 +359,7 @@ describe(`Load state`, () => {
             const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
             const archivedName = `2015 - 2016`;
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [`.${archivedUUID}`]: {
                         "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": Buffer.from([1, 1, 1, 1]),
                         "steve-johnson-gkfvdCEbUbQ-unsplash.jpeg": Buffer.from([1, 1, 1, 1]),
@@ -370,7 +372,7 @@ describe(`Load state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const albums = await library.loadAlbums();
             expect(Object.keys(albums).length).toEqual(1);
 
@@ -384,14 +386,14 @@ describe(`Load state`, () => {
 
         test(`Ignore 'Archived Assets' Folder`, async () => {
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ARCHIVE_DIR]: {
                         "test-file": Buffer.from([1, 1, 1]),
                     },
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(0);
@@ -399,7 +401,7 @@ describe(`Load state`, () => {
 
         test(`Ignore 'All Photos' & 'Shared Photos' Folder`, async () => {
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [PRIMARY_ASSET_DIR]: {
                         "test-file": Buffer.from([1, 1, 1]),
                     },
@@ -409,7 +411,7 @@ describe(`Load state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(0);
@@ -425,7 +427,7 @@ describe(`Load state`, () => {
             }
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [`.${emptyAlbumUUID}`]: files,
                     [emptyAlbumName]: mockfs.symlink({
                         path: `.${emptyAlbumUUID}`,
@@ -433,7 +435,7 @@ describe(`Load state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(1);
@@ -464,7 +466,7 @@ describe(`Load state`, () => {
             const archivedName = `2015 - 2016`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [PRIMARY_ASSET_DIR]: {
                         "test-file": Buffer.from([1, 1, 1]),
                     },
@@ -514,7 +516,7 @@ describe(`Load state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(5);
@@ -571,7 +573,7 @@ describe(`Write state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime, zone);
             await expect(library.verifyAsset(asset)).resolves.toEqual(true);
         });
@@ -599,7 +601,7 @@ describe(`Write state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime, zone);
             await expect(library.verifyAsset(asset)).resolves.toEqual(true);
         });
@@ -620,7 +622,7 @@ describe(`Write state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const asset = new Asset(assetChecksum, 1, fileType, assetMTime, zone);
             await expect(library.verifyAsset(asset)).rejects.toThrow(/^File's size does not match iCloud record$/);
         });
@@ -634,7 +636,7 @@ describe(`Write state`, () => {
                 [zoneDir]: {},
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const asset = new Asset(assetChecksum, 1, fileType, assetMTime, zone);
             await expect(library.verifyAsset(asset)).rejects.toThrow(/^File not found$/);
         });
@@ -662,7 +664,7 @@ describe(`Write state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime, zone);
             await expect(library.verifyAsset(asset)).rejects.toThrow(/^File's modification time does not match iCloud record$/);
         });
@@ -684,7 +686,7 @@ describe(`Write state`, () => {
         //         },
         //     });
 
-        //     const library = photosLibraryFactory();
+        //     const library = new PhotosLibrary();
         //     const asset = new Asset(`asdf`, assetData.length, fileType, assetMTime);
         //     await expect(library.verifyAsset(asset)).rejects.toThrow(/^'bla$/)
         // });
@@ -708,7 +710,7 @@ describe(`Write state`, () => {
                 [zoneDir]: {},
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
 
             try {
                 const response = await axios.get(url, config);
@@ -742,7 +744,7 @@ describe(`Write state`, () => {
                 [zoneDir]: {},
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
             library.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
 
@@ -777,7 +779,7 @@ describe(`Write state`, () => {
                 },
             });
 
-            const library = photosLibraryFactory();
+            const library = new PhotosLibrary();
             const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime, zone);
             await library.deleteAsset(asset);
             expect(fs.existsSync(path.join(zoneDir, assetFullFilename))).toBeFalsy();
@@ -791,15 +793,15 @@ describe(`Write state`, () => {
                 const albumName = `Stuff`;
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [`.${albumUUID}`]: {},
                         [albumName]: mockfs.symlink({
                             path: `.${albumName}`,
                         }),
                     },
                 });
-                const library = photosLibraryFactory();
-                const relativePath = library.findAlbumByUUIDInPath(albumUUID, photosDataDir);
+                const library = new PhotosLibrary();
+                const relativePath = library.findAlbumByUUIDInPath(albumUUID, Config.defaultConfig.dataDir);
                 expect(relativePath).toEqual(`.${albumUUID}`);
             });
 
@@ -809,7 +811,7 @@ describe(`Write state`, () => {
                 const folderedAlbumUUID = `6e7f4f44-445a-41ee-a87e-844a9109069d`;
                 const folderedAlbumName = `2022`;
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [`.${folderUUID}`]: {
                             [`.${folderedAlbumUUID}`]: {},
                             [folderedAlbumName]: mockfs.symlink({
@@ -822,8 +824,8 @@ describe(`Write state`, () => {
                     },
                 });
 
-                const library = photosLibraryFactory();
-                const relativePath = library.findAlbumByUUIDInPath(folderedAlbumUUID, photosDataDir);
+                const library = new PhotosLibrary();
+                const relativePath = library.findAlbumByUUIDInPath(folderedAlbumUUID, Config.defaultConfig.dataDir);
                 expect(relativePath).toEqual(`.${folderUUID}/.${folderedAlbumUUID}`);
             });
 
@@ -852,7 +854,7 @@ describe(`Write state`, () => {
                 const searchAlbumName = `2042`;
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [`.${folder1UUID}`]: {
                             [`.${folderedAlbum1UUID}`]: {
                                 [`.${folderedAlbum2UUID}`]: {
@@ -906,8 +908,8 @@ describe(`Write state`, () => {
                     },
                 });
 
-                const library = photosLibraryFactory();
-                const relativePath = library.findAlbumByUUIDInPath(searchAlbumUUID, photosDataDir);
+                const library = new PhotosLibrary();
+                const relativePath = library.findAlbumByUUIDInPath(searchAlbumUUID, Config.defaultConfig.dataDir);
                 expect(relativePath).toEqual(`.${folder3UUID}/.${folderedAlbum6UUID}/.${searchAlbumUUID}`);
             });
 
@@ -922,7 +924,7 @@ describe(`Write state`, () => {
                     const searchAlbumName = `2022`;
 
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [`.${folder1UUID}`]: {
                                 [`.${searchAlbumUUID}`]: {
                                 },
@@ -946,8 +948,8 @@ describe(`Write state`, () => {
                         },
                     });
 
-                    const library = photosLibraryFactory();
-                    expect(() => library.findAlbumByUUIDInPath(searchAlbumUUID, photosDataDir)).toThrow(/^Unable to find album: Multiple matches$/);
+                    const library = new PhotosLibrary();
+                    expect(() => library.findAlbumByUUIDInPath(searchAlbumUUID, Config.defaultConfig.dataDir)).toThrow(/^Unable to find album: Multiple matches$/);
                 });
 
                 test(`Album does not exist`, () => {
@@ -974,7 +976,7 @@ describe(`Write state`, () => {
                     const searchAlbumUUID = `6e7f4f44-445a-41ee-a87e-844a91090694`;
 
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [`.${folder1UUID}`]: {
                                 [`.${folderedAlbum1UUID}`]: {
                                     [`.${folderedAlbum2UUID}`]: {
@@ -1023,8 +1025,8 @@ describe(`Write state`, () => {
                         },
                     });
 
-                    const library = photosLibraryFactory();
-                    const relativePath = library.findAlbumByUUIDInPath(searchAlbumUUID, photosDataDir);
+                    const library = new PhotosLibrary();
+                    const relativePath = library.findAlbumByUUIDInPath(searchAlbumUUID, Config.defaultConfig.dataDir);
                     expect(relativePath.length).toEqual(0);
                 });
             });
@@ -1036,17 +1038,17 @@ describe(`Write state`, () => {
                     const album = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
 
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [`.${albumUUID}`]: {},
                             [albumName]: mockfs.symlink({
                                 path: `.${albumName}`,
                             }),
                         },
                     });
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
                     const [albumNamePath, uuidPath] = library.findAlbumPaths(album);
-                    expect(uuidPath).toEqual(path.join(photosDataDir, `.${albumUUID}`));
-                    expect(albumNamePath).toEqual(path.join(photosDataDir, albumName));
+                    expect(uuidPath).toEqual(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`));
+                    expect(albumNamePath).toEqual(path.join(Config.defaultConfig.dataDir, albumName));
                 });
 
                 test(`For existing album - Non-Root`, () => {
@@ -1057,7 +1059,7 @@ describe(`Write state`, () => {
                     const album = new Album(albumUUID, AlbumType.FOLDER, albumName, folderUUID);
 
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [`.${folderUUID}`]: {
                                 [`.${albumUUID}`]: {},
                                 [albumName]: mockfs.symlink({
@@ -1069,10 +1071,10 @@ describe(`Write state`, () => {
                             }),
                         },
                     });
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
                     const [albumNamePath, uuidPath] = library.findAlbumPaths(album);
-                    expect(uuidPath).toEqual(path.join(photosDataDir, `.${folderUUID}`, `.${albumUUID}`));
-                    expect(albumNamePath).toEqual(path.join(photosDataDir, `.${folderUUID}`, albumName));
+                    expect(uuidPath).toEqual(path.join(Config.defaultConfig.dataDir, `.${folderUUID}`, `.${albumUUID}`));
+                    expect(albumNamePath).toEqual(path.join(Config.defaultConfig.dataDir, `.${folderUUID}`, albumName));
                 });
 
                 test(`For album with non-existing parent`, () => {
@@ -1082,9 +1084,9 @@ describe(`Write state`, () => {
                     const album = new Album(albumUUID, AlbumType.FOLDER, albumName, parentUUID);
 
                     mockfs({
-                        [photosDataDir]: {},
+                        [Config.defaultConfig.dataDir]: {},
                     });
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
                     expect(() => library.findAlbumPaths(album)).toThrow(/^Unable to find parent of album$/);
                 });
             });
@@ -1093,16 +1095,16 @@ describe(`Write state`, () => {
         describe(`Create & Link`, () => {
             test(`Folder - Root`, () => {
                 mockfs({
-                    [photosDataDir]: {},
+                    [Config.defaultConfig.dataDir]: {},
                 });
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `Memories`;
                 const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
                 library.writeAlbum(folder);
-                const uuidFolder = fs.statSync(path.join(photosDataDir, `.${albumUUID}`));
-                const namedFolder = fs.lstatSync(path.join(photosDataDir, albumName));
-                const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, albumName));
+                const uuidFolder = fs.statSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`));
+                const namedFolder = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumName));
+                const namedFolderTarget = fs.readlinkSync(path.join(Config.defaultConfig.dataDir, albumName));
                 expect(uuidFolder.isDirectory()).toBeTruthy();
                 expect(namedFolder.isSymbolicLink()).toBeTruthy();
                 expect(namedFolderTarget).toEqual(`.${albumUUID}`);
@@ -1114,7 +1116,7 @@ describe(`Write state`, () => {
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `2021`;
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [`.${parentUUID}`]: {},
                         [parentName]: mockfs.symlink({
                             path: `.${parentUUID}`,
@@ -1122,13 +1124,13 @@ describe(`Write state`, () => {
                     },
                 });
                 const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, parentUUID);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 library.writeAlbum(folder);
 
-                const uuidFolder = fs.statSync(path.join(photosDataDir, `.${parentUUID}`, `.${albumUUID}`));
-                const namedFolder = fs.lstatSync(path.join(photosDataDir, `.${parentUUID}`, albumName));
-                const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, parentName, albumName));
+                const uuidFolder = fs.statSync(path.join(Config.defaultConfig.dataDir, `.${parentUUID}`, `.${albumUUID}`));
+                const namedFolder = fs.lstatSync(path.join(Config.defaultConfig.dataDir, `.${parentUUID}`, albumName));
+                const namedFolderTarget = fs.readlinkSync(path.join(Config.defaultConfig.dataDir, parentName, albumName));
                 expect(uuidFolder.isDirectory()).toBeTruthy();
                 expect(namedFolder.isSymbolicLink()).toBeTruthy();
                 expect(namedFolderTarget).toEqual(`.${albumUUID}`);
@@ -1138,12 +1140,12 @@ describe(`Write state`, () => {
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `Memories`;
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [`.${albumUUID}`]: {},
                     },
                 });
                 const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
                 expect(() => library.writeAlbum(folder)).toThrow(/^Unable to create album: Already exists$/);
             });
 
@@ -1151,12 +1153,12 @@ describe(`Write state`, () => {
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `Memories`;
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [albumName]: {},
                     },
                 });
                 const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
                 expect(() => library.writeAlbum(folder)).toThrow(/^Unable to create album: Already exists$/);
             });
 
@@ -1165,27 +1167,27 @@ describe(`Write state`, () => {
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `Memories`;
                 mockfs({
-                    [photosDataDir]: {},
+                    [Config.defaultConfig.dataDir]: {},
                 });
                 const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, parentUUID);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
                 expect(() => library.writeAlbum(folder)).toThrow(/^Unable to find parent of album$/);
             });
 
             test(`Album - no assets`, () => {
                 mockfs({
-                    [photosDataDir]: {},
+                    [Config.defaultConfig.dataDir]: {},
                 });
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `Memories`;
                 const folder = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 library.writeAlbum(folder);
 
-                const uuidFolder = fs.statSync(path.join(photosDataDir, `.${albumUUID}`));
-                const namedFolder = fs.lstatSync(path.join(photosDataDir, albumName));
-                const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, albumName));
+                const uuidFolder = fs.statSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`));
+                const namedFolder = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumName));
+                const namedFolderTarget = fs.readlinkSync(path.join(Config.defaultConfig.dataDir, albumName));
                 expect(uuidFolder.isDirectory()).toBeTruthy();
                 expect(namedFolder.isSymbolicLink()).toBeTruthy();
                 expect(namedFolderTarget).toEqual(`.${albumUUID}`);
@@ -1209,7 +1211,7 @@ describe(`Write state`, () => {
                 const albumAsset4mTime = 1546300800000; // 01.01.2019
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [PRIMARY_ASSET_DIR]: {
                             [albumAsset2Filename]: mockfs.file({
                                 mtime: new Date(albumAsset2mTime),
@@ -1236,40 +1238,40 @@ describe(`Write state`, () => {
 
                 const folder = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
                 folder.assets = albumAssets;
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
 
                 library.writeAlbum(folder);
 
-                const uuidFolder = fs.statSync(path.join(photosDataDir, `.${albumUUID}`));
-                const namedFolder = fs.lstatSync(path.join(photosDataDir, albumName));
-                const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, albumName));
+                const uuidFolder = fs.statSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`));
+                const namedFolder = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumName));
+                const namedFolderTarget = fs.readlinkSync(path.join(Config.defaultConfig.dataDir, albumName));
                 expect(uuidFolder.isDirectory()).toBeTruthy();
                 expect(namedFolder.isSymbolicLink()).toBeTruthy();
                 expect(namedFolderTarget).toEqual(`.${albumUUID}`);
 
-                const albumAsset1Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
+                const albumAsset1Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
                 expect(fs.existsSync(albumAsset1Path)).toBeFalsy();
 
                 expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to link assets`));
                 expect(handlerEvent).toHaveBeenCalledTimes(1);
 
-                const albumAsset2Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
+                const albumAsset2Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
                 const albumAsset2Stat = fs.lstatSync(albumAsset2Path);
                 expect(albumAsset2Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset2Stat.mtime).toEqual(new Date(albumAsset2mTime));
                 const albumAsset2Target = fs.readlinkSync(albumAsset2Path);
                 expect(albumAsset2Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset2Filename));
 
-                const albumAsset3Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset3PrettyFilename);
+                const albumAsset3Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset3PrettyFilename);
                 const albumAsset3Stat = fs.lstatSync(albumAsset3Path);
                 expect(albumAsset3Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset3Stat.mtime).toEqual(new Date(albumAsset3mTime));
                 const albumAsset3Target = fs.readlinkSync(albumAsset3Path);
                 expect(albumAsset3Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset3Filename));
 
-                const albumAsset4Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset4PrettyFilename);
+                const albumAsset4Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset4PrettyFilename);
                 const albumAsset4Stat = fs.lstatSync(albumAsset4Path);
                 expect(albumAsset4Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset4Stat.mtime).toEqual(new Date(albumAsset4mTime));
@@ -1295,7 +1297,7 @@ describe(`Write state`, () => {
                 const albumAsset4mTime = 1546300800000; // 01.01.2019
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [PRIMARY_ASSET_DIR]: {
                             [albumAsset1Filename]: mockfs.file({
                                 mtime: new Date(albumAsset1mTime),
@@ -1326,39 +1328,39 @@ describe(`Write state`, () => {
 
                 const folder = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
                 folder.assets = albumAssets;
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 library.writeAlbum(folder);
 
-                const uuidFolder = fs.statSync(path.join(photosDataDir, `.${albumUUID}`));
-                const namedFolder = fs.lstatSync(path.join(photosDataDir, albumName));
-                const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, albumName));
+                const uuidFolder = fs.statSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`));
+                const namedFolder = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumName));
+                const namedFolderTarget = fs.readlinkSync(path.join(Config.defaultConfig.dataDir, albumName));
                 expect(uuidFolder.isDirectory()).toBeTruthy();
                 expect(namedFolder.isSymbolicLink()).toBeTruthy();
                 expect(namedFolderTarget).toEqual(`.${albumUUID}`);
 
-                const albumAsset1Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
+                const albumAsset1Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
                 const albumAsset1Stat = fs.lstatSync(albumAsset1Path);
                 expect(albumAsset1Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime));
                 const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
                 expect(albumAsset1Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset1Filename));
 
-                const albumAsset2Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
+                const albumAsset2Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
                 const albumAsset2Stat = fs.lstatSync(albumAsset2Path);
                 expect(albumAsset2Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset2Stat.mtime).toEqual(new Date(albumAsset2mTime));
                 const albumAsset2Target = fs.readlinkSync(albumAsset2Path);
                 expect(albumAsset2Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset2Filename));
 
-                const albumAsset3Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset3PrettyFilename);
+                const albumAsset3Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset3PrettyFilename);
                 const albumAsset3Stat = fs.lstatSync(albumAsset3Path);
                 expect(albumAsset3Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset3Stat.mtime).toEqual(new Date(albumAsset3mTime));
                 const albumAsset3Target = fs.readlinkSync(albumAsset3Path);
                 expect(albumAsset3Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset3Filename));
 
-                const albumAsset4Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset4PrettyFilename);
+                const albumAsset4Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset4PrettyFilename);
                 const albumAsset4Stat = fs.lstatSync(albumAsset4Path);
                 expect(albumAsset4Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset4Stat.mtime).toEqual(new Date(albumAsset4mTime));
@@ -1377,7 +1379,7 @@ describe(`Write state`, () => {
                 const albumAsset2mTime = 1609459200000; // 01.01.2021
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [PRIMARY_ASSET_DIR]: {
                             [albumAsset1Filename]: mockfs.file({
                                 mtime: new Date(albumAsset1mTime),
@@ -1398,20 +1400,20 @@ describe(`Write state`, () => {
 
                 const folder = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
                 folder.assets = albumAssets;
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
 
                 library.writeAlbum(folder);
 
-                const uuidFolder = fs.statSync(path.join(photosDataDir, `.${albumUUID}`));
-                const namedFolder = fs.lstatSync(path.join(photosDataDir, albumName));
-                const namedFolderTarget = fs.readlinkSync(path.join(photosDataDir, albumName));
+                const uuidFolder = fs.statSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`));
+                const namedFolder = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumName));
+                const namedFolderTarget = fs.readlinkSync(path.join(Config.defaultConfig.dataDir, albumName));
                 expect(uuidFolder.isDirectory()).toBeTruthy();
                 expect(namedFolder.isSymbolicLink()).toBeTruthy();
                 expect(namedFolderTarget).toEqual(`.${albumUUID}`);
 
-                const albumAsset1Path = path.join(photosDataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
+                const albumAsset1Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
                 const albumAsset1Stat = fs.lstatSync(albumAsset1Path);
                 expect(albumAsset1Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset1Stat.mtime).toEqual(new Date(albumAsset1mTime));
@@ -1428,7 +1430,7 @@ describe(`Write state`, () => {
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `Memories`;
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [`.${albumUUID}`]: {},
                         [albumName]: mockfs.symlink({
                             path: `.${albumUUID}`,
@@ -1436,19 +1438,19 @@ describe(`Write state`, () => {
                     },
                 });
                 const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 library.deleteAlbum(folder);
 
-                expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy();
-                expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy();
+                expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`))).toBeFalsy();
+                expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, albumName))).toBeFalsy();
             });
 
             test(`Non-empty folder (only links)`, () => {
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `Memories`;
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [`.${albumUUID}`]: {
                             "stephen-leonardi-xx6ZyOeyJtI-unsplash.jpeg": mockfs.symlink({
                                 path: `../_All-Photos/AdXHmFwV1bys5hRFYq2PMg3K4pAl.jpeg`,
@@ -1469,19 +1471,19 @@ describe(`Write state`, () => {
                     },
                 });
                 const folder = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 library.deleteAlbum(folder);
 
-                expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy();
-                expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy();
+                expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`))).toBeFalsy();
+                expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, albumName))).toBeFalsy();
             });
 
             test(`Non-empty folder (non-safe files)`, () => {
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `Memories`;
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [`.${albumUUID}`]: {
                             "test-picture": Buffer.from([1, 1, 1, 1]),
                         },
@@ -1491,12 +1493,12 @@ describe(`Write state`, () => {
                     },
                 });
                 const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 expect(() => library.deleteAlbum(folder)).toThrow(/^Album not empty$/);
 
-                expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeTruthy();
-                expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeTruthy();
+                expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`))).toBeTruthy();
+                expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, albumName))).toBeTruthy();
             });
 
             test(`Non-empty folder (safe files)`, () => {
@@ -1509,7 +1511,7 @@ describe(`Write state`, () => {
                 }
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [`.${albumUUID}`]: files,
                         [albumName]: mockfs.symlink({
                             path: `.${albumUUID}`,
@@ -1517,12 +1519,12 @@ describe(`Write state`, () => {
                     },
                 });
                 const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 library.deleteAlbum(folder);
 
-                expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeFalsy();
-                expect(fs.existsSync(path.join(photosDataDir, albumName))).toBeFalsy();
+                expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`))).toBeFalsy();
+                expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, albumName))).toBeFalsy();
             });
 
             test(`Only pretty folder exists`, () => {
@@ -1530,18 +1532,18 @@ describe(`Write state`, () => {
                 const albumName = `Memories`;
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [albumName]: mockfs.symlink({
                             path: `.${albumUUID}`,
                         }),
                     },
                 });
                 const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 expect(() => library.deleteAlbum(folder)).toThrow(/^Unable to find path$/);
 
-                expect(fs.readlinkSync(path.join(photosDataDir, albumName)).length).toBeGreaterThan(0);
+                expect(fs.readlinkSync(path.join(Config.defaultConfig.dataDir, albumName)).length).toBeGreaterThan(0);
             });
 
             test(`Only UUID folder exists`, () => {
@@ -1549,16 +1551,16 @@ describe(`Write state`, () => {
                 const albumName = `Memories`;
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [`.${albumUUID}`]: {},
                     },
                 });
                 const folder = new Album(albumUUID, AlbumType.FOLDER, albumName, ``);
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
 
                 expect(() => library.deleteAlbum(folder)).toThrow(/^Unable to find path$/);
 
-                expect(fs.existsSync(path.join(photosDataDir, `.${albumUUID}`))).toBeTruthy();
+                expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`))).toBeTruthy();
             });
         });
 
@@ -1577,7 +1579,7 @@ describe(`Write state`, () => {
                     const asset4Modified = Date.now() - 16000;
 
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [`.${archivedUUID}`]: {
                                 [asset1Name]: mockfs.file({
                                     content: Buffer.from([1, 1, 1, 1]),
@@ -1606,9 +1608,9 @@ describe(`Write state`, () => {
                         },
                     });
 
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
                     library.movePathTuple(
-                        [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
+                        [path.join(Config.defaultConfig.dataDir, archivedName), path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`)],
                         [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
                     );
 
@@ -1623,12 +1625,12 @@ describe(`Write state`, () => {
                     expect(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset4Name)).mtimeMs).toEqual(asset4Modified);
                     expect(fs.existsSync(path.join(stashDir, archivedName))).toBeTruthy();
 
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeFalsy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeFalsy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeFalsy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeFalsy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeFalsy();
-                    expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset1Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset2Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset3Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset4Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, archivedName))).toBeFalsy();
                 });
 
                 test(`Destination with same UUID exists`, () => {
@@ -1639,7 +1641,7 @@ describe(`Write state`, () => {
                     const asset3Name = `steve-johnson-T12spiHYons-unsplash.jpeg`;
                     const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [ARCHIVE_DIR]: {
                                 [STASH_DIR]: {
                                     [`.${archivedUUID}`]: {},
@@ -1657,20 +1659,20 @@ describe(`Write state`, () => {
                         },
                     });
 
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
                     expect(() => library.movePathTuple(
-                        [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
+                        [path.join(Config.defaultConfig.dataDir, archivedName), path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`)],
                         [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
                     )).toThrow(/^Unable to create album: Already exists$/);
 
                     expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`))).toBeTruthy();
 
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, archivedName))).toBeTruthy();
                 });
 
                 test(`Destination with same name already exist`, () => {
@@ -1681,7 +1683,7 @@ describe(`Write state`, () => {
                     const asset3Name = `steve-johnson-T12spiHYons-unsplash.jpeg`;
                     const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [ARCHIVE_DIR]: {
                                 [STASH_DIR]: {
                                     [archivedName]: {},
@@ -1699,19 +1701,19 @@ describe(`Write state`, () => {
                         },
                     });
 
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
                     expect(() => library.movePathTuple(
-                        [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
+                        [path.join(Config.defaultConfig.dataDir, archivedName), path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`)],
                         [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
                     )).toThrow(/^Unable to create album: Already exists$/);
 
                     expect(fs.existsSync(path.join(stashDir, archivedName))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
-                    expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, archivedName))).toBeTruthy();
                 });
 
                 test(`Source AlbumName does not exist - will be ignored`, () => {
@@ -1722,7 +1724,7 @@ describe(`Write state`, () => {
                     const asset3Name = `steve-johnson-T12spiHYons-unsplash.jpeg`;
                     const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [ARCHIVE_DIR]: {
                             },
                             [`.${archivedUUID}`]: {
@@ -1734,10 +1736,10 @@ describe(`Write state`, () => {
                         },
                     });
 
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
 
                     library.movePathTuple(
-                        [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
+                        [path.join(Config.defaultConfig.dataDir, archivedName), path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`)],
                         [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
                     );
 
@@ -1748,30 +1750,30 @@ describe(`Write state`, () => {
                     expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
                     expect(fs.existsSync(path.join(stashDir, archivedName))).toBeTruthy();
 
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`))).toBeFalsy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset1Name))).toBeFalsy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset2Name))).toBeFalsy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset3Name))).toBeFalsy();
-                    expect(fs.existsSync(path.join(photosDataDir, `.${archivedUUID}`, asset4Name))).toBeFalsy();
-                    expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset1Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset2Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset3Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`, asset4Name))).toBeFalsy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, archivedName))).toBeFalsy();
                 });
 
                 test(`AlbumUUID does not exist`, () => {
                     const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
                     const archivedName = `2015 - 2016`;
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [ARCHIVE_DIR]: {},
                             [archivedName]: {},
                         },
                     });
 
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
                     expect(() => library.movePathTuple(
-                        [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
+                        [path.join(Config.defaultConfig.dataDir, archivedName), path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`)],
                         [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
                     )).toThrow(/^Unable to find path$/);
-                    expect(fs.existsSync(path.join(photosDataDir, archivedName))).toBeTruthy();
+                    expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, archivedName))).toBeTruthy();
                 });
             });
 
@@ -1780,14 +1782,14 @@ describe(`Write state`, () => {
                 const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
                 const archivedName = `2015 - 2016`;
 
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
                 library.movePathTuple = jest.fn();
 
                 const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
                 library.retrieveStashedAlbum(album);
                 expect(library.movePathTuple).toHaveBeenCalledWith(
                     [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
-                    [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
+                    [path.join(Config.defaultConfig.dataDir, archivedName), path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`)],
                 );
             });
 
@@ -1796,13 +1798,13 @@ describe(`Write state`, () => {
                 const archivedUUID = `fc649b1a-d22e-4b49-a5ee-066eb577d023`;
                 const archivedName = `2015 - 2016`;
 
-                const library = photosLibraryFactory();
+                const library = new PhotosLibrary();
                 library.movePathTuple = jest.fn();
 
                 const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
                 library.stashArchivedAlbum(album);
                 expect(library.movePathTuple).toHaveBeenCalledWith(
-                    [path.join(photosDataDir, archivedName), path.join(photosDataDir, `.${archivedUUID}`)],
+                    [path.join(Config.defaultConfig.dataDir, archivedName), path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`)],
                     [path.join(stashDir, archivedName), path.join(stashDir, `.${archivedUUID}`)],
                 );
             });
@@ -1817,7 +1819,7 @@ describe(`Write state`, () => {
                     const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
 
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [ARCHIVE_DIR]: {
                                 [STASH_DIR]: {
                                     [`.${archivedUUID}`]: {
@@ -1834,7 +1836,7 @@ describe(`Write state`, () => {
                         },
                     });
 
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
                     await library.cleanArchivedOrphans();
                     expect(fs.existsSync(path.join(archiveDir, archivedName))).toBeTruthy();
                     expect(fs.existsSync(path.join(archiveDir, archivedName, asset1Name))).toBeTruthy();
@@ -1854,7 +1856,7 @@ describe(`Write state`, () => {
                     const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
 
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [ARCHIVE_DIR]: {
                                 [STASH_DIR]: {
                                     [`.${archived1UUID}`]: {
@@ -1880,7 +1882,7 @@ describe(`Write state`, () => {
                         },
                     });
 
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
                     await library.cleanArchivedOrphans();
 
                     expect(fs.existsSync(path.join(archiveDir, archived1Name))).toBeTruthy();
@@ -1907,7 +1909,7 @@ describe(`Write state`, () => {
                     const asset4Name = `steve-johnson-YLfycNerbPo-unsplash.jpeg`;
 
                     mockfs({
-                        [photosDataDir]: {
+                        [Config.defaultConfig.dataDir]: {
                             [ARCHIVE_DIR]: {
                                 [STASH_DIR]: {
                                     [`.${archivedUUID}`]: {
@@ -1926,7 +1928,7 @@ describe(`Write state`, () => {
                         },
                     });
 
-                    const library = photosLibraryFactory();
+                    const library = new PhotosLibrary();
                     await library.cleanArchivedOrphans();
 
                     expect(fs.existsSync(path.join(archiveDir, archivedName))).toBeTruthy();

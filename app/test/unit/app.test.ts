@@ -1,6 +1,7 @@
 import mockfs from 'mock-fs';
 import fs from 'fs';
 import {describe, test, expect, jest, beforeEach, afterEach} from '@jest/globals';
+import * as Config from '../_helpers/_config';
 import {nonRejectOptions, rejectOptions, validOptions} from '../_helpers/app-factory.helper';
 import {ArchiveApp, DaemonApp, DaemonAppEvents, LIBRARY_LOCK_FILE, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {appFactory} from '../../src/app/factory';
@@ -13,12 +14,13 @@ import {setupLogger} from '../_mocks/logger';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 
 beforeEach(() => {
+    mockfs();
     prepareResourceManager(false);
-    jest.clearAllMocks();
 });
 
 afterEach(() => {
     mockfs.restore();
+    jest.clearAllMocks();
 });
 
 describe(`App Factory`, () => {
@@ -66,7 +68,6 @@ describe(`App Factory`, () => {
         expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(tokenApp.icloud).toBeDefined();
         expect(tokenApp.icloud.mfaServer).toBeDefined();
-        expect(tokenApp.icloud.auth).toBeDefined();
         expect(ResourceManager._instance).toBeDefined();
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
@@ -78,7 +79,6 @@ describe(`App Factory`, () => {
         expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(syncApp.icloud).toBeDefined();
         expect(syncApp.icloud.mfaServer).toBeDefined();
-        expect(syncApp.icloud.auth).toBeDefined();
         expect(ResourceManager._instance).toBeDefined();
         expect(syncApp.photosLibrary).toBeDefined();
         expect(syncApp.syncEngine).toBeDefined();
@@ -92,7 +92,6 @@ describe(`App Factory`, () => {
         expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(archiveApp.icloud).toBeDefined();
         expect(archiveApp.icloud.mfaServer).toBeDefined();
-        expect(archiveApp.icloud.auth).toBeDefined();
         expect(ResourceManager._instance).toBeDefined();
         expect(archiveApp.photosLibrary).toBeDefined();
         expect(archiveApp.syncEngine).toBeDefined();
@@ -141,7 +140,6 @@ describe(`App control flow`, () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
             tokenApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
             tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
-            tokenApp.icloud.auth.validateAccountTokens = jest.fn();
             tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
             const tokenEvent = spyOnEvent(tokenApp.icloud, EVENTS.TOKEN);
@@ -150,7 +148,6 @@ describe(`App control flow`, () => {
 
             expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
             expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(1);
-            expect(tokenApp.icloud.auth.validateAccountTokens).toHaveBeenCalledTimes(1);
             expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
 
             expect(tokenEvent).toHaveBeenCalledTimes(1);
@@ -230,7 +227,7 @@ describe(`App control flow`, () => {
         test(`Schedule job`, async () => {
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
             daemonApp.performScheduledSync = jest.fn(() => Promise.resolve());
-            ResourceManager.instance._appOptions.schedule = `*/1 * * * * *`; // Every second
+            ResourceManager.instance._resources.schedule = `*/1 * * * * *`; // Every second
             const eventsScheduledEvent = spyOnEvent(daemonApp.event, DaemonAppEvents.EVENTS.SCHEDULED);
 
             await daemonApp.run();
@@ -278,7 +275,7 @@ describe(`Library Lock`, () => {
 
         await tokenApp.acquireLibraryLock();
 
-        const lockFile = (await fs.promises.readFile(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE), {encoding: `utf-8`})).toString();
+        const lockFile = (await fs.promises.readFile(path.join(Config.defaultConfig.dataDir, LIBRARY_LOCK_FILE), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
     });
 
@@ -287,13 +284,13 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [ResourceManager.instance.dataDir]: {
+            [Config.defaultConfig.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await expect(tokenApp.acquireLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
-        expect(fs.existsSync(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 
     test(`Acquire lock warning - already locked with --force`, async () => {
@@ -302,14 +299,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [ResourceManager.instance.dataDir]: {
+            [ResourceManager.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await tokenApp.acquireLibraryLock();
 
-        const lockFile = (await fs.promises.readFile(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE), {encoding: `utf-8`})).toString();
+        const lockFile = (await fs.promises.readFile(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
     });
 
@@ -318,14 +315,14 @@ describe(`Library Lock`, () => {
         const thisPID = process.pid.toString();
 
         mockfs({
-            [ResourceManager.instance.dataDir]: {
+            [Config.defaultConfig.dataDir]: {
                 [LIBRARY_LOCK_FILE]: thisPID,
             },
         });
 
         await tokenApp.releaseLibraryLock();
 
-        expect(fs.existsSync(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
+        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
     });
 
     test(`Release lock error - not this process' lock`, async () => {
@@ -333,14 +330,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [ResourceManager.instance.dataDir]: {
+            [ResourceManager.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await expect(tokenApp.releaseLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
 
-        expect(fs.existsSync(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 
     test(`Release lock error - not this process' lock --force`, async () => {
@@ -348,14 +345,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [ResourceManager.instance.dataDir]: {
+            [ResourceManager.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await tokenApp.releaseLibraryLock();
 
-        expect(fs.existsSync(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
+        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
     });
 
     test(`Release lock error - no lock`, async () => {
@@ -363,6 +360,6 @@ describe(`Library Lock`, () => {
 
         await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined();
 
-        expect(!fs.existsSync(path.join(ResourceManager.instance.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(!fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 });

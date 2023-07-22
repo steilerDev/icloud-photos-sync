@@ -34,3 +34,7 @@ export const NO_PRIMARY_ZONE: ErrorStruct = buildErrorStruct(
 export const NO_SHARED_ZONE: ErrorStruct = buildErrorStruct(
     name, prefix, `NO_SHARED_ZONE`, `No shared photos zone present`,
 );
+
+export const NO_AASP_COOKIE: ErrorStruct = buildErrorStruct(
+    name, prefix, `NO_AASP_COOKIE`, `No AASP cookie present`,
+);

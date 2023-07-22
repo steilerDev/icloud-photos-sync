@@ -48,14 +48,20 @@ export class Validator {
      * @returns The validated data
      * @throws The error struct with context and message if validation fails
      */
-    validate<T>(validator: Ajv.ValidateFunction<T>, errorStruct: ErrorStruct, data: unknown, ...additionalValidations: ((T) => boolean)[]): T {
+    validate<T>(validator: Ajv.ValidateFunction<T>, errorStruct: ErrorStruct, data: unknown, ...additionalValidations: ((arg0: T) => boolean)[]): T {
         if (validator(data) && additionalValidations.every(validation => validation(data))) {
             return data;
         }
 
-        throw new iCPSError(errorStruct)
-            .addMessage(`${validator.errors![0].message} (${validator.errors![0].instancePath})`)
-            .addContext(`data`, data);
+        if(validator.errors) {
+            throw new iCPSError(errorStruct)
+                .addMessage(`${validator.errors![0].message} (${validator.errors![0].instancePath})`)
+                .addContext(`data`, data);
+        } else {
+            throw new iCPSError(errorStruct)
+                .addMessage(`Additional validations failed`)
+                .addContext(`data`, data);
+        }
     }
 
     /**
@@ -128,6 +134,7 @@ export class Validator {
             this._setupResponseValidator,
             VALIDATOR_ERR.SETUP_RESPONSE,
             data,
+            (data: SetupResponse) => data.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.X_APPLE)).length > 1, // Making sure there are authentication cookies
         );
     }
 

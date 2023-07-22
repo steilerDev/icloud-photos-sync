@@ -10,13 +10,6 @@ beforeEach(() => {
     prepareResourceManager();
 });
 
-test(`PhotosDomain not available`, () => {
-    const iCloudPhotos = iCloudPhotosFactory();
-    iCloudPhotos.auth.iCloudPhotosAccount.photosDomain = ``;
-
-    expect(() => iCloudPhotos.getServiceEndpoint(`someExt`)).toThrow(/^Unable to get service endpoint: Photos Domain not defined$/);
-});
-
 describe(`Setup iCloud Photos`, () => {
     test(`Setup successful`, async () => {
         const iCloudPhotos = iCloudPhotosFactory();
@@ -214,7 +207,7 @@ describe.each([
                 recordType: `recordType`,
             },
             resultsLimit: 2,
-            zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
+            zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
         },
     }, {
         desc: `recordType + filterBy + resultsLimit + desiredKeys`,
@@ -239,7 +232,7 @@ describe.each([
                 recordType: `recordType`,
             },
             resultsLimit: 2,
-            zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
+            zoneID: {ownerRecordName: Config.sharedZone.ownerRecordName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
         },
     }, {
         desc: `recordType + filterBy + resultsLimit`,
@@ -263,7 +256,7 @@ describe.each([
                 recordType: `recordType`,
             },
             resultsLimit: 2,
-            zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
+            zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
         },
     }, {
         desc: `recordType + filterBy + resultsLimit`,
@@ -287,7 +280,7 @@ describe.each([
                 recordType: `recordType`,
             },
             resultsLimit: 2,
-            zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
+            zoneID: {ownerRecordName: Config.sharedZone.ownerRecordName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
         },
     }, {
         desc: `recordType + filterBy`,
@@ -310,7 +303,7 @@ describe.each([
                 ],
                 recordType: `recordType`,
             },
-            zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
+            zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
         },
     }, {
         desc: `recordType + filterBy`,
@@ -333,7 +326,7 @@ describe.each([
                 ],
                 recordType: `recordType`,
             },
-            zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
+            zoneID: {ownerRecordName: Config.sharedZone.ownerRecordName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
         },
     }, {
         desc: `recordType`,
@@ -346,7 +339,7 @@ describe.each([
             query: {
                 recordType: `recordType`,
             },
-            zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
+            zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
         },
     }, {
         desc: `recordType`,
@@ -411,7 +404,7 @@ describe(`Perform Operation`, () => {
             expectedOperation: {
                 atomic: true,
                 operations: [],
-                zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
+                zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
             },
         }, {
             _desc: `No records - SharedZone`,
@@ -426,7 +419,7 @@ describe(`Perform Operation`, () => {
             expectedOperation: {
                 atomic: true,
                 operations: [],
-                zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
+                zoneID: {ownerRecordName: Config.sharedZone.ownerRecordName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
             },
         }, {
             _desc: `One record - PrimaryZone`,
@@ -453,7 +446,7 @@ describe(`Perform Operation`, () => {
                         },
                     },
                 }],
-                zoneID: {ownerRecordName: Config.primaryZone.ownerName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
+                zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
             },
         }, {
             _desc: `One record - SharedZone`,
@@ -480,7 +473,7 @@ describe(`Perform Operation`, () => {
                         },
                     },
                 }],
-                zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
+                zoneID: {ownerRecordName: Config.sharedZone.ownerRecordName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
             },
         },
     ])(`Success $_desc`, async ({operation, fields, records, expectedOperation, zone}) => {

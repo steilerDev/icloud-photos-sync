@@ -4,7 +4,7 @@ import * as Config from './_config';
 import {expectedMFAHeaders} from "./icloud-mfa.helper";
 import {addHoursToCurrentDate, getDateInThePast} from "./_general";
 import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
-import {iCloudAuthFactory} from "./icloud-auth.helper";
+import {ResourceManager} from "../../src/lib/resource-manager/resource-manager";
 
 /**
  * This function creates a new instance of the iCloud class, mocks unecessary functions and removes all event listeners.
@@ -15,6 +15,7 @@ export function iCloudFactory(): iCloud {
     icloud.mfaServer.startServer = () => {};
     icloud.mfaServer.stopServer = () => {};
     icloud.removeAllListeners();
+    icloud.mfaServer.removeAllListeners();
     icloud.ready = icloud.getReady();
     return icloud;
 }
@@ -26,16 +27,13 @@ export function iCloudFactory(): iCloud {
  * @returns An iCloudPhotos instance, ready to be used in tests.
  */
 export function iCloudPhotosFactory(removeEventListeners: boolean = true, sharedLibrary: boolean = true): iCloudPhotos {
-    const auth = iCloudAuthFactory(true);
-    auth.iCloudPhotosAccount.photosDomain = Config.iCloudPhotosAccount.photosDomain;
-    auth.iCloudPhotosAccount.primary = Config.primaryZone;
+    ResourceManager.network._resources.photosUrl = Config.photosDomain;
+    ResourceManager.instance._resources.primaryZone = Config.primaryZone;
     if (sharedLibrary) {
-        auth.iCloudPhotosAccount.shared = Config.sharedZone;
+        ResourceManager.instance._resources.sharedZone = Config.sharedZone;
     }
 
-    auth.getPhotosHeader = jest.fn(() => `headerValues`);
-
-    const icloudPhotos = new iCloudPhotos(auth);
+    const icloudPhotos = new iCloudPhotos();
 
     if (removeEventListeners) {
         icloudPhotos.removeAllListeners();
@@ -43,13 +41,6 @@ export function iCloudPhotosFactory(removeEventListeners: boolean = true, shared
 
     return icloudPhotos;
 }
-
-export const expectedTokenGetCall = [
-    `https://idmsa.apple.com/appleauth/auth/2sv/trust`,
-    {
-        headers: expectedMFAHeaders(),
-    },
-];
 
 export function getICloudCookieHeader(expired: boolean = false) {
     // We need to dynamically set the expiration date, otherwise we might run into issues
@@ -79,9 +70,3 @@ export function getICloudCookieHeader(expired: boolean = false) {
     };
 }
 
-export const expectedICloudSetupHeaders = {
-    Accept: `application/json`,
-    "Content-Type": `application/json`,
-    Origin: `https://www.icloud.com`,
-    "User-Agent": `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`,
-};

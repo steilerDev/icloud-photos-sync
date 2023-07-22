@@ -4,6 +4,6 @@ import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 
 export function archiveEngineFactory(_remoteDelete: boolean = true): ArchiveEngine {
-    ResourceManager.instance._appOptions.remoteDelete = _remoteDelete;
+    ResourceManager._instance!._resources.remoteDelete = _remoteDelete;
     return new ArchiveEngine(new iCloud(), new PhotosLibrary());
 }

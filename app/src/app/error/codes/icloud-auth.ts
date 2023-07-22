@@ -15,8 +15,8 @@ export const ACQUIRE_AUTH_SECRETS: ErrorStruct = buildErrorStruct(
     name, prefix, `ACQUIRE_AUTH_SECRETS`, `Unable to process auth secrets`,
 );
 
-export const NO_RESPONSE: ErrorStruct = buildErrorStruct(
-    name, prefix, `NO_RESPONSE`, `No response received during authentication`,
+export const UNKNOWN: ErrorStruct = buildErrorStruct(
+    name, prefix, `UNKNOWN`, `Received unknown error during authentication`,
 );
 
 export const UNAUTHORIZED: ErrorStruct = buildErrorStruct(

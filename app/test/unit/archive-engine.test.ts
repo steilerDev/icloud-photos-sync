@@ -1,7 +1,7 @@
 import mockfs from 'mock-fs';
 import {describe, test, beforeEach, afterEach, expect, jest} from '@jest/globals';
 import {archiveEngineFactory} from '../_helpers/archive-engine.helper';
-import {appDataDir as photosDataDir} from '../_helpers/_config';
+import * as Config from '../_helpers/_config';
 import {PRIMARY_ASSET_DIR, ARCHIVE_DIR} from '../../src/lib/photos-library/constants';
 import path from 'path';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
@@ -41,7 +41,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -81,14 +81,14 @@ describe.each([{
             await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
             expect(archiveEngine.icloud.photos.deleteAssets).toHaveBeenCalledWith([
                 asset1.recordName,
@@ -117,7 +117,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset1Edit.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
@@ -164,16 +164,16 @@ describe.each([{
 
             expect(errorEvent).not.toHaveBeenCalled();
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(4);
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1Edit.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1Edit.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1Edit.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1Edit.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(4);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1Edit.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1Edit.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
 
             expect(archiveEngine.icloud.photos.deleteAssets).toHaveBeenCalledWith([
                 asset1.recordName,
@@ -201,7 +201,7 @@ describe.each([{
                 asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [ASSET_DIR]: {
                             [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                             [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -257,7 +257,7 @@ describe.each([{
                 asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [ASSET_DIR]: {
                             [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                             [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -315,7 +315,7 @@ describe.each([{
                 asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [ASSET_DIR]: {
                             [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                             [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -336,7 +336,7 @@ describe.each([{
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
                 archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                await expect(archiveEngine.archivePath(`${photosDataDir}/${albumName}`, [asset1, asset2, asset3])).rejects.toThrow(/^Unable to load album$/);
+                await expect(archiveEngine.archivePath(`${Config.defaultConfig.dataDir}/${albumName}`, [asset1, asset2, asset3])).rejects.toThrow(/^Unable to load album$/);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
                 expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
@@ -359,7 +359,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -403,9 +403,9 @@ describe.each([{
             await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(2);
 
@@ -433,7 +433,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -476,14 +476,14 @@ describe.each([{
             await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
             expect(startEvent).toHaveBeenCalled();
             expect(persistEvent).toHaveBeenCalledWith(3);
@@ -506,7 +506,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -546,14 +546,14 @@ describe.each([{
             await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3])).rejects.toThrow(/^Unable to delete remote assets$/);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
             expect(startEvent).toHaveBeenCalled();
             expect(persistEvent).toHaveBeenCalledWith(3);
@@ -575,7 +575,7 @@ describe.each([{
         asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
         mockfs({
-            [photosDataDir]: {
+            [Config.defaultConfig.dataDir]: {
                 [ASSET_DIR]: {
                     [asset1.getAssetFilename()]: mockfs.file({
                         content: Buffer.from([1, 1, 1, 1]),
@@ -613,26 +613,26 @@ describe.each([{
 
         const archiveEngine = archiveEngineFactory();
 
-        await archiveEngine.persistAsset(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-        await archiveEngine.persistAsset(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-        await archiveEngine.persistAsset(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+        await archiveEngine.persistAsset(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+        await archiveEngine.persistAsset(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+        await archiveEngine.persistAsset(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
-        const asset1AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()));
-        const asset1ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
+        const asset1AssetStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()));
+        const asset1ArchivedStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
         expect(asset1AssetStats.isFile()).toBeTruthy();
         expect(asset1ArchivedStats.mtimeMs).toEqual(asset1.modified);
         expect(asset1ArchivedStats.isFile()).toBeTruthy();
         expect(asset1ArchivedStats.mtimeMs).toEqual(asset1.modified);
 
-        const asset2AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()));
-        const asset2ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
+        const asset2AssetStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()));
+        const asset2ArchivedStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
         expect(asset2AssetStats.isFile()).toBeTruthy();
         expect(asset2ArchivedStats.mtimeMs).toEqual(asset2.modified);
         expect(asset2ArchivedStats.isFile()).toBeTruthy();
         expect(asset2ArchivedStats.mtimeMs).toEqual(asset2.modified);
 
-        const asset3AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()));
-        const asset3ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+        const asset3AssetStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()));
+        const asset3ArchivedStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
         expect(asset3AssetStats.isFile()).toBeTruthy();
         expect(asset3ArchivedStats.mtimeMs).toEqual(asset3.modified);
         expect(asset3ArchivedStats.isFile()).toBeTruthy();
@@ -652,9 +652,9 @@ describe.each([{
 
             const archiveEngine = archiveEngineFactory();
 
-            const result1 = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-            const result2 = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
-            const result3 = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
+            const result1 = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            const result2 = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
+            const result3 = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
             expect(result1).toEqual(asset1.recordName);
             expect(result2).toEqual(asset2.recordName);
@@ -674,7 +674,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -700,7 +700,7 @@ describe.each([{
 
             const archiveEngine = archiveEngineFactory();
 
-            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrow(/^Unable to find remote asset$/);
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrow(/^Unable to find remote asset$/);
         });
 
         test(`Unable to find remote asset's record name`, () => {
@@ -715,7 +715,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -741,7 +741,7 @@ describe.each([{
 
             const archiveEngine = archiveEngineFactory();
 
-            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrow(/^Unable to get record name$/);
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrow(/^Unable to get record name$/);
         });
 
         test(`Don't delete asset if flag is set`, () => {
@@ -756,7 +756,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -782,7 +782,7 @@ describe.each([{
 
             const archiveEngine = archiveEngineFactory(false);
 
-            const result = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            const result = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
             expect(result).toBeUndefined();
         });
 
@@ -800,7 +800,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -826,7 +826,7 @@ describe.each([{
 
             const archiveEngine = archiveEngineFactory();
 
-            const result = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            const result = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
             expect(result).toBeUndefined();
         });
     });

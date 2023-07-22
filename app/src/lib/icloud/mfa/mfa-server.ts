@@ -15,6 +15,14 @@ import {ResourceManager} from '../../resource-manager/resource-manager.js';
 export const MFA_TIMEOUT_VALUE = 1000 * 60 * 10; // 10 minutes
 
 /**
+ * Endpoint URI of MFA Server, all expect POST requests
+ */
+export const MFA_SERVER_ENDPOINTS = {
+    CODE_INPUT: `/mfa`, // Expecting URL parameter 'code' with 6 digits
+    RESEND_CODE: `/resend_mfa`, // Expecting URL parameter 'method' (either 'device', 'sms', 'voice') and optionally 'phoneNumberId' (any number > 0)
+};
+
+/**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
  * todo - Implement re-request of MFA code
  */
@@ -68,7 +76,7 @@ export class MFAServer extends EventEmitter {
         this.server.listen(ResourceManager.mfaServerPort, () => {
             /* c8 ignore start */
             // Never starting the server just to see logger message
-            this.logger.info(`Exposing endpoints: ${JSON.stringify(Object.values(MFA_SERVER.ENDPOINT))}`);
+            this.logger.info(`Exposing endpoints: ${JSON.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
             /* c8 ignore stop */
         });
 
@@ -99,16 +107,16 @@ export class MFAServer extends EventEmitter {
             return;
         }
 
-        if (req.url.startsWith(MFA_SERVER.ENDPOINT.CODE_INPUT)) {
+        if (req.url.startsWith(MFA_SERVER_ENDPOINTS.CODE_INPUT)) {
             this.handleMFACode(req, res);
-        } else if (req.url.startsWith(MFA_SERVER.ENDPOINT.RESEND_CODE)) {
+        } else if (req.url.startsWith(MFA_SERVER_ENDPOINTS.RESEND_CODE)) {
             this.handleMFAResend(req, res);
         } else {
             this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.ROUTE_NOT_FOUND)
                 .addMessage(req.url)
                 .setWarning()
                 .addContext(`request`, req));
-            this.sendResponse(res, 404, `Route not found, available endpoints: ${JSON.stringify(Object.values(MFA_SERVER.ENDPOINT))}`);
+            this.sendResponse(res, 404, `Route not found, available endpoints: ${JSON.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
         }
     }
 

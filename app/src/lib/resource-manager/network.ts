@@ -37,6 +37,7 @@ export const HEADER_KEYS = {
  */
 export const COOKIE_KEYS = {
     AASP: `aasp`,
+    X_APPLE: `X-APPLE-`
 };
 
 export const HEADER = {
