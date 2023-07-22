@@ -7,10 +7,15 @@ import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import MockAdapter from 'axios-mock-adapter';
 import { NetworkManager } from '../../src/lib/resource-manager/network-manager';
 import { NetworkResources } from '../../src/lib/resource-manager/network';
+import { iCPSEvent } from '../../src/lib/resource-manager/events';
 
 export type MockedNetworkManager = NetworkManager & {
     mock: MockAdapter;
 };
+
+export type MockedResourceManager = ResourceManager & {
+    spyOnEvent: (event: iCPSEvent) => jest.Mock;
+}
 
 /**
  * This function resets the ResourceManager singleton and optionally creates a new instance using the supplied configuration.
@@ -32,6 +37,7 @@ export function prepareResourceManager(initiate: boolean = true, appOptions: iCP
     if (initiate) {
         ResourceManager.setup(appOptions);
         (ResourceManager.network as MockedNetworkManager).mock = new MockAdapter(ResourceManager.network._axios, {onNoMatch: `throwException`});
+        (ResourceManager.instance as MockedResourceManager).spyOnEvent = (event) => spyOnEvent(ResourceManager.instance, event)
     }
 }
 

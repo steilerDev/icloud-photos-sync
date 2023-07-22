@@ -1,5 +1,5 @@
 import mockfs from 'mock-fs';
-import {MockedNetworkManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
+import {MockedNetworkManager, MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import {describe, test, beforeEach, afterEach, expect, jest} from '@jest/globals';
 import path from 'path';
 import * as ICLOUD from '../../src/lib/icloud/constants';
@@ -17,6 +17,8 @@ import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import { MFA_ERR } from '../../src/app/error/error-codes';
 import { iCPSError } from '../../src/app/error/error';
+import { iCPSEventError } from '../../src/lib/resource-manager/events';
+import { get } from 'http';
 
 beforeEach(() => {
     prepareResourceManager();
@@ -567,7 +569,7 @@ describe(`MFA Flow`, () => {
     test('Timeout', async () => {
         const icloud = iCloudFactory();
         icloud.mfaServer.emit(MFA_SERVER.EVENTS.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
-        await expect(icloud.ready).rejects.toThrow(/^MFA server timeout (code needs to be provided within 10 minutes)$/);
+        await expect(icloud.ready).rejects.toThrow(/^MFA server timeout \(code needs to be provided within 10 minutes\)$/);
     })
 });
 
@@ -671,6 +673,8 @@ describe(`Setup iCloud`, () => {
         const icloud = iCloudFactory();
         ResourceManager.network.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
 
+        const accountReadyEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ACCOUNT_READY);
+        
         (ResourceManager.network as MockedNetworkManager).mock
             .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
                 dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
@@ -698,12 +702,16 @@ describe(`Setup iCloud`, () => {
         expect(ResourceManager.network._resources.cookies?.length).toEqual(17);
         expect(ResourceManager.network.photosUrl).toEqual(Config.photosDomain);
         expect(ResourceManager.network._axios.defaults.baseURL).toEqual(Config.photosDomain + '/database/1/com.apple.photos.cloud/production/private');
+        expect(accountReadyEvent).toHaveBeenCalledTimes(1);
         expect(icloud.photos).toBeDefined();
     });
 
-    test.only(`Receive empty set-cookies during setup`, async () => {
+    test(`Receive expired iCloud Cookies during setup`, async () => {
         const icloud = iCloudFactory();
         ResourceManager.network.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
+
+        const errorEvent = (ResourceManager.instance as MockedResourceManager).spyOnEvent(iCPSEventError.HANDLER_EVENT);
+        const accountReadyEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ACCOUNT_READY);
 
         (ResourceManager.network as MockedNetworkManager).mock
             .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
@@ -722,151 +730,107 @@ describe(`Setup iCloud`, () => {
                         status: `active`
                     }
                 }
-            }, {})
+            }, getICloudCookieHeader(true))
+
+        await icloud.setupAccount();
+        
+        expect(errorEvent).toHaveBeenCalledTimes(1);
+        expect(accountReadyEvent).toHaveBeenCalledTimes(1);
+
+        expect(ResourceManager.network._resources.cookies?.length).toEqual(14);
+    });
+
+    test.each([{
+        _desc: `Receive empty set cookies during setup`,
+        statusCode: 200,
+        responseHeaders: {},
+        responsePayload: {
+            dsInfo: {
+                isWebAccessAllowed: true
+            },
+            webservices: {
+                ckdatabasews: {
+                    url: Config.photosDomain,
+                    status: `active`
+                }
+            }
+        },
+    }, {
+        _desc: `Receive server error during setup`,
+        statusCode: 500,
+        responseHeaders: getICloudCookieHeader(),
+        responsePayload: {
+            dsInfo: {
+                isWebAccessAllowed: true
+            },
+            webservices: {
+                ckdatabasews: {
+                    url: Config.photosDomain,
+                    status: `active`
+                }
+            }
+        } 
+    }, {
+        _desc: `Receive invalid response during setup`,
+        statusCode: 200,
+        responseHeaders: getICloudCookieHeader(),
+        responsePayload: {} 
+    }])(`$_desc`, async ({_desc, responseHeaders, statusCode, responsePayload}) => {
+        const icloud = iCloudFactory();
+        ResourceManager.network.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
+
+        (ResourceManager.network as MockedNetworkManager).mock
+            .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
+                    dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
+                    trustToken: Config.trustToken,
+                }, 
+                Config.REQUEST_HEADER.DEFAULT
+            )
+            .reply(statusCode, responsePayload, responseHeaders)
 
         await icloud.setupAccount();
 
-        expect(ResourceManager.network._resources.cookies?.length).toEqual(0);
+        await expect(icloud.ready).rejects.toThrow(/^Unable to setup iCloud Account$/);
 
-        await expect(icloud.ready).rejects.toThrow(/^Unable to parse and validate setup response$/);
+        expect(ResourceManager.network._resources.cookies).toBeUndefined();
     });
-})
 
-//     test(`Receive expired iCloud Cookies during setup`, async () => {
-//         const icloud = iCloudFactory();
-//         icloud.auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionSecret;
+    describe(`Get iCloud Photos Ready`, () => {
+        test(`Setup resolves`, async () => {
+            const icloud = iCloudFactory();
 
-//         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-//             status: 200,
-//             data: { // Actual response contains significant more -potential useful- data, only the following is really necessary
-//                 webservices: {
-//                     ckdatabasews: {
-//                         url: `https://p00-ckdatabasews.icloud.com:443`,
-//                     },
-//                 },
-//             },
-//             headers: getICloudCookieHeader(true),
-//         }));
+            icloud.photos = new iCloudPhotos();
+            icloud.photos.setup = jest.fn(() => Promise.resolve());
 
-//         await icloud.setupAccount();
+            await icloud.getPhotosReady();
 
-//         expect(icloud.axios.post).toHaveBeenCalledWith(
-//             `https://setup.icloud.com/setup/ws/1/accountLogin`,
-//             {
-//                 dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-//                 trustToken: Config.trustToken,
-//             },
-//             {
-//                 headers: expectedICloudSetupHeaders,
-//             },
-//         );
-//         await expect(icloud.ready).rejects.toThrow(/^Unable to setup iCloud Account$/);
-//     });
+            expect(icloud.photos.listenerCount(HANDLER_EVENT)).toBe(1);
+            await expect(icloud.ready).resolves.not.toThrow();
 
-//     test(`Receive invalid status code during setup`, async () => {
-//         const icloud = iCloudFactory();
-//         icloud.auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionSecret;
+            expect(icloud.photos.listenerCount(ICLOUD_PHOTOS.EVENTS.READY)).toBe(1);
+            expect(icloud.photos.setup).toHaveBeenCalled();
+        });
 
-//         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-//             status: 500,
-//         }));
+        test(`Setup rejects`, async () => {
+            const icloud = iCloudFactory();
 
-//         await icloud.setupAccount();
+            icloud.photos = new iCloudPhotos();
+            icloud.photos.setup = jest.fn(() => Promise.reject());
 
-//         expect(icloud.axios.post).toHaveBeenCalledWith(
-//             `https://setup.icloud.com/setup/ws/1/accountLogin`,
-//             {
-//                 dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-//                 trustToken: Config.trustToken,
-//             },
-//             {
-//                 headers: expectedICloudSetupHeaders,
-//             },
-//         );
-//         await expect(icloud.ready).rejects.toThrow(/^Unable to setup iCloud Account$/);
-//     });
+            await icloud.getPhotosReady();
 
-//     test(`Receive invalid response during setup`, async () => {
-//         const icloud = iCloudFactory();
-//         icloud.auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionSecret;
+            await expect(icloud.ready).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
+ 
+            expect(icloud.photos.listenerCount(HANDLER_EVENT)).toBe(1);
+            expect(icloud.photos.setup).toHaveBeenCalled();
+        });
 
-//         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-//             status: 200,
-//             data: {},
-//             headers: getICloudCookieHeader(true),
-//         }));
+        test(`Photos Object invalid`, async () => {
+            const icloud = iCloudFactory();
 
-//         await icloud.setupAccount();
+            await icloud.getPhotosReady();
 
-//         expect(icloud.axios.post).toHaveBeenCalledWith(
-//             `https://setup.icloud.com/setup/ws/1/accountLogin`,
-//             {
-//                 dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-//                 trustToken: Config.trustToken,
-//             },
-//             {
-//                 headers: expectedICloudSetupHeaders,
-//             },
-//         );
-//         await expect(icloud.ready).rejects.toThrow(/^Unable to setup iCloud Account$/);
-//     });
-
-//     test(`Network failure`, async () => {
-//         const icloud = iCloudFactory();
-//         icloud.auth.iCloudAuthSecrets.sessionSecret = Config.iCloudAuthSecrets.sessionSecret;
-
-//         icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Network down!`)));
-
-//         await icloud.setupAccount();
-
-//         expect(icloud.axios.post).toHaveBeenCalledWith(
-//             `https://setup.icloud.com/setup/ws/1/accountLogin`,
-//             {
-//                 dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-//                 trustToken: Config.trustToken,
-//             },
-//             {
-//                 headers: expectedICloudSetupHeaders,
-//             },
-//         );
-//         await expect(icloud.ready).rejects.toThrow(/^Unable to setup iCloud Account$/);
-//     });
-
-//     describe(`Get iCloud Photos Ready`, () => {
-//         test(`Get iCloud Photos Ready`, async () => {
-//             const icloud = iCloudFactory();
-//             icloud.auth.iCloudCookies = getICloudCookies();
-//             icloud.photos = new iCloudPhotos(icloud.auth);
-//             icloud.photos.setup = jest.fn(() => Promise.resolve());
-
-//             await icloud.getPhotosReady();
-
-//             expect(icloud.photos.listenerCount(HANDLER_EVENT)).toBe(1);
-//             await expect(icloud.ready).resolves.not.toThrow();
-
-//             expect(icloud.photos.listenerCount(ICLOUD_PHOTOS.EVENTS.READY)).toBe(1);
-//             expect(icloud.photos.setup).toHaveBeenCalled();
-//         });
-
-//         test(`Cookies invalid`, async () => {
-//             const icloud = iCloudFactory();
-//             icloud.auth.iCloudCookies = getICloudCookies(true);
-//             icloud.photos = new iCloudPhotos(icloud.auth);
-//             icloud.photos.setup = jest.fn(() => Promise.resolve());
-
-//             await icloud.getPhotosReady();
-
-//             await expect(icloud.ready).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
-//             expect(icloud.photos.setup).not.toHaveBeenCalled();
-//         });
-
-//         test(`Photos Object invalid`, async () => {
-//             const icloud = iCloudFactory();
-//             icloud.auth.iCloudCookies = getICloudCookies();
-
-//             await icloud.getPhotosReady();
-
-//             await expect(icloud.ready).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
-//         });
-//     });
-// });
+            await expect(icloud.ready).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
+        });
+    });
+});

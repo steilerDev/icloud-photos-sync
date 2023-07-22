@@ -138,7 +138,8 @@ export class iCloud extends EventEmitter {
                 return;
             }
 
-            this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_AUTH_SECRETS));
+            // This should never happen
+            // this.emit(ICLOUD.EVENTS.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_AUTH_SECRETS));
         } catch (err) {
             if (err instanceof iCPSError) {
                 this.emit(ICLOUD.EVENTS.ERROR, err);

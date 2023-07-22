@@ -125,9 +125,8 @@ export class NetworkManager {
      * Sets the aasp cookie from a list of set cookie for the current session
      */
     set aaspCookie(setCookies: string[]) {
-        this.pushCookie(
-            setCookies.filter(cookieString => cookieString.startsWith(COOKIE_KEYS.AASP))
-                .map(cookieString => Cookie.parse(cookieString)),
+        this.pushCookieString(
+            setCookies.filter(cookieString => cookieString.startsWith(COOKIE_KEYS.AASP)),
         );
     }
 
@@ -187,7 +186,7 @@ export class NetworkManager {
      */
     applySetupResponse(setupResponse: SetupResponse) {
         this.photosUrl = setupResponse.data.webservices.ckdatabasews.url;
-        this.pushCookie(setupResponse.headers[`set-cookie`].map(cookieString => Cookie.parse(cookieString)));
+        this.pushCookieString(setupResponse.headers[`set-cookie`]);
     }
 
     applyPhotosSetupResponse(photosSetupResponse: PhotosSetupResponse) {
@@ -229,6 +228,14 @@ export class NetworkManager {
         this._resources.cookies = validCookies;
         this._axios.defaults.headers[HEADER_KEYS.COOKIE] = this._resources.cookies.map(cookie => cookie.cookieString()).join(`; `);
         this.logger.debug(`Updated cookie header to ${JSON.stringify(this._axios.defaults.headers[HEADER_KEYS.COOKIE])}`);
+    }
+
+    /**
+     * Pushes a list of set-cookie header strings to the session and updates the cookie header
+     * @param cookieString - The cookie string to add
+     */
+    pushCookieString(cookieString: string[]) {
+        this.pushCookie(cookieString.map(cookieString => Cookie.parse(cookieString)));
     }
 
     /**
