@@ -6,10 +6,13 @@ import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
 import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
-import {MFA_SERVER_ENDPOINTS, MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
+import {MFAServer, MFA_SERVER_ENDPOINTS, MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
+
+let server: MFAServer;
 
 beforeEach(() => {
     prepareResourceManager();
+    server = new MFAServer();
 });
 
 describe(`MFA Code`, () => {
@@ -17,7 +20,6 @@ describe(`MFA Code`, () => {
         const code = `123456`;
         const mfaMethod = new MFAMethod(`device`);
 
-        const server = mfaServerFactory();
         server.sendResponse = jest.fn();
         const mfaReceivedEvent = spyOnEvent(server, EVENTS.MFA_RECEIVED);
 
@@ -33,7 +35,6 @@ describe(`MFA Code`, () => {
     test(`Invalid code format`, () => {
         const code = `123 456`;
 
-        const server = mfaServerFactory();
         server.sendResponse = jest.fn();
         const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
 
@@ -52,7 +53,6 @@ describe(`MFA Resend`, () => {
         const method = `device`;
         const mfaMethod = new MFAMethod(method);
 
-        const server = mfaServerFactory();
         server.sendResponse = jest.fn();
         const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
@@ -69,7 +69,6 @@ describe(`MFA Resend`, () => {
         test(`Default id`, () => {
             const mfaMethod = new MFAMethod(method as `sms` | `voice`);
 
-            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
             const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
@@ -86,7 +85,6 @@ describe(`MFA Resend`, () => {
             const phoneNumberId = 3;
             const mfaMethod = new MFAMethod(method as `sms` | `voice`, phoneNumberId);
 
-            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
             const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
@@ -103,7 +101,6 @@ describe(`MFA Resend`, () => {
             const phoneNumberId = `invalid`;
             const mfaMethod = new MFAMethod(method as `sms` | `voice`);
 
-            const server = mfaServerFactory();
             server.sendResponse = jest.fn();
             const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
 
@@ -120,7 +117,6 @@ describe(`MFA Resend`, () => {
     test(`Invalid resend method`, () => {
         const method = `invalid`;
 
-        const server = mfaServerFactory();
         server.sendResponse = jest.fn();
         const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
 
@@ -132,85 +128,6 @@ describe(`MFA Resend`, () => {
         expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Resend method does not match expected format`);
         expect(handlerEvent).toHaveBeenCalledWith(new Error(`Resend method does not match expected format`));
     });
-
-    describe(`Process resend errors`, () => {
-        describe.each([`sms`, `voice`, `device`])(`Common errors`, method => {
-            test(`Unknown error`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                expect(mfaMethod.processResendError(new Error())).toEqual(new Error(`No response received`));
-            });
-
-            test(`Timeout`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                const error = {
-                    name: `AxiosError`,
-                    response: {
-                        status: 403,
-                    },
-                };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`iCloud timeout`));
-            });
-
-            test(`No response data`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                const error = {
-                    name: `AxiosError`,
-                    response: {
-                        status: 412,
-                    },
-                };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`Precondition Failed (412) with no response`));
-            });
-
-            test(`Unexpected status code`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                const error = {
-                    name: `AxiosError`,
-                    response: {
-                        status: 500,
-                    },
-                };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`Unknown error, while trying to resend MFA code`));
-            });
-        });
-
-        describe.each([`sms`, `voice`])(`Phone errors`, method => {
-            test(`No trusted phone numbers`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                const error = {
-                    name: `AxiosError`,
-                    response: {
-                        status: 412,
-                        data: {},
-                    },
-                };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`No trusted phone numbers registered`));
-            });
-
-            test(`Phone number ID does not exist`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                const error = {
-                    name: `AxiosError`,
-                    response: {
-                        status: 412,
-                        data: {
-                            trustedPhoneNumbers: [
-                                {
-                                    id: 2,
-                                    numberWithDialCode: `+49-123-456`,
-                                },
-                                {
-                                    id: 3,
-                                    numberWithDialCode: `+49-789-123`,
-                                },
-                            ],
-                        },
-                    },
-                };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`Selected Phone Number ID does not exist.`));
-            });
-        });
-    });
 });
 
 describe(`Request routing`, () => {
@@ -218,7 +135,6 @@ describe(`Request routing`, () => {
         const req = requestFactory(`/`, `GET`);
         const res = responseFactory();
 
-        const server = mfaServerFactory();
         server.sendResponse = jest.fn();
         server.handleMFAResend = jest.fn();
         server.handleMFACode = jest.fn();
@@ -234,7 +150,6 @@ describe(`Request routing`, () => {
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?testparam=abc`, `POST`);
         const res = responseFactory();
 
-        const server = mfaServerFactory();
         server.sendResponse = jest.fn();
         server.handleMFAResend = jest.fn();
         server.handleMFACode = jest.fn();
@@ -250,7 +165,6 @@ describe(`Request routing`, () => {
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?testparam=abc`, `POST`);
         const res = responseFactory();
 
-        const server = mfaServerFactory();
         server.sendResponse = jest.fn();
         server.handleMFAResend = jest.fn();
         server.handleMFACode = jest.fn();
@@ -267,7 +181,6 @@ describe(`Request routing`, () => {
         const req = requestFactory(`/invalid`, method);
         const res = responseFactory();
 
-        const server = mfaServerFactory();
         server.sendResponse = jest.fn();
         server.handleMFAResend = jest.fn();
         server.handleMFACode = jest.fn();
@@ -286,7 +199,6 @@ describe(`Request routing`, () => {
         const req = requestFactory(method, `POST`);
         const res = responseFactory();
 
-        const server = mfaServerFactory();
         server.sendResponse = jest.fn();
         server.handleMFAResend = jest.fn();
         server.handleMFACode = jest.fn();
@@ -305,7 +217,6 @@ describe(`Server lifecycle`, () => {
     jest.useFakeTimers();
 
     test(`Startup`, () => {
-        const server = mfaServerFactory();
         server.server.listen = jest.fn() as any;
 
         server.startServer();
@@ -315,7 +226,6 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Shutdown`, () => {
-        const server = mfaServerFactory();
         const closeFn = jest.fn() as any;
         server.server.close = closeFn;
 
@@ -326,14 +236,12 @@ describe(`Server lifecycle`, () => {
 
     test(`Send response`, () => {
         const res = responseFactory();
-        const server = mfaServerFactory();
         server.sendResponse(res, 200, `test`);
         expect(res.writeHead).toHaveBeenCalledWith(200, {"Content-Type": `application/json`});
         expect(res.end).toHaveBeenCalledWith(`{"message":"test"}`);
     });
 
     test(`Handle unknown server error`, () => {
-        const server = mfaServerFactory();
         const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
         server.server.emit(`error`, new Error(`some server error`));
 
@@ -341,7 +249,6 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Handle address in use error`, () => {
-        const server = mfaServerFactory();
         const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
         const error = new Error(`Address in use`);
         (error as any).code = `EADDRINUSE`;
@@ -351,7 +258,6 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Handle MFA timeout`, () => {
-        const server = mfaServerFactory();
         server.server.listen = jest.fn() as any;
         server.stopServer = jest.fn();
         server.removeAllListeners(); // On listener event process.exit would be called

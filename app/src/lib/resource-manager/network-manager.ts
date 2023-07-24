@@ -109,16 +109,16 @@ export class NetworkManager {
     }
 
     /**
-     * @returns The currently stored aasp cookie
+     * @returns The currently stored aasp cookie as a single element array
      * @throws An error if no aasp cookie is present
      */
-    get aaspCookie(): string {
+    get aaspCookie(): string[] {
         const aaspCookies = this._resources.cookies.filter(cookie => cookie.key === COOKIE_KEYS.AASP).map(cookie => cookie.value);
-        if (aaspCookies.length != 1) {
+        if (aaspCookies.length !== 1) {
             throw new iCPSError(RES_MANAGER_ERR.NO_AASP_COOKIE);
         }
 
-        return aaspCookies[0];
+        return aaspCookies;
     }
 
     /**

@@ -17,7 +17,7 @@
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["sync"],
+            "args": ["token"],
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",
             ],
@@ -36,7 +36,7 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/test.env"
+            "envFile": "${workspaceFolder}/.vscode/api-test.env"
         }, {
             "name": "Run All Tests",
             "type": "node",
@@ -51,7 +51,7 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/test.env"
+            "envFile": "${workspaceFolder}/.vscode/api-test.env"
         }, {
             "name": "Debug Test",
             "type": "node",
@@ -64,7 +64,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/icloud.test.ts"
+                "test/unit/validator.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"

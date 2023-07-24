@@ -179,11 +179,7 @@ export class iCloudPhotos extends EventEmitter {
             data.resultsLimit = resultsLimit;
         }
 
-        let queryResponse: any;
-
-        await this.queryQueue.add(async () => {
-            queryResponse = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config);
-        });
+        const queryResponse = await this.queryQueue.add(async () => ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config));
 
         const fetchedRecords = queryResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
@@ -225,7 +221,7 @@ export class iCloudPhotos extends EventEmitter {
             },
         }));
 
-        const operationResponse = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config);
+        const operationResponse = await this.queryQueue.add(async () => ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config));
         const fetchedRecords = operationResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)

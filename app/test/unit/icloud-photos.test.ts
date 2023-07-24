@@ -1,160 +1,155 @@
 import {describe, test, expect, jest, beforeEach} from '@jest/globals';
-import {iCloudPhotosFactory} from '../_helpers/icloud.helper';
+import {getICloudCookieHeader, iCloudCookieRequestHeader, iCloudPhotosFactory} from '../_helpers/icloud.helper';
 import {AxiosRequestConfig} from 'axios';
 import * as Config from '../_helpers/_config';
 import * as ICLOUD_PHOTOS from '../../src/lib/icloud/icloud-photos/constants';
-import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
+import {MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
+import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
+import {iCPSError} from '../../src/app/error/error';
+import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
+let mockedResourceManager: MockedResourceManager;
+let mockedICloudPhotos: iCloudPhotos;
+
 beforeEach(() => {
-    prepareResourceManager();
+    mockedResourceManager = prepareResourceManager()!;
+    mockedResourceManager._network.photosUrl = Config.photosDomain;
+    mockedResourceManager._network.pushCookieString(getICloudCookieHeader()[`set-cookie`]);
+    mockedResourceManager._resources.primaryZone = Config.primaryZone;
+    mockedResourceManager._resources.sharedZone = Config.sharedZone;
+
+    mockedICloudPhotos = new iCloudPhotos();
+    mockedICloudPhotos.removeAllListeners();
 });
 
 describe(`Setup iCloud Photos`, () => {
-    test(`Setup successful`, async () => {
-        const iCloudPhotos = iCloudPhotosFactory();
+    const setupURL = `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`;
 
-        iCloudPhotos.ready = Promise.resolve();
-        const axiosResponse = `Success`;
-        const setupCompleteEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
-        iCloudPhotos.auth.processPhotosSetupResponse = jest.fn();
-        iCloudPhotos.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve(axiosResponse));
+    test(`Success`, async () => {
+        mockedICloudPhotos.ready = Promise.resolve();
 
-        await iCloudPhotos.setup();
+        const setupCompleteEvent = spyOnEvent(mockedICloudPhotos, ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
 
-        expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
-            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
-            {},
-            {
-                headers: `headerValues`,
-            },
-        );
-        expect(iCloudPhotos.auth.processPhotosSetupResponse).toHaveBeenCalledWith(axiosResponse);
+        mockedResourceManager._validator.validatePhotosSetupResponse = jest.fn<typeof mockedResourceManager._validator.validatePhotosSetupResponse>();
+        mockedResourceManager._network.applyPhotosSetupResponse = jest.fn<typeof mockedResourceManager._network.applyPhotosSetupResponse>();
+
+        mockedResourceManager._network.mock
+            .onPost(setupURL, {})
+            .reply(200);
+
+        await mockedICloudPhotos.setup();
+
+        expect(mockedResourceManager._validator.validatePhotosSetupResponse).toHaveBeenCalledTimes(1);
+        expect(mockedResourceManager._network.applyPhotosSetupResponse).toHaveBeenCalledTimes(1);
+        expect((mockedResourceManager._network.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
+
         expect(setupCompleteEvent).toHaveBeenCalledTimes(1);
     });
 
     test(`Response validation fails`, async () => {
-        const iCloudPhotos = iCloudPhotosFactory();
+        mockedICloudPhotos.ready = mockedICloudPhotos.getReady();
 
-        iCloudPhotos.ready = iCloudPhotos.getReady();
-        const axiosResponse = `Success`;
-        const errorEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
-        iCloudPhotos.auth.processPhotosSetupResponse = jest.fn(() => {
-            throw new Error();
+        const errorEvent = spyOnEvent(mockedICloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
+
+        mockedResourceManager._validator.validatePhotosSetupResponse = jest.fn<typeof mockedResourceManager._validator.validatePhotosSetupResponse>(() => {
+            throw new iCPSError(VALIDATOR_ERR.SETUP_RESPONSE);
         });
 
-        iCloudPhotos.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve(axiosResponse));
+        mockedResourceManager._network.mock
+            .onPost(setupURL, {})
+            .reply(200);
 
-        await expect(iCloudPhotos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
-
-        expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
-            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
-            {},
-            {
-                headers: `headerValues`,
-            },
-        );
-        expect(iCloudPhotos.auth.processPhotosSetupResponse).toHaveBeenCalledWith(axiosResponse);
+        await expect(mockedICloudPhotos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
         expect(errorEvent).toHaveBeenCalledWith(new Error(`Unexpected error while setting up iCloud Photos`));
     });
 
     test(`Network failure`, async () => {
-        const iCloudPhotos = iCloudPhotosFactory();
+        mockedICloudPhotos.ready = mockedICloudPhotos.getReady();
 
-        iCloudPhotos.ready = iCloudPhotos.getReady();
-        const errorEvent = spyOnEvent(iCloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
-        iCloudPhotos.auth.processPhotosSetupResponse = jest.fn();
+        const errorEvent = spyOnEvent(mockedICloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
 
-        iCloudPhotos.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Network Error`)));
+        mockedResourceManager._network.mock
+            .onPost(setupURL, {})
+            .reply(500);
 
-        await expect(iCloudPhotos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
-
-        expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
-            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`,
-            {},
-            {
-                headers: `headerValues`,
-            },
-        );
-        expect(iCloudPhotos.auth.processPhotosSetupResponse).not.toHaveBeenCalled();
+        await expect(mockedICloudPhotos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
         expect(errorEvent).toHaveBeenCalledWith(new Error(`Unexpected error while setting up iCloud Photos`));
     });
 
     test(`Check indexing state after setup`, () => {
-        const iCloudPhotos = iCloudPhotosFactory(false);
-        iCloudPhotos.checkingIndexingStatus = jest.fn(() => Promise.resolve());
+        mockedICloudPhotos = new iCloudPhotos(); // Doing this so event listeners are maintained
 
-        iCloudPhotos.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
+        mockedICloudPhotos.checkingIndexingStatus = jest.fn<typeof mockedICloudPhotos.checkingIndexingStatus>()
+            .mockResolvedValue();
 
-        expect(iCloudPhotos.checkingIndexingStatus).toHaveBeenCalledTimes(1);
+        mockedICloudPhotos.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
+
+        expect(mockedICloudPhotos.checkingIndexingStatus).toHaveBeenCalledTimes(1);
     });
 
     describe.each([Zones.Primary, Zones.Shared])(`Check indexing state - %o`, zone => {
         test(`Indexing finished`, async () => {
-            const iCloudPhotos = iCloudPhotosFactory();
-
-            iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
-                fields: {
-                    state: {
-                        value: `FINISHED`,
+            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+                .mockResolvedValue([{
+                    fields: {
+                        state: {
+                            value: `FINISHED`,
+                        },
                     },
-                },
-            }]));
+                }]);
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).resolves.toBeUndefined();
+            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).resolves.toBeUndefined();
 
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Indexing in progress with progress`, async () => {
-            const iCloudPhotos = iCloudPhotosFactory();
-
-            iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
-                fields: {
-                    state: {
-                        value: `RUNNING`,
+            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+                .mockResolvedValue([{
+                    fields: {
+                        state: {
+                            value: `RUNNING`,
+                        },
+                        progress: {
+                            value: 20,
+                        },
                     },
-                    progress: {
-                        value: 20,
-                    },
-                },
-            }]));
+                }]);
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
+            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
 
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Indexing in progress without progress`, async () => {
-            const iCloudPhotos = iCloudPhotosFactory();
-
-            iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
-                fields: {
-                    state: {
-                        value: `RUNNING`,
+            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+                .mockResolvedValue([{
+                    fields: {
+                        state: {
+                            value: `RUNNING`,
+                        },
                     },
-                },
-            }]));
+                }]);
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
+            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
 
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Unknown status`, async () => {
-            const iCloudPhotos = iCloudPhotosFactory();
-
-            iCloudPhotos.performQuery = jest.fn(() => Promise.resolve([{
-                fields: {
-                    state: {
-                        value: `UNKNOWN_STATE`,
+            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+                .mockResolvedValue([{
+                    fields: {
+                        state: {
+                            value: `UNKNOWN_STATE`,
+                        },
                     },
-                },
-            }]));
+                }]);
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Unknown indexing state$/);
+            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Unknown indexing state$/);
 
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test.each([
@@ -163,362 +158,232 @@ describe(`Setup iCloud Photos`, () => {
             [[{fields: {}}]],
             [[{fields: {state: {}}}]],
         ])(`Empty query - %o`, async queryResult => {
-            const iCloudPhotos = iCloudPhotosFactory();
+            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+                .mockResolvedValue(queryResult);
 
-            iCloudPhotos.performQuery = jest.fn(() => Promise.resolve(queryResult));
+            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Unable to get indexing state$/);
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Unable to get indexing state$/);
-
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Query failure`, async () => {
-            const iCloudPhotos = iCloudPhotosFactory();
-            iCloudPhotos.performQuery = jest.fn(() => Promise.reject(new Error()));
+            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+                .mockRejectedValue(new Error());
 
-            await expect(iCloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^$/);
+            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^$/);
 
-            expect(iCloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
     });
 });
 
 describe.each([
     {
-        desc: `recordType + filterBy + resultsLimit + desiredKeys`,
-        recordType: `recordType`,
-        filterBy: [{
-            fieldName: `someField`,
-            comparator: `EQUALS`,
-            fieldValue: {
-                value: `someValue`,
-                type: `STRING`,
-            },
-        }],
-        resultsLimit: 2,
-        desiredKeys: [`key1, key2`],
         zone: Zones.Primary,
-        expectedQuery: {
-            desiredKeys: [`key1, key2`],
-            query: {
-                filterBy: [
-                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
-                ],
-                recordType: `recordType`,
-            },
-            resultsLimit: 2,
-            zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
-        },
+        expectedZoneObject: Config.primaryZone,
     }, {
-        desc: `recordType + filterBy + resultsLimit + desiredKeys`,
-        recordType: `recordType`,
-        filterBy: [{
-            fieldName: `someField`,
-            comparator: `EQUALS`,
-            fieldValue: {
-                value: `someValue`,
-                type: `STRING`,
-            },
-        }],
-        resultsLimit: 2,
-        desiredKeys: [`key1, key2`],
         zone: Zones.Shared,
-        expectedQuery: {
-            desiredKeys: [`key1, key2`],
-            query: {
-                filterBy: [
-                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
-                ],
-                recordType: `recordType`,
-            },
-            resultsLimit: 2,
-            zoneID: {ownerRecordName: Config.sharedZone.ownerRecordName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
-        },
-    }, {
-        desc: `recordType + filterBy + resultsLimit`,
-        recordType: `recordType`,
-        filterBy: [{
-            fieldName: `someField`,
-            comparator: `EQUALS`,
-            fieldValue: {
-                value: `someValue`,
-                type: `STRING`,
-            },
-        }],
-        resultsLimit: 2,
-        desiredKeys: undefined,
-        zone: Zones.Primary,
-        expectedQuery: {
-            query: {
-                filterBy: [
-                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
-                ],
-                recordType: `recordType`,
-            },
-            resultsLimit: 2,
-            zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
-        },
-    }, {
-        desc: `recordType + filterBy + resultsLimit`,
-        recordType: `recordType`,
-        filterBy: [{
-            fieldName: `someField`,
-            comparator: `EQUALS`,
-            fieldValue: {
-                value: `someValue`,
-                type: `STRING`,
-            },
-        }],
-        resultsLimit: 2,
-        desiredKeys: undefined,
-        zone: Zones.Shared,
-        expectedQuery: {
-            query: {
-                filterBy: [
-                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
-                ],
-                recordType: `recordType`,
-            },
-            resultsLimit: 2,
-            zoneID: {ownerRecordName: Config.sharedZone.ownerRecordName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
-        },
-    }, {
-        desc: `recordType + filterBy`,
-        recordType: `recordType`,
-        filterBy: [{
-            fieldName: `someField`,
-            comparator: `EQUALS`,
-            fieldValue: {
-                value: `someValue`,
-                type: `STRING`,
-            },
-        }],
-        resultsLimit: undefined,
-        desiredKeys: undefined,
-        zone: Zones.Primary,
-        expectedQuery: {
-            query: {
-                filterBy: [
-                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
-                ],
-                recordType: `recordType`,
-            },
-            zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
-        },
-    }, {
-        desc: `recordType + filterBy`,
-        recordType: `recordType`,
-        filterBy: [{
-            fieldName: `someField`,
-            comparator: `EQUALS`,
-            fieldValue: {
-                value: `someValue`,
-                type: `STRING`,
-            },
-        }],
-        resultsLimit: undefined,
-        desiredKeys: undefined,
-        zone: Zones.Shared,
-        expectedQuery: {
-            query: {
-                filterBy: [
-                    {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
-                ],
-                recordType: `recordType`,
-            },
-            zoneID: {ownerRecordName: Config.sharedZone.ownerRecordName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
-        },
-    }, {
-        desc: `recordType`,
-        recordType: `recordType`,
-        filterBy: undefined,
-        resultsLimit: undefined,
-        desiredKeys: undefined,
-        zone: Zones.Primary,
-        expectedQuery: {
-            query: {
-                recordType: `recordType`,
-            },
-            zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
-        },
-    }, {
-        desc: `recordType`,
-        recordType: `recordType`,
-        filterBy: undefined,
-        resultsLimit: undefined,
-        desiredKeys: undefined,
-        zone: Zones.Shared,
-        expectedQuery: {
-            query: {
-                recordType: `recordType`,
-            },
-            zoneID: {ownerRecordName: Config.sharedZone.ownerName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
-        },
+        expectedZoneObject: Config.sharedZone,
     },
-])(`Perform Query $desc - $zone`, ({recordType, filterBy, resultsLimit, desiredKeys, expectedQuery, zone}) => {
-    test(`Success`, async () => {
-        const iCloudPhotos = iCloudPhotosFactory();
-        const responseRecords = [`recordA`, `recordB`];
-        iCloudPhotos.axios.post = jest.fn(() => Promise.resolve({
-            data: {
-                records: responseRecords,
-            },
-        } as any));
-
-        const result = await iCloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys);
-
-        expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
-            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`,
-            expectedQuery,
-            {headers: `headerValues`, params: {remapEnums: `True`}},
-        );
-        expect(iCloudPhotos.auth.validatePhotosAccount).toHaveBeenCalledWith(zone);
-        expect(result).toEqual(responseRecords);
-    });
-
-    test(`No data returned`, async () => {
-        const iCloudPhotos = iCloudPhotosFactory();
-        iCloudPhotos.axios.post = jest.fn(() => Promise.resolve({
-            data: {},
-        } as any));
-
-        await expect(iCloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Received unexpected query response format$/);
-
-        expect(iCloudPhotos.auth.validatePhotosAccount).toHaveBeenCalledWith(zone);
-        expect(iCloudPhotos.axios.post).toHaveBeenCalledTimes(1);
-    });
-});
-
-describe(`Perform Operation`, () => {
-    test.each([
+])(`$zone`, ({zone, expectedZoneObject}) => {
+    describe.each([
         {
-            _desc: `No records - PrimaryZone`,
-            operation: `someOperation`,
-            fields: {
-                someField: {
+            desc: `recordType + filterBy + resultsLimit + desiredKeys`,
+            recordType: `recordType`,
+            filterBy: [{
+                fieldName: `someField`,
+                comparator: `EQUALS`,
+                fieldValue: {
                     value: `someValue`,
+                    type: `STRING`,
                 },
-            },
-            records: [],
-            zone: Zones.Primary,
-            expectedOperation: {
-                atomic: true,
-                operations: [],
-                zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
+            }],
+            resultsLimit: 2,
+            desiredKeys: [`key1, key2`],
+            expectedQuery: {
+                desiredKeys: [`key1, key2`],
+                query: {
+                    filterBy: [
+                        {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
+                    ],
+                    recordType: `recordType`,
+                },
+                resultsLimit: 2,
+                zoneID: expectedZoneObject,
             },
         }, {
-            _desc: `No records - SharedZone`,
-            operation: `someOperation`,
-            fields: {
-                someField: {
+            desc: `recordType + filterBy + resultsLimit`,
+            recordType: `recordType`,
+            filterBy: [{
+                fieldName: `someField`,
+                comparator: `EQUALS`,
+                fieldValue: {
                     value: `someValue`,
+                    type: `STRING`,
                 },
-            },
-            records: [],
-            zone: Zones.Shared,
-            expectedOperation: {
-                atomic: true,
-                operations: [],
-                zoneID: {ownerRecordName: Config.sharedZone.ownerRecordName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
+            }],
+            resultsLimit: 2,
+            desiredKeys: undefined,
+            expectedQuery: {
+                query: {
+                    filterBy: [
+                        {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
+                    ],
+                    recordType: `recordType`,
+                },
+                resultsLimit: 2,
+                zoneID: expectedZoneObject,
             },
         }, {
-            _desc: `One record - PrimaryZone`,
-            operation: `someOperation`,
-            fields: {
-                someField: {
+            desc: `recordType + filterBy`,
+            recordType: `recordType`,
+            filterBy: [{
+                fieldName: `someField`,
+                comparator: `EQUALS`,
+                fieldValue: {
                     value: `someValue`,
+                    type: `STRING`,
                 },
-            },
-            records: [`recordA`],
-            zone: Zones.Primary,
-            expectedOperation: {
-                atomic: true,
-                operations: [{
-                    operationType: `someOperation`,
-                    record: {
-                        recordName: `recordA`,
-                        recordType: `CPLAsset`,
-                        recordChangeTag: `21h2`,
-                        fields: {
-                            someField: {
-                                value: `someValue`,
-                            },
-                        },
-                    },
-                }],
-                zoneID: {ownerRecordName: Config.primaryZone.ownerRecordName, zoneName: Config.primaryZone.zoneName, zoneType: Config.primaryZone.zoneType},
+            }],
+            resultsLimit: undefined,
+            desiredKeys: undefined,
+            expectedQuery: {
+                query: {
+                    filterBy: [
+                        {comparator: `EQUALS`, fieldName: `someField`, fieldValue: {type: `STRING`, value: `someValue`}},
+                    ],
+                    recordType: `recordType`,
+                },
+                zoneID: expectedZoneObject,
             },
         }, {
-            _desc: `One record - SharedZone`,
-            operation: `someOperation`,
-            fields: {
-                someField: {
-                    value: `someValue`,
+            desc: `recordType`,
+            recordType: `recordType`,
+            filterBy: undefined,
+            resultsLimit: undefined,
+            desiredKeys: undefined,
+            expectedQuery: {
+                query: {
+                    recordType: `recordType`,
                 },
-            },
-            records: [`recordA`],
-            zone: Zones.Shared,
-            expectedOperation: {
-                atomic: true,
-                operations: [{
-                    operationType: `someOperation`,
-                    record: {
-                        recordName: `recordA`,
-                        recordType: `CPLAsset`,
-                        recordChangeTag: `21h2`,
-                        fields: {
-                            someField: {
-                                value: `someValue`,
-                            },
-                        },
-                    },
-                }],
-                zoneID: {ownerRecordName: Config.sharedZone.ownerRecordName, zoneName: Config.sharedZone.zoneName, zoneType: Config.sharedZone.zoneType},
+                zoneID: expectedZoneObject,
             },
         },
-    ])(`Success $_desc`, async ({operation, fields, records, expectedOperation, zone}) => {
-        const iCloudPhotos = iCloudPhotosFactory();
+    ])(`Perform Query $desc`, ({recordType, filterBy, resultsLimit, desiredKeys, expectedQuery}) => {
+        test(`Success`, async () => {
+            const responseRecords = [`recordA`, `recordB`];
 
-        const responseRecords = [`recordA`, `recordB`];
-        iCloudPhotos.axios.post = jest.fn(() => Promise.resolve({
-            data: {
-                records: responseRecords,
+            mockedResourceManager._network.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
+                .reply(200, {
+                    records: responseRecords,
+                });
+
+            const result = await mockedICloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys);
+
+            expect(result).toEqual(responseRecords);
+
+            expect((mockedResourceManager._network.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
+            expect(mockedResourceManager._network.mock.history.post[0].params!.remapEnums).toEqual(`True`);
+        });
+
+        test(`No data returned`, async () => {
+            mockedResourceManager._network.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
+                .reply(200, {});
+
+            await expect(mockedICloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Received unexpected query response format$/);
+        });
+
+        test(`Server Error`, async () => {
+            mockedResourceManager._network.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
+                .reply(500, {});
+
+            await expect(mockedICloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Request failed with status code 500$/);
+        });
+    });
+
+    describe.each([{
+        desc: `No records`,
+        operation: `someOperation`,
+        fields: {
+            someField: {
+                value: `someValue`,
             },
-        } as any));
+        },
+        records: [],
+        expectedOperation: {
+            atomic: true,
+            operations: [],
+            zoneID: expectedZoneObject,
+        },
+    }, {
+        desc: `One record`,
+        operation: `someOperation`,
+        fields: {
+            someField: {
+                value: `someValue`,
+            },
+        },
+        records: [`recordA`],
+        expectedOperation: {
+            atomic: true,
+            operations: [{
+                operationType: `someOperation`,
+                record: {
+                    recordName: `recordA`,
+                    recordType: `CPLAsset`,
+                    recordChangeTag: `21h2`,
+                    fields: {
+                        someField: {
+                            value: `someValue`,
+                        },
+                    },
+                },
+            }],
+            zoneID: expectedZoneObject,
+        },
+    }])(`Perform Operation $desc`, ({operation, fields, records, expectedOperation}) => {
+        test(`Success`, async () => {
+            mockedResourceManager._network.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/modify`, expectedOperation)
+                .reply(200, {
+                    records,
+                });
 
-        const result = await iCloudPhotos.performOperation(zone, operation, fields, records);
+            const result = await mockedICloudPhotos.performOperation(zone, operation, fields, records);
 
-        expect(iCloudPhotos.axios.post).toHaveBeenCalledWith(
-            `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/modify`,
-            expectedOperation,
-            {headers: `headerValues`, params: {remapEnums: `True`}},
-        );
-        expect(result).toEqual(responseRecords);
+            expect(result).toEqual(records);
+
+            expect((mockedResourceManager._network.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
+            expect(mockedResourceManager._network.mock.history.post[0].params!.remapEnums).toEqual(`True`);
+        });
+
+        test.todo(`Without any content`);
+        test.todo(`Only operationType`);
+        test.todo(`Only operationType + recordName`);
+        describe(`With operationType + recordName + fields`, () => {
+            test.todo(`Success`);
+            test.todo(`No data returned`);
+            test.todo(`Network failure`);
+        });
     });
-
-    test.todo(`Without any content`);
-    test.todo(`Only operationType`);
-    test.todo(`Only operationType + recordName`);
-    describe(`With operationType + recordName + fields`, () => {
-        test.todo(`Success`);
-        test.todo(`No data returned`);
-        test.todo(`Network failure`);
-    });
 });
 
-describe(`Fetch records`, () => {
-    // Test invalid extension
-});
+// Describe(`Fetch records`, () => {
+//     // Test invalid extension
+// });
 
-describe(`Fetch albums`, () => {
+// describe(`Fetch albums`, () => {
 
-});
+// });
 
-describe(`Download asset`, () => {
-    test.todo(`Success`);
-    test.todo(`No download url`);
-});
+// describe(`Download asset`, () => {
+//     test.todo(`Success`);
+//     test.todo(`No download url`);
+// });
 
-describe(`Delete asset`, () => {
-    test.todo(`Success`);
-});
+// describe(`Delete asset`, () => {
+//     test.todo(`Success`);
+// });

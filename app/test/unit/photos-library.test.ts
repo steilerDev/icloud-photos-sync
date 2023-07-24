@@ -55,9 +55,7 @@ test(`Should use existing directories and not overwrite content`, () => {
 
         },
     });
-    const opts = {
-        dataDir: Config.defaultConfig.dataDir,
-    };
+
     const _library = new PhotosLibrary();
     expect(fs.existsSync(Config.defaultConfig.dataDir)).toBe(true);
     expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `testFile`)));

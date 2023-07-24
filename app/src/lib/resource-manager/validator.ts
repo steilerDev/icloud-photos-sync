@@ -27,16 +27,34 @@ export class Validator {
      */
     _resourceFileValidator: Ajv.ValidateFunction<ResourceFile> = new Ajv.default({verbose: true, logger: this.logger}).compile<ResourceFile>(ResourceFileSchema);
 
+    /**
+     * Validator for the signin response schema
+     */
     _signinResponseValidator: Ajv.ValidateFunction<SigninResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<SigninResponse>(SigninResponseSchema);
 
+    /**
+     * Validator for MFA Device Response schema
+     */
     _resendMFADeviceResponseValidator: Ajv.ValidateFunction<ResendMFADeviceResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<ResendMFADeviceResponse>(ResendMFADeviceResponseSchema);
 
+    /**
+     * Validator for MFA Phone Response schema
+     */
     _resendMFAPhoneResponseValidator: Ajv.ValidateFunction<ResendMFAPhoneResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<ResendMFAPhoneResponse>(ResendMFAPhoneResponseSchema);
 
+    /**
+     * Validator for the trust response schema
+     */
     _trustResponseValidator: Ajv.ValidateFunction<TrustResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<TrustResponse>(TrustResponseSchema);
 
+    /**
+     * Validator for the iCloud setup response schema
+     */
     _setupResponseValidator: Ajv.ValidateFunction<SetupResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<SetupResponse>(SetupResponseSchema);
 
+    /**
+     * Validator for the iCloud photos setup response schema
+     */
     _photosSetupResponseValidator: Ajv.ValidateFunction<PhotosSetupResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<PhotosSetupResponse>(PhotosSetupResponseSchema);
 
     /**
@@ -53,15 +71,15 @@ export class Validator {
             return data;
         }
 
-        if(validator.errors) {
+        if (validator.errors) {
             throw new iCPSError(errorStruct)
                 .addMessage(`${validator.errors![0].message} (${validator.errors![0].instancePath})`)
                 .addContext(`data`, data);
-        } else {
-            throw new iCPSError(errorStruct)
-                .addMessage(`Additional validations failed`)
-                .addContext(`data`, data);
         }
+
+        throw new iCPSError(errorStruct)
+            .addMessage(`Additional validations failed`)
+            .addContext(`data`, data);
     }
 
     /**

@@ -5,9 +5,9 @@ import * as Config from './_config';
 import {iCPSAppOptions} from '../../src/app/factory';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import MockAdapter from 'axios-mock-adapter';
-import { NetworkManager } from '../../src/lib/resource-manager/network-manager';
-import { NetworkResources } from '../../src/lib/resource-manager/network';
-import { iCPSEvent } from '../../src/lib/resource-manager/events';
+import {NetworkManager} from '../../src/lib/resource-manager/network-manager';
+import {NetworkResources} from '../../src/lib/resource-manager/network';
+import {iCPSEvent} from '../../src/lib/resource-manager/events';
 
 export type MockedNetworkManager = NetworkManager & {
     mock: MockAdapter;
@@ -15,6 +15,7 @@ export type MockedNetworkManager = NetworkManager & {
 
 export type MockedResourceManager = ResourceManager & {
     spyOnEvent: (event: iCPSEvent) => jest.Mock;
+    _network: MockedNetworkManager;
 }
 
 /**
@@ -22,7 +23,7 @@ export type MockedResourceManager = ResourceManager & {
  * @param initiate - Whether to create a new instance of the ResourceManager. If false, the ResourceManager singleton will be reset, but not re-initialized and a resource file will be created through mockfs.
  * @param appOptions - The configuration to use when creating a new instance of the ResourceManager
  */
-export function prepareResourceManager(initiate: boolean = true, appOptions: iCPSAppOptions = Config.defaultConfig) {
+export function prepareResourceManager(initiate: boolean = true, appOptions: iCPSAppOptions = Config.defaultConfig): MockedResourceManager | undefined {
     ResourceManager._instance = undefined;
 
     ResourceManager.prototype.readResourceFile = jest.fn<typeof ResourceManager.prototype.readResourceFile>()
@@ -37,8 +38,10 @@ export function prepareResourceManager(initiate: boolean = true, appOptions: iCP
     if (initiate) {
         ResourceManager.setup(appOptions);
         (ResourceManager.network as MockedNetworkManager).mock = new MockAdapter(ResourceManager.network._axios, {onNoMatch: `throwException`});
-        (ResourceManager.instance as MockedResourceManager).spyOnEvent = (event) => spyOnEvent(ResourceManager.instance, event)
+        (ResourceManager.instance as MockedResourceManager).spyOnEvent = event => spyOnEvent(ResourceManager.instance, event);
     }
+
+    return ResourceManager._instance as MockedResourceManager | undefined;
 }
 
 export function spyOnEvent(object: EventEmitter, eventName: string): any {

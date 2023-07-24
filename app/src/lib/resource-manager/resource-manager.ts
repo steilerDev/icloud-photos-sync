@@ -32,14 +32,16 @@ export class ResourceManager extends EventEmitter {
      * Prepares the ResourceManager singleton.
      * This function should only be called once.
      * @param appOptions - The parsed app options
+     * @returns The singleton instance of the ResourceManager
      * @throws If the function is called with an already initiated singleton
      */
-    static setup(appOptions: iCPSAppOptions) {
+    static setup(appOptions: iCPSAppOptions): ResourceManager {
         if (this._instance) {
             throw new iCPSError(RES_MANAGER_ERR.ALREADY_INITIATED);
         }
 
         this._instance = new ResourceManager(appOptions);
+        return this._instance;
     }
 
     /**
@@ -534,11 +536,11 @@ export class ResourceManager extends EventEmitter {
      * @throws If no shared zone is set
      */
     get _sharedZone(): PhotosAccountZone {
-        if (!this._resources.primaryZone) {
-            throw new iCPSError(RES_MANAGER_ERR.NO_PRIMARY_ZONE);
+        if (!this._resources.sharedZone) {
+            throw new iCPSError(RES_MANAGER_ERR.NO_SHARED_ZONE);
         }
 
-        return this._resources.primaryZone;
+        return this._resources.sharedZone;
     }
 
     /**

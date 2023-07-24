@@ -145,52 +145,6 @@ export class MFAMethod {
     }
 
     /**
-     * Will take the Axios Error returned from the backend, and provide a user-readable string
-     * @param err - The error returned
-     * @returns An iCPSError indicating the underlying issue
-     */
-    processResendError(err: any): iCPSError {
-        if (err.name !== `AxiosError` || !err.response) {
-            return new iCPSError(MFA_ERR.NO_RESPONSE)
-                .addCause(err);
-        }
-
-        if (err.response.status === 403) {
-            return new iCPSError(MFA_ERR.TIMEOUT)
-                .addCause(err);
-        }
-
-        if (err.response.status === 412) {
-            if (!err.response.data) {
-                return new iCPSError(MFA_ERR.PRECONDITION_FAILED)
-                    .addCause(err);
-            }
-
-            if (this.type === MFAMethodType.SMS || this.type === MFAMethodType.VOICE) {
-                const trustedPhones = (err.response.data as any).trustedPhoneNumbers;
-                if (!trustedPhones
-                    || !Array.isArray(trustedPhones)
-                    || trustedPhones.length === 0) {
-                    return new iCPSError(MFA_ERR.NO_TRUSTED_NUMBERS)
-                        .addContext(`response.data`, err.response.data)
-                        .addCause(err);
-                }
-
-                if (!trustedPhones.some(number => number.id === this.numberId)) {
-                    return new iCPSError(MFA_ERR.TRUSTED_NUMBER_NOT_AVAILABLE)
-                        .addMessage(`available numbers:\n${trustedPhones.map(number => `- ${number.id}: ${number.numberWithDialCode}`).join(`\n`)}`)
-                        .addContext(`response.data`, err.response.data)
-                        .addCause(err);
-                }
-            }
-        }
-
-        return new iCPSError(MFA_ERR.UNKNOWN_RESEND_ERROR)
-            .addMessage(`method ${this}`)
-            .addCause(err);
-    }
-
-    /**
      * @param mfa - The MFA code, that should be send for validation
      * @returns The appropriate payload for entering the code, given the currently selected MFA Method
      */

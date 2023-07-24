@@ -135,7 +135,6 @@ export class iCloud extends EventEmitter {
             if (response.status === 200) {
                 this.logger.debug(`Response status is 200, authentication successful - device trusted`);
                 this.emit(ICLOUD.EVENTS.TRUSTED);
-                return;
             }
 
             // This should never happen
@@ -202,7 +201,7 @@ export class iCloud extends EventEmitter {
                 this.logger.info(`Successfully requested new MFA code using ${validatedResponse.data.trustedDeviceCount} trusted device(s)`);
             }
         } catch (err) {
-            this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_FAILED).setWarning().addCause(method.processResendError(err)));
+            this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_FAILED).setWarning().addCause(err));
         }
     }
 
