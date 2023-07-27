@@ -1,7 +1,6 @@
 /**
  * This file holds constants relevant to the networking layer
  */
-
 import {Cookie} from "tough-cookie";
 
 /**
@@ -13,7 +12,7 @@ export const CLIENT_ID = `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde
  */
 export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`;
 /**
- * Client information shared with the iCloud backend
+ * Client information shared with the iCloud backend based on the user agent
  */
 export const CLIENT_INFO = JSON.stringify({
     U: USER_AGENT,
@@ -140,6 +139,7 @@ export type NetworkResources = {
 
 /**
  * The expected response format for the signin request
+ * @see {@link ENDPOINTS.AUTH.PATH.SIGNIN}  
  */
 export type SigninResponse = {
     /**
@@ -169,6 +169,7 @@ export type SigninResponse = {
 
 /**
  * The expected response format for the MFA resend request on a trusted device
+ * @see {@link ENDPOINTS.AUTH.PATH.MFA.DEVICE_RESEND}  
  */
 export type ResendMFADeviceResponse = {
     data: {
@@ -190,13 +191,14 @@ export type ResendMFADeviceResponse = {
 
 /**
  * The expected response format for the MFA resend request on a trusted phone number
+ * @see {@link ENDPOINTS.AUTH.PATH.MFA.PHONE_RESEND}  
  */
 export type ResendMFAPhoneResponse = {
     data: PhoneNumberVerification
 }
 
 /**
- * Information about phone number verification
+ * Information about phone number verification used in MFA resend responses
  */
 export type PhoneNumberVerification = {
     /**
@@ -211,7 +213,7 @@ export type PhoneNumberVerification = {
 }
 
 /**
- * Object representing a trusted phone number
+ * Object representing a trusted phone number used in MFA resend responses
  */
 export type TrustedPhoneNumber = {
     /**
@@ -238,7 +240,7 @@ export type TrustedPhoneNumber = {
 }
 
 /**
- * Format of the expected security code
+ * Format of the expected security code used in MFA resend responses
  */
 export type SecurityCodeFormat = {
     length: 6,
@@ -248,6 +250,10 @@ export type SecurityCodeFormat = {
     securityCodeCooldown: false
 }
 
+/**
+ * The expected response format for the device trust request
+ * @see {@link ENDPOINTS.AUTH.PATH.TRUST}  
+ */
 export type TrustResponse = {
     headers: {
         /**
@@ -263,6 +269,10 @@ export type TrustResponse = {
     }
 }
 
+/**
+ * The expected response format for the account setup request
+ * @see {@link ENDPOINTS.SETUP.PATH.ACCOUNT} 
+ */
 export type SetupResponse = {
     headers: {
         /**
@@ -299,6 +309,9 @@ export type SetupResponse = {
     }
 }
 
+/**
+ * The expected response format for the photos setup request
+ */
 export type PhotosSetupResponse = {
     data: {
         /**
@@ -318,6 +331,9 @@ export type PhotosSetupResponse = {
     }
 }
 
+/**
+ * Response zone object from photos setup response
+ */
 export type PhotosSetupResponseZone = {
     zoneID: {
         /**

@@ -19,24 +19,9 @@ import {ResourceManager} from '../../src/lib/resource-manager/resource-manager.j
 jest.setTimeout(30 * 1000);
 
 describe(`API E2E Tests`, () => {
-    let resourceManager: ResourceManager;
-
-    beforeAll(() => {
-        // Initiate resource manager once
-        resourceManager = prepareResourceManagerForApiTests();
-    });
-
-    beforeEach(() => {
-        mockfs({
-            [Config.defaultConfig.dataDir]: {},
-        });
-    });
-
-    afterEach(() => {
-        mockfs.restore();
-    });
 
     test(`API Prerequisite`, () => {
+        const resourceManager = prepareResourceManagerForApiTests();
         expect(resourceManager._resources.username).toBeDefined();
         expect(resourceManager._resources.username.length).toBeGreaterThan(0);
         expect(resourceManager._resources.password).toBeDefined();
@@ -46,9 +31,17 @@ describe(`API E2E Tests`, () => {
     });
 
     describe(`Login flow`, () => {
+        let resourceManager: ResourceManager;
+
+        beforeEach(() => {
+            resourceManager = prepareResourceManagerForApiTests();
+            mockfs({
+                [Config.defaultConfig.dataDir]: {},
+            });
+        });
+    
         afterEach(() => {
-            // Because we are overwriting those in the upcoming tests
-            applyEnvSecrets(resourceManager);
+            mockfs.restore();
         });
 
         test(`Invalid username/password`, async () => {
@@ -74,17 +67,29 @@ describe(`API E2E Tests`, () => {
         });
 
         test(`Success`, async () => {
-            const _icloud = new iCloud();
-            await expect(_icloud.authenticate()).resolves.not.toThrow();
+            const icloud = new iCloud();
+            await expect(icloud.authenticate()).resolves.not.toThrow();
         });
     });
 
     describe(`Logged in test cases`, () => {
         let icloud: iCloud;
+        let resourceManager: ResourceManager;
 
         beforeAll(async () => {
+            resourceManager = prepareResourceManagerForApiTests();
             icloud = new iCloud();
             await icloud.authenticate();
+        });
+
+        beforeEach(() => {
+            mockfs({
+                [Config.defaultConfig.dataDir]: {},
+            });
+        });
+    
+        afterEach(() => {
+            mockfs.restore();
         });
 
         describe(`Fetching records`, () => {

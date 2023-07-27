@@ -6,13 +6,13 @@ import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import {getLogger} from '../../logger.js';
-import {convertCPLAssets} from '../../sync-engine/helpers/fetchAndLoad-helpers.js';
 import {HANDLER_EVENT} from '../../../app/event/error-handler.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
 import PQueue from 'p-queue';
 import {ResourceManager} from '../../resource-manager/resource-manager.js';
 import {ENDPOINTS} from '../../resource-manager/network.js';
+import { SyncEngineHelper } from '../../sync-engine/helper.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -328,7 +328,7 @@ export class iCloudPhotos extends EventEmitter {
 
                     const albumAssets: AlbumAssets = {};
 
-                    convertCPLAssets(albumCPLAssets, albumCPLMasters).forEach(asset => {
+                    SyncEngineHelper.convertCPLAssets(albumCPLAssets, albumCPLMasters).forEach(asset => {
                         /**
                          * @remarks this probably needs to be more complex to support shared library folders once available from the API
                          */
