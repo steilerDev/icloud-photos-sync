@@ -1,4 +1,3 @@
-import mockfs from 'mock-fs';
 import {MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import {describe, test, beforeEach, expect, jest} from '@jest/globals';
 import * as ICLOUD from '../../src/lib/icloud/constants';

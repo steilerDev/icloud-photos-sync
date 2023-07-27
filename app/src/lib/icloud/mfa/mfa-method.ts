@@ -1,5 +1,3 @@
-import {MFA_ERR} from '../../../app/error/error-codes.js';
-import {iCPSError} from '../../../app/error/error.js';
 import {ENDPOINTS} from '../../resource-manager/network.js';
 
 /**

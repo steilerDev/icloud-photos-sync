@@ -5,6 +5,10 @@
 CMD="npx ts-json-schema-generator -f tsconfig.json"
 TARGET_FOLDER="src/lib/resource-manager/schemas"
 
+if [ ! -d "$TARGET_FOLDER" ]; then
+  mkdir -p "$TARGET_FOLDER"
+fi
+
 $CMD --type ResourceFile --path src/lib/resource-manager/resources.ts > ${TARGET_FOLDER}/resource-file.json
 $CMD --additional-properties true --type SigninResponse --path src/lib/resource-manager/network.ts > ${TARGET_FOLDER}/signin-response.json
 $CMD --additional-properties true --type ResendMFADeviceResponse --path src/lib/resource-manager/network.ts > ${TARGET_FOLDER}/resend-mfa-device-response.json

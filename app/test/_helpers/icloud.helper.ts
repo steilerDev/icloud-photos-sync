@@ -1,7 +1,5 @@
 import {iCloud} from "../../src/lib/icloud/icloud";
-import {jest} from "@jest/globals";
 import * as Config from './_config';
-import {expectedMFAHeaders} from "./icloud-mfa.helper";
 import {addHoursToCurrentDate, getDateInThePast} from "./_general";
 import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
 import {ResourceManager} from "../../src/lib/resource-manager/resource-manager";

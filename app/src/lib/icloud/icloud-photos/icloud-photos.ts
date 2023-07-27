@@ -12,7 +12,7 @@ import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
 import PQueue from 'p-queue';
 import {ResourceManager} from '../../resource-manager/resource-manager.js';
 import {ENDPOINTS} from '../../resource-manager/network.js';
-import { SyncEngineHelper } from '../../sync-engine/helper.js';
+import {SyncEngineHelper} from '../../sync-engine/helper.js';
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there

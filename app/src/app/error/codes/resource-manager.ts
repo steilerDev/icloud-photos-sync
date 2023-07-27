@@ -11,10 +11,6 @@ export const ALREADY_INITIATED: ErrorStruct = buildErrorStruct(
     name, prefix, `ALREADY_INITIATED`, `Resource Manager has already been initiated`,
 );
 
-export const UNABLE_TO_LOAD_FILE: ErrorStruct = buildErrorStruct(
-    name, prefix, `UNABLE_TO_LOAD_FILE`, `Unable to load resource file`,
-);
-
 export const UNABLE_TO_WRITE_FILE: ErrorStruct = buildErrorStruct(
     name, prefix, `UNABLE_TO_WRITE_FILE`, `Unable to write resource file`,
 );

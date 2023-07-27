@@ -1,4 +1,3 @@
-import mockfs from 'mock-fs';
 import {jest} from '@jest/globals';
 import EventEmitter from 'events';
 import * as Config from './_config';
@@ -6,7 +5,6 @@ import {iCPSAppOptions} from '../../src/app/factory';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import MockAdapter from 'axios-mock-adapter';
 import {NetworkManager} from '../../src/lib/resource-manager/network-manager';
-import {NetworkResources} from '../../src/lib/resource-manager/network';
 import {iCPSEvent} from '../../src/lib/resource-manager/events';
 
 export type MockedNetworkManager = NetworkManager & {

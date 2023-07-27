@@ -6,15 +6,15 @@ import {Cookie} from "tough-cookie";
 /**
  * Hard coded client id, extracted from previous requests
  */
-export const CLIENT_ID = `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d`;
+const CLIENT_ID = `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d`;
 /**
  * User Agent this CLI is using. Emulating a Firefox Browser
  */
-export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`;
+const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`;
 /**
  * Client information shared with the iCloud backend based on the user agent
  */
-export const CLIENT_INFO = JSON.stringify({
+const CLIENT_INFO = JSON.stringify({
     U: USER_AGENT,
     L: `en-US`,
     Z: `GMT+01:00`,
@@ -139,7 +139,7 @@ export type NetworkResources = {
 
 /**
  * The expected response format for the signin request
- * @see {@link ENDPOINTS.AUTH.PATH.SIGNIN}  
+ * @see {@link ENDPOINTS.AUTH.PATH.SIGNIN}
  */
 export type SigninResponse = {
     /**
@@ -169,7 +169,7 @@ export type SigninResponse = {
 
 /**
  * The expected response format for the MFA resend request on a trusted device
- * @see {@link ENDPOINTS.AUTH.PATH.MFA.DEVICE_RESEND}  
+ * @see {@link ENDPOINTS.AUTH.PATH.MFA.DEVICE_RESEND}
  */
 export type ResendMFADeviceResponse = {
     data: {
@@ -191,7 +191,7 @@ export type ResendMFADeviceResponse = {
 
 /**
  * The expected response format for the MFA resend request on a trusted phone number
- * @see {@link ENDPOINTS.AUTH.PATH.MFA.PHONE_RESEND}  
+ * @see {@link ENDPOINTS.AUTH.PATH.MFA.PHONE_RESEND}
  */
 export type ResendMFAPhoneResponse = {
     data: PhoneNumberVerification
@@ -252,7 +252,7 @@ export type SecurityCodeFormat = {
 
 /**
  * The expected response format for the device trust request
- * @see {@link ENDPOINTS.AUTH.PATH.TRUST}  
+ * @see {@link ENDPOINTS.AUTH.PATH.TRUST}
  */
 export type TrustResponse = {
     headers: {
@@ -271,7 +271,7 @@ export type TrustResponse = {
 
 /**
  * The expected response format for the account setup request
- * @see {@link ENDPOINTS.SETUP.PATH.ACCOUNT} 
+ * @see {@link ENDPOINTS.SETUP.PATH.ACCOUNT}
  */
 export type SetupResponse = {
     headers: {

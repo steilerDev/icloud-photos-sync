@@ -4,7 +4,7 @@ import {iCPSError} from "../../app/error/error.js";
 import {CPLAlbum, CPLAsset, CPLMaster} from "../icloud/icloud-photos/query-parser.js";
 import {Album} from "../photos-library/model/album.js";
 import {Asset, AssetType} from "../photos-library/model/asset.js";
-import { PEntity, PLibraryEntities, PLibraryProcessingQueues } from "../photos-library/model/photos-entity.js";
+import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../photos-library/model/photos-entity.js";
 
 /**
  * This object exposes various static helpers required to perform a sync
@@ -13,28 +13,28 @@ export const SyncEngineHelper = {
     /**
      * @see {@link convertCPLAlbums}
      */
-    convertCPLAlbums: convertCPLAlbums,
+    convertCPLAlbums,
     /**
      * @see {@link convertCPLAssets}
      */
-    convertCPLAssets: convertCPLAssets,
+    convertCPLAssets,
     /**
      * @see {@link sortQueue}
      */
-    sortQueue: sortQueue,
+    sortQueue,
     /**
      * @see {@link compareQueueElements}
      */
-    compareQueueElements: compareQueueElements,
+    compareQueueElements,
     /**
      * @see {@link getProcessingQueues}
      */
-    getProcessingQueues: getProcessingQueues,
+    getProcessingQueues,
     /**
      * @see {@link resolveHierarchicalDependencies}
      */
-    resolveHierarchicalDependencies: resolveHierarchicalDependencies,
-}
+    resolveHierarchicalDependencies,
+};
 
 /**
  * Matches CPLAsset/CPLMaster pairs and parses their associated Asset(s)
@@ -135,26 +135,26 @@ function compareQueueElements(fullQueue: Album[], a: Album, b: Album): number {
  */
 function getProcessingQueues<T>(remoteEntities: PEntity<T>[], _localEntities: PLibraryEntities<T>): PLibraryProcessingQueues<T> {
     const localEntities = {..._localEntities};
-    //this.logger.debug(`Getting processing queues`);
+    // This.logger.debug(`Getting processing queues`);
     const toBeAdded: T[] = [];
     const toBeKept: T[] = [];
     remoteEntities.forEach(remoteEntity => {
         const localEntity = localEntities[remoteEntity.getUUID()];
         if (!localEntity || !remoteEntity.equal(localEntity)) {
             // No local entity OR local entity does not match remote entity -> Remote asset will be added & local asset will not be removed from deletion queue
-            //this.logger.debug(`Adding new remote entity ${remoteEntity.getDisplayName()}`);
+            // this.logger.debug(`Adding new remote entity ${remoteEntity.getDisplayName()}`);
             // Making sure entities have all relevant properties
             toBeAdded.push(remoteEntity.apply(localEntity));
         } else {
             // Local asset matches remote asset, nothing to do, but preventing local asset to be deleted
-            //this.logger.debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
+            // this.logger.debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
             toBeKept.push(remoteEntity.apply(localEntity));
             delete localEntities[remoteEntity.getUUID()];
         }
     });
     // The original library should only hold those records, that have not been referenced by the remote state, removing them
     const toBeDeleted = Object.values(localEntities);
-    //this.logger.debug(`Adding ${toBeAdded.length} remote entities, removing ${toBeDeleted.length} local entities, keeping ${toBeKept.length} local entities`);
+    // This.logger.debug(`Adding ${toBeAdded.length} remote entities, removing ${toBeDeleted.length} local entities, keeping ${toBeKept.length} local entities`);
     return [toBeDeleted, toBeAdded, toBeKept];
 }
 
@@ -165,7 +165,7 @@ function getProcessingQueues<T>(remoteEntities: PEntity<T>[], _localEntities: PL
  * @returns Updated processing queues with resolved hierarchical dependencies, ready for processing
  */
 function resolveHierarchicalDependencies(queues: PLibraryProcessingQueues<Album>, localAlbumEntities: PLibraryEntities<Album>): PLibraryProcessingQueues<Album> {
-    //this.logger.debug(`Resolving hierarchical dependencies in album processing queues...`);
+    // This.logger.debug(`Resolving hierarchical dependencies in album processing queues...`);
     const toBeDeleted = queues[0];
     const toBeAdded = queues[1];
     let toBeKept = queues[2];
@@ -178,7 +178,7 @@ function resolveHierarchicalDependencies(queues: PLibraryProcessingQueues<Album>
     toBeKept.forEach((keptAlbum, index) => {
         // Check if any of the deleted is an ancestor of the kept album
         if (toBeDeleted.some(deletedAlbum => keptAlbum.hasAncestor(deletedAlbum, localAlbums))) {
-            //this.logger.debug(`Found hierarchical dependency for album ${keptAlbum.getDisplayName()}`);
+            // This.logger.debug(`Found hierarchical dependency for album ${keptAlbum.getDisplayName()}`);
             // This means that this kept album actually needs to be deleted & added
             toBeDeleted.push(keptAlbum);
             toBeAdded.push(keptAlbum);

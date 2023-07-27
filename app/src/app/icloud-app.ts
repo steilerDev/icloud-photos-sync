@@ -98,7 +98,7 @@ export class DaemonApp extends iCPSApp {
 /**
  * This is the base application class which will setup and manage the iCloud connection and local Photos Library
  */
-export abstract class iCloudApp extends iCPSApp {
+abstract class iCloudApp extends iCPSApp {
     /**
      * This sessions' iCloud object
      */

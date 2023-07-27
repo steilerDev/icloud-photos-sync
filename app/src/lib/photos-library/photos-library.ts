@@ -14,7 +14,7 @@ import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
 import {ResourceManager} from '../resource-manager/resource-manager.js';
 
-export type PathTuple = [namePath: string, uuidPath: string]
+type PathTuple = [namePath: string, uuidPath: string]
 
 /**
  * This class holds the local data structure

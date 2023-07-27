@@ -1,6 +1,5 @@
 import {describe, test, expect, jest, beforeEach} from '@jest/globals';
-import {getICloudCookieHeader, iCloudCookieRequestHeader, iCloudPhotosFactory} from '../_helpers/icloud.helper';
-import {AxiosRequestConfig} from 'axios';
+import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
 import * as Config from '../_helpers/_config';
 import * as ICLOUD_PHOTOS from '../../src/lib/icloud/icloud-photos/constants';
 import {MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';

@@ -63,10 +63,6 @@ export const LOCK_ACQUISITION: ErrorStruct = buildErrorStruct(
     name, prefix, `LOCK_ACQUISITION`, `Unable to acquire library lock`,
 );
 
-export const LOCK_RELEASE: ErrorStruct = buildErrorStruct(
-    name, prefix, `LOCK_RELEASE`, `Unable to release library lock`,
-);
-
 export const LOCKED: ErrorStruct = buildErrorStruct(
     name, prefix, `LOCKED`, `Library locked. Use --force (or FORCE env variable) to forcefully remove the lock`,
 );

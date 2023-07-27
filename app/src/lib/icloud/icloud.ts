@@ -1,4 +1,4 @@
-import {AxiosError, AxiosRequestConfig} from 'axios';
+import {AxiosRequestConfig} from 'axios';
 import EventEmitter from 'events';
 import {MFAServer} from './mfa/mfa-server.js';
 import * as ICLOUD from './constants.js';
@@ -11,7 +11,6 @@ import {iCPSError} from '../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
 import {ResourceManager} from '../resource-manager/resource-manager.js';
 import {ENDPOINTS, HEADER} from '../resource-manager/network.js';
-import {Validator} from '../resource-manager/validator.js';
 
 /**
  * This class holds the iCloud connection

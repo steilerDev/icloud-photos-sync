@@ -5,14 +5,14 @@ import * as SYNC_ENGINE from './constants.js';
 import {Asset} from '../photos-library/model/asset.js';
 import {Album, AlbumType} from '../photos-library/model/album.js';
 import PQueue from 'p-queue';
-import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
+import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
 import {getLogger} from '../logger.js';
 
 import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
 import {ResourceManager} from '../resource-manager/resource-manager.js';
-import { SyncEngineHelper } from './helper.js';
-import { HANDLER_EVENT } from '../../app/event/error-handler.js';
+import {SyncEngineHelper} from './helper.js';
+import {HANDLER_EVENT} from '../../app/event/error-handler.js';
 
 /**
  * This class handles the photos sync

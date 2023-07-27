@@ -18,14 +18,14 @@ import {ResourceManager} from "../../lib/resource-manager/resource-manager.js";
 /**
  * The InfluxLineProtocol field set type
  */
-export type InfluxLineProtocolFieldSet = {
+type InfluxLineProtocolFieldSet = {
     [fieldKey: string]: string
 }
 
 /**
  * The InfluxLineProtocol tag set type
  */
-export type InfluxLineProtocolTagSet = {
+type InfluxLineProtocolTagSet = {
     [tagKey: string]: string
 }
 
@@ -88,7 +88,7 @@ const FIELDS = {
 /**
  * This class represents a measurement point using the Influx Line Protocol
  */
-export class InfluxLineProtocolPoint {
+class InfluxLineProtocolPoint {
     /**
      * Default logger for the class
      */

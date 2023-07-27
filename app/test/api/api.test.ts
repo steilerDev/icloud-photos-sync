@@ -9,7 +9,7 @@ import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
 import expectedMastersAlbum from "../_data/api.expected.album-cpl-masters.json";
 import expectedAssetsAlbum from "../_data/api.expected.album-cpl-assets.json";
 import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
-import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData, prepareResourceManagerForApiTests, applyEnvSecrets} from '../_helpers/api.helper';
+import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData, prepareResourceManagerForApiTests} from '../_helpers/api.helper';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder.js';
@@ -19,7 +19,6 @@ import {ResourceManager} from '../../src/lib/resource-manager/resource-manager.j
 jest.setTimeout(30 * 1000);
 
 describe(`API E2E Tests`, () => {
-
     test(`API Prerequisite`, () => {
         const resourceManager = prepareResourceManagerForApiTests();
         expect(resourceManager._resources.username).toBeDefined();
@@ -39,7 +38,7 @@ describe(`API E2E Tests`, () => {
                 [Config.defaultConfig.dataDir]: {},
             });
         });
-    
+
         afterEach(() => {
             mockfs.restore();
         });
@@ -74,10 +73,9 @@ describe(`API E2E Tests`, () => {
 
     describe(`Logged in test cases`, () => {
         let icloud: iCloud;
-        let resourceManager: ResourceManager;
 
         beforeAll(async () => {
-            resourceManager = prepareResourceManagerForApiTests();
+            prepareResourceManagerForApiTests();
             icloud = new iCloud();
             await icloud.authenticate();
         });
@@ -87,7 +85,7 @@ describe(`API E2E Tests`, () => {
                 [Config.defaultConfig.dataDir]: {},
             });
         });
-    
+
         afterEach(() => {
             mockfs.restore();
         });

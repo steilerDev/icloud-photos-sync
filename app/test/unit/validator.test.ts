@@ -1,6 +1,5 @@
 import {describe, test, expect, beforeEach} from '@jest/globals';
 import {Validator} from '../../src/lib/resource-manager/validator';
-import {ResourceFile} from '../../src/lib/resource-manager/resources';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {ResendMFADeviceResponse, ResendMFAPhoneResponse} from '../../src/lib/resource-manager/network';
 

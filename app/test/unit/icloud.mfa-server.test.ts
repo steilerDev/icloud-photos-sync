@@ -1,10 +1,10 @@
 
-import {expect, describe, test, jest, beforeEach, afterEach} from '@jest/globals';
+import {expect, describe, test, jest, beforeEach} from '@jest/globals';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 import {EVENTS} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
-import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
+import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import {MFAServer, MFA_SERVER_ENDPOINTS, MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
 

@@ -3,7 +3,7 @@ import {ErrorStruct, ERR_UNKNOWN} from "./error-codes.js";
 /**
  * Severity of the error
  */
-export type Severity = `WARN` | `FATAL`
+type Severity = `WARN` | `FATAL`
 
 /**
  * Base class for this tool's error type

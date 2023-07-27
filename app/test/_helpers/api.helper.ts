@@ -4,11 +4,9 @@ import {jest} from '@jest/globals';
 import {CPLAlbum, CPLAsset, CPLMaster} from "../../src/lib/icloud/icloud-photos/query-parser";
 import * as Config from './_config';
 import path from "path";
-import {prepareResourceManager} from "./_general";
 import {ResourceManager} from "../../src/lib/resource-manager/resource-manager";
 
 export function prepareResourceManagerForApiTests(): ResourceManager {
-
     ResourceManager._instance = undefined;
 
     ResourceManager.prototype.readResourceFile = jest.fn<typeof ResourceManager.prototype.readResourceFile>()

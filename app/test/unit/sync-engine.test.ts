@@ -1,13 +1,12 @@
 import mockfs from 'mock-fs';
 import {describe, test, jest, expect, afterEach, beforeEach} from '@jest/globals';
 import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
-import {SyncEngine} from '../../src/lib/sync-engine/sync-engine';
 import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
 import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
 import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
-import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from '../../src/lib/photos-library/model/photos-entity';
+import {PEntity, PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
 import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted, mockSyncEngineForAlbumQueue, fetchAndLoadStateReturnValue, diffStateReturnValue, convertCPLAssetsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue, fetchAllCPLAssetsMastersReturnValue, fetchAllCPLAlbumsReturnValue, getRandomZone} from '../_helpers/sync-engine.helper';
@@ -16,7 +15,7 @@ import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
 import {HANDLER_EVENT} from '../../src/app/event/error-handler';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
-import { SyncEngineHelper} from '../../src/lib/sync-engine/helper';
+import {SyncEngineHelper} from '../../src/lib/sync-engine/helper';
 
 beforeEach(() => {
     prepareResourceManager();
@@ -312,7 +311,7 @@ describe(`Coordination`, () => {
         expect(diffCompletedEvent).toHaveBeenCalledTimes(1);
         expect(result).toEqual([[[], [], []], resolveHierarchicalDependenciesReturnValue]);
 
-        SyncEngineHelper.getProcessingQueues = getProcessingQueuesOriginal 
+        SyncEngineHelper.getProcessingQueues = getProcessingQueuesOriginal;
         SyncEngineHelper.resolveHierarchicalDependencies = resolveHierarchicalDependenciesOriginal;
     });
 
@@ -424,7 +423,6 @@ describe(`Processing remote records`, () => {
 
 describe(`Diffing state`, () => {
     describe(`Asset State`, () => {
-    
         test.each([
             {
                 desc: `Add items to empty state`,
@@ -439,7 +437,7 @@ describe(`Diffing state`, () => {
                     added: 4,
                     deleted: 0,
                     kept: 0,
-                }
+                },
             }, {
                 desc: `Only remove items from existing state`,
                 remoteAssets: [],
@@ -453,7 +451,7 @@ describe(`Diffing state`, () => {
                     added: 0,
                     deleted: 4,
                     kept: 0,
-                }
+                },
             }, {
                 desc: `Only add items to existing state`,
                 remoteAssets: [
@@ -469,7 +467,7 @@ describe(`Diffing state`, () => {
                     added: 3,
                     deleted: 0,
                     kept: 1,
-                }
+                },
             }, {
                 desc: `Add & remove items from existing state`,
                 remoteAssets: [
@@ -486,7 +484,7 @@ describe(`Diffing state`, () => {
                     added: 2,
                     deleted: 2,
                     kept: 1,
-                }
+                },
             }, {
                 desc: `No change in state`,
                 remoteAssets: [
@@ -505,7 +503,7 @@ describe(`Diffing state`, () => {
                     added: 0,
                     deleted: 0,
                     kept: 4,
-                }
+                },
             }, {
                 desc: `Only modified changed`,
                 remoteAssets: [
@@ -524,7 +522,7 @@ describe(`Diffing state`, () => {
                     added: 2,
                     deleted: 2,
                     kept: 2,
-                }
+                },
             }, {
                 desc: `Only content changed`,
                 remoteAssets: [
@@ -539,12 +537,12 @@ describe(`Diffing state`, () => {
                     somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
                     somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
                 },
-                expected : {
+                expected: {
                     added: 2,
                     deleted: 2,
                     kept: 2,
-                }
-            }
+                },
+            },
         ])(`$desc`, ({remoteAssets, localAssets, expected}) => {
             const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAssets as Asset[], localAssets as PLibraryEntities<Asset>);
             expect(toBeDeleted.length).toEqual(expected.deleted);
@@ -1269,7 +1267,6 @@ describe(`Handle processing queue`, () => {
                     desc: `Unsorted queue (missing ancestor link)`,
                 },
             ])(`$desc`, ({queue}) => {
-
                 const sortedQueue = SyncEngineHelper.sortQueue(queue);
 
                 expect(sortedQueue).toBeDefined();
