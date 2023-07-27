@@ -3,19 +3,16 @@ import {iCloud} from '../icloud/icloud.js';
 import {PhotosLibrary} from '../photos-library/photos-library.js';
 import * as SYNC_ENGINE from './constants.js';
 import {Asset} from '../photos-library/model/asset.js';
-import {Album} from '../photos-library/model/album.js';
+import {Album, AlbumType} from '../photos-library/model/album.js';
 import PQueue from 'p-queue';
-import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
+import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
 import {getLogger} from '../logger.js';
 
-// Helpers extending this class
-import {getProcessingQueues, resolveHierarchicalDependencies} from './helpers/diff-helpers.js';
-import {convertCPLAssets, convertCPLAlbums} from './helpers/fetchAndLoad-helpers.js';
-import {addAsset, writeAssets} from './helpers/write-assets-helpers.js';
-import {addAlbum, compareQueueElements, removeAlbum, sortQueue, writeAlbums} from './helpers/write-albums-helper.js';
 import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
 import {ResourceManager} from '../resource-manager/resource-manager.js';
+import { SyncEngineHelper } from './helper.js';
+import { HANDLER_EVENT } from '../../app/event/error-handler.js';
 
 /**
  * This class handles the photos sync
@@ -146,9 +143,9 @@ export class SyncEngine extends EventEmitter {
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
         const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await Promise.all([
             this.icloud.photos.fetchAllCPLAssetsMasters()
-                .then(([cplAssets, cplMasters]) => SyncEngine.convertCPLAssets(cplAssets, cplMasters)),
+                .then(([cplAssets, cplMasters]) => SyncEngineHelper.convertCPLAssets(cplAssets, cplMasters)),
             this.icloud.photos.fetchAllCPLAlbums()
-                .then(cplAlbums => SyncEngine.convertCPLAlbums(cplAlbums)),
+                .then(cplAlbums => SyncEngineHelper.convertCPLAlbums(cplAlbums)),
             this.photosLibrary.loadAssets(),
             this.photosLibrary.loadAlbums(),
         ]);
@@ -156,10 +153,6 @@ export class SyncEngine extends EventEmitter {
         this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, remoteAssets.length, remoteAlbums.length, Object.keys(localAssets).length, Object.keys(localAlbums).length);
         return [remoteAssets, remoteAlbums, localAssets, localAlbums];
     }
-
-    // From ./helpers/fetchAndLoad-helpers.ts
-    static convertCPLAlbums = convertCPLAlbums;
-    static convertCPLAssets = convertCPLAssets;
 
     /**
      * This function diffs the provided local state with the given remote state
@@ -173,17 +166,13 @@ export class SyncEngine extends EventEmitter {
         this.emit(SYNC_ENGINE.EVENTS.DIFF);
         this.logger.info(`Diffing state`);
         const [assetQueue, albumQueue] = await Promise.all([
-            this.getProcessingQueues(remoteAssets, localAssets),
-            this.getProcessingQueues(remoteAlbums, localAlbums),
+            SyncEngineHelper.getProcessingQueues(remoteAssets, localAssets),
+            SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums),
         ]);
-        const resolvedAlbumQueue = this.resolveHierarchicalDependencies(albumQueue, localAlbums);
+        const resolvedAlbumQueue = SyncEngineHelper.resolveHierarchicalDependencies(albumQueue, localAlbums);
         this.emit(SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
         return [assetQueue, resolvedAlbumQueue];
     }
-
-    // From ./helpers/diff-helpers.ts
-    resolveHierarchicalDependencies = resolveHierarchicalDependencies;
-    getProcessingQueues = getProcessingQueues;
 
     /**
      * Takes the processing queues and performs the necessary actions to write them to disk
@@ -206,14 +195,127 @@ export class SyncEngine extends EventEmitter {
         this.emit(SYNC_ENGINE.EVENTS.WRITE_COMPLETED);
     }
 
-    // From ./helpers/write-assets-helpers.ts
-    writeAssets = writeAssets;
-    addAsset = addAsset;
+    /**
+     * Writes the asset changes defined in the processing queue to to disk (by downloading the asset or deleting it)
+     * @param processingQueue - The asset processing queue
+     * @returns A promise that settles, once all asset changes have been written to disk
+     */
+    async writeAssets(processingQueue: PLibraryProcessingQueues<Asset>) {
+        const toBeDeleted = processingQueue[0];
+        const toBeAdded = processingQueue[1];
+        // Initializing sync queue
+        this.downloadQueue = new PQueue({concurrency: ResourceManager.downloadThreads});
 
-    // From ./helpers/write-albums-helpers.ts
-    writeAlbums = writeAlbums;
-    sortQueue = sortQueue;
-    static compareQueueElements = compareQueueElements;
-    addAlbum = addAlbum;
-    removeAlbum = removeAlbum;
+        this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
+
+        // Deleting before downloading, in order to ensure no conflicts
+        await Promise.all(toBeDeleted.map(asset => this.photosLibrary.deleteAsset(asset)));
+        await Promise.all(toBeAdded.map(asset => this.downloadQueue.add(() => this.addAsset(asset))));
+    }
+
+    /**
+     * Downloads and stores a given asset, unless file is already present on disk
+     * @param asset - The asset that needs to be downloaded
+     * @returns A promise that resolves, once the file has been successfully written to disk
+     */
+    async addAsset(asset: Asset) {
+        this.logger.info(`Adding asset ${asset.getDisplayName()}`);
+
+        try {
+            await this.photosLibrary.verifyAsset(asset);
+            this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
+        } catch (err) {
+            const data = await this.icloud.photos.downloadAsset(asset);
+            await this.photosLibrary.writeAsset(asset, data);
+        }
+
+        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
+    }
+
+    /**
+     * Writes the album changes defined in the processing queue to to disk
+     * @param processingQueue - The album processing queue, expected to have resolved all hierarchical dependencies
+     * @returns A promise that settles, once all album changes have been written to disk
+     */
+    async writeAlbums(processingQueue: PLibraryProcessingQueues<Album>) {
+        this.logger.info(`Writing lib structure!`);
+
+        // Making sure our queues are sorted
+        const toBeDeleted: Album[] = SyncEngineHelper.sortQueue(processingQueue[0]);
+        const toBeAdded: Album[] = SyncEngineHelper.sortQueue(processingQueue[1]);
+
+        // Deletion before addition, in order to avoid duplicate folders
+        // Reversing processing order, since we need to remove nested folders first
+        toBeDeleted.reverse().forEach(album => {
+            this.removeAlbum(album);
+        });
+
+        toBeAdded.forEach(album => {
+            this.addAlbum(album);
+        });
+
+        await this.photosLibrary.cleanArchivedOrphans();
+    }
+
+    /**
+     * Writes the data structure of an album to disk. This includes:
+     *   * Create a hidden folder containing the UUID
+     *   * Create a link to the hidden folder, containing the real name of the album
+     *   * (If possible) link correct pictures from the assetFolder to the newly created album
+     * @param album - The album, that should be written to disk
+     */
+    addAlbum(album: Album) {
+        // If albumType == Archive -> Check in 'archivedFolder' and move
+        this.logger.debug(`Creating album ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
+
+        if (album.albumType === AlbumType.ARCHIVED) {
+            try {
+                this.photosLibrary.retrieveStashedAlbum(album);
+            } catch (err) {
+                this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.STASH_RETRIEVE)
+                    .addMessage(album.getDisplayName())
+                    .addCause(err));
+            }
+
+            return;
+        }
+
+        try {
+            this.photosLibrary.writeAlbum(album);
+        } catch (err) {
+            this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.ADD_ALBUM)
+                .addMessage(album.getDisplayName())
+                .addCause(err)
+                .setWarning());
+        }
+    }
+
+    /**
+     * This will delete an album from disk and remove all associated symlinks
+     * Deletion will only happen if the album is 'empty'. This means it only contains symlinks or 'safe' files. Any other folder or file will result in the folder not being deleted.
+     * @param album - The album that needs to be deleted
+     */
+    removeAlbum(album: Album) {
+        this.logger.debug(`Removing album ${album.getDisplayName()}`);
+
+        if (album.albumType === AlbumType.ARCHIVED) {
+            try {
+                this.photosLibrary.stashArchivedAlbum(album);
+            } catch (err) {
+                this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.STASH)
+                    .addMessage(album.getDisplayName())
+                    .addCause(err));
+            }
+
+            return;
+        }
+
+        try {
+            this.photosLibrary.deleteAlbum(album);
+        } catch (err) {
+            this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.DELETE_ALBUM)
+                .addMessage(album.getDisplayName())
+                .addCause(err));
+        }
+    }
 }
