@@ -9,20 +9,13 @@ import EventEmitter from 'events';
 import * as PHOTOS_LIBRARY from '../photos-library/constants.js';
 import * as path from 'path';
 import {readFileSync, writeFileSync} from "fs";
-import {PhotosAccountZone, RESOURCE_FILE_ENCODING, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resources.js";
-import {getLogger} from "../logger.js";
-import {HANDLER_EVENT} from "../../app/event/error-handler.js";
+import {FILE_ENCODING, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resources.js";
 import {Validator} from "./validator.js";
 import {NetworkManager} from "./network-manager.js";
 import {LogLevelDesc} from "loglevel";
-import {iCPSEvent, iCPSEventResourceManager} from "./events.js";
+import {iCPSEvent, iCPSEventError, iCPSEventLog, iCPSEventResourceManager} from "./events.js";
 
-export class ResourceManager extends EventEmitter {
-    /**
-     * Default logger for the class
-     */
-    protected logger = getLogger(this);
-
+export class ResourceManager {
     /**
      * The singleton instance of the ResourceManager
      */
@@ -72,24 +65,24 @@ export class ResourceManager extends EventEmitter {
     _validator: Validator = new Validator();
 
     /**
+     * The application's central event bus
+     */
+    _eventBus: EventEmitter = new EventEmitter();
+
+    /**
      * Creates the resource manager, based on the previously parsed iCPSAppOptions.
      * Should not be called directly, but through the static setup function.
      * @param appOptions - The parsed app options
      */
     constructor(appOptions: iCPSAppOptions) {
-        super();
-
-        // Need to set this before reading the resource file, while still keeping order of cli options over resource file
-        this._resources.dataDir = appOptions.dataDir;
-        Object.assign(this._resources, this.readResourceFile());
         Object.assign(this._resources, appOptions);
 
         if (this._resources.refreshToken) {
-            this.logger.info(`Clearing trust token due to refresh token flag being set`);
+            this.logger.info(this, `Clearing trust token due to refresh token flag being set`);
             this._trustToken = undefined;
         }
 
-        this.logger.debug(`Loaded resources: ${JSON.stringify(this._resources, null, 4)}`);
+        this.logger.debug(this, `Loaded resources: ${JSON.stringify(this._resources, null, 4)}`);
     }
 
     /**
@@ -97,12 +90,12 @@ export class ResourceManager extends EventEmitter {
      */
     readResourceFile(): ResourceFile {
         try {
-            this.logger.debug(`Reading resource file from ${this._resourceFilePath}`);
-            const resourceFileData = JSON.parse(readFileSync(this._resourceFilePath, {encoding: RESOURCE_FILE_ENCODING}));
+            this.logger.debug(this, `Reading resource file from ${this._resourceFilePath}`);
+            const resourceFileData = JSON.parse(readFileSync(this._resourceFilePath, {encoding: FILE_ENCODING}));
             return this._validator.validateResourceFile(resourceFileData);
         } catch (err) {
             this.emit(iCPSEventResourceManager.NO_RESOURCE_FILE_FOUND);
-            this.logger.debug(`No resource file found, creating a new one`);
+            this.logger.debug(this, `No resource file found returning default values`);
             return {
                 libraryVersion: PHOTOS_LIBRARY.LIBRARY_VERSION,
                 trustToken: undefined,
@@ -120,11 +113,11 @@ export class ResourceManager extends EventEmitter {
                 trustToken: this._trustToken,
             };
             const resourceFileData = JSON.stringify(formattedResourceFile, null, 4);
-            this.logger.debug(`Writing resource file to ${this._resourceFilePath}`);
+            this.logger.debug(this, `Writing resource file to ${this._resourceFilePath}`);
 
-            writeFileSync(this._resourceFilePath, resourceFileData, {encoding: RESOURCE_FILE_ENCODING});
+            writeFileSync(this._resourceFilePath, resourceFileData, {encoding: FILE_ENCODING});
         } catch (err) {
-            this.emit(HANDLER_EVENT, new iCPSError(RES_MANAGER_ERR.UNABLE_TO_WRITE_FILE)
+            this.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(RES_MANAGER_ERR.UNABLE_TO_WRITE_FILE)
                 .setWarning()
                 .addCause(err));
         }
@@ -169,6 +162,7 @@ export class ResourceManager extends EventEmitter {
      * @returns The currently loaded libraries version
      */
     get _libraryVersion(): number {
+        this._resources.libraryVersion = this.readResourceFile().libraryVersion;
         return this._resources.libraryVersion;
     }
 
@@ -185,6 +179,11 @@ export class ResourceManager extends EventEmitter {
      * @returns The currently used trust token, or undefined if none is set. The supplied trust token from the CLI options takes precedence over the one from the resource file.
      */
     get _trustToken(): string | undefined {
+        const {trustToken} = this.readResourceFile();
+        if (trustToken !== undefined) {
+            this._resources.trustToken = trustToken;
+        }
+
         return this._resources.trustToken;
     }
 
@@ -583,11 +582,166 @@ export class ResourceManager extends EventEmitter {
     }
 
     /**
-     * Emits an event from the singleton instance
+     * @returns The path to the log file
+     */
+    get logFilePath(): string | undefined {
+        return this._resources.logFilePath;
+    }
+
+    /**
+     * Calls the log file path getter from the singleton instance
+     * @see {@link logFilePath}
+     */
+    static get logFilePath(): string | undefined {
+        return ResourceManager.instance.logFilePath;
+    }
+
+    /**
+     * Creates and sets the logging file path
+     */
+    _enableLogging() {
+        this._resources.logFilePath = path.format({
+            dir: this._dataDir,
+            base: LOG_FILE_NAME,
+        });
+    }
+
+    /**
+     * Calls the enable logging function from the singleton instance
+     * @see {@link _enableLogging}
+     */
+    static enableLogging() {
+        ResourceManager.instance._enableLogging();
+    }
+
+    /**
+     * @returns The path to the metrics file
+     */
+    get metricsFilePath(): string | undefined {
+        return this._resources.metricsFilePath;
+    }
+
+    /**
+     * Calls the metrics file path getter from the singleton instance
+     * @see {@link metricsFilePath}
+     */
+    static get metricsFilePath(): string | undefined {
+        return ResourceManager.instance.metricsFilePath;
+    }
+
+    /**
+     * Creates and sets the metrics file path
+     */
+    _enableMetricExporter() {
+        this._resources.metricsFilePath = path.format({
+            dir: this._dataDir,
+            base: METRICS_FILE_NAME,
+        });
+    }
+
+    /**
+     * Calls the enable logging function from the singleton instance
+     * @see {@link _enableMetricExporter}
+     */
+    static enableMetricExporter() {
+        ResourceManager.instance._enableMetricExporter();
+    }
+
+    logger = {
+        debug: (instance: any, message: string) => {
+            this.emit(iCPSEventLog.DEBUG, instance, message);
+        },
+        info: (instance: any, message: string) => {
+            this.emit(iCPSEventLog.INFO, instance, message);
+        },
+        warn: (instance: any, message: string) => {
+            this.emit(iCPSEventLog.WARN, instance, message);
+        },
+        error: (instance: any, message: string) => {
+            this.emit(iCPSEventLog.ERROR, instance, message);
+        },
+    };
+
+    static logger(instance: any) {
+        return {
+            debug: (message: string) => {
+                this.emit(iCPSEventLog.DEBUG, instance, message);
+            },
+            // Log is for compatibility with loglevel
+            info: (message: string) => {
+                this.emit(iCPSEventLog.INFO, instance, message);
+            },
+            warn: (message: string) => {
+                this.emit(iCPSEventLog.WARN, instance, message);
+            },
+            error: (message: string) => {
+                this.emit(iCPSEventLog.ERROR, instance, message);
+            },
+        };
+    }
+
+    /**
+     * Emits an event from the event bus
      * @param event - The event to emit
      * @param args - Optional arguments to pass to the event
+     * @returns True if the event had listeners, false otherwise.
      */
-    static emit(event: iCPSEvent, ...args: any[]) {
-        ResourceManager.instance.emit(event, ...args);
+    emit(event: iCPSEvent, ...args: any[]): boolean {
+        return this._eventBus.emit(event, ...args);
+    }
+
+    /**
+     * Emits an event from the singleton instance's event bus
+     * @param event - The event to emit
+     * @param args - Optional arguments to pass to the event
+     * @returns True if the event had listeners, false otherwise.
+     * @see {@link emit}
+     */
+    static emit(event: iCPSEvent, ...args: any[]): boolean {
+        return ResourceManager.instance.emit(event, ...args);
+    }
+
+    /**
+     * Creates an event listener for the event bus
+     * @param event - The event to listen for
+     * @param listener - The listener to call when the event is emitted
+     * @returns The instance for chaining
+     */
+    on(event: iCPSEvent, listener: (...args: any[]) => void): this {
+        this._eventBus.on(event, listener);
+        return this;
+    }
+
+    /**
+     * Creates an event listener for the singleton instance's event bus
+     * @param event - The event to listen for
+     * @param listener - The listener to call when the event is emitted
+     * @returns The singleton instance for chaining
+     * @see {@link on}
+     */
+    static on(event: iCPSEvent, listener: (...args: any[]) => void): ResourceManager {
+        return ResourceManager.instance.on(event, listener);
+    }
+
+    /**
+     * Creates an event listener for the event bus that is only called once
+     * @param event - The event to listen for
+     * @param listener - The listener to call when the event is emitted
+     * @returns The instance for chaining
+     */
+    once(event: iCPSEvent, listener: (...args: any[]) => void): this {
+        this._eventBus.once(event, listener);
+        return this;
+    }
+
+    /**
+     * Creates an event listener for the singleton instance's event bus that is only called once
+     * @param event - The event to listen for
+     * @param listener - The listener to call when the event is emitted
+     * @returns The singleton instance for chaining
+     * @see {@link once}
+     */
+    static once(event: iCPSEvent, listener: (...args: any[]) => void): ResourceManager {
+        return ResourceManager.instance.once(event, listener);
     }
 }

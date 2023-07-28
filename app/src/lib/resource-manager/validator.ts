@@ -7,55 +7,59 @@ import SetupResponseSchema from "./schemas/setup-response.json" assert { type: "
 import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" assert { type: "json" }; // eslint-disable-line
 import ResendMFADeviceResponseSchema from "./schemas/resend-mfa-device-response.json" assert { type: "json" }; // eslint-disable-line
 import ResendMFAPhoneResponseSchema from "./schemas/resend-mfa-phone-response.json" assert { type: "json" }; // eslint-disable-line
-import {getLogger} from "../logger.js";
 import {ResourceFile} from "./resources.js";
 import {iCPSError} from "../../app/error/error.js";
 import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
 import {COOKIE_KEYS, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninResponse, TrustResponse} from "./network.js";
+import {ResourceManager} from './resource-manager.js';
+
+export const AJV_CONF = {
+    verbose: true,
+    logger: {
+        log: (...args: any[]) => ResourceManager.logger(this).info(args.map(arg => String(arg)).join(` `)),
+        warn: (...args: any[]) => ResourceManager.logger(this).warn(args.map(arg => String(arg)).join(` `)),
+        error: (...args: any[]) => ResourceManager.logger(this).error(args.map(arg => String(arg)).join(` `)),
+    },
+};
 
 /**
  * This class is responsible for validating 3rd party provided JSON based resources
  */
 export class Validator {
     /**
-     * Default logger for the class
-     */
-    protected logger = getLogger(this);
-
-    /**
      * Validator for the resource file schema
      */
-    _resourceFileValidator: Ajv.ValidateFunction<ResourceFile> = new Ajv.default({verbose: true, logger: this.logger}).compile<ResourceFile>(ResourceFileSchema);
+    _resourceFileValidator: Ajv.ValidateFunction<ResourceFile> = new Ajv.default(AJV_CONF).compile<ResourceFile>(ResourceFileSchema);
 
     /**
      * Validator for the signin response schema
      */
-    _signinResponseValidator: Ajv.ValidateFunction<SigninResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<SigninResponse>(SigninResponseSchema);
+    _signinResponseValidator: Ajv.ValidateFunction<SigninResponse> = new Ajv.default(AJV_CONF).compile<SigninResponse>(SigninResponseSchema);
 
     /**
      * Validator for MFA Device Response schema
      */
-    _resendMFADeviceResponseValidator: Ajv.ValidateFunction<ResendMFADeviceResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<ResendMFADeviceResponse>(ResendMFADeviceResponseSchema);
+    _resendMFADeviceResponseValidator: Ajv.ValidateFunction<ResendMFADeviceResponse> = new Ajv.default(AJV_CONF).compile<ResendMFADeviceResponse>(ResendMFADeviceResponseSchema);
 
     /**
      * Validator for MFA Phone Response schema
      */
-    _resendMFAPhoneResponseValidator: Ajv.ValidateFunction<ResendMFAPhoneResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<ResendMFAPhoneResponse>(ResendMFAPhoneResponseSchema);
+    _resendMFAPhoneResponseValidator: Ajv.ValidateFunction<ResendMFAPhoneResponse> = new Ajv.default(AJV_CONF).compile<ResendMFAPhoneResponse>(ResendMFAPhoneResponseSchema);
 
     /**
      * Validator for the trust response schema
      */
-    _trustResponseValidator: Ajv.ValidateFunction<TrustResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<TrustResponse>(TrustResponseSchema);
+    _trustResponseValidator: Ajv.ValidateFunction<TrustResponse> = new Ajv.default(AJV_CONF).compile<TrustResponse>(TrustResponseSchema);
 
     /**
      * Validator for the iCloud setup response schema
      */
-    _setupResponseValidator: Ajv.ValidateFunction<SetupResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<SetupResponse>(SetupResponseSchema);
+    _setupResponseValidator: Ajv.ValidateFunction<SetupResponse> = new Ajv.default(AJV_CONF).compile<SetupResponse>(SetupResponseSchema);
 
     /**
      * Validator for the iCloud photos setup response schema
      */
-    _photosSetupResponseValidator: Ajv.ValidateFunction<PhotosSetupResponse> = new Ajv.default({verbose: true, logger: this.logger}).compile<PhotosSetupResponse>(PhotosSetupResponseSchema);
+    _photosSetupResponseValidator: Ajv.ValidateFunction<PhotosSetupResponse> = new Ajv.default(AJV_CONF).compile<PhotosSetupResponse>(PhotosSetupResponseSchema);
 
     /**
      * Generic validation function

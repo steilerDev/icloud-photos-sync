@@ -1,28 +1,20 @@
-import {EventEmitter} from 'events';
 import {iCloud} from '../icloud/icloud.js';
 import {PhotosLibrary} from '../photos-library/photos-library.js';
-import * as SYNC_ENGINE from './constants.js';
 import {Asset} from '../photos-library/model/asset.js';
 import {Album, AlbumType} from '../photos-library/model/album.js';
 import PQueue from 'p-queue';
 import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
-import {getLogger} from '../logger.js';
 
 import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
 import {ResourceManager} from '../resource-manager/resource-manager.js';
 import {SyncEngineHelper} from './helper.js';
-import {HANDLER_EVENT} from '../../app/event/error-handler.js';
+import {iCPSEventError, iCPSEventSyncEngine} from '../resource-manager/events.js';
 
 /**
  * This class handles the photos sync
  */
-export class SyncEngine extends EventEmitter {
-    /**
-     * Default logger for the class
-     */
-    protected logger = getLogger(this);
-
+export class SyncEngine {
     /**
      * The iCloud connection
      */
@@ -45,7 +37,6 @@ export class SyncEngine extends EventEmitter {
      * @param photosLibrary - The photos library object
      */
     constructor(icloud: iCloud, photosLibrary: PhotosLibrary) {
-        super();
         this.icloud = icloud;
         this.photosLibrary = photosLibrary;
     }
@@ -55,28 +46,28 @@ export class SyncEngine extends EventEmitter {
      * @returns A list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync)
      */
     async sync(): Promise<[Asset[], Album[]]> {
-        this.logger.info(`Starting sync`);
-        this.emit(SYNC_ENGINE.EVENTS.START);
+        ResourceManager.logger(this).info(`Starting sync`);
+        ResourceManager.emit(iCPSEventSyncEngine.START);
         let retryCount = 0;
         while (ResourceManager.maxRetries > retryCount) {
             retryCount++;
-            this.logger.info(`Performing sync, try #${retryCount}`);
+            ResourceManager.logger(this).info(`Performing sync, try #${retryCount}`);
 
             const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await this.fetchAndLoadState();
             const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums, localAssets, localAlbums);
 
             try {
                 await this.writeState(assetQueue, albumQueue);
-                this.logger.info(`Completed sync!`);
-                this.emit(SYNC_ENGINE.EVENTS.DONE);
+                ResourceManager.logger(this).info(`Completed sync!`);
+                ResourceManager.emit(iCPSEventSyncEngine.DONE);
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
                 // Checking if we should retry
                 this.checkFatalError(err);
 
-                this.logger.info(`Detected recoverable error: ${err.message}`);
+                ResourceManager.logger(this).info(`Detected recoverable error: ${err.message}`);
 
-                this.emit(SYNC_ENGINE.EVENTS.RETRY, retryCount);
+                ResourceManager.emit(iCPSEventSyncEngine.RETRY, retryCount);
                 await this.prepareRetry();
             }
         }
@@ -93,17 +84,17 @@ export class SyncEngine extends EventEmitter {
      */
     checkFatalError(err: any): boolean {
         if (err.code === `ERR_BAD_RESPONSE`) {
-            this.logger.debug(`Bad server response (${err.response?.status}), refreshing session...`);
+            ResourceManager.logger(this).debug(`Bad server response (${err.response?.status}), refreshing session...`);
             return false;
         }
 
         if (err.code === `ERR_BAD_REQUEST`) {
-            this.logger.debug(`Bad request ${err.response?.status}, refreshing session...`);
+            ResourceManager.logger(this).debug(`Bad request ${err.response?.status}, refreshing session...`);
             return false;
         }
 
         if (err.code === `EAI_AGAIN`) {
-            this.logger.debug(`iCloud DNS record expired, refreshing session...`);
+            ResourceManager.logger(this).debug(`iCloud DNS record expired, refreshing session...`);
             return false;
         }
 
@@ -115,21 +106,21 @@ export class SyncEngine extends EventEmitter {
      * Prepares the sync engine for a retry, by emptying the queue and refreshing iCloud cookies
      */
     async prepareRetry() {
-        this.logger.debug(`Preparing retry...`);
+        ResourceManager.logger(this).debug(`Preparing retry...`);
         if (this.downloadQueue) {
             if (this.downloadQueue.size > 0) {
-                this.logger.info(`Error occurred with ${this.downloadQueue.size} asset(s) left in the download queue, clearing queue...`);
+                ResourceManager.logger(this).info(`Error occurred with ${this.downloadQueue.size} asset(s) left in the download queue, clearing queue...`);
                 this.downloadQueue.clear();
             }
 
             if (this.downloadQueue.pending > 0) {
-                this.logger.info(`Error occurred with ${this.downloadQueue.pending} pending job(s), waiting for queue to settle...`);
+                ResourceManager.logger(this).info(`Error occurred with ${this.downloadQueue.pending} pending job(s), waiting for queue to settle...`);
                 await this.downloadQueue.onIdle();
-                this.logger.debug(`Queue has settled!`);
+                ResourceManager.logger(this).debug(`Queue has settled!`);
             }
         }
 
-        this.logger.debug(`Refreshing iCloud connection`);
+        ResourceManager.logger(this).debug(`Refreshing iCloud connection`);
         const iCloudReady = this.icloud.getReady();
         this.icloud.setupAccount();
         await iCloudReady;
@@ -140,7 +131,7 @@ export class SyncEngine extends EventEmitter {
      * @returns A promise that resolve once the fetch was completed, containing the remote & local state - remote album state is in order
      */
     async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
-        this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD);
+        ResourceManager.emit(iCPSEventSyncEngine.FETCH_N_LOAD);
         const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await Promise.all([
             this.icloud.photos.fetchAllCPLAssetsMasters()
                 .then(([cplAssets, cplMasters]) => SyncEngineHelper.convertCPLAssets(cplAssets, cplMasters)),
@@ -150,7 +141,7 @@ export class SyncEngine extends EventEmitter {
             this.photosLibrary.loadAlbums(),
         ]);
 
-        this.emit(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, remoteAssets.length, remoteAlbums.length, Object.keys(localAssets).length, Object.keys(localAlbums).length);
+        ResourceManager.emit(iCPSEventSyncEngine.FETCH_N_LOAD_COMPLETED, remoteAssets.length, remoteAlbums.length, Object.keys(localAssets).length, Object.keys(localAlbums).length);
         return [remoteAssets, remoteAlbums, localAssets, localAlbums];
     }
 
@@ -163,14 +154,14 @@ export class SyncEngine extends EventEmitter {
      * @returns A promise that, once resolved, will contain processing queues that can be used in order to sync the remote state.
      */
     async diffState(remoteAssets: Asset[], remoteAlbums: Album[], localAssets: PLibraryEntities<Asset>, localAlbums: PLibraryEntities<Album>): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
-        this.emit(SYNC_ENGINE.EVENTS.DIFF);
-        this.logger.info(`Diffing state`);
+        ResourceManager.emit(iCPSEventSyncEngine.DIFF);
+        ResourceManager.logger(this).info(`Diffing state`);
         const [assetQueue, albumQueue] = await Promise.all([
             SyncEngineHelper.getProcessingQueues(remoteAssets, localAssets),
             SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums),
         ]);
         const resolvedAlbumQueue = SyncEngineHelper.resolveHierarchicalDependencies(albumQueue, localAlbums);
-        this.emit(SYNC_ENGINE.EVENTS.DIFF_COMPLETED);
+        ResourceManager.emit(iCPSEventSyncEngine.DIFF_COMPLETED);
         return [assetQueue, resolvedAlbumQueue];
     }
 
@@ -181,18 +172,18 @@ export class SyncEngine extends EventEmitter {
      * @returns A promise that will settle, once the state has been written to disk
      */
     async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
-        this.emit(SYNC_ENGINE.EVENTS.WRITE);
-        this.logger.info(`Writing state`);
+        ResourceManager.emit(iCPSEventSyncEngine.WRITE);
+        ResourceManager.logger(this).info(`Writing state`);
 
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);
+        ResourceManager.emit(iCPSEventSyncEngine.WRITE_ASSETS, assetQueue[0].length, assetQueue[1].length, assetQueue[2].length);
         await this.writeAssets(assetQueue);
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED);
+        ResourceManager.emit(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED);
 
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, albumQueue[0].length, albumQueue[1].length, albumQueue[2].length);
+        ResourceManager.emit(iCPSEventSyncEngine.WRITE_ALBUMS, albumQueue[0].length, albumQueue[1].length, albumQueue[2].length);
         await this.writeAlbums(albumQueue);
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED);
+        ResourceManager.emit(iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED);
 
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_COMPLETED);
+        ResourceManager.emit(iCPSEventSyncEngine.WRITE_COMPLETED);
     }
 
     /**
@@ -206,7 +197,7 @@ export class SyncEngine extends EventEmitter {
         // Initializing sync queue
         this.downloadQueue = new PQueue({concurrency: ResourceManager.downloadThreads});
 
-        this.logger.debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
+        ResourceManager.logger(this).debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
 
         // Deleting before downloading, in order to ensure no conflicts
         await Promise.all(toBeDeleted.map(asset => this.photosLibrary.deleteAsset(asset)));
@@ -219,17 +210,17 @@ export class SyncEngine extends EventEmitter {
      * @returns A promise that resolves, once the file has been successfully written to disk
      */
     async addAsset(asset: Asset) {
-        this.logger.info(`Adding asset ${asset.getDisplayName()}`);
+        ResourceManager.logger(this).info(`Adding asset ${asset.getDisplayName()}`);
 
         try {
             await this.photosLibrary.verifyAsset(asset);
-            this.logger.debug(`Asset ${asset.getDisplayName()} already downloaded`);
+            ResourceManager.logger(this).debug(`Asset ${asset.getDisplayName()} already downloaded`);
         } catch (err) {
             const data = await this.icloud.photos.downloadAsset(asset);
             await this.photosLibrary.writeAsset(asset, data);
         }
 
-        this.emit(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, asset.getDisplayName());
+        ResourceManager.emit(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, asset.getDisplayName());
     }
 
     /**
@@ -238,7 +229,7 @@ export class SyncEngine extends EventEmitter {
      * @returns A promise that settles, once all album changes have been written to disk
      */
     async writeAlbums(processingQueue: PLibraryProcessingQueues<Album>) {
-        this.logger.info(`Writing lib structure!`);
+        ResourceManager.logger(this).info(`Writing lib structure!`);
 
         // Making sure our queues are sorted
         const toBeDeleted: Album[] = SyncEngineHelper.sortQueue(processingQueue[0]);
@@ -266,15 +257,17 @@ export class SyncEngine extends EventEmitter {
      */
     addAlbum(album: Album) {
         // If albumType == Archive -> Check in 'archivedFolder' and move
-        this.logger.debug(`Creating album ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
+        ResourceManager.logger(this).debug(`Creating album ${album.getDisplayName()} with parent ${album.parentAlbumUUID}`);
 
         if (album.albumType === AlbumType.ARCHIVED) {
             try {
                 this.photosLibrary.retrieveStashedAlbum(album);
             } catch (err) {
-                this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.STASH_RETRIEVE)
-                    .addMessage(album.getDisplayName())
-                    .addCause(err));
+                ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+                    new iCPSError(SYNC_ERR.STASH_RETRIEVE)
+                        .addMessage(album.getDisplayName())
+                        .addCause(err),
+                );
             }
 
             return;
@@ -283,10 +276,12 @@ export class SyncEngine extends EventEmitter {
         try {
             this.photosLibrary.writeAlbum(album);
         } catch (err) {
-            this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.ADD_ALBUM)
-                .addMessage(album.getDisplayName())
-                .addCause(err)
-                .setWarning());
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+                new iCPSError(SYNC_ERR.ADD_ALBUM)
+                    .addMessage(album.getDisplayName())
+                    .addCause(err)
+                    .setWarning(),
+            );
         }
     }
 
@@ -296,15 +291,17 @@ export class SyncEngine extends EventEmitter {
      * @param album - The album that needs to be deleted
      */
     removeAlbum(album: Album) {
-        this.logger.debug(`Removing album ${album.getDisplayName()}`);
+        ResourceManager.logger(this).debug(`Removing album ${album.getDisplayName()}`);
 
         if (album.albumType === AlbumType.ARCHIVED) {
             try {
                 this.photosLibrary.stashArchivedAlbum(album);
             } catch (err) {
-                this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.STASH)
-                    .addMessage(album.getDisplayName())
-                    .addCause(err));
+                ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+                    new iCPSError(SYNC_ERR.STASH)
+                        .addMessage(album.getDisplayName())
+                        .addCause(err),
+                );
             }
 
             return;
@@ -313,9 +310,11 @@ export class SyncEngine extends EventEmitter {
         try {
             this.photosLibrary.deleteAlbum(album);
         } catch (err) {
-            this.emit(HANDLER_EVENT, new iCPSError(SYNC_ERR.DELETE_ALBUM)
-                .addMessage(album.getDisplayName())
-                .addCause(err));
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+                new iCPSError(SYNC_ERR.DELETE_ALBUM)
+                    .addMessage(album.getDisplayName())
+                    .addCause(err),
+            );
         }
     }
 }

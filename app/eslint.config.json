@@ -40,7 +40,8 @@
         "no-debugger": "warn",
         "no-promise-executor-return": "off",
         "no-unsafe-finally": "off",
-        "tsdoc-undefined-tag": "off"
+        "tsdoc-undefined-tag": "off",
+        "no-fallthrough": "off"
     },
     "overrides": [
         {

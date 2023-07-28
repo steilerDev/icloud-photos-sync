@@ -1,19 +1,9 @@
-import EventEmitter from "events";
-import {EventHandler} from "./event-handler.js";
-import {iCloud} from '../../lib/icloud/icloud.js';
-import * as ICLOUD from '../../lib/icloud/constants.js';
-import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
-import * as ARCHIVE_ENGINE from '../../lib/archive-engine/constants.js';
-import * as MFA_SERVER from '../../lib/icloud/mfa/constants.js';
-import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
-import {getLogger} from '../../lib/logger.js';
-import {ArchiveEngine} from '../../lib/archive-engine/archive-engine.js';
-import {ErrorHandler, ERROR_EVENT, WARN_EVENT} from './error-handler.js';
 import * as fs from "fs";
-import path from "path";
-import {MFAServer} from "../../lib/icloud/mfa/mfa-server.js";
-import {DaemonAppEvents} from "../icloud-app.js";
 import {ResourceManager} from "../../lib/resource-manager/resource-manager.js";
+import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resource-manager/events.js';
+import {iCPSError} from '../error/error.js';
+import {APP_ERR} from '../error/error-codes.js';
+import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
 
 /**
  * The InfluxLineProtocol field set type
@@ -29,7 +19,9 @@ type InfluxLineProtocolTagSet = {
     [tagKey: string]: string
 }
 
-const METRICS_FILE_NAME = `.icloud-photos-sync.metrics`;
+/**
+ * The name of the measurement written to the metrics file
+ */
 const MEASUREMENT_NAME = `icloud_photos_sync`;
 
 /**
@@ -90,11 +82,6 @@ const FIELDS = {
  */
 class InfluxLineProtocolPoint {
     /**
-     * Default logger for the class
-     */
-    private logger = getLogger(this);
-
-    /**
      * The measurement's name
      */
     measurement: string;
@@ -120,7 +107,7 @@ class InfluxLineProtocolPoint {
      */
     constructor(measurement: string = MEASUREMENT_NAME) {
         if (measurement.startsWith(`_`)) {
-            this.logger.debug(`Measurement (${measurement}) cannot start with '_': Removing leading characters`);
+            ResourceManager.logger(this).debug(`Measurement (${measurement}) cannot start with '_': Removing leading characters`);
             measurement = measurement.replace(/^_+/, ``);
         }
 
@@ -138,12 +125,12 @@ class InfluxLineProtocolPoint {
      */
     toString(): string {
         if (!this.measurement || this.measurement.length === 0) {
-            this.logger.debug(`Measurement name required!`);
+            ResourceManager.logger(this).debug(`Measurement name required!`);
             return `# Invalid data point: Measurement name is required\n`;
         }
 
         if (Object.keys(this.fieldSet).length === 0) {
-            this.logger.debug(`At least one field is required!`);
+            ResourceManager.logger(this).debug(`At least one field is required!`);
             return `# Invalid data point: At least one field is required\n`;
         }
 
@@ -221,7 +208,7 @@ class InfluxLineProtocolPoint {
                 return this;
             }
 
-            this.logger.debug(`Provided field value number is neither integer, nor finite, ignoring...`);
+            ResourceManager.logger(this).debug(`Provided field value number is neither integer, nor finite, ignoring...`);
             return this;
         }
 
@@ -241,7 +228,7 @@ class InfluxLineProtocolPoint {
      */
     private replaceIfExists(input: string, disallowedSequence: string, replacement: string = `_`): string {
         if (input.indexOf(disallowedSequence) >= 0) {
-            this.logger.trace(`Input **${input}** contains '${disallowedSequence}': Replacing with ${replacement}`);
+            ResourceManager.logger(this).debug(`Input **${input}** contains '${disallowedSequence}': Replacing with ${replacement}`);
             input = input.replaceAll(disallowedSequence, replacement);
         }
 
@@ -252,16 +239,11 @@ class InfluxLineProtocolPoint {
 /**
  * This class implements exporting metrics for monitoring purposes
  */
-export class MetricsExporter implements EventHandler {
+export class MetricsExporter {
     /**
-     * Default logger for the class
+     * The opened file descriptor of the metrics file
      */
-    private logger = getLogger(this);
-
-    /**
-     * Path to the file, where metrics will be exported to. Undefined if exporter is not activated.
-     */
-    metricsFile?: string;
+    private metricsFileDescriptor: number;
 
     /**
      * Creates the exporter and checks for the file
@@ -269,287 +251,194 @@ export class MetricsExporter implements EventHandler {
      */
     constructor() {
         if (!ResourceManager.exportMetrics) {
-            this.metricsFile = undefined;
             return;
         }
 
-        this.metricsFile = path.format({
-            dir: ResourceManager.dataDir,
-            base: METRICS_FILE_NAME,
-        });
+        ResourceManager.enableMetricExporter();
 
-        if (fs.existsSync(this.metricsFile)) {
-            // Clearing file if it exists
-            fs.truncateSync(this.metricsFile);
+        try {
+            // Try opening the file - truncate if exists
+            this.metricsFileDescriptor = fs.openSync(ResourceManager.metricsFilePath, `w`);
+
+            ResourceManager
+                .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.AUTHENTICATION_STARTED));
+                }).on(iCPSEventCloud.AUTHENTICATED, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.AUTHENTICATED));
+                })
+                .on(iCPSEventCloud.MFA_REQUIRED, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.MFA_REQUIRED));
+                })
+                .on(iCPSEventCloud.TRUSTED, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.DEVICE_TRUSTED));
+                })
+                .on(iCPSEventCloud.ACCOUNT_READY, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.ACCOUNT_READY));
+                });
+
+            ResourceManager
+                .on(iCPSEventMFA.MFA_RECEIVED, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.MFA_RECEIVED));
+                })
+                .on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.MFA_NOT_PROVIDED));
+                });
+
+            ResourceManager
+                .on(iCPSEventPhotos.READY, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.ICLOUD_READY));
+                });
+
+            ResourceManager
+                .on(iCPSEventApp.SCHEDULED, (next: Date) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED)
+                        .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+                })
+                .on(iCPSEventApp.SCHEDULED_DONE, (next: Date) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED_SUCCESS)
+                        .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+                })
+                .on(iCPSEventApp.SCHEDULED_RETRY, (next: Date) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED_FAILURE)
+                        .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+                });
+
+            ResourceManager
+                .on(iCPSEventSyncEngine.START, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SYNC_START));
+                })
+                .on(iCPSEventSyncEngine.FETCH_N_LOAD, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.FETCH_N_LOAD_STARTED));
+                })
+                .on(iCPSEventSyncEngine.FETCH_N_LOAD_COMPLETED, (remoteAssetCount: number, remoteAlbumCount: number, localAssetCount: number, localAlbumCount: number) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.FETCH_N_LOAD_COMPLETED)
+                        .addField(FIELDS.LOCAL_ALBUMS_LOADED, localAlbumCount)
+                        .addField(FIELDS.LOCAL_ASSETS_LOADED, localAssetCount)
+                        .addField(FIELDS.REMOTE_ALBUMS_FETCHED, remoteAlbumCount)
+                        .addField(FIELDS.REMOTE_ASSETS_FETCHED, remoteAssetCount),
+                    );
+                })
+                .on(iCPSEventSyncEngine.DIFF, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.DIFF_STARTED));
+                })
+                .on(iCPSEventSyncEngine.DIFF_COMPLETED, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.DIFF_COMPLETED));
+                })
+                .on(iCPSEventSyncEngine.WRITE, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_STARTED));
+                })
+                .on(iCPSEventSyncEngine.WRITE_ASSETS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_ASSETS_STARTED)
+                        .addField(FIELDS.ASSETS_TO_BE_ADDED, toBeAddedCount)
+                        .addField(FIELDS.ASSETS_TO_BE_DELETED, toBeDeletedCount)
+                        .addField(FIELDS.ASSETS_TO_BE_KEPT, toBeKept),
+                    );
+                })
+                .on(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, (recordName: string) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.ASSET_WRITTEN, recordName),
+                    );
+                })
+                .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_ASSETS_COMPLETED));
+                })
+                .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_ALBUMS_COMPLETED)
+                        .addField(FIELDS.ALBUMS_TO_BE_ADDED, toBeAddedCount)
+                        .addField(FIELDS.ALBUMS_TO_BE_DELETED, toBeDeletedCount)
+                        .addField(FIELDS.ALBUMS_TO_BE_KEPT, toBeKept),
+                    );
+                })
+                .on(iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_ALBUMS_COMPLETED));
+                })
+                .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_COMPLETED));
+                })
+                .on(iCPSEventSyncEngine.DONE, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SYNC_COMPLETED));
+                })
+                .on(iCPSEventSyncEngine.RETRY, () => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SYNC_RETRY));
+                });
+
+            ResourceManager
+                .on(iCPSEventArchiveEngine.PERSISTING_START, (numberOfAssets: number) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint().addField(FIELDS.ASSETS_ARCHIVED, numberOfAssets));
+                })
+                .on(iCPSEventArchiveEngine.REMOTE_DELETE, (numberOfAssets: number) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint().addField(FIELDS.REMOTE_ASSETS_DELETED, numberOfAssets));
+                });
+
+            ResourceManager
+                .on(iCPSEventError.HANDLER_ERROR, (err: string) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.ERROR)
+                        .addField(FIELDS.ERROR, err));
+                })
+                .on(iCPSEventError.HANDLER_WARN, (err: string) => {
+                    this.logDataPoint(new InfluxLineProtocolPoint()
+                        .addField(FIELDS.STATUS_TIME, Date.now())
+                        .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.ERROR)
+                        .addField(FIELDS.ERROR, err));
+                });
+
+            ResourceManager.logger(this).info(`Enabling metrics exporter to file ${ResourceManager.metricsFilePath}`);
+        } catch (err) {
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(APP_ERR.METRICS_EXPORTER).setWarning().addCause(err));
         }
-
-        this.logger.info(`Enabling metrics exporter to file ${this.metricsFile}`);
-    }
-
-    /**
-     * Starts listening on class specific events on the provided object for status printing
-     * @param objects - The EventEmitter
-     */
-    registerObjects(...objects: EventEmitter[]) {
-        if (!this.metricsFile) {
-            return;
-        }
-
-        objects.forEach(obj => {
-            if (obj instanceof iCloud) {
-                this.handleICloud(obj);
-                return;
-            }
-
-            if (obj instanceof SyncEngine) {
-                this.handleSyncEngine(obj);
-                return;
-            }
-
-            if (obj instanceof ArchiveEngine) {
-                this.handleArchiveEngine(obj);
-                return;
-            }
-
-            if (obj instanceof MFAServer) {
-                this.handleMFAServer(obj);
-                return;
-            }
-
-            if (obj instanceof DaemonAppEvents) {
-                this.handleDaemonApp(obj);
-            }
-
-            if (obj instanceof ErrorHandler) {
-                this.handleErrorHandler(obj);
-            }
-        });
     }
 
     logDataPoint(dataPoint: InfluxLineProtocolPoint) {
-        fs.appendFileSync(this.metricsFile, dataPoint.toString(), {encoding: `utf8`});
-    }
-
-    /**
-     * Listens to MFA Server events and provides metrics output
-     * @param mfaServer - The MFA server to listen on
-     */
-    private handleMFAServer(mfaServer: MFAServer) {
-        mfaServer.on(MFA_SERVER.EVENTS.MFA_NOT_PROVIDED, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.MFA_NOT_PROVIDED));
-        });
-    }
-
-    /**
-     * Listens to iCloud events and provides metrics output
-     * @param iCloud - The iCloud object to listen on
-     */
-    private handleICloud(iCloud: iCloud) {
-        iCloud.on(ICLOUD.EVENTS.AUTHENTICATION_STARTED, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.AUTHENTICATION_STARTED));
-        });
-
-        iCloud.on(ICLOUD.EVENTS.AUTHENTICATED, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.AUTHENTICATED));
-        });
-
-        iCloud.on(ICLOUD.EVENTS.MFA_REQUIRED, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.MFA_REQUIRED));
-        });
-
-        iCloud.on(ICLOUD.EVENTS.MFA_RECEIVED, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.MFA_RECEIVED));
-        });
-
-        iCloud.on(ICLOUD.EVENTS.TRUSTED, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.DEVICE_TRUSTED));
-        });
-
-        iCloud.on(ICLOUD.EVENTS.ACCOUNT_READY, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.ACCOUNT_READY));
-        });
-
-        iCloud.on(ICLOUD.EVENTS.READY, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.ICLOUD_READY));
-        });
-    }
-
-    /**
-     * Listens to Sync Engine events and provides CLI output
-     * @param syncEngine - The Sync Engine object to listen on
-     */
-    private handleSyncEngine(syncEngine: SyncEngine) {
-        syncEngine.on(SYNC_ENGINE.EVENTS.START, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SYNC_START));
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.FETCH_N_LOAD_STARTED));
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.FETCH_N_LOAD_COMPLETED, (remoteAssetCount, remoteAlbumCount, localAssetCount, localAlbumCount) => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.FETCH_N_LOAD_COMPLETED)
-                .addField(FIELDS.LOCAL_ALBUMS_LOADED, localAlbumCount)
-                .addField(FIELDS.LOCAL_ASSETS_LOADED, localAssetCount)
-                .addField(FIELDS.REMOTE_ALBUMS_FETCHED, remoteAlbumCount)
-                .addField(FIELDS.REMOTE_ASSETS_FETCHED, remoteAssetCount),
-            );
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.DIFF, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.DIFF_STARTED));
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.DIFF_COMPLETED, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.DIFF_COMPLETED));
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_STARTED));
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS, (toBeDeletedCount, toBeAddedCount, toBeKept) => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_ASSETS_STARTED)
-                .addField(FIELDS.ASSETS_TO_BE_ADDED, toBeAddedCount)
-                .addField(FIELDS.ASSETS_TO_BE_DELETED, toBeDeletedCount)
-                .addField(FIELDS.ASSETS_TO_BE_KEPT, toBeKept),
-            );
-        });
-
-        // RecordName would be available
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSET_COMPLETED, recordName => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.ASSET_WRITTEN, recordName),
-            );
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ASSETS_COMPLETED, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_ASSETS_COMPLETED));
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS, (toBeDeletedCount, toBeAddedCount, toBeKept) => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_ALBUMS_COMPLETED)
-                .addField(FIELDS.ALBUMS_TO_BE_ADDED, toBeAddedCount)
-                .addField(FIELDS.ALBUMS_TO_BE_DELETED, toBeDeletedCount)
-                .addField(FIELDS.ALBUMS_TO_BE_KEPT, toBeKept),
-            );
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_ALBUMS_COMPLETED, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_ALBUMS_COMPLETED));
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.WRITE_COMPLETED, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.WRITE_COMPLETED));
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.DONE, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SYNC_COMPLETED));
-        });
-
-        syncEngine.on(SYNC_ENGINE.EVENTS.RETRY, () => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SYNC_RETRY));
-        });
-    }
-
-    /**
-     * Listens to Archive Engine events and provides CLI output
-     * @param archiveEngine - The Archive Engine object to listen on
-     */
-    private handleArchiveEngine(archiveEngine: ArchiveEngine) {
-        archiveEngine.on(ARCHIVE_ENGINE.EVENTS.PERSISTING_START, (numberOfAssets: number) => {
-            this.logDataPoint(new InfluxLineProtocolPoint().addField(FIELDS.ASSETS_ARCHIVED, numberOfAssets));
-        });
-
-        archiveEngine.on(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, (numberOfAssets: number) => {
-            this.logDataPoint(new InfluxLineProtocolPoint().addField(FIELDS.REMOTE_ASSETS_DELETED, numberOfAssets));
-        });
-    }
-
-    /**
-     * Listens to Error Handler events and provides CLI output
-     * @param errorHandler - The Error Handler object to listen on
-     */
-    private handleErrorHandler(errorHandler: ErrorHandler) {
-        errorHandler.on(ERROR_EVENT, (err: string) => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.ERROR)
-                .addField(FIELDS.ERROR, err));
-        });
-
-        errorHandler.on(WARN_EVENT, (err: string) => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.WARNING, err));
-        });
-    }
-
-    /**
-     * Handles events emitted from the daemon app
-     * @param daemon - The daemon app event emitter
-     */
-    private handleDaemonApp(daemon: DaemonAppEvents) {
-        daemon.on(DaemonAppEvents.EVENTS.SCHEDULED, (next: Date) => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED)
-                .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
-        });
-
-        daemon.on(DaemonAppEvents.EVENTS.DONE, (next: Date) => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED_SUCCESS)
-                .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
-        });
-
-        daemon.on(DaemonAppEvents.EVENTS.RETRY, (next: Date) => {
-            this.logDataPoint(new InfluxLineProtocolPoint()
-                .addField(FIELDS.STATUS_TIME, Date.now())
-                .addField(FIELDS.STATUS.name, FIELDS.STATUS.values.SCHEDULED_FAILURE)
-                .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
-        });
+        fs.appendFileSync(this.metricsFileDescriptor, dataPoint.toString(), {encoding: FILE_ENCODING});
     }
 }

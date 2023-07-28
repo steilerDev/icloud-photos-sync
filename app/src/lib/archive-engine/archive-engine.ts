@@ -1,4 +1,3 @@
-import {getLogger} from '../logger.js';
 import {AlbumType} from '../photos-library/model/album.js';
 import {Asset} from '../photos-library/model/asset.js';
 import {PhotosLibrary} from '../photos-library/photos-library.js';
@@ -6,18 +5,11 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {iCPSError} from '../../app/error/error.js';
-import EventEmitter from 'events';
-import * as ARCHIVE_ENGINE from './constants.js';
-import {HANDLER_EVENT} from '../../app/event/error-handler.js';
 import {ARCHIVE_ERR} from '../../app/error/error-codes.js';
 import {ResourceManager} from '../resource-manager/resource-manager.js';
+import {iCPSEventArchiveEngine, iCPSEventError} from '../resource-manager/events.js';
 
-export class ArchiveEngine extends EventEmitter {
-    /**
-     * Default logger for the class
-     */
-    protected logger = getLogger(this);
-
+export class ArchiveEngine {
     /**
      * The local photos library
      */
@@ -34,7 +26,6 @@ export class ArchiveEngine extends EventEmitter {
      * @param photosLibrary - The local photos library
      */
     constructor(icloud: iCloud, photosLibrary: PhotosLibrary) {
-        super();
         this.icloud = icloud;
         this.photosLibrary = photosLibrary;
     }
@@ -47,8 +38,8 @@ export class ArchiveEngine extends EventEmitter {
      * @returns A Promise, that resolves once the path has been archived
      */
     async archivePath(archivePath: string, assetList: Asset[]) {
-        this.logger.debug(`Archiving path ${archivePath}`);
-        this.emit(ARCHIVE_ENGINE.EVENTS.ARCHIVE_START, archivePath);
+        ResourceManager.logger(this).debug(`Archiving path ${archivePath}`);
+        ResourceManager.emit(iCPSEventArchiveEngine.ARCHIVE_START, archivePath);
 
         const albumName = path.basename(archivePath);
         if (albumName.startsWith(`.`)) {
@@ -68,8 +59,8 @@ export class ArchiveEngine extends EventEmitter {
         }
 
         const numberOfItems = Object.keys(loadedAlbum.assets).length;
-        this.logger.debug(`Persisting ${numberOfItems} items`);
-        this.emit(ARCHIVE_ENGINE.EVENTS.PERSISTING_START, numberOfItems);
+        ResourceManager.logger(this).debug(`Persisting ${numberOfItems} items`);
+        ResourceManager.emit(iCPSEventArchiveEngine.PERSISTING_START, numberOfItems);
 
         // Iterating over all album items to persist them
         const remoteDeleteList = await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
@@ -79,7 +70,7 @@ export class ArchiveEngine extends EventEmitter {
             try {
                 await this.persistAsset(assetPath, archivedAssetPath);
             } catch (err) {
-                this.emit(HANDLER_EVENT, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
+                ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
                     .addCause(err)
                     .addContext(`assetPath`, assetPath)
                     .addContext(`archivedAssetPath`, archivedAssetPath),
@@ -90,7 +81,7 @@ export class ArchiveEngine extends EventEmitter {
             try {
                 return this.prepareForRemoteDeletion(assetPath, assetList);
             } catch (err) {
-                this.emit(HANDLER_EVENT, err);
+                ResourceManager.emit(iCPSEventError.HANDLER_EVENT, err);
                 return undefined;
             }
         }));
@@ -99,7 +90,7 @@ export class ArchiveEngine extends EventEmitter {
         const uniqueDeleteList = [...new Set(remoteDeleteList.filter(obj => obj !== undefined))];
         if (uniqueDeleteList && uniqueDeleteList.length > 0 && ResourceManager.remoteDelete) {
             try {
-                this.emit(ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE, uniqueDeleteList.length);
+                ResourceManager.emit(iCPSEventArchiveEngine.REMOTE_DELETE, uniqueDeleteList.length);
                 await this.icloud.photos.deleteAssets(uniqueDeleteList);
             } catch (err) {
                 throw new iCPSError(ARCHIVE_ERR.REMOTE_DELETE_FAILED)
@@ -107,7 +98,7 @@ export class ArchiveEngine extends EventEmitter {
             }
         }
 
-        this.emit(ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
+        ResourceManager.emit(iCPSEventArchiveEngine.ARCHIVE_DONE);
     }
 
     /**
@@ -117,7 +108,7 @@ export class ArchiveEngine extends EventEmitter {
      * @returns A Promise that resolves, once the file has been copied
      */
     async persistAsset(assetPath: string, archivedAssetPath: string): Promise<void> {
-        this.logger.debug(`Persisting ${assetPath} to ${archivedAssetPath}`);
+        ResourceManager.logger(this).debug(`Persisting ${assetPath} to ${archivedAssetPath}`);
         const fileStat = await fs.stat(assetPath);
         // Const lFileStat = await fs.lstat(archivedAssetPath)
         await fs.unlink(archivedAssetPath);
@@ -156,11 +147,11 @@ export class ArchiveEngine extends EventEmitter {
         }
 
         if (asset.isFavorite) {
-            this.logger.debug(`Not deleting favorite asset ${asset.getDisplayName()}`);
+            ResourceManager.logger(this).debug(`Not deleting favorite asset ${asset.getDisplayName()}`);
             return undefined;
         }
 
-        this.logger.debug(`Returning asset ${asset.recordName} for deletion`);
+        ResourceManager.logger(this).debug(`Returning asset ${asset.recordName} for deletion`);
         return asset.recordName;
     }
 }

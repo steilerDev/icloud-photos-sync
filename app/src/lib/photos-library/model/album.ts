@@ -97,7 +97,7 @@ export class Album implements PEntity<Album> {
             Buffer.from(cplAlbum.albumNameEnc, `base64`).toString(`utf8`),
             cplAlbum.parentId ? cplAlbum.parentId : ``,
         );
-        album.assets = cplAlbum.assets;
+        album.assets = cplAlbum.assets ?? {};
         return album;
     }
 

@@ -7,14 +7,11 @@ import {iCPSError} from "./error/error.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {Album} from "../lib/photos-library/model/album.js";
 import path from "path";
-import {EventEmitter} from "events";
-import * as ICLOUD from "../lib/icloud/constants.js";
-import * as Logger from '../lib/logger.js';
 import {Cron} from "croner";
-import {HANDLER_EVENT} from "./event/error-handler.js";
-import {EventHandler, registerObjectsToEventHandlers, removeObjectsFromEventHandlers} from "./event/event-handler.js";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {ResourceManager} from "../lib/resource-manager/resource-manager.js";
+import {iCPSEventApp, iCPSEventCloud, iCPSEventError} from "../lib/resource-manager/events.js";
+import {exit} from "process";
 
 /**
  * Filename for library lock file located in DATA_DIR
@@ -22,25 +19,10 @@ import {ResourceManager} from "../lib/resource-manager/resource-manager.js";
 export const LIBRARY_LOCK_FILE = `.library.lock`;
 
 export abstract class iCPSApp {
-    constructor() {
-        // Needs to be done here so all future objects use it / including handlers and everything created down the chain
-        Logger.setupLogger();
-    }
-
     /**
      * Executes this app
-     * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      */
-    abstract run(...eventHandlers: EventHandler[]): Promise<unknown>
-}
-
-export class DaemonAppEvents extends EventEmitter {
-    static EVENTS = {
-        SCHEDULED: `scheduled`, // Next execution
-        START: `start`,
-        DONE: `done`, // Next execution
-        RETRY: `retry`, // Next execution
-    };
+    abstract run(): Promise<unknown>
 }
 
 /**
@@ -53,29 +35,14 @@ export class DaemonApp extends iCPSApp {
     job?: Cron;
 
     /**
-     * EventEmitter to notify EventHandlers, needed because we cannot extend two classes
-     */
-    event: DaemonAppEvents;
-
-    /**
-     * Builds the app
-     * @param options - CLI Options for the app
-     */
-    constructor() {
-        super();
-        this.event = new DaemonAppEvents();
-    }
-
-    /**
      * Schedule the synchronization based on the provided cron string
      * @returns Once the job has been scheduled
      */
-    async run(...eventHandlers: EventHandler[]) {
-        registerObjectsToEventHandlers(eventHandlers, this.event);
+    async run() {
         this.job = new Cron(ResourceManager.schedule, async () => {
-            await this.performScheduledSync(eventHandlers);
+            await this.performScheduledSync();
         });
-        this.event.emit(DaemonAppEvents.EVENTS.SCHEDULED, this.job?.nextRun());
+        ResourceManager.emit(iCPSEventApp.SCHEDULED, this.job?.nextRun());
     }
 
     /**
@@ -83,14 +50,14 @@ export class DaemonApp extends iCPSApp {
      * @param eventHandlers - Event handlers of daemon app
      * @param syncApp - Parametrized for testability - will be freshly initiated if omitted
      */
-    async performScheduledSync(eventHandlers: EventHandler[], syncApp: SyncApp = new SyncApp()) {
+    async performScheduledSync(syncApp: SyncApp = new SyncApp()) {
         try {
-            this.event.emit(DaemonAppEvents.EVENTS.START);
-            await syncApp.run(...eventHandlers);
-            this.event.emit(DaemonAppEvents.EVENTS.DONE, this.job?.nextRun());
+            ResourceManager.emit(iCPSEventApp.SCHEDULED_START);
+            await syncApp.run();
+            ResourceManager.emit(iCPSEventApp.SCHEDULED_DONE, this.job?.nextRun());
         } catch (err) {
-            this.event.emit(HANDLER_EVENT, new iCPSError(APP_ERR.DAEMON).addCause(err));
-            this.event.emit(DaemonAppEvents.EVENTS.RETRY, this.job?.nextRun());
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(APP_ERR.DAEMON).addCause(err));
+            ResourceManager.emit(iCPSEventApp.SCHEDULED_RETRY, this.job?.nextRun());
         }
     }
 }
@@ -126,9 +93,7 @@ abstract class iCloudApp extends iCPSApp {
      * @returns A promise that resolves once the iCloud service is fully available
      * @throws A iCPSError in case an error occurs
      */
-    async run(...eventHandlers: EventHandler[]): Promise<unknown> {
-        registerObjectsToEventHandlers(eventHandlers, this.icloud, this.icloud.mfaServer);
-
+    async run(): Promise<unknown> {
         try {
             await this.acquireLibraryLock();
         } catch (err) {
@@ -148,7 +113,6 @@ abstract class iCloudApp extends iCPSApp {
      * Removes all established event listeners and releases the library lock
      */
     async clean() {
-        removeObjectsFromEventHandlers(this.icloud, this.icloud.mfaServer);
         await this.releaseLibraryLock();
     }
 
@@ -197,14 +161,16 @@ abstract class iCloudApp extends iCPSApp {
 export class TokenApp extends iCloudApp {
     /**
      * This function will validate the currently stored account token and print it afterwards
-     * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      * @returns A promise that resolves once the operation has been completed
      * @throws A TokenError in case an error occurs
      */
-    async run(...eventHandlers: EventHandler[]): Promise<unknown> {
+    async run(): Promise<unknown> {
         try {
-            await super.run(...eventHandlers);
-            this.icloud.emit(ICLOUD.EVENTS.TOKEN, ResourceManager.trustToken);
+            ResourceManager.on(iCPSEventCloud.TRUSTED, token => {
+                ResourceManager.emit(iCPSEventApp.TOKEN, token);
+                exit(0);
+            });
+            await super.run();
         } catch (err) {
             throw new iCPSError(APP_ERR.TOKEN)
                 .addCause(err);
@@ -249,10 +215,9 @@ export class SyncApp extends iCloudApp {
      * @returns A Promise that resolves to a tuple containing a list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync).
      * @throws A SyncError in case an error occurs
      */
-    async run(...eventHandlers: EventHandler[]): Promise<unknown> {
-        registerObjectsToEventHandlers(eventHandlers, this.photosLibrary, this.syncEngine);
+    async run(): Promise<unknown> {
         try {
-            await super.run(...eventHandlers);
+            await super.run();
             return await this.syncEngine.sync();
         } catch (err) {
             throw new iCPSError(APP_ERR.SYNC)
@@ -270,7 +235,6 @@ export class SyncApp extends iCloudApp {
      */
     async clean() {
         await super.clean();
-        removeObjectsFromEventHandlers(this.photosLibrary, this.syncEngine);
     }
 }
 
@@ -305,10 +269,9 @@ export class ArchiveApp extends SyncApp {
      * @returns A promise that resolves once the operation has finished
      * @throws An ArchiveError in case an error occurs
      */
-    async run(...eventHandlers: EventHandler[]): Promise<unknown> {
-        registerObjectsToEventHandlers(eventHandlers, this.archiveEngine);
+    async run(): Promise<unknown> {
         try {
-            const [remoteAssets] = await super.run(...eventHandlers) as [Asset[], Album[]];
+            const [remoteAssets] = await super.run() as [Asset[], Album[]];
             return await this.archiveEngine.archivePath(this.archivePath, remoteAssets);
         } catch (err) {
             throw new iCPSError(APP_ERR.ARCHIVE)
@@ -326,6 +289,5 @@ export class ArchiveApp extends SyncApp {
      */
     async clean() {
         await super.clean();
-        removeObjectsFromEventHandlers(this.archiveEngine);
     }
 }

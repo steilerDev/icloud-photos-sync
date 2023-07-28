@@ -36,7 +36,7 @@ export function prepareResourceManager(initiate: boolean = true, appOptions: iCP
     if (initiate) {
         ResourceManager.setup(appOptions);
         (ResourceManager.network as MockedNetworkManager).mock = new MockAdapter(ResourceManager.network._axios, {onNoMatch: `throwException`});
-        (ResourceManager.instance as MockedResourceManager).spyOnEvent = event => spyOnEvent(ResourceManager.instance, event);
+        (ResourceManager.instance as MockedResourceManager).spyOnEvent = event => spyOnEvent(ResourceManager.instance._eventBus, event);
     }
 
     return ResourceManager._instance as MockedResourceManager | undefined;

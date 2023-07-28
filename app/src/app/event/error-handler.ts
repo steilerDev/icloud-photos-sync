@@ -1,29 +1,12 @@
 import * as bt from 'backtrace-node';
-import {EventEmitter} from 'events';
 import * as PACKAGE_INFO from '../../lib/package.js';
-import {getLogger, logFilePath} from "../../lib/logger.js";
 import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
-import {EventHandler} from './event-handler.js';
 import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
-import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
-import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
 import fs from 'fs/promises';
 import path from 'path';
 import {ResourceManager} from '../../lib/resource-manager/resource-manager.js';
-
-/**
- * The event emitted by classes of this application and picked up by the handler.
- */
-export const HANDLER_EVENT = `handler-event`;
-/**
- * Event emitted in case an error was handled. Error string provided as argument.
- */
-export const ERROR_EVENT = `error`;
-/**
- * Event emitted in case a warning was handled. Error string provided as argument.
- */
-export const WARN_EVENT = `warn`;
+import {iCPSEventApp, iCPSEventError, iCPSEventLog} from '../../lib/resource-manager/events.js';
 
 const reportDenyList = [
     ERR_SIGINT.code,
@@ -47,7 +30,7 @@ const BACKTRACE_SUBMISSION = {
 /**
  * This class handles errors thrown or `HANDLER_EVENT` emitted by classes of this application
  */
-export class ErrorHandler extends EventEmitter implements EventHandler {
+export class ErrorHandler {
     /**
      * The error reporting client - if activated
      */
@@ -59,7 +42,6 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
     verbose: boolean = false;
 
     constructor() {
-        super();
         if (ResourceManager.enableCrashReporting) {
             const endpoint = `${BACKTRACE_SUBMISSION.DOMAIN}/${BACKTRACE_SUBMISSION.UNIVERSE}/`
                                 + `${PACKAGE_INFO.VERSION === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
@@ -75,7 +57,14 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
                 },
             });
             // This.btClient.setSymbolication();
+            ResourceManager.on(iCPSEventApp.SCHEDULED_START, async () => {
+                await this.reportSyncStart();
+            });
         }
+
+        ResourceManager.on(iCPSEventError.HANDLER_EVENT, async (err: unknown) => {
+            await this.handle(err);
+        });
 
         if (ResourceManager.logLevel === `trace` || ResourceManager.logLevel === `debug`) {
             this.verbose = true;
@@ -120,32 +109,13 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         // Performing output based on severity
         switch (_err.sev) {
         case `WARN`:
-            this.emit(WARN_EVENT, message);
-            getLogger(this).warn(message);
+            ResourceManager.emit(iCPSEventError.HANDLER_WARN, message);
             break;
         default:
         case `FATAL`:
-            this.emit(ERROR_EVENT, message);
-            getLogger(this).error(message);
+            ResourceManager.emit(iCPSEventError.HANDLER_ERROR, message);
             break;
         }
-    }
-
-    /**
-     * Registers an event listener for `HANDLER_EVENT` on the provided object.
-     * @param objects - A list of EventEmitter, which will emit `HANDLER_EVENT`
-     */
-    registerObjects(...objects: EventEmitter[]) {
-        objects.forEach(obj => {
-            obj.on(HANDLER_EVENT, async (err: unknown) => {
-                await this.handle(err);
-            });
-            if (this.btClient && obj instanceof SyncEngine) {
-                obj.on(SYNC_ENGINE.EVENTS.START, async () => {
-                    await this.reportSyncStart();
-                });
-            }
-        });
     }
 
     /**
@@ -160,7 +130,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
         const errorUUID = randomUUID();
 
-        const attachment = await this.prepareLogFile(logFilePath);
+        const attachment = await this.prepareLogFile(ResourceManager.logFilePath);
 
         const report = this.btClient.createReport(err, {
             'icps.description': err.getDescription(),

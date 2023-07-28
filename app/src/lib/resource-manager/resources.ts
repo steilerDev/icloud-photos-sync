@@ -1,10 +1,24 @@
 import {iCPSAppOptions} from "../../app/factory.js";
 
 /**
+ * File encoding for all text based files written by this application
+ */
+export const FILE_ENCODING = `utf8`;
+
+/**
  * Filename of the resource file
  */
 export const RESOURCE_FILE_NAME = `.icloud-photos-sync`;
-export const RESOURCE_FILE_ENCODING = `utf8`;
+
+/**
+ * The name of the log file
+ */
+export const LOG_FILE_NAME = `.icloud-photos-sync.log`;
+
+/**
+ * The name of the metrics file
+ */
+export const METRICS_FILE_NAME = `.icloud-photos-sync.metrics`;
 
 /**
  * Resources held by the resource manager
@@ -12,6 +26,7 @@ export const RESOURCE_FILE_ENCODING = `utf8`;
 export type iCPSResources = ResourceFile
     & iCPSAppOptions
     & PhotosAccount
+    & iCPSRuntimeResources;
 
 /**
  * Persistent information, stored in a resource file
@@ -59,4 +74,22 @@ export type PhotosAccountZone = {
      * The owner name, usually _<UUID>
      */
     ownerRecordName: string,
+}
+
+/**
+ * Optional runtime resources
+ */
+export type iCPSRuntimeResources = {
+    /**
+     * The path to the log file, undefined if logging is disabled
+     */
+    logFilePath?: string,
+    /**
+     * The path to the metrics file, undefined if the metrics exporter is disabled
+     */
+    metricsFilePath?: string,
+    /**
+     * The path to the HAR file, undefined if the HAR exporter is disabled
+     */
+    harFilePath?: string,
 }

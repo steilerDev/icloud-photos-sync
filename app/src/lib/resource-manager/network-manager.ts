@@ -5,17 +5,11 @@ import {ResourceManager} from "./resource-manager.js";
 import {iCPSEventError} from "./events.js";
 import {iCPSError} from "../../app/error/error.js";
 import {RES_MANAGER_ERR} from "../../app/error/error-codes.js";
-import {getLogger} from "../logger.js";
 
 /**
  * This class is responsible for keeping track of the shared network connection
  */
 export class NetworkManager {
-    /**
-     * Default logger for the class
-     */
-    protected logger = getLogger(this);
-
     /**
      * Non persistent network resources, required to access the iCloud API
      */
@@ -44,7 +38,7 @@ export class NetworkManager {
      * @param scnt - The scnt value to use,  undefined to delete the header
      */
     set scnt(scnt: string | undefined) {
-        this.logger.debug(`Setting scnt to ${scnt}`);
+        ResourceManager.logger(this).debug(`Setting scnt to ${scnt}`);
         this._resources.scnt = scnt;
         if (this._resources.scnt === undefined) {
             delete this._axios.defaults.headers[HEADER_KEYS.SCNT];
@@ -83,7 +77,7 @@ export class NetworkManager {
      * @param sessionId - The session id value to use - undefined to delete the header
      */
     set sessionId(sessionId: string | undefined) {
-        this.logger.debug(`Setting sessionId to ${sessionId}`);
+        ResourceManager.logger(this).debug(`Setting sessionId to ${sessionId}`);
         this._resources.sessionId = sessionId;
         if (this._resources.sessionId === undefined) {
             delete this._axios.defaults.headers[HEADER_KEYS.SESSION_ID];
@@ -104,7 +98,7 @@ export class NetworkManager {
      * Persist the session token required for setup
      */
     set sessionToken(sessionToken: string | undefined) {
-        this.logger.debug(`Setting sessionToken to ${sessionToken}`);
+        ResourceManager.logger(this).debug(`Setting sessionToken to ${sessionToken}`);
         this._resources.sessionToken = sessionToken;
     }
 
@@ -156,7 +150,7 @@ export class NetworkManager {
      * @param url - The url to set, including the protocol and port
      */
     set photosUrl(url: string | undefined) {
-        this.logger.debug(`Setting photosUrl to ${url}`);
+        ResourceManager.logger(this).debug(`Setting photosUrl to ${url}`);
         this._resources.photosUrl = url;
         this._axios.defaults.baseURL = this._resources.photosUrl + ENDPOINTS.PHOTOS.BASE_PATH;
     }
@@ -190,7 +184,7 @@ export class NetworkManager {
     }
 
     applyPhotosSetupResponse(photosSetupResponse: PhotosSetupResponse) {
-        this.logger.info(`Found ${photosSetupResponse.data.zones.length} available zones: ${photosSetupResponse.data.zones.map(zone => zone.zoneID.zoneName).join(`, `)}`);
+        ResourceManager.logger(this).info(`Found ${photosSetupResponse.data.zones.length} available zones: ${photosSetupResponse.data.zones.map(zone => zone.zoneID.zoneName).join(`, `)}`);
 
         const primaryZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName === `PrimarySync`);
         if (!primaryZoneData) {
@@ -202,7 +196,7 @@ export class NetworkManager {
 
         const sharedZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName.startsWith(`SharedSync-`));
         if (sharedZoneData) {
-            this.logger.debug(`Found shared zone ${sharedZoneData.zoneID.zoneName}`);
+            ResourceManager.logger(this).debug(`Found shared zone ${sharedZoneData.zoneID.zoneName}`);
             ResourceManager.sharedZone = sharedZoneData.zoneID;
         }
     }
@@ -218,7 +212,7 @@ export class NetworkManager {
         );
 
         if (validCookies.length !== this._resources.cookies.length) {
-            this.logger.debug(`Removing ${this._resources.cookies.length - validCookies.length} expired cookies`);
+            ResourceManager.logger(this).debug(`Removing ${this._resources.cookies.length - validCookies.length} expired cookies`);
             ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(RES_MANAGER_ERR.EXPIRED_COOKIES_DETECTED)
                 .addContext(`cookies`, this._resources.cookies)
                 .setWarning(),
@@ -227,7 +221,7 @@ export class NetworkManager {
 
         this._resources.cookies = validCookies;
         this._axios.defaults.headers[HEADER_KEYS.COOKIE] = this._resources.cookies.map(cookie => cookie.cookieString()).join(`; `);
-        this.logger.debug(`Updated cookie header to ${JSON.stringify(this._axios.defaults.headers[HEADER_KEYS.COOKIE])}`);
+        ResourceManager.logger(this).debug(`Updated cookie header to ${JSON.stringify(this._axios.defaults.headers[HEADER_KEYS.COOKIE])}`);
     }
 
     /**
@@ -247,7 +241,7 @@ export class NetworkManager {
             this._resources.cookies = [];
         }
 
-        this.logger.debug(`Adding ${cookies.length} cookies to the session`);
+        ResourceManager.logger(this).debug(`Adding ${cookies.length} cookies to the session`);
         this._resources.cookies.push(...cookies);
         this._updateCookieHeader();
     }

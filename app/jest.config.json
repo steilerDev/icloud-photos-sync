@@ -32,8 +32,6 @@
       ]
     },
     "moduleNameMapper": {
-      ".*/logger.js": "<rootDir>/test/_mocks/logger.ts",
-      ".*/cli.js": "<rootDir>/test/_mocks/cli.ts",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     }
   }

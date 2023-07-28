@@ -1,13 +1,10 @@
-import EventEmitter from 'events';
 import http from 'http';
-import * as MFA_SERVER from './constants.js';
-import {getLogger} from '../../logger.js';
 import {MFAMethod} from './mfa-method.js';
 import * as PACKAGE from '../../package.js';
-import {HANDLER_EVENT} from '../../../app/event/error-handler.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {MFA_ERR} from '../../../app/error/error-codes.js';
 import {ResourceManager} from '../../resource-manager/resource-manager.js';
+import {iCPSEventError, iCPSEventMFA} from '../../resource-manager/events.js';
 
 /**
  * The MFA timeout value in milliseconds
@@ -26,12 +23,7 @@ export const MFA_SERVER_ENDPOINTS = {
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
  * todo - Implement re-request of MFA code
  */
-export class MFAServer extends EventEmitter {
-    /**
-     * Default logger for this class
-     */
-    private logger = getLogger(this);
-
+export class MFAServer {
     /**
      * The server object
      */
@@ -51,9 +43,7 @@ export class MFAServer extends EventEmitter {
      * Creates the server object
      */
     constructor() {
-        super();
-
-        this.logger.debug(`Preparing MFA server on port ${ResourceManager.mfaServerPort}`);
+        ResourceManager.logger(this).debug(`Preparing MFA server on port ${ResourceManager.mfaServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
         this.server.on(`error`, err => {
             const icpsErr = (Object.hasOwn(err, `code`) && (err as any).code === `EADDRINUSE`)
@@ -62,7 +52,7 @@ export class MFAServer extends EventEmitter {
 
             icpsErr.addCause(err);
 
-            this.emit(HANDLER_EVENT, icpsErr);
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, icpsErr);
         });
 
         // Default MFA request always goes to device
@@ -73,18 +63,23 @@ export class MFAServer extends EventEmitter {
      * Starts the server and listens for incoming requests to perform MFA actions
      */
     startServer() {
-        this.server.listen(ResourceManager.mfaServerPort, () => {
-            /* c8 ignore start */
-            // Never starting the server just to see logger message
-            this.logger.info(`Exposing endpoints: ${JSON.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
-            /* c8 ignore stop */
-        });
+        try {
+            this.server.listen(ResourceManager.mfaServerPort, () => {
+                /* c8 ignore start */
+                // Never starting the server just to see logger message
+                ResourceManager.emit(iCPSEventMFA.STARTED, ResourceManager.mfaServerPort);
+                ResourceManager.logger(this).info(`Exposing endpoints: ${JSON.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
+                /* c8 ignore stop */
+            });
 
-        // MFA code needs to be provided within timeout period
-        this.mfaTimeout = setTimeout(() => {
-            this.emit(MFA_SERVER.EVENTS.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
-            this.stopServer();
-        }, MFA_TIMEOUT_VALUE);
+            // MFA code needs to be provided within timeout period
+            this.mfaTimeout = setTimeout(() => {
+                ResourceManager.emit(iCPSEventMFA.MFA_NOT_PROVIDED, this.mfaMethod, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
+                this.stopServer();
+            }, MFA_TIMEOUT_VALUE);
+        } catch (err) {
+            ResourceManager.emit(iCPSEventMFA.ERROR, new iCPSError(MFA_ERR.STARTUP_FAILED).addCause(err));
+        }
     }
 
     /**
@@ -99,7 +94,7 @@ export class MFAServer extends EventEmitter {
         }
 
         if (req.method !== `POST`) {
-            this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.METHOD_NOT_FOUND)
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.METHOD_NOT_FOUND)
                 .setWarning()
                 .addMessage(`endpoint ${req.url}, method ${req.method}`)
                 .addContext(`request`, req));
@@ -112,7 +107,7 @@ export class MFAServer extends EventEmitter {
         } else if (req.url.startsWith(MFA_SERVER_ENDPOINTS.RESEND_CODE)) {
             this.handleMFAResend(req, res);
         } else {
-            this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.ROUTE_NOT_FOUND)
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.ROUTE_NOT_FOUND)
                 .addMessage(req.url)
                 .setWarning()
                 .addContext(`request`, req));
@@ -127,7 +122,7 @@ export class MFAServer extends EventEmitter {
      */
     handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!req.url.match(/\?code=\d{6}$/)) {
-            this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.CODE_FORMAT)
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.CODE_FORMAT)
                 .addMessage(req.url)
                 .setWarning()
                 .addContext(`request`, req));
@@ -137,9 +132,9 @@ export class MFAServer extends EventEmitter {
 
         const mfa: string = req.url.slice(-6);
 
-        this.logger.debug(`Received MFA: ${mfa}`);
+        ResourceManager.logger(this).debug(`Received MFA: ${mfa}`);
         this.sendResponse(res, 200, `Read MFA code: ${mfa}`);
-        this.emit(MFA_SERVER.EVENTS.MFA_RECEIVED, this.mfaMethod, mfa);
+        ResourceManager.emit(iCPSEventMFA.MFA_RECEIVED, this.mfaMethod, mfa);
     }
 
     /**
@@ -151,7 +146,7 @@ export class MFAServer extends EventEmitter {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
         if (!methodMatch) {
             this.sendResponse(res, 400, `Resend method does not match expected format`);
-            this.emit(HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_METHOD_FORMAT)
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_METHOD_FORMAT)
                 .addContext(`requestURL`, req.url));
             return;
         }
@@ -167,7 +162,7 @@ export class MFAServer extends EventEmitter {
         }
 
         this.sendResponse(res, 200, `Requesting MFA resend with method ${this.mfaMethod}`);
-        this.emit(MFA_SERVER.EVENTS.MFA_RESEND, this.mfaMethod);
+        ResourceManager.emit(iCPSEventMFA.MFA_RESEND, this.mfaMethod);
     }
 
     /**
@@ -185,7 +180,7 @@ export class MFAServer extends EventEmitter {
      * Stops the server
      */
     stopServer() {
-        this.logger.debug(`Stopping server`);
+        ResourceManager.logger(this).debug(`Stopping server`);
         if (this.server) {
             this.server.close();
             this.server = undefined;

@@ -18,3 +18,11 @@ export const SYNC: ErrorStruct = buildErrorStruct(
 export const ARCHIVE: ErrorStruct = buildErrorStruct(
     name, prefix, `ARCHIVE`, `Archive failed`,
 );
+
+export const LOGGER: ErrorStruct = buildErrorStruct(
+    name, prefix, `LOGGER`, `Unable to initialize logger`,
+);
+
+export const METRICS_EXPORTER: ErrorStruct = buildErrorStruct(
+    name, prefix, `METRICS_EXPORTER`, `Unable to initialize metrics exporter`,
+);
