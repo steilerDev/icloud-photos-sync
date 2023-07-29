@@ -9,8 +9,7 @@ import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import axios, {AxiosRequestConfig} from 'axios';
 import * as Config from '../_helpers/_config';
-import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
-import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
@@ -18,8 +17,10 @@ const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR)
 const archiveDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR);
 const stashDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR, STASH_DIR);
 
+let mockedResourceManager: MockedResourceManager;
+
 beforeEach(() => {
-    prepareResourceManager();
+    mockedResourceManager = prepareResourceManager()!;
 });
 
 afterEach(() => {
@@ -229,7 +230,7 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
+            const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
             const albums = await library.loadAlbums();
 
@@ -250,7 +251,7 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const orphanEvent = spyOnEvent(library, HANDLER_EVENT);
+            const orphanEvent = mockedResourceManager.spyOnHandlerEvent();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(0);
@@ -743,7 +744,7 @@ describe(`Write state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
+            const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
             library.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
 
             try {
@@ -1238,7 +1239,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
+                const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
                 library.writeAlbum(folder);
 
@@ -1400,7 +1401,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const handlerEvent = spyOnEvent(library, HANDLER_EVENT);
+                const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
                 library.writeAlbum(folder);
 
@@ -1781,7 +1782,7 @@ describe(`Write state`, () => {
                 const archivedName = `2015 - 2016`;
 
                 const library = new PhotosLibrary();
-                library.movePathTuple = jest.fn();
+                library.movePathTuple = jest.fn<typeof library.movePathTuple>();
 
                 const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
                 library.retrieveStashedAlbum(album);
@@ -1797,7 +1798,7 @@ describe(`Write state`, () => {
                 const archivedName = `2015 - 2016`;
 
                 const library = new PhotosLibrary();
-                library.movePathTuple = jest.fn();
+                library.movePathTuple = jest.fn<typeof library.movePathTuple>();
 
                 const album = new Album(archivedUUID, AlbumType.ARCHIVED, archivedName, ``);
                 library.stashArchivedAlbum(album);

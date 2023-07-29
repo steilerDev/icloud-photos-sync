@@ -1,44 +1,4 @@
-import {iCloud} from "../../src/lib/icloud/icloud";
-import * as Config from './_config';
 import {addHoursToCurrentDate, getDateInThePast} from "./_general";
-import {iCloudPhotos} from "../../src/lib/icloud/icloud-photos/icloud-photos";
-import {ResourceManager} from "../../src/lib/resource-manager/resource-manager";
-
-/**
- * This function creates a new instance of the iCloud class, mocks unecessary functions and removes all event listeners.
- * @returns An iCloud instance, ready to be used in tests.
- */
-export function iCloudFactory(): iCloud {
-    const icloud = new iCloud();
-    icloud.mfaServer.startServer = () => {};
-    icloud.mfaServer.stopServer = () => {};
-    icloud.removeAllListeners();
-    icloud.mfaServer.removeAllListeners();
-    icloud.ready = icloud.getReady();
-    return icloud;
-}
-
-/**
- * This function creates a new instance of the iCloudPhotos class, mocks unecessary functions and removes all event listeners.
- * @param removeEventListeners - Whether to remove all event listeners from the instance. Defaults to true.
- * @param sharedLibrary - Whether to add a shared library to the iCloudPhotosAccount. Defaults to true.
- * @returns An iCloudPhotos instance, ready to be used in tests.
- */
-export function iCloudPhotosFactory(removeEventListeners: boolean = true, sharedLibrary: boolean = true): iCloudPhotos {
-    ResourceManager.network._resources.photosUrl = Config.photosDomain;
-    ResourceManager.instance._resources.primaryZone = Config.primaryZone;
-    if (sharedLibrary) {
-        ResourceManager.instance._resources.sharedZone = Config.sharedZone;
-    }
-
-    const icloudPhotos = new iCloudPhotos();
-
-    if (removeEventListeners) {
-        icloudPhotos.removeAllListeners();
-    }
-
-    return icloudPhotos;
-}
 
 export function getICloudCookieHeader(expired: boolean = false) {
     // We need to dynamically set the expiration date, otherwise we might run into issues

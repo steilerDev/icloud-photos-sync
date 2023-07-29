@@ -118,7 +118,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Invalid log level`,
-        expected: `error: option '-l, --log-level <level>' argument 'superInfo' is invalid. Allowed choices are trace, debug, info, warn, error.\n`,
+        expected: `error: option '-l, --log-level <level>' argument 'superInfo' is invalid. Allowed choices are debug, info, warn, error.\n`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -787,9 +787,9 @@ export const nonRejectOptions = [
             `-p`,
             `testPass`,
             `--log-level`,
-            `trace`,
+            `warn`,
         ],
-        _desc: `Log level set to trace`,
+        _desc: `Log level set to warn`,
         expectedOptions: {
             username: `test@icloud.com`,
             password: `testPass`,
@@ -803,7 +803,7 @@ export const nonRejectOptions = [
             force: false,
             refreshToken: false,
             remoteDelete: false,
-            logLevel: `trace`,
+            logLevel: `warn`,
             silent: false,
             logToCli: false,
             suppressWarnings: false,

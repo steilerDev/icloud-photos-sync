@@ -26,7 +26,7 @@ export const MAX_RECORDS_LIMIT = 198;
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
  */
-export class iCloudPhotos extends EventEmitter {
+export class iCloudPhotos {
     /**
      * A promise that will resolve, once the object is ready or reject, in case there is an error
      */
@@ -42,8 +42,6 @@ export class iCloudPhotos extends EventEmitter {
      * @param auth - The populated authentication object
      */
     constructor() {
-        super();
-
         this.queryQueue = new PQueue({
             intervalCap: ResourceManager.metadataRate[0],
             interval: ResourceManager.metadataRate[1],

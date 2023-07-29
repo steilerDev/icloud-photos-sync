@@ -1,15 +1,15 @@
 import {describe, test, expect, jest, beforeEach} from '@jest/globals';
 import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
 import * as Config from '../_helpers/_config';
-import * as ICLOUD_PHOTOS from '../../src/lib/icloud/icloud-photos/constants';
 import {MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {iCPSError} from '../../src/app/error/error';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
+import { iCPSEventPhotos } from '../../src/lib/resource-manager/events';
 
 let mockedResourceManager: MockedResourceManager;
-let mockedICloudPhotos: iCloudPhotos;
+let photos: iCloudPhotos;
 
 beforeEach(() => {
     mockedResourceManager = prepareResourceManager()!;
@@ -18,17 +18,16 @@ beforeEach(() => {
     mockedResourceManager._resources.primaryZone = Config.primaryZone;
     mockedResourceManager._resources.sharedZone = Config.sharedZone;
 
-    mockedICloudPhotos = new iCloudPhotos();
-    mockedICloudPhotos.removeAllListeners();
+    photos = new iCloudPhotos();
 });
 
 describe(`Setup iCloud Photos`, () => {
     const setupURL = `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`;
 
     test(`Success`, async () => {
-        mockedICloudPhotos.ready = Promise.resolve();
+        photos.ready = Promise.resolve();
 
-        const setupCompleteEvent = spyOnEvent(mockedICloudPhotos, ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
+        const setupCompletedEvent = mockedResourceManager.spyOnEvent(iCPSEventPhotos.SETUP_COMPLETED);
 
         mockedResourceManager._validator.validatePhotosSetupResponse = jest.fn<typeof mockedResourceManager._validator.validatePhotosSetupResponse>();
         mockedResourceManager._network.applyPhotosSetupResponse = jest.fn<typeof mockedResourceManager._network.applyPhotosSetupResponse>();
@@ -37,19 +36,17 @@ describe(`Setup iCloud Photos`, () => {
             .onPost(setupURL, {})
             .reply(200);
 
-        await mockedICloudPhotos.setup();
+        await photos.setup();
 
         expect(mockedResourceManager._validator.validatePhotosSetupResponse).toHaveBeenCalledTimes(1);
         expect(mockedResourceManager._network.applyPhotosSetupResponse).toHaveBeenCalledTimes(1);
         expect((mockedResourceManager._network.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
 
-        expect(setupCompleteEvent).toHaveBeenCalledTimes(1);
+        expect(setupCompletedEvent).toHaveBeenCalledTimes(1);
     });
 
     test(`Response validation fails`, async () => {
-        mockedICloudPhotos.ready = mockedICloudPhotos.getReady();
-
-        const errorEvent = spyOnEvent(mockedICloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
+        const errorEvent = mockedResourceManager.spyOnEvent(iCPSEventPhotos.ERROR, false);
 
         mockedResourceManager._validator.validatePhotosSetupResponse = jest.fn<typeof mockedResourceManager._validator.validatePhotosSetupResponse>(() => {
             throw new iCPSError(VALIDATOR_ERR.SETUP_RESPONSE);
@@ -59,37 +56,33 @@ describe(`Setup iCloud Photos`, () => {
             .onPost(setupURL, {})
             .reply(200);
 
-        await expect(mockedICloudPhotos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
+        await expect(photos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
         expect(errorEvent).toHaveBeenCalledWith(new Error(`Unexpected error while setting up iCloud Photos`));
     });
 
     test(`Network failure`, async () => {
-        mockedICloudPhotos.ready = mockedICloudPhotos.getReady();
-
-        const errorEvent = spyOnEvent(mockedICloudPhotos, ICLOUD_PHOTOS.EVENTS.ERROR);
+        const errorEvent = mockedResourceManager.spyOnEvent(iCPSEventPhotos.ERROR, false);
 
         mockedResourceManager._network.mock
             .onPost(setupURL, {})
             .reply(500);
 
-        await expect(mockedICloudPhotos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
+        await expect(photos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
         expect(errorEvent).toHaveBeenCalledWith(new Error(`Unexpected error while setting up iCloud Photos`));
     });
 
     test(`Check indexing state after setup`, () => {
-        mockedICloudPhotos = new iCloudPhotos(); // Doing this so event listeners are maintained
-
-        mockedICloudPhotos.checkingIndexingStatus = jest.fn<typeof mockedICloudPhotos.checkingIndexingStatus>()
+        photos.checkingIndexingStatus = jest.fn<typeof photos.checkingIndexingStatus>()
             .mockResolvedValue();
 
-        mockedICloudPhotos.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
+        mockedResourceManager.emit(iCPSEventPhotos.SETUP_COMPLETED);
 
-        expect(mockedICloudPhotos.checkingIndexingStatus).toHaveBeenCalledTimes(1);
+        expect(photos.checkingIndexingStatus).toHaveBeenCalledTimes(1);
     });
 
     describe.each([Zones.Primary, Zones.Shared])(`Check indexing state - %o`, zone => {
         test(`Indexing finished`, async () => {
-            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
                 .mockResolvedValue([{
                     fields: {
                         state: {
@@ -98,13 +91,13 @@ describe(`Setup iCloud Photos`, () => {
                     },
                 }]);
 
-            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).resolves.toBeUndefined();
+            await expect(photos.checkIndexingStatusForZone(zone)).resolves.toBeUndefined();
 
-            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(photos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Indexing in progress with progress`, async () => {
-            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
                 .mockResolvedValue([{
                     fields: {
                         state: {
@@ -116,13 +109,13 @@ describe(`Setup iCloud Photos`, () => {
                     },
                 }]);
 
-            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
+            await expect(photos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
 
-            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(photos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Indexing in progress without progress`, async () => {
-            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
                 .mockResolvedValue([{
                     fields: {
                         state: {
@@ -131,13 +124,13 @@ describe(`Setup iCloud Photos`, () => {
                     },
                 }]);
 
-            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
+            await expect(photos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
 
-            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(photos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Unknown status`, async () => {
-            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
                 .mockResolvedValue([{
                     fields: {
                         state: {
@@ -146,9 +139,9 @@ describe(`Setup iCloud Photos`, () => {
                     },
                 }]);
 
-            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Unknown indexing state$/);
+            await expect(photos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Unknown indexing state$/);
 
-            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(photos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test.each([
@@ -157,21 +150,21 @@ describe(`Setup iCloud Photos`, () => {
             [[{fields: {}}]],
             [[{fields: {state: {}}}]],
         ])(`Empty query - %o`, async queryResult => {
-            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
                 .mockResolvedValue(queryResult);
 
-            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Unable to get indexing state$/);
+            await expect(photos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Unable to get indexing state$/);
 
-            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(photos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
         test(`Query failure`, async () => {
-            mockedICloudPhotos.performQuery = jest.fn<typeof mockedICloudPhotos.performQuery>()
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
                 .mockRejectedValue(new Error());
 
-            await expect(mockedICloudPhotos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^$/);
+            await expect(photos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^$/);
 
-            expect(mockedICloudPhotos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(photos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
     });
 });
@@ -278,7 +271,7 @@ describe.each([
                     records: responseRecords,
                 });
 
-            const result = await mockedICloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys);
+            const result = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys);
 
             expect(result).toEqual(responseRecords);
 
@@ -291,7 +284,7 @@ describe.each([
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
                 .reply(200, {});
 
-            await expect(mockedICloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Received unexpected query response format$/);
+            await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Received unexpected query response format$/);
         });
 
         test(`Server Error`, async () => {
@@ -299,7 +292,7 @@ describe.each([
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
                 .reply(500, {});
 
-            await expect(mockedICloudPhotos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Request failed with status code 500$/);
+            await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Request failed with status code 500$/);
         });
     });
 
@@ -351,7 +344,7 @@ describe.each([
                     records,
                 });
 
-            const result = await mockedICloudPhotos.performOperation(zone, operation, fields, records);
+            const result = await photos.performOperation(zone, operation, fields, records);
 
             expect(result).toEqual(records);
 

@@ -1,5 +1,6 @@
 import {MFAServer} from "../../src/lib/icloud/mfa/mfa-server";
 import {jest} from '@jest/globals';
+import {UnknownFunction} from "jest-mock"
 import {IncomingMessage, ServerResponse} from "http";
 
 export function mfaServerFactory(): MFAServer {
@@ -16,7 +17,7 @@ export function requestFactory(url: string, method: string = `POST`): IncomingMe
 
 export function responseFactory(): ServerResponse<IncomingMessage> {
     return {
-        writeHead: jest.fn(),
-        end: jest.fn(),
+        writeHead: jest.fn<UnknownFunction>(),
+        end: jest.fn<UnknownFunction>(),
     } as unknown as ServerResponse<IncomingMessage>;
 }

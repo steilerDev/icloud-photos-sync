@@ -10,7 +10,7 @@ import path from "path";
 import {Cron} from "croner";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {ResourceManager} from "../lib/resource-manager/resource-manager.js";
-import {iCPSEventApp, iCPSEventCloud, iCPSEventError} from "../lib/resource-manager/events.js";
+import {iCPSEventApp, iCPSEventCloud, iCPSEventError, iCPSEventPhotos} from "../lib/resource-manager/events.js";
 import {exit} from "process";
 
 /**
@@ -166,9 +166,13 @@ export class TokenApp extends iCloudApp {
      */
     async run(): Promise<unknown> {
         try {
+            // Making sure execution stops after TRUSTED event, by removing exising listeners
+            ResourceManager.instance._eventBus.removeAllListeners(iCPSEventCloud.TRUSTED);
             ResourceManager.on(iCPSEventCloud.TRUSTED, token => {
+                // Emitting event for CLI
                 ResourceManager.emit(iCPSEventApp.TOKEN, token);
-                exit(0);
+                // Fulfilling promise
+                ResourceManager.emit(iCPSEventPhotos.READY)
             });
             await super.run();
         } catch (err) {

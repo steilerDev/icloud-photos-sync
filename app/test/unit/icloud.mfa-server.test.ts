@@ -1,17 +1,17 @@
 
 import {expect, describe, test, jest, beforeEach} from '@jest/globals';
-import {HANDLER_EVENT} from '../../src/app/event/error-handler';
-import {EVENTS} from '../../src/lib/icloud/mfa/constants';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
 import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
-import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
+import {MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import {MFAServer, MFA_SERVER_ENDPOINTS, MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
+import { iCPSEventMFA } from '../../src/lib/resource-manager/events';
 
 let server: MFAServer;
+let mockedResourceManager: MockedResourceManager
 
 beforeEach(() => {
-    prepareResourceManager();
+    mockedResourceManager = prepareResourceManager()!;
     server = new MFAServer();
 });
 
@@ -20,8 +20,8 @@ describe(`MFA Code`, () => {
         const code = `123456`;
         const mfaMethod = new MFAMethod(`device`);
 
-        server.sendResponse = jest.fn();
-        const mfaReceivedEvent = spyOnEvent(server, EVENTS.MFA_RECEIVED);
+        server.sendResponse = jest.fn<typeof server.sendResponse>();
+        const mfaReceivedEvent = mockedResourceManager.spyOnEvent(iCPSEventMFA.MFA_RECEIVED);
 
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?code=${code}`);
         const res = responseFactory();
@@ -35,8 +35,8 @@ describe(`MFA Code`, () => {
     test(`Invalid code format`, () => {
         const code = `123 456`;
 
-        server.sendResponse = jest.fn();
-        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        server.sendResponse = jest.fn<typeof server.sendResponse>();
+        const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?code=${code}`);
         const res = responseFactory();
@@ -49,12 +49,15 @@ describe(`MFA Code`, () => {
 });
 
 describe(`MFA Resend`, () => {
+    beforeEach(() => {
+        server.sendResponse = jest.fn<typeof server.sendResponse>();
+    });
+
     test(`In app resend`, () => {
         const method = `device`;
         const mfaMethod = new MFAMethod(method);
 
-        server.sendResponse = jest.fn();
-        const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
+        const mfaResendEvent = mockedResourceManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
         const res = responseFactory();
@@ -69,8 +72,7 @@ describe(`MFA Resend`, () => {
         test(`Default id`, () => {
             const mfaMethod = new MFAMethod(method as `sms` | `voice`);
 
-            server.sendResponse = jest.fn();
-            const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
+            const mfaResendEvent = mockedResourceManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
             const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
             const res = responseFactory();
@@ -85,8 +87,8 @@ describe(`MFA Resend`, () => {
             const phoneNumberId = 3;
             const mfaMethod = new MFAMethod(method as `sms` | `voice`, phoneNumberId);
 
-            server.sendResponse = jest.fn();
-            const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
+            server.sendResponse = jest.fn<typeof server.sendResponse>();
+            const mfaResendEvent = mockedResourceManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
             const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
             const res = responseFactory();
@@ -101,8 +103,7 @@ describe(`MFA Resend`, () => {
             const phoneNumberId = `invalid`;
             const mfaMethod = new MFAMethod(method as `sms` | `voice`);
 
-            server.sendResponse = jest.fn();
-            const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
+            const mfaResendEvent = mockedResourceManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
             const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
             const res = responseFactory();
@@ -117,8 +118,7 @@ describe(`MFA Resend`, () => {
     test(`Invalid resend method`, () => {
         const method = `invalid`;
 
-        server.sendResponse = jest.fn();
-        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
         const res = responseFactory();
@@ -131,13 +131,15 @@ describe(`MFA Resend`, () => {
 });
 
 describe(`Request routing`, () => {
+    beforeEach(() => {
+        server.sendResponse = jest.fn<typeof server.sendResponse>();
+        server.handleMFAResend = jest.fn<typeof server.handleMFAResend>();
+        server.handleMFACode = jest.fn<typeof server.handleMFACode>();
+    });
+
     test(`GET /`, () => {
         const req = requestFactory(`/`, `GET`);
         const res = responseFactory();
-
-        server.sendResponse = jest.fn();
-        server.handleMFAResend = jest.fn();
-        server.handleMFACode = jest.fn();
 
         server.handleRequest(req, res);
 
@@ -150,10 +152,6 @@ describe(`Request routing`, () => {
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?testparam=abc`, `POST`);
         const res = responseFactory();
 
-        server.sendResponse = jest.fn();
-        server.handleMFAResend = jest.fn();
-        server.handleMFACode = jest.fn();
-
         server.handleRequest(req, res);
 
         expect(server.handleMFACode).toHaveBeenCalledWith(req, res);
@@ -164,10 +162,6 @@ describe(`Request routing`, () => {
     test(`POST /ENDPOINT.RESEND_CODE`, () => {
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?testparam=abc`, `POST`);
         const res = responseFactory();
-
-        server.sendResponse = jest.fn();
-        server.handleMFAResend = jest.fn();
-        server.handleMFACode = jest.fn();
 
         server.handleRequest(req, res);
 
@@ -181,10 +175,7 @@ describe(`Request routing`, () => {
         const req = requestFactory(`/invalid`, method);
         const res = responseFactory();
 
-        server.sendResponse = jest.fn();
-        server.handleMFAResend = jest.fn();
-        server.handleMFACode = jest.fn();
-        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
         server.handleRequest(req, res);
 
@@ -199,10 +190,7 @@ describe(`Request routing`, () => {
         const req = requestFactory(method, `POST`);
         const res = responseFactory();
 
-        server.sendResponse = jest.fn();
-        server.handleMFAResend = jest.fn();
-        server.handleMFACode = jest.fn();
-        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
         server.handleRequest(req, res);
 
@@ -217,7 +205,7 @@ describe(`Server lifecycle`, () => {
     jest.useFakeTimers();
 
     test(`Startup`, () => {
-        server.server.listen = jest.fn() as any;
+        server.server.listen = jest.fn<typeof server.server.listen>() as any;
 
         server.startServer();
         expect((server.server.listen as any).mock.lastCall[0]).toEqual(80);
@@ -226,11 +214,11 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Shutdown`, () => {
-        const closeFn = jest.fn() as any;
-        server.server.close = closeFn;
+        const closeFunction = jest.fn<typeof server.server.close>();
+        server.server.close = closeFunction;
 
         server.stopServer();
-        expect(closeFn).toHaveBeenCalled();
+        expect(closeFunction).toHaveBeenCalled();
         expect(server.server).toBeUndefined();
     });
 
@@ -242,14 +230,14 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Handle unknown server error`, () => {
-        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
         server.server.emit(`error`, new Error(`some server error`));
 
         expect(handlerEvent).toHaveBeenCalledWith(new Error(`HTTP Server Error`));
     });
 
     test(`Handle address in use error`, () => {
-        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
         const error = new Error(`Address in use`);
         (error as any).code = `EADDRINUSE`;
         server.server.emit(`error`, new Error(`Address in use`));
@@ -258,11 +246,11 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Handle MFA timeout`, () => {
-        server.server.listen = jest.fn() as any;
-        server.stopServer = jest.fn();
-        server.removeAllListeners(); // On listener event process.exit would be called
 
-        const timeoutEvent = spyOnEvent(server, EVENTS.MFA_NOT_PROVIDED);
+        server.server.listen = jest.fn<typeof server.server.listen>() as any;
+        server.stopServer = jest.fn<typeof server.stopServer>();
+
+        const timeoutEvent = mockedResourceManager.spyOnEvent(iCPSEventMFA.MFA_NOT_PROVIDED);
 
         server.startServer();
 
@@ -277,7 +265,7 @@ describe(`Server lifecycle`, () => {
 
         // Timers should have been called now
         jest.advanceTimersByTime(2);
-        expect(timeoutEvent).toHaveBeenCalledWith(new Error(`MFA server timeout (code needs to be provided within 10 minutes)`));
+        expect(timeoutEvent).toHaveBeenCalledWith(new MFAMethod(), new Error(`MFA server timeout (code needs to be provided within 10 minutes)`));
         expect(server.stopServer).toHaveBeenCalled();
     });
 });

@@ -12,8 +12,8 @@ import {readFileSync, writeFileSync} from "fs";
 import {FILE_ENCODING, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resources.js";
 import {Validator} from "./validator.js";
 import {NetworkManager} from "./network-manager.js";
-import {LogLevelDesc} from "loglevel";
 import {iCPSEvent, iCPSEventError, iCPSEventLog, iCPSEventResourceManager} from "./events.js";
+import {LogLevel} from "../../app/event/log.js";
 
 export class ResourceManager {
     /**
@@ -377,7 +377,7 @@ export class ResourceManager {
     /**
      * @returns The log level of the application
      */
-    get _logLevel(): LogLevelDesc {
+    get _logLevel(): LogLevel {
         return this._resources.logLevel;
     }
 
@@ -386,7 +386,7 @@ export class ResourceManager {
      * @see {@link _logLevel}
      * @returns The log level of the application
      */
-    static get logLevel(): LogLevelDesc {
+    static get logLevel(): LogLevel {
         return ResourceManager.instance._logLevel;
     }
 

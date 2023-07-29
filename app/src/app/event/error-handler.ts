@@ -6,7 +6,7 @@ import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR, MFA_ERR} from '../error/
 import fs from 'fs/promises';
 import path from 'path';
 import {ResourceManager} from '../../lib/resource-manager/resource-manager.js';
-import {iCPSEventApp, iCPSEventError, iCPSEventLog} from '../../lib/resource-manager/events.js';
+import {iCPSEventApp, iCPSEventError } from '../../lib/resource-manager/events.js';
 
 const reportDenyList = [
     ERR_SIGINT.code,
@@ -66,7 +66,7 @@ export class ErrorHandler {
             await this.handle(err);
         });
 
-        if (ResourceManager.logLevel === `trace` || ResourceManager.logLevel === `debug`) {
+        if (ResourceManager.logLevel === `debug`) {
             this.verbose = true;
         }
 

@@ -4,7 +4,7 @@ import * as PACKAGE_INFO from '../lib/package.js';
 import {ErrorHandler} from "./event/error-handler.js";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 import {ResourceManager} from "../lib/resource-manager/resource-manager.js";
-import {LogLevelDesc} from "loglevel";
+import {LogLevel} from "./event/log.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -97,7 +97,7 @@ export type iCPSAppOptions = {
     force: boolean,
     refreshToken: boolean,
     remoteDelete: boolean,
-    logLevel: LogLevelDesc,
+    logLevel: LogLevel,
     silent: boolean,
     logToCli: boolean,
     suppressWarnings: boolean,
@@ -166,9 +166,9 @@ export function appFactory(argv: string[]): iCPSApp {
         .addOption(new Option(`--remote-delete`, `If this flag is set, delete non-favorite photos in the iCloud Photos backend upon archiving.`)
             .env(`REMOTE_DELETE`)
             .default(false))
-        .addOption(new Option(`-l, --log-level <level>`, `Set the log level. NOTE: 'trace' might leak sensitive session data.`)
+        .addOption(new Option(`-l, --log-level <level>`, `Set the log level.`)
             .env(`LOG_LEVEL`)
-            .choices([`debug`, `info`, `warn`, `error`])
+            .choices(Object.values(LogLevel))
             .default(`info`))
         .addOption(new Option(`-s, --silent`, `Disables all output to the console.`)
             .env(`SILENT`)
