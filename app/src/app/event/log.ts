@@ -4,12 +4,51 @@ import {iCPSEventError, iCPSEventLog} from "../../lib/resource-manager/events.js
 import {iCPSError} from "../error/error.js";
 import {APP_ERR} from "../error/error-codes.js";
 import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
+import Ajv from 'ajv';
 
 export enum LogLevel {
     DEBUG = `debug`,
     INFO = `info`,
     WARN = `warn`,
     ERROR = `error`,
+}
+
+/**
+ * Creates a wrapper around the logger events to be used by the AJV validator
+ */
+export class AjvLogInterface implements Ajv.Logger {
+    /**
+     * Formats the provided arguments as a string
+     * @param args - The arguments to format
+     * @returns The formatted string
+     */
+    format(...args: unknown[]): string {
+        return args.map(arg => String(arg)).join(` `);
+    }
+
+    /**
+     * Emits a log info event using the provided arguments
+     * @param args - The arguments to log
+     */
+    log(...args: unknown[]): unknown {
+        return ResourceManager.emit(iCPSEventLog.INFO, this, this.format(...args));
+    }
+
+    /**
+     * Emits a log warn event using the provided arguments
+     * @param args - The arguments to log
+     */
+    warn(...args: unknown[]): unknown {
+        return ResourceManager.emit(iCPSEventLog.WARN, this, this.format(...args));
+    }
+
+    /**
+     * Emits a log error event using the provided arguments
+     * @param args - The arguments to log
+     */
+    error(...args: unknown[]): unknown {
+        return ResourceManager.emit(iCPSEventLog.ERROR, this, this.format(...args));
+    }
 }
 
 /**

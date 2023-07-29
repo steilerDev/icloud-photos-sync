@@ -1,7 +1,9 @@
 import {describe, test, expect, beforeEach} from '@jest/globals';
 import {Validator} from '../../src/lib/resource-manager/validator';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
-import {ResendMFADeviceResponse, ResendMFAPhoneResponse} from '../../src/lib/resource-manager/network';
+import {ResendMFADeviceResponse, ResendMFAPhoneResponse, TrustResponse} from '../../src/lib/resource-manager/network';
+import {getICloudCookieHeader} from '../_helpers/icloud.helper';
+import * as Config from '../_helpers/_config';
 
 describe(`Validator`, () => {
     let validator: Validator;
@@ -377,56 +379,451 @@ describe(`Validator`, () => {
         });
     });
 
-    //   Describe('validateTrustResponse', () => {
-    //     it('should validate a valid trust response', () => {
-    //       const data: TrustResponse = {
-    //         status: 'success',
-    //       };
-    //       expect(() => validator.validateTrustResponse(data)).not.toThrow();
-    //     });
+    describe(`validateTrustResponse`, () => {
+        test(`should validate a valid trust response`, () => {
+            const data: TrustResponse = {
+                headers: {
+                    'x-apple-twosv-trust-token': "someTrustToken", // eslint-disable-line
+                    'x-apple-session-token': "someSessionToken", // eslint-disable-line
+                },
+            };
+            expect(() => validator.validateTrustResponse(data)).not.toThrow();
+        });
 
-    //     it('should throw an error for an invalid trust response', () => {
-    //       const data = {
-    //         status: 'invalid',
-    //       };
-    //       expect(() => validator.validateTrustResponse(data)).toThrow(iCPSError);
-    //       expect(() => validator.validateTrustResponse(data)).toThrowError(VALIDATOR_ERR.TRUST_RESPONSE);
-    //     });
-    //   });
+        test.each([
+            {
+                data: {
+                    headers: {
+                        'x-apple-twosv-trust-token': "someTrustToken", // eslint-disable-line
+                    },
+                },
+                desc: `missing session token`,
+            }, {
+                data: {
+                    headers: {
+                        'x-apple-twosv-trust-token': "someTrustToken", // eslint-disable-line
+                        'x-apple-session-token': "", // eslint-disable-line
+                    },
+                },
+                desc: `empty session token`,
+            },
+        ])(`should throw an error for an invalid trust response: $desc`, ({data}) => {
+            expect(() => validator.validateTrustResponse(data)).toThrowError(VALIDATOR_ERR.TRUST_RESPONSE);
+        });
+    });
 
-    //   describe('validateSetupResponse', () => {
-    //     it('should validate a valid setup response', () => {
-    //       const data: SetupResponse = {
-    //         headers: {
-    //           'set-cookie': ['X-APPLE-WEBAUTH-HSA-SESSION=123'],
-    //         },
-    //       };
-    //       expect(() => validator.validateSetupResponse(data)).not.toThrow();
-    //     });
+    describe(`validateSetupResponse`, () => {
+        test(`should validate a valid setup response`, () => {
+            const data = {
+                headers: getICloudCookieHeader(),
+                data: {
+                    dsInfo: {
+                        isWebAccessAllowed: true,
+                    },
+                    webservices: {
+                        ckdatabasews: {
+                            url: Config.photosDomain,
+                            status: `active`,
+                        },
+                    },
+                },
+            };
+            expect(() => validator.validateSetupResponse(data)).not.toThrow();
+        });
 
-    //     it('should throw an error for an invalid setup response', () => {
-    //       const data = {
-    //         headers: {},
-    //       };
-    //       expect(() => validator.validateSetupResponse(data)).toThrow(iCPSError);
-    //       expect(() => validator.validateSetupResponse(data)).toThrowError(VALIDATOR_ERR.SETUP_RESPONSE);
-    //     });
-    //   });
+        test.each([
+            {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        dsInfo: {
+                            isWebAccessAllowed: false,
+                        },
+                        webservices: {
+                            ckdatabasews: {
+                                url: Config.photosDomain,
+                                status: `active`,
+                            },
+                        },
+                    },
+                },
+                desc: `web access not allowed`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        dsInfo: {},
+                        webservices: {
+                            ckdatabasews: {
+                                url: Config.photosDomain,
+                                status: `active`,
+                            },
+                        },
+                    },
+                },
+                desc: `missing dsInfo`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {},
+                    },
+                },
+                desc: `missing webservices`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {
+                            ckdatabasews: {
+                                url: Config.photosDomain,
+                                status: `inactive`,
+                            },
+                        },
+                    },
+                },
+                desc: `inactive ckdatabasews`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {
+                            ckdatabasews: {
+                                url: Config.photosDomain,
+                            },
+                        },
+                    },
+                },
+                desc: `missing status`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {
+                            ckdatabasews: {
+                                status: `active`,
+                            },
+                        },
+                    },
+                },
+                desc: `missing url`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {
+                            ckdatabasews: {},
+                        },
+                    },
+                },
+                desc: `missing url and status`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {},
+                },
+                desc: `missing dsInfo and webservices`,
+            }, {
+                data: {
+                    data: {
+                        headers: ``,
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {
+                            ckdatabasews: {
+                                url: Config.photosDomain,
+                                status: `active`,
+                            },
+                        },
+                    },
+                },
+                desc: `missing headers`,
+            }, {
+                data: {
+                    data: {
+                        headers: {
+                            "set-cookie": [
+                                `nonAppleCookie=123`,
+                            ],
+                        },
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {
+                            ckdatabasews: {
+                                url: Config.photosDomain,
+                                status: `active`,
+                            },
+                        },
+                    },
+                },
+                desc: `invalid cookies`,
+            },
+        ])(`should throw an error for an invalid setup response: $desc`, ({data}) => {
+            expect(() => validator.validateSetupResponse(data)).toThrowError(VALIDATOR_ERR.SETUP_RESPONSE);
+        });
+    });
 
-    //   describe('validatePhotosSetupResponse', () => {
-    //     it('should validate a valid photos setup response', () => {
-    //       const data: PhotosSetupResponse = {
-    //         status: 'success',
-    //       };
-    //       expect(() => validator.validatePhotosSetupResponse(data)).not.toThrow();
-    //     });
+    describe(`validatePhotosSetupResponse`, () => {
+        test.each([
+            {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    /**
+                                     * @pattern ^PrimarySync|SharedSync-[0-9A-F-]+$
+                                     */
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `valid primary zone`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    /**
+                                     * @pattern ^PrimarySync|SharedSync-[0-9A-F-]+$
+                                     */
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            }, {
+                                zoneID: {
+                                    zoneName: `SharedSync-12345678-1234-1234-1234-123456789012`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `valid primary and shared zone`,
+            },
+        ])(`should validate a valid photos setup response: $desc`, ({data}) => {
+            expect(() => validator.validatePhotosSetupResponse(data)).not.toThrow();
+        });
 
-//     it('should throw an error for an invalid photos setup response', () => {
-//       const data = {
-//         status: 'invalid',
-//       };
-//       expect(() => validator.validatePhotosSetupResponse(data)).toThrow(iCPSError);
-//       expect(() => validator.validatePhotosSetupResponse(data)).toThrowError(VALIDATOR_ERR.PHOTOS_SETUP_RESPONSE);
-//     });
-//   });
+        test.each([
+            {
+                data: {
+                    data: {
+                        moreComing: true,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `moreComing is true`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: ``,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `syncToken is empty`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `syncToken is missing`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `WEIRD_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `zoneType is invalid`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerId`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `zoneType is missing`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `InvalidSync`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `zoneName is invalid`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `zoneName is missing`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: ``,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `ownerRecordName is empty`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `ownerRecordName is missing`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            }, {
+                                zoneID: {
+                                    zoneName: `SharedSync-12345678-1234-1234-1234-123456789012`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            }, {
+                                zoneID: {
+                                    zoneName: `SharedSync-98765432-4321-4321-4321-432109876543`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `too many zones`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [],
+                    },
+                },
+                desc: `no zones`,
+            },
+        ])(`should throw an error for an invalid photos setup response: $desc`, ({data}) => {
+            expect(() => validator.validatePhotosSetupResponse(data)).toThrow(VALIDATOR_ERR.PHOTOS_SETUP_RESPONSE);
+        });
+    });
 });

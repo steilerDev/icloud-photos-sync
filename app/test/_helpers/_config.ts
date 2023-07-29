@@ -1,4 +1,4 @@
-/* cSpell:disable */
+/* CSpell:disable */
 import {iCPSAppOptions} from "../../src/app/factory";
 import {PhotosAccountZone} from "../../src/lib/resource-manager/resources";
 

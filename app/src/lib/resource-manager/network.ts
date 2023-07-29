@@ -320,6 +320,7 @@ export type PhotosSetupResponse = {
         moreComing: false,
         /**
          * Sync token - currently not used
+         * @minLength 1
          */
         syncToken: string,
         /**
