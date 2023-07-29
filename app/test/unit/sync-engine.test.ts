@@ -8,14 +8,13 @@ import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PEntity, PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
-import * as SYNC_ENGINE from '../../src/lib/sync-engine/constants';
 import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted, mockSyncEngineForAlbumQueue, fetchAndLoadStateReturnValue, diffStateReturnValue, convertCPLAssetsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue, fetchAllCPLAssetsMastersReturnValue, fetchAllCPLAlbumsReturnValue, getRandomZone} from '../_helpers/sync-engine.helper';
-import {MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
+import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import {SyncEngineHelper} from '../../src/lib/sync-engine/helper';
-import { iCPSEventSyncEngine } from '../../src/lib/resource-manager/events';
+import {iCPSEventSyncEngine} from '../../src/lib/resource-manager/events';
 
 let mockedResourceManager: MockedResourceManager;
 
@@ -1496,7 +1495,7 @@ describe(`Handle processing queue`, () => {
 
         test(`Adding - HANDLER_EVENT fired on error`, async () => {
             const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-            const handlerEvent = mockedResourceManager.spyOnHandlerEvent()
+            const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
             const addAlbumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
             const addAlbumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
@@ -1527,7 +1526,7 @@ describe(`Handle processing queue`, () => {
 
         test(`Deleting - HANDLER_EVENT fired on error`, async () => {
             const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-            const handlerEvent = mockedResourceManager.spyOnHandlerEvent()
+            const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
             const removeAlbumParent = new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName4`, ``);
             const removeAlbumChild = new Album(`someUUID2-1`, AlbumType.ALBUM, `someAlbumName5`, `someUUID2`);
@@ -1610,7 +1609,7 @@ describe(`Handle processing queue`, () => {
                 const album1 = new Album(`someUUID1`, AlbumType.ARCHIVED, `someAlbumName1`, ``);
                 const album2 = new Album(`someUUID2`, AlbumType.ARCHIVED, `someAlbumName2`, ``);
 
-                const handlerEvent = mockedResourceManager.spyOnHandlerEvent()
+                const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
                 syncEngine.photosLibrary.retrieveStashedAlbum = jest.fn<typeof syncEngine.photosLibrary.retrieveStashedAlbum>()
                     .mockImplementationOnce(() => {
                         throw new Error(`Unable to retrieve album`);
@@ -1633,7 +1632,7 @@ describe(`Handle processing queue`, () => {
                 const album1 = new Album(`someUUID1`, AlbumType.ARCHIVED, `someAlbumName1`, ``);
                 const album2 = new Album(`someUUID2`, AlbumType.ARCHIVED, `someAlbumName2`, ``);
 
-                const handlerEvent = mockedResourceManager.spyOnHandlerEvent()
+                const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
                 syncEngine.photosLibrary.stashArchivedAlbum = jest.fn<typeof syncEngine.photosLibrary.stashArchivedAlbum>()
                     .mockImplementationOnce(() => {
                         throw new Error(`Unable to retrieve album`);

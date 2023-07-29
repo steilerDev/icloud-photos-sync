@@ -47,7 +47,7 @@ export type ResourceFile = {
 /**
  * Information to interact with the iCloud Photos backend
  */
-export type PhotosAccount = {
+type PhotosAccount = {
     /**
      * The primary photos library zone
      */
@@ -79,7 +79,7 @@ export type PhotosAccountZone = {
 /**
  * Optional runtime resources
  */
-export type iCPSRuntimeResources = {
+type iCPSRuntimeResources = {
     /**
      * The path to the log file, undefined if logging is disabled
      */

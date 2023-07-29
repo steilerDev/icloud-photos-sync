@@ -3,12 +3,12 @@ import {expect, describe, test, jest, beforeEach} from '@jest/globals';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as PACKAGE from '../../src/lib/package';
 import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
-import {MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
+import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
 import {MFAServer, MFA_SERVER_ENDPOINTS, MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
-import { iCPSEventMFA } from '../../src/lib/resource-manager/events';
+import {iCPSEventMFA} from '../../src/lib/resource-manager/events';
 
 let server: MFAServer;
-let mockedResourceManager: MockedResourceManager
+let mockedResourceManager: MockedResourceManager;
 
 beforeEach(() => {
     mockedResourceManager = prepareResourceManager()!;
@@ -246,7 +246,6 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Handle MFA timeout`, () => {
-
         server.server.listen = jest.fn<typeof server.server.listen>() as any;
         server.stopServer = jest.fn<typeof server.stopServer>();
 

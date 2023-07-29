@@ -11,7 +11,6 @@ import {Cron} from "croner";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {ResourceManager} from "../lib/resource-manager/resource-manager.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventError, iCPSEventPhotos} from "../lib/resource-manager/events.js";
-import {exit} from "process";
 
 /**
  * Filename for library lock file located in DATA_DIR
@@ -166,13 +165,13 @@ export class TokenApp extends iCloudApp {
      */
     async run(): Promise<unknown> {
         try {
-            // Making sure execution stops after TRUSTED event, by removing exising listeners
+            // Making sure execution stops after TRUSTED event, by removing existing listeners
             ResourceManager.instance._eventBus.removeAllListeners(iCPSEventCloud.TRUSTED);
             ResourceManager.on(iCPSEventCloud.TRUSTED, token => {
                 // Emitting event for CLI
                 ResourceManager.emit(iCPSEventApp.TOKEN, token);
                 // Fulfilling promise
-                ResourceManager.emit(iCPSEventPhotos.READY)
+                ResourceManager.emit(iCPSEventPhotos.READY);
             });
             await super.run();
         } catch (err) {

@@ -13,7 +13,7 @@ import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
 import {COOKIE_KEYS, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninResponse, TrustResponse} from "./network.js";
 import {ResourceManager} from './resource-manager.js';
 
-export const AJV_CONF = {
+const AJV_CONF = {
     verbose: true,
     logger: {
         log: (...args: any[]) => ResourceManager.logger(this).info(args.map(arg => String(arg)).join(` `)),

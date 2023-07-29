@@ -1,5 +1,4 @@
 import {AxiosRequestConfig, AxiosResponse} from 'axios';
-import {EventEmitter} from 'events';
 import * as QueryBuilder from './query-builder.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
@@ -15,13 +14,13 @@ import {iCPSEventError, iCPSEventPhotos} from '../../resource-manager/events.js'
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now
  */
-export const RECORD_CHANGE_TAG = `21h2`;
+const RECORD_CHANGE_TAG = `21h2`;
 
 /**
  * The max record limit, requested & returned by iCloud.
  * Should be 200, but in order to divide by 3 (for albums) and 2 (for all pictures) 198 is more convenient
  */
-export const MAX_RECORDS_LIMIT = 198;
+const MAX_RECORDS_LIMIT = 198;
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -182,7 +181,7 @@ export class iCloudPhotos {
             data.resultsLimit = resultsLimit;
         }
 
-        const queryResponse = await this.queryQueue.add(async () => ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config));
+        const queryResponse = await this.queryQueue.add(async () => ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config)) as AxiosResponse<any, any>;
 
         const fetchedRecords = queryResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
@@ -224,7 +223,7 @@ export class iCloudPhotos {
             },
         }));
 
-        const operationResponse = await this.queryQueue.add(async () => ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config));
+        const operationResponse = await this.queryQueue.add(async () => ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config)) as AxiosResponse<any, any>;
         const fetchedRecords = operationResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)

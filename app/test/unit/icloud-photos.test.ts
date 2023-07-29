@@ -1,12 +1,12 @@
 import {describe, test, expect, jest, beforeEach} from '@jest/globals';
 import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
 import * as Config from '../_helpers/_config';
-import {MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
+import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {iCPSError} from '../../src/app/error/error';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
-import { iCPSEventPhotos } from '../../src/lib/resource-manager/events';
+import {iCPSEventPhotos} from '../../src/lib/resource-manager/events';
 
 let mockedResourceManager: MockedResourceManager;
 let photos: iCloudPhotos;

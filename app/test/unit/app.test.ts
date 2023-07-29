@@ -7,7 +7,7 @@ import {ArchiveApp, DaemonApp, LIBRARY_LOCK_FILE, SyncApp, TokenApp} from '../..
 import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {Album} from '../../src/lib/photos-library/model/album';
-import {MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
+import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import path from 'path';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import {iCPSEventApp, iCPSEventCloud} from '../../src/lib/resource-manager/events';
@@ -102,7 +102,7 @@ describe(`App Factory`, () => {
         expect(daemonApp).toBeInstanceOf(DaemonApp);
         expect(ResourceManager._instance).toBeDefined();
     });
- });
+});
 
 describe(`App control flow`, () => {
     test(`Handle authentication error`, async () => {

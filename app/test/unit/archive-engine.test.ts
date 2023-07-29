@@ -6,18 +6,18 @@ import path from 'path';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
-import {MockedResourceManager, prepareResourceManager, spyOnEvent} from '../_helpers/_general';
+import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
-import { iCPSEventArchiveEngine, iCPSEventError } from '../../src/lib/resource-manager/events';
-import { ArchiveEngine } from '../../src/lib/archive-engine/archive-engine';
-import { iCloud } from '../../src/lib/icloud/icloud';
-import { PhotosLibrary } from '../../src/lib/photos-library/photos-library';
+import {iCPSEventArchiveEngine} from '../../src/lib/resource-manager/events';
+import {ArchiveEngine} from '../../src/lib/archive-engine/archive-engine';
+import {iCloud} from '../../src/lib/icloud/icloud';
+import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 
 let mockedResourceManager: MockedResourceManager;
 let archiveEngine: ArchiveEngine;
 
 beforeEach(() => {
-    mockfs()
+    mockfs();
     mockedResourceManager = prepareResourceManager(true, {
         ...Config.defaultConfig,
         remoteDelete: true,
@@ -74,7 +74,6 @@ describe.each([{
                 },
             });
 
-           
             const startEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
             const persistEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
             const remoteDeleteEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
@@ -737,7 +736,7 @@ describe.each([{
         });
 
         test(`Don't delete asset if flag is set`, () => {
-            mockedResourceManager._resources.remoteDelete = false
+            mockedResourceManager._resources.remoteDelete = false;
 
             const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const albumUUIDPath = `.${albumUUID}`;

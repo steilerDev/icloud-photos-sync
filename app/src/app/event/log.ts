@@ -21,8 +21,6 @@ export class LogInterface {
      */
     private logFileDescriptor: number;
 
-    logFilePath: string;
-
     constructor() {
         if (ResourceManager.logToCli) {
             return;

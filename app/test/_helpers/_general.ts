@@ -23,7 +23,7 @@ export type MockedResourceManager = ResourceManager & {
  * @param appOptions - The configuration to use when creating a new instance of the ResourceManager
  */
 export function prepareResourceManager(initiate: boolean = true, appOptions: iCPSAppOptions = Config.defaultConfig): MockedResourceManager | undefined {
-    if(ResourceManager._instance) {
+    if (ResourceManager._instance) {
         ResourceManager._instance._eventBus.removeAllListeners();
         ResourceManager._instance = undefined;
     }
@@ -42,7 +42,6 @@ export function prepareResourceManager(initiate: boolean = true, appOptions: iCP
         (ResourceManager.network as MockedNetworkManager).mock = new MockAdapter(ResourceManager.network._axios, {onNoMatch: `throwException`});
         (ResourceManager.instance as MockedResourceManager).spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(ResourceManager.instance._eventBus, event, removeListeners);
         (ResourceManager.instance as MockedResourceManager).spyOnHandlerEvent = (removeListeners: boolean = true) => spyOnEvent(ResourceManager.instance._eventBus, iCPSEventError.HANDLER_EVENT, removeListeners);
-
     }
 
     return ResourceManager._instance as MockedResourceManager | undefined;

@@ -200,7 +200,7 @@ export type ResendMFAPhoneResponse = {
 /**
  * Information about phone number verification used in MFA resend responses
  */
-export type PhoneNumberVerification = {
+type PhoneNumberVerification = {
     /**
      * The phone number used for verification
      */
@@ -215,7 +215,7 @@ export type PhoneNumberVerification = {
 /**
  * Object representing a trusted phone number used in MFA resend responses
  */
-export type TrustedPhoneNumber = {
+type TrustedPhoneNumber = {
     /**
      * @minimum 0
      */
@@ -242,7 +242,7 @@ export type TrustedPhoneNumber = {
 /**
  * Format of the expected security code used in MFA resend responses
  */
-export type SecurityCodeFormat = {
+type SecurityCodeFormat = {
     length: 6,
     tooManyCodesSent: false,
     tooManyCodesValidated: false,
@@ -334,7 +334,7 @@ export type PhotosSetupResponse = {
 /**
  * Response zone object from photos setup response
  */
-export type PhotosSetupResponseZone = {
+type PhotosSetupResponseZone = {
     zoneID: {
         /**
          * @minLength 1
