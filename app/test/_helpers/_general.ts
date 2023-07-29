@@ -7,6 +7,9 @@ import MockAdapter from 'axios-mock-adapter';
 import {NetworkManager} from '../../src/lib/resource-manager/network-manager';
 import {iCPSEvent, iCPSEventError} from '../../src/lib/resource-manager/events';
 
+export type UnknownFunction = (...args: Array<unknown>) => unknown
+export type UnknownAsyncFunction = (...args: Array<unknown>) => Promise<unknown>
+
 export type MockedNetworkManager = NetworkManager & {
     mock: MockAdapter;
 };

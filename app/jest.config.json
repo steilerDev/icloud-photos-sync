@@ -9,9 +9,11 @@
     "collectCoverage": true,
     "collectCoverageFrom": [
       "src/**/*.ts",
+      "!src/app/main.ts",
       "!src/app/event/**/*",
       "!src/app/error/**/*",
-      "!src/lib/package.ts"
+      "!src/lib/package.ts",
+      "!src/lib/photos-library/model photos-entity.ts"
     ],
     "coverageProvider": "v8",
     "coverageReporters": [

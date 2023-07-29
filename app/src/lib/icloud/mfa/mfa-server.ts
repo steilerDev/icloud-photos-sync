@@ -188,6 +188,7 @@ export class MFAServer {
 
         if (this.mfaTimeout) {
             clearTimeout(this.mfaTimeout);
+            this.mfaTimeout = undefined;
         }
     }
 }

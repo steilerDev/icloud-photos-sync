@@ -1,4 +1,4 @@
-import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
+import {MockedResourceManager, UnknownAsyncFunction, prepareResourceManager} from '../_helpers/_general';
 import {describe, test, beforeEach, expect, jest} from '@jest/globals';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as Config from '../_helpers/_config';
@@ -231,6 +231,22 @@ describe(`Authenticate`, () => {
             expect(mfaEvent).not.toHaveBeenCalled();
             expect(errorEvent).toHaveBeenCalledTimes(1);
         });
+    });
+
+    test(`Unknown authentication error`, async () => {
+        mockedResourceManager._network.post = (jest.fn<UnknownAsyncFunction>() as any)
+            .mockRejectedValue(new Error(`Unknown Error`));
+
+        const authenticationEvent = mockedResourceManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
+        const trustedEvent = mockedResourceManager.spyOnEvent(iCPSEventCloud.TRUSTED);
+        const mfaEvent = mockedResourceManager.spyOnEvent(iCPSEventCloud.MFA_REQUIRED);
+        const errorEvent = mockedResourceManager.spyOnEvent(iCPSEventCloud.ERROR, false); // Required for promise to resolve
+
+        await expect(icloud.authenticate()).rejects.toThrow(/^Received unknown error during authentication$/);
+        expect(authenticationEvent).toHaveBeenCalled();
+        expect(trustedEvent).not.toHaveBeenCalled();
+        expect(mfaEvent).not.toHaveBeenCalled();
+        expect(errorEvent).toHaveBeenCalledTimes(1);
     });
 });
 

@@ -1,8 +1,7 @@
 import {MFAServer} from "../../src/lib/icloud/mfa/mfa-server";
 import {jest} from '@jest/globals';
 import {IncomingMessage, ServerResponse} from "http";
-
-type UnknownFunction = (...args: Array<unknown>) => unknown
+import {UnknownFunction} from "./_general";
 
 export function mfaServerFactory(): MFAServer {
     const server = new MFAServer();

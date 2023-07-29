@@ -6,6 +6,8 @@ import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
 import {MFAServer, MFA_SERVER_ENDPOINTS, MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
 import {iCPSEventMFA} from '../../src/lib/resource-manager/events';
+import {MFA_ERR} from '../../src/app/error/error-codes';
+import {iCPSError} from '../../src/app/error/error';
 
 let server: MFAServer;
 let mockedResourceManager: MockedResourceManager;
@@ -213,13 +215,34 @@ describe(`Server lifecycle`, () => {
         clearTimeout(server.mfaTimeout);
     });
 
+    test(`Startup Error`, () => {
+        server.server.listen = jest.fn<typeof server.server.listen>(() => {
+            throw new Error(`some server error`);
+        }) as any;
+
+        const errorEvent = mockedResourceManager.spyOnEvent(iCPSEventMFA.ERROR);
+
+        server.startServer();
+
+        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.STARTUP_FAILED));
+
+        expect(server.mfaTimeout).toBeUndefined();
+    });
+
     test(`Shutdown`, () => {
         const closeFunction = jest.fn<typeof server.server.close>();
         server.server.close = closeFunction;
 
+        const timeoutFunction = jest.fn();
+        server.mfaTimeout = setTimeout(() => timeoutFunction, 1000);
+
         server.stopServer();
+        jest.advanceTimersByTime(1001);
+
         expect(closeFunction).toHaveBeenCalled();
         expect(server.server).toBeUndefined();
+        expect(server.mfaTimeout).toBeUndefined();
+        expect(timeoutFunction).not.toHaveBeenCalled();
     });
 
     test(`Send response`, () => {
@@ -233,7 +256,7 @@ describe(`Server lifecycle`, () => {
         const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
         server.server.emit(`error`, new Error(`some server error`));
 
-        expect(handlerEvent).toHaveBeenCalledWith(new Error(`HTTP Server Error`));
+        expect(handlerEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.SERVER_ERR));
     });
 
     test(`Handle address in use error`, () => {
