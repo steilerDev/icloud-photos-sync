@@ -10,14 +10,16 @@
   },
   "scripts": {
     "clean": "rm -rf bin/ coverage/ doc/ node_modules/ package-lock.json src/lib/resource-manager/schemas/",
-    "lint": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
-    "build-schema": "./build/schema.sh",
-    "prebuild": "npm run lint && npx knip",
-    "build": "npm run build-schema && npx tsc",
-    "typedoc": "npx typedoc --plugin typedoc-plugin-markdown --plugin typedoc-github-wiki-theme",
+    "prebuild:lint": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
+    "prebuild:knip": "npx knip --config knip.config.jsonc",
+    "prebuild": "npm run prebuild:lint && npm run prebuild:knip",
+    "build:schema": "./build/schema.sh",
+    "build:typescript": "npx tsc",
+    "build:typedoc": "npx typedoc --plugin typedoc-plugin-markdown --plugin typedoc-github-wiki-theme",
+    "build": "npm run build:schema && npm run build:typescript",
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules --experimental-json-modules' npx jest --config jest.config.json test/unit/",
-    "test-single": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules --experimental-json-modules' npx jest --config jest.config.json",
-    "test-api": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules --experimental-json-modules' npx jest --config jest.config.json test/api/",
+    "test:all": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules --experimental-json-modules' npx jest --config jest.config.json",
+    "test:api": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules --experimental-json-modules' npx jest --config jest.config.json test/api/",
     "execute": "node bin/main.js"
   },
   "repository": {
