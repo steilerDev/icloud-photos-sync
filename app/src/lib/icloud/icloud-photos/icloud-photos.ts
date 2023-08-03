@@ -46,7 +46,7 @@ export class iCloudPhotos {
             interval: ResourceManager.metadataRate[1],
         });
 
-        ResourceManager.on(iCPSEventPhotos.SETUP_COMPLETED, async () => {
+        ResourceManager.events(this).on(iCPSEventPhotos.SETUP_COMPLETED, async () => {
             await this.checkingIndexingStatus();
         });
 
@@ -59,7 +59,7 @@ export class iCloudPhotos {
      */
     getReady(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            ResourceManager
+            ResourceManager.events(this)
                 .once(iCPSEventPhotos.READY, () => resolve())
                 .once(iCPSEventPhotos.ERROR, err => reject(err));
         });

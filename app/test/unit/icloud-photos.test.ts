@@ -13,8 +13,11 @@ let photos: iCloudPhotos;
 
 beforeEach(() => {
     mockedResourceManager = prepareResourceManager()!;
-    mockedResourceManager._network.photosUrl = Config.photosDomain;
-    mockedResourceManager._network.pushCookieString(getICloudCookieHeader()[`set-cookie`]);
+    mockedResourceManager._networkManager.photosUrl = Config.photosDomain;
+    getICloudCookieHeader()[`set-cookie`]
+        .forEach(cookie => {
+            mockedResourceManager._networkManager._headerJar.setCookie(cookie);
+        });
     mockedResourceManager._resources.primaryZone = Config.primaryZone;
     mockedResourceManager._resources.sharedZone = Config.sharedZone;
 
@@ -30,17 +33,17 @@ describe(`Setup iCloud Photos`, () => {
         const setupCompletedEvent = mockedResourceManager.spyOnEvent(iCPSEventPhotos.SETUP_COMPLETED);
 
         mockedResourceManager._validator.validatePhotosSetupResponse = jest.fn<typeof mockedResourceManager._validator.validatePhotosSetupResponse>();
-        mockedResourceManager._network.applyPhotosSetupResponse = jest.fn<typeof mockedResourceManager._network.applyPhotosSetupResponse>();
+        mockedResourceManager._networkManager.applyPhotosSetupResponse = jest.fn<typeof mockedResourceManager._networkManager.applyPhotosSetupResponse>();
 
-        mockedResourceManager._network.mock
+        mockedResourceManager._networkManager.mock
             .onPost(setupURL, {})
             .reply(200);
 
         await photos.setup();
 
         expect(mockedResourceManager._validator.validatePhotosSetupResponse).toHaveBeenCalledTimes(1);
-        expect(mockedResourceManager._network.applyPhotosSetupResponse).toHaveBeenCalledTimes(1);
-        expect((mockedResourceManager._network.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
+        expect(mockedResourceManager._networkManager.applyPhotosSetupResponse).toHaveBeenCalledTimes(1);
+        expect((mockedResourceManager._networkManager.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
 
         expect(setupCompletedEvent).toHaveBeenCalledTimes(1);
     });
@@ -52,7 +55,7 @@ describe(`Setup iCloud Photos`, () => {
             throw new iCPSError(VALIDATOR_ERR.SETUP_RESPONSE);
         });
 
-        mockedResourceManager._network.mock
+        mockedResourceManager._networkManager.mock
             .onPost(setupURL, {})
             .reply(200);
 
@@ -63,7 +66,7 @@ describe(`Setup iCloud Photos`, () => {
     test(`Network failure`, async () => {
         const errorEvent = mockedResourceManager.spyOnEvent(iCPSEventPhotos.ERROR, false);
 
-        mockedResourceManager._network.mock
+        mockedResourceManager._networkManager.mock
             .onPost(setupURL, {})
             .reply(500);
 
@@ -75,7 +78,7 @@ describe(`Setup iCloud Photos`, () => {
         photos.checkingIndexingStatus = jest.fn<typeof photos.checkingIndexingStatus>()
             .mockResolvedValue();
 
-        mockedResourceManager.emit(iCPSEventPhotos.SETUP_COMPLETED);
+        mockedResourceManager._eventManager.emit(iCPSEventPhotos.SETUP_COMPLETED);
 
         expect(photos.checkingIndexingStatus).toHaveBeenCalledTimes(1);
     });
@@ -265,7 +268,7 @@ describe.each([
         test(`Success`, async () => {
             const responseRecords = [`recordA`, `recordB`];
 
-            mockedResourceManager._network.mock
+            mockedResourceManager._networkManager.mock
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
                 .reply(200, {
                     records: responseRecords,
@@ -275,12 +278,12 @@ describe.each([
 
             expect(result).toEqual(responseRecords);
 
-            expect((mockedResourceManager._network.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
-            expect(mockedResourceManager._network.mock.history.post[0].params!.remapEnums).toEqual(`True`);
+            expect((mockedResourceManager._networkManager.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
+            expect(mockedResourceManager._networkManager.mock.history.post[0].params!.remapEnums).toEqual(`True`);
         });
 
         test(`No data returned`, async () => {
-            mockedResourceManager._network.mock
+            mockedResourceManager._networkManager.mock
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
                 .reply(200, {});
 
@@ -288,7 +291,7 @@ describe.each([
         });
 
         test(`Server Error`, async () => {
-            mockedResourceManager._network.mock
+            mockedResourceManager._networkManager.mock
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
                 .reply(500, {});
 
@@ -338,7 +341,7 @@ describe.each([
         },
     }])(`Perform Operation $desc`, ({operation, fields, records, expectedOperation}) => {
         test(`Success`, async () => {
-            mockedResourceManager._network.mock
+            mockedResourceManager._networkManager.mock
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/modify`, expectedOperation)
                 .reply(200, {
                     records,
@@ -348,8 +351,8 @@ describe.each([
 
             expect(result).toEqual(records);
 
-            expect((mockedResourceManager._network.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
-            expect(mockedResourceManager._network.mock.history.post[0].params!.remapEnums).toEqual(`True`);
+            expect((mockedResourceManager._networkManager.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
+            expect(mockedResourceManager._networkManager.mock.history.post[0].params!.remapEnums).toEqual(`True`);
         });
 
         test.todo(`Without any content`);

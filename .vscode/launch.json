@@ -11,16 +11,15 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "runtimeArgs": [
-                "--experimental-vm-modules",
-                "--experimental-json-modules"
-            ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
             "args": ["sync"],
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",
             ],
+            "env": {
+                "NODE_NO_WARNINGS": "1"
+            },
             "envFile": "${workspaceFolder}/.vscode/test.env"
         }, {
             "name": "Run API Tests",
@@ -28,7 +27,6 @@
             "request": "launch",
             "runtimeArgs": [
                 "--experimental-vm-modules",
-                "--experimental-json-modules",
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
                 "test/api/api.test.ts"
@@ -43,7 +41,6 @@
             "request": "launch",
             "runtimeArgs": [
                 "--experimental-vm-modules",
-                "--experimental-json-modules",
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
                 //"test/unit/.*.test.ts"
@@ -58,13 +55,12 @@
             "request": "launch",
             "runtimeArgs": [
                 "--experimental-vm-modules",
-                "--experimental-json-modules",
                 "--inspect-brk",
                 "node_modules/.bin/jest",
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/icloud.mfa-server.test.ts"
+                "test/unit/icloud.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"

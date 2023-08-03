@@ -4,51 +4,12 @@ import {iCPSEventError, iCPSEventLog} from "../../lib/resource-manager/events.js
 import {iCPSError} from "../error/error.js";
 import {APP_ERR} from "../error/error-codes.js";
 import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
-import Ajv from 'ajv';
 
 export enum LogLevel {
     DEBUG = `debug`,
     INFO = `info`,
     WARN = `warn`,
     ERROR = `error`,
-}
-
-/**
- * Creates a wrapper around the logger events to be used by the AJV validator
- */
-export class AjvLogInterface implements Ajv.Logger {
-    /**
-     * Formats the provided arguments as a string
-     * @param args - The arguments to format
-     * @returns The formatted string
-     */
-    format(...args: unknown[]): string {
-        return args.map(arg => String(arg)).join(` `);
-    }
-
-    /**
-     * Emits a log info event using the provided arguments
-     * @param args - The arguments to log
-     */
-    log(...args: unknown[]): unknown {
-        return ResourceManager.emit(iCPSEventLog.INFO, this, this.format(...args));
-    }
-
-    /**
-     * Emits a log warn event using the provided arguments
-     * @param args - The arguments to log
-     */
-    warn(...args: unknown[]): unknown {
-        return ResourceManager.emit(iCPSEventLog.WARN, this, this.format(...args));
-    }
-
-    /**
-     * Emits a log error event using the provided arguments
-     * @param args - The arguments to log
-     */
-    error(...args: unknown[]): unknown {
-        return ResourceManager.emit(iCPSEventLog.ERROR, this, this.format(...args));
-    }
 }
 
 /**
@@ -65,34 +26,36 @@ export class LogInterface {
             return;
         }
 
-        ResourceManager.enableLogging();
-
         try {
             // Try opening the file - truncate if exists
             this.logFileDescriptor = fs.openSync(ResourceManager.logFilePath, `w`);
 
             switch (ResourceManager.logLevel) {
             case `debug`:
-                ResourceManager.on(iCPSEventLog.DEBUG, (instance: any, msg: string) => this.logMessage(LogLevel.DEBUG, instance, msg));
+                ResourceManager.events(this).on(iCPSEventLog.DEBUG, (source: any, msg: string) => this.logMessage(LogLevel.DEBUG, source, msg));
             default:
             case `info`:
-                ResourceManager.on(iCPSEventLog.INFO, (instance: any, msg: string) => this.logMessage(LogLevel.INFO, instance, msg));
+                ResourceManager.events(this).on(iCPSEventLog.INFO, (source: any, msg: string) => this.logMessage(LogLevel.INFO, source, msg));
             case `warn`:
-                ResourceManager.on(iCPSEventLog.WARN, (instance: any, msg: string) => this.logMessage(LogLevel.WARN, instance, msg));
+                ResourceManager.events(this).on(iCPSEventLog.WARN, (source: any, msg: string) => this.logMessage(LogLevel.WARN, source, msg));
             case `error`:
-                ResourceManager.on(iCPSEventLog.ERROR, (instance: any, msg: string) => this.logMessage(LogLevel.ERROR, instance, msg));
+                ResourceManager.events(this).on(iCPSEventLog.ERROR, (source: any, msg: string) => this.logMessage(LogLevel.ERROR, source, msg));
             }
         } catch (err) {
             ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(APP_ERR.LOGGER).setWarning().addCause(err));
         }
     }
 
-    private logMessage(level: LogLevel, instance: any, msg: string) {
-        if (level === `warn` && msg === undefined) {
-            console.log();
-        }
+    /**
+     * Logs a message to the log file
+     * @param level - The log level
+     * @param source - The source of the message, either a string of an object instance
+     * @param msg - The message to log
+     */
+    private logMessage(level: LogLevel, source: any, msg: string) {
+        const _source = typeof source === `string` ? source : String(source.constructor.name);
 
-        const prefixedMessage = `[${new Date().toISOString()}] ${level.toUpperCase()} ${String(instance.constructor.name)}: ${msg}\n`;
+        const prefixedMessage = `[${new Date().toISOString()}] ${level.toUpperCase()} ${_source}: ${msg}\n`;
         fs.appendFileSync(this.logFileDescriptor, prefixedMessage, {encoding: FILE_ENCODING});
     }
 }

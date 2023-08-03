@@ -112,6 +112,10 @@ abstract class iCloudApp extends iCPSApp {
      * Removes all established event listeners and releases the library lock
      */
     async clean() {
+        await ResourceManager.network.resetSession();
+        ResourceManager.events(this.icloud.mfaServer).removeListeners();
+        ResourceManager.events(this.icloud.photos).removeListeners();
+        ResourceManager.events(this.icloud).removeListeners();
         await this.releaseLibraryLock();
     }
 
@@ -166,12 +170,13 @@ export class TokenApp extends iCloudApp {
     async run(): Promise<unknown> {
         try {
             // Making sure execution stops after TRUSTED event, by removing existing listeners
-            ResourceManager.instance._eventBus.removeAllListeners(iCPSEventCloud.TRUSTED);
-            ResourceManager.on(iCPSEventCloud.TRUSTED, token => {
-                // Emitting event for CLI
-                ResourceManager.emit(iCPSEventApp.TOKEN, token);
+            ResourceManager.events(this.icloud).removeListeners(iCPSEventCloud.TRUSTED);
+
+            ResourceManager.events(this).once(iCPSEventCloud.TRUSTED, token => {
                 // Fulfilling promise
                 ResourceManager.emit(iCPSEventPhotos.READY);
+                // Emitting event for CLI
+                ResourceManager.emit(iCPSEventApp.TOKEN, token);
             });
             await super.run();
         } catch (err) {
@@ -186,6 +191,14 @@ export class TokenApp extends iCloudApp {
 
         // Has to return something (TS2355)
         return true;
+    }
+
+    /**
+     * Removes all established event listeners and releases the library lock
+     */
+    async clean() {
+        await super.clean();
+        ResourceManager.events(this).removeListeners();
     }
 }
 

@@ -15,10 +15,6 @@ export const UNABLE_TO_WRITE_FILE: ErrorStruct = buildErrorStruct(
     name, prefix, `UNABLE_TO_WRITE_FILE`, `Unable to write resource file`,
 );
 
-export const EXPIRED_COOKIES_DETECTED: ErrorStruct = buildErrorStruct(
-    name, prefix, `EXPIRED_COOKIES_DETECTED`, `Expired cookies detected`,
-);
-
 export const NO_SESSION: ErrorStruct = buildErrorStruct(
     name, prefix, `NO_SESSION`, `No session token or session ID present`,
 );
@@ -29,8 +25,4 @@ export const NO_PRIMARY_ZONE: ErrorStruct = buildErrorStruct(
 
 export const NO_SHARED_ZONE: ErrorStruct = buildErrorStruct(
     name, prefix, `NO_SHARED_ZONE`, `No shared photos zone present`,
-);
-
-export const NO_AASP_COOKIE: ErrorStruct = buildErrorStruct(
-    name, prefix, `NO_AASP_COOKIE`, `No AASP cookie present`,
 );

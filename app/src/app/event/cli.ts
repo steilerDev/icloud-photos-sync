@@ -38,22 +38,22 @@ export class CLIInterface {
         this.print(chalk.green(`Made with <3 by steilerDev`));
 
         if (ResourceManager.logToCli) {
-            ResourceManager
+            ResourceManager.events(this)
                 .on(iCPSEventLog.DEBUG, (instance: any, msg: string) => this.printLog(`debug`, instance, msg))
                 .on(iCPSEventLog.INFO, (instance: any, msg: string) => this.printLog(`info`, instance, msg))
                 .on(iCPSEventLog.WARN, (instance: any, msg: string) => this.printLog(`warn`, instance, msg))
                 .on(iCPSEventLog.ERROR, (instance: any, msg: string) => this.printLog(`error`, instance, msg));
         }
 
-        if (ResourceManager.suppressWarnings) {
-            ResourceManager
+        if (!ResourceManager.suppressWarnings) {
+            ResourceManager.events(this)
                 .on(iCPSEventError.HANDLER_WARN, (msg: string) => this.printWarning(msg));
         }
 
-        ResourceManager
+        ResourceManager.events(this)
             .on(iCPSEventError.HANDLER_ERROR, (msg: string) => this.printFatalError(msg));
 
-        ResourceManager
+        ResourceManager.events(this)
             .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
                 this.print(chalk.white(this.getHorizontalLine()));
                 this.print(chalk.white(`Authenticating user...`));
@@ -71,7 +71,7 @@ export class CLIInterface {
                 this.print(chalk.white(`Sign in successful!`));
             });
 
-        ResourceManager
+        ResourceManager.events(this)
             .on(iCPSEventMFA.STARTED, port => {
                 this.print(chalk.white(`Listening for input on port ${port}`));
             })
@@ -82,7 +82,7 @@ export class CLIInterface {
                 this.print(chalk.yellowBright(`MFA code not provided in time, aborting...`));
             });
 
-        ResourceManager
+        ResourceManager.events(this)
             .on(iCPSEventPhotos.SETUP_COMPLETED, () => {
                 this.print(chalk.white(`iCloud Photos setup completed, checking indexing status...`));
             })
@@ -90,7 +90,7 @@ export class CLIInterface {
                 this.print(chalk.white(`iCloud Photos ready!`));
             });
 
-        ResourceManager
+        ResourceManager.events(this)
             .on(iCPSEventApp.TOKEN, token => {
                 this.print(chalk.green(`Validated token:\n${token}`));
             })
@@ -112,7 +112,7 @@ export class CLIInterface {
                 this.print(chalk.green(this.getHorizontalLine()));
             });
 
-        ResourceManager
+        ResourceManager.events(this)
             .on(iCPSEventSyncEngine.START, () => {
                 this.print(chalk.white(this.getHorizontalLine()));
                 this.print(chalk.white.bold(`Starting sync at ${this.getDateTime()}`));
@@ -165,7 +165,7 @@ export class CLIInterface {
                 this.print(chalk.white(this.getHorizontalLine()));
             });
 
-        ResourceManager
+        ResourceManager.events(this)
             .on(iCPSEventArchiveEngine.ARCHIVE_START, (path: string) => {
                 this.print(chalk.white.bold(`Archiving local path ${path}`));
             })

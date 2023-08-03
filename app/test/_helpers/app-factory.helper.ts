@@ -398,6 +398,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -430,6 +431,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -462,6 +464,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -494,6 +497,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -526,6 +530,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -558,6 +563,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -590,6 +596,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -622,6 +629,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -653,6 +661,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -684,6 +693,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -715,6 +725,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -746,6 +757,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -777,6 +789,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -809,6 +822,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -840,6 +854,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -871,6 +886,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -902,6 +918,7 @@ export const nonRejectOptions = [
             suppressWarnings: true,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -933,6 +950,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: true,
             metadataRate: [Infinity, 0],
+            networkCapture: true,
         },
     }, {
         options: [
@@ -965,6 +983,39 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [5, 10],
+            networkCapture: true,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
+            `--no-network-capture`,
+        ],
+        _desc: `Network capture disabled`,
+        expectedOptions: {
+            username: `test@icloud.com`,
+            password: `testPass`,
+            dataDir: `/opt/icloud-photos-library`,
+            port: 80,
+            maxRetries: Infinity,
+            downloadThreads: 5,
+            schedule: `0 2 * * *`,
+            enableCrashReporting: false,
+            failOnMfa: false,
+            force: false,
+            refreshToken: false,
+            remoteDelete: false,
+            logLevel: `info`,
+            silent: false,
+            logToCli: false,
+            suppressWarnings: false,
+            exportMetrics: false,
+            metadataRate: [Infinity, 0],
+            networkCapture: false,
         },
     },
 ];

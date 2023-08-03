@@ -34,24 +34,23 @@ export class iCloud {
     constructor() {
         // MFA Server & lifecycle management
         this.mfaServer = new MFAServer();
-        ResourceManager
+        ResourceManager.events(this)
             .on(iCPSEventMFA.MFA_RECEIVED, this.submitMFA.bind(this))
             .on(iCPSEventMFA.MFA_RESEND, this.resendMFA.bind(this));
 
         this.photos = new iCloudPhotos();
 
         // ICloud lifecycle management
-        if (ResourceManager.failOnMfa) {
-            ResourceManager.on(iCPSEventCloud.MFA_REQUIRED, () => {
-                ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.FAIL_ON_MFA));
-            });
-        } else {
-            ResourceManager.on(iCPSEventCloud.MFA_REQUIRED, () => {
-                this.mfaServer.startServer();
-            });
-        }
 
-        ResourceManager
+        ResourceManager.events(this)
+            .on(iCPSEventCloud.MFA_REQUIRED, () => {
+                if (ResourceManager.failOnMfa) {
+                    ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.FAIL_ON_MFA));
+                    return;
+                }
+
+                this.mfaServer.startServer();
+            })
             .on(iCPSEventCloud.TRUSTED, async () => {
                 await this.setupAccount();
             })
@@ -71,7 +70,7 @@ export class iCloud {
      */
     getReady(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            ResourceManager
+            ResourceManager.events(this)
                 .once(iCPSEventPhotos.READY, () => resolve())
                 .once(iCPSEventCloud.ERROR, err => reject(err))
                 .once(iCPSEventPhotos.ERROR, err => reject(err))
@@ -254,7 +253,7 @@ export class iCloud {
 
             const url = ENDPOINTS.SETUP.BASE + ENDPOINTS.SETUP.PATH.ACCOUNT;
             const data = {
-                dsWebAuthToken: ResourceManager.network.session,
+                dsWebAuthToken: ResourceManager.network.sessionSecret,
                 trustToken: ResourceManager.network.trustToken,
             };
 

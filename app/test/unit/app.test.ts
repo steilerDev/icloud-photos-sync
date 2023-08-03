@@ -105,13 +105,26 @@ describe(`App Factory`, () => {
 });
 
 describe(`App control flow`, () => {
-    test(`Handle authentication error`, async () => {
+    let mockedResourceManager: ResourceManager;
+    beforeEach(() => {
+        mockedResourceManager = prepareResourceManager(true)!;
+    });
+
+    test.only(`Handle authentication error`, async () => {
         const tokenApp = appFactory(validOptions.token) as TokenApp;
-        tokenApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
-        tokenApp.icloud.authenticate = jest.fn(() => Promise.reject(new Error()));
-        tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
+        tokenApp.acquireLibraryLock = jest.fn<typeof tokenApp.acquireLibraryLock>()
+            .mockResolvedValue();
+        tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>()
+            .mockRejectedValue(new Error(`Authentication failed`));
+        tokenApp.releaseLibraryLock = jest.fn<typeof tokenApp.releaseLibraryLock>()
+            .mockResolvedValue();
+        mockedResourceManager._networkManager.resetSession = jest.fn<typeof mockedResourceManager._networkManager.resetSession>()
+            .mockResolvedValue();
+        mockedResourceManager._eventManager.removeListenersFromRegistry = jest.fn<typeof mockedResourceManager._eventManager.removeListenersFromRegistry>();
 
         await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
+
+        expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
 
         expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
         expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -134,7 +147,7 @@ describe(`App control flow`, () => {
         test(`Execute token actions`, async () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
 
-            const tokenEvent = spyOnEvent(ResourceManager.instance._eventBus, iCPSEventApp.TOKEN);
+            const tokenEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.TOKEN);
 
             tokenApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
             tokenApp.icloud.authenticate = jest.fn(() => {
@@ -227,7 +240,7 @@ describe(`App control flow`, () => {
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
             daemonApp.performScheduledSync = jest.fn(() => Promise.resolve());
             ResourceManager.instance._resources.schedule = `*/1 * * * * *`; // Every second
-            const eventScheduledEvent = spyOnEvent(ResourceManager.instance._eventBus, iCPSEventApp.SCHEDULED);
+            const eventScheduledEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.SCHEDULED);
 
             await daemonApp.run();
 
@@ -241,7 +254,7 @@ describe(`App control flow`, () => {
 
         test(`Scheduled sync succeeds`, async () => {
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
-            const successEvent = spyOnEvent(ResourceManager.instance._eventBus, iCPSEventApp.SCHEDULED_DONE);
+            const successEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.SCHEDULED_DONE);
 
             const syncApp = new SyncApp();
             syncApp.run = jest.fn(() => Promise.resolve());
@@ -254,7 +267,7 @@ describe(`App control flow`, () => {
 
         test(`Scheduled sync fails`, async () => {
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
-            const retryEvent = spyOnEvent(ResourceManager.instance._eventBus, iCPSEventApp.SCHEDULED_RETRY);
+            const retryEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.SCHEDULED_RETRY);
 
             const syncApp = new SyncApp();
             syncApp.run = jest.fn(() => Promise.reject());

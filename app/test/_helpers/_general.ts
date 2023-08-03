@@ -17,7 +17,7 @@ export type MockedNetworkManager = NetworkManager & {
 export type MockedResourceManager = ResourceManager & {
     spyOnEvent: (event: iCPSEvent, removeListeners?: boolean) => jest.Mock;
     spyOnHandlerEvent: (removeListeners?: boolean) => jest.Mock;
-    _network: MockedNetworkManager;
+    _networkManager: MockedNetworkManager;
 }
 
 /**
@@ -27,7 +27,7 @@ export type MockedResourceManager = ResourceManager & {
  */
 export function prepareResourceManager(initiate: boolean = true, appOptions: iCPSAppOptions = Config.defaultConfig): MockedResourceManager | undefined {
     if (ResourceManager._instance) {
-        ResourceManager._instance._eventBus.removeAllListeners();
+        ResourceManager._instance._eventManager._eventBus.removeAllListeners();
         ResourceManager._instance = undefined;
     }
 
@@ -42,9 +42,9 @@ export function prepareResourceManager(initiate: boolean = true, appOptions: iCP
 
     if (initiate) {
         ResourceManager.setup(appOptions);
-        (ResourceManager.network as MockedNetworkManager).mock = new MockAdapter(ResourceManager.network._axios, {onNoMatch: `throwException`});
-        (ResourceManager.instance as MockedResourceManager).spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(ResourceManager.instance._eventBus, event, removeListeners);
-        (ResourceManager.instance as MockedResourceManager).spyOnHandlerEvent = (removeListeners: boolean = true) => spyOnEvent(ResourceManager.instance._eventBus, iCPSEventError.HANDLER_EVENT, removeListeners);
+        (ResourceManager.instance._networkManager as MockedNetworkManager).mock = new MockAdapter(ResourceManager.network._axios, {onNoMatch: `throwException`});
+        (ResourceManager.instance as MockedResourceManager).spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(ResourceManager.instance._eventManager._eventBus, event, removeListeners);
+        (ResourceManager.instance as MockedResourceManager).spyOnHandlerEvent = (removeListeners: boolean = true) => spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventError.HANDLER_EVENT, removeListeners);
     }
 
     return ResourceManager._instance as MockedResourceManager | undefined;

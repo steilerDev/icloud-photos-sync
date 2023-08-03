@@ -11,11 +11,10 @@ import {ResourceFile} from "./resources.js";
 import {iCPSError} from "../../app/error/error.js";
 import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
 import {COOKIE_KEYS, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninResponse, TrustResponse} from "./network.js";
-import {AjvLogInterface} from '../../app/event/log.js';
 
 const AJV_CONF = {
     verbose: true,
-    logger: new AjvLogInterface(),
+    // Logger: ResourceManager.logger(`AjvValidator`),
 };
 
 /**
