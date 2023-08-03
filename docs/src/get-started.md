@@ -67,6 +67,8 @@ Find examples for the various deployment options within this guide.
 
     The `latest` tag should always represent the latest stable release, whereas the `beta` tag provides a semi-stable preview of the upcoming release, while the `nightly` tag offers the latest development build, which might not be stable.
 
+    !!! info "Experimental node modules"
+        This application uses experimental node modules, which are not yet available in the LTS version of NodeJS. This includes [import assertions](https://github.com/tc39/proposal-import-attributes) and importing JSON modules. To remove runtime warnings and ensuring proper execution, it is recommended to set the `NODE_NO_WARNINGS` environmental variable to `1``
 
     === "NPM"
 
