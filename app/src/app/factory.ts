@@ -102,6 +102,7 @@ export type iCPSAppOptions = {
     logToCli: boolean,
     suppressWarnings: boolean,
     exportMetrics: boolean,
+    networkCapture: boolean,
     metadataRate: [number, number]
 }
 
@@ -181,6 +182,9 @@ export function appFactory(argv: string[]): iCPSApp {
             .default(false))
         .addOption(new Option(`--export-metrics`, `Enables the export of sync metrics to a file using the Influx Line Protocol.`)
             .env(`EXPORT_METRICS`)
+            .default(false))
+        .addOption(new Option(`--network-capture`, `Enables network capture, and generate a HAR file for debugging purposes. Written to '.icloud-photos-sync.har' in the data dir.`)
+            .env(`NETWORK_CAPTURE`)
             .default(false))
         .addOption(new Option(`--metadata-rate <interval>`, `Limits the rate of metadata fetching in order to avoid getting throttled by the API. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one request in 20ms.`)
             .env(`METADATA_RATE`)

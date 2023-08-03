@@ -7,6 +7,10 @@ import fs from 'fs/promises';
 import path from 'path';
 import {ResourceManager} from '../../lib/resource-manager/resource-manager.js';
 import {iCPSEventApp, iCPSEventError} from '../../lib/resource-manager/events.js';
+import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
+import * as zlib from 'zlib';
+import {Readable} from 'stream';
+import os from 'os';
 
 const reportDenyList = [
     ERR_SIGINT.code,
@@ -57,12 +61,12 @@ export class ErrorHandler {
                 },
             });
             // This.btClient.setSymbolication();
-            ResourceManager.on(iCPSEventApp.SCHEDULED_START, async () => {
+            ResourceManager.events(this).on(iCPSEventApp.SCHEDULED_START, async () => {
                 await this.reportSyncStart();
             });
         }
 
-        ResourceManager.on(iCPSEventError.HANDLER_EVENT, async (err: unknown) => {
+        ResourceManager.events(this).on(iCPSEventError.HANDLER_EVENT, async (err: unknown) => {
             await this.handle(err);
         });
 
@@ -130,60 +134,141 @@ export class ErrorHandler {
 
         const errorUUID = randomUUID();
 
-        const attachment = await this.prepareLogFile(ResourceManager.logFilePath);
+        const attachments = await this.prepareAttachments(errorUUID);
 
         const report = this.btClient.createReport(err, {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
             'icps.rootErrorCode': err.getRootErrorCode(),
             'icps.errorCodeStack': err.getErrorCodeStack().join(`->`),
-        }, attachment);
+        }, attachments);
 
         await this.btClient.sendAsync(report);
         return errorUUID;
     }
 
     /**
-     * This function extracts relevant parts of the log file, in order to streamline error reporting
-     * @param currentLogFilePath - The file path to the current log file
-     * @returns - An array, containing the file path to the processed log file, or an empty array if the log file could not be prepared
+     * Prepares and compresses the error attachments
+     * @param errorUUID - The UUID of the error, used to identify the files
+     * @returns A promise that resolves to an array of file paths (might be empty)
      */
-    async prepareLogFile(currentLogFilePath: string): Promise<string[]> {
+    async prepareAttachments(errorUUID: string): Promise<string[]> {
+        const attachmentDir = await fs.mkdtemp(path.join(os.tmpdir(), `icps-crash-report-`));
+
+        const attachments: string[] = [];
+
+        // Adding log file
+        const logFilePath = await this.prepareLogFile(attachmentDir, errorUUID);
+        if (logFilePath) {
+            attachments.push(logFilePath);
+        }
+
+        // Adding HAR file
+        const harFilePath = await this.prepareHarFile(attachmentDir, errorUUID);
+        if (harFilePath) {
+            attachments.push(harFilePath);
+        }
+
+        if (attachments.length === 0) {
+            ResourceManager.emit(iCPSEventError.HANDLER_WARN, `No attachments found for error report`);
+            await fs.rmdir(attachmentDir);
+            return [];
+        }
+
+        ResourceManager.emit(iCPSEventError.HANDLER_ERROR, `Crash report saved to ${attachmentDir}`);
+
+        return attachments;
+    }
+
+    /**
+     * Prepares the log file for submission.
+     * This function extracts relevant parts of the log file, in order to streamline error reporting
+     * @param attachmentDir - The directory to store the prepared log file in
+     * @param errorUUID - The UUID of the error, used to identify the log file
+     * @returns A promise that resolves to the path of the prepared log file - compressed using the brotli algorithm
+     */
+    async prepareLogFile(attachmentDir: string, errorUUID: string): Promise<string | undefined> {
         const maxNumberOfLines = 200;
-        let tmpLogFileFd: fs.FileHandle;
-        const result: string[] = [];
+        const targetPath = path.join(attachmentDir, `icps-crash-${errorUUID}.log`);
 
         try {
             // Reading current log file and determining length
-            const data = (await fs.readFile(currentLogFilePath, {encoding: `utf8`})).split(`\n`);
+            const data = (await fs.readFile(ResourceManager.logFilePath, {encoding: FILE_ENCODING})).split(`\n`);
             const totalNumberOfLines = data.length;
 
-            // If there is nothing to truncate, we return the original log file
-            if (totalNumberOfLines < maxNumberOfLines) {
-                return [currentLogFilePath];
+            if (totalNumberOfLines === 0) {
+                return;
             }
 
-            // Creating temp log file, overwriting existing
-            const currentLogFile = path.parse(currentLogFilePath);
-            const tmpLogFilePath = `${currentLogFile.dir}/${currentLogFile.name}-reported.log`;
-            tmpLogFileFd = await fs.open(tmpLogFilePath, `w`);
+            // If there is nothing to truncate, we copy the original log file
+            if (totalNumberOfLines < maxNumberOfLines) {
+                fs.copyFile(ResourceManager.logFilePath, targetPath);
+                return;
+            }
 
-            // Noting how many lines will be truncated
-            await fs.appendFile(tmpLogFileFd, `########################\n`);
-            await fs.appendFile(tmpLogFileFd, `# Truncated ${totalNumberOfLines - maxNumberOfLines} lines\n`);
-            await fs.appendFile(tmpLogFileFd, `########################\n`);
-
-            // Writing temp file
+            const truncatedData = new Readable();
+            truncatedData.push(`########################\n`);
+            truncatedData.push(`# Truncated ${totalNumberOfLines - maxNumberOfLines} lines\n`);
+            truncatedData.push(`########################\n`);
             for (let i = 0; i < totalNumberOfLines; i++) {
                 if (i > (totalNumberOfLines - maxNumberOfLines)) {
-                    await fs.appendFile(tmpLogFileFd, `${data[i]}\n`);
+                    truncatedData.push(`${data[i]}\n`);
                 }
             }
 
-            result.push(tmpLogFilePath);
+            truncatedData.push(null);
+
+            await this.compressStream(targetPath, truncatedData);
+
+            return targetPath;
+        } catch (err) {
+            ResourceManager.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare log file for crash report`, err);
+            return undefined;
+        }
+    }
+
+    /**
+     * Prepares the HAR file for submission
+     * @param attachmentDir - The directory to store the prepared log file in
+     * @param errorUUID - The UUID of the error, used to identify the log file
+     * @returns A promise that resolves to the path of the prepared HAR file, or undefined if no file was written - compressed using the brotli algorithm
+     */
+    async prepareHarFile(attachmentDir: string, errorUUID: string): Promise<string | undefined> {
+        if (!(await ResourceManager.network.writeHarFile())) {
+            return undefined;
+        }
+
+        const targetPath = path.join(attachmentDir, `icps-crash-${errorUUID}.har`);
+        let harData: fs.FileHandle;
+        try {
+            harData = await fs.open(ResourceManager.harFilePath, `r`);
+
+            const harStream = harData.createReadStream();
+            await this.compressStream(targetPath, harStream);
+        } catch (err) {
+            ResourceManager.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare HAR file for crash report`, err);
+            return undefined;
         } finally {
-            await tmpLogFileFd?.close();
-            return result;
+            await harData?.close();
+        }
+
+        return targetPath;
+    }
+
+    async compressStream(targetPath: string, data: Readable): Promise<void> {
+        let targetFd: fs.FileHandle;
+        try {
+            targetFd = await fs.open(`${targetPath}.br`, `w`);
+            const output = targetFd.createWriteStream();
+
+            const brotliStream = zlib.createBrotliCompress();
+            data.pipe(brotliStream).pipe(output);
+            await new Promise<void>((resolve, reject) => {
+                output.on(`finish`, resolve);
+                output.on(`error`, reject);
+            });
+        } finally {
+            await targetFd?.close();
         }
     }
 

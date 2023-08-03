@@ -10,6 +10,7 @@ import {SYNC_ERR} from '../../app/error/error-codes.js';
 import {ResourceManager} from '../resource-manager/resource-manager.js';
 import {SyncEngineHelper} from './helper.js';
 import {iCPSEventError, iCPSEventSyncEngine} from '../resource-manager/events.js';
+import {AxiosError} from 'axios';
 
 /**
  * This class handles the photos sync
@@ -62,44 +63,20 @@ export class SyncEngine {
                 ResourceManager.emit(iCPSEventSyncEngine.DONE);
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
-                // Checking if we should retry
-                this.checkFatalError(err);
+                if (err instanceof AxiosError) {
+                    ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.NETWORK).addCause(err));
+                } else {
+                    ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.UNKNOWN).addCause(err));
+                }
 
-                ResourceManager.logger(this).info(`Detected recoverable error: ${err.message}`);
-
-                ResourceManager.emit(iCPSEventSyncEngine.RETRY, retryCount);
                 await this.prepareRetry();
+                ResourceManager.emit(iCPSEventSyncEngine.RETRY, retryCount);
             }
         }
 
         // We'll only reach this, if we exceeded retryCount
         throw new iCPSError(SYNC_ERR.MAX_RETRY)
             .addMessage(`${retryCount}`);
-    }
-
-    /**
-     * Checks if a given AxiosError can be seen as 'fatal' in the context of a sync
-     * @param err - An error that was thrown during 'writeState()'
-     * @throws If a fatal error occurred that should NOT be retried
-     */
-    checkFatalError(err: any): boolean {
-        if (err.code === `ERR_BAD_RESPONSE`) {
-            ResourceManager.logger(this).debug(`Bad server response (${err.response?.status}), refreshing session...`);
-            return false;
-        }
-
-        if (err.code === `ERR_BAD_REQUEST`) {
-            ResourceManager.logger(this).debug(`Bad request ${err.response?.status}, refreshing session...`);
-            return false;
-        }
-
-        if (err.code === `EAI_AGAIN`) {
-            ResourceManager.logger(this).debug(`iCloud DNS record expired, refreshing session...`);
-            return false;
-        }
-
-        throw new iCPSError(SYNC_ERR.UNKNOWN_SYNC)
-            .addCause(err);
     }
 
     /**
@@ -120,10 +97,10 @@ export class SyncEngine {
             }
         }
 
-        ResourceManager.logger(this).debug(`Refreshing iCloud connection`);
-        const iCloudReady = this.icloud.getReady();
-        this.icloud.setupAccount();
-        await iCloudReady;
+        // ResourceManager.logger(this).debug(`Refreshing iCloud connection`);
+        // const iCloudReady = this.icloud.getReady();
+        // this.icloud.setupAccount();
+        // await iCloudReady;
     }
 
     /**

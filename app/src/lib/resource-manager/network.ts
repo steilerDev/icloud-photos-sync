@@ -1,7 +1,7 @@
 /**
  * This file holds constants relevant to the networking layer
  */
-import {Cookie} from "tough-cookie";
+import * as PACKAGE from "../package.js";
 
 /**
  * Hard coded client id, extracted from previous requests
@@ -82,6 +82,20 @@ export const ENDPOINTS = {
                 DEVICE_ENTER: `/verify/trusteddevice/securitycode`,
                 PHONE_RESEND: `/verify/phone`,
                 PHONE_ENTER: `/verify/phone/securitycode`,
+                /**
+                 * Security key endpoints:
+                 * SECURITY_KEY_ENTER: '/verify/security/key'
+                 * Payload:
+                 * \{
+                 *      "challenge":"43-character-challenge",
+                 *      "clientData":"[redacted]",
+                 *      "signatureData":"[redacted]",
+                 *      "authenticatorData":"[redacted]",
+                 *      "userHandle":"[redacted]",
+                 *      "credentialID":"[redacted]",
+                 *      "rpId":"apple.com"
+                 * \}
+                 */
             },
             TRUST: `/2sv/trust`,
         },
@@ -111,26 +125,26 @@ export const ENDPOINTS = {
     },
 };
 
+export const EMPTY_HAR = {
+    log: {
+        version: `1.2`,
+        creator: {
+            name: PACKAGE.NAME,
+            version: PACKAGE.VERSION,
+        },
+        pages: [],
+        entries: [],
+    },
+};
+
 /**
  * Non persistent network resources, required to access the iCloud API
  */
 export type NetworkResources = {
     /**
-     * X-Apple-ID-Session-Id
+     * Session secret, either acquired on successful sign in, or after trusting the device
      */
-    sessionId?: string,
-    /**
-     * X-Apple-Session-Token after trusting the device
-     */
-    sessionToken?: string,
-    /**
-     * Apple provided header to identify requests during authentication
-     */
-    scnt?: string,
-    /**
-     * Cookies acquired after authentication
-     */
-    cookies?: Cookie[],
+    sessionSecret?: string,
     /**
      * The dynamic iCloud photos URL
      */
