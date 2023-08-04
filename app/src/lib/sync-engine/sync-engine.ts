@@ -189,13 +189,9 @@ export class SyncEngine {
     async addAsset(asset: Asset) {
         ResourceManager.logger(this).info(`Adding asset ${asset.getDisplayName()}`);
 
-        try {
-            await this.photosLibrary.verifyAsset(asset);
-            ResourceManager.logger(this).debug(`Asset ${asset.getDisplayName()} already downloaded`);
-        } catch (err) {
-            const data = await this.icloud.photos.downloadAsset(asset);
-            await this.photosLibrary.writeAsset(asset, data);
-        }
+        const response = await this.icloud.photos.downloadAsset(asset);
+
+        await this.photosLibrary.writeAsset(asset, response);
 
         ResourceManager.emit(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, asset.getDisplayName());
     }

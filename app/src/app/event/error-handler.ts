@@ -11,6 +11,7 @@ import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
 import * as zlib from 'zlib';
 import {Readable} from 'stream';
 import os from 'os';
+import {pEvent} from 'p-event';
 
 const reportDenyList = [
     ERR_SIGINT.code,
@@ -263,10 +264,7 @@ export class ErrorHandler {
 
             const brotliStream = zlib.createBrotliCompress();
             data.pipe(brotliStream).pipe(output);
-            await new Promise<void>((resolve, reject) => {
-                output.on(`finish`, resolve);
-                output.on(`error`, reject);
-            });
+            await pEvent(output, `finish`, {rejectionEvents: [`error`]});
         } finally {
             await targetFd?.close();
         }

@@ -7,6 +7,7 @@ import {iCPSError} from "../../app/error/error.js";
 import {RES_MANAGER_ERR} from "../../app/error/error-codes.js";
 import {AxiosHarTracker} from "axios-har-tracker";
 import {FILE_ENCODING} from "./resources.js";
+import {Readable} from "stream";
 
 class Header {
     key: string;
@@ -107,6 +108,12 @@ export class NetworkManager {
     _axios: AxiosInstance;
 
     /**
+     * A separate axios instance to handle stream based downloads of assets
+     * This allows us to bypass har files for those big files - additionally something is not handling the stream correctly
+     */
+    _streamingAxios: AxiosInstance;
+
+    /**
      * Collection of header values and cookies that are applied based on the request
      */
     _headerJar: HeaderJar;
@@ -119,6 +126,11 @@ export class NetworkManager {
     constructor(enableNetworkCapture: boolean) {
         this._axios = axios.create({
             headers: HEADER.DEFAULT,
+        });
+
+        this._streamingAxios = axios.create({
+            headers: HEADER.DEFAULT,
+            responseType: `stream`,
         });
 
         if (enableNetworkCapture) {
@@ -321,6 +333,16 @@ export class NetworkManager {
      */
     async get<T = any, R = AxiosResponse<T>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R> {
         return this._axios.get(url, config);
+    }
+
+    /**
+     * Performs a GET request to acquire a asset's data stream
+     * @param url - The location of the asset
+     * @returns A promise, that resolves once the request has been completed.
+     */
+    // async getDataStream<R = AxiosResponse<Readable>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R> {
+    async getDataStream(url: string): Promise<AxiosResponse<Readable>> {
+        return this._streamingAxios.get(url);
     }
 
     /**

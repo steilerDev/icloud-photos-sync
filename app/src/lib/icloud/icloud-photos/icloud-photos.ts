@@ -10,6 +10,7 @@ import {ResourceManager} from '../../resource-manager/resource-manager.js';
 import {ENDPOINTS} from '../../resource-manager/network.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
 import {iCPSEventError, iCPSEventPhotos} from '../../resource-manager/events.js';
+import {Readable} from 'stream';
 
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now
@@ -553,17 +554,9 @@ export class iCloudPhotos {
      * @param asset - The asset to be downloaded
      * @returns A promise, that -once resolved-, contains the Axios response
      */
-    async downloadAsset(asset: Asset): Promise<AxiosResponse<any, any>> {
+    async downloadAsset(asset: Asset): Promise<AxiosResponse<Readable, any>> {
         ResourceManager.logger(this).debug(`Starting download of asset ${asset.getDisplayName()}`);
-
-        const config: AxiosRequestConfig = {
-            responseType: `stream`,
-        };
-
-        return ResourceManager.network.get(
-            asset.downloadURL,
-            config,
-        );
+        return ResourceManager.network.getDataStream(asset.downloadURL);
     }
 
     /**
