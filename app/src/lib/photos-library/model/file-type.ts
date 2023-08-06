@@ -43,6 +43,7 @@ const EXT = {
     'public.item': `largeThumbnail`,
     'public.mpo-image': `mpo`,
     'com.dji.mimo.pano.jpeg': `jpg`,
+    'public.avif': 'avif'
 };
 
 /**
