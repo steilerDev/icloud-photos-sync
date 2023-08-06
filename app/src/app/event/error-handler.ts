@@ -29,8 +29,9 @@ const reportDenyList = [
  * List of errors that will get reported, even though it's only a warning
  */
 const reportAllowList = [
-    LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR.code
-]
+    LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR.code,
+    LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION.code,
+];
 
 const BACKTRACE_SUBMISSION = {
     DOMAIN: `https://submit.backtrace.io`,
@@ -110,9 +111,9 @@ export class ErrorHandler {
 
         // Report error and append error code
         if (
-            (_err.sev === `FATAL` || reportAllowList.indexOf(rootErrorCode) > -1) && // Report fatal errors and errors in allow list
-            reportDenyList.indexOf(rootErrorCode) === -1 // Exclude errors in deny list
-        ) { 
+            (_err.sev === `FATAL` || reportAllowList.indexOf(rootErrorCode) > -1) // Report fatal errors and errors in allow list
+            && reportDenyList.indexOf(rootErrorCode) === -1 // Exclude errors in deny list
+        ) {
             const errorId = await this.reportError(_err);
             message += ` (Error Code: ${errorId})`;
         } else {
