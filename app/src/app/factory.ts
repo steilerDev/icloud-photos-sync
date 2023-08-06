@@ -142,7 +142,7 @@ export function appFactory(argv: string[]): iCPSApp {
             .argParser(commanderParsePositiveInt))
         .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon an error ('Infinity' means that it will always retry).`)
             .env(`MAX_RETRIES`)
-            .default(Infinity, `Infinity`)
+            .default(10)
             .argParser(commanderParsePositiveIntOrInfinity))
         .addOption(new Option(`-t, --download-threads <number>`, `Sets the number of download threads ('Infinity' will remove all limitations).`)
             .env(`DOWNLOAD_THREADS`)
