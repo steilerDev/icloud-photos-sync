@@ -4,7 +4,7 @@ const name = `SyncError`;
 const prefix = `SYNC`;
 
 export const CONVERSION: ErrorStruct = buildErrorStruct(
-    name, prefix, `CONVERSION`, `Error while converting asset`,
+    name, prefix, `CONVERSION`, `Asset could not be converted - ignoring it`,
 );
 
 export const STASH_RETRIEVE: ErrorStruct = buildErrorStruct(

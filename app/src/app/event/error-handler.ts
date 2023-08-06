@@ -13,6 +13,9 @@ import {Readable} from 'stream';
 import os from 'os';
 import {pEvent} from 'p-event';
 
+/**
+ * List of errors that will never get reported
+ */
 const reportDenyList = [
     ERR_SIGINT.code,
     ERR_SIGTERM.code,
@@ -21,6 +24,13 @@ const reportDenyList = [
     LIBRARY_ERR.LOCKED.code, // Only happens if library is locked
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
 ];
+
+/**
+ * List of errors that will get reported, even though it's only a warning
+ */
+const reportAllowList = [
+    LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR.code
+]
 
 const BACKTRACE_SUBMISSION = {
     DOMAIN: `https://submit.backtrace.io`,
@@ -96,15 +106,17 @@ export class ErrorHandler {
 
         let message = _err.getDescription();
 
+        const rootErrorCode = _err.getRootErrorCode(true);
+
         // Report error and append error code
-        if (_err.sev === `FATAL`) { // Report only fatal errors
-            const rootErrorCode = _err.getRootErrorCode(true);
-            if (reportDenyList.indexOf(rootErrorCode) === -1) { // Report only, if root error code is not in deny list
-                const errorId = await this.reportError(_err);
-                message += ` (Error Code: ${errorId})`;
-            } else {
-                message += ` (Not reporting ${rootErrorCode})`;
-            }
+        if (
+            (_err.sev === `FATAL` || reportAllowList.indexOf(rootErrorCode) > -1) && // Report fatal errors and errors in allow list
+            reportDenyList.indexOf(rootErrorCode) === -1 // Exclude errors in deny list
+        ) { 
+            const errorId = await this.reportError(_err);
+            message += ` (Error Code: ${errorId})`;
+        } else {
+            message += ` (Not reporting ${rootErrorCode})`;
         }
 
         if (this.verbose && Object.keys(_err.context).length > 0) {

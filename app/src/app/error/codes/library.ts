@@ -8,11 +8,11 @@ export const NO_DISTANCE_TO_ROOT: ErrorStruct = buildErrorStruct(
 );
 
 export const UNKNOWN_FILETYPE_DESCRIPTOR: ErrorStruct = buildErrorStruct(
-    name, prefix, `UNKNOWN_FILE_TYPE_DESCRIPTOR`, `Unknown filetype descriptor, see GH issue 143`,
+    name, prefix, `UNKNOWN_FILE_TYPE_DESCRIPTOR`, `Unknown filetype descriptor, please report in GH issue 143`,
 );
 
 export const UNKNOWN_FILETYPE_EXTENSION: ErrorStruct = buildErrorStruct(
-    name, prefix, `UNKNOWN_FILETYPE_EXTENSION`, `Unknown filetype extension, see GH issue 143`,
+    name, prefix, `UNKNOWN_FILETYPE_EXTENSION`, `Unknown filetype extension, please report in GH issue 143`,
 );
 
 export const INVALID_FILE: ErrorStruct = buildErrorStruct(

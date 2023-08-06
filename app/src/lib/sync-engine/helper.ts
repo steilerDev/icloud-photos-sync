@@ -5,6 +5,8 @@ import {CPLAlbum, CPLAsset, CPLMaster} from "../icloud/icloud-photos/query-parse
 import {Album} from "../photos-library/model/album.js";
 import {Asset, AssetType} from "../photos-library/model/asset.js";
 import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../photos-library/model/photos-entity.js";
+import { ResourceManager } from "../resource-manager/resource-manager.js";
+import { iCPSEventError } from "../resource-manager/events.js";
 
 /**
  * This object exposes various static helpers required to perform a sync
@@ -64,11 +66,12 @@ function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Asset
                 remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, origExt, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite, asset.zoneName));
             }
         } catch (err) {
-            // In case missing filetype descriptor is thrown, adding asset context to error
-            throw new iCPSError(SYNC_ERR.CONVERSION)
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.CONVERSION)
+                .setWarning()
                 .addCause(err)
                 .addContext(`cplAsset`, asset)
-                .addContext(`cplMaster`, master);
+                .addContext(`cplMaster`, master)
+            )
         }
     });
     return remoteAssets;
