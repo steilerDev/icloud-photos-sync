@@ -11,6 +11,7 @@ import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
 import {ResourceManager} from '../resource-manager/resource-manager.js';
 import {iCPSEventError} from '../resource-manager/events.js';
+import {Readable} from 'stream';
 
 type PathTuple = [namePath: string, uuidPath: string]
 
@@ -253,12 +254,12 @@ export class PhotosLibrary {
      * @param response - The response -as a stream- containing the data of the asset
      * @returns A promise, that resolves once this asset was written to disk and verified
      */
-    async writeAsset(asset: Asset, response: AxiosResponse<any, any>): Promise<void> {
+    async writeAsset(asset: Asset, response: AxiosResponse<Readable, any>): Promise<void> {
         ResourceManager.logger(this).debug(`Writing asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath();
-        const writeStream = fs.createWriteStream(location);
+        const writeStream = fs.createWriteStream(location, {flags: `w`});
         response.data.pipe(writeStream);
-        await pEvent(writeStream, `close`);
+        await pEvent(writeStream, `finish`, {rejectionEvents: [`error`]});
         try {
             await fs.promises.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
             await this.verifyAsset(asset);
