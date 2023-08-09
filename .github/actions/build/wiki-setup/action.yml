@@ -17,6 +17,9 @@ runs:
     - id: setup-npm
       shell: bash
       run: (cd ${{ inputs.app-path }}; npm ci)
+    - id: setup-schema
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm run build:schema)
     - id: setup-fs
       shell: bash
       run: cp README.md LICENSE ${{ inputs.app-path }}/  

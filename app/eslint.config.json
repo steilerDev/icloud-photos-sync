@@ -17,10 +17,10 @@
     ],
     "rules": {
         "quotes": ["error", "backtick"],
-        "quote-props": ["error", "always"],
+        "quote-props": ["error", "as-needed"],
         "indent": ["error", 4],
         "eol-last": ["error", "never"],
-        "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudPhotos", "iCloudAuth", "iCloudError", "iCloudWarning", "iCloudAuthError", "iCPSError"], "capIsNewExceptions": ["TTL"] }],
+        "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudPhotos", "iCloudAuth", "iCloudError", "iCloudWarning", "iCloudAuthError", "iCPSError", "iCPSLogInterface", "default", "iCPSInfluxLineProtocolPoint"], "capIsNewExceptions": ["TTL"] }],
         "tsdoc/syntax": "warn",
         "no-negated-condition": "off",
         "no-unused-vars": "off",
@@ -40,7 +40,9 @@
         "no-debugger": "warn",
         "no-promise-executor-return": "off",
         "no-unsafe-finally": "off",
-        "tsdoc-undefined-tag": "off"
+        "tsdoc-undefined-tag": "off",
+        "no-fallthrough": "off",
+        "accessor-pairs": ["error", { "getWithoutSet": true, "enforceForClassMembers": false }]
     },
     "overrides": [
         {

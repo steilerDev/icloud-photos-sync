@@ -17,4 +17,4 @@ runs:
         github_token: ${{ inputs.gh-token }}
     - id: clear-nightly-tags
       shell: bash
-      run: git push origin --delete $(git tag -l "$(git describe --tags --abbrev=0)-nightly*")
+      run: git push origin --delete $(git tag -l "*-nightly*")

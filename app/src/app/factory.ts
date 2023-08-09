@@ -3,6 +3,8 @@ import Cron from "croner";
 import * as PACKAGE_INFO from '../lib/package.js';
 import {ErrorHandler} from "./event/error-handler.js";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
+import {ResourceManager} from "../lib/resource-manager/resource-manager.js";
+import {LogLevel} from "./event/log.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -84,7 +86,7 @@ function commanderParseInterval(value: string, _dummyPrevious?: unknown): [numbe
 export type iCPSAppOptions = {
     username: string,
     password: string,
-    trustToken: string,
+    trustToken?: string,
     dataDir: string,
     port: number,
     maxRetries: number,
@@ -95,11 +97,12 @@ export type iCPSAppOptions = {
     force: boolean,
     refreshToken: boolean,
     remoteDelete: boolean,
-    logLevel: string,
+    logLevel: LogLevel,
     silent: boolean,
     logToCli: boolean,
     suppressWarnings: boolean,
     exportMetrics: boolean,
+    networkCapture: boolean,
     metadataRate: [number, number]
 }
 
@@ -110,10 +113,10 @@ export type iCPSAppOptions = {
  */
 export function appFactory(argv: string[]): iCPSApp {
     const AppCommands = {
-        "archive": `archive`,
-        "sync": `sync`,
-        "token": `token`,
-        "daemon": `daemon`,
+        archive: `archive`,
+        sync: `sync`,
+        token: `token`,
+        daemon: `daemon`,
     };
 
     const program = new Command();
@@ -137,9 +140,9 @@ export function appFactory(argv: string[]): iCPSApp {
             .env(`PORT`)
             .default(80)
             .argParser(commanderParsePositiveInt))
-        .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon an error ('Infinity' means that it will always retry).`)
+        .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon a sync error ('Infinity' means that it will always retry).`)
             .env(`MAX_RETRIES`)
-            .default(Infinity, `Infinity`)
+            .default(10)
             .argParser(commanderParsePositiveIntOrInfinity))
         .addOption(new Option(`-t, --download-threads <number>`, `Sets the number of download threads ('Infinity' will remove all limitations).`)
             .env(`DOWNLOAD_THREADS`)
@@ -164,14 +167,14 @@ export function appFactory(argv: string[]): iCPSApp {
         .addOption(new Option(`--remote-delete`, `If this flag is set, delete non-favorite photos in the iCloud Photos backend upon archiving.`)
             .env(`REMOTE_DELETE`)
             .default(false))
-        .addOption(new Option(`-l, --log-level <level>`, `Set the log level. NOTE: 'trace' might leak sensitive session data.`)
+        .addOption(new Option(`-l, --log-level <level>`, `Set the log level.`)
             .env(`LOG_LEVEL`)
-            .choices([`trace`, `debug`, `info`, `warn`, `error`])
+            .choices(Object.values(LogLevel))
             .default(`info`))
-        .addOption(new Option(`-s, --silent`, `Disables logging to the console and forces logs to go to the log file.`)
+        .addOption(new Option(`-s, --silent`, `Disables all output to the console.`)
             .env(`SILENT`)
             .default(false))
-        .addOption(new Option(`--log-to-cli`, `Disables logging to file and logs everything to the console. This will be ignored if '--silent' is set.`)
+        .addOption(new Option(`--log-to-cli`, `Disables logging to file and logs everything to the console.`)
             .env(`LOG_TO_CLI`)
             .default(false))
         .addOption(new Option(`--suppress-warnings`, `Non critical warnings will not be displayed in the UI. They will still go into the log.`)
@@ -180,32 +183,39 @@ export function appFactory(argv: string[]): iCPSApp {
         .addOption(new Option(`--export-metrics`, `Enables the export of sync metrics to a file using the Influx Line Protocol.`)
             .env(`EXPORT_METRICS`)
             .default(false))
+        .addOption(new Option(`--network-capture`, `Enables network capture, and generate a HAR file for debugging purposes. Written to '.icloud-photos-sync.har' in the data dir.`)
+            .env(`NETWORK_CAPTURE`)
+            .default(false))
         .addOption(new Option(`--metadata-rate <interval>`, `Limits the rate of metadata fetching in order to avoid getting throttled by the API. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one request in 20ms.`)
             .env(`METADATA_RATE`)
             .default([Infinity, 0], `Infinity/0`)
             .argParser(commanderParseInterval));
 
     program.command(AppCommands.daemon)
-        .action(() => {
-            app = new DaemonApp(program.opts() as iCPSAppOptions);
+        .action((_, command) => {
+            ResourceManager.setup(command.parent.opts());
+            app = new DaemonApp();
         })
         .description(`Starts the synchronization in scheduled daemon mode - continuously running based on the provided cron schedule.`);
 
     program.command(AppCommands.token)
-        .action(() => {
-            app = new TokenApp(program.opts() as iCPSAppOptions);
+        .action((_, command) => {
+            ResourceManager.setup(command.parent.opts());
+            app = new TokenApp();
         })
         .description(`Validates the current trust token, fetches a new one (if necessary) and prints it to the CLI.`);
 
     program.command(AppCommands.sync)
-        .action(() => {
-            app = new SyncApp(program.opts() as iCPSAppOptions);
+        .action((_, command) => {
+            ResourceManager.setup(command.parent.opts());
+            app = new SyncApp();
         })
         .description(`This command will fetch the remote state and persist it to the local disk.`);
 
     program.command(AppCommands.archive)
-        .action(archivePath => {
-            app = new ArchiveApp(program.opts() as iCPSAppOptions, archivePath);
+        .action((archivePath, _, command) => {
+            ResourceManager.setup(command.parent.opts());
+            app = new ArchiveApp(archivePath);
         })
         .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)
         .argument(`<path>`, `Path to the folder that should be archived`);

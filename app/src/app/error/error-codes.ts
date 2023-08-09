@@ -1,7 +1,7 @@
 /**
  * Possible error names
  */
-export type ErrorName =
+type ErrorName =
     `ArchiveError` |
     `iCPSError` |
     `InterruptError` |
@@ -11,6 +11,8 @@ export type ErrorName =
     `LibraryError` |
     `AppError` |
     `QueryParserError` |
+    `ResManagerError` |
+    `ValidatorError` |
     `SyncError`
 
 /**
@@ -42,7 +44,7 @@ export type ErrorStruct = {
 export function buildErrorStruct(name: ErrorName, errorCodePrefix: string, errorCode: string, message: string): ErrorStruct {
     return {
         name,
-        "code": `${errorCodePrefix}_${errorCode}`,
+        code: `${errorCodePrefix}_${errorCode}`,
         message,
     };
 }
@@ -55,22 +57,24 @@ import * as LIBRARY_ERR from './codes/library.js';
 import * as APP_ERR from './codes/app.js';
 import * as QUERY_PARSER_ERR from './codes/icloud-query-parser.js';
 import * as SYNC_ERR from './codes/sync.js';
-export {MFA_ERR, ARCHIVE_ERR, AUTH_ERR, ICLOUD_PHOTOS_ERR, LIBRARY_ERR, APP_ERR, QUERY_PARSER_ERR, SYNC_ERR};
+import * as RES_MANAGER_ERR from './codes/resource-manager.js';
+import * as VALIDATOR_ERR from './codes/validator.js';
+export {MFA_ERR, ARCHIVE_ERR, AUTH_ERR, ICLOUD_PHOTOS_ERR, LIBRARY_ERR, APP_ERR, QUERY_PARSER_ERR, SYNC_ERR, RES_MANAGER_ERR, VALIDATOR_ERR};
 
 export const ERR_UNKNOWN: ErrorStruct = {
-    "name": `iCPSError`,
-    "code": `UNKNOWN`,
-    "message": `Unknown error occurred`,
+    name: `iCPSError`,
+    code: `UNKNOWN`,
+    message: `Unknown error occurred`,
 };
 
 export const ERR_SIGINT: ErrorStruct = {
-    "name": `InterruptError`,
-    "code": `SIGINT`,
-    "message": `Received user interrupt: SIGINT`,
+    name: `InterruptError`,
+    code: `SIGINT`,
+    message: `Received user interrupt: SIGINT`,
 };
 
 export const ERR_SIGTERM: ErrorStruct = {
-    "name": `InterruptError`,
-    "code": `SIGTERM`,
-    "message": `Received user interrupt: SIGTERM`,
+    name: `InterruptError`,
+    code: `SIGTERM`,
+    message: `Received user interrupt: SIGTERM`,
 };

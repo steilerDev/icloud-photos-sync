@@ -140,11 +140,6 @@
                   "index": 6,
                   "text": "iCloud Ready"
                 },
-                "MFA_NOT_PROVIDED": {
-                  "color": "dark-purple",
-                  "index": 21,
-                  "text": "MFA Not Provided"
-                },
                 "MFA_RECEIVED": {
                   "color": "yellow",
                   "index": 3,
@@ -154,6 +149,11 @@
                   "color": "purple",
                   "index": 2,
                   "text": "MFA Required"
+                },
+                "MFA_TIMEOUT": {
+                  "color": "dark-purple",
+                  "index": 21,
+                  "text": "MFA Timeout"
                 },
                 "SCHEDULED": {
                   "color": "super-light-green",
@@ -314,7 +314,7 @@
           "alias": "status",
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_MONITORING}"
+            "uid": "ODP_NQfnk"
           },
           "groupBy": [
             {
@@ -352,6 +352,7 @@
           "tags": []
         }
       ],
+      "title": "Status",
       "type": "stat"
     },
     {
@@ -535,6 +536,11 @@
           "mappings": [
             {
               "options": {
+                " SCHEDULED": {
+                  "color": "super-light-green",
+                  "index": 21,
+                  "text": "Run scheduled"
+                },
                 "ACCOUNT_READY": {
                   "color": "dark-blue",
                   "index": 5,
@@ -594,6 +600,21 @@
                   "color": "dark-orange",
                   "index": 2,
                   "text": "MFA Required"
+                },
+                "MFA_TIMEOUT": {
+                  "color": "dark-blue",
+                  "index": 20,
+                  "text": "MFA Timeout"
+                },
+                "SCHEDULED_FAILURE": {
+                  "color": "semi-dark-red",
+                  "index": 23,
+                  "text": "Scheduled Run Failed"
+                },
+                "SCHEDULED_SUCCESS": {
+                  "color": "semi-dark-green",
+                  "index": 22,
+                  "text": "Scheduled Run Succeeded"
                 },
                 "SYNC_COMPLETED": {
                   "color": "green",

@@ -1,27 +1,30 @@
 import mockfs from 'mock-fs';
 import fs from 'fs';
 import {describe, test, expect, jest, beforeEach, afterEach} from '@jest/globals';
+import * as Config from '../_helpers/_config';
 import {nonRejectOptions, rejectOptions, validOptions} from '../_helpers/app-factory.helper';
-import {ArchiveApp, DaemonApp, DaemonAppEvents, LIBRARY_LOCK_FILE, SyncApp, TokenApp} from '../../src/app/icloud-app';
+import {ArchiveApp, DaemonApp, LIBRARY_LOCK_FILE, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
-import {Album} from '../../src/lib/photos-library/model/album';
-import {spyOnEvent} from '../_helpers/_general';
-import {EVENTS} from '../../src/lib/icloud/constants';
+import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import path from 'path';
-import {setupLogger} from '../_mocks/logger';
+import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
+import {iCPSEventApp, iCPSEventCloud} from '../../src/lib/resource-manager/events';
 
 beforeEach(() => {
     mockfs();
-    jest.clearAllMocks();
+    prepareResourceManager(false);
 });
 
 afterEach(() => {
     mockfs.restore();
+    jest.clearAllMocks();
 });
 
 describe(`App Factory`, () => {
     test.each(rejectOptions)(`Reject CLI: $_desc`, ({options, expected}) => {
+        const originalFunction = ResourceManager.setup;
+        ResourceManager.setup = jest.fn<typeof ResourceManager.setup>();
         const mockExit = jest.spyOn(process, `exit`).mockImplementation(() => {
             throw new Error(`Process Exit`);
         });
@@ -31,30 +34,49 @@ describe(`App Factory`, () => {
 
         expect(mockExit).toHaveBeenCalledWith(1);
         expect(mockStderr).toBeCalledWith(expected);
+        expect(ResourceManager.setup).not.toHaveBeenCalled();
+
+        ResourceManager.setup = originalFunction;
     });
 
-    test.each(nonRejectOptions)(`Valid CLI: $_desc`, ({options, expectedKey, expectedValue}) => {
-        const app = appFactory(options);
-        expect(app.options[expectedKey]).toEqual(expectedValue);
+    describe.each([{
+        command: [`token`],
+        appType: TokenApp,
+    }, {
+        command: [`sync`],
+        appType: SyncApp,
+    }, {
+        command: [`daemon`],
+        appType: DaemonApp,
+    }, {
+        command: [`archive`, `/some/valid/path`],
+        appType: ArchiveApp,
+    }])(`Valid CLI for $appType app`, ({command, appType}) => {
+        test.each(nonRejectOptions)(`$_desc`, ({options, expectedOptions}) => {
+            const setupSpy = jest.spyOn(ResourceManager, `setup`);
+            const app = appFactory([...options, ...command]);
+            expect(setupSpy).toHaveBeenCalledWith(expectedOptions);
+            expect(app).toBeInstanceOf(appType);
+        });
     });
 
     test(`Create Token App`, () => {
         const tokenApp = appFactory(validOptions.token) as TokenApp;
+
         expect(tokenApp).toBeInstanceOf(TokenApp);
-        expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(tokenApp.icloud).toBeDefined();
         expect(tokenApp.icloud.mfaServer).toBeDefined();
-        expect(tokenApp.icloud.auth).toBeDefined();
+        expect(ResourceManager._instance).toBeDefined();
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 
     test(`Create Sync App`, () => {
         const syncApp = appFactory(validOptions.sync) as SyncApp;
+
         expect(syncApp).toBeInstanceOf(SyncApp);
-        expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(syncApp.icloud).toBeDefined();
         expect(syncApp.icloud.mfaServer).toBeDefined();
-        expect(syncApp.icloud.auth).toBeDefined();
+        expect(ResourceManager._instance).toBeDefined();
         expect(syncApp.photosLibrary).toBeDefined();
         expect(syncApp.syncEngine).toBeDefined();
         expect(fs.existsSync(`/opt/icloud-photos-library`));
@@ -62,11 +84,11 @@ describe(`App Factory`, () => {
 
     test(`Create Archive App`, () => {
         const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
+
         expect(archiveApp).toBeInstanceOf(ArchiveApp);
-        expect(setupLogger).toHaveBeenCalledTimes(1);
         expect(archiveApp.icloud).toBeDefined();
         expect(archiveApp.icloud.mfaServer).toBeDefined();
-        expect(archiveApp.icloud.auth).toBeDefined();
+        expect(ResourceManager._instance).toBeDefined();
         expect(archiveApp.photosLibrary).toBeDefined();
         expect(archiveApp.syncEngine).toBeDefined();
         expect(archiveApp.archiveEngine).toBeDefined();
@@ -75,20 +97,30 @@ describe(`App Factory`, () => {
 
     test(`Create Daemon App`, () => {
         const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
+
         expect(daemonApp).toBeInstanceOf(DaemonApp);
-        expect(setupLogger).toHaveBeenCalledTimes(1);
-        expect(daemonApp.event).toBeDefined();
+        expect(ResourceManager._instance).toBeDefined();
     });
 });
 
 describe(`App control flow`, () => {
     test(`Handle authentication error`, async () => {
         const tokenApp = appFactory(validOptions.token) as TokenApp;
-        tokenApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
-        tokenApp.icloud.authenticate = jest.fn(() => Promise.reject(new Error()));
-        tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
+        tokenApp.acquireLibraryLock = jest.fn<typeof tokenApp.acquireLibraryLock>()
+            .mockResolvedValue();
+        tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>()
+            .mockRejectedValue(new Error(`Authentication failed`));
+        tokenApp.releaseLibraryLock = jest.fn<typeof tokenApp.releaseLibraryLock>()
+            .mockResolvedValue();
+        ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+            .mockResolvedValue();
+        ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
+            .mockReturnValue(ResourceManager.event);
 
         await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
+
+        expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
+        expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(5);
 
         expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
         expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -96,11 +128,21 @@ describe(`App control flow`, () => {
 
     test(`Handle lock acquisition error`, async () => {
         const tokenApp = appFactory(validOptions.token) as TokenApp;
-        tokenApp.acquireLibraryLock = jest.fn(() => Promise.reject(new Error()));
-        tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
-        tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
+        tokenApp.acquireLibraryLock = jest.fn<typeof tokenApp.acquireLibraryLock>()
+            .mockRejectedValue(new Error());
+        tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>()
+            .mockResolvedValue();
+        tokenApp.releaseLibraryLock = jest.fn<typeof tokenApp.releaseLibraryLock>()
+            .mockResolvedValue();
+        ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+            .mockResolvedValue();
+        ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
+            .mockReturnValue(ResourceManager.event);
 
         await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
+
+        expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
+        expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(5);
 
         expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
         expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -110,19 +152,34 @@ describe(`App control flow`, () => {
     describe(`Token App`, () => {
         test(`Execute token actions`, async () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
-            tokenApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
-            tokenApp.icloud.authenticate = jest.fn(() => Promise.resolve());
-            tokenApp.icloud.auth.validateAccountTokens = jest.fn();
-            tokenApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
 
-            const tokenEvent = spyOnEvent(tokenApp.icloud, EVENTS.TOKEN);
+            const tokenEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.TOKEN);
+
+            tokenApp.acquireLibraryLock = jest.fn<typeof tokenApp.acquireLibraryLock>()
+                .mockResolvedValue();
+            tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>(() => {
+                ResourceManager.emit(iCPSEventCloud.TRUSTED);
+                return tokenApp.icloud.ready;
+            });
+            tokenApp.releaseLibraryLock = jest.fn<typeof tokenApp.releaseLibraryLock>()
+                .mockResolvedValue();
+            ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+                .mockResolvedValue();
+
+            const originalRemoveListenersFromRegistry = ResourceManager.instance._eventManager.removeListenersFromRegistry;
+
+            ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
+                .mockImplementationOnce(originalRemoveListenersFromRegistry) // Original implementation need to run once, so it can divert the execution flow
+                .mockReturnValue(ResourceManager.event);
 
             await tokenApp.run();
 
             expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
             expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(1);
-            expect(tokenApp.icloud.auth.validateAccountTokens).toHaveBeenCalledTimes(1);
             expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
+
+            expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
+            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(5);
 
             expect(tokenEvent).toHaveBeenCalledTimes(1);
         });
@@ -131,10 +188,19 @@ describe(`App control flow`, () => {
     describe(`Sync App`, () => {
         test(`Execute sync actions`, async () => {
             const syncApp = appFactory(validOptions.sync) as SyncApp;
-            syncApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
-            syncApp.icloud.authenticate = jest.fn(() => Promise.resolve());
-            syncApp.syncEngine.sync = jest.fn(() => Promise.resolve([[], []] as [Asset[], Album[]]));
-            syncApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
+
+            syncApp.acquireLibraryLock = jest.fn<typeof syncApp.acquireLibraryLock>()
+                .mockResolvedValue();
+            syncApp.icloud.authenticate = jest.fn<typeof syncApp.icloud.authenticate>()
+                .mockResolvedValue();
+            syncApp.syncEngine.sync = jest.fn<typeof syncApp.syncEngine.sync>()
+                .mockResolvedValue([[], []]);
+            syncApp.releaseLibraryLock = jest.fn<typeof syncApp.releaseLibraryLock>()
+                .mockResolvedValue();
+            ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+                .mockResolvedValue();
+            ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
+                .mockReturnValue(ResourceManager.event);
 
             await syncApp.run();
 
@@ -142,14 +208,25 @@ describe(`App control flow`, () => {
             expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
             expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(syncApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
+            expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
+            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(3);
         });
 
         test(`Handle sync error`, async () => {
             const syncApp = appFactory(validOptions.sync) as SyncApp;
-            syncApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
-            syncApp.icloud.authenticate = jest.fn(() => Promise.resolve());
-            syncApp.syncEngine.sync = jest.fn(() => Promise.reject(new Error()));
-            syncApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
+
+            syncApp.acquireLibraryLock = jest.fn<typeof syncApp.acquireLibraryLock>()
+                .mockResolvedValue();
+            syncApp.icloud.authenticate = jest.fn<typeof syncApp.icloud.authenticate>()
+                .mockResolvedValue();
+            syncApp.syncEngine.sync = jest.fn<typeof syncApp.syncEngine.sync>()
+                .mockRejectedValue(new Error());
+            syncApp.releaseLibraryLock = jest.fn<typeof syncApp.releaseLibraryLock>()
+                .mockResolvedValue();
+            ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+                .mockResolvedValue();
+            ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
+                .mockReturnValue(ResourceManager.event);
 
             await expect(syncApp.run()).rejects.toThrow(/^Sync failed$/);
 
@@ -157,18 +234,31 @@ describe(`App control flow`, () => {
             expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
             expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(syncApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
+            expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
+            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(3);
         });
     });
 
     describe(`Archive App`, () => {
         test(`Execute archive actions`, async () => {
             const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
-            archiveApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
-            archiveApp.icloud.authenticate = jest.fn(() => Promise.resolve());
-            const remoteState = [{"fileChecksum": `someChecksum`}] as Asset[];
-            archiveApp.syncEngine.sync = jest.fn(() => Promise.resolve([remoteState, []] as [Asset[], Album[]]));
-            archiveApp.archiveEngine.archivePath = jest.fn(() => Promise.resolve());
-            archiveApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
+            archiveApp.acquireLibraryLock = jest.fn<typeof archiveApp.acquireLibraryLock>()
+                .mockResolvedValue();
+            archiveApp.icloud.authenticate = jest.fn<typeof archiveApp.icloud.authenticate>()
+                .mockResolvedValue();
+
+            const remoteState = [{fileChecksum: `someChecksum`}] as Asset[];
+            archiveApp.syncEngine.sync = jest.fn<typeof archiveApp.syncEngine.sync>()
+                .mockResolvedValue([remoteState, []]);
+
+            archiveApp.archiveEngine.archivePath = jest.fn<typeof archiveApp.archiveEngine.archivePath>()
+                .mockResolvedValue();
+            archiveApp.releaseLibraryLock = jest.fn<typeof archiveApp.releaseLibraryLock>()
+                .mockResolvedValue();
+            ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+                .mockResolvedValue();
+            ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
+                .mockReturnValue(ResourceManager.event);
 
             await archiveApp.run();
 
@@ -177,15 +267,28 @@ describe(`App control flow`, () => {
             expect(archiveApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledWith(validOptions.archive[validOptions.archive.length - 1], remoteState);
             expect(archiveApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
+            expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
+            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(3);
         });
 
         test(`Handle archive error`, async () => {
             const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
-            archiveApp.acquireLibraryLock = jest.fn(() => Promise.resolve());
-            archiveApp.icloud.authenticate = jest.fn(() => Promise.resolve());
-            archiveApp.syncEngine.sync = jest.fn(() => Promise.resolve([[], []] as [Asset[], Album[]]));
-            archiveApp.archiveEngine.archivePath = jest.fn(() => Promise.reject(new Error()));
-            archiveApp.releaseLibraryLock = jest.fn(() => Promise.resolve());
+            archiveApp.acquireLibraryLock = jest.fn<typeof archiveApp.acquireLibraryLock>()
+                .mockResolvedValue();
+            archiveApp.icloud.authenticate = jest.fn<typeof archiveApp.icloud.authenticate>()
+                .mockResolvedValue();
+
+            archiveApp.syncEngine.sync = jest.fn<typeof archiveApp.syncEngine.sync>()
+                .mockResolvedValue([[], []]);
+
+            archiveApp.archiveEngine.archivePath = jest.fn<typeof archiveApp.archiveEngine.archivePath>()
+                .mockRejectedValue(new Error());
+            archiveApp.releaseLibraryLock = jest.fn<typeof archiveApp.releaseLibraryLock>()
+                .mockResolvedValue();
+            ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+                .mockResolvedValue();
+            ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
+                .mockReturnValue(ResourceManager.event);
 
             await expect(archiveApp.run()).rejects.toThrow(/^Archive failed$/);
 
@@ -194,19 +297,22 @@ describe(`App control flow`, () => {
             expect(archiveApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledTimes(1);
             expect(archiveApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
+            expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
+            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(3);
         });
     });
 
     describe(`Daemon App`, () => {
         test(`Schedule job`, async () => {
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
-            daemonApp.performScheduledSync = jest.fn(() => Promise.resolve());
-            daemonApp.options.schedule = `*/1 * * * * *`; // Every second
-            const eventsScheduledEvent = spyOnEvent(daemonApp.event, DaemonAppEvents.EVENTS.SCHEDULED);
+            daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
+                .mockResolvedValue();
+            ResourceManager.instance._resources.schedule = `*/1 * * * * *`; // Every second
+            const eventScheduledEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.SCHEDULED);
 
             await daemonApp.run();
 
-            expect(eventsScheduledEvent).toHaveBeenCalledTimes(1);
+            expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
             // Waiting 2 seconds to make sure schedule ran at least once
             await new Promise(r => setTimeout(r, 2000));
             expect(daemonApp.performScheduledSync).toHaveBeenCalled();
@@ -215,26 +321,28 @@ describe(`App control flow`, () => {
         });
 
         test(`Scheduled sync succeeds`, async () => {
-            const syncApp = appFactory(validOptions.sync) as SyncApp;
-            syncApp.run = jest.fn(() => Promise.resolve());
-
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
-            const successEvent = spyOnEvent(daemonApp.event, DaemonAppEvents.EVENTS.DONE);
+            const successEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.SCHEDULED_DONE);
 
-            await daemonApp.performScheduledSync([], syncApp);
+            const syncApp = new SyncApp();
+            syncApp.run = jest.fn<typeof syncApp.run>()
+                .mockResolvedValue(undefined);
+
+            await daemonApp.performScheduledSync(syncApp);
 
             expect(syncApp.run).toHaveBeenCalled();
             expect(successEvent).toHaveBeenCalled();
         });
 
         test(`Scheduled sync fails`, async () => {
-            const syncApp = appFactory(validOptions.sync) as SyncApp;
-            syncApp.run = jest.fn(() => Promise.reject());
-
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
-            const retryEvent = spyOnEvent(daemonApp.event, DaemonAppEvents.EVENTS.RETRY);
+            const retryEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.SCHEDULED_RETRY);
 
-            await daemonApp.performScheduledSync([], syncApp);
+            const syncApp = new SyncApp();
+            syncApp.run = jest.fn<typeof syncApp.run>()
+                .mockRejectedValue(new Error());
+
+            await daemonApp.performScheduledSync(syncApp);
 
             expect(syncApp.run).toHaveBeenCalled();
             expect(retryEvent).toHaveBeenCalled();
@@ -249,7 +357,7 @@ describe(`Library Lock`, () => {
 
         await tokenApp.acquireLibraryLock();
 
-        const lockFile = (await fs.promises.readFile(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE), {"encoding": `utf-8`})).toString();
+        const lockFile = (await fs.promises.readFile(path.join(Config.defaultConfig.dataDir, LIBRARY_LOCK_FILE), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
     });
 
@@ -258,13 +366,13 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [tokenApp.options.dataDir]: {
+            [Config.defaultConfig.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await expect(tokenApp.acquireLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
-        expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 
     test(`Acquire lock warning - already locked with --force`, async () => {
@@ -273,14 +381,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [tokenApp.options.dataDir]: {
+            [ResourceManager.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await tokenApp.acquireLibraryLock();
 
-        const lockFile = (await fs.promises.readFile(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE), {"encoding": `utf-8`})).toString();
+        const lockFile = (await fs.promises.readFile(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
     });
 
@@ -289,14 +397,14 @@ describe(`Library Lock`, () => {
         const thisPID = process.pid.toString();
 
         mockfs({
-            [tokenApp.options.dataDir]: {
+            [Config.defaultConfig.dataDir]: {
                 [LIBRARY_LOCK_FILE]: thisPID,
             },
         });
 
         await tokenApp.releaseLibraryLock();
 
-        expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
+        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
     });
 
     test(`Release lock error - not this process' lock`, async () => {
@@ -304,14 +412,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [tokenApp.options.dataDir]: {
+            [ResourceManager.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await expect(tokenApp.releaseLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
 
-        expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 
     test(`Release lock error - not this process' lock --force`, async () => {
@@ -319,14 +427,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [tokenApp.options.dataDir]: {
+            [ResourceManager.dataDir]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await tokenApp.releaseLibraryLock();
 
-        expect(fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
+        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
     });
 
     test(`Release lock error - no lock`, async () => {
@@ -334,6 +442,6 @@ describe(`Library Lock`, () => {
 
         await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined();
 
-        expect(!fs.existsSync(path.join(tokenApp.options.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(!fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 });

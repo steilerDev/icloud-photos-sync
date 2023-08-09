@@ -3,10 +3,13 @@
     "module": "NodeNext",
     "target": "ESNext",
     "moduleResolution": "NodeNext",
-    "esModuleInterop": true,
     "sourceMap": true,
+    "declaration": true,
+    "esModuleInterop": true,
     "resolveJsonModule": true,
-    "outDir": "bin"
+    "strictNullChecks": false,
+    "outDir": "bin",
+    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   "lib": [

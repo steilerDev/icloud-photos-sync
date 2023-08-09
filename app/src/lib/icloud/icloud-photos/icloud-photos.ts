@@ -1,38 +1,32 @@
-import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios';
-import {EventEmitter} from 'events';
-import * as ICLOUD_PHOTOS from './constants.js';
+import {AxiosRequestConfig, AxiosResponse} from 'axios';
 import * as QueryBuilder from './query-builder.js';
-import {iCloudAuth} from '../auth.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
-import {getLogger} from '../../logger.js';
-import {convertCPLAssets} from '../../sync-engine/helpers/fetchAndLoad-helpers.js';
-import {HANDLER_EVENT} from '../../../app/event/error-handler.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
 import PQueue from 'p-queue';
-import {iCloudApp} from '../../../app/icloud-app.js';
+import {ResourceManager} from '../../resource-manager/resource-manager.js';
+import {ENDPOINTS} from '../../resource-manager/network.js';
+import {SyncEngineHelper} from '../../sync-engine/helper.js';
+import {iCPSEventError, iCPSEventPhotos} from '../../resource-manager/events.js';
+import {Readable} from 'stream';
+
+/**
+ * To perform an operation, a record change tag is required. Hardcoding it for now
+ */
+const RECORD_CHANGE_TAG = `21h2`;
+
+/**
+ * The max record limit, requested & returned by iCloud.
+ * Should be 200, but in order to divide by 3 (for albums) and 2 (for all pictures) 198 is more convenient
+ */
+const MAX_RECORDS_LIMIT = 198;
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
  */
-export class iCloudPhotos extends EventEmitter {
-    /**
-     * Default logger for this class
-     */
-    private logger = getLogger(this);
-
-    /**
-     * Cookie required to authenticate against the iCloud Services
-     */
-    auth: iCloudAuth;
-
-    /**
-     * Local axios instance to handle network requests
-     */
-    axios: AxiosInstance;
-
+export class iCloudPhotos {
     /**
      * A promise that will resolve, once the object is ready or reject, in case there is an error
      */
@@ -47,17 +41,13 @@ export class iCloudPhotos extends EventEmitter {
      * Creates a new iCloud Photos Class
      * @param auth - The populated authentication object
      */
-    constructor(app: iCloudApp, auth: iCloudAuth) {
-        super();
-        this.auth = auth;
-        this.axios = axios.create();
-
+    constructor() {
         this.queryQueue = new PQueue({
-            "intervalCap": app.options.metadataRate[0],
-            "interval": app.options.metadataRate[1],
+            intervalCap: ResourceManager.metadataRate[0],
+            interval: ResourceManager.metadataRate[1],
         });
 
-        this.on(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE, async () => {
+        ResourceManager.events(this).on(iCPSEventPhotos.SETUP_COMPLETED, async () => {
             await this.checkingIndexingStatus();
         });
 
@@ -70,22 +60,10 @@ export class iCloudPhotos extends EventEmitter {
      */
     getReady(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this.once(ICLOUD_PHOTOS.EVENTS.READY, () => resolve());
-            this.once(ICLOUD_PHOTOS.EVENTS.ERROR, err => reject(err));
+            ResourceManager.events(this)
+                .once(iCPSEventPhotos.READY, () => resolve())
+                .once(iCPSEventPhotos.ERROR, err => reject(err));
         });
-    }
-
-    /**
-     * Builds the full service endpoint URL based on currently assigned iCP domain
-     * @param ext - The service endpoint extension applied to the base domain
-     * @returns The full URL to the current active service endpoint
-     */
-    getServiceEndpoint(ext: string): string {
-        if (!this.auth.iCloudPhotosAccount.photosDomain || this.auth.iCloudPhotosAccount.photosDomain.length === 0) {
-            throw new iCPSError(ICLOUD_PHOTOS_ERR.DOMAIN_MISSING);
-        }
-
-        return `${this.auth.iCloudPhotosAccount.photosDomain}${ICLOUD_PHOTOS.PATHS.BASE_PATH}${ext}`;
     }
 
     /**
@@ -95,19 +73,16 @@ export class iCloudPhotos extends EventEmitter {
      */
     async setup() {
         try {
-            this.logger.debug(`Getting iCloud Photos account information`);
+            ResourceManager.logger(this).debug(`Getting iCloud Photos account information`);
 
-            const config: AxiosRequestConfig = {
-                "headers": this.auth.getPhotosHeader(),
-            };
+            const response = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.ZONES, {});
+            const validatedResponse = ResourceManager.validator.validatePhotosSetupResponse(response);
+            ResourceManager.network.applyPhotosSetupResponse(validatedResponse);
 
-            const setupResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.ZONES), {}, config);
-
-            this.auth.processPhotosSetupResponse(setupResponse);
-            this.logger.debug(`Successfully gathered iCloud Photos account information`);
-            this.emit(ICLOUD_PHOTOS.EVENTS.SETUP_COMPLETE);
+            ResourceManager.logger(this).debug(`Successfully gathered iCloud Photos account information`);
+            ResourceManager.emit(iCPSEventPhotos.SETUP_COMPLETED);
         } catch (err) {
-            this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.SETUP_ERROR).addCause(err));
+            ResourceManager.emit(iCPSEventPhotos.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.SETUP_ERROR).addCause(err));
         } finally {
             return this.ready;
         }
@@ -118,16 +93,16 @@ export class iCloudPhotos extends EventEmitter {
      * Will emit READY, or ERROR
      */
     async checkingIndexingStatus() {
-        this.logger.debug(`Checking Indexing Status of iCloud Photos Account`);
+        ResourceManager.logger(this).debug(`Checking Indexing Status of iCloud Photos Account`);
         try {
             await this.checkIndexingStatusForZone(QueryBuilder.Zones.Primary);
-            if (this.auth.sharedLibraryAvailable()) {
+            if (ResourceManager.sharedZoneAvailable) {
                 await this.checkIndexingStatusForZone(QueryBuilder.Zones.Shared);
             }
 
-            this.emit(ICLOUD_PHOTOS.EVENTS.READY);
+            ResourceManager.emit(iCPSEventPhotos.READY);
         } catch (err) {
-            this.emit(ICLOUD_PHOTOS.EVENTS.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNAVAILABLE).addCause(err));
+            ResourceManager.emit(iCPSEventPhotos.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNAVAILABLE).addCause(err));
         }
     }
 
@@ -149,7 +124,7 @@ export class iCloudPhotos extends EventEmitter {
         }
 
         if (indexingState === `RUNNING`) {
-            this.logger.debug(`Indexing for zone ${zone} in progress, sync needs to wait!`);
+            ResourceManager.logger(this).debug(`Indexing for zone ${zone} in progress, sync needs to wait!`);
             const indexingInProgressError = new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS)
                 .addMessage(`zone: ${zone}`);
 
@@ -162,7 +137,7 @@ export class iCloudPhotos extends EventEmitter {
         }
 
         if (indexingState === `FINISHED`) {
-            this.logger.info(`Indexing of ${zone} finished, sync can start!`);
+            ResourceManager.logger(this).info(`Indexing of ${zone} finished, sync can start!`);
             return;
         }
 
@@ -182,19 +157,17 @@ export class iCloudPhotos extends EventEmitter {
      * @returns An array of records as returned by the backend
      */
     async performQuery(zone: QueryBuilder.Zones, recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
-        this.auth.validatePhotosAccount(zone);
         const config: AxiosRequestConfig = {
-            "headers": this.auth.getPhotosHeader(),
-            "params": {
-                "remapEnums": `True`,
+            params: {
+                remapEnums: `True`,
             },
         };
 
         const data: any = {
-            "query": {
-                "recordType": `${recordType}`,
+            query: {
+                recordType: `${recordType}`,
             },
-            "zoneID": QueryBuilder.getZoneID(zone, this.auth),
+            zoneID: QueryBuilder.getZoneID(zone),
         };
 
         if (filterBy) {
@@ -209,11 +182,7 @@ export class iCloudPhotos extends EventEmitter {
             data.resultsLimit = resultsLimit;
         }
 
-        let queryResponse: any;
-
-        await this.queryQueue.add(async () => {
-            queryResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.QUERY), data, config);
-        });
+        const queryResponse = await this.queryQueue.add(async () => ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config)) as AxiosResponse<any, any>;
 
         const fetchedRecords = queryResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
@@ -233,31 +202,29 @@ export class iCloudPhotos extends EventEmitter {
      * @returns An array of records that have been altered
      */
     async performOperation(zone: QueryBuilder.Zones, operationType: string, fields: any, recordNames: string[]) {
-        this.auth.validatePhotosAccount(zone);
         const config: AxiosRequestConfig = {
-            "headers": this.auth.getPhotosHeader(),
-            "params": {
-                "remapEnums": `True`,
+            params: {
+                remapEnums: `True`,
             },
         };
 
         const data: any = {
-            "operations": [],
-            "zoneID": QueryBuilder.getZoneID(zone, this.auth),
-            "atomic": true,
+            operations: [],
+            zoneID: QueryBuilder.getZoneID(zone),
+            atomic: true,
         };
 
         data.operations = recordNames.map(recordName => ({
-            "operationType": `${operationType}`,
-            "record": {
-                "recordName": `${recordName}`,
-                "recordType": `CPLAsset`,
-                "recordChangeTag": ICLOUD_PHOTOS.RECORD_CHANGE_TAG,
+            operationType: `${operationType}`,
+            record: {
+                recordName: `${recordName}`,
+                recordType: `CPLAsset`,
+                recordChangeTag: RECORD_CHANGE_TAG,
                 fields,
             },
         }));
 
-        const operationResponse = await this.axios.post(this.getServiceEndpoint(ICLOUD_PHOTOS.PATHS.EXT.MODIFY), data, config);
+        const operationResponse = await this.queryQueue.add(async () => ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config)) as AxiosResponse<any, any>;
         const fetchedRecords = operationResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)
@@ -289,7 +256,7 @@ export class iCloudPhotos extends EventEmitter {
                 for (const nextAlbum of await queue.shift()) {
                     // If album is a folder, there is stuff in there, adding it to the queue
                     if (nextAlbum.albumType === AlbumType.FOLDER) {
-                        this.logger.debug(`Adding child elements of ${nextAlbum.albumNameEnc} to the processing queue`);
+                        ResourceManager.logger(this).debug(`Adding child elements of ${nextAlbum.albumNameEnc} to the processing queue`);
                         queue.push(this.fetchCPLAlbums(nextAlbum.recordName));
                     }
 
@@ -364,7 +331,7 @@ export class iCloudPhotos extends EventEmitter {
 
                     const albumAssets: AlbumAssets = {};
 
-                    convertCPLAssets(albumCPLAssets, albumCPLMasters).forEach(asset => {
+                    SyncEngineHelper.convertCPLAssets(albumCPLAssets, albumCPLMasters).forEach(asset => {
                         /**
                          * @remarks this probably needs to be more complex to support shared library folders once available from the API
                          */
@@ -378,7 +345,7 @@ export class iCloudPhotos extends EventEmitter {
                     cplAlbums.push(CPLAlbum.parseFromQuery(album));
                 }
             } catch (err) {
-                this.logger.info(`Error processing CPLAlbum: ${JSON.stringify(album)}: ${err.message}`);
+                ResourceManager.logger(this).info(`Error processing CPLAlbum: ${JSON.stringify(album)}: ${err.message}`);
             }
         }
 
@@ -420,18 +387,18 @@ export class iCloudPhotos extends EventEmitter {
     buildPictureRecordsRequestsForZone(zone: QueryBuilder.Zones, expectedNumberOfRecords: number, albumId?: string): Promise<any[]>[] {
         // Calculating number of concurrent requests, in order to execute in parallel
         const numberOfRequests = albumId === undefined
-            ? Math.ceil((expectedNumberOfRecords * 2) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT) // On all pictures two records per photo are returned (CPLMaster & CPLAsset) which are counted against max
-            : Math.ceil((expectedNumberOfRecords * 3) / ICLOUD_PHOTOS.MAX_RECORDS_LIMIT); // On folders three records per photo are returned (CPLMaster, CPLAsset & CPLContainerRelation) which are counted against max
+            ? Math.ceil((expectedNumberOfRecords * 2) / MAX_RECORDS_LIMIT) // On all pictures two records per photo are returned (CPLMaster & CPLAsset) which are counted against max
+            : Math.ceil((expectedNumberOfRecords * 3) / MAX_RECORDS_LIMIT); // On folders three records per photo are returned (CPLMaster, CPLAsset & CPLContainerRelation) which are counted against max
 
-        this.logger.debug(`Expecting ${expectedNumberOfRecords} records for album ${albumId === undefined ? `All photos` : albumId} in ${zone} library, executing ${numberOfRequests} queries`);
+        ResourceManager.logger(this).debug(`Expecting ${expectedNumberOfRecords} records for album ${albumId === undefined ? `All photos` : albumId} in ${zone} library, executing ${numberOfRequests} queries`);
 
         // Collecting all promise queries for parallel execution
         const pictureRecordsRequests: Promise<any[]>[] = [];
         for (let index = 0; index < numberOfRequests; index++) {
             const startRank = albumId === undefined // The start rank always refers to the tuple/triple of records, therefore we need to adjust the start rank based on the amount of records returned
-                ? index * Math.floor(ICLOUD_PHOTOS.MAX_RECORDS_LIMIT / 2)
-                : index * Math.floor(ICLOUD_PHOTOS.MAX_RECORDS_LIMIT / 3);
-            this.logger.debug(`Building query for records of album ${albumId === undefined ? `All photos` : albumId} in ${zone} library at index ${startRank}`);
+                ? index * Math.floor(MAX_RECORDS_LIMIT / 2)
+                : index * Math.floor(MAX_RECORDS_LIMIT / 3);
+            ResourceManager.logger(this).debug(`Building query for records of album ${albumId === undefined ? `All photos` : albumId} in ${zone} library at index ${startRank}`);
             const startRankFilter = QueryBuilder.getStartRankFilterForStartRank(startRank);
             const directionFilter = QueryBuilder.getDirectionFilterForDirection();
 
@@ -441,7 +408,7 @@ export class iCloudPhotos extends EventEmitter {
                     zone,
                     QueryBuilder.RECORD_TYPES.ALL_PHOTOS,
                     [startRankFilter, directionFilter],
-                    ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
+                    MAX_RECORDS_LIMIT,
                     QueryBuilder.QUERY_KEYS,
                 ));
             } else {
@@ -450,7 +417,7 @@ export class iCloudPhotos extends EventEmitter {
                     zone,
                     QueryBuilder.RECORD_TYPES.PHOTO_RECORDS,
                     [startRankFilter, directionFilter, parentFilter],
-                    ICLOUD_PHOTOS.MAX_RECORDS_LIMIT,
+                    MAX_RECORDS_LIMIT,
                     QueryBuilder.QUERY_KEYS,
                 ));
             }
@@ -484,6 +451,7 @@ export class iCloudPhotos extends EventEmitter {
 
         if (record.recordType === QueryBuilder.RECORD_TYPES.CONTAINER_RELATION) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNWANTED_RECORD_TYPE)
+                .setWarning()
                 .addMessage(record.recordType)
                 .addContext(`recordType`, record.recordType);
         }
@@ -525,7 +493,7 @@ export class iCloudPhotos extends EventEmitter {
      * @returns An array of CPLMaster and CPLAsset records
      */
     async fetchAllCPLAssetsMasters(parentId?: string): Promise<[CPLAsset[], CPLMaster[]]> {
-        this.logger.debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
+        ResourceManager.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
 
         let expectedNumberOfRecords = -1;
         let allRecords: any[] = [];
@@ -535,8 +503,8 @@ export class iCloudPhotos extends EventEmitter {
             [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, parentId);
 
             // Merging assets of shared library, if available
-            if (this.auth.sharedLibraryAvailable() && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
-                this.logger.debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
+            if (ResourceManager.sharedZoneAvailable && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
+                ResourceManager.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
                 const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared);
                 allRecords = [...allRecords, ...sharedRecords];
                 expectedNumberOfRecords += sharedExpectedCount;
@@ -563,17 +531,19 @@ export class iCloudPhotos extends EventEmitter {
                     seen.add(record.recordName);
                 }
             } catch (err) {
-                this.logger.info(`Error processing asset ${JSON.stringify(record)}: ${err.message}`);
+                ResourceManager.logger(this).info(`Error processing asset ${JSON.stringify(record)}: ${err.message}`);
             }
         }
 
         // There should be one CPLMaster and one CPLAsset per record, however the iCloud response is sometimes not adhering to this.
         if (cplMasters.length !== expectedNumberOfRecords || cplAssets.length !== expectedNumberOfRecords) {
-            this.emit(HANDLER_EVENT, new iCPSError(ICLOUD_PHOTOS_ERR.COUNT_MISMATCH)
-                .setWarning()
-                .addMessage(`expected ${expectedNumberOfRecords} CPLMaster & ${expectedNumberOfRecords} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`));
+            ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+                new iCPSError(ICLOUD_PHOTOS_ERR.COUNT_MISMATCH)
+                    .setWarning()
+                    .addMessage(`expected ${expectedNumberOfRecords} CPLMaster & ${expectedNumberOfRecords} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`),
+            );
         } else {
-            this.logger.debug(`Received expected amount (${expectedNumberOfRecords}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
+            ResourceManager.logger(this).debug(`Received expected amount (${expectedNumberOfRecords}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
         }
 
         return [cplAssets, cplMasters];
@@ -584,18 +554,9 @@ export class iCloudPhotos extends EventEmitter {
      * @param asset - The asset to be downloaded
      * @returns A promise, that -once resolved-, contains the Axios response
      */
-    async downloadAsset(asset: Asset): Promise<AxiosResponse<any, any>> {
-        this.logger.debug(`Starting download of asset ${asset.getDisplayName()}`);
-
-        const config: AxiosRequestConfig = {
-            "headers": this.auth.getPhotosHeader(),
-            "responseType": `stream`,
-        };
-
-        return this.axios.get(
-            asset.downloadURL,
-            config,
-        );
+    async downloadAsset(asset: Asset): Promise<AxiosResponse<Readable, any>> {
+        ResourceManager.logger(this).debug(`Starting download of asset ${asset.getDisplayName()}`);
+        return ResourceManager.network.getDataStream(asset.downloadURL);
     }
 
     /**
@@ -605,7 +566,7 @@ export class iCloudPhotos extends EventEmitter {
      * @returns A Promise, that fulfils once the operation has been performed
      */
     async deleteAssets(recordNames: string[]) {
-        this.logger.debug(`Deleting ${recordNames.length} assets: ${JSON.stringify(recordNames)}`);
+        ResourceManager.logger(this).debug(`Deleting ${recordNames.length} assets: ${JSON.stringify(recordNames)}`);
         await this.performOperation(QueryBuilder.Zones.Primary, `update`, QueryBuilder.getIsDeletedField(), recordNames);
     }
 }

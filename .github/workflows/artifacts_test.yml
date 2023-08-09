@@ -5,7 +5,7 @@ on:
   workflow_call:
     inputs:
       methods:
-        description: 'An array of test methods that need to be run. Will be read using fromJSON(). Allowed values: ["e2e", "unit"]'
+        description: 'An array of test methods that need to be run. Will be read using fromJSON(). Allowed values: ["e2e", "unit-ubuntu", "unit-macos", "api"]'
         required: true
         type: string
     secrets:
@@ -22,9 +22,20 @@ on:
 permissions: {}
 
 jobs:
-  unit:
+  unit-ubuntu:
     runs-on: ubuntu-latest
-    if: contains(fromJSON(inputs.methods), 'unit')
+    if: contains(fromJSON(inputs.methods), 'unit-ubuntu')
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v3
+      - name: setup/test-unit
+        uses: ./.github/actions/test/unit-setup
+      - name: action/test-unit
+        uses: ./.github/actions/test/unit
+
+  unit-macos:
+    runs-on: macos-latest
+    if: contains(fromJSON(inputs.methods), 'unit-macos')
     steps:
       - name: setup/checkout
         uses: actions/checkout@v3

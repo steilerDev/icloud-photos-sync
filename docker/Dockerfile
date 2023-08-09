@@ -7,6 +7,9 @@ RUN apk update && \
     apk add curl vim bash jq && \
     rm -rf /var/cache/apk/*
 
+# Setting node environment to not show experimental warnings
+ENV NODE_NO_WARNINGS=1 
+
 # Installing application binary
 RUN npm install -g /opt/*.tgz
 

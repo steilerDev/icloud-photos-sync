@@ -13,10 +13,13 @@
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["token"],
+            "args": ["daemon"],
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",
             ],
+            "env": {
+                "NODE_NO_WARNINGS": "1"
+            },
             "envFile": "${workspaceFolder}/.vscode/test.env"
         }, {
             "name": "Run API Tests",
@@ -31,7 +34,10 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/test.env"
+            "env": {
+                "NODE_NO_WARNINGS": "1"
+            },
+            "envFile": "${workspaceFolder}/.vscode/api-test.env"
         }, {
             "name": "Run All Tests",
             "type": "node",
@@ -45,7 +51,10 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/test.env"
+            "envFile": "${workspaceFolder}/.vscode/api-test.env",
+            "env": {
+                "NODE_NO_WARNINGS": "1"
+            },
         }, {
             "name": "Debug Test",
             "type": "node",
@@ -57,7 +66,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/icloud.test.ts"
+                "test/unit/sync-engine.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"

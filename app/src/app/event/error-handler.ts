@@ -1,53 +1,52 @@
 import * as bt from 'backtrace-node';
-import {EventEmitter} from 'events';
 import * as PACKAGE_INFO from '../../lib/package.js';
-import {getLogger, logFilePath} from "../../lib/logger.js";
 import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
-import {EventHandler} from './event-handler.js';
-import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, MFA_ERR} from '../error/error-codes.js';
-import {iCPSAppOptions} from '../factory.js';
-import * as SYNC_ENGINE from '../../lib/sync-engine/constants.js';
-import {SyncEngine} from '../../lib/sync-engine/sync-engine.js';
+import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
 import fs from 'fs/promises';
 import path from 'path';
+import {ResourceManager} from '../../lib/resource-manager/resource-manager.js';
+import {iCPSEventApp, iCPSEventError} from '../../lib/resource-manager/events.js';
+import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
+import * as zlib from 'zlib';
+import {Readable} from 'stream';
+import os from 'os';
+import {pEvent} from 'p-event';
 
 /**
- * The event emitted by classes of this application and picked up by the handler.
+ * List of errors that will never get reported
  */
-export const HANDLER_EVENT = `handler-event`;
-/**
- * Event emitted in case an error was handled. Error string provided as argument.
- */
-export const ERROR_EVENT = `error`;
-/**
- * Event emitted in case a warning was handled. Error string provided as argument.
- */
-export const WARN_EVENT = `warn`;
-
 const reportDenyList = [
     ERR_SIGINT.code,
     ERR_SIGTERM.code,
     MFA_ERR.ADDR_IN_USE_ERR.code, // Only happens if port/address is in use
     MFA_ERR.SERVER_TIMEOUT.code, // Only happens if user does not interact within 10 minutes
-    // LIBRARY_ERR.LOCKED.code,
+    LIBRARY_ERR.LOCKED.code, // Only happens if library is locked
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
 ];
 
+/**
+ * List of errors that will get reported, even though it's only a warning
+ */
+const reportAllowList = [
+    LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR.code,
+    LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION.code,
+];
+
 const BACKTRACE_SUBMISSION = {
-    "DOMAIN": `https://submit.backtrace.io`,
-    "UNIVERSE": `steilerdev`,
-    "TOKEN": {
-        "PROD": `92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49`,
-        "DEV": `bf2e718ef569a1421ba4f3c9b36a8e4b84b1c4043265533f204e5759f7f4edee`,
+    DOMAIN: `https://submit.backtrace.io`,
+    UNIVERSE: `steilerdev`,
+    TOKEN: {
+        PROD: `92b77410edda81e81e4e3b37e24d5a7045e1dae2825149fb022ba46da82b6b49`,
+        DEV: `bf2e718ef569a1421ba4f3c9b36a8e4b84b1c4043265533f204e5759f7f4edee`,
     },
-    "TYPE": `json`,
+    TYPE: `json`,
 };
 
 /**
  * This class handles errors thrown or `HANDLER_EVENT` emitted by classes of this application
  */
-export class ErrorHandler extends EventEmitter implements EventHandler {
+export class ErrorHandler {
     /**
      * The error reporting client - if activated
      */
@@ -58,26 +57,32 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
      */
     verbose: boolean = false;
 
-    constructor(options: iCPSAppOptions) {
-        super();
-        if (options.enableCrashReporting) {
+    constructor() {
+        if (ResourceManager.enableCrashReporting) {
             const endpoint = `${BACKTRACE_SUBMISSION.DOMAIN}/${BACKTRACE_SUBMISSION.UNIVERSE}/`
                                 + `${PACKAGE_INFO.VERSION === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
                                 + BACKTRACE_SUBMISSION.TYPE;
 
             this.btClient = bt.initialize({
                 endpoint,
-                "handlePromises": true,
-                "enableMetricsSupport": true,
-                "attributes": {
-                    "application": PACKAGE_INFO.NAME,
+                handlePromises: true,
+                enableMetricsSupport: true,
+                attributes: {
+                    application: PACKAGE_INFO.NAME,
                     'application.version': PACKAGE_INFO.VERSION,
                 },
             });
             // This.btClient.setSymbolication();
+            ResourceManager.events(this).on(iCPSEventApp.SCHEDULED_START, async () => {
+                await this.reportSyncStart();
+            });
         }
 
-        if (options.logLevel === `trace` || options.logLevel === `debug`) {
+        ResourceManager.events(this).on(iCPSEventError.HANDLER_EVENT, async (err: unknown) => {
+            await this.handle(err);
+        });
+
+        if (ResourceManager.logLevel === `debug`) {
             this.verbose = true;
         }
 
@@ -102,15 +107,17 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
         let message = _err.getDescription();
 
+        const rootErrorCode = _err.getRootErrorCode(true);
+
         // Report error and append error code
-        if (_err.sev === `FATAL`) { // Report only fatal errors
-            const rootErrorCode = _err.getRootErrorCode(true);
-            if (reportDenyList.indexOf(rootErrorCode) === -1) { // Report only, if root error code is not in deny list
-                const errorId = await this.reportError(_err);
-                message += ` (Error Code: ${errorId})`;
-            } else {
-                message += ` (Not reporting ${rootErrorCode})`;
-            }
+        if (
+            (_err.sev === `FATAL` || reportAllowList.indexOf(rootErrorCode) > -1) // Report fatal errors and errors in allow list
+            && reportDenyList.indexOf(rootErrorCode) === -1 // Exclude errors in deny list
+        ) {
+            const errorId = await this.reportError(_err);
+            message += ` (Error Code: ${errorId})`;
+        } else {
+            message += ` (Not reporting ${rootErrorCode})`;
         }
 
         if (this.verbose && Object.keys(_err.context).length > 0) {
@@ -120,32 +127,13 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         // Performing output based on severity
         switch (_err.sev) {
         case `WARN`:
-            this.emit(WARN_EVENT, message);
-            getLogger(this).warn(message);
+            ResourceManager.emit(iCPSEventError.HANDLER_WARN, message);
             break;
         default:
         case `FATAL`:
-            this.emit(ERROR_EVENT, message);
-            getLogger(this).error(message);
+            ResourceManager.emit(iCPSEventError.HANDLER_ERROR, message);
             break;
         }
-    }
-
-    /**
-     * Registers an event listener for `HANDLER_EVENT` on the provided object.
-     * @param objects - A list of EventEmitter, which will emit `HANDLER_EVENT`
-     */
-    registerObjects(...objects: EventEmitter[]) {
-        objects.forEach(obj => {
-            obj.on(HANDLER_EVENT, async (err: unknown) => {
-                await this.handle(err);
-            });
-            if (this.btClient && obj instanceof SyncEngine) {
-                obj.on(SYNC_ENGINE.EVENTS.START, async () => {
-                    await this.reportSyncStart();
-                });
-            }
-        });
     }
 
     /**
@@ -160,60 +148,138 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
 
         const errorUUID = randomUUID();
 
-        const attachment = await this.prepareLogFile(logFilePath);
+        const attachments = await this.prepareAttachments(errorUUID);
 
         const report = this.btClient.createReport(err, {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
             'icps.rootErrorCode': err.getRootErrorCode(),
             'icps.errorCodeStack': err.getErrorCodeStack().join(`->`),
-        }, attachment);
+        }, attachments);
 
         await this.btClient.sendAsync(report);
         return errorUUID;
     }
 
     /**
-     * This function extracts relevant parts of the log file, in order to streamline error reporting
-     * @param currentLogFilePath - The file path to the current log file
-     * @returns - An array, containing the file path to the processed log file, or an empty array if the log file could not be prepared
+     * Prepares and compresses the error attachments
+     * @param errorUUID - The UUID of the error, used to identify the files
+     * @returns A promise that resolves to an array of file paths (might be empty)
      */
-    async prepareLogFile(currentLogFilePath: string): Promise<string[]> {
+    async prepareAttachments(errorUUID: string): Promise<string[]> {
+        const attachmentDir = await fs.mkdtemp(path.join(os.tmpdir(), `icps-crash-report-`));
+
+        const attachments: string[] = [];
+
+        // Adding log file
+        const logFilePath = await this.prepareLogFile(attachmentDir, errorUUID);
+        if (logFilePath) {
+            attachments.push(logFilePath);
+        }
+
+        // Adding HAR file
+        const harFilePath = await this.prepareHarFile(attachmentDir, errorUUID);
+        if (harFilePath) {
+            attachments.push(harFilePath);
+        }
+
+        if (attachments.length === 0) {
+            ResourceManager.emit(iCPSEventError.HANDLER_WARN, `No attachments found for error report`);
+            await fs.rmdir(attachmentDir);
+            return [];
+        }
+
+        ResourceManager.emit(iCPSEventError.HANDLER_ERROR, `Crash report saved to ${attachmentDir}`);
+
+        return attachments;
+    }
+
+    /**
+     * Prepares the log file for submission.
+     * This function extracts relevant parts of the log file, in order to streamline error reporting
+     * @param attachmentDir - The directory to store the prepared log file in
+     * @param errorUUID - The UUID of the error, used to identify the log file
+     * @returns A promise that resolves to the path of the prepared log file - compressed using the brotli algorithm
+     */
+    async prepareLogFile(attachmentDir: string, errorUUID: string): Promise<string | undefined> {
         const maxNumberOfLines = 200;
-        let tmpLogFileFd: fs.FileHandle;
-        const result: string[] = [];
+        const targetPath = path.join(attachmentDir, `icps-crash-${errorUUID}.log`);
 
         try {
             // Reading current log file and determining length
-            const data = (await fs.readFile(currentLogFilePath, {"encoding": `utf8`})).split(`\n`);
+            const data = (await fs.readFile(ResourceManager.logFilePath, {encoding: FILE_ENCODING})).split(`\n`);
             const totalNumberOfLines = data.length;
 
-            // If there is nothing to truncate, we return the original log file
-            if (totalNumberOfLines < maxNumberOfLines) {
-                return [currentLogFilePath];
+            if (totalNumberOfLines === 0) {
+                return;
             }
 
-            // Creating temp log file, overwriting existing
-            const currentLogFile = path.parse(currentLogFilePath);
-            const tmpLogFilePath = `${currentLogFile.dir}/${currentLogFile.name}-reported.log`;
-            tmpLogFileFd = await fs.open(tmpLogFilePath, `w`);
+            // If there is nothing to truncate, we copy the original log file
+            if (totalNumberOfLines < maxNumberOfLines) {
+                fs.copyFile(ResourceManager.logFilePath, targetPath);
+                return;
+            }
 
-            // Noting how many lines will be truncated
-            await fs.appendFile(tmpLogFileFd, `########################\n`);
-            await fs.appendFile(tmpLogFileFd, `# Truncated ${totalNumberOfLines - maxNumberOfLines} lines\n`);
-            await fs.appendFile(tmpLogFileFd, `########################\n`);
-
-            // Writing temp file
+            const truncatedData = new Readable();
+            truncatedData.push(`########################\n`);
+            truncatedData.push(`# Truncated ${totalNumberOfLines - maxNumberOfLines} lines\n`);
+            truncatedData.push(`########################\n`);
             for (let i = 0; i < totalNumberOfLines; i++) {
                 if (i > (totalNumberOfLines - maxNumberOfLines)) {
-                    await fs.appendFile(tmpLogFileFd, `${data[i]}\n`);
+                    truncatedData.push(`${data[i]}\n`);
                 }
             }
 
-            result.push(tmpLogFilePath);
+            truncatedData.push(null);
+
+            await this.compressStream(targetPath, truncatedData);
+
+            return targetPath;
+        } catch (err) {
+            ResourceManager.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare log file for crash report`, err);
+            return undefined;
+        }
+    }
+
+    /**
+     * Prepares the HAR file for submission
+     * @param attachmentDir - The directory to store the prepared log file in
+     * @param errorUUID - The UUID of the error, used to identify the log file
+     * @returns A promise that resolves to the path of the prepared HAR file, or undefined if no file was written - compressed using the brotli algorithm
+     */
+    async prepareHarFile(attachmentDir: string, errorUUID: string): Promise<string | undefined> {
+        if (!(await ResourceManager.network.writeHarFile())) {
+            return undefined;
+        }
+
+        const targetPath = path.join(attachmentDir, `icps-crash-${errorUUID}.har`);
+        let harData: fs.FileHandle;
+        try {
+            harData = await fs.open(ResourceManager.harFilePath, `r`);
+
+            const harStream = harData.createReadStream();
+            await this.compressStream(targetPath, harStream);
+        } catch (err) {
+            ResourceManager.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare HAR file for crash report`, err);
+            return undefined;
         } finally {
-            await tmpLogFileFd?.close();
-            return result;
+            await harData?.close();
+        }
+
+        return targetPath;
+    }
+
+    async compressStream(targetPath: string, data: Readable): Promise<void> {
+        let targetFd: fs.FileHandle;
+        try {
+            targetFd = await fs.open(`${targetPath}.br`, `w`);
+            const output = targetFd.createWriteStream();
+
+            const brotliStream = zlib.createBrotliCompress();
+            data.pipe(brotliStream).pipe(output);
+            await pEvent(output, `finish`, {rejectionEvents: [`error`]});
+        } finally {
+            await targetFd?.close();
         }
     }
 
@@ -225,7 +291,7 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
         try {
             await (this.btClient as any)._backtraceMetrics.sendSummedEvent(`Sync`);
         } catch (err) {
-            await this.reportError(new iCPSError({"name": `iCPSError`, "code": `METRIC_FAILED`, "message": `Unable to report sync start`}).addCause(err));
+            await this.reportError(new iCPSError({name: `iCPSError`, code: `METRIC_FAILED`, message: `Unable to report sync start`}).addCause(err));
         }
     }
 
@@ -234,26 +300,26 @@ export class ErrorHandler extends EventEmitter implements EventHandler {
     */
     static cleanEnv() {
         const confidentialData = {
-            "username": {
-                "env": `APPLE_ID_USER`,
-                "cli": [
+            username: {
+                env: `APPLE_ID_USER`,
+                cli: [
                     `-u`, `--username`,
                 ],
-                "replacement": `<APPLE ID USERNAME>`,
+                replacement: `<APPLE ID USERNAME>`,
             },
-            "password": {
-                "env": `APPLE_ID_PWD`,
-                "cli": [
+            password: {
+                env: `APPLE_ID_PWD`,
+                cli: [
                     `-p`, `--password`,
                 ],
-                "replacement": `<APPLE ID PASSWORD>`,
+                replacement: `<APPLE ID PASSWORD>`,
             },
             "trust-token": {
-                "env": `TRUST_TOKEN`,
-                "cli": [
+                env: `TRUST_TOKEN`,
+                cli: [
                     `-T`, `--trust-token`,
                 ],
-                "replacement": `<TRUST TOKEN>`,
+                replacement: `<TRUST TOKEN>`,
             },
         };
 

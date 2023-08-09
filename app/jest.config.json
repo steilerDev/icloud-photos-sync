@@ -9,11 +9,10 @@
     "collectCoverage": true,
     "collectCoverageFrom": [
       "src/**/*.ts",
-      "!src/main.ts",
+      "!src/app/main.ts",
       "!src/app/event/**/*",
       "!src/app/error/**/*",
       "!src/lib/package.ts",
-      "!src/lib/logger.ts",
       "!src/lib/photos-library/model/photos-entity.ts"
     ],
     "coverageProvider": "v8",
@@ -32,8 +31,6 @@
       ]
     },
     "moduleNameMapper": {
-      ".*/logger.js": "<rootDir>/test/_mocks/logger.ts",
-      ".*/cli.js": "<rootDir>/test/_mocks/cli.ts",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     }
   }

@@ -1,7 +1,36 @@
-import {CPLAlbum, CPLAsset, CPLMaster} from "../../src/lib/icloud/icloud-photos/query-parser";
-import * as fs from 'fs';
-import path from "path";
 import mockfs from 'mock-fs';
+import * as fs from 'fs';
+import {jest} from '@jest/globals';
+import {CPLAlbum, CPLAsset, CPLMaster} from "../../src/lib/icloud/icloud-photos/query-parser";
+import * as Config from './_config';
+import path from "path";
+import {ResourceManager} from "../../src/lib/resource-manager/resource-manager";
+
+export function prepareResourceManagerForApiTests(): ResourceManager {
+    ResourceManager._instance = undefined;
+
+    ResourceManager.prototype.readResourceFile = jest.fn<typeof ResourceManager.prototype.readResourceFile>()
+        .mockReturnValue({
+            libraryVersion: 1,
+        });
+
+    ResourceManager.prototype.writeResourceFile = jest.fn<typeof ResourceManager.prototype.writeResourceFile>()
+        .mockReturnValue();
+
+    ResourceManager.setup({
+        ...Config.defaultConfig,
+        failOnMfa: true,
+    });
+
+    applyEnvSecrets(ResourceManager.instance);
+    return ResourceManager.instance;
+}
+
+export function applyEnvSecrets(resourceManager: ResourceManager) {
+    resourceManager._resources.username = process.env.TEST_APPLE_ID_USER!;
+    resourceManager._resources.password = process.env.TEST_APPLE_ID_PWD!;
+    resourceManager._resources.trustToken = process.env.TEST_TRUST_TOKEN!;
+}
 
 /**
  * Helper to compare objects, that have string property 'recordName'
@@ -22,15 +51,15 @@ export function sortByRecordName(a: any, b: any): number {
  */
 export function postProcessMasterData(a: CPLMaster): any {
     return {
-        "filenameEnc": a.filenameEnc,
-        "modified": a.modified,
-        "recordName": a.recordName,
-        "resourceType": a.resourceType,
-        "resource": {
-            "fileChecksum": a.resource.fileChecksum,
-            "referenceChecksum": a.resource.referenceChecksum,
-            "size": a.resource.size,
-            "wrappingKey": a.resource.wrappingKey,
+        filenameEnc: a.filenameEnc,
+        modified: a.modified,
+        recordName: a.recordName,
+        resourceType: a.resourceType,
+        resource: {
+            fileChecksum: a.resource.fileChecksum,
+            referenceChecksum: a.resource.referenceChecksum,
+            size: a.resource.size,
+            wrappingKey: a.resource.wrappingKey,
         },
     };
 }
@@ -42,19 +71,19 @@ export function postProcessMasterData(a: CPLMaster): any {
  */
 export function postProcessAssetData(a: CPLAsset): any {
     const asset: any = {
-        "favorite": a.favorite,
-        "masterRef": a.masterRef,
-        "modified": a.modified,
-        "recordName": a.recordName,
+        favorite: a.favorite,
+        masterRef: a.masterRef,
+        modified: a.modified,
+        recordName: a.recordName,
     };
     if (a.resource) {
         asset.adjustmentType = a.adjustmentType;
         asset.resourceType = a.resourceType;
         asset.resource = {
-            "fileChecksum": a.resource.fileChecksum,
-            "referenceChecksum": a.resource.referenceChecksum,
-            "size": a.resource.size,
-            "wrappingKey": a.resource.wrappingKey,
+            fileChecksum: a.resource.fileChecksum,
+            referenceChecksum: a.resource.referenceChecksum,
+            size: a.resource.size,
+            wrappingKey: a.resource.wrappingKey,
         };
     }
 
@@ -68,12 +97,12 @@ export function postProcessAssetData(a: CPLAsset): any {
  */
 export async function postProcessAlbumData(a: CPLAlbum): Promise<any> {
     return {
-        "albumNameEnc": a.albumNameEnc,
-        "albumType": a.albumType,
-        "assets": await a?.assets,
-        "modified": a.modified,
-        "parentId": a.parentId,
-        "recordName": a.recordName,
+        albumNameEnc: a.albumNameEnc,
+        albumType: a.albumType,
+        assets: a.assets,
+        modified: a.modified,
+        parentId: a.parentId,
+        recordName: a.recordName,
     };
 }
 

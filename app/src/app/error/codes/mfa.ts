@@ -23,10 +23,6 @@ export const ADDR_IN_USE_ERR: ErrorStruct = buildErrorStruct(
     name, prefix, `ADDR_IN_USE`, `HTTP Server could not start, because address/port is in use`,
 );
 
-export const RESEND_REQUEST_FAILED: ErrorStruct = buildErrorStruct(
-    name, prefix, `RESEND_REQUEST_FAILED`, `Resending request failed`,
-);
-
 export const RESEND_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `RESEND_FAILED`, `Unable to request new MFA code`,
 );
@@ -49,28 +45,4 @@ export const ROUTE_NOT_FOUND: ErrorStruct = buildErrorStruct(
 
 export const METHOD_NOT_FOUND: ErrorStruct = buildErrorStruct(
     name, prefix, `METHOD_NOT_FOUND`, `Received request with unsupported method`,
-);
-
-export const NO_RESPONSE: ErrorStruct = buildErrorStruct(
-    name, prefix, `NO_RESPONSE`, `No response received`,
-);
-
-export const TIMEOUT: ErrorStruct = buildErrorStruct(
-    name, prefix, `TIMEOUT`, `iCloud timeout`,
-);
-
-export const PRECONDITION_FAILED: ErrorStruct = buildErrorStruct(
-    name, prefix, `PRECONDITION_FAILED`, `Precondition Failed (412) with no response`,
-);
-
-export const NO_TRUSTED_NUMBERS: ErrorStruct = buildErrorStruct(
-    name, prefix, `NO_TRUSTED_NUMBERS`, `No trusted phone numbers registered`,
-);
-
-export const TRUSTED_NUMBER_NOT_AVAILABLE: ErrorStruct = buildErrorStruct(
-    name, prefix, `TRUSTED_NUMBER_NOT_AVAILABLE`, `Selected Phone Number ID does not exist.`,
-);
-
-export const UNKNOWN_RESEND_ERROR: ErrorStruct = buildErrorStruct(
-    name, prefix, `UNKNOWN_RESEND_ERROR`, `Unknown error, while trying to resend MFA code`,
 );

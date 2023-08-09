@@ -3,7 +3,7 @@ import {ErrorStruct, ERR_UNKNOWN} from "./error-codes.js";
 /**
  * Severity of the error
  */
-export type Severity = `WARN` | `FATAL`
+type Severity = `WARN` | `FATAL`
 
 /**
  * Base class for this tool's error type
@@ -43,7 +43,7 @@ export class iCPSError extends Error {
      * Creates an application specific error using the provided
      * @param err - The error structure
      */
-    constructor(err: ErrorStruct) {
+    constructor(err: ErrorStruct = ERR_UNKNOWN) {
         super(err.message);
 
         this.name = err.name;
@@ -174,7 +174,7 @@ export class iCPSError extends Error {
             return err;
         }
 
-        const _err = new iCPSError(ERR_UNKNOWN);
+        const _err = new iCPSError();
 
         if (err instanceof Error) {
             return _err.addCause(err);

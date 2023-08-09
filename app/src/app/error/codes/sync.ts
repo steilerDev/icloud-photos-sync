@@ -4,7 +4,7 @@ const name = `SyncError`;
 const prefix = `SYNC`;
 
 export const CONVERSION: ErrorStruct = buildErrorStruct(
-    name, prefix, `CONVERSION`, `Error while converting asset`,
+    name, prefix, `CONVERSION`, `Asset could not be converted - ignoring it`,
 );
 
 export const STASH_RETRIEVE: ErrorStruct = buildErrorStruct(
@@ -27,6 +27,10 @@ export const MAX_RETRY: ErrorStruct = buildErrorStruct(
     name, prefix, `MAX_RETRY`, `Sync did not complete successfully within expected amount of tries`,
 );
 
-export const UNKNOWN_SYNC: ErrorStruct = buildErrorStruct(
-    name, prefix, `UNKNOWN_SYNC`, `Unknown sync error`,
+export const NETWORK: ErrorStruct = buildErrorStruct(
+    name, prefix, `NETWORK`, `Network error during sync, trying to retry`,
+);
+
+export const UNKNOWN: ErrorStruct = buildErrorStruct(
+    name, prefix, `UNKNOWN`, `Unknown error during sync, trying to retry`,
 );

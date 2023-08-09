@@ -41,6 +41,9 @@ const EXT = {
     'com.canon.cr3-raw-image': `cr3`,
     'com.olympus.or-raw-image': `orf`,
     'public.item': `largeThumbnail`,
+    'public.mpo-image': `mpo`,
+    'com.dji.mimo.pano.jpeg': `jpg`,
+    'public.avif': `avif`,
 };
 
 /**

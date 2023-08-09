@@ -100,7 +100,9 @@ This CLI Application offers the following high level functionality:
 
 ## Documentation
 
-A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/icloud-photos-sync/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/) - are published there as well.
+A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/icloud-photos-sync/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/) - are published there as well. 
+
+I am also trying to publish regular updates on the progress of this project in a [development blog](https://github.com/steilerDev/icloud-photos-sync/discussions/305).
 
 ## Limitations
 

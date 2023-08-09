@@ -14,7 +14,7 @@ runs:
   steps:
     - id: build-typedoc
       shell: bash
-      run: (cd ${{ inputs.app-path }}; npm run typedoc)
+      run: (cd ${{ inputs.app-path }}; npm run build:typedoc)
     - id: package-artifact
       shell: bash
       run: |

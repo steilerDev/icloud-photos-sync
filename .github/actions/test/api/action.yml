@@ -23,4 +23,4 @@ runs:
         export TEST_APPLE_ID_USER=${{ inputs.test-apple-id-user }}
         export TEST_APPLE_ID_PWD=${{ inputs.test-apple-id-pwd }}
         export TEST_TRUST_TOKEN=${{ inputs.test-trust-token }}
-        (cd ${{ inputs.app-path }}; npm run test-api)
+        (cd ${{ inputs.app-path }}; npm run test:api)
