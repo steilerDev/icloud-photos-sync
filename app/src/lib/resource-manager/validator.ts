@@ -106,7 +106,7 @@ export class Validator {
             this._signinResponseValidator,
             VALIDATOR_ERR.SIGNIN_RESPONSE,
             data,
-            (data: SigninResponse) => data.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.AASP)).length === 1, // Making sure the aasp cookie is present
+            (data: SigninResponse) => data.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.AASP)).length <= 1, // AASP cookie is optional
         );
     }
 
