@@ -115,7 +115,7 @@ describe(`Validator`, () => {
                     headers: {
                         scnt: `scntString`,
                         'x-apple-session-token': `sessionToken`,
-                        'set-cookie': [`aasp1=123`,`aasp2=123`],
+                        'set-cookie': [`aasp1=123`, `aasp2=123`],
                     },
                 },
                 desc: `too many aasp set-cookie header`,

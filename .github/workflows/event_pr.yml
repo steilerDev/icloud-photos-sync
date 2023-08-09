@@ -10,6 +10,16 @@ on:
       - dev
 
 jobs:
+  
+  debug:
+    name: debug
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+
   build:
     name: build
     uses: ./.github/workflows/artifacts_build-release.yml
