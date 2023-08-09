@@ -10,21 +10,11 @@ on:
       - dev
 
 jobs:
-  
-  debug:
-    name: debug
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-
   build:
     name: build
     uses: ./.github/workflows/artifacts_build-release.yml
     with:
-      all-artifacts: ${{ github.ref_name != 'dev' }} # Skip building associated artifacts on dev channel
+      all-artifacts: true
       release: false
 
   test:
@@ -33,7 +23,7 @@ jobs:
     uses: ./.github/workflows/artifacts_test.yml
     permissions: {}
     with:
-      methods: ${{github.ref_name == 'beta' && '["unit-ubuntu", "unit-macos", "e2e", "api"]' || (github.ref_name == 'dev' && '["unit-ubuntu", "e2e", "api"]' || '["unit-ubuntu"]' ) }} # Only running full suite when targeting beta or main (from dev or beta)
+      methods: ${{github.base_ref == 'main' && '["unit-ubuntu", "unit-macos", "e2e", "api"]' || (github.base_ref == 'beta' && '["unit-ubuntu", "e2e", "api"]' || '["unit-ubuntu"]' ) }} # Only running full suite when targeting beta or main
     secrets:
       test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
       test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
