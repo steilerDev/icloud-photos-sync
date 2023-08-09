@@ -140,7 +140,7 @@ export function appFactory(argv: string[]): iCPSApp {
             .env(`PORT`)
             .default(80)
             .argParser(commanderParsePositiveInt))
-        .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon an error ('Infinity' means that it will always retry).`)
+        .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon a sync error ('Infinity' means that it will always retry).`)
             .env(`MAX_RETRIES`)
             .default(10)
             .argParser(commanderParsePositiveIntOrInfinity))

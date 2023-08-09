@@ -34,7 +34,6 @@ export class ResourceManager {
         }
 
         this._instance = new ResourceManager(appOptions);
-        this._instance._networkManager.resetSession();
         return this._instance;
     }
 

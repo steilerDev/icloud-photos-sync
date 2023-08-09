@@ -1,25 +1,28 @@
 import mockfs from 'mock-fs';
 import {describe, test, jest, expect, afterEach, beforeEach} from '@jest/globals';
-import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
-import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
-import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
-import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
+
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
-import {PEntity, PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
-import {syncEngineFactory, mockSyncEngineForAssetQueue, queueIsSorted, mockSyncEngineForAlbumQueue, fetchAndLoadStateReturnValue, diffStateReturnValue, convertCPLAssetsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue, fetchAllCPLAssetsMastersReturnValue, fetchAllCPLAlbumsReturnValue, getRandomZone} from '../_helpers/sync-engine.helper';
-import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
+import {fetchAndLoadStateReturnValue, diffStateReturnValue, convertCPLAssetsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue, fetchAllCPLAssetsMastersReturnValue, fetchAllCPLAlbumsReturnValue, getRandomZone} from '../_helpers/sync-engine.helper';
+import {MockedResourceManager, UnknownFunction, prepareResourceManager} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import PQueue from 'p-queue';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import {SyncEngineHelper} from '../../src/lib/sync-engine/helper';
-import {iCPSEventSyncEngine} from '../../src/lib/resource-manager/events';
+import {iCPSEventError, iCPSEventSyncEngine} from '../../src/lib/resource-manager/events';
+import {SyncEngine} from '../../src/lib/sync-engine/sync-engine';
+import {iCloud} from '../../src/lib/icloud/icloud';
+import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
+import {iCPSError} from '../../src/app/error/error';
+import {SYNC_ERR} from '../../src/app/error/error-codes';
 
 let mockedResourceManager: MockedResourceManager;
+let syncEngine: SyncEngine;
 
 beforeEach(() => {
     mockedResourceManager = prepareResourceManager()!;
+    syncEngine = new SyncEngine(new iCloud(), new PhotosLibrary());
     mockfs({});
 });
 
@@ -30,8 +33,6 @@ afterEach(() => {
 describe(`Coordination`, () => {
     describe(`Sync`, () => {
         test(`Successful on first try`, async () => {
-            const syncEngine = syncEngineFactory();
-
             const startEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.START);
             syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
                 .mockResolvedValue(fetchAndLoadStateReturnValue);
@@ -40,6 +41,8 @@ describe(`Coordination`, () => {
             syncEngine.writeState = jest.fn<typeof syncEngine.writeState>()
                 .mockResolvedValue();
             const doneEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.DONE);
+            const retryEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.RETRY);
+            const handlerEvent = mockedResourceManager.spyOnEvent(iCPSEventError.HANDLER_EVENT);
 
             await syncEngine.sync();
 
@@ -48,13 +51,16 @@ describe(`Coordination`, () => {
             expect(syncEngine.diffState).toHaveBeenCalledWith(...fetchAndLoadStateReturnValue);
             expect(syncEngine.writeState).toHaveBeenCalledWith(...diffStateReturnValue);
             expect(doneEvent).toHaveBeenCalledTimes(1);
+            expect(retryEvent).not.toHaveBeenCalled();
+            expect(handlerEvent).not.toHaveBeenCalled();
         });
 
         test(`Reach maximum retries`, async () => {
-            const syncEngine = syncEngineFactory();
             ResourceManager.instance._resources.maxRetries = 4;
 
             const startEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.START);
+            const retryEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.RETRY);
+            const handlerEvent = mockedResourceManager.spyOnEvent(iCPSEventError.HANDLER_EVENT);
             syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
                 .mockResolvedValue(fetchAndLoadStateReturnValue);
             syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
@@ -71,13 +77,15 @@ describe(`Coordination`, () => {
                 .mockRejectedValueOnce(error)
                 .mockRejectedValueOnce(error)
                 .mockRejectedValueOnce(error)
-                .mockResolvedValueOnce();
+                .mockResolvedValue();
 
             syncEngine.prepareRetry = jest.fn<typeof syncEngine.prepareRetry>();
 
             await expect(syncEngine.sync()).rejects.toEqual(new Error(`Sync did not complete successfully within expected amount of tries`));
 
             expect(startEvent).toHaveBeenCalled();
+            expect(retryEvent).toHaveBeenCalledTimes(4);
+            expect(handlerEvent).toHaveBeenCalledTimes(4);
             expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(4);
             expect(syncEngine.diffState).toHaveBeenCalledTimes(4);
             expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
@@ -93,36 +101,19 @@ describe(`Coordination`, () => {
         });
 
         test.each([
-            (() => {
-                const error = new Error(`Bad Response`) as unknown as AxiosError;
-                error.name = `AxiosError`;
-                error.code = `ERR_BAD_RESPONSE`;
-                error.response = {
-                    status: 500,
-                } as unknown as AxiosResponse;
-
-                return {error};
-            })(),
-            (() => {
-                const error = new Error(`Bad Request - 410`) as unknown as AxiosError;
-                error.name = `AxiosError`;
-                error.code = `ERR_BAD_REQUEST`;
-                error.response = {
-                    status: 410,
-                } as unknown as AxiosResponse;
-
-                return {error};
-            })(),
-            (() => {
-                const error = new Error(`getaddrinfo EAI_AGAIN`) as unknown as AxiosError;
-                error.name = `Error`;
-                error.code = `EAI_AGAIN`;
-                return {error};
-            })(),
-        ])(`Recoverable write failure - $error.message`, async ({error}) => {
-            const syncEngine = syncEngineFactory();
-
+            {
+                error: new AxiosError(`Bad Response`, `ERR_BAD_RESPONSE`),
+                expectedError: new iCPSError(SYNC_ERR.NETWORK),
+                desc: `Network error`,
+            }, {
+                error: new Error(`Unknown error`),
+                expectedError: new iCPSError(SYNC_ERR.UNKNOWN),
+                desc: `Unknown error`,
+            },
+        ])(`Perform retry - $desc`, async ({error, expectedError}) => {
             const startEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.START);
+            const retryEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.RETRY);
+            const handlerEvent = mockedResourceManager.spyOnEvent(iCPSEventError.HANDLER_EVENT);
             syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
                 .mockResolvedValue(fetchAndLoadStateReturnValue);
             syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
@@ -136,6 +127,8 @@ describe(`Coordination`, () => {
             await syncEngine.sync();
 
             expect(startEvent).toHaveBeenCalled();
+            expect(retryEvent).toHaveBeenCalledWith(1);
+            expect(handlerEvent).toHaveBeenCalledWith(expectedError);
             expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(2);
             expect(syncEngine.diffState).toHaveBeenCalledTimes(2);
             expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
@@ -145,54 +138,6 @@ describe(`Coordination`, () => {
             expect(syncEngine.writeState).toHaveBeenNthCalledWith(2, ...diffStateReturnValue);
             expect(syncEngine.prepareRetry).toHaveBeenCalledTimes(1);
             expect(doneEvent).toHaveBeenCalledTimes(1);
-        });
-
-        test(`Fatal failure - Unknown error`, async () => {
-            const error = new Error(`Unknown network error code`);
-            const syncEngine = syncEngineFactory();
-            const startEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.START);
-
-            syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
-                .mockResolvedValue(fetchAndLoadStateReturnValue);
-            syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
-                .mockResolvedValue(diffStateReturnValue);
-            syncEngine.writeState = jest.fn<typeof syncEngine.writeState>()
-                .mockRejectedValue(error);
-
-            await expect(syncEngine.sync()).rejects.toEqual(new Error(`Unknown sync error`));
-
-            expect(startEvent).toHaveBeenCalled();
-            expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
-            expect(syncEngine.diffState).toHaveBeenCalledTimes(1);
-            expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
-            expect(syncEngine.writeState).toHaveBeenCalledTimes(1);
-            expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, ...diffStateReturnValue);
-        });
-
-        test(`Fatal failure - Unknown Axios Error`, async () => {
-            const error = {
-                name: `AxiosError`,
-                message: `Server Error`,
-                code: `SERVER_ERROR`,
-            };
-            const syncEngine = syncEngineFactory();
-            const startEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.START);
-
-            syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
-                .mockResolvedValue(fetchAndLoadStateReturnValue);
-            syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
-                .mockResolvedValue(diffStateReturnValue);
-            syncEngine.writeState = jest.fn<typeof syncEngine.writeState>()
-                .mockRejectedValue(error);
-
-            await expect(syncEngine.sync()).rejects.toEqual(new Error(`Unknown sync error`));
-
-            expect(startEvent).toHaveBeenCalled();
-            expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
-            expect(syncEngine.diffState).toHaveBeenCalledTimes(1);
-            expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
-            expect(syncEngine.writeState).toHaveBeenCalledTimes(1);
-            expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, ...diffStateReturnValue);
         });
 
         test.each([
@@ -227,7 +172,6 @@ describe(`Coordination`, () => {
                 msg: `Started queue`,
             },
         ])(`Prepare Retry - $msg`, async ({queue}) => {
-            const syncEngine = syncEngineFactory();
             syncEngine.downloadQueue = queue as unknown as PQueue;
             syncEngine.icloud.setupAccount = jest.fn<typeof syncEngine.icloud.setupAccount>()
                 .mockResolvedValue();
@@ -246,7 +190,6 @@ describe(`Coordination`, () => {
     });
 
     test(`Fetch & Load State`, async () => {
-        const syncEngine = syncEngineFactory();
         const fetchNLoadEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.FETCH_N_LOAD);
 
         const convertCPLAlbumsOriginal = SyncEngineHelper.convertCPLAlbums;
@@ -290,8 +233,6 @@ describe(`Coordination`, () => {
     });
 
     test(`Diff state`, async () => {
-        const syncEngine = syncEngineFactory();
-
         const getProcessingQueuesOriginal = SyncEngineHelper.getProcessingQueues;
         const resolveHierarchicalDependenciesOriginal = SyncEngineHelper.resolveHierarchicalDependencies;
 
@@ -317,7 +258,6 @@ describe(`Coordination`, () => {
     });
 
     test(`Write state`, async () => {
-        const syncEngine = syncEngineFactory();
         syncEngine.writeAssets = jest.fn<typeof syncEngine.writeAssets>()
             .mockResolvedValue();
         syncEngine.writeAlbums = jest.fn<typeof syncEngine.writeAlbums>()
@@ -347,746 +287,24 @@ describe(`Coordination`, () => {
     });
 });
 
-describe(`Processing remote records`, () => {
-    test(`Converting Assets - E2E Flow`, () => {
-        const cplAssets = expectedAssetsAll.map((pseudoAsset: any) => {
-            if (pseudoAsset.resource) {
-                pseudoAsset.resource.downloadURL = `https:/icloud.com`;
-            }
-
-            return pseudoAsset;
-        }) as CPLAsset[];
-
-        const cplMasters = expectedMastersAll.map((pseudoMaster: any) => {
-            pseudoMaster.resource.downloadURL = `https:/icloud.com`;
-            return pseudoMaster;
-        }) as unknown as CPLMaster[];
-
-        const assets = SyncEngineHelper.convertCPLAssets(cplAssets, cplMasters);
-        expect(assets.length).toEqual(206); // 202 + 4 edits
-        for (const asset of assets) {
-            expect(asset.fileChecksum.length).toBeGreaterThan(0);
-            expect(asset.size).toBeGreaterThan(0);
-            expect(asset.modified).toBeGreaterThan(0);
-            expect(asset.fileType).toBeDefined();
-            expect(asset.assetType).toBeDefined();
-            expect(asset.origFilename.length).toBeGreaterThan(0);
-            expect(asset.wrappingKey).toBeDefined();
-            expect(asset.wrappingKey?.length).toBeGreaterThan(0);
-            expect(asset.referenceChecksum).toBeDefined();
-            expect(asset.referenceChecksum?.length).toBeGreaterThan(0);
-            expect(asset.downloadURL).toBeDefined();
-            expect(asset.downloadURL?.length).toBeGreaterThan(0);
-            expect(asset.recordName).toBeDefined();
-            expect(asset.recordName?.length).toBeGreaterThan(0);
-            expect(asset.isFavorite).toBeDefined();
-        }
-    });
-
-    test(`Converting Asset - Invalid File Extension`, () => {
-        const cplMasters = [{
-            filenameEnc: `emhlbnl1LWx1by13bWZtU054bTl5MC11bnNwbGFzaC5qcGVn`,
-            modified: 1660139199098,
-            recordName: `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
-            resourceType: `random.resourceType`,
-            resource: {
-                fileChecksum: `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
-                referenceChecksum: `AS/OBaLJzK8dRs8QM97ikJQfJEGI`,
-                size: 170384,
-                wrappingKey: `NQtpvztdVKKNfrb8lf482g==`,
-                downloadURL: `https://icloud.com`,
-            },
-            zoneName: getRandomZone(),
-        } as CPLMaster];
-
-        const cplAssets = [{
-            favorite: 0,
-            masterRef: `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`,
-            modified: 1660139199099,
-            recordName: `4E921FD1-74AA-42EE-8601-C3E9B96DA089`,
-        } as CPLAsset];
-
-        expect(() => SyncEngineHelper.convertCPLAssets(cplAssets, cplMasters)).toThrow(/^Error while converting asset$/);
-    });
-
-    test(`Converting Albums - E2E Flow`, () => {
-        const cplAlbums = expectedAlbumsAll as CPLAlbum[];
-
-        const albums = SyncEngineHelper.convertCPLAlbums(cplAlbums);
-        expect(albums.length).toEqual(8);
-        for (const album of albums) {
-            expect(album.albumName.length).toBeGreaterThan(0);
-            expect(album.uuid.length).toBeGreaterThan(0);
-            expect(album.albumType).toBeDefined();
-        }
-    });
-});
-
-describe(`Diffing state`, () => {
-    describe(`Asset State`, () => {
-        test.each([
-            {
-                desc: `Add items to empty state`,
-                remoteAssets: [
-                    new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                ],
-                localAssets: {},
-                expected: {
-                    added: 4,
-                    deleted: 0,
-                    kept: 0,
-                },
-            }, {
-                desc: `Only remove items from existing state`,
-                remoteAssets: [],
-                localAssets: {
-                    somechecksum: new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    somechecksum1: new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                },
-                expected: {
-                    added: 0,
-                    deleted: 4,
-                    kept: 0,
-                },
-            }, {
-                desc: `Only add items to existing state`,
-                remoteAssets: [
-                    new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                ],
-                localAssets: {
-                    somechecksum: new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                },
-                expected: {
-                    added: 3,
-                    deleted: 0,
-                    kept: 1,
-                },
-            }, {
-                desc: `Add & remove items from existing state`,
-                remoteAssets: [
-                    new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false),
-                ],
-                localAssets: {
-                    somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                    somechecksum4: new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false),
-                },
-                expected: {
-                    added: 2,
-                    deleted: 2,
-                    kept: 1,
-                },
-            }, {
-                desc: `No change in state`,
-                remoteAssets: [
-                    new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                ],
-                localAssets: {
-                    somechecksum: new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    somechecksum1: new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                },
-                expected: {
-                    added: 0,
-                    deleted: 0,
-                    kept: 4,
-                },
-            }, {
-                desc: `Only modified changed`,
-                remoteAssets: [
-                    new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 1420, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 1420, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                ],
-                localAssets: {
-                    somechecksum: new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    somechecksum1: new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                },
-                expected: {
-                    added: 2,
-                    deleted: 2,
-                    kept: 2,
-                },
-            }, {
-                desc: `Only content changed`,
-                remoteAssets: [
-                    new Asset(`somechecksum`, 43, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    new Asset(`somechecksum1`, 43, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                ],
-                localAssets: {
-                    somechecksum: new Asset(`somechecksum`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, `somechecksum`, `https://icloud.com`, `somerecordname`, false),
-                    somechecksum1: new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false),
-                    somechecksum2: new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false),
-                    somechecksum3: new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false),
-                },
-                expected: {
-                    added: 2,
-                    deleted: 2,
-                    kept: 2,
-                },
-            },
-        ])(`$desc`, ({remoteAssets, localAssets, expected}) => {
-            const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAssets as Asset[], localAssets as PLibraryEntities<Asset>);
-            expect(toBeDeleted.length).toEqual(expected.deleted);
-            expect(toBeAdded.length).toEqual(expected.added);
-            expect(toBeKept.length).toEqual(expected.kept);
-        });
-    });
-
-    describe(`Album state`, () => {
-        test(`Add items to empty state`, () => {
-            const remoteAlbums = [
-                new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
-                new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``),
-                new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
-                new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
-            ];
-            const localAlbums: PLibraryEntities<Album> = {};
-
-            const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums);
-            expect(toBeDeleted.length).toEqual(0);
-            expect(toBeAdded.length).toEqual(4);
-            expect(toBeKept.length).toEqual(0);
-        });
-
-        test(`Only remove items from existing state`, () => {
-            const remoteAlbums: PEntity<Album>[] = [];
-
-            const localAlbums = {
-                somechecksum1: new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
-                somechecksum2: new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``),
-                somechecksum3: new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
-                somechecksum4: new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
-            };
-
-            const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums);
-            expect(toBeDeleted.length).toEqual(4);
-            expect(toBeAdded.length).toEqual(0);
-            expect(toBeKept.length).toEqual(0);
-        });
-
-        test(`Only add items to existing state`, () => {
-            const remoteAlbums = [
-                new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
-                new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``),
-                new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
-                new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
-            ];
-
-            const localAlbums = {
-                somechecksum1: new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
-            };
-
-            const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums);
-            expect(toBeDeleted.length).toEqual(0);
-            expect(toBeAdded.length).toEqual(3);
-            expect(toBeKept.length).toEqual(1);
-        });
-
-        test(`Add & remove items from existing state`, () => {
-            const remoteAlbums = [
-                new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
-                new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``),
-                new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
-            ];
-
-            const localAlbums = {
-                somechecksum3: new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
-                somechecksum4: new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
-                somechecksum5: new Album(`somechecksum5`, AlbumType.ALBUM, `testAlbum5`, ``),
-            };
-
-            const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums);
-            expect(toBeDeleted.length).toEqual(2);
-            expect(toBeAdded.length).toEqual(2);
-            expect(toBeKept.length).toEqual(1);
-        });
-
-        test(`No change in state`, () => {
-            const remoteAlbums = [
-                new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
-                new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``),
-                new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
-                new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
-            ];
-
-            const localAlbums = {
-                somechecksum1: new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``),
-                somechecksum2: new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``),
-                somechecksum3: new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``),
-                somechecksum4: new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``),
-            };
-
-            const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums);
-            expect(toBeDeleted.length).toEqual(0);
-            expect(toBeAdded.length).toEqual(0);
-            expect(toBeKept.length).toEqual(4);
-        });
-
-        test(`Album assets changed`, () => {
-            // LocalAlbum1 and localAlbum4 are missing assets
-            const remoteAlbum1 = new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``);
-            remoteAlbum1.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-            const remoteAlbum2 = new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``);
-            remoteAlbum2.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-            const remoteAlbum3 = new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``);
-            remoteAlbum3.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-            const remoteAlbum4 = new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``);
-            remoteAlbum4.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-
-            const localAlbum1 = new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``);
-            localAlbum1.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-            };
-            const localAlbum2 = new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``);
-            localAlbum2.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-            const localAlbum3 = new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``);
-            localAlbum3.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-            const localAlbum4 = new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``);
-            localAlbum4.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-            };
-
-            const remoteAlbums = [
-                remoteAlbum1,
-                remoteAlbum2,
-                remoteAlbum3,
-                remoteAlbum4,
-            ];
-
-            const localAlbums = {
-                somechecksum1: localAlbum1,
-                somechecksum2: localAlbum2,
-                somechecksum3: localAlbum3,
-                somechecksum4: localAlbum4,
-            };
-
-            const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums);
-            expect(toBeDeleted.length).toEqual(2);
-            expect(toBeAdded.length).toEqual(2);
-            expect(toBeKept.length).toEqual(2);
-        });
-
-        test(`Archived album's content is ignored`, () => {
-            // LocalAlbum1 is archived and should not be changed
-            const remoteAlbum1 = new Album(`somechecksum1`, AlbumType.ALBUM, `testAlbum1`, ``);
-            remoteAlbum1.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-            const remoteAlbum2 = new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``);
-            remoteAlbum2.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-            const remoteAlbum3 = new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``);
-            remoteAlbum3.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-            const remoteAlbum4 = new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``);
-            remoteAlbum4.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-
-            const localAlbum1 = new Album(`somechecksum1`, AlbumType.ARCHIVED, `testAlbum1`, ``);
-            localAlbum1.assets = {};
-            const localAlbum2 = new Album(`somechecksum2`, AlbumType.ALBUM, `testAlbum2`, ``);
-            localAlbum2.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-            const localAlbum3 = new Album(`somechecksum3`, AlbumType.ALBUM, `testAlbum3`, ``);
-            localAlbum3.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-            const localAlbum4 = new Album(`somechecksum4`, AlbumType.ALBUM, `testAlbum4`, ``);
-            localAlbum4.assets = {
-                'assetChecksum1.png': `fileName1.png`,
-                'assetChecksum2.png': `fileName2.png`,
-                'assetChecksum3.png': `fileName3.png`,
-                'assetChecksum4.png': `fileName4.png`,
-            };
-
-            const remoteAlbums = [
-                remoteAlbum1,
-                remoteAlbum2,
-                remoteAlbum3,
-                remoteAlbum4,
-            ];
-
-            const localAlbums = {
-                somechecksum1: localAlbum1,
-                somechecksum2: localAlbum2,
-                somechecksum3: localAlbum3,
-                somechecksum4: localAlbum4,
-            };
-
-            const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums);
-            expect(toBeDeleted.length).toEqual(0);
-            expect(toBeAdded.length).toEqual(0);
-            expect(toBeKept.length).toEqual(4);
-        });
-
-        describe(`Hierarchical dependencies`, () => {
-            test(`Album moved`, () => {
-                const localAlbumEntities = {
-                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
-                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
-                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
-                };
-                // AlbumUUID2 is moved from folderUUID1 to root
-                const toBeAdded = [
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, ``),
-                ];
-                const toBeDeleted = [
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
-                ];
-                const toBeKept = [
-                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
-                ];
-
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = SyncEngineHelper.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
-
-                expect(processedToBeAdded).toEqual(toBeAdded);
-                expect(processedToBeDeleted).toEqual(toBeDeleted);
-                expect(processedToKept).toEqual(toBeKept);
-            });
-
-            test(`Folder with albums moved`, () => {
-                const localAlbumEntities = {
-                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    folderUUID2: new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID2`),
-                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID2`),
-                };
-                // FolderUUID2 (with all albums) is moved from folderUUID1 to root
-                const toBeAdded = [
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, ``),
-                ];
-                const toBeDeleted = [
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                ];
-                const toBeKept = [
-                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID2`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID2`),
-                ];
-
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = SyncEngineHelper.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
-
-                expect(processedToBeAdded.length).toEqual(4);
-                expect(processedToBeAdded).toEqual([
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, ``),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID2`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID2`),
-                ]);
-                expect(processedToBeDeleted.length).toEqual(4);
-                expect(processedToBeDeleted).toEqual([
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID2`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID2`),
-                ]);
-                expect(processedToKept.length).toEqual(2);
-                expect(processedToKept).toEqual([
-                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                ]);
-            });
-
-            test(`Folder with folders moved`, () => {
-                const localAlbumEntities = {
-                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    folderUUID2: new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    folderUUID3: new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    folderUUID4: new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
-                };
-                // FolderUUID2 (with all albums & folders) is moved from folderUUID1 to root
-                const toBeAdded = [
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, ``),
-                ];
-                const toBeDeleted = [
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                ];
-                const toBeKept = [
-                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
-                ];
-
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = SyncEngineHelper.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
-
-                expect(processedToBeAdded.length).toEqual(6);
-                expect(processedToBeAdded).toEqual([
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, ``),
-                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
-                ]);
-                expect(processedToBeDeleted.length).toEqual(6);
-                expect(processedToBeDeleted).toEqual([
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
-                ]);
-                expect(processedToKept.length).toEqual(2);
-                expect(processedToKept).toEqual([
-                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                ]);
-            });
-
-            test(`Folder with albums deleted, albums kept`, () => {
-                const localAlbumEntities = {
-                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
-                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
-                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
-                };
-                // FolderUUID1 is deleted and all albums within are moved from folderUUID1 to root
-                const toBeAdded = [
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, ``),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, ``),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, ``),
-                ];
-                const toBeDeleted = [
-                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
-                ];
-                const toBeKept = [
-                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                ];
-
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = SyncEngineHelper.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
-
-                expect(processedToBeAdded).toEqual(toBeAdded);
-                expect(processedToBeDeleted).toEqual(toBeDeleted);
-                expect(processedToKept).toEqual(toBeKept);
-            });
-
-            test(`Folder with albums deleted, albums deleted`, () => {
-                const localAlbumEntities = {
-                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
-                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
-                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
-                };
-                // FolderUUID1 is deleted and all albums within are also deleted
-                const toBeAdded = [];
-                const toBeDeleted = [
-                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID1`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
-                ];
-                const toBeKept = [
-                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                ];
-
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = SyncEngineHelper.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
-
-                expect(processedToBeAdded).toEqual(toBeAdded);
-                expect(processedToBeDeleted).toEqual(toBeDeleted);
-                expect(processedToKept).toEqual(toBeKept);
-            });
-
-            test(`Folder with folders deleted, nested folder kept`, () => {
-                const localAlbumEntities = {
-                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    folderUUID2: new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    folderUUID3: new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    folderUUID4: new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
-                };
-                // FolderUUID2 is deleted and its albums & folder are moved to root
-                const toBeAdded = [
-                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, ``),
-                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, ``),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, ``),
-                ];
-                const toBeDeleted = [
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                ];
-                const toBeKept = [
-                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
-                ];
-
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = SyncEngineHelper.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
-
-                expect(processedToBeAdded).toEqual([
-                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, ``),
-                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, ``),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, ``),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
-                ]);
-
-                expect(processedToBeDeleted).toEqual([
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
-                ]);
-
-                expect(processedToKept).toEqual([
-                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                ]);
-            });
-
-            test(`Folder with folders deleted, nested folder deleted`, () => {
-                const localAlbumEntities = {
-                    folderUUID1: new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    folderUUID2: new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    folderUUID3: new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    folderUUID4: new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    albumUUID1: new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                    albumUUID2: new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    albumUUID3: new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
-                };
-                // FolderUUID2, folderUUID3 and folderUUID4 are deleted and its albums are moved to root
-                const toBeAdded = [
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, ``),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, ``),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, ``),
-                ];
-                const toBeDeleted = [
-                    new Album(`folderUUID2`, AlbumType.FOLDER, `folderName2`, `folderUUID1`),
-                    new Album(`folderUUID3`, AlbumType.FOLDER, `folderName3`, `folderUUID2`),
-                    new Album(`folderUUID4`, AlbumType.FOLDER, `folderName4`, `folderUUID2`),
-                    new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID2`),
-                    new Album(`albumUUID3`, AlbumType.ALBUM, `albumName3`, `folderUUID3`),
-                    new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID4`),
-                ];
-                const toBeKept = [
-                    new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
-                    new Album(`albumUUID1`, AlbumType.ALBUM, `albumName1`, ``),
-                ];
-
-                const [processedToBeDeleted, processedToBeAdded, processedToKept] = SyncEngineHelper.resolveHierarchicalDependencies([toBeDeleted, toBeAdded, toBeKept], localAlbumEntities);
-
-                expect(processedToBeAdded).toEqual(toBeAdded);
-                expect(processedToBeDeleted).toEqual(toBeDeleted);
-                expect(processedToKept).toEqual(toBeKept);
-            });
-        });
-    });
-});
-
 describe(`Handle processing queue`, () => {
     describe(`Handle asset queue`, () => {
+        let writeAssetCompleteEvent: jest.Mock<UnknownFunction>;
+
+        beforeEach(() => {
+            syncEngine.photosLibrary.writeAsset = jest.fn<typeof syncEngine.photosLibrary.writeAsset>()
+                .mockResolvedValue();
+            syncEngine.photosLibrary.deleteAsset = jest.fn<typeof syncEngine.photosLibrary.deleteAsset>()
+                .mockResolvedValue();
+            syncEngine.icloud.photos.downloadAsset = jest.fn<typeof syncEngine.icloud.photos.downloadAsset>()
+                .mockResolvedValue({} as any);
+
+            writeAssetCompleteEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
+        });
+
         test(`Empty processing queue`, async () => {
-            const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
-
-            const writeAssetCompleteEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
-
             await syncEngine.writeAssets([[], [], []]);
 
-            expect(syncEngine.photosLibrary.verifyAsset).not.toHaveBeenCalled();
             expect(syncEngine.photosLibrary.writeAsset).not.toHaveBeenCalled();
             expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
             expect(syncEngine.icloud.photos.downloadAsset).not.toHaveBeenCalled();
@@ -1094,10 +312,6 @@ describe(`Handle processing queue`, () => {
         });
 
         test(`Only deleting`, async () => {
-            const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
-
-            const writeAssetCompleteEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
-
             const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
             const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
             const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
@@ -1105,7 +319,6 @@ describe(`Handle processing queue`, () => {
 
             await syncEngine.writeAssets([toBeDeleted, [], []]);
 
-            expect(syncEngine.photosLibrary.verifyAsset).not.toHaveBeenCalled();
             expect(syncEngine.photosLibrary.writeAsset).not.toHaveBeenCalled();
             expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenCalledTimes(3);
             expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(1, asset1);
@@ -1116,10 +329,6 @@ describe(`Handle processing queue`, () => {
         });
 
         test(`Only adding`, async () => {
-            const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
-
-            const writeAssetCompleteEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
-
             const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
             const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
             const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
@@ -1127,7 +336,6 @@ describe(`Handle processing queue`, () => {
 
             await syncEngine.writeAssets([[], toBeAdded, []]);
 
-            expect(syncEngine.photosLibrary.verifyAsset).toHaveBeenCalledTimes(3);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
@@ -1142,36 +350,7 @@ describe(`Handle processing queue`, () => {
             expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
         });
 
-        test(`Only adding - one asset present`, async () => {
-            const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
-            // Return 'true' on validation once
-            syncEngine.photosLibrary.verifyAsset = jest.fn(() => Promise.resolve(true)).mockReturnValueOnce(Promise.resolve(true)).mockReturnValue(Promise.reject(new Error(`Invalid file`)));
-
-            const writeAssetCompleteEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
-
-            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
-            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
-            const toBeAdded = [asset1, asset2];
-
-            await syncEngine.writeAssets([[], toBeAdded, []]);
-
-            expect(syncEngine.photosLibrary.verifyAsset).toHaveBeenCalledTimes(2);
-            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledTimes(1);
-            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset2);
-
-            expect(syncEngine.photosLibrary.writeAsset).toHaveBeenCalledTimes(1);
-            expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(2);
-            expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(1, `somechecksum1`);
-            expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);
-
-            expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
-        });
-
         test(`Adding & deleting`, async () => {
-            const syncEngine = mockSyncEngineForAssetQueue(syncEngineFactory());
-
-            const writeAssetCompleteEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
-
             const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
             const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
             const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
@@ -1183,7 +362,6 @@ describe(`Handle processing queue`, () => {
 
             await syncEngine.writeAssets([toBeDeleted, toBeAdded, []]);
 
-            expect(syncEngine.photosLibrary.verifyAsset).toHaveBeenCalledTimes(3);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
@@ -1203,218 +381,20 @@ describe(`Handle processing queue`, () => {
     });
 
     describe(`Handle album queue`, () => {
-        describe(`Sort queue`, () => {
-            const defaultFullQueue = [
-                new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-2`),
-                new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1.2`, `someUUID1`),
-                new Album(`someUUID1-3`, AlbumType.ALBUM, `someAlbumName1.3`, `someUUID1`),
-                new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName2`, ``),
-                new Album(`someUUID3`, AlbumType.ALBUM, `someAlbumName3`, ``),
-                new Album(`someUUID3-1`, AlbumType.ALBUM, `someAlbumName3.1`, `someUUID3`),
-                new Album(`someUUID3-2`, AlbumType.ALBUM, `someAlbumName3.2`, `someUUID3`),
-                new Album(`someUUID3-2-1`, AlbumType.ALBUM, `someAlbumName3.2.1`, `someUUID3-2`),
-            ];
-
-            test.each([
-                {
-                    queue: [],
-                    desc: `Empty queue`,
-                }, {
-                    queue: [
-                        new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                        new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-1`),
-                        new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1.2`, `someUUID1`),
-                        new Album(`someUUID1-3`, AlbumType.ALBUM, `someAlbumName1.3`, `someUUID1`),
-                        new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName2`, ``),
-                        new Album(`someUUID3`, AlbumType.ALBUM, `someAlbumName3`, ``),
-                        new Album(`someUUID3-1`, AlbumType.ALBUM, `someAlbumName3.1`, `someUUID3`),
-                        new Album(`someUUID3-2`, AlbumType.ALBUM, `someAlbumName3.2`, `someUUID3`),
-                    ],
-                    desc: `Sorted queue`,
-                }, {
-                    queue: [
-                        new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1.2`, `someUUID1`),
-                        new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                        new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        new Album(`someUUID1-3`, AlbumType.ALBUM, `someAlbumName1.3`, `someUUID1`),
-                        new Album(`someUUID3-1`, AlbumType.ALBUM, `someAlbumName3.1`, `someUUID3`),
-                        new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName2`, ``),
-                        new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-1`),
-                        new Album(`someUUID3-2`, AlbumType.ALBUM, `someAlbumName3.2`, `someUUID3`),
-                        new Album(`someUUID3`, AlbumType.ALBUM, `someAlbumName3`, ``),
-                        new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                    ],
-                    desc: `Unsorted queue`,
-                }, {
-                    queue: [
-                        new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                        new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-1`),
-                        new Album(`someUUID4-1-1`, AlbumType.ALBUM, `someAlbumName4.1.1`, `someUUID4-1`),
-                        new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1.2`, `someUUID1`),
-                        new Album(`someUUID1-3`, AlbumType.ALBUM, `someAlbumName1.3`, `someUUID1`),
-                        new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName2`, ``),
-                        new Album(`someUUID3`, AlbumType.ALBUM, `someAlbumName3`, ``),
-                        new Album(`someUUID3-1`, AlbumType.ALBUM, `someAlbumName3.1`, `someUUID3`),
-                        new Album(`someUUID3-2`, AlbumType.ALBUM, `someAlbumName3.2`, `someUUID3`),
-                        new Album(`someUUID4-1`, AlbumType.ALBUM, `someAlbumName4.1`, `someUUID4`),
-                    ],
-                    desc: `Unsorted queue (missing ancestor link)`,
-                },
-            ])(`$desc`, ({queue}) => {
-                const sortedQueue = SyncEngineHelper.sortQueue(queue);
-
-                expect(sortedQueue).toBeDefined();
-                expect(queueIsSorted(sortedQueue)).toBeTruthy();
-                expect(sortedQueue.length).toEqual(queue.length);
-            });
-
-            describe(`Distance to root`, () => {
-                test.each([
-                    {
-                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        expectedDistance: 0,
-                    },
-                    {
-                        a: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        expectedDistance: 1,
-                    },
-                    {
-                        a: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                        expectedDistance: 2,
-                    },
-                ])(`Calculating distance to root - Expecting $expectedDistance`, ({a, expectedDistance}) => {
-                    expect(Album.distanceToRoot(a, defaultFullQueue)).toEqual(expectedDistance);
-                });
-
-                test(`Calculating distance to root - Broken Link`, () => {
-                    const brokenQueue = [
-                        new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                        new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-2`),
-                    ];
-                    expect(() => Album.distanceToRoot(new Album(`someUUID1-1-2`, AlbumType.ALBUM, `someAlbumName1.1.2`, `someUUID1-2`), brokenQueue)).toThrow(/^Unable to determine distance to root, no link to root!$/);
-                });
-            });
-
-            describe(`Album compare function`, () => {
-                test.each([
-                    {
-                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        b: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                    },
-                    {
-                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        b: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                    },
-                    {
-                        a: new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
-                        b: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1-1`),
-                    },
-                    {
-                        a: new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
-                        b: new Album(`someUUID3-2-1`, AlbumType.ALBUM, `someAlbumName3.2.1`, `someUUID3-2`),
-                    },
-                ])(`Compare function returns negative value - %#`, ({a, b}) => {
-                    const result = SyncEngineHelper.compareQueueElements(defaultFullQueue, a, b);
-                    expect(result).toBeLessThan(0);
-                });
-
-                test.each([
-                    {
-                        a: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        b: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                    },
-                    {
-                        a: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                        b: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                    },
-                    {
-                        a: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1-1`),
-                        b: new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
-                    },
-                    {
-                        a: new Album(`someUUID3-2-1`, AlbumType.ALBUM, `someAlbumName3.2.1`, `someUUID3-2`),
-                        b: new Album(`someUUID1-2`, AlbumType.ALBUM, `someAlbumName1`, `someUUID1`),
-                    },
-                ])(`Compare function returns positive value - %#`, ({a, b}) => {
-                    const result = SyncEngineHelper.compareQueueElements(defaultFullQueue, a, b);
-                    expect(result).toBeGreaterThan(0);
-                });
-
-                test(`Compare function is reflexive`, () => {
-                    const album = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
-                    const result = SyncEngineHelper.compareQueueElements([album], album, album);
-                    expect(result).toEqual(0);
-                });
-
-                test.each([
-                    {
-                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        b: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                    },
-                    {
-                        a: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        b: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                    },
-                    {
-                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        b: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                    },
-                ])(`Compare Function is symmetric - %#`, ({a, b}) => {
-                    const result1 = SyncEngineHelper.compareQueueElements(defaultFullQueue, a, b);
-                    const result2 = SyncEngineHelper.compareQueueElements(defaultFullQueue, b, a);
-                    expect.assertions(1);
-                    if (result1 < 0) {
-                        expect(result2).toBeGreaterThan(0);
-                    } else if (result1 > 0) {
-                        expect(result2).toBeLessThan(0);
-                    } else if (result1 === 0) {
-                        expect(result2).toEqual(0);
-                    }
-                });
-
-                test.each([
-                    {
-                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        b: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        c: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                    },
-                    {
-                        a: new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName1.1.1`, `someUUID1-1`),
-                        b: new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName1.1`, `someUUID1`),
-                        c: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                    },
-                    {
-                        a: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        b: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                        c: new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``),
-                    },
-                ])(`Compare Function is reflexive - %#`, ({a, b, c}) => {
-                    const result1 = SyncEngineHelper.compareQueueElements(defaultFullQueue, a, b);
-                    const result2 = SyncEngineHelper.compareQueueElements(defaultFullQueue, b, c);
-                    const result3 = SyncEngineHelper.compareQueueElements(defaultFullQueue, a, c);
-                    expect.assertions(1);
-                    if (result1 > 0 && result2 > 0) {
-                        expect(result3).toBeGreaterThan(0);
-                    } else if (result1 < 0 && result2 < 0) {
-                        expect(result3).toBeLessThan(0);
-                    } else if (result1 === 0 && result2 === 0) {
-                        expect(result3).toEqual(0);
-                    }
-                });
-            });
+        beforeEach(() => {
+            syncEngine.photosLibrary.cleanArchivedOrphans = jest.fn<typeof syncEngine.photosLibrary.cleanArchivedOrphans>()
+                .mockResolvedValue();
+            syncEngine.photosLibrary.stashArchivedAlbum = jest.fn<typeof syncEngine.photosLibrary.stashArchivedAlbum>()
+                .mockReturnValue({} as any);
+            syncEngine.photosLibrary.retrieveStashedAlbum = jest.fn<typeof syncEngine.photosLibrary.retrieveStashedAlbum>()
+                .mockReturnValue({} as any);
+            syncEngine.photosLibrary.writeAlbum = jest.fn<typeof syncEngine.photosLibrary.writeAlbum>()
+                .mockReturnValue();
+            syncEngine.photosLibrary.deleteAlbum = jest.fn<typeof syncEngine.photosLibrary.deleteAlbum>()
+                .mockReturnValue();
         });
 
         test(`Empty processing queue`, async () => {
-            const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-
             await syncEngine.writeAlbums([[], [], []]);
 
             expect(syncEngine.photosLibrary.cleanArchivedOrphans).toHaveBeenCalled();
@@ -1425,8 +405,6 @@ describe(`Handle processing queue`, () => {
         });
 
         test(`Only deleting`, async () => {
-            const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-
             const albumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
             const albumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
             const albumChildChild = new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName3`, `someUUID1-1`);
@@ -1445,8 +423,6 @@ describe(`Handle processing queue`, () => {
         });
 
         test(`Only adding`, async () => {
-            const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-
             const albumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
             const albumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
             const albumChildChild = new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName3`, `someUUID1-1`);
@@ -1465,8 +441,6 @@ describe(`Handle processing queue`, () => {
         });
 
         test(`Adding & deleting`, async () => {
-            const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-
             const addAlbumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
             const addAlbumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
             const addAlbumChildChild = new Album(`someUUID1-1-1`, AlbumType.ALBUM, `someAlbumName3`, `someUUID1-1`);
@@ -1494,7 +468,6 @@ describe(`Handle processing queue`, () => {
         });
 
         test(`Adding - HANDLER_EVENT fired on error`, async () => {
-            const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
             const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
             const addAlbumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
@@ -1525,7 +498,6 @@ describe(`Handle processing queue`, () => {
         });
 
         test(`Deleting - HANDLER_EVENT fired on error`, async () => {
-            const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
             const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
 
             const removeAlbumParent = new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName4`, ``);
@@ -1557,8 +529,6 @@ describe(`Handle processing queue`, () => {
 
         describe(`Archive albums`, () => {
             test(`Remote album (locally archived) deleted`, async () => {
-                const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-
                 const albumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
                 const albumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
                 const albumChildChild = new Album(`someUUID1-1-1`, AlbumType.ARCHIVED, `someAlbumName3`, `someUUID1-1`);
@@ -1579,8 +549,6 @@ describe(`Handle processing queue`, () => {
             });
 
             test(`Remote album (locally archived) moved`, async () => {
-                const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-
                 const removedAlbumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
                 const removedAlbumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
                 const removedAlbumChildChild = new Album(`someUUID1-1-1`, AlbumType.ARCHIVED, `someAlbumName3`, `someUUID1-1`);
@@ -1604,8 +572,6 @@ describe(`Handle processing queue`, () => {
             });
 
             test(`Retrieving from stash - ERROR_HANDLE fired on error`, async () => {
-                const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-
                 const album1 = new Album(`someUUID1`, AlbumType.ARCHIVED, `someAlbumName1`, ``);
                 const album2 = new Album(`someUUID2`, AlbumType.ARCHIVED, `someAlbumName2`, ``);
 
@@ -1627,8 +593,6 @@ describe(`Handle processing queue`, () => {
             });
 
             test(`Stash - ERROR_HANDLE fired on error`, async () => {
-                const syncEngine = mockSyncEngineForAlbumQueue(syncEngineFactory());
-
                 const album1 = new Album(`someUUID1`, AlbumType.ARCHIVED, `someAlbumName1`, ``);
                 const album2 = new Album(`someUUID2`, AlbumType.ARCHIVED, `someAlbumName2`, ``);
 

@@ -75,6 +75,9 @@ export class CLIInterface {
             .on(iCPSEventMFA.STARTED, port => {
                 this.print(chalk.white(`Listening for input on port ${port}`));
             })
+            .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {
+                this.print(chalk.white(`Resending MFA code via ${method.toString()}...`));
+            } )
             .on(iCPSEventMFA.MFA_RECEIVED, (method: MFAMethod, code: string) => {
                 this.print(chalk.white(`MFA code received via ${method.toString()} (${code})`));
             })

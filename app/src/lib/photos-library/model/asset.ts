@@ -224,8 +224,9 @@ export class Asset implements PEntity<Asset> {
      * @returns True if the provided file matches this object representation
      * @throws An error, if verification fails
      */
-    async verify(filePath: string): Promise<boolean> {
+    async verify(): Promise<boolean> {
         let fileStat: Stats;
+        const filePath = this.getAssetFilePath();
         try {
             fileStat = await fs.stat(filePath);
         } catch (err) {

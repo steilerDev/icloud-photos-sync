@@ -384,7 +384,7 @@ export const nonRejectOptions = [
             trustToken: `some-trust-token`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -398,7 +398,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -417,7 +417,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/some/data/dir`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -431,7 +431,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -450,7 +450,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 8080,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -464,7 +464,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -497,7 +497,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -530,7 +530,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -549,7 +549,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 50,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -563,7 +563,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -582,7 +582,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: Infinity,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -596,7 +596,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -615,7 +615,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 1 10 * *`,
             enableCrashReporting: false,
@@ -629,7 +629,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -647,7 +647,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: true,
@@ -661,7 +661,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -679,7 +679,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -693,7 +693,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -711,7 +711,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -725,7 +725,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -743,7 +743,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -757,7 +757,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -775,7 +775,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -789,7 +789,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -808,7 +808,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -822,7 +822,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -840,7 +840,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -854,7 +854,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -872,7 +872,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -886,7 +886,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -904,7 +904,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -918,7 +918,7 @@ export const nonRejectOptions = [
             suppressWarnings: true,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -936,7 +936,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -950,7 +950,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: true,
             metadataRate: [Infinity, 0],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -969,7 +969,7 @@ export const nonRejectOptions = [
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -983,7 +983,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [5, 10],
-            networkCapture: true,
+            networkCapture: false,
         },
     }, {
         options: [
@@ -993,15 +993,15 @@ export const nonRejectOptions = [
             `test@icloud.com`,
             `-p`,
             `testPass`,
-            `--no-network-capture`,
+            `--network-capture`,
         ],
-        _desc: `Network capture disabled`,
+        _desc: `Network capture enabled`,
         expectedOptions: {
             username: `test@icloud.com`,
             password: `testPass`,
             dataDir: `/opt/icloud-photos-library`,
             port: 80,
-            maxRetries: Infinity,
+            maxRetries: 10,
             downloadThreads: 5,
             schedule: `0 2 * * *`,
             enableCrashReporting: false,
@@ -1015,7 +1015,7 @@ export const nonRejectOptions = [
             suppressWarnings: false,
             exportMetrics: false,
             metadataRate: [Infinity, 0],
-            networkCapture: false,
+            networkCapture: true,
         },
     },
 ];

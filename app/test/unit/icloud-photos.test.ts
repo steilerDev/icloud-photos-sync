@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 
 describe(`Setup iCloud Photos`, () => {
-    const setupURL = `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/changes/database`;
+    const setupURL = `${Config.photosDomain}/database/1/com.apple.photos.cloud/production/private/changes/database`;
 
     test(`Success`, async () => {
         photos.ready = Promise.resolve();

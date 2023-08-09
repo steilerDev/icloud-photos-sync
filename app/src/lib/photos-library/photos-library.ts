@@ -293,9 +293,7 @@ export class PhotosLibrary {
      */
     async verifyAsset(asset: Asset): Promise<boolean> {
         ResourceManager.logger(this).debug(`Verifying asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath();
-
-        return asset.verify(location);
+        return asset.verify();
     }
 
     /**

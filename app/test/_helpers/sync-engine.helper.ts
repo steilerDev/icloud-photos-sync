@@ -1,36 +1,9 @@
-import {jest} from '@jest/globals';
-import {AxiosResponse} from 'axios';
-import {iCloud} from "../../src/lib/icloud/icloud";
 import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PLibraryEntities, PLibraryProcessingQueues} from '../../src/lib/photos-library/model/photos-entity';
-import {PhotosLibrary} from "../../src/lib/photos-library/photos-library";
-import {SyncEngine} from "../../src/lib/sync-engine/sync-engine";
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
-
-export function syncEngineFactory(): SyncEngine {
-    return new SyncEngine(new iCloud(), new PhotosLibrary());
-}
-
-export function mockSyncEngineForAssetQueue(syncEngine: SyncEngine): SyncEngine {
-    syncEngine.photosLibrary.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
-    syncEngine.photosLibrary.writeAsset = jest.fn(async () => {});
-    syncEngine.photosLibrary.deleteAsset = jest.fn(async () => {});
-    syncEngine.icloud.photos.downloadAsset = jest.fn(async () => ({} as AxiosResponse<any, any>));
-    return syncEngine;
-}
-
-export function mockSyncEngineForAlbumQueue(syncEngine: SyncEngine): SyncEngine {
-    syncEngine.photosLibrary.cleanArchivedOrphans = jest.fn(() => Promise.resolve());
-    syncEngine.photosLibrary.stashArchivedAlbum = jest.fn(_album => {});
-    syncEngine.photosLibrary.retrieveStashedAlbum = jest.fn(_album => {});
-    syncEngine.photosLibrary.writeAlbum = jest.fn(_album => {});
-    syncEngine.photosLibrary.deleteAlbum = jest.fn(_album => {});
-
-    return syncEngine;
-}
 
 /**
  * This function checks, if the provided album queue is 'in order'

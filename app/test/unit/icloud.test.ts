@@ -598,7 +598,7 @@ describe.each([
 
     describe(`Setup iCloud`, () => {
         test(`Success`, async () => {
-            mockedResourceManager._networkManager.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
+            mockedResourceManager._networkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedResourceManager._validator.validateSetupResponse = jest.fn<typeof mockedResourceManager._validator.validateSetupResponse>();
             mockedResourceManager._networkManager.applySetupResponse = jest.fn<typeof mockedResourceManager._networkManager.applySetupResponse>();

@@ -39,7 +39,7 @@ class HeaderJar {
 
     constructor(axios: AxiosInstance) {
         axios.interceptors.request.use(config => {
-            config.headers[HEADER_KEYS.COOKIE] = Array.from(this.cookies.values())
+            const requestCookieString = Array.from(this.cookies.values())
                 .filter(cookie => this.isApplicable(config, cookie))
                 .filter(
                     cookie => cookie.TTL() > 0
@@ -47,6 +47,10 @@ class HeaderJar {
                     // For some reason some Apple Headers have a magic expire unix time of 1000 (X-APPLE-WEBAUTH-HSA-LOGIN)
                 )
                 .map(cookie => cookie.cookieString()).join(`; `);
+
+            if (requestCookieString.length > 0) {
+                config.headers[HEADER_KEYS.COOKIE] = requestCookieString;
+            }
 
             Array.from(this.headers.values())
                 .filter(cookie => this.isApplicable(config, cookie))
@@ -84,6 +88,14 @@ class HeaderJar {
     }
 
     /**
+     * Clearing a header from the header jar
+     * @param key - The key of the header to clear
+     */
+    clearHeader(key: string) {
+        this.headers.delete(key);
+    }
+
+    /**
      * Sets a cookie object in the header jar - overwrites existing cookies with the same key
      * @param cookie - The cookie to set
      */
@@ -109,7 +121,7 @@ export class NetworkManager {
 
     /**
      * A separate axios instance to handle stream based downloads of assets
-     * This allows us to bypass har files for those big files - additionally something is not handling the stream correctly
+     * This allows us to bypass har files for those big files - additionally HarTracker is not handling the stream correctly
      */
     _streamingAxios: AxiosInstance;
 
@@ -148,6 +160,9 @@ export class NetworkManager {
         await this.writeHarFile();
 
         this._axios.defaults.baseURL = undefined;
+
+        this._headerJar.clearHeader(HEADER_KEYS.SCNT);
+        this._headerJar.clearHeader(HEADER_KEYS.SESSION_ID);
 
         if (ResourceManager.networkCapture) {
             // Resets the generated HAR file to make sure it does not grow too much while reusing the same instance
@@ -248,7 +263,7 @@ export class NetworkManager {
 
     /**
      * Sets the photos URL including the default path to be the default base url going forward
-     * @param url - The url to set, including the protocol and port. If undefined this will unset the base url
+     * @param url - The url to set, including the protocol and port.
      */
     set photosUrl(url: string | undefined) {
         ResourceManager.logger(this).debug(`Setting photosUrl to ${url}`);
