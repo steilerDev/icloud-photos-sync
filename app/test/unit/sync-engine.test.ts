@@ -22,8 +22,8 @@ let syncEngine: SyncEngine;
 
 beforeEach(() => {
     mockedResourceManager = prepareResourceManager()!;
-    syncEngine = new SyncEngine(new iCloud(), new PhotosLibrary());
     mockfs({});
+    syncEngine = new SyncEngine(new iCloud(), new PhotosLibrary());
 });
 
 afterEach(() => {

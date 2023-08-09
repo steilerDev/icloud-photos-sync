@@ -115,10 +115,10 @@ describe(`Validator`, () => {
                     headers: {
                         scnt: `scntString`,
                         'x-apple-session-token': `sessionToken`,
-                        'set-cookie': [`SOME_COOKIE=123`],
+                        'set-cookie': [`aasp1=123`,`aasp2=123`],
                     },
                 },
-                desc: `missing aasp set-cookie header`,
+                desc: `too many aasp set-cookie header`,
             },
         ])(`should throw an error for an invalid signin response: $desc`, ({data}) => {
             expect(() => validator.validateSigninResponse(data)).toThrowError(VALIDATOR_ERR.SIGNIN_RESPONSE);
