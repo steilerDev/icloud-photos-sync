@@ -113,7 +113,6 @@ abstract class iCloudApp extends iCPSApp {
      */
     async clean() {
         await ResourceManager.network.resetSession();
-        ResourceManager.events(this.icloud.mfaServer).removeListeners();
         ResourceManager.events(this.icloud.photos).removeListeners();
         ResourceManager.events(this.icloud).removeListeners();
         await this.releaseLibraryLock();

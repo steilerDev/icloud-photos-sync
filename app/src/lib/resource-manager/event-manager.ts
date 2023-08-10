@@ -122,16 +122,29 @@ export class EventManager {
             return this;
         }
 
-        const registeredListeners = event === undefined
-            ? this._eventRegistry.get(source)
-            : this._eventRegistry.get(source).filter(registryObject => registryObject.event === event);
+        // We need to remove reference to the listener from the registry to avoid memory leaks
+        // Storing non-removed listeners in a new array and replacing the old one with it
+        const updatedSourceRegistry: EventRegistryObject[] = [];
 
-        ResourceManager.logger(this).debug(`Removing ${registeredListeners.length} listeners for source ${source.constructor.name}`);
-
-        for (const registeredListener of registeredListeners) {
-            this._eventBus.removeListener(registeredListener.event, registeredListener.listener);
+        let removedListenerCount = 0;
+        for (const registryObject of this._eventRegistry.get(source)) {
+            if (event === undefined || registryObject.event === event) { // Removing listener and not pushing to new array
+                this._eventBus.removeListener(registryObject.event, registryObject.listener);
+                removedListenerCount++;
+            } else { // Keeping listener and pushing to new array
+                updatedSourceRegistry.push(registryObject);
+            }
         }
 
+        ResourceManager.logger(this).debug(`Removed ${removedListenerCount} listeners for source ${source.constructor.name}`);
+
+        if (updatedSourceRegistry.length === 0) {
+            ResourceManager.logger(this).debug(`No more listeners for source ${source.constructor.name} registered`);
+            this._eventRegistry.delete(source);
+            return this;
+        }
+
+        this._eventRegistry.set(source, updatedSourceRegistry);
         return this;
     }
 }
