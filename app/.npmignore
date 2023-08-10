@@ -1,0 +1,10 @@
+build/
+coverage/
+src/
+test/
+eslint.config.json
+jest.config.json
+knip.config.jsonc
+tsconfig.json
+tsdoc.json
+typedoc.json
