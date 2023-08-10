@@ -211,25 +211,24 @@ export class ErrorHandler {
             const totalNumberOfLines = data.length;
 
             if (totalNumberOfLines === 0) {
-                return;
+                return undefined;
             }
 
             // If there is nothing to truncate, we copy the original log file
-            if (totalNumberOfLines < maxNumberOfLines) {
-                fs.copyFile(ResourceManager.logFilePath, targetPath);
-                return;
+            const truncatedData = new Readable();
+
+            // If we truncate, make a note of it
+            if (totalNumberOfLines > maxNumberOfLines) {
+                truncatedData.push(`########################\n`);
+                truncatedData.push(`# Truncated ${totalNumberOfLines - maxNumberOfLines} lines\n`);
+                truncatedData.push(`########################\n`);
             }
 
-            const truncatedData = new Readable();
-            truncatedData.push(`########################\n`);
-            truncatedData.push(`# Truncated ${totalNumberOfLines - maxNumberOfLines} lines\n`);
-            truncatedData.push(`########################\n`);
             for (let i = 0; i < totalNumberOfLines; i++) {
                 if (i > (totalNumberOfLines - maxNumberOfLines)) {
                     truncatedData.push(`${data[i]}\n`);
                 }
             }
-
             truncatedData.push(null);
 
             await this.compressStream(targetPath, truncatedData);
