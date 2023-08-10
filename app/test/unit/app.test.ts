@@ -120,7 +120,7 @@ describe(`App control flow`, () => {
         await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
 
         expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-        expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(5);
+        expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
 
         expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
         expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -142,7 +142,7 @@ describe(`App control flow`, () => {
         await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
 
         expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-        expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(5);
+        expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
 
         expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
         expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -179,7 +179,7 @@ describe(`App control flow`, () => {
             expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
 
             expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(5);
+            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
 
             expect(tokenEvent).toHaveBeenCalledTimes(1);
         });
@@ -209,7 +209,7 @@ describe(`App control flow`, () => {
             expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(syncApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
             expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(3);
+            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
 
         test(`Handle sync error`, async () => {
@@ -235,7 +235,7 @@ describe(`App control flow`, () => {
             expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(syncApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
             expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(3);
+            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
     });
 
@@ -268,7 +268,7 @@ describe(`App control flow`, () => {
             expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledWith(validOptions.archive[validOptions.archive.length - 1], remoteState);
             expect(archiveApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
             expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(3);
+            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
 
         test(`Handle archive error`, async () => {
@@ -298,7 +298,7 @@ describe(`App control flow`, () => {
             expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledTimes(1);
             expect(archiveApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
             expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(3);
+            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
     });
 
