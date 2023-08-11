@@ -2,7 +2,6 @@ import {iCloud} from '../icloud/icloud.js';
 import {PhotosLibrary} from '../photos-library/photos-library.js';
 import {Asset} from '../photos-library/model/asset.js';
 import {Album, AlbumType} from '../photos-library/model/album.js';
-import PQueue from 'p-queue';
 import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
 
 import {iCPSError} from '../../app/error/error.js';
@@ -25,12 +24,6 @@ export class SyncEngine {
      * The local PhotosLibrary
      */
     photosLibrary: PhotosLibrary;
-
-    /**
-     * A queue containing all pending asset downloads, in order to limit download threads
-     * Initialized in writeAssets()
-     */
-    downloadQueue: PQueue;
 
     /**
      * Creates a new sync engine from the previously created objects and CLI options
@@ -69,7 +62,7 @@ export class SyncEngine {
                     ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.UNKNOWN).addCause(err));
                 }
 
-                await this.prepareRetry();
+                await ResourceManager.network.settleCCYLimiter();
                 ResourceManager.emit(iCPSEventSyncEngine.RETRY, retryCount);
             }
         }
@@ -77,30 +70,6 @@ export class SyncEngine {
         // We'll only reach this, if we exceeded retryCount
         throw new iCPSError(SYNC_ERR.MAX_RETRY)
             .addMessage(`${retryCount}`);
-    }
-
-    /**
-     * Prepares the sync engine for a retry, by emptying the queue and refreshing iCloud cookies
-     */
-    async prepareRetry() {
-        ResourceManager.logger(this).debug(`Preparing retry...`);
-        if (this.downloadQueue) {
-            if (this.downloadQueue.size > 0) {
-                ResourceManager.logger(this).info(`Error occurred with ${this.downloadQueue.size} asset(s) left in the download queue, clearing queue...`);
-                this.downloadQueue.clear();
-            }
-
-            if (this.downloadQueue.pending > 0) {
-                ResourceManager.logger(this).info(`Error occurred with ${this.downloadQueue.pending} pending job(s), waiting for queue to settle...`);
-                await this.downloadQueue.onIdle();
-                ResourceManager.logger(this).debug(`Queue has settled!`);
-            }
-        }
-
-        // ResourceManager.logger(this).debug(`Refreshing iCloud connection`);
-        // const iCloudReady = this.icloud.getReady();
-        // this.icloud.setupAccount();
-        // await iCloudReady;
     }
 
     /**
@@ -172,13 +141,12 @@ export class SyncEngine {
         const toBeDeleted = processingQueue[0];
         const toBeAdded = processingQueue[1];
         // Initializing sync queue
-        this.downloadQueue = new PQueue({concurrency: ResourceManager.downloadThreads});
 
         ResourceManager.logger(this).debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
 
         // Deleting before downloading, in order to ensure no conflicts
         await Promise.all(toBeDeleted.map(asset => this.photosLibrary.deleteAsset(asset)));
-        await Promise.all(toBeAdded.map(asset => this.downloadQueue.add(() => this.addAsset(asset))));
+        await Promise.all(toBeAdded.map(asset => this.addAsset(asset)));
     }
 
     /**

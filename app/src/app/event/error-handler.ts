@@ -229,6 +229,7 @@ export class ErrorHandler {
                     truncatedData.push(`${data[i]}\n`);
                 }
             }
+
             truncatedData.push(null);
 
             await this.compressStream(targetPath, truncatedData);

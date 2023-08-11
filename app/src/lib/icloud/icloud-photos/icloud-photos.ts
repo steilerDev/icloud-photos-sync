@@ -5,7 +5,6 @@ import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
-import PQueue from 'p-queue';
 import {ResourceManager} from '../../resource-manager/resource-manager.js';
 import {ENDPOINTS} from '../../resource-manager/network.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
@@ -33,20 +32,9 @@ export class iCloudPhotos {
     ready: Promise<void>;
 
     /**
-     * The queue holding all query operations. Used to rate limit metadata fetching
-     */
-    queryQueue: PQueue;
-
-    /**
      * Creates a new iCloud Photos Class
-     * @param auth - The populated authentication object
      */
     constructor() {
-        this.queryQueue = new PQueue({
-            intervalCap: ResourceManager.metadataRate[0],
-            interval: ResourceManager.metadataRate[1],
-        });
-
         ResourceManager.events(this).on(iCPSEventPhotos.SETUP_COMPLETED, async () => {
             await this.checkingIndexingStatus();
         });
@@ -182,7 +170,7 @@ export class iCloudPhotos {
             data.resultsLimit = resultsLimit;
         }
 
-        const queryResponse = await this.queryQueue.add(async () => ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config)) as AxiosResponse<any, any>;
+        const queryResponse = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config);
 
         const fetchedRecords = queryResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
@@ -224,7 +212,7 @@ export class iCloudPhotos {
             },
         }));
 
-        const operationResponse = await this.queryQueue.add(async () => ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config)) as AxiosResponse<any, any>;
+        const operationResponse = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config);
         const fetchedRecords = operationResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)

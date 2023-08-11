@@ -7,7 +7,6 @@ import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {fetchAndLoadStateReturnValue, diffStateReturnValue, convertCPLAssetsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue, fetchAllCPLAssetsMastersReturnValue, fetchAllCPLAlbumsReturnValue, getRandomZone} from '../_helpers/sync-engine.helper';
 import {MockedResourceManager, UnknownFunction, prepareResourceManager} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
-import PQueue from 'p-queue';
 import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import {SyncEngineHelper} from '../../src/lib/sync-engine/helper';
 import {iCPSEventError, iCPSEventSyncEngine} from '../../src/lib/resource-manager/events';
@@ -31,6 +30,10 @@ afterEach(() => {
 });
 
 describe(`Coordination`, () => {
+    beforeEach(() => {
+        mockedResourceManager._networkManager.settleCCYLimiter = jest.fn<typeof mockedResourceManager._networkManager.settleCCYLimiter>();
+    });
+
     describe(`Sync`, () => {
         test(`Successful on first try`, async () => {
             const startEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.START);
@@ -51,6 +54,7 @@ describe(`Coordination`, () => {
             expect(syncEngine.diffState).toHaveBeenCalledWith(...fetchAndLoadStateReturnValue);
             expect(syncEngine.writeState).toHaveBeenCalledWith(...diffStateReturnValue);
             expect(doneEvent).toHaveBeenCalledTimes(1);
+            expect(mockedResourceManager._networkManager.settleCCYLimiter).not.toHaveBeenCalled();
             expect(retryEvent).not.toHaveBeenCalled();
             expect(handlerEvent).not.toHaveBeenCalled();
         });
@@ -79,8 +83,6 @@ describe(`Coordination`, () => {
                 .mockRejectedValueOnce(error)
                 .mockResolvedValue();
 
-            syncEngine.prepareRetry = jest.fn<typeof syncEngine.prepareRetry>();
-
             await expect(syncEngine.sync()).rejects.toEqual(new Error(`Sync did not complete successfully within expected amount of tries`));
 
             expect(startEvent).toHaveBeenCalled();
@@ -97,7 +99,7 @@ describe(`Coordination`, () => {
             expect(syncEngine.writeState).toHaveBeenNthCalledWith(2, ...diffStateReturnValue);
             expect(syncEngine.writeState).toHaveBeenNthCalledWith(3, ...diffStateReturnValue);
             expect(syncEngine.writeState).toHaveBeenNthCalledWith(4, ...diffStateReturnValue);
-            expect(syncEngine.prepareRetry).toHaveBeenCalledTimes(4);
+            expect(mockedResourceManager._networkManager.settleCCYLimiter).toHaveBeenCalledTimes(4);
         });
 
         test.each([
@@ -121,7 +123,6 @@ describe(`Coordination`, () => {
             syncEngine.writeState = jest.fn<typeof syncEngine.writeState>()
                 .mockRejectedValueOnce(error)
                 .mockResolvedValueOnce();
-            syncEngine.prepareRetry = jest.fn<typeof syncEngine.prepareRetry>();
             const doneEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.DONE);
 
             await syncEngine.sync();
@@ -136,57 +137,58 @@ describe(`Coordination`, () => {
             expect(syncEngine.writeState).toHaveBeenCalledTimes(2);
             expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, ...diffStateReturnValue);
             expect(syncEngine.writeState).toHaveBeenNthCalledWith(2, ...diffStateReturnValue);
-            expect(syncEngine.prepareRetry).toHaveBeenCalledTimes(1);
+            expect(mockedResourceManager._networkManager.settleCCYLimiter).toHaveBeenCalledTimes(1);
             expect(doneEvent).toHaveBeenCalledTimes(1);
         });
 
-        test.each([
-            {
-                queue: undefined,
-                msg: `Undefined queue`,
-            },
-            {
-                queue: new PQueue(),
-                msg: `Empty queue`,
-            },
-            {
-                queue: (() => {
-                    const queue = new PQueue({concurrency: 2, autoStart: true});
-                    for (let i = 0; i < 10; i++) {
-                        queue.add(() => new Promise(resolve => setTimeout(resolve, 40)));
-                    }
+        // @todo: Implement in network manager tests
+        //     test.each([
+        //         {
+        //             queue: undefined,
+        //             msg: `Undefined queue`,
+        //         },
+        //         {
+        //             queue: new PQueue(),
+        //             msg: `Empty queue`,
+        //         },
+        //         {
+        //             queue: (() => {
+        //                 const queue = new PQueue({concurrency: 2, autoStart: true});
+        //                 for (let i = 0; i < 10; i++) {
+        //                     queue.add(() => new Promise(resolve => setTimeout(resolve, 40)));
+        //                 }
 
-                    return queue;
-                })(),
-                msg: `Non-Empty queue`,
-            },
-            {
-                queue: (() => {
-                    const queue = new PQueue({concurrency: 2, autoStart: true});
-                    for (let i = 0; i < 10; i++) {
-                        queue.add(() => new Promise(resolve => setTimeout(resolve, 40)));
-                    }
+        //                 return queue;
+        //             })(),
+        //             msg: `Non-Empty queue`,
+        //         },
+        //         {
+        //             queue: (() => {
+        //                 const queue = new PQueue({concurrency: 2, autoStart: true});
+        //                 for (let i = 0; i < 10; i++) {
+        //                     queue.add(() => new Promise(resolve => setTimeout(resolve, 40)));
+        //                 }
 
-                    return queue;
-                })(),
-                msg: `Started queue`,
-            },
-        ])(`Prepare Retry - $msg`, async ({queue}) => {
-            syncEngine.downloadQueue = queue as unknown as PQueue;
-            syncEngine.icloud.setupAccount = jest.fn<typeof syncEngine.icloud.setupAccount>()
-                .mockResolvedValue();
-            syncEngine.icloud.getReady = jest.fn<typeof syncEngine.icloud.getReady>()
-                .mockResolvedValue();
+        //                 return queue;
+        //             })(),
+        //             msg: `Started queue`,
+        //         },
+        //     ])(`Prepare Retry - $msg`, async ({queue}) => {
+        //         syncEngine.downloadQueue = queue as unknown as PQueue;
+        //         syncEngine.icloud.setupAccount = jest.fn<typeof syncEngine.icloud.setupAccount>()
+        //             .mockResolvedValue();
+        //         syncEngine.icloud.getReady = jest.fn<typeof syncEngine.icloud.getReady>()
+        //             .mockResolvedValue();
 
-            await syncEngine.prepareRetry();
+        //         await syncEngine.prepareRetry();
 
-            expect.assertions(queue ? 2 : 0);
-            // Expect(syncEngine.icloud.setupAccount).toHaveBeenCalledTimes(1);
-            if (syncEngine.downloadQueue) {
-                expect(syncEngine.downloadQueue.size).toEqual(0);
-                expect(syncEngine.downloadQueue.pending).toEqual(0);
-            }
-        });
+        //         expect.assertions(queue ? 2 : 0);
+        //         // Expect(syncEngine.icloud.setupAccount).toHaveBeenCalledTimes(1);
+        //         if (syncEngine.downloadQueue) {
+        //             expect(syncEngine.downloadQueue.size).toEqual(0);
+        //             expect(syncEngine.downloadQueue.pending).toEqual(0);
+        //         }
+        //     });
     });
 
     test(`Fetch & Load State`, async () => {

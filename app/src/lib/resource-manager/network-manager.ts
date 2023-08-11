@@ -1,13 +1,15 @@
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import fs from "fs/promises";
-import {HEADER, HEADER_KEYS, SigninResponse, NetworkResources, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, EMPTY_HAR} from "./network.js";
+import * as PACKAGE from "../package.js";
+import {HEADER_KEYS, SigninResponse, NetworkResources, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network.js";
 import {Cookie} from "tough-cookie";
 import {ResourceManager} from "./resource-manager.js";
 import {iCPSError} from "../../app/error/error.js";
 import {RES_MANAGER_ERR} from "../../app/error/error-codes.js";
 import {AxiosHarTracker} from "axios-har-tracker";
-import {FILE_ENCODING} from "./resources.js";
+import {FILE_ENCODING, iCPSResources} from "./resources.js";
 import {Readable} from "stream";
+import PQueue from "p-queue";
 
 class Header {
     key: string;
@@ -38,28 +40,52 @@ class HeaderJar {
     absoluteURLRegex = /^(?:[a-z+]+:)?\/\//i;
 
     constructor(axios: AxiosInstance) {
-        axios.interceptors.request.use(config => {
-            const requestCookieString = Array.from(this.cookies.values())
-                .filter(cookie => this.isApplicable(config, cookie))
-                .filter(
-                    cookie => cookie.TTL() > 0
-                    || (cookie.expires as Date).getTime() === 1000, // Cookie.expires could also be the string 'Infinity', but then TTL() would be the number Infinity
-                    // For some reason some Apple Headers have a magic expire unix time of 1000 (X-APPLE-WEBAUTH-HSA-LOGIN)
-                )
-                .map(cookie => cookie.cookieString()).join(`; `);
+        // Default headers
+        this.setHeader(new Header(``, `Accept`, `application/json`));
+        this.setHeader(new Header(``, `Content-Type`, `application/json`));
+        this.setHeader(new Header(``, `Connection`, `keep-alive`));
+        this.setHeader(new Header(``, `Accept-Encoding`, `gzip, deflate, br`));
+        this.setHeader(new Header(``, `User-Agent`, USER_AGENT));
 
-            if (requestCookieString.length > 0) {
-                config.headers[HEADER_KEYS.COOKIE] = requestCookieString;
-            }
+        // Static auth headers
+        this.setHeader(new Header(`idmsa.apple.com`, `Origin`, `https://idmsa.apple.com`)); // This should overwrite the default 'Origin' header
+        this.setHeader(new Header(`idmsa.apple.com`, `Referer`, `https://idmsa.apple.com/`));
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-Widget-Key`, CLIENT_ID));
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Client-Id`, CLIENT_ID));
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-I-FD-Client-Info`, CLIENT_INFO));
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Response-Type`, `code`));
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Response-Mode`, `web_message`));
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Client-Type`, `firstPartyAuth`));
 
-            Array.from(this.headers.values())
-                .filter(cookie => this.isApplicable(config, cookie))
-                .forEach(header => {
-                    config.headers[header.key] = header.value;
-                });
+        axios.interceptors.request.use(config => this._injectHeaders(config));
+    }
 
-            return config;
-        });
+    /**
+     * Injects the relevant headers and cookies into the request
+     * @param config - The request config
+     * @returns An adjusted request config containing relevant cookies and headers
+     */
+    _injectHeaders(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
+        const requestCookieString = Array.from(this.cookies.values())
+            .filter(cookie => this.isApplicable(config, cookie))
+            .filter(
+                cookie => cookie.TTL() > 0
+                || (cookie.expires as Date).getTime() === 1000, // Cookie.expires could also be the string 'Infinity', but then TTL() would be the number Infinity
+                // For some reason some Apple Headers have a magic expire unix time of 1000 (X-APPLE-WEBAUTH-HSA-LOGIN)
+            )
+            .map(cookie => cookie.cookieString()).join(`; `);
+
+        if (requestCookieString.length > 0) {
+            config.headers[HEADER_KEYS.COOKIE] = requestCookieString;
+        }
+
+        Array.from(this.headers.values())
+            .filter(cookie => this.isApplicable(config, cookie))
+            .forEach(header => {
+                config.headers[header.key] = header.value;
+            });
+
+        return config;
     }
 
     /**
@@ -120,10 +146,20 @@ export class NetworkManager {
     _axios: AxiosInstance;
 
     /**
+     * Queue to enable metadata rate limiting. Applied to regular (non-streaming) requests
+     */
+    _rateLimiter: PQueue;
+
+    /**
      * A separate axios instance to handle stream based downloads of assets
      * This allows us to bypass har files for those big files - additionally HarTracker is not handling the stream correctly
      */
     _streamingAxios: AxiosInstance;
+
+    /**
+     * Queue to enable CCY rate limiting. Applied to streaming requests
+     */
+    _streamingCCYLimiter: PQueue;
 
     /**
      * Collection of header values and cookies that are applied based on the request
@@ -135,17 +171,30 @@ export class NetworkManager {
      */
     _harTracker: AxiosHarTracker | undefined;
 
-    constructor(enableNetworkCapture: boolean) {
-        this._axios = axios.create({
-            headers: HEADER.DEFAULT,
+    /**
+     * Creates a new network manager
+     * @param resources - The global configuration resources - because ResourceManager Singleton is not yet available
+     */
+    constructor(resources: iCPSResources) {
+        this._rateLimiter = new PQueue({
+            intervalCap: resources.metadataRate[0],
+            interval: resources.metadataRate[1],
         });
 
+        this._axios = axios.create({
+            headers: {
+                Origin: `https://www.icloud.com`,
+            },
+        });
+
+        this._streamingCCYLimiter = new PQueue({concurrency: resources.downloadThreads});
+
         this._streamingAxios = axios.create({
-            headers: HEADER.DEFAULT,
+            // Headers: HEADER.DEFAULT,
             responseType: `stream`,
         });
 
-        if (enableNetworkCapture) {
+        if (resources.networkCapture) {
             this._harTracker = new AxiosHarTracker(this._axios as any);
         }
 
@@ -157,18 +206,68 @@ export class NetworkManager {
      * This will write the HAR file to disk, in case network capture is enabled
      */
     async resetSession() {
-        await this.writeHarFile();
-
         this._axios.defaults.baseURL = undefined;
 
         this._headerJar.clearHeader(HEADER_KEYS.SCNT);
         this._headerJar.clearHeader(HEADER_KEYS.SESSION_ID);
 
+        await this.settleRateLimiter();
+        await this.settleCCYLimiter();
+
         if (ResourceManager.networkCapture) {
+            await this.writeHarFile();
             // Resets the generated HAR file to make sure it does not grow too much while reusing the same instance
             // Unfortunately this object is private, so we have to cast it to any
-            (this._harTracker as any).generatedHar = EMPTY_HAR;
+            (this._harTracker as any).generatedHar = {
+                log: {
+                    version: `1.2`,
+                    creator: {
+                        name: PACKAGE.NAME,
+                        version: PACKAGE.VERSION,
+                    },
+                    pages: [],
+                    entries: [],
+                },
+            };
+            (this._harTracker as any).newEntry = (this._harTracker as any).generateNewEntry();
         }
+    }
+
+    /**
+     * Settles the rate limiter queue
+     * @see {@link settleQueue}
+     */
+    async settleRateLimiter() {
+        ResourceManager.logger(this).debug(`Settling rate limiter queue...`);
+        await this.settleQueue(this._rateLimiter);
+    }
+
+    /**
+     * Settles the CCY limiter queue
+     * @see {@link settleQueue}
+     */
+    async settleCCYLimiter() {
+        ResourceManager.logger(this).debug(`Settling CCY limiter queue...`);
+        await this.settleQueue(this._streamingCCYLimiter);
+    }
+
+    /**
+     * Makes sure that the queue is settled before continuing (no more pending or running jobs)
+     * Pending jobs will be cancelled and running jobs will be awaited
+     * @param queue - The queue to settle
+     */
+    async settleQueue(queue: PQueue) {
+        if (queue.size > 0) {
+            ResourceManager.logger(this).info(`Clearing queue with ${queue.size} queued job(s)...`);
+            queue.clear();
+        }
+
+        if (queue.pending > 0) {
+            ResourceManager.logger(this).info(`${queue.pending} pending job(s), waiting for them to settle...`);
+            await queue.onIdle();
+        }
+
+        ResourceManager.logger(this).debug(`Queue has settled!`);
     }
 
     /**
@@ -183,12 +282,13 @@ export class NetworkManager {
 
         try {
             const generatedObject = this._harTracker.getGeneratedHar();
-            ResourceManager.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
             if (generatedObject.log.entries.length === 0) {
                 ResourceManager.logger(this).debug(`Not writing HAR file because no entries were captured`);
                 return false;
             }
+
+            ResourceManager.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
             await fs.writeFile(ResourceManager.harFilePath, JSON.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
             ResourceManager.logger(this).info(`HAR file written`);
@@ -331,43 +431,47 @@ export class NetworkManager {
 
     /**
      * Perform a POST request using the local axios instance and configuration
+     * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
      * @param data - The data to send
      * @param config - Additional configuration
      * @returns A promise, that resolves once the request has been completed.
      */
     async post<T = any, R = AxiosResponse<T>, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R> {
-        return this._axios.post(url, data, config);
+        return this._rateLimiter.add(async () => this._axios.post(url, data, config)) as R;
     }
 
     /**
      * Perform a GET request using the local axios instance and configuration
+     * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
      * @param config - Additional configuration
      * @returns A promise, that resolves once the request has been completed.
      */
     async get<T = any, R = AxiosResponse<T>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R> {
-        return this._axios.get(url, config);
+        return this._rateLimiter.add(async () => this._axios.get(url, config)) as Promise<R>;
     }
 
     /**
      * Performs a GET request to acquire a asset's data stream
+     * Uses concurrency limiting to ensure that the available bandwidth is used most efficiently
      * @param url - The location of the asset
      * @returns A promise, that resolves once the request has been completed.
      */
     // async getDataStream<R = AxiosResponse<Readable>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R> {
     async getDataStream(url: string): Promise<AxiosResponse<Readable>> {
-        return this._streamingAxios.get(url);
+        return this._streamingCCYLimiter.add(async () => this._streamingAxios.get(url)) as Promise<AxiosResponse<Readable>>;
     }
 
     /**
      * Perform a PUT request using the local axios instance and configuration
+     * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
      * @param data - The data to send
      * @param config - Additional configuration
      * @returns A promise, that resolves once the request has been completed.
      */
     async put<T = any, R = AxiosResponse<T>, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R> {
-        return this._axios.put(url, data, config);
+        return this._rateLimiter.add(async () => this._axios.put(url, data, config)) as R;
     }
 }

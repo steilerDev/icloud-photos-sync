@@ -20,7 +20,8 @@
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json test/unit/",
     "test:all": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
     "test:api": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json test/api/",
-    "execute": "node bin/main.js"
+    "execute": "node bin/main.js",
+    "execute:debug": "node --inspect=0.0.0.0:9229 bin/main.js daemon"
   },
   "repository": {
     "type": "git",

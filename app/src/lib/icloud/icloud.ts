@@ -5,7 +5,7 @@ import {MFAMethod} from './mfa/mfa-method.js';
 import {iCPSError} from '../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
 import {ResourceManager} from '../resource-manager/resource-manager.js';
-import {ENDPOINTS, HEADER} from '../resource-manager/network.js';
+import {ENDPOINTS} from '../resource-manager/network.js';
 import {iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos} from '../resource-manager/events.js';
 
 /**
@@ -90,7 +90,6 @@ export class iCloud {
         const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.SIGNIN;
 
         const config: AxiosRequestConfig = {
-            headers: HEADER.AUTH,
             params: {
                 isRememberMeEnabled: true,
             },
@@ -168,7 +167,6 @@ export class iCloud {
 
         const url = method.getResendURL();
         const config: AxiosRequestConfig = {
-            headers: HEADER.AUTH,
             validateStatus: method.resendSuccessful.bind(method),
         };
         const data = method.getResendPayload();
@@ -204,7 +202,6 @@ export class iCloud {
 
             const url = method.getEnterURL();
             const config: AxiosRequestConfig = {
-                headers: HEADER.AUTH,
                 validateStatus: method.enterSuccessful.bind(method),
             };
             const data = method.getEnterPayload(mfa);
@@ -228,7 +225,6 @@ export class iCloud {
 
             const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.TRUST;
             const config: AxiosRequestConfig = {
-                headers: HEADER.AUTH,
                 validateStatus: status => status === 204,
             };
 

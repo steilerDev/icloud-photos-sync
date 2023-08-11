@@ -96,13 +96,14 @@ export class ResourceManager {
             });
         }
 
-        this._networkManager = new NetworkManager(this._resources.networkCapture);
         if (this._resources.networkCapture) {
             this._resources.harFilePath = path.format({
                 dir: this._dataDir,
                 base: HAR_FILE_NAME,
             });
         }
+
+        this._networkManager = new NetworkManager(this._resources);
     }
 
     /**
