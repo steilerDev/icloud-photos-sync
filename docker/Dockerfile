@@ -19,5 +19,7 @@ RUN chmod 755 /root/enter_mfa.sh && \
     chmod 755 /root/resend_mfa.sh && \
     ln -s /root/resend_mfa.sh /usr/local/bin/resend_mfa
 
+VOLUME /opt/icloud-photos-library
+
 ENTRYPOINT ["icloud-photos-sync"]
 CMD ["daemon"]
