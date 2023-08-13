@@ -5,9 +5,10 @@ import {CPLAlbum, CPLAsset, CPLMaster} from "../../src/lib/icloud/icloud-photos/
 import * as Config from './_config';
 import path from "path";
 import {ResourceManager} from "../../src/lib/resource-manager/resource-manager";
+import {Resources} from '../../src/lib/resource-manager/main';
 
 export function prepareResourceManagerForApiTests(): ResourceManager {
-    ResourceManager._instance = undefined;
+    Resources._instance = undefined as any;
 
     ResourceManager.prototype.readResourceFile = jest.fn<typeof ResourceManager.prototype.readResourceFile>()
         .mockReturnValue({
@@ -17,19 +18,16 @@ export function prepareResourceManagerForApiTests(): ResourceManager {
     ResourceManager.prototype.writeResourceFile = jest.fn<typeof ResourceManager.prototype.writeResourceFile>()
         .mockReturnValue();
 
-    ResourceManager.setup({
+    const instance = Resources.setup({
         ...Config.defaultConfig,
         failOnMfa: true,
     });
 
-    applyEnvSecrets(ResourceManager.instance);
-    return ResourceManager.instance;
-}
+    instance._resources.username = process.env.TEST_APPLE_ID_USER!;
+    instance._resources.password = process.env.TEST_APPLE_ID_PWD!;
+    instance._resources.trustToken = process.env.TEST_TRUST_TOKEN!;
 
-export function applyEnvSecrets(resourceManager: ResourceManager) {
-    resourceManager._resources.username = process.env.TEST_APPLE_ID_USER!;
-    resourceManager._resources.password = process.env.TEST_APPLE_ID_PWD!;
-    resourceManager._resources.trustToken = process.env.TEST_TRUST_TOKEN!;
+    return instance;
 }
 
 /**

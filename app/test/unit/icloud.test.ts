@@ -8,6 +8,7 @@ import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import {MFA_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {iCPSError} from '../../src/app/error/error';
 import {iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos} from '../../src/lib/resource-manager/events';
+import {Resources} from '../../src/lib/resource-manager/main';
 
 let mockedResourceManager: MockedResourceManager;
 let icloud: iCloud;
@@ -120,8 +121,8 @@ describe.each([
             const trustedEvent = mockedResourceManager.spyOnEvent(iCPSEventCloud.TRUSTED);
             const errorEvent = mockedResourceManager.spyOnEvent(iCPSEventCloud.ERROR);
 
-            mockedResourceManager._validator.validateSigninResponse = jest.fn<typeof ResourceManager.validator.validateSigninResponse>();
-            mockedResourceManager._networkManager.applySigninResponse = jest.fn<typeof ResourceManager.network.applySigninResponse>();
+            mockedResourceManager._validator.validateSigninResponse = jest.fn<typeof mockedResourceManager._validator.validateSigninResponse>();
+            mockedResourceManager._networkManager.applySigninResponse = jest.fn<typeof mockedResourceManager._networkManager.applySigninResponse>();
 
             mockedResourceManager._networkManager.mock
                 .onPost(`https://idmsa.apple.com/appleauth/auth/signin`, {
@@ -179,7 +180,7 @@ describe.each([
         test(`Authentication response not matching validator`, async () => {
             const authenticationEvent = mockedResourceManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
 
-            mockedResourceManager._validator.validateSigninResponse = jest.fn<typeof ResourceManager.validator.validateSigninResponse>(() => {
+            mockedResourceManager._validator.validateSigninResponse = jest.fn<typeof mockedResourceManager._validator.validateSigninResponse>(() => {
                 throw new iCPSError(VALIDATOR_ERR.SIGNIN_RESPONSE);
             });
 
@@ -664,7 +665,7 @@ describe.each([
 
             test(`Setup resolves`, async () => {
                 icloud.photos.setup = jest.fn<typeof icloud.photos.setup>(() => {
-                    ResourceManager.emit(iCPSEventPhotos.READY);
+                    Resources.emit(iCPSEventPhotos.READY);
                     return Promise.resolve();
                 });
 

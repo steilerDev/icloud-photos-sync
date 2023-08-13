@@ -31,7 +31,6 @@ export const HAR_FILE_NAME = `.icloud-photos-sync.har`;
 export type iCPSResources = ResourceFile
     & iCPSAppOptions
     & PhotosAccount
-    & iCPSRuntimeResources;
 
 /**
  * Persistent information, stored in a resource file
@@ -79,22 +78,4 @@ export type PhotosAccountZone = {
      * The owner name, usually _<UUID>
      */
     ownerRecordName: string,
-}
-
-/**
- * Optional runtime resources
- */
-type iCPSRuntimeResources = {
-    /**
-     * The path to the log file, undefined if logging is disabled
-     */
-    logFilePath?: string,
-    /**
-     * The path to the metrics file, undefined if the metrics exporter is disabled
-     */
-    metricsFilePath?: string,
-    /**
-     * The path to the HAR file, undefined if the HAR exporter is disabled
-     */
-    harFilePath?: string,
 }

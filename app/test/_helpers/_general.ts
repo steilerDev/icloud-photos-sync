@@ -6,6 +6,7 @@ import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import MockAdapter from 'axios-mock-adapter';
 import {NetworkManager} from '../../src/lib/resource-manager/network-manager';
 import {iCPSEvent, iCPSEventError} from '../../src/lib/resource-manager/events';
+import {Resources} from '../../src/lib/resource-manager/main';
 
 export type UnknownFunction = (...args: Array<unknown>) => unknown
 export type UnknownAsyncFunction = (...args: Array<unknown>) => Promise<unknown>
@@ -26,9 +27,9 @@ export type MockedResourceManager = ResourceManager & {
  * @param appOptions - The configuration to use when creating a new instance of the ResourceManager
  */
 export function prepareResourceManager(initiate: boolean = true, appOptions: iCPSAppOptions = Config.defaultConfig): MockedResourceManager | undefined {
-    if (ResourceManager._instance) {
-        ResourceManager._instance._eventManager._eventBus.removeAllListeners();
-        ResourceManager._instance = undefined;
+    if (Resources._instance) {
+        Resources._instance._eventManager._eventBus.removeAllListeners();
+        Resources._instance = undefined as any;
     }
 
     ResourceManager.prototype.readResourceFile = jest.fn<typeof ResourceManager.prototype.readResourceFile>()
@@ -41,13 +42,14 @@ export function prepareResourceManager(initiate: boolean = true, appOptions: iCP
         .mockReturnValue();
 
     if (initiate) {
-        ResourceManager.setup(appOptions);
-        (ResourceManager.instance._networkManager as MockedNetworkManager).mock = new MockAdapter(ResourceManager.network._axios, {onNoMatch: `throwException`});
-        (ResourceManager.instance as MockedResourceManager).spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(ResourceManager.instance._eventManager._eventBus, event, removeListeners);
-        (ResourceManager.instance as MockedResourceManager).spyOnHandlerEvent = (removeListeners: boolean = true) => spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventError.HANDLER_EVENT, removeListeners);
+        const instance = Resources.setup(appOptions) as MockedResourceManager;
+        instance._networkManager.mock = new MockAdapter(instance._networkManager._axios, {onNoMatch: `throwException`});
+        instance.spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(instance._eventManager._eventBus, event, removeListeners);
+        instance.spyOnHandlerEvent = (removeListeners: boolean = true) => spyOnEvent(instance._eventManager._eventBus, iCPSEventError.HANDLER_EVENT, removeListeners);
+        return instance;
     }
 
-    return ResourceManager._instance as MockedResourceManager | undefined;
+    return undefined;
 }
 
 export function spyOnEvent(object: EventEmitter, eventName: string, removeListeners: boolean = true): any {

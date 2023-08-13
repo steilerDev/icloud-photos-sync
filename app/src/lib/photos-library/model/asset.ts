@@ -8,7 +8,7 @@ import {iCPSError} from '../../../app/error/error.js';
 import {LIBRARY_ERR} from '../../../app/error/error-codes.js';
 import {Zones} from '../../icloud/icloud-photos/query-builder.js';
 import {PRIMARY_ASSET_DIR, SHARED_ASSET_DIR} from '../constants.js';
-import {ResourceManager} from '../../resource-manager/resource-manager.js';
+import {Resources} from '../../resource-manager/main.js';
 
 /**
  * Representing the possible asset types
@@ -183,7 +183,7 @@ export class Asset implements PEntity<Asset> {
      */
     getAssetFilePath() {
         return path.format({
-            dir: path.join(ResourceManager.dataDir, this.zone === Zones.Primary ? PRIMARY_ASSET_DIR : SHARED_ASSET_DIR),
+            dir: path.join(Resources.dataDir(), this.zone === Zones.Primary ? PRIMARY_ASSET_DIR : SHARED_ASSET_DIR),
             name: this.getAssetFilename(),
         });
     }

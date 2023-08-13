@@ -3,13 +3,13 @@ import fs from "fs/promises";
 import * as PACKAGE from "../package.js";
 import {HEADER_KEYS, SigninResponse, NetworkResources, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network.js";
 import {Cookie} from "tough-cookie";
-import {ResourceManager} from "./resource-manager.js";
 import {iCPSError} from "../../app/error/error.js";
 import {RES_MANAGER_ERR} from "../../app/error/error-codes.js";
 import {AxiosHarTracker} from "axios-har-tracker";
 import {FILE_ENCODING, iCPSResources} from "./resources.js";
 import {Readable} from "stream";
 import PQueue from "p-queue";
+import {Resources} from "./main.js";
 
 class Header {
     key: string;
@@ -39,6 +39,10 @@ class HeaderJar {
      */
     absoluteURLRegex = /^(?:[a-z+]+:)?\/\//i;
 
+    /**
+     * Creates a new header jar with static header values applied
+     * @param axios - The axios instance to apply the headers to
+     */
     constructor(axios: AxiosInstance) {
         // Default headers
         this.setHeader(new Header(``, `Accept`, `application/json`));
@@ -173,7 +177,7 @@ export class NetworkManager {
 
     /**
      * Creates a new network manager
-     * @param resources - The global configuration resources - because ResourceManager Singleton is not yet available
+     * @param resources - The global configuration resources - because Resources Singleton is not yet available
      */
     constructor(resources: iCPSResources) {
         this._rateLimiter = new PQueue({
@@ -190,11 +194,10 @@ export class NetworkManager {
         this._streamingCCYLimiter = new PQueue({concurrency: resources.downloadThreads});
 
         this._streamingAxios = axios.create({
-            // Headers: HEADER.DEFAULT,
             responseType: `stream`,
         });
 
-        if (resources.networkCapture) {
+        if (resources.enableNetworkCapture) {
             this._harTracker = new AxiosHarTracker(this._axios as any);
         }
 
@@ -214,7 +217,7 @@ export class NetworkManager {
         await this.settleRateLimiter();
         await this.settleCCYLimiter();
 
-        if (ResourceManager.networkCapture) {
+        if (Resources.enableNetworkCapture()) {
             await this.writeHarFile();
             // Resets the generated HAR file to make sure it does not grow too much while reusing the same instance
             // Unfortunately this object is private, so we have to cast it to any
@@ -238,7 +241,7 @@ export class NetworkManager {
      * @see {@link settleQueue}
      */
     async settleRateLimiter() {
-        ResourceManager.logger(this).debug(`Settling rate limiter queue...`);
+        Resources.logger(this).debug(`Settling rate limiter queue...`);
         await this.settleQueue(this._rateLimiter);
     }
 
@@ -247,7 +250,7 @@ export class NetworkManager {
      * @see {@link settleQueue}
      */
     async settleCCYLimiter() {
-        ResourceManager.logger(this).debug(`Settling CCY limiter queue...`);
+        Resources.logger(this).debug(`Settling CCY limiter queue...`);
         await this.settleQueue(this._streamingCCYLimiter);
     }
 
@@ -258,16 +261,16 @@ export class NetworkManager {
      */
     async settleQueue(queue: PQueue) {
         if (queue.size > 0) {
-            ResourceManager.logger(this).info(`Clearing queue with ${queue.size} queued job(s)...`);
+            Resources.logger(this).info(`Clearing queue with ${queue.size} queued job(s)...`);
             queue.clear();
         }
 
         if (queue.pending > 0) {
-            ResourceManager.logger(this).info(`${queue.pending} pending job(s), waiting for them to settle...`);
+            Resources.logger(this).info(`${queue.pending} pending job(s), waiting for them to settle...`);
             await queue.onIdle();
         }
 
-        ResourceManager.logger(this).debug(`Queue has settled!`);
+        Resources.logger(this).debug(`Queue has settled!`);
     }
 
     /**
@@ -275,8 +278,8 @@ export class NetworkManager {
      * @returns - True if the file could be written, false otherwise
      */
     async writeHarFile(): Promise<boolean> {
-        if (!ResourceManager.networkCapture) {
-            ResourceManager.logger(this).debug(`Not writing HAR file because network capture is disabled`);
+        if (!Resources.harFilePath()) {
+            Resources.logger(this).debug(`Not writing HAR file because network capture is disabled`);
             return false;
         }
 
@@ -284,16 +287,16 @@ export class NetworkManager {
             const generatedObject = this._harTracker.getGeneratedHar();
 
             if (generatedObject.log.entries.length === 0) {
-                ResourceManager.logger(this).debug(`Not writing HAR file because no entries were captured`);
+                Resources.logger(this).debug(`Not writing HAR file because no entries were captured`);
                 return false;
             }
 
-            ResourceManager.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
+            Resources.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
-            await fs.writeFile(ResourceManager.harFilePath, JSON.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
-            ResourceManager.logger(this).info(`HAR file written`);
+            await fs.writeFile(Resources.harFilePath(), JSON.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
+            Resources.logger(this).info(`HAR file written`);
         } catch (err) {
-            ResourceManager.logger(this).error(`Unable to write HAR file: ${err.message}`);
+            Resources.logger(this).error(`Unable to write HAR file: ${err.message}`);
             return false;
         }
 
@@ -305,7 +308,7 @@ export class NetworkManager {
      * @param scnt - The scnt value to use,  undefined to delete the header
      */
     set scnt(scnt: string) {
-        ResourceManager.logger(this).debug(`Setting scnt header to ${scnt}`);
+        Resources.logger(this).debug(`Setting scnt header to ${scnt}`);
         this._headerJar.setHeader(new Header(`idmsa.apple.com`, HEADER_KEYS.SCNT, scnt));
     }
 
@@ -327,7 +330,7 @@ export class NetworkManager {
      * @param sessionId - The session id value to use - undefined to delete the header
      */
     set sessionId(sessionId: string) {
-        ResourceManager.logger(this).debug(`Setting session secret to ${sessionId}`);
+        Resources.logger(this).debug(`Setting session secret to ${sessionId}`);
         this._resources.sessionSecret = sessionId;
         this._headerJar.setHeader(new Header(`idmsa.apple.com`, HEADER_KEYS.SESSION_ID, sessionId));
     }
@@ -336,7 +339,7 @@ export class NetworkManager {
      * Persist the session token as session secret, required for setup
      */
     set sessionToken(sessionToken: string) {
-        ResourceManager.logger(this).debug(`Setting session secret to ${sessionToken}`);
+        Resources.logger(this).debug(`Setting session secret to ${sessionToken}`);
         this._resources.sessionSecret = sessionToken;
     }
 
@@ -344,14 +347,15 @@ export class NetworkManager {
      * @returns The currently stored trust token from the resource manager
      */
     get trustToken(): string | undefined {
-        return ResourceManager.trustToken;
+        return Resources.trustToken();
     }
 
     /**
      * Persists the trust token required for setup using the resource
+     * @param string - The trust token to persist
      */
     set trustToken(string: string | undefined) {
-        ResourceManager.trustToken = string;
+        Resources.setTrustToken(string);
     }
 
     /**
@@ -366,7 +370,7 @@ export class NetworkManager {
      * @param url - The url to set, including the protocol and port.
      */
     set photosUrl(url: string | undefined) {
-        ResourceManager.logger(this).debug(`Setting photosUrl to ${url}`);
+        Resources.logger(this).debug(`Setting photosUrl to ${url}`);
         this._resources.photosUrl = url;
         this._axios.defaults.baseURL = this._resources.photosUrl === undefined
             ? undefined
@@ -383,7 +387,7 @@ export class NetworkManager {
 
         const aaspCookie = signinResponse.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.AASP));
         if (aaspCookie.length !== 1) {
-            ResourceManager.logger(this).warn(`Expected exactly one AASP cookie, but found ${aaspCookie.length}`);
+            Resources.logger(this).warn(`Expected exactly one AASP cookie, but found ${aaspCookie.length}`);
             return;
         }
 
@@ -412,7 +416,7 @@ export class NetworkManager {
     }
 
     applyPhotosSetupResponse(photosSetupResponse: PhotosSetupResponse) {
-        ResourceManager.logger(this).info(`Found ${photosSetupResponse.data.zones.length} available zones: ${photosSetupResponse.data.zones.map(zone => zone.zoneID.zoneName).join(`, `)}`);
+        Resources.logger(this).info(`Found ${photosSetupResponse.data.zones.length} available zones: ${photosSetupResponse.data.zones.map(zone => zone.zoneID.zoneName).join(`, `)}`);
 
         const primaryZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName === `PrimarySync`);
         if (!primaryZoneData) {
@@ -420,12 +424,12 @@ export class NetworkManager {
                 .addContext(`zones`, photosSetupResponse.data.zones);
         }
 
-        ResourceManager.primaryZone = primaryZoneData.zoneID;
+        Resources.setPrimaryZone(primaryZoneData.zoneID);
 
         const sharedZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName.startsWith(`SharedSync-`));
         if (sharedZoneData) {
-            ResourceManager.logger(this).debug(`Found shared zone ${sharedZoneData.zoneID.zoneName}`);
-            ResourceManager.sharedZone = sharedZoneData.zoneID;
+            Resources.logger(this).debug(`Found shared zone ${sharedZoneData.zoneID.zoneName}`);
+            Resources.setSharedZone(sharedZoneData.zoneID);
         }
     }
 

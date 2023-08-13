@@ -5,7 +5,7 @@ import {CPLAlbum, CPLAsset, CPLMaster} from "../icloud/icloud-photos/query-parse
 import {Album} from "../photos-library/model/album.js";
 import {Asset, AssetType} from "../photos-library/model/asset.js";
 import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../photos-library/model/photos-entity.js";
-import {ResourceManager} from "../resource-manager/resource-manager.js";
+import {Resources} from "../resource-manager/main.js";
 import {iCPSEventError} from "../resource-manager/events.js";
 
 /**
@@ -66,7 +66,7 @@ function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Asset
                 remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, origExt, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite, asset.zoneName));
             }
         } catch (err) {
-            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.CONVERSION)
+            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.CONVERSION)
                 .setWarning()
                 .addCause(err)
                 .addContext(`cplAsset`, asset)

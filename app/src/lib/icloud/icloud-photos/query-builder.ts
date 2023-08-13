@@ -1,7 +1,7 @@
 /**
  * This file helps building queries for the iCloud Photos backend service
  */
-import {ResourceManager} from "../../resource-manager/resource-manager.js";
+import {Resources} from "../../resource-manager/main.js";
 import {PhotosAccountZone} from "../../resource-manager/resources.js";
 
 /**
@@ -68,10 +68,10 @@ export enum Zones {
  */
 export function getZoneID(zone: Zones): PhotosAccountZone {
     if (zone === Zones.Shared) {
-        return ResourceManager.sharedZone;
+        return Resources.sharedZone();
     }
 
-    return ResourceManager.primaryZone;
+    return Resources.primaryZone();
 }
 
 /**

@@ -4,11 +4,11 @@ import {iCloud} from '../../src/lib/icloud/icloud.js';
 import crypto from 'crypto';
 
 import * as Config from '../_helpers/_config';
-import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
-import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
-import expectedMastersAlbum from "../_data/api.expected.album-cpl-masters.json";
-import expectedAssetsAlbum from "../_data/api.expected.album-cpl-assets.json";
-import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
+import expectedAssetsAll from "./_data/expected.all-cpl-assets.json";
+import expectedMastersAll from "./_data/expected.all-cpl-masters.json";
+import expectedMastersAlbum from "./_data/expected.album-cpl-masters.json";
+import expectedAssetsAlbum from "./_data/expected.album-cpl-assets.json";
+import expectedAlbumsAll from "./_data/expected.all-cpl-albums.json";
 import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData, prepareResourceManagerForApiTests} from '../_helpers/api.helper';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';

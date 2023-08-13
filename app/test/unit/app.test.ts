@@ -8,8 +8,8 @@ import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {prepareResourceManager, spyOnEvent} from '../_helpers/_general';
 import path from 'path';
-import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import {iCPSEventApp, iCPSEventCloud} from '../../src/lib/resource-manager/events';
+import {Resources} from '../../src/lib/resource-manager/main';
 
 beforeEach(() => {
     mockfs();
@@ -23,8 +23,8 @@ afterEach(() => {
 
 describe(`App Factory`, () => {
     test.each(rejectOptions)(`Reject CLI: $_desc`, ({options, expected}) => {
-        const originalFunction = ResourceManager.setup;
-        ResourceManager.setup = jest.fn<typeof ResourceManager.setup>();
+        const originalFunction = Resources.setup;
+        Resources.setup = jest.fn<typeof Resources.setup>();
         const mockExit = jest.spyOn(process, `exit`).mockImplementation(() => {
             throw new Error(`Process Exit`);
         });
@@ -34,9 +34,9 @@ describe(`App Factory`, () => {
 
         expect(mockExit).toHaveBeenCalledWith(1);
         expect(mockStderr).toBeCalledWith(expected);
-        expect(ResourceManager.setup).not.toHaveBeenCalled();
+        expect(Resources.setup).not.toHaveBeenCalled();
 
-        ResourceManager.setup = originalFunction;
+        Resources.setup = originalFunction;
     });
 
     describe.each([{
@@ -53,7 +53,7 @@ describe(`App Factory`, () => {
         appType: ArchiveApp,
     }])(`Valid CLI for $appType app`, ({command, appType}) => {
         test.each(nonRejectOptions)(`$_desc`, ({options, expectedOptions}) => {
-            const setupSpy = jest.spyOn(ResourceManager, `setup`);
+            const setupSpy = jest.spyOn(Resources, `setup`);
             const app = appFactory([...options, ...command]);
             expect(setupSpy).toHaveBeenCalledWith(expectedOptions);
             expect(app).toBeInstanceOf(appType);
@@ -66,7 +66,7 @@ describe(`App Factory`, () => {
         expect(tokenApp).toBeInstanceOf(TokenApp);
         expect(tokenApp.icloud).toBeDefined();
         expect(tokenApp.icloud.mfaServer).toBeDefined();
-        expect(ResourceManager._instance).toBeDefined();
+        expect(Resources._instance).toBeDefined();
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 
@@ -76,7 +76,7 @@ describe(`App Factory`, () => {
         expect(syncApp).toBeInstanceOf(SyncApp);
         expect(syncApp.icloud).toBeDefined();
         expect(syncApp.icloud.mfaServer).toBeDefined();
-        expect(ResourceManager._instance).toBeDefined();
+        expect(Resources._instance).toBeDefined();
         expect(syncApp.photosLibrary).toBeDefined();
         expect(syncApp.syncEngine).toBeDefined();
         expect(fs.existsSync(`/opt/icloud-photos-library`));
@@ -88,7 +88,7 @@ describe(`App Factory`, () => {
         expect(archiveApp).toBeInstanceOf(ArchiveApp);
         expect(archiveApp.icloud).toBeDefined();
         expect(archiveApp.icloud.mfaServer).toBeDefined();
-        expect(ResourceManager._instance).toBeDefined();
+        expect(Resources._instance).toBeDefined();
         expect(archiveApp.photosLibrary).toBeDefined();
         expect(archiveApp.syncEngine).toBeDefined();
         expect(archiveApp.archiveEngine).toBeDefined();
@@ -99,7 +99,7 @@ describe(`App Factory`, () => {
         const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
 
         expect(daemonApp).toBeInstanceOf(DaemonApp);
-        expect(ResourceManager._instance).toBeDefined();
+        expect(Resources._instance).toBeDefined();
     });
 });
 
@@ -112,15 +112,15 @@ describe(`App control flow`, () => {
             .mockRejectedValue(new Error(`Authentication failed`));
         tokenApp.releaseLibraryLock = jest.fn<typeof tokenApp.releaseLibraryLock>()
             .mockResolvedValue();
-        ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+        Resources._instance._networkManager.resetSession = jest.fn<typeof Resources._instance._networkManager.resetSession>()
             .mockResolvedValue();
-        ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
-            .mockReturnValue(ResourceManager.event);
+        Resources._instance._eventManager.removeListenersFromRegistry = jest.fn<typeof Resources._instance._eventManager.removeListenersFromRegistry>()
+            .mockReturnValue(Resources._instance._eventManager);
 
         await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
 
-        expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-        expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
+        expect(Resources._instance._networkManager.resetSession).toHaveBeenCalledTimes(1);
+        expect(Resources._instance._eventManager.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
 
         expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
         expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -134,15 +134,15 @@ describe(`App control flow`, () => {
             .mockResolvedValue();
         tokenApp.releaseLibraryLock = jest.fn<typeof tokenApp.releaseLibraryLock>()
             .mockResolvedValue();
-        ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+        Resources._instance._networkManager.resetSession = jest.fn<typeof Resources._instance._networkManager.resetSession>()
             .mockResolvedValue();
-        ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
-            .mockReturnValue(ResourceManager.event);
+        Resources._instance._eventManager.removeListenersFromRegistry = jest.fn<typeof Resources._instance._eventManager.removeListenersFromRegistry>()
+            .mockReturnValue(Resources._instance._eventManager);
 
         await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
 
-        expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-        expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
+        expect(Resources._instance._networkManager.resetSession).toHaveBeenCalledTimes(1);
+        expect(Resources._instance._eventManager.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
 
         expect(tokenApp.acquireLibraryLock).toHaveBeenCalledTimes(1);
         expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
@@ -153,24 +153,24 @@ describe(`App control flow`, () => {
         test(`Execute token actions`, async () => {
             const tokenApp = appFactory(validOptions.token) as TokenApp;
 
-            const tokenEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.TOKEN);
+            const tokenEvent = spyOnEvent(Resources._instance._eventManager._eventBus, iCPSEventApp.TOKEN);
 
             tokenApp.acquireLibraryLock = jest.fn<typeof tokenApp.acquireLibraryLock>()
                 .mockResolvedValue();
             tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>(() => {
-                ResourceManager.emit(iCPSEventCloud.TRUSTED);
+                Resources.emit(iCPSEventCloud.TRUSTED);
                 return tokenApp.icloud.ready;
             });
             tokenApp.releaseLibraryLock = jest.fn<typeof tokenApp.releaseLibraryLock>()
                 .mockResolvedValue();
-            ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+            Resources._instance._networkManager.resetSession = jest.fn<typeof Resources._instance._networkManager.resetSession>()
                 .mockResolvedValue();
 
-            const originalRemoveListenersFromRegistry = ResourceManager.instance._eventManager.removeListenersFromRegistry;
+            const originalRemoveListenersFromRegistry = Resources._instance._eventManager.removeListenersFromRegistry;
 
-            ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
+            Resources._instance._eventManager.removeListenersFromRegistry = jest.fn<typeof Resources._instance._eventManager.removeListenersFromRegistry>()
                 .mockImplementationOnce(originalRemoveListenersFromRegistry) // Original implementation need to run once, so it can divert the execution flow
-                .mockReturnValue(ResourceManager.event);
+                .mockReturnValue(Resources._instance._eventManager);
 
             await tokenApp.run();
 
@@ -178,8 +178,8 @@ describe(`App control flow`, () => {
             expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(1);
             expect(tokenApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
 
-            expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
+            expect(Resources._instance._networkManager.resetSession).toHaveBeenCalledTimes(1);
+            expect(Resources._instance._eventManager.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
 
             expect(tokenEvent).toHaveBeenCalledTimes(1);
         });
@@ -197,10 +197,10 @@ describe(`App control flow`, () => {
                 .mockResolvedValue([[], []]);
             syncApp.releaseLibraryLock = jest.fn<typeof syncApp.releaseLibraryLock>()
                 .mockResolvedValue();
-            ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+            Resources._instance._networkManager.resetSession = jest.fn<typeof Resources._instance._networkManager.resetSession>()
                 .mockResolvedValue();
-            ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
-                .mockReturnValue(ResourceManager.event);
+            Resources._instance._eventManager.removeListenersFromRegistry = jest.fn<typeof Resources._instance._eventManager.removeListenersFromRegistry>()
+                .mockReturnValue(Resources._instance._eventManager);
 
             await syncApp.run();
 
@@ -208,8 +208,8 @@ describe(`App control flow`, () => {
             expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
             expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(syncApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
+            expect(Resources._instance._networkManager.resetSession).toHaveBeenCalledTimes(1);
+            expect(Resources._instance._eventManager.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
 
         test(`Handle sync error`, async () => {
@@ -223,10 +223,10 @@ describe(`App control flow`, () => {
                 .mockRejectedValue(new Error());
             syncApp.releaseLibraryLock = jest.fn<typeof syncApp.releaseLibraryLock>()
                 .mockResolvedValue();
-            ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+            Resources._instance._networkManager.resetSession = jest.fn<typeof Resources._instance._networkManager.resetSession>()
                 .mockResolvedValue();
-            ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
-                .mockReturnValue(ResourceManager.event);
+            Resources._instance._eventManager.removeListenersFromRegistry = jest.fn<typeof Resources._instance._eventManager.removeListenersFromRegistry>()
+                .mockReturnValue(Resources._instance._eventManager);
 
             await expect(syncApp.run()).rejects.toThrow(/^Sync failed$/);
 
@@ -234,8 +234,8 @@ describe(`App control flow`, () => {
             expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
             expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(syncApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
+            expect(Resources._instance._networkManager.resetSession).toHaveBeenCalledTimes(1);
+            expect(Resources._instance._eventManager.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
     });
 
@@ -255,10 +255,10 @@ describe(`App control flow`, () => {
                 .mockResolvedValue();
             archiveApp.releaseLibraryLock = jest.fn<typeof archiveApp.releaseLibraryLock>()
                 .mockResolvedValue();
-            ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+            Resources._instance._networkManager.resetSession = jest.fn<typeof Resources._instance._networkManager.resetSession>()
                 .mockResolvedValue();
-            ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
-                .mockReturnValue(ResourceManager.event);
+            Resources._instance._eventManager.removeListenersFromRegistry = jest.fn<typeof Resources._instance._eventManager.removeListenersFromRegistry>()
+                .mockReturnValue(Resources._instance._eventManager);
 
             await archiveApp.run();
 
@@ -267,8 +267,8 @@ describe(`App control flow`, () => {
             expect(archiveApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledWith(validOptions.archive[validOptions.archive.length - 1], remoteState);
             expect(archiveApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
+            expect(Resources._instance._networkManager.resetSession).toHaveBeenCalledTimes(1);
+            expect(Resources._instance._eventManager.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
 
         test(`Handle archive error`, async () => {
@@ -285,10 +285,10 @@ describe(`App control flow`, () => {
                 .mockRejectedValue(new Error());
             archiveApp.releaseLibraryLock = jest.fn<typeof archiveApp.releaseLibraryLock>()
                 .mockResolvedValue();
-            ResourceManager.network.resetSession = jest.fn<typeof ResourceManager.network.resetSession>()
+            Resources._instance._networkManager.resetSession = jest.fn<typeof Resources._instance._networkManager.resetSession>()
                 .mockResolvedValue();
-            ResourceManager.event.removeListenersFromRegistry = jest.fn<typeof ResourceManager.instance._eventManager.removeListenersFromRegistry>()
-                .mockReturnValue(ResourceManager.event);
+            Resources._instance._eventManager.removeListenersFromRegistry = jest.fn<typeof Resources._instance._eventManager.removeListenersFromRegistry>()
+                .mockReturnValue(Resources._instance._eventManager);
 
             await expect(archiveApp.run()).rejects.toThrow(/^Archive failed$/);
 
@@ -297,8 +297,8 @@ describe(`App control flow`, () => {
             expect(archiveApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledTimes(1);
             expect(archiveApp.releaseLibraryLock).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(ResourceManager.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
+            expect(Resources._instance._networkManager.resetSession).toHaveBeenCalledTimes(1);
+            expect(Resources._instance._eventManager.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
     });
 
@@ -307,8 +307,8 @@ describe(`App control flow`, () => {
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
             daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
                 .mockResolvedValue();
-            ResourceManager.instance._resources.schedule = `*/1 * * * * *`; // Every second
-            const eventScheduledEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.SCHEDULED);
+            Resources._instance._resources.schedule = `*/1 * * * * *`; // Every second
+            const eventScheduledEvent = spyOnEvent(Resources._instance._eventManager._eventBus, iCPSEventApp.SCHEDULED);
 
             await daemonApp.run();
 
@@ -322,7 +322,7 @@ describe(`App control flow`, () => {
 
         test(`Scheduled sync succeeds`, async () => {
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
-            const successEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.SCHEDULED_DONE);
+            const successEvent = spyOnEvent(Resources._instance._eventManager._eventBus, iCPSEventApp.SCHEDULED_DONE);
 
             const syncApp = new SyncApp();
             syncApp.run = jest.fn<typeof syncApp.run>()
@@ -336,7 +336,7 @@ describe(`App control flow`, () => {
 
         test(`Scheduled sync fails`, async () => {
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
-            const retryEvent = spyOnEvent(ResourceManager.instance._eventManager._eventBus, iCPSEventApp.SCHEDULED_RETRY);
+            const retryEvent = spyOnEvent(Resources._instance._eventManager._eventBus, iCPSEventApp.SCHEDULED_RETRY);
 
             const syncApp = new SyncApp();
             syncApp.run = jest.fn<typeof syncApp.run>()
@@ -372,7 +372,7 @@ describe(`Library Lock`, () => {
         });
 
         await expect(tokenApp.acquireLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
-        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(fs.existsSync(path.join(Resources.dataDir(), LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 
     test(`Acquire lock warning - already locked with --force`, async () => {
@@ -381,14 +381,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [ResourceManager.dataDir]: {
+            [Resources.dataDir()]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await tokenApp.acquireLibraryLock();
 
-        const lockFile = (await fs.promises.readFile(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE), {encoding: `utf-8`})).toString();
+        const lockFile = (await fs.promises.readFile(path.join(Resources.dataDir(), LIBRARY_LOCK_FILE), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
     });
 
@@ -404,7 +404,7 @@ describe(`Library Lock`, () => {
 
         await tokenApp.releaseLibraryLock();
 
-        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
+        expect(fs.existsSync(path.join(Resources.dataDir(), LIBRARY_LOCK_FILE))).toBeFalsy();
     });
 
     test(`Release lock error - not this process' lock`, async () => {
@@ -412,14 +412,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [ResourceManager.dataDir]: {
+            [Resources.dataDir()]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await expect(tokenApp.releaseLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
 
-        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(fs.existsSync(path.join(Resources.dataDir(), LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 
     test(`Release lock error - not this process' lock --force`, async () => {
@@ -427,14 +427,14 @@ describe(`Library Lock`, () => {
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
-            [ResourceManager.dataDir]: {
+            [Resources.dataDir()]: {
                 [LIBRARY_LOCK_FILE]: notThisPID,
             },
         });
 
         await tokenApp.releaseLibraryLock();
 
-        expect(fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeFalsy();
+        expect(fs.existsSync(path.join(Resources.dataDir(), LIBRARY_LOCK_FILE))).toBeFalsy();
     });
 
     test(`Release lock error - no lock`, async () => {
@@ -442,6 +442,6 @@ describe(`Library Lock`, () => {
 
         await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined();
 
-        expect(!fs.existsSync(path.join(ResourceManager.dataDir, LIBRARY_LOCK_FILE))).toBeTruthy();
+        expect(!fs.existsSync(path.join(Resources.dataDir(), LIBRARY_LOCK_FILE))).toBeTruthy();
     });
 });

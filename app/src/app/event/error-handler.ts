@@ -5,7 +5,7 @@ import {randomUUID} from "crypto";
 import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
 import fs from 'fs/promises';
 import path from 'path';
-import {ResourceManager} from '../../lib/resource-manager/resource-manager.js';
+import {Resources} from '../../lib/resource-manager/main.js';
 import {iCPSEventApp, iCPSEventError} from '../../lib/resource-manager/events.js';
 import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
 import * as zlib from 'zlib';
@@ -58,7 +58,7 @@ export class ErrorHandler {
     verbose: boolean = false;
 
     constructor() {
-        if (ResourceManager.enableCrashReporting) {
+        if (Resources.enableCrashReporting) {
             const endpoint = `${BACKTRACE_SUBMISSION.DOMAIN}/${BACKTRACE_SUBMISSION.UNIVERSE}/`
                                 + `${PACKAGE_INFO.VERSION === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
                                 + BACKTRACE_SUBMISSION.TYPE;
@@ -73,16 +73,16 @@ export class ErrorHandler {
                 },
             });
             // This.btClient.setSymbolication();
-            ResourceManager.events(this).on(iCPSEventApp.SCHEDULED_START, async () => {
+            Resources.events(this).on(iCPSEventApp.SCHEDULED_START, async () => {
                 await this.reportSyncStart();
             });
         }
 
-        ResourceManager.events(this).on(iCPSEventError.HANDLER_EVENT, async (err: unknown) => {
+        Resources.events(this).on(iCPSEventError.HANDLER_EVENT, async (err: unknown) => {
             await this.handle(err);
         });
 
-        if (ResourceManager.logLevel === `debug`) {
+        if (Resources.logLevel() === `debug`) {
             this.verbose = true;
         }
 
@@ -127,11 +127,11 @@ export class ErrorHandler {
         // Performing output based on severity
         switch (_err.sev) {
         case `WARN`:
-            ResourceManager.emit(iCPSEventError.HANDLER_WARN, message);
+            Resources.emit(iCPSEventError.HANDLER_WARN, message);
             break;
         default:
         case `FATAL`:
-            ResourceManager.emit(iCPSEventError.HANDLER_ERROR, message);
+            Resources.emit(iCPSEventError.HANDLER_ERROR, message);
             break;
         }
     }
@@ -184,12 +184,12 @@ export class ErrorHandler {
         }
 
         if (attachments.length === 0) {
-            ResourceManager.emit(iCPSEventError.HANDLER_WARN, `No attachments found for error report`);
+            Resources.emit(iCPSEventError.HANDLER_WARN, `No attachments found for error report`);
             await fs.rmdir(attachmentDir);
             return [];
         }
 
-        ResourceManager.emit(iCPSEventError.HANDLER_ERROR, `Crash report saved to ${attachmentDir}`);
+        Resources.emit(iCPSEventError.HANDLER_ERROR, `Crash report saved to ${attachmentDir}`);
 
         return attachments;
     }
@@ -207,7 +207,7 @@ export class ErrorHandler {
 
         try {
             // Reading current log file and determining length
-            const data = (await fs.readFile(ResourceManager.logFilePath, {encoding: FILE_ENCODING})).split(`\n`);
+            const data = (await fs.readFile(Resources.logFilePath(), {encoding: FILE_ENCODING})).split(`\n`);
             const totalNumberOfLines = data.length;
 
             if (totalNumberOfLines === 0) {
@@ -236,7 +236,7 @@ export class ErrorHandler {
 
             return targetPath;
         } catch (err) {
-            ResourceManager.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare log file for crash report`, err);
+            Resources.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare log file for crash report`, err);
             return undefined;
         }
     }
@@ -248,19 +248,19 @@ export class ErrorHandler {
      * @returns A promise that resolves to the path of the prepared HAR file, or undefined if no file was written - compressed using the brotli algorithm
      */
     async prepareHarFile(attachmentDir: string, errorUUID: string): Promise<string | undefined> {
-        if (!(await ResourceManager.network.writeHarFile())) {
+        if (!(await Resources.network().writeHarFile())) {
             return undefined;
         }
 
         const targetPath = path.join(attachmentDir, `icps-crash-${errorUUID}.har`);
         let harData: fs.FileHandle;
         try {
-            harData = await fs.open(ResourceManager.harFilePath, `r`);
+            harData = await fs.open(Resources.harFilePath(), `r`);
 
             const harStream = harData.createReadStream();
             await this.compressStream(targetPath, harStream);
         } catch (err) {
-            ResourceManager.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare HAR file for crash report`, err);
+            Resources.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare HAR file for crash report`, err);
             return undefined;
         } finally {
             await harData?.close();

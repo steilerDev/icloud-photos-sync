@@ -3,12 +3,12 @@ import {test, beforeEach, expect, jest, describe} from '@jest/globals';
 import {EventManager} from "../../src/lib/resource-manager/event-manager";
 import {iCPSEventError, iCPSEventLog} from "../../src/lib/resource-manager/events";
 import {prepareResourceManager} from '../_helpers/_general';
+import {Resources} from '../../src/lib/resource-manager/main';
 
 let eventManager: EventManager;
 
 beforeEach(() => {
-    prepareResourceManager()!;
-    eventManager = new EventManager();
+    eventManager = prepareResourceManager()!._eventManager;
 });
 
 test(`EventManager emits events correctly`, () => {
@@ -30,7 +30,7 @@ describe(`EventManager manages registry correctly`, () => {
 
             const listener = {};
 
-            const staticEvents = eventManager.events(listener);
+            const staticEvents = Resources.events(listener);
             expect(staticEvents).toHaveProperty(`on`);
 
             staticEvents.on(iCPSEventError.HANDLER_EVENT, () => {});
@@ -43,7 +43,7 @@ describe(`EventManager manages registry correctly`, () => {
 
             const listener = {};
 
-            const staticEvents = eventManager.events(listener);
+            const staticEvents = Resources.events(listener);
             expect(staticEvents).toHaveProperty(`once`);
 
             staticEvents.once(iCPSEventError.HANDLER_EVENT, () => {});
@@ -56,7 +56,7 @@ describe(`EventManager manages registry correctly`, () => {
 
             const listener = {};
 
-            const staticEvents = eventManager.events(listener);
+            const staticEvents = Resources.events(listener);
             expect(staticEvents).toHaveProperty(`removeListeners`);
 
             staticEvents.removeListeners(iCPSEventError.HANDLER_EVENT);
@@ -69,7 +69,7 @@ describe(`EventManager manages registry correctly`, () => {
 
             const listener = {};
 
-            const staticEvents = eventManager.events(listener);
+            const staticEvents = Resources.events(listener);
             expect(staticEvents).toHaveProperty(`removeListeners`);
 
             staticEvents.removeListeners();
@@ -99,7 +99,7 @@ describe(`EventManager manages registry correctly`, () => {
             eventManager.emit = jest.fn<typeof eventManager.emit>()
                 .mockReturnValue(true);
 
-            const staticLogger = eventManager.logger(`test`);
+            const staticLogger = Resources.logger(`test`);
             expect(staticLogger).toHaveProperty(functionName);
 
             staticLogger[functionName](`Hello, world!`);
@@ -143,7 +143,7 @@ describe(`EventManager manages registry correctly`, () => {
             const testEvent = iCPSEventError.HANDLER_EVENT;
             const listener = {};
 
-            eventManager.events(listener).on(testEvent, eventListener);
+            eventManager.on(listener, testEvent, eventListener);
 
             expect(eventManager._eventRegistry.get(listener)).toHaveLength(1);
 
@@ -157,9 +157,9 @@ describe(`EventManager manages registry correctly`, () => {
             const testEventB = iCPSEventError.HANDLER_ERROR;
             const listener = {};
 
-            eventManager.events(listener).on(testEventA, eventListener);
-            eventManager.events(listener).on(testEventA, eventListener);
-            eventManager.events(listener).on(testEventB, eventListener);
+            eventManager.on(listener, testEventA, eventListener);
+            eventManager.on(listener, testEventA, eventListener);
+            eventManager.on(listener, testEventB, eventListener);
 
             expect(eventManager._eventRegistry.get(listener)).toHaveLength(3);
 
@@ -175,11 +175,11 @@ describe(`EventManager manages registry correctly`, () => {
             const listenerA = {};
             const listenerB = {};
 
-            eventManager.events(listenerA).on(testEventA, eventListener);
-            eventManager.events(listenerA).on(testEventA, eventListener);
-            eventManager.events(listenerA).on(testEventB, eventListener);
-            eventManager.events(listenerB).on(testEventA, eventListener);
-            eventManager.events(listenerB).on(testEventB, eventListener);
+            eventManager.on(listenerA, testEventA, eventListener);
+            eventManager.on(listenerA, testEventA, eventListener);
+            eventManager.on(listenerA, testEventB, eventListener);
+            eventManager.on(listenerB, testEventA, eventListener);
+            eventManager.on(listenerB, testEventB, eventListener);
 
             expect(eventManager._eventRegistry.get(listenerA)).toHaveLength(3);
             expect(eventManager._eventRegistry.get(listenerB)).toHaveLength(2);
@@ -199,12 +199,10 @@ describe(`EventManager manages registry correctly`, () => {
             const listenerA = {};
             const listenerB = {};
 
-            eventManager.events(listenerA)
-                .on(testEventA, eventListenerA)
-                .on(testEventB, eventListenerA);
-            eventManager.events(listenerB)
-                .on(testEventA, eventListenerB)
-                .on(testEventB, eventListenerB);
+            eventManager.on(listenerA, testEventA, eventListenerA);
+            eventManager.on(listenerA, testEventB, eventListenerA);
+            eventManager.on(listenerB, testEventA, eventListenerB);
+            eventManager.on(listenerB, testEventB, eventListenerB);
 
             eventManager.removeListenersFromRegistry(listenerA);
 
@@ -222,12 +220,10 @@ describe(`EventManager manages registry correctly`, () => {
             const listenerA = {};
             const listenerB = {};
 
-            eventManager.events(listenerA)
-                .on(testEventA, eventListenerA)
-                .on(testEventB, eventListenerA);
-            eventManager.events(listenerB)
-                .on(testEventA, eventListenerB)
-                .on(testEventB, eventListenerB);
+            eventManager.on(listenerA, testEventA, eventListenerA);
+            eventManager.on(listenerA, testEventB, eventListenerA);
+            eventManager.on(listenerB, testEventA, eventListenerB);
+            eventManager.on(listenerB, testEventB, eventListenerB);
 
             eventManager.removeListenersFromRegistry(listenerA, testEventA);
 
@@ -244,9 +240,8 @@ describe(`EventManager manages registry correctly`, () => {
             const listenerA = {};
             const listenerB = {};
 
-            eventManager.events(listenerA)
-                .on(testEventA, eventListenerA)
-                .on(testEventB, eventListenerA);
+            eventManager.on(listenerA, testEventA, eventListenerA);
+            eventManager.on(listenerA, testEventB, eventListenerA);
 
             eventManager.removeListenersFromRegistry(listenerB);
 
@@ -263,11 +258,9 @@ describe(`EventManager manages registry correctly`, () => {
             const listenerA = {};
             const listenerB = {};
 
-            eventManager.events(listenerA)
-                .on(testEventA, eventListenerA)
-                .on(testEventB, eventListenerA);
-            eventManager.events(listenerB)
-                .on(testEventA, eventListenerB);
+            eventManager.on(listenerA, testEventA, eventListenerA);
+            eventManager.on(listenerA, testEventB, eventListenerA);
+            eventManager.on(listenerB, testEventA, eventListenerB);
 
             eventManager.removeListenersFromRegistry(listenerB, testEventB);
 

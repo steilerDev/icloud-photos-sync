@@ -7,7 +7,6 @@ import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {fetchAndLoadStateReturnValue, diffStateReturnValue, convertCPLAssetsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue, fetchAllCPLAssetsMastersReturnValue, fetchAllCPLAlbumsReturnValue, getRandomZone} from '../_helpers/sync-engine.helper';
 import {MockedResourceManager, UnknownFunction, prepareResourceManager} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
-import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
 import {SyncEngineHelper} from '../../src/lib/sync-engine/helper';
 import {iCPSEventError, iCPSEventSyncEngine} from '../../src/lib/resource-manager/events';
 import {SyncEngine} from '../../src/lib/sync-engine/sync-engine';
@@ -15,6 +14,7 @@ import {iCloud} from '../../src/lib/icloud/icloud';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 import {iCPSError} from '../../src/app/error/error';
 import {SYNC_ERR} from '../../src/app/error/error-codes';
+import {Resources} from '../../src/lib/resource-manager/main';
 
 let mockedResourceManager: MockedResourceManager;
 let syncEngine: SyncEngine;
@@ -60,7 +60,7 @@ describe(`Coordination`, () => {
         });
 
         test(`Reach maximum retries`, async () => {
-            ResourceManager.instance._resources.maxRetries = 4;
+            Resources._instance._resources.maxRetries = 4;
 
             const startEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.START);
             const retryEvent = mockedResourceManager.spyOnEvent(iCPSEventSyncEngine.RETRY);

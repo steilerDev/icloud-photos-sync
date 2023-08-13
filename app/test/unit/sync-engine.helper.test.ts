@@ -1,8 +1,8 @@
 
 import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
-import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
-import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
-import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
+import expectedAssetsAll from "../api/_data/expected.all-cpl-assets.json";
+import expectedMastersAll from "../api/_data/expected.all-cpl-masters.json";
+import expectedAlbumsAll from "../api/_data/expected.all-cpl-albums.json";
 import {describe, test, expect} from '@jest/globals';
 import {SyncEngineHelper} from '../../src/lib/sync-engine/helper';
 import {getRandomZone, queueIsSorted} from '../_helpers/sync-engine.helper';

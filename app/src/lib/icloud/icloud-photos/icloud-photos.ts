@@ -5,7 +5,7 @@ import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
-import {ResourceManager} from '../../resource-manager/resource-manager.js';
+import {Resources} from '../../resource-manager/main.js';
 import {ENDPOINTS} from '../../resource-manager/network.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
 import {iCPSEventError, iCPSEventPhotos} from '../../resource-manager/events.js';
@@ -35,7 +35,7 @@ export class iCloudPhotos {
      * Creates a new iCloud Photos Class
      */
     constructor() {
-        ResourceManager.events(this).on(iCPSEventPhotos.SETUP_COMPLETED, async () => {
+        Resources.events(this).on(iCPSEventPhotos.SETUP_COMPLETED, async () => {
             await this.checkingIndexingStatus();
         });
 
@@ -48,7 +48,7 @@ export class iCloudPhotos {
      */
     getReady(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            ResourceManager.events(this)
+            Resources.events(this)
                 .once(iCPSEventPhotos.READY, () => resolve())
                 .once(iCPSEventPhotos.ERROR, err => reject(err));
         });
@@ -61,16 +61,16 @@ export class iCloudPhotos {
      */
     async setup() {
         try {
-            ResourceManager.logger(this).debug(`Getting iCloud Photos account information`);
+            Resources.logger(this).debug(`Getting iCloud Photos account information`);
 
-            const response = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.ZONES, {});
-            const validatedResponse = ResourceManager.validator.validatePhotosSetupResponse(response);
-            ResourceManager.network.applyPhotosSetupResponse(validatedResponse);
+            const response = await Resources.network().post(ENDPOINTS.PHOTOS.PATH.ZONES, {});
+            const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
+            Resources.network().applyPhotosSetupResponse(validatedResponse);
 
-            ResourceManager.logger(this).debug(`Successfully gathered iCloud Photos account information`);
-            ResourceManager.emit(iCPSEventPhotos.SETUP_COMPLETED);
+            Resources.logger(this).debug(`Successfully gathered iCloud Photos account information`);
+            Resources.emit(iCPSEventPhotos.SETUP_COMPLETED);
         } catch (err) {
-            ResourceManager.emit(iCPSEventPhotos.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.SETUP_ERROR).addCause(err));
+            Resources.emit(iCPSEventPhotos.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.SETUP_ERROR).addCause(err));
         } finally {
             return this.ready;
         }
@@ -81,16 +81,16 @@ export class iCloudPhotos {
      * Will emit READY, or ERROR
      */
     async checkingIndexingStatus() {
-        ResourceManager.logger(this).debug(`Checking Indexing Status of iCloud Photos Account`);
+        Resources.logger(this).debug(`Checking Indexing Status of iCloud Photos Account`);
         try {
             await this.checkIndexingStatusForZone(QueryBuilder.Zones.Primary);
-            if (ResourceManager.sharedZoneAvailable) {
+            if (Resources.sharedZoneAvailable()) {
                 await this.checkIndexingStatusForZone(QueryBuilder.Zones.Shared);
             }
 
-            ResourceManager.emit(iCPSEventPhotos.READY);
+            Resources.emit(iCPSEventPhotos.READY);
         } catch (err) {
-            ResourceManager.emit(iCPSEventPhotos.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNAVAILABLE).addCause(err));
+            Resources.emit(iCPSEventPhotos.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_STATE_UNAVAILABLE).addCause(err));
         }
     }
 
@@ -112,7 +112,7 @@ export class iCloudPhotos {
         }
 
         if (indexingState === `RUNNING`) {
-            ResourceManager.logger(this).debug(`Indexing for zone ${zone} in progress, sync needs to wait!`);
+            Resources.logger(this).debug(`Indexing for zone ${zone} in progress, sync needs to wait!`);
             const indexingInProgressError = new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS)
                 .addMessage(`zone: ${zone}`);
 
@@ -125,7 +125,7 @@ export class iCloudPhotos {
         }
 
         if (indexingState === `FINISHED`) {
-            ResourceManager.logger(this).info(`Indexing of ${zone} finished, sync can start!`);
+            Resources.logger(this).info(`Indexing of ${zone} finished, sync can start!`);
             return;
         }
 
@@ -170,7 +170,7 @@ export class iCloudPhotos {
             data.resultsLimit = resultsLimit;
         }
 
-        const queryResponse = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config);
+        const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config);
 
         const fetchedRecords = queryResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
@@ -212,7 +212,7 @@ export class iCloudPhotos {
             },
         }));
 
-        const operationResponse = await ResourceManager.network.post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config);
+        const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config);
         const fetchedRecords = operationResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)
@@ -244,7 +244,7 @@ export class iCloudPhotos {
                 for (const nextAlbum of await queue.shift()) {
                     // If album is a folder, there is stuff in there, adding it to the queue
                     if (nextAlbum.albumType === AlbumType.FOLDER) {
-                        ResourceManager.logger(this).debug(`Adding child elements of ${nextAlbum.albumNameEnc} to the processing queue`);
+                        Resources.logger(this).debug(`Adding child elements of ${nextAlbum.albumNameEnc} to the processing queue`);
                         queue.push(this.fetchCPLAlbums(nextAlbum.recordName));
                     }
 
@@ -333,7 +333,7 @@ export class iCloudPhotos {
                     cplAlbums.push(CPLAlbum.parseFromQuery(album));
                 }
             } catch (err) {
-                ResourceManager.logger(this).info(`Error processing CPLAlbum: ${JSON.stringify(album)}: ${err.message}`);
+                Resources.logger(this).info(`Error processing CPLAlbum: ${JSON.stringify(album)}: ${err.message}`);
             }
         }
 
@@ -378,7 +378,7 @@ export class iCloudPhotos {
             ? Math.ceil((expectedNumberOfRecords * 2) / MAX_RECORDS_LIMIT) // On all pictures two records per photo are returned (CPLMaster & CPLAsset) which are counted against max
             : Math.ceil((expectedNumberOfRecords * 3) / MAX_RECORDS_LIMIT); // On folders three records per photo are returned (CPLMaster, CPLAsset & CPLContainerRelation) which are counted against max
 
-        ResourceManager.logger(this).debug(`Expecting ${expectedNumberOfRecords} records for album ${albumId === undefined ? `All photos` : albumId} in ${zone} library, executing ${numberOfRequests} queries`);
+        Resources.logger(this).debug(`Expecting ${expectedNumberOfRecords} records for album ${albumId === undefined ? `All photos` : albumId} in ${zone} library, executing ${numberOfRequests} queries`);
 
         // Collecting all promise queries for parallel execution
         const pictureRecordsRequests: Promise<any[]>[] = [];
@@ -386,7 +386,7 @@ export class iCloudPhotos {
             const startRank = albumId === undefined // The start rank always refers to the tuple/triple of records, therefore we need to adjust the start rank based on the amount of records returned
                 ? index * Math.floor(MAX_RECORDS_LIMIT / 2)
                 : index * Math.floor(MAX_RECORDS_LIMIT / 3);
-            ResourceManager.logger(this).debug(`Building query for records of album ${albumId === undefined ? `All photos` : albumId} in ${zone} library at index ${startRank}`);
+            Resources.logger(this).debug(`Building query for records of album ${albumId === undefined ? `All photos` : albumId} in ${zone} library at index ${startRank}`);
             const startRankFilter = QueryBuilder.getStartRankFilterForStartRank(startRank);
             const directionFilter = QueryBuilder.getDirectionFilterForDirection();
 
@@ -481,7 +481,7 @@ export class iCloudPhotos {
      * @returns An array of CPLMaster and CPLAsset records
      */
     async fetchAllCPLAssetsMasters(parentId?: string): Promise<[CPLAsset[], CPLMaster[]]> {
-        ResourceManager.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
+        Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
 
         let expectedNumberOfRecords = -1;
         let allRecords: any[] = [];
@@ -491,8 +491,8 @@ export class iCloudPhotos {
             [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, parentId);
 
             // Merging assets of shared library, if available
-            if (ResourceManager.sharedZoneAvailable && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
-                ResourceManager.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
+            if (Resources.sharedZoneAvailable() && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
+                Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
                 const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared);
                 allRecords = [...allRecords, ...sharedRecords];
                 expectedNumberOfRecords += sharedExpectedCount;
@@ -519,19 +519,19 @@ export class iCloudPhotos {
                     seen.add(record.recordName);
                 }
             } catch (err) {
-                ResourceManager.logger(this).info(`Error processing asset ${JSON.stringify(record)}: ${err.message}`);
+                Resources.logger(this).info(`Error processing asset ${JSON.stringify(record)}: ${err.message}`);
             }
         }
 
         // There should be one CPLMaster and one CPLAsset per record, however the iCloud response is sometimes not adhering to this.
         if (cplMasters.length !== expectedNumberOfRecords || cplAssets.length !== expectedNumberOfRecords) {
-            ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+            Resources.emit(iCPSEventError.HANDLER_EVENT,
                 new iCPSError(ICLOUD_PHOTOS_ERR.COUNT_MISMATCH)
                     .setWarning()
                     .addMessage(`expected ${expectedNumberOfRecords} CPLMaster & ${expectedNumberOfRecords} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`),
             );
         } else {
-            ResourceManager.logger(this).debug(`Received expected amount (${expectedNumberOfRecords}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
+            Resources.logger(this).debug(`Received expected amount (${expectedNumberOfRecords}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
         }
 
         return [cplAssets, cplMasters];
@@ -543,8 +543,8 @@ export class iCloudPhotos {
      * @returns A promise, that -once resolved-, contains the Axios response
      */
     async downloadAsset(asset: Asset): Promise<AxiosResponse<Readable, any>> {
-        ResourceManager.logger(this).debug(`Starting download of asset ${asset.getDisplayName()}`);
-        return ResourceManager.network.getDataStream(asset.downloadURL);
+        Resources.logger(this).debug(`Starting download of asset ${asset.getDisplayName()}`);
+        return Resources.network().getDataStream(asset.downloadURL);
     }
 
     /**
@@ -554,7 +554,7 @@ export class iCloudPhotos {
      * @returns A Promise, that fulfils once the operation has been performed
      */
     async deleteAssets(recordNames: string[]) {
-        ResourceManager.logger(this).debug(`Deleting ${recordNames.length} assets: ${JSON.stringify(recordNames)}`);
+        Resources.logger(this).debug(`Deleting ${recordNames.length} assets: ${JSON.stringify(recordNames)}`);
         await this.performOperation(QueryBuilder.Zones.Primary, `update`, QueryBuilder.getIsDeletedField(), recordNames);
     }
 }
