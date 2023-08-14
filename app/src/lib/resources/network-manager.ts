@@ -12,7 +12,7 @@ import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
 
-class Header {
+export class Header {
     key: string;
     value: string;
     domain: string;
@@ -24,7 +24,7 @@ class Header {
     }
 }
 
-class HeaderJar {
+export class HeaderJar {
     headers: Map<string, Header> = new Map();
     cookies: Map<string, Cookie> = new Map();
 
@@ -114,8 +114,10 @@ class HeaderJar {
      * Sets a header object in the header jar - overwrites existing headers with the same key
      * @param header - The header to set
      */
-    setHeader(header: Header) {
-        this.headers.set(header.key, header);
+    setHeader(...header: Header[]) {
+        for (const h of header) {
+            this.headers.set(h.key, h);
+        }
     }
 
     /**

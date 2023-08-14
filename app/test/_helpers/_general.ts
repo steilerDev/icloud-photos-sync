@@ -114,11 +114,11 @@ export function spyOnEvent(object: EventEmitter, eventName: string, removeListen
     return eventFunction;
 }
 
-export function addHoursToCurrentDate(hours: number): string {
-    return new Date(new Date().getTime() + (hours * 3600000)).toUTCString();
+export function addHoursToCurrentDate(hours: number): Date {
+    return new Date(new Date().getTime() + (hours * 3600000));
 }
 
-export function getDateInThePast(): string {
+export function getDateInThePast(): Date {
     // 36 hours in the past
-    return new Date(new Date().getTime() - (36 * 3600000)).toUTCString();
+    return new Date(new Date().getTime() - (36 * 3600000));
 }
