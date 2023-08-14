@@ -9,8 +9,8 @@ import {Album} from "../lib/photos-library/model/album.js";
 import path from "path";
 import {Cron} from "croner";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
-import {Resources} from "../lib/resource-manager/main.js";
-import {iCPSEventApp, iCPSEventCloud, iCPSEventError, iCPSEventPhotos} from "../lib/resource-manager/events.js";
+import {Resources} from "../lib/resources/main.js";
+import {iCPSEventApp, iCPSEventCloud, iCPSEventError, iCPSEventPhotos} from "../lib/resources/events-types.js";
 
 /**
  * Filename for library lock file located in DATA_DIR
@@ -38,7 +38,7 @@ export class DaemonApp extends iCPSApp {
      * @returns Once the job has been scheduled
      */
     async run() {
-        this.job = new Cron(Resources.schedule(), async () => {
+        this.job = new Cron(Resources.manager().schedule, async () => {
             await this.performScheduledSync();
         });
         Resources.emit(iCPSEventApp.SCHEDULED, this.job?.nextRun());
@@ -78,8 +78,8 @@ abstract class iCloudApp extends iCPSApp {
         super();
 
         // It's crucial for the data dir to exist, create if it doesn't
-        if (!fs.existsSync(Resources.dataDir())) {
-            fs.mkdirSync(Resources.dataDir(), {recursive: true});
+        if (!fs.existsSync(Resources.manager().dataDir)) {
+            fs.mkdirSync(Resources.manager().dataDir, {recursive: true});
         }
 
         // Creating necessary objects for this scope
@@ -123,9 +123,9 @@ abstract class iCloudApp extends iCPSApp {
      * @throws A Library Error, if the lock could not be acquired
      */
     async acquireLibraryLock() {
-        const lockFilePath = path.join(Resources.dataDir(), LIBRARY_LOCK_FILE);
+        const lockFilePath = path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE);
         if (fs.existsSync(lockFilePath)) {
-            if (!Resources.force()) {
+            if (!Resources.manager().force) {
                 const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
                 throw new iCPSError(LIBRARY_ERR.LOCKED)
                     .addMessage(`Locked by PID ${lockingProcess}`);
@@ -142,13 +142,13 @@ abstract class iCloudApp extends iCPSApp {
      * @throws A Library Error, if the lock could not be released
      */
     async releaseLibraryLock() {
-        const lockFilePath = path.join(Resources.dataDir(), LIBRARY_LOCK_FILE);
+        const lockFilePath = path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE);
         if (!fs.existsSync(lockFilePath)) {
             return;
         }
 
         const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
-        if (lockingProcess !== process.pid.toString() && !Resources.force()) {
+        if (lockingProcess !== process.pid.toString() && !Resources.manager().force) {
             throw new iCPSError(LIBRARY_ERR.LOCKED)
                 .addMessage(`Locked by PID ${lockingProcess}`);
         }

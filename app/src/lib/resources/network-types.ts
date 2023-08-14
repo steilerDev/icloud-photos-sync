@@ -98,20 +98,6 @@ export const ENDPOINTS = {
 };
 
 /**
- * Non persistent network resources, required to access the iCloud API
- */
-export type NetworkResources = {
-    /**
-     * Session secret, either acquired on successful sign in, or after trusting the device
-     */
-    sessionSecret?: string,
-    /**
-     * The dynamic iCloud photos URL
-     */
-    photosUrl?: string,
-}
-
-/**
  * The expected response format for the signin request
  * @see {@link ENDPOINTS.AUTH.PATH.SIGNIN}
  */

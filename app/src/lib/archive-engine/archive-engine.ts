@@ -6,8 +6,8 @@ import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {iCPSError} from '../../app/error/error.js';
 import {ARCHIVE_ERR} from '../../app/error/error-codes.js';
-import {Resources} from '../resource-manager/main.js';
-import {iCPSEventArchiveEngine, iCPSEventError} from '../resource-manager/events.js';
+import {Resources} from '../resources/main.js';
+import {iCPSEventArchiveEngine, iCPSEventError} from '../resources/events-types.js';
 
 export class ArchiveEngine {
     /**
@@ -88,7 +88,7 @@ export class ArchiveEngine {
 
         // Filtering for unique & undefined entries
         const uniqueDeleteList = [...new Set(remoteDeleteList.filter(obj => obj !== undefined))];
-        if (uniqueDeleteList && uniqueDeleteList.length > 0 && Resources.remoteDelete()) {
+        if (uniqueDeleteList && uniqueDeleteList.length > 0 && Resources.manager().remoteDelete) {
             try {
                 Resources.emit(iCPSEventArchiveEngine.REMOTE_DELETE, uniqueDeleteList.length);
                 await this.icloud.photos.deleteAssets(uniqueDeleteList);
@@ -124,7 +124,7 @@ export class ArchiveEngine {
      * @throws An ArchiveWarning if loading fails
      */
     prepareForRemoteDeletion(assetPath: string, assetList: Asset[]): string | undefined {
-        if (!Resources.remoteDelete()) {
+        if (!Resources.manager().remoteDelete) {
             return undefined;
         }
 

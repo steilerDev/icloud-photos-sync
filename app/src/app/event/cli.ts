@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import * as PACKAGE_INFO from '../../lib/package.js';
 import {SingleBar} from 'cli-progress';
-import {Resources} from '../../lib/resource-manager/main.js';
-import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resource-manager/events.js';
+import {Resources} from '../../lib/resources/main.js';
+import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 
 /**
@@ -26,7 +26,7 @@ export class CLIInterface {
             barIncompleteChar: ` `,
         });
 
-        if (Resources.silent()) {
+        if (Resources.manager().silent) {
             return;
         }
 
@@ -37,7 +37,7 @@ export class CLIInterface {
         this.print(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
         this.print(chalk.green(`Made with <3 by steilerDev`));
 
-        if (Resources.logToCli()) {
+        if (Resources.manager().logToCli) {
             Resources.events(this)
                 .on(iCPSEventLog.DEBUG, (instance: any, msg: string) => this.printLog(`debug`, instance, msg))
                 .on(iCPSEventLog.INFO, (instance: any, msg: string) => this.printLog(`info`, instance, msg))
@@ -45,7 +45,7 @@ export class CLIInterface {
                 .on(iCPSEventLog.ERROR, (instance: any, msg: string) => this.printLog(`error`, instance, msg));
         }
 
-        if (!Resources.suppressWarnings()) {
+        if (!Resources.manager().suppressWarnings) {
             Resources.events(this)
                 .on(iCPSEventError.HANDLER_WARN, (msg: string) => this.printWarning(msg));
         }

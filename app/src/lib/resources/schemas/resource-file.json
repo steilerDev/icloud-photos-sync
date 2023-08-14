@@ -1,0 +1,26 @@
+{
+  "$ref": "#/definitions/ResourceFile",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ResourceFile": {
+      "additionalProperties": false,
+      "description": "Persistent information, stored in a resource file",
+      "properties": {
+        "libraryVersion": {
+          "default": 1,
+          "description": "The library version of the currently present library",
+          "minimum": 1,
+          "type": "number"
+        },
+        "trustToken": {
+          "description": "The currently used trust token",
+          "type": "string"
+        }
+      },
+      "required": [
+        "libraryVersion"
+      ],
+      "type": "object"
+    }
+  }
+}

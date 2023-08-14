@@ -1,0 +1,145 @@
+{
+  "$ref": "#/definitions/ResendMFAPhoneResponse",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ResendMFAPhoneResponse": {
+      "description": "The expected response format for the MFA resend request on a trusted phone number",
+      "properties": {
+        "data": {
+          "description": "Information about phone number verification used in MFA resend responses",
+          "properties": {
+            "authenticationType": {
+              "const": "hsa2",
+              "type": "string"
+            },
+            "hsa2Account": {
+              "const": true,
+              "type": "boolean"
+            },
+            "restrictedAccount": {
+              "const": false,
+              "type": "boolean"
+            },
+            "securityCode": {
+              "description": "Format of the expected security code used in MFA resend responses",
+              "properties": {
+                "length": {
+                  "const": 6,
+                  "type": "number"
+                },
+                "securityCodeCooldown": {
+                  "const": false,
+                  "type": "boolean"
+                },
+                "securityCodeLocked": {
+                  "const": false,
+                  "type": "boolean"
+                },
+                "tooManyCodesSent": {
+                  "const": false,
+                  "type": "boolean"
+                },
+                "tooManyCodesValidated": {
+                  "const": false,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "length",
+                "tooManyCodesSent",
+                "tooManyCodesValidated",
+                "securityCodeLocked",
+                "securityCodeCooldown"
+              ],
+              "type": "object"
+            },
+            "trustedPhoneNumber": {
+              "description": "The phone number used for verification",
+              "properties": {
+                "id": {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "lastTwoDigits": {
+                  "maxLength": 2,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "numberWithDialCode": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "obfuscatedNumber": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "pushMode": {
+                  "pattern": "^sms|voice$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "numberWithDialCode",
+                "pushMode",
+                "obfuscatedNumber",
+                "lastTwoDigits"
+              ],
+              "type": "object"
+            },
+            "trustedPhoneNumbers": {
+              "items": {
+                "description": "Object representing a trusted phone number used in MFA resend responses",
+                "properties": {
+                  "id": {
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  "lastTwoDigits": {
+                    "maxLength": 2,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "numberWithDialCode": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "obfuscatedNumber": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "pushMode": {
+                    "pattern": "^sms|voice$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "numberWithDialCode",
+                  "pushMode",
+                  "obfuscatedNumber",
+                  "lastTwoDigits"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "trustedPhoneNumber",
+            "trustedPhoneNumbers",
+            "securityCode",
+            "authenticationType",
+            "hsa2Account",
+            "restrictedAccount"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    }
+  }
+}

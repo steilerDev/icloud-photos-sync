@@ -2,51 +2,89 @@ import {jest} from '@jest/globals';
 import EventEmitter from 'events';
 import * as Config from './_config';
 import {iCPSAppOptions} from '../../src/app/factory';
-import {ResourceManager} from '../../src/lib/resource-manager/resource-manager';
+import {ResourceManager} from '../../src/lib/resources/resource-manager';
 import MockAdapter from 'axios-mock-adapter';
-import {NetworkManager} from '../../src/lib/resource-manager/network-manager';
-import {iCPSEvent, iCPSEventError} from '../../src/lib/resource-manager/events';
-import {Resources} from '../../src/lib/resource-manager/main';
+import {NetworkManager} from '../../src/lib/resources/network-manager';
+import {iCPSEvent, iCPSEventError} from '../../src/lib/resources/events-types';
+import {Resources} from '../../src/lib/resources/main';
+import {Validator} from '../../src/lib/resources/validator';
+import {EventManager} from '../../src/lib/resources/event-manager';
 
 export type UnknownFunction = (...args: Array<unknown>) => unknown
 export type UnknownAsyncFunction = (...args: Array<unknown>) => Promise<unknown>
+
+export type MockedResourceInstances = {
+    manager: MockedResourceManager,
+    network: MockedNetworkManager,
+    validator: MockedValidator,
+    event: MockedEventManager,
+}
 
 export type MockedNetworkManager = NetworkManager & {
     mock: MockAdapter;
 };
 
-export type MockedResourceManager = ResourceManager & {
+export type MockedResourceManager = ResourceManager
+
+export type MockedValidator = Validator
+
+export type MockedEventManager = EventManager & {
     spyOnEvent: (event: iCPSEvent, removeListeners?: boolean) => jest.Mock;
     spyOnHandlerEvent: (removeListeners?: boolean) => jest.Mock;
-    _networkManager: MockedNetworkManager;
 }
 
 /**
- * This function resets the ResourceManager singleton and optionally creates a new instance using the supplied configuration.
- * @param initiate - Whether to create a new instance of the ResourceManager. If false, the ResourceManager singleton will be reset, but not re-initialized and a resource file will be created through mockfs.
- * @param appOptions - The configuration to use when creating a new instance of the ResourceManager
+ * This function resets the Resource singletons and creates new instances suitable for API tests, reading secrets from the environment variables.
+ * @returns
  */
-export function prepareResourceManager(initiate: boolean = true, appOptions: iCPSAppOptions = Config.defaultConfig): MockedResourceManager | undefined {
-    if (Resources._instance) {
-        Resources._instance._eventManager._eventBus.removeAllListeners();
-        Resources._instance = undefined as any;
-    }
+export function prepareResourceForApiTests(): Resources.Types.Instances {
+    prepareResources(false);
 
-    ResourceManager.prototype.readResourceFile = jest.fn<typeof ResourceManager.prototype.readResourceFile>()
+    const instances = Resources.setup({
+        ...Config.defaultConfig,
+        username: process.env.TEST_APPLE_ID_USER!,
+        password: process.env.TEST_APPLE_ID_PWD!,
+        trustToken: process.env.TEST_TRUST_TOKEN!,
+        failOnMfa: true,
+    })!;
+
+    instances.manager._writeResourceFile = jest.fn<typeof instances.manager._writeResourceFile>()
+        .mockReturnValue();
+
+    instances.manager._readResourceFile = jest.fn<typeof instances.manager._readResourceFile>()
         .mockReturnValue({
-            trustToken: Config.trustToken,
             libraryVersion: 1,
         });
 
-    ResourceManager.prototype.writeResourceFile = jest.fn<typeof ResourceManager.prototype.writeResourceFile>()
-        .mockReturnValue();
+    return instances;
+}
+
+/**
+ * This function resets the Resource singletons and optionally creates new instances using the supplied configuration.
+ * @param initiate - Whether to create new instances. If false, the instance singletons will be reset, but not re-initialized.
+ * @param appOptions - The configuration to use when creating a new instance of the ResourceManager
+ */
+export function prepareResources(initiate: boolean = true, appOptions: iCPSAppOptions = Config.defaultConfig): MockedResourceInstances | undefined {
+    if (Resources._instances) {
+        Resources._instances.event._eventBus.removeAllListeners();
+        Resources._instances = undefined as any;
+    }
 
     if (initiate) {
-        const instance = Resources.setup(appOptions) as MockedResourceManager;
-        instance._networkManager.mock = new MockAdapter(instance._networkManager._axios, {onNoMatch: `throwException`});
-        instance.spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(instance._eventManager._eventBus, event, removeListeners);
-        instance.spyOnHandlerEvent = (removeListeners: boolean = true) => spyOnEvent(instance._eventManager._eventBus, iCPSEventError.HANDLER_EVENT, removeListeners);
-        return instance;
+        const instances = Resources.setup(appOptions) as MockedResourceInstances;
+        instances.manager._readResourceFile = jest.fn<typeof instances.manager._readResourceFile>()
+            .mockReturnValue({
+                libraryVersion: 1,
+                trustToken: Config.trustToken,
+            });
+
+        instances.manager._writeResourceFile = jest.fn<typeof instances.manager._writeResourceFile>()
+            .mockReturnValue();
+
+        instances.network.mock = new MockAdapter(instances.network._axios, {onNoMatch: `throwException`});
+        instances.event.spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(instances.event._eventBus, event, removeListeners);
+        instances.event.spyOnHandlerEvent = (removeListeners: boolean = true) => spyOnEvent(instances.event._eventBus, iCPSEventError.HANDLER_EVENT, removeListeners);
+        return instances;
     }
 
     return undefined;

@@ -1,0 +1,57 @@
+{
+  "$ref": "#/definitions/SigninResponse",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "SigninResponse": {
+      "description": "The expected response format for the signin request",
+      "properties": {
+        "data": {
+          "description": "Data should be irrelevant for this one",
+          "properties": {
+            "authType": {
+              "const": "hsa2",
+              "type": "string"
+            }
+          },
+          "required": [
+            "authType"
+          ],
+          "type": "object"
+        },
+        "headers": {
+          "properties": {
+            "scnt": {
+              "description": "Scnt token - required to keep track of MFA request",
+              "minLength": 1,
+              "type": "string"
+            },
+            "set-cookie": {
+              "description": "Should hold the 'aasp' cookie",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "x-apple-session-token": {
+              "description": "Session secret - required to keep track of MFA request",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "scnt",
+            "x-apple-session-token",
+            "set-cookie"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "data",
+        "headers"
+      ],
+      "type": "object"
+    }
+  }
+}

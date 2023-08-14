@@ -5,8 +5,8 @@ import {CPLAlbum, CPLAsset, CPLMaster} from "../icloud/icloud-photos/query-parse
 import {Album} from "../photos-library/model/album.js";
 import {Asset, AssetType} from "../photos-library/model/asset.js";
 import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../photos-library/model/photos-entity.js";
-import {Resources} from "../resource-manager/main.js";
-import {iCPSEventError} from "../resource-manager/events.js";
+import {Resources} from "../resources/main.js";
+import {iCPSEventError} from "../resources/events-types.js";
 
 /**
  * This object exposes various static helpers required to perform a sync

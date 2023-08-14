@@ -6,9 +6,9 @@ import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/mode
 
 import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
-import {Resources} from '../resource-manager/main.js';
+import {Resources} from '../resources/main.js';
 import {SyncEngineHelper} from './helper.js';
-import {iCPSEventError, iCPSEventSyncEngine} from '../resource-manager/events.js';
+import {iCPSEventError, iCPSEventSyncEngine} from '../resources/events-types.js';
 import {AxiosError} from 'axios';
 
 /**
@@ -43,7 +43,7 @@ export class SyncEngine {
         Resources.logger(this).info(`Starting sync`);
         Resources.emit(iCPSEventSyncEngine.START);
         let retryCount = 0;
-        while (Resources.maxRetries() > retryCount) {
+        while (Resources.manager().maxRetries > retryCount) {
             retryCount++;
             Resources.logger(this).info(`Performing sync, try #${retryCount}`);
 

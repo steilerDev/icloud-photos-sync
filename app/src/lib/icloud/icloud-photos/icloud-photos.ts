@@ -5,10 +5,10 @@ import {Asset} from '../../photos-library/model/asset.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
-import {Resources} from '../../resource-manager/main.js';
-import {ENDPOINTS} from '../../resource-manager/network.js';
+import {Resources} from '../../resources/main.js';
+import {ENDPOINTS} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
-import {iCPSEventError, iCPSEventPhotos} from '../../resource-manager/events.js';
+import {iCPSEventError, iCPSEventPhotos} from '../../resources/events-types.js';
 import {Readable} from 'stream';
 
 /**
@@ -84,7 +84,7 @@ export class iCloudPhotos {
         Resources.logger(this).debug(`Checking Indexing Status of iCloud Photos Account`);
         try {
             await this.checkIndexingStatusForZone(QueryBuilder.Zones.Primary);
-            if (Resources.sharedZoneAvailable()) {
+            if (Resources.manager().sharedZoneAvailable) {
                 await this.checkIndexingStatusForZone(QueryBuilder.Zones.Shared);
             }
 
@@ -491,7 +491,7 @@ export class iCloudPhotos {
             [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, parentId);
 
             // Merging assets of shared library, if available
-            if (Resources.sharedZoneAvailable() && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
+            if (Resources.manager().sharedZoneAvailable && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
                 Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
                 const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared);
                 allRecords = [...allRecords, ...sharedRecords];

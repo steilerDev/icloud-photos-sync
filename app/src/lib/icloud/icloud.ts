@@ -4,9 +4,9 @@ import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {MFAMethod} from './mfa/mfa-method.js';
 import {iCPSError} from '../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
-import {Resources} from '../resource-manager/main.js';
-import {ENDPOINTS} from '../resource-manager/network.js';
-import {iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos} from '../resource-manager/events.js';
+import {Resources} from '../resources/main.js';
+import {ENDPOINTS} from '../resources/network-types.js';
+import {iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos} from '../resources/events-types.js';
 
 /**
  * This class holds the iCloud connection
@@ -44,7 +44,7 @@ export class iCloud {
 
         Resources.events(this)
             .on(iCPSEventCloud.MFA_REQUIRED, () => {
-                if (Resources.failOnMfa()) {
+                if (Resources.manager().failOnMfa) {
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.FAIL_ON_MFA));
                     return;
                 }
@@ -98,10 +98,10 @@ export class iCloud {
         };
 
         const data = {
-            accountName: Resources.username(),
-            password: Resources.password(),
+            accountName: Resources.manager().username,
+            password: Resources.manager().password,
             trustTokens: [
-                Resources.trustToken(),
+                Resources.manager().trustToken,
             ],
         };
 
@@ -121,7 +121,7 @@ export class iCloud {
 
             if (response.status === 200) {
                 Resources.logger(this).debug(`Response status is 200, authentication successful - device trusted`);
-                Resources.emit(iCPSEventCloud.TRUSTED, Resources.trustToken());
+                Resources.emit(iCPSEventCloud.TRUSTED, Resources.manager().trustToken);
             }
 
             // This should never happen
@@ -233,7 +233,7 @@ export class iCloud {
             Resources.network().applyTrustResponse(validatedResponse);
 
             Resources.logger(this).debug(`Acquired account tokens`);
-            Resources.emit(iCPSEventCloud.TRUSTED, Resources.trustToken());
+            Resources.emit(iCPSEventCloud.TRUSTED, Resources.manager().trustToken);
         } catch (err) {
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_ACCOUNT_TOKENS).addCause(err));
         }
@@ -249,8 +249,8 @@ export class iCloud {
 
             const url = ENDPOINTS.SETUP.BASE + ENDPOINTS.SETUP.PATH.ACCOUNT;
             const data = {
-                dsWebAuthToken: Resources.network().sessionSecret,
-                trustToken: Resources.network().trustToken,
+                dsWebAuthToken: Resources.manager().sessionSecret,
+                trustToken: Resources.manager().trustToken,
             };
 
             const response = await Resources.network().post(url, data);

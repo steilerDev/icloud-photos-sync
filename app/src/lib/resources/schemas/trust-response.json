@@ -1,0 +1,34 @@
+{
+  "$ref": "#/definitions/TrustResponse",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "TrustResponse": {
+      "description": "The expected response format for the device trust request",
+      "properties": {
+        "headers": {
+          "properties": {
+            "x-apple-session-token": {
+              "description": "Session token to setup the account",
+              "minLength": 1,
+              "type": "string"
+            },
+            "x-apple-twosv-trust-token": {
+              "description": "TwoTrust token for future requests",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "x-apple-twosv-trust-token",
+            "x-apple-session-token"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "headers"
+      ],
+      "type": "object"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 /* CSpell:disable */
 import {iCPSAppOptions} from "../../src/app/factory";
-import {PhotosAccountZone} from "../../src/lib/resource-manager/resources";
+import {PhotosAccountZone} from "../../src/lib/resources/resource-types";
 
 export const defaultConfig = {
     username: `test@icloud.com`,

@@ -9,7 +9,7 @@ import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import axios, {AxiosRequestConfig} from 'axios';
 import * as Config from '../_helpers/_config';
-import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
+import {MockedEventManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
@@ -17,10 +17,11 @@ const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR)
 const archiveDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR);
 const stashDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR, STASH_DIR);
 
-let mockedResourceManager: MockedResourceManager;
+let mockedEventManager: MockedEventManager;
 
 beforeEach(() => {
-    mockedResourceManager = prepareResourceManager()!;
+    const instances = prepareResources()!;
+    mockedEventManager = instances.event;
 });
 
 afterEach(() => {
@@ -230,7 +231,7 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
+            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
 
             const albums = await library.loadAlbums();
 
@@ -251,7 +252,7 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const orphanEvent = mockedResourceManager.spyOnHandlerEvent();
+            const orphanEvent = mockedEventManager.spyOnHandlerEvent();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(0);
@@ -744,7 +745,7 @@ describe(`Write state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
+            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
             library.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
 
             try {
@@ -1239,7 +1240,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
+                const handlerEvent = mockedEventManager.spyOnHandlerEvent();
 
                 library.writeAlbum(folder);
 
@@ -1401,7 +1402,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
+                const handlerEvent = mockedEventManager.spyOnHandlerEvent();
 
                 library.writeAlbum(folder);
 

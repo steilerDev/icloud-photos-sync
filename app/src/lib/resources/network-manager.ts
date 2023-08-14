@@ -1,15 +1,16 @@
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import fs from "fs/promises";
 import * as PACKAGE from "../package.js";
-import {HEADER_KEYS, SigninResponse, NetworkResources, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network.js";
+import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network-types.js";
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
-import {RES_MANAGER_ERR} from "../../app/error/error-codes.js";
+import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {AxiosHarTracker} from "axios-har-tracker";
-import {FILE_ENCODING, iCPSResources} from "./resources.js";
+import {FILE_ENCODING} from "./resource-types.js";
 import {Readable} from "stream";
 import PQueue from "p-queue";
 import {Resources} from "./main.js";
+import {iCPSAppOptions} from "../../app/factory.js";
 
 class Header {
     key: string;
@@ -129,9 +130,11 @@ class HeaderJar {
      * Sets a cookie object in the header jar - overwrites existing cookies with the same key
      * @param cookie - The cookie to set
      */
-    setCookie(cookie: Cookie | string) {
-        const _cookie = typeof cookie === `string` ? Cookie.parse(cookie) : cookie;
-        this.cookies.set(_cookie.key, _cookie);
+    setCookie(...cookie: (Cookie | string)[]) {
+        for (const c of cookie) {
+            const _cookie = typeof c === `string` ? Cookie.parse(c) : c;
+            this.cookies.set(_cookie.key, _cookie);
+        }
     }
 }
 
@@ -139,11 +142,6 @@ class HeaderJar {
  * This class is responsible for keeping track of the shared network connection
  */
 export class NetworkManager {
-    /**
-     * Non persistent network resources, required to access the iCloud API
-     */
-    _resources: NetworkResources = {};
-
     /**
      * Local axios instance to handle network requests
      */
@@ -179,7 +177,7 @@ export class NetworkManager {
      * Creates a new network manager
      * @param resources - The global configuration resources - because Resources Singleton is not yet available
      */
-    constructor(resources: iCPSResources) {
+    constructor(resources: iCPSAppOptions) {
         this._rateLimiter = new PQueue({
             intervalCap: resources.metadataRate[0],
             interval: resources.metadataRate[1],
@@ -217,7 +215,7 @@ export class NetworkManager {
         await this.settleRateLimiter();
         await this.settleCCYLimiter();
 
-        if (Resources.enableNetworkCapture()) {
+        if (Resources.manager().enableNetworkCapture) {
             await this.writeHarFile();
             // Resets the generated HAR file to make sure it does not grow too much while reusing the same instance
             // Unfortunately this object is private, so we have to cast it to any
@@ -278,7 +276,7 @@ export class NetworkManager {
      * @returns - True if the file could be written, false otherwise
      */
     async writeHarFile(): Promise<boolean> {
-        if (!Resources.harFilePath()) {
+        if (!Resources.manager().harFilePath) {
             Resources.logger(this).debug(`Not writing HAR file because network capture is disabled`);
             return false;
         }
@@ -293,7 +291,7 @@ export class NetworkManager {
 
             Resources.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
-            await fs.writeFile(Resources.harFilePath(), JSON.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
+            await fs.writeFile(Resources.manager().harFilePath, JSON.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
             Resources.logger(this).info(`HAR file written`);
         } catch (err) {
             Resources.logger(this).error(`Unable to write HAR file: ${err.message}`);
@@ -313,25 +311,12 @@ export class NetworkManager {
     }
 
     /**
-     * Returns the session secret required to setup the account
-     * This can either be the session ID acquired from authentication with a valid trust token, or the session token acquired after going through the MFA flow and trusting the device
-     * @throws An error if neither session ID nor session token are set
-     */
-    get sessionSecret(): string {
-        if (this._resources.sessionSecret !== undefined) {
-            return this._resources.sessionSecret;
-        }
-
-        throw new iCPSError(RES_MANAGER_ERR.NO_SESSION);
-    }
-
-    /**
      * Persists the X-Apple-Id-Session-Id header required for the MFA flow and adds the relevant header to the header jar
      * @param sessionId - The session id value to use - undefined to delete the header
      */
     set sessionId(sessionId: string) {
         Resources.logger(this).debug(`Setting session secret to ${sessionId}`);
-        this._resources.sessionSecret = sessionId;
+        Resources.manager().sessionSecret = sessionId;
         this._headerJar.setHeader(new Header(`idmsa.apple.com`, HEADER_KEYS.SESSION_ID, sessionId));
     }
 
@@ -340,29 +325,7 @@ export class NetworkManager {
      */
     set sessionToken(sessionToken: string) {
         Resources.logger(this).debug(`Setting session secret to ${sessionToken}`);
-        this._resources.sessionSecret = sessionToken;
-    }
-
-    /**
-     * @returns The currently stored trust token from the resource manager
-     */
-    get trustToken(): string | undefined {
-        return Resources.trustToken();
-    }
-
-    /**
-     * Persists the trust token required for setup using the resource
-     * @param string - The trust token to persist
-     */
-    set trustToken(string: string | undefined) {
-        Resources.setTrustToken(string);
-    }
-
-    /**
-     * @returns The currently stored photos URL
-     */
-    get photosUrl(): string | undefined {
-        return this._resources.photosUrl;
+        Resources.manager().sessionSecret = sessionToken;
     }
 
     /**
@@ -371,10 +334,9 @@ export class NetworkManager {
      */
     set photosUrl(url: string | undefined) {
         Resources.logger(this).debug(`Setting photosUrl to ${url}`);
-        this._resources.photosUrl = url;
-        this._axios.defaults.baseURL = this._resources.photosUrl === undefined
+        this._axios.defaults.baseURL = url === undefined
             ? undefined
-            : this._resources.photosUrl + ENDPOINTS.PHOTOS.BASE_PATH;
+            : url + ENDPOINTS.PHOTOS.BASE_PATH;
     }
 
     /**
@@ -391,7 +353,7 @@ export class NetworkManager {
             return;
         }
 
-        this._headerJar.setCookie(aaspCookie[0]);
+        this._headerJar.setCookie(...aaspCookie);
     }
 
     /**
@@ -399,7 +361,7 @@ export class NetworkManager {
      * @param trustResponse - The response received from the server
      */
     applyTrustResponse(trustResponse: TrustResponse) {
-        this.trustToken = trustResponse.headers[`x-apple-twosv-trust-token`];
+        Resources.manager().trustToken = trustResponse.headers[`x-apple-twosv-trust-token`];
         this.sessionToken = trustResponse.headers[`x-apple-session-token`];
     }
 
@@ -409,27 +371,28 @@ export class NetworkManager {
      */
     applySetupResponse(setupResponse: SetupResponse) {
         this.photosUrl = setupResponse.data.webservices.ckdatabasews.url;
-        setupResponse.headers[`set-cookie`]
-            .forEach(cookie => {
-                this._headerJar.setCookie(cookie);
-            });
+        this._headerJar.setCookie(...setupResponse.headers[`set-cookie`]);
     }
 
+    /**
+     * Applies configurations from the response received after the photos setup request
+     * @param photosSetupResponse - The response received from the server
+     */
     applyPhotosSetupResponse(photosSetupResponse: PhotosSetupResponse) {
         Resources.logger(this).info(`Found ${photosSetupResponse.data.zones.length} available zones: ${photosSetupResponse.data.zones.map(zone => zone.zoneID.zoneName).join(`, `)}`);
 
         const primaryZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName === `PrimarySync`);
         if (!primaryZoneData) {
-            throw new iCPSError(RES_MANAGER_ERR.NO_PRIMARY_ZONE)
+            throw new iCPSError(RESOURCES_ERR.NO_PRIMARY_ZONE)
                 .addContext(`zones`, photosSetupResponse.data.zones);
         }
 
-        Resources.setPrimaryZone(primaryZoneData.zoneID);
+        Resources.manager().primaryZone = primaryZoneData.zoneID;
 
         const sharedZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName.startsWith(`SharedSync-`));
         if (sharedZoneData) {
             Resources.logger(this).debug(`Found shared zone ${sharedZoneData.zoneID.zoneName}`);
-            Resources.setSharedZone(sharedZoneData.zoneID);
+            Resources.manager().sharedZone = sharedZoneData.zoneID;
         }
     }
 

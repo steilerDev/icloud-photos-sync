@@ -3,7 +3,7 @@ import Cron from "croner";
 import * as PACKAGE_INFO from '../lib/package.js';
 import {ErrorHandler} from "./event/error-handler.js";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
-import {Resources} from "../lib/resource-manager/main.js";
+import {Resources} from "../lib/resources/main.js";
 import {LogLevel} from "./event/log.js";
 
 /**
@@ -131,7 +131,7 @@ export function appFactory(argv: string[]): iCPSApp {
         .addOption(new Option(`-p, --password <password>`, `AppleID password.`)
             .env(`APPLE_ID_PWD`)
             .makeOptionMandatory(true))
-        .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, '.trust-token.icloud' in data dir is tried to be read. If all fails, a new trust token will be acquired, requiring the input of an MFA code.`)
+        .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, the trust token is read from the '.icloud-photos-sync' resource file in data dir. If all fails, a new trust token will be acquired, requiring the input of an MFA code.`)
             .env(`TRUST_TOKEN`))
         .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library.`)
             .env(`DATA_DIR`)

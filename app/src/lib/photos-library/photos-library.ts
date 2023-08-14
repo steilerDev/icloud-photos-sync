@@ -9,8 +9,8 @@ import {pEvent} from 'p-event';
 import {iCPSError} from '../../app/error/error.js';
 import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
-import {Resources} from '../resource-manager/main.js';
-import {iCPSEventError} from '../resource-manager/events.js';
+import {Resources} from '../resources/main.js';
+import {iCPSEventError} from '../resources/events-types.js';
 import {Readable} from 'stream';
 
 type PathTuple = [namePath: string, uuidPath: string]
@@ -44,9 +44,9 @@ export class PhotosLibrary {
      * @param app - The app object holding CLI options
      */
     constructor() {
-        if (Resources.libraryVersion() !== PHOTOS_LIBRARY.LIBRARY_VERSION) {
+        if (Resources.manager().libraryVersion !== PHOTOS_LIBRARY.LIBRARY_VERSION) {
             throw new iCPSError(LIBRARY_ERR.VERSION_MISMATCH)
-                .addMessage(`The library version of the local library (${Resources.libraryVersion()}) does not match the expected version (${PHOTOS_LIBRARY.LIBRARY_VERSION})`);
+                .addMessage(`The library version of the local library (${Resources.manager().libraryVersion}) does not match the expected version (${PHOTOS_LIBRARY.LIBRARY_VERSION})`);
         }
 
         this.primaryAssetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.PRIMARY_ASSET_DIR]);
@@ -61,7 +61,7 @@ export class PhotosLibrary {
      * @returns The full path
      */
     getFullPathAndCreate(subpaths: string[]) {
-        const thisDir = path.join(Resources.dataDir(), ...subpaths);
+        const thisDir = path.join(Resources.manager().dataDir, ...subpaths);
         if (!fs.existsSync(thisDir)) {
             Resources.logger(this).debug(`${thisDir} does not exist, creating`);
             fs.mkdirSync(thisDir, {recursive: true});
@@ -114,7 +114,7 @@ export class PhotosLibrary {
     async loadAlbums(): Promise<PLibraryEntities<Album>> {
         // Loading folders
         const libAlbums: PLibraryEntities<Album> = {};
-        (await this.loadAlbum(Album.getRootAlbum(), Resources.dataDir()))
+        (await this.loadAlbum(Album.getRootAlbum(), Resources.manager().dataDir))
             .forEach(album => {
                 libAlbums[album.getUUID()] = album;
             });
@@ -310,9 +310,9 @@ export class PhotosLibrary {
      */
     findAlbumPaths(album: Album): PathTuple {
         // Directory path of the parent folder
-        let parentPath = Resources.dataDir();
+        let parentPath = Resources.manager().dataDir;
         if (album.parentAlbumUUID) {
-            const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, Resources.dataDir());
+            const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, Resources.manager().dataDir);
             if (parentPathExt.length === 0) {
                 throw new iCPSError(LIBRARY_ERR.NO_PARENT)
                     .addMessage(album.getDisplayName())

@@ -1,9 +1,9 @@
 import * as fs from "fs";
-import {Resources} from "../../lib/resource-manager/main.js";
-import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resource-manager/events.js';
+import {Resources} from "../../lib/resources/main.js";
+import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {iCPSError} from '../error/error.js';
 import {APP_ERR} from '../error/error-codes.js';
-import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
+import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 
 /**
  * The InfluxLineProtocol field set type
@@ -272,13 +272,13 @@ export class MetricsExporter {
      * @param options - The CLI options
      */
     constructor() {
-        if (!Resources.exportMetrics()) {
+        if (!Resources.manager().exportMetrics) {
             return;
         }
 
         try {
             // Try opening the file - truncate if exists
-            this.metricsFileDescriptor = fs.openSync(Resources.metricsFilePath(), `w`);
+            this.metricsFileDescriptor = fs.openSync(Resources.manager().metricsFilePath, `w`);
 
             Resources.events(this)
                 .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
@@ -427,7 +427,7 @@ export class MetricsExporter {
                         .addField(FIELDS.WARNING, err));
                 });
 
-            Resources.logger(this).info(`Enabling metrics exporter to file ${Resources.metricsFilePath}`);
+            Resources.logger(this).info(`Enabling metrics exporter to file ${Resources.manager().metricsFilePath}`);
         } catch (err) {
             Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(APP_ERR.METRICS_EXPORTER).setWarning().addCause(err));
         }

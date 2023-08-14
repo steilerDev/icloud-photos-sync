@@ -31,6 +31,7 @@ export const HAR_FILE_NAME = `.icloud-photos-sync.har`;
 export type iCPSResources = ResourceFile
     & iCPSAppOptions
     & PhotosAccount
+    & NetworkResources;
 
 /**
  * Persistent information, stored in a resource file
@@ -46,6 +47,16 @@ export type ResourceFile = {
      * The currently used trust token
      */
     trustToken?: string
+}
+
+/**
+ * Non persistent network resources, required to access the iCloud API
+ */
+type NetworkResources = {
+    /**
+     * Session secret, either acquired on successful sign in, or after trusting the device
+     */
+    sessionSecret?: string,
 }
 
 /**

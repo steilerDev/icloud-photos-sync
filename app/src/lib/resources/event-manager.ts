@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import {iCPSEvent} from "./events.js";
+import {iCPSEvent} from "./events-types.js";
 import {Resources} from "./main.js";
 
 /**

@@ -1,9 +1,9 @@
 import * as fs from 'fs';
-import {Resources} from "../../lib/resource-manager/main.js";
-import {iCPSEventError, iCPSEventLog} from "../../lib/resource-manager/events.js";
+import {Resources} from "../../lib/resources/main.js";
+import {iCPSEventError, iCPSEventLog} from "../../lib/resources/events-types.js";
 import {iCPSError} from "../error/error.js";
 import {APP_ERR} from "../error/error-codes.js";
-import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
+import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 
 export enum LogLevel {
     DEBUG = `debug`,
@@ -22,15 +22,15 @@ export class LogInterface {
     private logFileDescriptor: number;
 
     constructor() {
-        if (Resources.logToCli()) {
+        if (Resources.manager().logToCli) {
             return;
         }
 
         try {
             // Try opening the file - truncate if exists
-            this.logFileDescriptor = fs.openSync(Resources.logFilePath(), `w`);
+            this.logFileDescriptor = fs.openSync(Resources.manager().logFilePath, `w`);
 
-            switch (Resources.logLevel()) {
+            switch (Resources.manager().logLevel) {
             case `debug`:
                 Resources.events(this).on(iCPSEventLog.DEBUG, (source: any, msg: string) => this.logMessage(LogLevel.DEBUG, source, msg));
             default:

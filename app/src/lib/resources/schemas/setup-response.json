@@ -1,0 +1,82 @@
+{
+  "$ref": "#/definitions/SetupResponse",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "SetupResponse": {
+      "description": "The expected response format for the account setup request",
+      "properties": {
+        "data": {
+          "properties": {
+            "dsInfo": {
+              "properties": {
+                "isWebAccessAllowed": {
+                  "const": true,
+                  "description": "Web access is necessary for the application",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "isWebAccessAllowed"
+              ],
+              "type": "object"
+            },
+            "webservices": {
+              "description": "Holds the dynamic iCloud service URLs",
+              "properties": {
+                "ckdatabasews": {
+                  "description": "Service for iCloud Photos",
+                  "properties": {
+                    "status": {
+                      "const": "active",
+                      "description": "Service needs to be active",
+                      "type": "string"
+                    },
+                    "url": {
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url",
+                    "status"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "ckdatabasews"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "dsInfo",
+            "webservices"
+          ],
+          "type": "object"
+        },
+        "headers": {
+          "properties": {
+            "set-cookie": {
+              "description": "Should hold the apple authentication",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": [
+            "set-cookie"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "headers",
+        "data"
+      ],
+      "type": "object"
+    }
+  }
+}

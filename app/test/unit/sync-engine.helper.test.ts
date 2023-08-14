@@ -10,8 +10,8 @@ import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {PEntity, PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
-import {prepareResourceManager} from '../_helpers/_general';
-import {iCPSEventError} from '../../src/lib/resource-manager/events';
+import {prepareResources} from '../_helpers/_general';
+import {iCPSEventError} from '../../src/lib/resources/events-types';
 import {iCPSError} from '../../src/app/error/error';
 import {SYNC_ERR} from '../../src/app/error/error-codes';
 
@@ -52,9 +52,9 @@ describe(`Processing remote records`, () => {
     });
 
     test(`Converting Asset - Invalid File Extension`, () => {
-        const mockedResourceManager = prepareResourceManager()!;
+        const mockedEventManager = prepareResources()!.event;
 
-        const warnEvent = mockedResourceManager.spyOnEvent(iCPSEventError.HANDLER_EVENT);
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventError.HANDLER_EVENT);
 
         const cplMasters = [{
             filenameEnc: `emhlbnl1LWx1by13bWZtU054bTl5MC11bnNwbGFzaC5qcGVn`,

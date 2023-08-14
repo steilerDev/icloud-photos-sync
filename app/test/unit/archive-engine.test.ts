@@ -6,22 +6,26 @@ import path from 'path';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
-import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
+import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
-import {iCPSEventArchiveEngine} from '../../src/lib/resource-manager/events';
+import {iCPSEventArchiveEngine} from '../../src/lib/resources/events-types';
 import {ArchiveEngine} from '../../src/lib/archive-engine/archive-engine';
 import {iCloud} from '../../src/lib/icloud/icloud';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 
 let mockedResourceManager: MockedResourceManager;
+let mockedEventManager: MockedEventManager;
 let archiveEngine: ArchiveEngine;
 
 beforeEach(() => {
     mockfs();
-    mockedResourceManager = prepareResourceManager(true, {
+    const instances = prepareResources(true, {
         ...Config.defaultConfig,
         remoteDelete: true,
     })!;
+    mockedResourceManager = instances.manager;
+    mockedEventManager = instances.event;
+
     archiveEngine = new ArchiveEngine(new iCloud(), new PhotosLibrary());
 });
 
@@ -74,10 +78,10 @@ describe.each([{
                 },
             });
 
-            const startEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
-            const persistEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
-            const remoteDeleteEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
-            const finishEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+            const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
+            const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
+            const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
@@ -153,11 +157,11 @@ describe.each([{
                 },
             });
 
-            const startEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
-            const persistEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
-            const remoteDeleteEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
-            const finishEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
-            const errorEvent = mockedResourceManager.spyOnHandlerEvent();
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+            const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
+            const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
+            const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
+            const errorEvent = mockedEventManager.spyOnHandlerEvent();
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
@@ -232,7 +236,7 @@ describe.each([{
                     },
                 });
 
-                const startEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+                const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
 
                 archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
@@ -292,7 +296,7 @@ describe.each([{
                     },
                 });
 
-                const startEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+                const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
 
                 archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
@@ -334,7 +338,7 @@ describe.each([{
                     },
                 });
 
-                const startEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+                const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
 
                 archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
@@ -387,11 +391,11 @@ describe.each([{
                 },
             });
 
-            const startEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
-            const persistEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
-            const remoteDeleteEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
-            const finishEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
-            const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+            const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
+            const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
+            const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
+            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve())
                 .mockRejectedValueOnce(`Persisting failed`)
@@ -460,11 +464,11 @@ describe.each([{
                 },
             });
 
-            const startEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
-            const persistEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
-            const remoteDeleteEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
-            const finishEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
-            const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+            const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
+            const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
+            const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
+            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
@@ -532,10 +536,10 @@ describe.each([{
                 },
             });
 
-            const startEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
-            const persistEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
-            const remoteDeleteEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
-            const finishEvent = mockedResourceManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+            const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
+            const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
+            const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)

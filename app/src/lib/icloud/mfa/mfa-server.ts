@@ -3,8 +3,8 @@ import {MFAMethod} from './mfa-method.js';
 import * as PACKAGE from '../../package.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {MFA_ERR} from '../../../app/error/error-codes.js';
-import {Resources} from '../../resource-manager/main.js';
-import {iCPSEventError, iCPSEventMFA} from '../../resource-manager/events.js';
+import {Resources} from '../../resources/main.js';
+import {iCPSEventError, iCPSEventMFA} from '../../resources/events-types.js';
 
 /**
  * The MFA timeout value in milliseconds
@@ -43,11 +43,11 @@ export class MFAServer {
      * Creates the server object
      */
     constructor() {
-        Resources.logger(this).debug(`Preparing MFA server on port ${Resources.mfaServerPort()}`);
+        Resources.logger(this).debug(`Preparing MFA server on port ${Resources.manager().mfaServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
         this.server.on(`error`, err => {
             const icpsErr = (Object.hasOwn(err, `code`) && (err as any).code === `EADDRINUSE`)
-                ? new iCPSError(MFA_ERR.ADDR_IN_USE_ERR).addContext(`port`, Resources.mfaServerPort())
+                ? new iCPSError(MFA_ERR.ADDR_IN_USE_ERR).addContext(`port`, Resources.manager().mfaServerPort)
                 : new iCPSError(MFA_ERR.SERVER_ERR);
 
             icpsErr.addCause(err);
@@ -64,10 +64,10 @@ export class MFAServer {
      */
     startServer() {
         try {
-            this.server.listen(Resources.mfaServerPort(), () => {
+            this.server.listen(Resources.manager().mfaServerPort, () => {
                 /* c8 ignore start */
                 // Never starting the server just to see logger message
-                Resources.emit(iCPSEventMFA.STARTED, Resources.mfaServerPort());
+                Resources.emit(iCPSEventMFA.STARTED, Resources.manager().mfaServerPort);
                 Resources.logger(this).info(`Exposing endpoints: ${JSON.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
                 /* c8 ignore stop */
             });

@@ -5,9 +5,9 @@ import {randomUUID} from "crypto";
 import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
 import fs from 'fs/promises';
 import path from 'path';
-import {Resources} from '../../lib/resource-manager/main.js';
-import {iCPSEventApp, iCPSEventError} from '../../lib/resource-manager/events.js';
-import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
+import {Resources} from '../../lib/resources/main.js';
+import {iCPSEventApp, iCPSEventError} from '../../lib/resources/events-types.js';
+import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 import * as zlib from 'zlib';
 import {Readable} from 'stream';
 import os from 'os';
@@ -58,7 +58,7 @@ export class ErrorHandler {
     verbose: boolean = false;
 
     constructor() {
-        if (Resources.enableCrashReporting) {
+        if (Resources.manager().enableCrashReporting) {
             const endpoint = `${BACKTRACE_SUBMISSION.DOMAIN}/${BACKTRACE_SUBMISSION.UNIVERSE}/`
                                 + `${PACKAGE_INFO.VERSION === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
                                 + BACKTRACE_SUBMISSION.TYPE;
@@ -82,7 +82,7 @@ export class ErrorHandler {
             await this.handle(err);
         });
 
-        if (Resources.logLevel() === `debug`) {
+        if (Resources.manager().logLevel === `debug`) {
             this.verbose = true;
         }
 
@@ -207,7 +207,7 @@ export class ErrorHandler {
 
         try {
             // Reading current log file and determining length
-            const data = (await fs.readFile(Resources.logFilePath(), {encoding: FILE_ENCODING})).split(`\n`);
+            const data = (await fs.readFile(Resources.manager().logFilePath, {encoding: FILE_ENCODING})).split(`\n`);
             const totalNumberOfLines = data.length;
 
             if (totalNumberOfLines === 0) {
@@ -255,7 +255,7 @@ export class ErrorHandler {
         const targetPath = path.join(attachmentDir, `icps-crash-${errorUUID}.har`);
         let harData: fs.FileHandle;
         try {
-            harData = await fs.open(Resources.harFilePath(), `r`);
+            harData = await fs.open(Resources.manager().harFilePath, `r`);
 
             const harStream = harData.createReadStream();
             await this.compressStream(targetPath, harStream);
