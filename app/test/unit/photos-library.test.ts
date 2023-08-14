@@ -9,7 +9,7 @@ import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import axios, {AxiosRequestConfig} from 'axios';
 import * as Config from '../_helpers/_config';
-import {MockedEventManager, prepareResources} from '../_helpers/_general';
+import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
@@ -18,24 +18,40 @@ const archiveDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR);
 const stashDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR, STASH_DIR);
 
 let mockedEventManager: MockedEventManager;
+let mockedResourceManager: MockedResourceManager;
 
 beforeEach(() => {
     const instances = prepareResources()!;
     mockedEventManager = instances.event;
+    mockedResourceManager = instances.manager;
 });
 
 afterEach(() => {
     mockfs.restore();
 });
 
+test(`Libraries version mismatch should throw`, () => {
+    mockfs();
+    mockedResourceManager._resources.libraryVersion = 99;
+    expect(() => {
+        const _library = new PhotosLibrary();
+    }).toThrowError(/^Library version mismatch$/);
+
+    expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeFalsy();
+    expect(fs.existsSync(primaryAssetDir)).toBeFalsy();
+    expect(fs.existsSync(sharedAssetDir)).toBeFalsy();
+    expect(fs.existsSync(archiveDir)).toBeFalsy();
+    expect(fs.existsSync(stashDir)).toBeFalsy();
+});
+
 test(`Should create missing directories`, () => {
     mockfs();
     const _library = new PhotosLibrary();
-    expect(fs.existsSync(Config.defaultConfig.dataDir)).toBe(true);
-    expect(fs.existsSync(primaryAssetDir)).toBe(true);
-    expect(fs.existsSync(sharedAssetDir)).toBe(true);
-    expect(fs.existsSync(archiveDir)).toBe(true);
-    expect(fs.existsSync(stashDir)).toBe(true);
+    expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeTruthy();
+    expect(fs.existsSync(primaryAssetDir)).toBeTruthy();
+    expect(fs.existsSync(sharedAssetDir)).toBeTruthy();
+    expect(fs.existsSync(archiveDir)).toBeTruthy();
+    expect(fs.existsSync(stashDir)).toBeTruthy();
 });
 
 test(`Should use existing directories and not overwrite content`, () => {

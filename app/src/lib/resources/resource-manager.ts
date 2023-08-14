@@ -26,15 +26,14 @@ export class ResourceManager {
      */
     constructor(appOptions: iCPSAppOptions) {
         // Cannot use logger here
+        Object.assign(this._resources, this._readResourceFile());
         Object.assign(this._resources, appOptions);
-
-        if (this._resources.trustToken) {
-            this.trustToken = this._resources.trustToken;
-        }
 
         if (this._resources.refreshToken) {
             this.trustToken = undefined;
         }
+
+        this._writeResourceFile();
     }
 
     /**
@@ -47,7 +46,7 @@ export class ResourceManager {
             return Resources.validator().validateResourceFile(resourceFileData);
         } catch (err) {
             Resources.emit(iCPSEventResourceManager.NO_RESOURCE_FILE_FOUND);
-            Resources.logger(this).debug(`No resource file found returning default values`);
+            Resources.logger(this).debug(`No valid resource file found returning default values`);
             return {
                 libraryVersion: PHOTOS_LIBRARY.LIBRARY_VERSION,
                 trustToken: undefined,
@@ -56,13 +55,13 @@ export class ResourceManager {
     }
 
     /**
-     * Writes the resource file to disk
+     * Writes the resources to the resource file
      */
     _writeResourceFile() {
         try {
             const formattedResourceFile: ResourceFile = {
-                libraryVersion: this.libraryVersion,
-                trustToken: this.trustToken,
+                libraryVersion: this._resources.libraryVersion,
+                trustToken: this._resources.trustToken,
             };
             const resourceFileData = JSON.stringify(formattedResourceFile, null, 4);
             Resources.logger(this).debug(`Writing resource file to ${this.resourceFilePath}`);
@@ -138,8 +137,8 @@ export class ResourceManager {
      * @returns The currently loaded libraries version
      */
     get libraryVersion(): number {
-        const {libraryVersion} = this._readResourceFile();
-        if (libraryVersion !== undefined) {
+        if (isNaN(this._resources.libraryVersion)) {
+            const {libraryVersion} = this._readResourceFile();
             this._resources.libraryVersion = libraryVersion;
         }
 
@@ -150,12 +149,12 @@ export class ResourceManager {
      * @returns The currently used trust token, or undefined if none is set. The supplied trust token from the CLI options takes precedence over the one from the resource file.
      */
     get trustToken(): string | undefined {
-        if (this._resources.trustToken) {
-            return this._resources.trustToken;
+        if (!this._resources.trustToken) {
+            const {trustToken} = this._readResourceFile();
+            this._resources.trustToken = trustToken;
         }
 
-        const {trustToken} = this._readResourceFile();
-        return trustToken;
+        return this._resources.trustToken;
     }
 
     /**

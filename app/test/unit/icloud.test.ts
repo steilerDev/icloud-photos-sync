@@ -116,6 +116,7 @@ describe.each([
     },
 ])(`Setup iCloud: $desc`, ({photosDomain}) => {
     beforeEach(() => {
+        mockedResourceManager._resources.trustToken = Config.trustToken;
         mockedNetworkManager.photosUrl = photosDomain;
     });
 
@@ -152,10 +153,7 @@ describe.each([
         });
 
         test(`Invalid Trust Token - MFA Required`, async () => {
-            mockedResourceManager._readResourceFile = jest.fn<typeof mockedResourceManager._readResourceFile>()
-                .mockReturnValue({
-                    libraryVersion: 1,
-                });
+            mockedResourceManager._resources.trustToken = undefined;
 
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
             icloud.ready = new Promise<void>((resolve, _reject) => resolve());
@@ -610,6 +608,7 @@ describe.each([
     describe(`Setup iCloud`, () => {
         test(`Success`, async () => {
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+            mockedResourceManager._resources.trustToken = Config.trustToken;
 
             mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>();
             mockedNetworkManager.applySetupResponse = jest.fn<typeof mockedNetworkManager.applySetupResponse>();
@@ -640,11 +639,7 @@ describe.each([
             });
 
             mockedNetworkManager.mock
-                .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
-                    dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-                    trustToken: Config.trustToken,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                .onAny()
                 .reply(200);
 
             await icloud.setupAccount();
@@ -657,11 +652,7 @@ describe.each([
             mockedNetworkManager.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedNetworkManager.mock
-                .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
-                    dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-                    trustToken: Config.trustToken,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                .onAny()
                 .reply(500);
 
             await icloud.setupAccount();

@@ -66,20 +66,34 @@ export function prepareResourceForApiTests(): Resources.Types.Instances {
  */
 export function prepareResources(initiate: boolean = true, appOptions: iCPSAppOptions = Config.defaultConfig): MockedResourceInstances | undefined {
     if (Resources._instances) {
-        Resources._instances.event._eventBus.removeAllListeners();
+        if (Resources._instances.event) {
+            Resources._instances.event._eventBus.removeAllListeners();
+        }
+
         Resources._instances = undefined as any;
     }
 
     if (initiate) {
-        const instances = Resources.setup(appOptions) as MockedResourceInstances;
-        instances.manager._readResourceFile = jest.fn<typeof instances.manager._readResourceFile>()
+        const originalWriteResourceFile = ResourceManager.prototype._writeResourceFile;
+        const originalReadResourceFile = ResourceManager.prototype._readResourceFile;
+
+        ResourceManager.prototype._writeResourceFile = jest.fn<typeof ResourceManager.prototype._writeResourceFile>()
+            .mockReturnValue();
+
+        ResourceManager.prototype._readResourceFile = jest.fn<typeof ResourceManager.prototype._readResourceFile>()
             .mockReturnValue({
                 libraryVersion: 1,
-                trustToken: Config.trustToken,
+                trustToken: undefined,
             });
 
-        instances.manager._writeResourceFile = jest.fn<typeof instances.manager._writeResourceFile>()
-            .mockReturnValue();
+        const instances = Resources.setup(appOptions) as MockedResourceInstances;
+
+        instances.manager._writeResourceFile = ResourceManager.prototype._writeResourceFile;
+
+        instances.manager._readResourceFile = ResourceManager.prototype._readResourceFile;
+
+        ResourceManager.prototype._writeResourceFile = originalWriteResourceFile;
+        ResourceManager.prototype._readResourceFile = originalReadResourceFile;
 
         instances.network.mock = new MockAdapter(instances.network._axios, {onNoMatch: `throwException`});
         instances.event.spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(instances.event._eventBus, event, removeListeners);

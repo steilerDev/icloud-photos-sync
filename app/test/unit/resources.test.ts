@@ -1,96 +1,175 @@
 
 import {test, beforeEach, expect, jest, describe} from '@jest/globals';
+import * as Config from '../_helpers/_config';
 import {EventManager} from "../../src/lib/resources/event-manager";
 import {iCPSEventError, iCPSEventLog} from "../../src/lib/resources/events-types";
 import {prepareResources} from '../_helpers/_general';
 import {Resources} from '../../src/lib/resources/main';
 
-let eventManager: EventManager;
-
-beforeEach(() => {
-    eventManager = prepareResources()!.event;
-});
-
-describe(`Creates static events element correctly`, () => {
-    test(`on function`, () => {
-        eventManager.on = jest.fn<typeof eventManager.on>()
-            .mockReturnValue(eventManager);
-
-        const listener = {};
-
-        const staticEvents = Resources.events(listener);
-        expect(staticEvents).toHaveProperty(`on`);
-
-        staticEvents.on(iCPSEventError.HANDLER_EVENT, () => {});
-        expect(eventManager.on).toHaveBeenCalledWith(listener, iCPSEventError.HANDLER_EVENT, expect.any(Function));
+describe(`Initializes correctly`, () => {
+    beforeEach(() => {
+        prepareResources(false);
     });
 
-    test(`once function`, () => {
-        eventManager.once = jest.fn<typeof eventManager.once>()
-            .mockReturnValue(eventManager);
-
-        const listener = {};
-
-        const staticEvents = Resources.events(listener);
-        expect(staticEvents).toHaveProperty(`once`);
-
-        staticEvents.once(iCPSEventError.HANDLER_EVENT, () => {});
-        expect(eventManager.once).toHaveBeenCalledWith(listener, iCPSEventError.HANDLER_EVENT, expect.any(Function));
+    test(`setup should initialize the singleton instances`, () => {
+        const instances = Resources.setup(Config.defaultConfig);
+        expect(instances.event).toBeDefined();
+        expect(instances.validator).toBeDefined();
+        expect(instances.manager).toBeDefined();
+        expect(instances.network).toBeDefined();
     });
 
-    test(`removeListener function`, () => {
-        eventManager.removeListenersFromRegistry = jest.fn<typeof eventManager.removeListenersFromRegistry>()
-            .mockReturnValue(eventManager);
-
-        const listener = {};
-
-        const staticEvents = Resources.events(listener);
-        expect(staticEvents).toHaveProperty(`removeListeners`);
-
-        staticEvents.removeListeners(iCPSEventError.HANDLER_EVENT);
-        expect(eventManager.removeListenersFromRegistry).toHaveBeenCalledWith(listener, iCPSEventError.HANDLER_EVENT);
+    test(`setup should throw if called twice`, () => {
+        Resources.setup(Config.defaultConfig);
+        expect(() => Resources.setup(Config.defaultConfig)).toThrowError();
     });
 
-    test(`removeListener function without event`, () => {
-        eventManager.removeListenersFromRegistry = jest.fn<typeof eventManager.removeListenersFromRegistry>()
-            .mockReturnValue(eventManager);
-
-        const listener = {};
-
-        const staticEvents = Resources.events(listener);
-        expect(staticEvents).toHaveProperty(`removeListeners`);
-
-        staticEvents.removeListeners();
-        expect(eventManager.removeListenersFromRegistry).toHaveBeenCalledWith(listener, undefined);
+    test(`instances should return the singleton instances`, () => {
+        Resources.setup(Config.defaultConfig);
+        const instances = Resources.instances();
+        expect(instances.event).toBeDefined();
+        expect(instances.validator).toBeDefined();
+        expect(instances.manager).toBeDefined();
+        expect(instances.network).toBeDefined();
     });
-});
 
-describe(`Creates static logger element correctly`, () => {
-    test.each([
+    test(`instances should throw if called before setup`, () => {
+        expect(() => Resources.instances()).toThrowError(/^Resources have not been initiated$/);
+    });
+
+    describe.each([
         {
-            functionName: `log`,
-            expectedLogLevel: iCPSEventLog.INFO,
+            functionName: `event`,
+            typeName: `EventManager`,
+            error: /^EventManager has not been initiated$/,
         }, {
-            functionName: `debug`,
-            expectedLogLevel: iCPSEventLog.DEBUG,
+            functionName: `manager`,
+            typeName: `ResourceManager`,
+            error: /^ResourceManager has not been initiated$/,
         }, {
-            functionName: `info`,
-            expectedLogLevel: iCPSEventLog.INFO,
+            functionName: `network`,
+            typeName: `NetworkManager`,
+            error: /^NetworkManager has not been initiated$/,
         }, {
-            functionName: `warn`,
-            expectedLogLevel: iCPSEventLog.WARN,
-        }, {
-            functionName: `error`,
-            expectedLogLevel: iCPSEventLog.ERROR,
+            functionName: `validator`,
+            typeName: `Validator`,
+            error: /^Validator has not been initiated$/,
         },
-    ])(`$functionName function`, ({functionName, expectedLogLevel}) => {
+    ])(`$functionName access function`, ({functionName, typeName, error}) => {
+        test(`${functionName}() should return the ${typeName}`, () => {
+            Resources.setup(Config.defaultConfig);
+
+            const obj = Resources[functionName]();
+
+            expect(obj).toBeDefined();
+            expect(obj.constructor.name).toEqual(typeName);
+        });
+
+        test(`${functionName}() should throw if ${typeName} is uninitialized`, () => {
+            Resources._instances = {} as any;
+
+            expect(() => Resources[functionName]()).toThrowError(error);
+        });
+    });
+});
+
+describe(`Creates static helper functions correctly`, () => {
+    let eventManager: EventManager;
+
+    beforeEach(() => {
+        eventManager = prepareResources()!.event;
+    });
+
+    test(`Emits event correctly`, () => {
         eventManager.emit = jest.fn<typeof eventManager.emit>()
             .mockReturnValue(true);
 
-        const staticLogger = Resources.logger(`test`);
-        expect(staticLogger).toHaveProperty(functionName);
+        Resources.emit(iCPSEventError.HANDLER_EVENT, `Hello, world!`);
 
-        staticLogger[functionName](`Hello, world!`);
-        expect(eventManager.emit).toHaveBeenCalledWith(expectedLogLevel, `test`, `Hello, world!`);
+        expect(eventManager.emit).toHaveBeenCalledWith(iCPSEventError.HANDLER_EVENT, `Hello, world!`);
+    });
+
+    describe(`Creates static events element correctly`, () => {
+        test(`on function`, () => {
+            eventManager.on = jest.fn<typeof eventManager.on>()
+                .mockReturnValue(eventManager);
+
+            const listener = {};
+
+            const staticEvents = Resources.events(listener);
+            expect(staticEvents).toHaveProperty(`on`);
+
+            staticEvents.on(iCPSEventError.HANDLER_EVENT, () => {});
+            expect(eventManager.on).toHaveBeenCalledWith(listener, iCPSEventError.HANDLER_EVENT, expect.any(Function));
+        });
+
+        test(`once function`, () => {
+            eventManager.once = jest.fn<typeof eventManager.once>()
+                .mockReturnValue(eventManager);
+
+            const listener = {};
+
+            const staticEvents = Resources.events(listener);
+            expect(staticEvents).toHaveProperty(`once`);
+
+            staticEvents.once(iCPSEventError.HANDLER_EVENT, () => {});
+            expect(eventManager.once).toHaveBeenCalledWith(listener, iCPSEventError.HANDLER_EVENT, expect.any(Function));
+        });
+
+        test(`removeListener function`, () => {
+            eventManager.removeListenersFromRegistry = jest.fn<typeof eventManager.removeListenersFromRegistry>()
+                .mockReturnValue(eventManager);
+
+            const listener = {};
+
+            const staticEvents = Resources.events(listener);
+            expect(staticEvents).toHaveProperty(`removeListeners`);
+
+            staticEvents.removeListeners(iCPSEventError.HANDLER_EVENT);
+            expect(eventManager.removeListenersFromRegistry).toHaveBeenCalledWith(listener, iCPSEventError.HANDLER_EVENT);
+        });
+
+        test(`removeListener function without event`, () => {
+            eventManager.removeListenersFromRegistry = jest.fn<typeof eventManager.removeListenersFromRegistry>()
+                .mockReturnValue(eventManager);
+
+            const listener = {};
+
+            const staticEvents = Resources.events(listener);
+            expect(staticEvents).toHaveProperty(`removeListeners`);
+
+            staticEvents.removeListeners();
+            expect(eventManager.removeListenersFromRegistry).toHaveBeenCalledWith(listener, undefined);
+        });
+    });
+
+    describe(`Creates static logger element correctly`, () => {
+        test.each([
+            {
+                functionName: `log`,
+                expectedLogLevel: iCPSEventLog.INFO,
+            }, {
+                functionName: `debug`,
+                expectedLogLevel: iCPSEventLog.DEBUG,
+            }, {
+                functionName: `info`,
+                expectedLogLevel: iCPSEventLog.INFO,
+            }, {
+                functionName: `warn`,
+                expectedLogLevel: iCPSEventLog.WARN,
+            }, {
+                functionName: `error`,
+                expectedLogLevel: iCPSEventLog.ERROR,
+            },
+        ])(`$functionName function`, ({functionName, expectedLogLevel}) => {
+            eventManager.emit = jest.fn<typeof eventManager.emit>()
+                .mockReturnValue(true);
+
+            const staticLogger = Resources.logger(`test`);
+            expect(staticLogger).toHaveProperty(functionName);
+
+            staticLogger[functionName](`Hello, world!`);
+            expect(eventManager.emit).toHaveBeenCalledWith(expectedLogLevel, `test`, `Hello, world!`);
+        });
     });
 });
