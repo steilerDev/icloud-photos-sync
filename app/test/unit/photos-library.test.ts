@@ -142,6 +142,8 @@ describe(`Load state`, () => {
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // eslint-disable-line
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
+                        ".DS_Store": ``, // 'Safe' file
+                        ".fuse_hidden1234": ``, // 'Safe' file
                     },
                 },
                 expectedCount: 2,
@@ -155,6 +157,8 @@ describe(`Load state`, () => {
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // eslint-disable-line
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
+                        ".DS_Store": ``, // 'Safe' file
+                        ".fuse_hidden1234": ``, // 'Safe' file
                     },
                 },
                 expectedCount: 2,
@@ -174,6 +178,8 @@ describe(`Load state`, () => {
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // eslint-disable-line
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
+                        ".DS_Store": ``, // 'Safe' file
+                        ".fuse_hidden1234": ``, // 'Safe' file
                     },
                 },
                 expectedCount: 5,
@@ -437,10 +443,10 @@ describe(`Load state`, () => {
             const emptyAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const emptyAlbumName = `Stuff`;
 
-            const files: any = {};
-            for (const safeFileName of SAFE_FILES) {
-                files[safeFileName] = Buffer.from([1]);
-            }
+            const files: any = {
+                ".DS_Store": Buffer.from([1]),
+                ".fuse_hidden0016736000000ccc": Buffer.from([1]),
+            };
 
             mockfs({
                 [Config.defaultConfig.dataDir]: {
@@ -467,10 +473,10 @@ describe(`Load state`, () => {
         test(`Load nested state`, async () => {
             const emptyAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const emptyAlbumName = `Stuff`;
-            const files: any = {};
-            for (const safeFileName of SAFE_FILES) {
-                files[safeFileName] = Buffer.from([1]);
-            }
+            const files: any = {
+                ".DS_Store": Buffer.from([1]),
+                ".fuse_hidden0016736000000ccc": Buffer.from([1]),
+            };
 
             const folderUUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
             const folderName = `Memories`;
@@ -1521,10 +1527,10 @@ describe(`Write state`, () => {
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `Memories`;
 
-                const files: any = {};
-                for (const safeFileName of SAFE_FILES) {
-                    files[safeFileName] = Buffer.from([1]);
-                }
+                const files: any = {
+                    ".DS_Store": Buffer.from([1]),
+                    ".fuse_hidden0016736000000ccc": Buffer.from([1]),
+                };
 
                 mockfs({
                     [Config.defaultConfig.dataDir]: {

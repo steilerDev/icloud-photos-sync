@@ -85,7 +85,8 @@ export class PhotosLibrary {
         const libAssets: PLibraryEntities<Asset> = {};
         const zonePath = zone === Zones.Primary ? this.primaryAssetDir : this.sharedAssetDir;
         (await fs.promises.readdir(zonePath, {withFileTypes: true}))
-            .filter(file => file.isFile() && !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name))
+            .filter(file => file.isFile())
+            .filter(file => PHOTOS_LIBRARY.SAFE_FILES.every(regex => !regex.test(file.name)))
             .forEach(file => {
                 try {
                     const fileStat = fs.statSync(path.format({
@@ -227,10 +228,13 @@ export class PhotosLibrary {
             withFileTypes: true,
         })).some(file => file.isDirectory());
 
-        // If there are files in the folders, the folder is treated as archived
-        const filePresent = (await fs.promises.readdir(thisPath, {
+        const dirContent = await fs.promises.readdir(thisPath, {
             withFileTypes: true,
-        })).filter(file => !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name)) // Filter out files that are safe to ignore
+        });
+
+        // If there are files in the folders, the folder is treated as archived
+        const filePresent = dirContent
+            .filter(file => PHOTOS_LIBRARY.SAFE_FILES.every(regex => !regex.test(file.name)))
             .some(file => file.isFile());
 
         if (directoryPresent) {
@@ -467,7 +471,8 @@ export class PhotosLibrary {
 
         // Checking content
         const pathContent = fs.readdirSync(uuidPath, {withFileTypes: true})
-            .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
+            .filter(item => !item.isSymbolicLink()) // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
+            .filter(file => PHOTOS_LIBRARY.SAFE_FILES.every(regex => !regex.test(file.name)));
         if (pathContent.length > 0) {
             throw new iCPSError(LIBRARY_ERR.NOT_EMPTY)
                 .addMessage(uuidPath)
