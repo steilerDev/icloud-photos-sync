@@ -9,8 +9,8 @@ import {pEvent} from 'p-event';
 import {iCPSError} from '../../app/error/error.js';
 import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
-import {ResourceManager} from '../resource-manager/resource-manager.js';
-import {iCPSEventError} from '../resource-manager/events.js';
+import {Resources} from '../resources/main.js';
+import {iCPSEventError} from '../resources/events-types.js';
 import {Readable} from 'stream';
 
 type PathTuple = [namePath: string, uuidPath: string]
@@ -44,6 +44,11 @@ export class PhotosLibrary {
      * @param app - The app object holding CLI options
      */
     constructor() {
+        if (Resources.manager().libraryVersion !== PHOTOS_LIBRARY.LIBRARY_VERSION) {
+            throw new iCPSError(LIBRARY_ERR.VERSION_MISMATCH)
+                .addMessage(`The library version of the local library (${Resources.manager().libraryVersion}) does not match the expected version (${PHOTOS_LIBRARY.LIBRARY_VERSION})`);
+        }
+
         this.primaryAssetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.PRIMARY_ASSET_DIR]);
         this.sharedAssetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.SHARED_ASSET_DIR]);
         this.archiveDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR]);
@@ -56,9 +61,9 @@ export class PhotosLibrary {
      * @returns The full path
      */
     getFullPathAndCreate(subpaths: string[]) {
-        const thisDir = path.join(ResourceManager.dataDir, ...subpaths);
+        const thisDir = path.join(Resources.manager().dataDir, ...subpaths);
         if (!fs.existsSync(thisDir)) {
-            ResourceManager.logger(this).debug(`${thisDir} does not exist, creating`);
+            Resources.logger(this).debug(`${thisDir} does not exist, creating`);
             fs.mkdirSync(thisDir, {recursive: true});
         }
 
@@ -80,7 +85,8 @@ export class PhotosLibrary {
         const libAssets: PLibraryEntities<Asset> = {};
         const zonePath = zone === Zones.Primary ? this.primaryAssetDir : this.sharedAssetDir;
         (await fs.promises.readdir(zonePath, {withFileTypes: true}))
-            .filter(file => file.isFile() && !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name))
+            .filter(file => file.isFile())
+            .filter(file => PHOTOS_LIBRARY.SAFE_FILES.every(regex => !regex.test(file.name)))
             .forEach(file => {
                 try {
                     const fileStat = fs.statSync(path.format({
@@ -89,9 +95,9 @@ export class PhotosLibrary {
                     }));
                     const asset = Asset.fromFile(file.name, fileStat, zone);
                     libAssets[asset.getUUID()] = asset;
-                    ResourceManager.logger(this).debug(`Loaded asset ${asset.getDisplayName()}`);
+                    Resources.logger(this).debug(`Loaded asset ${asset.getDisplayName()}`);
                 } catch (err) {
-                    ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+                    Resources.emit(iCPSEventError.HANDLER_EVENT,
                         new iCPSError(LIBRARY_ERR.INVALID_FILE)
                             .setWarning()
                             .addMessage(file.name)
@@ -109,7 +115,7 @@ export class PhotosLibrary {
     async loadAlbums(): Promise<PLibraryEntities<Album>> {
         // Loading folders
         const libAlbums: PLibraryEntities<Album> = {};
-        (await this.loadAlbum(Album.getRootAlbum(), ResourceManager.dataDir))
+        (await this.loadAlbum(Album.getRootAlbum(), Resources.manager().dataDir))
             .forEach(album => {
                 libAlbums[album.getUUID()] = album;
             });
@@ -134,13 +140,13 @@ export class PhotosLibrary {
             albums.push(album);
         }
 
-        ResourceManager.logger(this).info(`Loading album ${album.getDisplayName()}`);
+        Resources.logger(this).info(`Loading album ${album.getDisplayName()}`);
 
         const symbolicLinks = (await fs.promises.readdir(albumPath, {
             withFileTypes: true,
         })).filter(file => file.isSymbolicLink());
 
-        ResourceManager.logger(this).debug(`Found ${symbolicLinks.length} symbolic links in ${album.getDisplayName()}`);
+        Resources.logger(this).debug(`Found ${symbolicLinks.length} symbolic links in ${album.getDisplayName()}`);
 
         for (const link of symbolicLinks) {
             // If we are loading a folder, we need to iterate over it's contents UUIDs
@@ -176,7 +182,7 @@ export class PhotosLibrary {
         try {
             // Checking if there is actually a dead symlink
             if (await fs.promises.lstat(symlinkPath) && !fs.existsSync(symlinkPath)) {
-                ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+                Resources.emit(iCPSEventError.HANDLER_EVENT,
                     new iCPSError(LIBRARY_ERR.DEAD_SYMLINK)
                         .setWarning()
                         .addMessage(symlinkPath)
@@ -222,16 +228,19 @@ export class PhotosLibrary {
             withFileTypes: true,
         })).some(file => file.isDirectory());
 
-        // If there are files in the folders, the folder is treated as archived
-        const filePresent = (await fs.promises.readdir(thisPath, {
+        const dirContent = await fs.promises.readdir(thisPath, {
             withFileTypes: true,
-        })).filter(file => !PHOTOS_LIBRARY.SAFE_FILES.includes(file.name)) // Filter out files that are safe to ignore
+        });
+
+        // If there are files in the folders, the folder is treated as archived
+        const filePresent = dirContent
+            .filter(file => PHOTOS_LIBRARY.SAFE_FILES.every(regex => !regex.test(file.name)))
             .some(file => file.isFile());
 
         if (directoryPresent) {
             // AlbumType.Folder cannot be archived!
             if (filePresent) {
-                ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+                Resources.emit(iCPSEventError.HANDLER_EVENT,
                     new iCPSError(LIBRARY_ERR.EXTRANEOUS_FILE)
                         .setWarning()
                         .addMessage(thisPath),
@@ -255,7 +264,7 @@ export class PhotosLibrary {
      * @returns A promise, that resolves once this asset was written to disk and verified
      */
     async writeAsset(asset: Asset, response: AxiosResponse<Readable, any>): Promise<void> {
-        ResourceManager.logger(this).debug(`Writing asset ${asset.getDisplayName()}`);
+        Resources.logger(this).debug(`Writing asset ${asset.getDisplayName()}`);
         const location = asset.getAssetFilePath();
         const writeStream = fs.createWriteStream(location, {flags: `w`});
         response.data.pipe(writeStream);
@@ -263,9 +272,9 @@ export class PhotosLibrary {
         try {
             await fs.promises.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
             await this.verifyAsset(asset);
-            ResourceManager.logger(this).debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
+            Resources.logger(this).debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
         } catch (err) {
-            ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+            Resources.emit(iCPSEventError.HANDLER_EVENT,
                 new iCPSError(LIBRARY_ERR.INVALID_ASSET)
                     .addMessage(asset.getDisplayName())
                     .addContext(`asset`, asset)
@@ -281,7 +290,7 @@ export class PhotosLibrary {
      * @returns A promise, that resolves once the asset was deleted from disk
      */
     async deleteAsset(asset: Asset) {
-        ResourceManager.logger(this).info(`Deleting asset ${asset.getDisplayName()}`);
+        Resources.logger(this).info(`Deleting asset ${asset.getDisplayName()}`);
         await fs.promises.rm(asset.getAssetFilePath(), {force: true});
     }
 
@@ -292,7 +301,7 @@ export class PhotosLibrary {
      * @throws An error, in case the object cannot be verified
      */
     async verifyAsset(asset: Asset): Promise<boolean> {
-        ResourceManager.logger(this).debug(`Verifying asset ${asset.getDisplayName()}`);
+        Resources.logger(this).debug(`Verifying asset ${asset.getDisplayName()}`);
         return asset.verify();
     }
 
@@ -305,9 +314,9 @@ export class PhotosLibrary {
      */
     findAlbumPaths(album: Album): PathTuple {
         // Directory path of the parent folder
-        let parentPath = ResourceManager.dataDir;
+        let parentPath = Resources.manager().dataDir;
         if (album.parentAlbumUUID) {
-            const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, ResourceManager.dataDir);
+            const parentPathExt = this.findAlbumByUUIDInPath(album.parentAlbumUUID, Resources.manager().dataDir);
             if (parentPathExt.length === 0) {
                 throw new iCPSError(LIBRARY_ERR.NO_PARENT)
                     .addMessage(album.getDisplayName())
@@ -365,7 +374,7 @@ export class PhotosLibrary {
         }).filter(result => result !== ``); // Removing non-matches
 
         if (searchResult.length === 1) {
-            ResourceManager.logger(this).debug(`Found folder ${albumUUID} in ${rootPath}`);
+            Resources.logger(this).debug(`Found folder ${albumUUID} in ${rootPath}`);
             return searchResult[0];
         }
 
@@ -399,10 +408,10 @@ export class PhotosLibrary {
         }
 
         // Creating album
-        ResourceManager.logger(this).debug(`Creating folder ${uuidPath}`);
+        Resources.logger(this).debug(`Creating folder ${uuidPath}`);
         fs.mkdirSync(uuidPath, {recursive: true});
         // Symlinking to correctly named album
-        ResourceManager.logger(this).debug(`Linking ${albumNamePath} to ${path.basename(uuidPath)}`);
+        Resources.logger(this).debug(`Linking ${albumNamePath} to ${path.basename(uuidPath)}`);
         fs.symlinkSync(path.basename(uuidPath), albumNamePath);
 
         // @remarks Something is wrong here - see E2E test
@@ -430,14 +439,14 @@ export class PhotosLibrary {
             // Relative asset path is relative to album, not the linkedAsset
             const relativeAssetPath = path.relative(albumPath, assetPath);
             try {
-                ResourceManager.logger(this).debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
+                Resources.logger(this).debug(`Linking ${relativeAssetPath} to ${linkedAsset}`);
 
                 // Getting asset time, in order to update link as well
                 const assetTime = fs.statSync(assetPath).mtime;
                 fs.symlinkSync(relativeAssetPath, linkedAsset);
                 fs.lutimesSync(linkedAsset, assetTime, assetTime);
             } catch (err) {
-                ResourceManager.emit(iCPSEventError.HANDLER_EVENT,
+                Resources.emit(iCPSEventError.HANDLER_EVENT,
                     new iCPSError(LIBRARY_ERR.LINK)
                         .setWarning()
                         .addMessage(`${relativeAssetPath} to ${linkedAsset}`)
@@ -452,7 +461,7 @@ export class PhotosLibrary {
      * @param album - The album that needs to be removed
      */
     deleteAlbum(album: Album) {
-        ResourceManager.logger(this).debug(`Deleting folder ${album.getDisplayName()}`);
+        Resources.logger(this).debug(`Deleting folder ${album.getDisplayName()}`);
         const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
         // Path to album
         if (!fs.existsSync(uuidPath)) {
@@ -462,7 +471,8 @@ export class PhotosLibrary {
 
         // Checking content
         const pathContent = fs.readdirSync(uuidPath, {withFileTypes: true})
-            .filter(item => !(item.isSymbolicLink() || PHOTOS_LIBRARY.SAFE_FILES.includes(item.name))); // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
+            .filter(item => !item.isSymbolicLink()) // Filter out symbolic links, we are fine with deleting those as well as the 'safe' files
+            .filter(file => PHOTOS_LIBRARY.SAFE_FILES.every(regex => !regex.test(file.name)));
         if (pathContent.length > 0) {
             throw new iCPSError(LIBRARY_ERR.NOT_EMPTY)
                 .addMessage(uuidPath)
@@ -477,7 +487,7 @@ export class PhotosLibrary {
 
         fs.rmSync(uuidPath, {recursive: true});
         fs.unlinkSync(albumNamePath);
-        ResourceManager.logger(this).debug(`Successfully deleted album ${album.getDisplayName()} at ${albumNamePath} & ${uuidPath}`);
+        Resources.logger(this).debug(`Successfully deleted album ${album.getDisplayName()} at ${albumNamePath} & ${uuidPath}`);
     }
 
     /**
@@ -485,7 +495,7 @@ export class PhotosLibrary {
      * @param album - The album that needs to be stashed
      */
     stashArchivedAlbum(album: Album) {
-        ResourceManager.logger(this).debug(`Stashing album ${album.getDisplayName()}`);
+        Resources.logger(this).debug(`Stashing album ${album.getDisplayName()}`);
         this.movePathTuple(
             this.findAlbumPaths(album),
             this.findStashAlbumPaths(album),
@@ -497,7 +507,7 @@ export class PhotosLibrary {
      * @param album - The album that needs to be retrieved
      */
     retrieveStashedAlbum(album: Album) {
-        ResourceManager.logger(this).debug(`Retrieving stashed album ${album.getDisplayName()}`);
+        Resources.logger(this).debug(`Retrieving stashed album ${album.getDisplayName()}`);
         this.movePathTuple(
             this.findStashAlbumPaths(album),
             this.findAlbumPaths(album),
@@ -531,7 +541,7 @@ export class PhotosLibrary {
                 .addMessage(destUUIDPath);
         }
 
-        ResourceManager.logger(this).debug(`Moving ${srcUUIDPath} to ${destUUIDPath}`);
+        Resources.logger(this).debug(`Moving ${srcUUIDPath} to ${destUUIDPath}`);
         fs.renameSync(srcUUIDPath, destUUIDPath);
         fs.utimesSync(destUUIDPath, srcUUIDStats.mtime, srcUUIDStats.mtime);
 
@@ -540,10 +550,10 @@ export class PhotosLibrary {
             srcNameStats = fs.lstatSync(srcNamePath);
             fs.unlinkSync(srcNamePath);
         } catch (err) {
-            ResourceManager.logger(this).debug(`Unable to unlink ${srcNamePath}: ${err.message}`);
+            Resources.logger(this).debug(`Unable to unlink ${srcNamePath}: ${err.message}`);
         }
 
-        ResourceManager.logger(this).debug(`Re-linking ${destNamePath}`);
+        Resources.logger(this).debug(`Re-linking ${destNamePath}`);
         fs.symlinkSync(path.basename(destUUIDPath), destNamePath);
         fs.lutimesSync(destNamePath, srcNameStats.mtime, srcNameStats.mtime);
     }
@@ -552,10 +562,10 @@ export class PhotosLibrary {
      * This function will look for orphaned albums and remove the unnecessary UUID links to make them more manageable
      */
     async cleanArchivedOrphans() {
-        ResourceManager.logger(this).debug(`Cleaning archived orphans`);
+        Resources.logger(this).debug(`Cleaning archived orphans`);
         const archivedOrphans = await this.loadAlbum(Album.getStashAlbum(), this.stashDir);
         for (const album of archivedOrphans) {
-            ResourceManager.logger(this).debug(`Found orphaned album ${album}`);
+            Resources.logger(this).debug(`Found orphaned album ${album}`);
             const [namePath, uuidPath] = this.findStashAlbumPaths(album);
             let targetPath: string;
             let index = 0;
@@ -565,7 +575,7 @@ export class PhotosLibrary {
                 targetPath = path.join(this.archiveDir, basename);
             } while (fs.existsSync(targetPath));
 
-            ResourceManager.logger(this).debug(`Moving ${uuidPath} to ${targetPath}, unlinking ${namePath}`);
+            Resources.logger(this).debug(`Moving ${uuidPath} to ${targetPath}, unlinking ${namePath}`);
             await fs.promises.rename(uuidPath, targetPath);
             await fs.promises.unlink(namePath);
         }

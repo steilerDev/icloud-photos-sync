@@ -2,14 +2,14 @@ import mockfs from 'mock-fs';
 import fs from 'fs';
 import {expect, describe, test, afterEach, jest, beforeEach} from '@jest/globals';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
-import {PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, ARCHIVE_DIR, STASH_DIR, SAFE_FILES} from '../../src/lib/photos-library/constants';
+import {PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, ARCHIVE_DIR, STASH_DIR} from '../../src/lib/photos-library/constants';
 import path from 'path';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import axios, {AxiosRequestConfig} from 'axios';
 import * as Config from '../_helpers/_config';
-import {MockedResourceManager, prepareResourceManager} from '../_helpers/_general';
+import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
@@ -17,24 +17,41 @@ const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR)
 const archiveDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR);
 const stashDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR, STASH_DIR);
 
+let mockedEventManager: MockedEventManager;
 let mockedResourceManager: MockedResourceManager;
 
 beforeEach(() => {
-    mockedResourceManager = prepareResourceManager()!;
+    const instances = prepareResources()!;
+    mockedEventManager = instances.event;
+    mockedResourceManager = instances.manager;
 });
 
 afterEach(() => {
     mockfs.restore();
 });
 
+test(`Libraries version mismatch should throw`, () => {
+    mockfs();
+    mockedResourceManager._resources.libraryVersion = 99;
+    expect(() => {
+        const _library = new PhotosLibrary();
+    }).toThrowError(/^Library version mismatch$/);
+
+    expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeFalsy();
+    expect(fs.existsSync(primaryAssetDir)).toBeFalsy();
+    expect(fs.existsSync(sharedAssetDir)).toBeFalsy();
+    expect(fs.existsSync(archiveDir)).toBeFalsy();
+    expect(fs.existsSync(stashDir)).toBeFalsy();
+});
+
 test(`Should create missing directories`, () => {
     mockfs();
     const _library = new PhotosLibrary();
-    expect(fs.existsSync(Config.defaultConfig.dataDir)).toBe(true);
-    expect(fs.existsSync(primaryAssetDir)).toBe(true);
-    expect(fs.existsSync(sharedAssetDir)).toBe(true);
-    expect(fs.existsSync(archiveDir)).toBe(true);
-    expect(fs.existsSync(stashDir)).toBe(true);
+    expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeTruthy();
+    expect(fs.existsSync(primaryAssetDir)).toBeTruthy();
+    expect(fs.existsSync(sharedAssetDir)).toBeTruthy();
+    expect(fs.existsSync(archiveDir)).toBeTruthy();
+    expect(fs.existsSync(stashDir)).toBeTruthy();
 });
 
 test(`Should use existing directories and not overwrite content`, () => {
@@ -125,6 +142,8 @@ describe(`Load state`, () => {
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // eslint-disable-line
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
+                        ".DS_Store": ``, // 'Safe' file
+                        ".fuse_hidden1234": ``, // 'Safe' file
                     },
                 },
                 expectedCount: 2,
@@ -138,6 +157,8 @@ describe(`Load state`, () => {
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // eslint-disable-line
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
+                        ".DS_Store": ``, // 'Safe' file
+                        ".fuse_hidden1234": ``, // 'Safe' file
                     },
                 },
                 expectedCount: 2,
@@ -157,6 +178,8 @@ describe(`Load state`, () => {
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf": Buffer.from([1, 1, 1, 1, 1, 1]), // eslint-disable-line
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file extension
                         "Aah0dUnhGFNWjAeqKEkB_SNLNpF-f": Buffer.from([1, 1, 1, 1, 1, 1]), // Invalid file name
+                        ".DS_Store": ``, // 'Safe' file
+                        ".fuse_hidden1234": ``, // 'Safe' file
                     },
                 },
                 expectedCount: 5,
@@ -230,7 +253,7 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
+            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
 
             const albums = await library.loadAlbums();
 
@@ -251,7 +274,7 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const orphanEvent = mockedResourceManager.spyOnHandlerEvent();
+            const orphanEvent = mockedEventManager.spyOnHandlerEvent();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(0);
@@ -420,10 +443,10 @@ describe(`Load state`, () => {
             const emptyAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const emptyAlbumName = `Stuff`;
 
-            const files: any = {};
-            for (const safeFileName of SAFE_FILES) {
-                files[safeFileName] = Buffer.from([1]);
-            }
+            const files: any = {
+                ".DS_Store": Buffer.from([1]),
+                ".fuse_hidden0016736000000ccc": Buffer.from([1]),
+            };
 
             mockfs({
                 [Config.defaultConfig.dataDir]: {
@@ -450,10 +473,10 @@ describe(`Load state`, () => {
         test(`Load nested state`, async () => {
             const emptyAlbumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const emptyAlbumName = `Stuff`;
-            const files: any = {};
-            for (const safeFileName of SAFE_FILES) {
-                files[safeFileName] = Buffer.from([1]);
-            }
+            const files: any = {
+                ".DS_Store": Buffer.from([1]),
+                ".fuse_hidden0016736000000ccc": Buffer.from([1]),
+            };
 
             const folderUUID = `cc40a239-2beb-483e-acee-e897db1b818b`;
             const folderName = `Memories`;
@@ -744,7 +767,7 @@ describe(`Write state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
+            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
             library.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
 
             try {
@@ -1239,7 +1262,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
+                const handlerEvent = mockedEventManager.spyOnHandlerEvent();
 
                 library.writeAlbum(folder);
 
@@ -1401,7 +1424,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const handlerEvent = mockedResourceManager.spyOnHandlerEvent();
+                const handlerEvent = mockedEventManager.spyOnHandlerEvent();
 
                 library.writeAlbum(folder);
 
@@ -1504,10 +1527,10 @@ describe(`Write state`, () => {
                 const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
                 const albumName = `Memories`;
 
-                const files: any = {};
-                for (const safeFileName of SAFE_FILES) {
-                    files[safeFileName] = Buffer.from([1]);
-                }
+                const files: any = {
+                    ".DS_Store": Buffer.from([1]),
+                    ".fuse_hidden0016736000000ccc": Buffer.from([1]),
+                };
 
                 mockfs({
                     [Config.defaultConfig.dataDir]: {

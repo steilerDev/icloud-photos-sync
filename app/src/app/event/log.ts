@@ -1,9 +1,9 @@
 import * as fs from 'fs';
-import {ResourceManager} from "../../lib/resource-manager/resource-manager.js";
-import {iCPSEventError, iCPSEventLog} from "../../lib/resource-manager/events.js";
+import {Resources} from "../../lib/resources/main.js";
+import {iCPSEventError, iCPSEventLog} from "../../lib/resources/events-types.js";
 import {iCPSError} from "../error/error.js";
 import {APP_ERR} from "../error/error-codes.js";
-import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
+import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 
 export enum LogLevel {
     DEBUG = `debug`,
@@ -22,27 +22,27 @@ export class LogInterface {
     private logFileDescriptor: number;
 
     constructor() {
-        if (ResourceManager.logToCli) {
+        if (Resources.manager().logToCli) {
             return;
         }
 
         try {
             // Try opening the file - truncate if exists
-            this.logFileDescriptor = fs.openSync(ResourceManager.logFilePath, `w`);
+            this.logFileDescriptor = fs.openSync(Resources.manager().logFilePath, `w`);
 
-            switch (ResourceManager.logLevel) {
+            switch (Resources.manager().logLevel) {
             case `debug`:
-                ResourceManager.events(this).on(iCPSEventLog.DEBUG, (source: any, msg: string) => this.logMessage(LogLevel.DEBUG, source, msg));
+                Resources.events(this).on(iCPSEventLog.DEBUG, (source: any, msg: string) => this.logMessage(LogLevel.DEBUG, source, msg));
             default:
             case `info`:
-                ResourceManager.events(this).on(iCPSEventLog.INFO, (source: any, msg: string) => this.logMessage(LogLevel.INFO, source, msg));
+                Resources.events(this).on(iCPSEventLog.INFO, (source: any, msg: string) => this.logMessage(LogLevel.INFO, source, msg));
             case `warn`:
-                ResourceManager.events(this).on(iCPSEventLog.WARN, (source: any, msg: string) => this.logMessage(LogLevel.WARN, source, msg));
+                Resources.events(this).on(iCPSEventLog.WARN, (source: any, msg: string) => this.logMessage(LogLevel.WARN, source, msg));
             case `error`:
-                ResourceManager.events(this).on(iCPSEventLog.ERROR, (source: any, msg: string) => this.logMessage(LogLevel.ERROR, source, msg));
+                Resources.events(this).on(iCPSEventLog.ERROR, (source: any, msg: string) => this.logMessage(LogLevel.ERROR, source, msg));
             }
         } catch (err) {
-            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(APP_ERR.LOGGER).setWarning().addCause(err));
+            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(APP_ERR.LOGGER).setWarning().addCause(err));
         }
     }
 

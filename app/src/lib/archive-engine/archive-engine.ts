@@ -6,8 +6,8 @@ import * as path from 'path';
 import {iCloud} from '../icloud/icloud.js';
 import {iCPSError} from '../../app/error/error.js';
 import {ARCHIVE_ERR} from '../../app/error/error-codes.js';
-import {ResourceManager} from '../resource-manager/resource-manager.js';
-import {iCPSEventArchiveEngine, iCPSEventError} from '../resource-manager/events.js';
+import {Resources} from '../resources/main.js';
+import {iCPSEventArchiveEngine, iCPSEventError} from '../resources/events-types.js';
 
 export class ArchiveEngine {
     /**
@@ -38,8 +38,8 @@ export class ArchiveEngine {
      * @returns A Promise, that resolves once the path has been archived
      */
     async archivePath(archivePath: string, assetList: Asset[]) {
-        ResourceManager.logger(this).debug(`Archiving path ${archivePath}`);
-        ResourceManager.emit(iCPSEventArchiveEngine.ARCHIVE_START, archivePath);
+        Resources.logger(this).debug(`Archiving path ${archivePath}`);
+        Resources.emit(iCPSEventArchiveEngine.ARCHIVE_START, archivePath);
 
         const albumName = path.basename(archivePath);
         if (albumName.startsWith(`.`)) {
@@ -59,8 +59,8 @@ export class ArchiveEngine {
         }
 
         const numberOfItems = Object.keys(loadedAlbum.assets).length;
-        ResourceManager.logger(this).debug(`Persisting ${numberOfItems} items`);
-        ResourceManager.emit(iCPSEventArchiveEngine.PERSISTING_START, numberOfItems);
+        Resources.logger(this).debug(`Persisting ${numberOfItems} items`);
+        Resources.emit(iCPSEventArchiveEngine.PERSISTING_START, numberOfItems);
 
         // Iterating over all album items to persist them
         const remoteDeleteList = await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
@@ -70,7 +70,7 @@ export class ArchiveEngine {
             try {
                 await this.persistAsset(assetPath, archivedAssetPath);
             } catch (err) {
-                ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
+                Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
                     .addCause(err)
                     .addContext(`assetPath`, assetPath)
                     .addContext(`archivedAssetPath`, archivedAssetPath),
@@ -81,16 +81,16 @@ export class ArchiveEngine {
             try {
                 return this.prepareForRemoteDeletion(assetPath, assetList);
             } catch (err) {
-                ResourceManager.emit(iCPSEventError.HANDLER_EVENT, err);
+                Resources.emit(iCPSEventError.HANDLER_EVENT, err);
                 return undefined;
             }
         }));
 
         // Filtering for unique & undefined entries
         const uniqueDeleteList = [...new Set(remoteDeleteList.filter(obj => obj !== undefined))];
-        if (uniqueDeleteList && uniqueDeleteList.length > 0 && ResourceManager.remoteDelete) {
+        if (uniqueDeleteList && uniqueDeleteList.length > 0 && Resources.manager().remoteDelete) {
             try {
-                ResourceManager.emit(iCPSEventArchiveEngine.REMOTE_DELETE, uniqueDeleteList.length);
+                Resources.emit(iCPSEventArchiveEngine.REMOTE_DELETE, uniqueDeleteList.length);
                 await this.icloud.photos.deleteAssets(uniqueDeleteList);
             } catch (err) {
                 throw new iCPSError(ARCHIVE_ERR.REMOTE_DELETE_FAILED)
@@ -98,7 +98,7 @@ export class ArchiveEngine {
             }
         }
 
-        ResourceManager.emit(iCPSEventArchiveEngine.ARCHIVE_DONE);
+        Resources.emit(iCPSEventArchiveEngine.ARCHIVE_DONE);
     }
 
     /**
@@ -108,7 +108,7 @@ export class ArchiveEngine {
      * @returns A Promise that resolves, once the file has been copied
      */
     async persistAsset(assetPath: string, archivedAssetPath: string): Promise<void> {
-        ResourceManager.logger(this).debug(`Persisting ${assetPath} to ${archivedAssetPath}`);
+        Resources.logger(this).debug(`Persisting ${assetPath} to ${archivedAssetPath}`);
         const fileStat = await fs.stat(assetPath);
         // Const lFileStat = await fs.lstat(archivedAssetPath)
         await fs.unlink(archivedAssetPath);
@@ -124,7 +124,7 @@ export class ArchiveEngine {
      * @throws An ArchiveWarning if loading fails
      */
     prepareForRemoteDeletion(assetPath: string, assetList: Asset[]): string | undefined {
-        if (!ResourceManager.remoteDelete) {
+        if (!Resources.manager().remoteDelete) {
             return undefined;
         }
 
@@ -147,11 +147,11 @@ export class ArchiveEngine {
         }
 
         if (asset.isFavorite) {
-            ResourceManager.logger(this).debug(`Not deleting favorite asset ${asset.getDisplayName()}`);
+            Resources.logger(this).debug(`Not deleting favorite asset ${asset.getDisplayName()}`);
             return undefined;
         }
 
-        ResourceManager.logger(this).debug(`Returning asset ${asset.recordName} for deletion`);
+        Resources.logger(this).debug(`Returning asset ${asset.recordName} for deletion`);
         return asset.recordName;
     }
 }

@@ -1,36 +1,7 @@
 import mockfs from 'mock-fs';
 import * as fs from 'fs';
-import {jest} from '@jest/globals';
 import {CPLAlbum, CPLAsset, CPLMaster} from "../../src/lib/icloud/icloud-photos/query-parser";
-import * as Config from './_config';
 import path from "path";
-import {ResourceManager} from "../../src/lib/resource-manager/resource-manager";
-
-export function prepareResourceManagerForApiTests(): ResourceManager {
-    ResourceManager._instance = undefined;
-
-    ResourceManager.prototype.readResourceFile = jest.fn<typeof ResourceManager.prototype.readResourceFile>()
-        .mockReturnValue({
-            libraryVersion: 1,
-        });
-
-    ResourceManager.prototype.writeResourceFile = jest.fn<typeof ResourceManager.prototype.writeResourceFile>()
-        .mockReturnValue();
-
-    ResourceManager.setup({
-        ...Config.defaultConfig,
-        failOnMfa: true,
-    });
-
-    applyEnvSecrets(ResourceManager.instance);
-    return ResourceManager.instance;
-}
-
-export function applyEnvSecrets(resourceManager: ResourceManager) {
-    resourceManager._resources.username = process.env.TEST_APPLE_ID_USER!;
-    resourceManager._resources.password = process.env.TEST_APPLE_ID_PWD!;
-    resourceManager._resources.trustToken = process.env.TEST_TRUST_TOKEN!;
-}
 
 /**
  * Helper to compare objects, that have string property 'recordName'

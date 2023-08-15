@@ -4,9 +4,9 @@ import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {MFAMethod} from './mfa/mfa-method.js';
 import {iCPSError} from '../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
-import {ResourceManager} from '../resource-manager/resource-manager.js';
-import {ENDPOINTS, HEADER} from '../resource-manager/network.js';
-import {iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos} from '../resource-manager/events.js';
+import {Resources} from '../resources/main.js';
+import {ENDPOINTS} from '../resources/network-types.js';
+import {iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos} from '../resources/events-types.js';
 
 /**
  * This class holds the iCloud connection
@@ -34,7 +34,7 @@ export class iCloud {
     constructor() {
         // MFA Server & lifecycle management
         this.mfaServer = new MFAServer();
-        ResourceManager.events(this)
+        Resources.events(this)
             .on(iCPSEventMFA.MFA_RECEIVED, this.submitMFA.bind(this))
             .on(iCPSEventMFA.MFA_RESEND, this.resendMFA.bind(this));
 
@@ -42,10 +42,10 @@ export class iCloud {
 
         // ICloud lifecycle management
 
-        ResourceManager.events(this)
+        Resources.events(this)
             .on(iCPSEventCloud.MFA_REQUIRED, () => {
-                if (ResourceManager.failOnMfa) {
-                    ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.FAIL_ON_MFA));
+                if (Resources.manager().failOnMfa) {
+                    Resources.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.FAIL_ON_MFA));
                     return;
                 }
 
@@ -70,7 +70,7 @@ export class iCloud {
      */
     getReady(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            ResourceManager.events(this)
+            Resources.events(this)
                 .once(iCPSEventPhotos.READY, () => resolve())
                 .once(iCPSEventCloud.ERROR, err => reject(err))
                 .once(iCPSEventPhotos.ERROR, err => reject(err))
@@ -84,13 +84,12 @@ export class iCloud {
      * Tries to directly login using trustToken, otherwise starts MFA flow
      */
     async authenticate(): Promise<void> {
-        ResourceManager.logger(this).info(`Authenticating user`);
-        ResourceManager.emit(iCPSEventCloud.AUTHENTICATION_STARTED);
+        Resources.logger(this).info(`Authenticating user`);
+        Resources.emit(iCPSEventCloud.AUTHENTICATION_STARTED);
 
         const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.SIGNIN;
 
         const config: AxiosRequestConfig = {
-            headers: HEADER.AUTH,
             params: {
                 isRememberMeEnabled: true,
             },
@@ -99,59 +98,59 @@ export class iCloud {
         };
 
         const data = {
-            accountName: ResourceManager.username,
-            password: ResourceManager.password,
+            accountName: Resources.manager().username,
+            password: Resources.manager().password,
             trustTokens: [
-                ResourceManager.trustToken,
+                Resources.manager().trustToken,
             ],
         };
 
         try {
-            const response = await ResourceManager.network.post(url, data, config);
+            const response = await Resources.network().post(url, data, config);
 
-            const validatedResponse = ResourceManager.validator.validateSigninResponse(response);
-            ResourceManager.network.applySigninResponse(validatedResponse);
+            const validatedResponse = Resources.validator().validateSigninResponse(response);
+            Resources.network().applySigninResponse(validatedResponse);
 
-            ResourceManager.logger(this).debug(`Acquired signin secrets`);
+            Resources.logger(this).debug(`Acquired signin secrets`);
 
             if (response.status === 409) {
-                ResourceManager.logger(this).debug(`Response status is 409, requiring MFA`);
-                ResourceManager.emit(iCPSEventCloud.MFA_REQUIRED);
+                Resources.logger(this).debug(`Response status is 409, requiring MFA`);
+                Resources.emit(iCPSEventCloud.MFA_REQUIRED);
                 return;
             }
 
             if (response.status === 200) {
-                ResourceManager.logger(this).debug(`Response status is 200, authentication successful - device trusted`);
-                ResourceManager.emit(iCPSEventCloud.TRUSTED, ResourceManager.trustToken);
+                Resources.logger(this).debug(`Response status is 200, authentication successful - device trusted`);
+                Resources.emit(iCPSEventCloud.TRUSTED, Resources.manager().trustToken);
             }
 
             // This should never happen
-            // ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_AUTH_SECRETS));
+            // Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_AUTH_SECRETS));
         } catch (err) {
             if (err instanceof iCPSError) {
-                ResourceManager.emit(iCPSEventCloud.ERROR, err);
+                Resources.emit(iCPSEventCloud.ERROR, err);
                 return;
             }
 
             if (err?.response?.status) {
                 switch (err.response.status) {
                 case 401:
-                    ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
+                    Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
                     break;
                 case 403:
-                    ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.FORBIDDEN).addCause(err));
+                    Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.FORBIDDEN).addCause(err));
                     break;
                 case 412:
-                    ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.PRECONDITION_FAILED).addCause(err));
+                    Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.PRECONDITION_FAILED).addCause(err));
                     break;
                 default:
-                    ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNEXPECTED_RESPONSE).addCause(err));
+                    Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNEXPECTED_RESPONSE).addCause(err));
                 }
 
                 return;
             }
 
-            ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNKNOWN).addCause(err));
+            Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNKNOWN).addCause(err));
             return;
         } finally {
             return this.ready;
@@ -164,32 +163,31 @@ export class iCloud {
      * @returns A promise that resolves once all activity has been completed
      */
     async resendMFA(method: MFAMethod) {
-        ResourceManager.logger(this).info(`Resending MFA code with ${method}`);
+        Resources.logger(this).info(`Resending MFA code with ${method}`);
 
         const url = method.getResendURL();
         const config: AxiosRequestConfig = {
-            headers: HEADER.AUTH,
             validateStatus: method.resendSuccessful.bind(method),
         };
         const data = method.getResendPayload();
 
-        ResourceManager.logger(this).debug(`Requesting MFA code via URL ${url} with data ${JSON.stringify(data)}`);
+        Resources.logger(this).debug(`Requesting MFA code via URL ${url} with data ${JSON.stringify(data)}`);
 
         try {
-            const response = await ResourceManager.network.put(url, data, config);
+            const response = await Resources.network().put(url, data, config);
 
             if (method.isSMS || method.isVoice) {
-                const validatedResponse = ResourceManager.validator.validateResendMFAPhoneResponse(response);
-                ResourceManager.logger(this).info(`Successfully requested new MFA code using phone ${validatedResponse.data.trustedPhoneNumber.numberWithDialCode}`);
+                const validatedResponse = Resources.validator().validateResendMFAPhoneResponse(response);
+                Resources.logger(this).info(`Successfully requested new MFA code using phone ${validatedResponse.data.trustedPhoneNumber.numberWithDialCode}`);
                 return;
             }
 
             if (method.isDevice) {
-                const validatedResponse = ResourceManager.validator.validateResendMFADeviceResponse(response);
-                ResourceManager.logger(this).info(`Successfully requested new MFA code using ${validatedResponse.data.trustedDeviceCount} trusted device(s)`);
+                const validatedResponse = Resources.validator().validateResendMFADeviceResponse(response);
+                Resources.logger(this).info(`Successfully requested new MFA code using ${validatedResponse.data.trustedDeviceCount} trusted device(s)`);
             }
         } catch (err) {
-            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_FAILED).setWarning().addCause(err));
+            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_FAILED).setWarning().addCause(err));
         }
     }
 
@@ -200,22 +198,21 @@ export class iCloud {
     async submitMFA(method: MFAMethod, mfa: string) {
         try {
             this.mfaServer.stopServer();
-            ResourceManager.logger(this).info(`Authenticating MFA with code ${mfa}`);
+            Resources.logger(this).info(`Authenticating MFA with code ${mfa}`);
 
             const url = method.getEnterURL();
             const config: AxiosRequestConfig = {
-                headers: HEADER.AUTH,
                 validateStatus: method.enterSuccessful.bind(method),
             };
             const data = method.getEnterPayload(mfa);
 
-            ResourceManager.logger(this).debug(`Entering MFA code via URL ${url} with data ${JSON.stringify(data)}`);
-            await ResourceManager.network.post(url, data, config);
+            Resources.logger(this).debug(`Entering MFA code via URL ${url} with data ${JSON.stringify(data)}`);
+            await Resources.network().post(url, data, config);
 
-            ResourceManager.logger(this).info(`MFA code correct!`);
-            ResourceManager.emit(iCPSEventCloud.AUTHENTICATED);
+            Resources.logger(this).info(`MFA code correct!`);
+            Resources.emit(iCPSEventCloud.AUTHENTICATED);
         } catch (err) {
-            ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.SUBMIT_FAILED).addCause(err));
+            Resources.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.SUBMIT_FAILED).addCause(err));
         }
     }
 
@@ -224,22 +221,21 @@ export class iCloud {
      */
     async getTokens() {
         try {
-            ResourceManager.logger(this).info(`Trusting device and acquiring trust tokens`);
+            Resources.logger(this).info(`Trusting device and acquiring trust tokens`);
 
             const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.TRUST;
             const config: AxiosRequestConfig = {
-                headers: HEADER.AUTH,
                 validateStatus: status => status === 204,
             };
 
-            const response = await ResourceManager.network.get(url, config);
-            const validatedResponse = ResourceManager.validator.validateTrustResponse(response);
-            ResourceManager.network.applyTrustResponse(validatedResponse);
+            const response = await Resources.network().get(url, config);
+            const validatedResponse = Resources.validator().validateTrustResponse(response);
+            Resources.network().applyTrustResponse(validatedResponse);
 
-            ResourceManager.logger(this).debug(`Acquired account tokens`);
-            ResourceManager.emit(iCPSEventCloud.TRUSTED, ResourceManager.trustToken);
+            Resources.logger(this).debug(`Acquired account tokens`);
+            Resources.emit(iCPSEventCloud.TRUSTED, Resources.manager().trustToken);
         } catch (err) {
-            ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_ACCOUNT_TOKENS).addCause(err));
+            Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_ACCOUNT_TOKENS).addCause(err));
         }
     }
 
@@ -249,22 +245,22 @@ export class iCloud {
      */
     async setupAccount() {
         try {
-            ResourceManager.logger(this).info(`Setting up iCloud connection`);
+            Resources.logger(this).info(`Setting up iCloud connection`);
 
             const url = ENDPOINTS.SETUP.BASE + ENDPOINTS.SETUP.PATH.ACCOUNT;
             const data = {
-                dsWebAuthToken: ResourceManager.network.sessionSecret,
-                trustToken: ResourceManager.network.trustToken,
+                dsWebAuthToken: Resources.manager().sessionSecret,
+                trustToken: Resources.manager().trustToken,
             };
 
-            const response = await ResourceManager.network.post(url, data);
-            const validatedResponse = ResourceManager.validator.validateSetupResponse(response);
-            ResourceManager.network.applySetupResponse(validatedResponse);
+            const response = await Resources.network().post(url, data);
+            const validatedResponse = Resources.validator().validateSetupResponse(response);
+            Resources.network().applySetupResponse(validatedResponse);
 
-            ResourceManager.logger(this).debug(`Account ready`);
-            ResourceManager.emit(iCPSEventCloud.ACCOUNT_READY);
+            Resources.logger(this).debug(`Account ready`);
+            Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
-            ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACCOUNT_SETUP).addCause(err));
+            Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACCOUNT_SETUP).addCause(err));
         }
     }
 
@@ -273,10 +269,10 @@ export class iCloud {
     */
     async getPhotosReady() {
         try {
-            ResourceManager.logger(this).info(`Getting iCloud Photos Service ready`);
+            Resources.logger(this).info(`Getting iCloud Photos Service ready`);
             await this.photos.setup();
         } catch (err) {
-            ResourceManager.emit(iCPSEventCloud.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.SETUP_FAILED).addCause(err));
+            Resources.emit(iCPSEventCloud.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.SETUP_FAILED).addCause(err));
         }
     }
 }

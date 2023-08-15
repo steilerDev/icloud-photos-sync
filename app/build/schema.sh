@@ -3,7 +3,7 @@
 # This script is used to build the various json schema from ts files
 
 CMD="npx ts-json-schema-generator -f tsconfig.json"
-TARGET_FOLDER="src/lib/resource-manager/schemas"
+TARGET_FOLDER="src/lib/resources/schemas"
 
 if [ ! -d "$TARGET_FOLDER" ]; then
   mkdir -p "$TARGET_FOLDER"

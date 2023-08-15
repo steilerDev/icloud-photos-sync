@@ -5,8 +5,8 @@ import {CPLAlbum, CPLAsset, CPLMaster} from "../icloud/icloud-photos/query-parse
 import {Album} from "../photos-library/model/album.js";
 import {Asset, AssetType} from "../photos-library/model/asset.js";
 import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../photos-library/model/photos-entity.js";
-import {ResourceManager} from "../resource-manager/resource-manager.js";
-import {iCPSEventError} from "../resource-manager/events.js";
+import {Resources} from "../resources/main.js";
+import {iCPSEventError} from "../resources/events-types.js";
 
 /**
  * This object exposes various static helpers required to perform a sync
@@ -66,7 +66,7 @@ function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Asset
                 remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, origExt, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite, asset.zoneName));
             }
         } catch (err) {
-            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.CONVERSION)
+            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.CONVERSION)
                 .setWarning()
                 .addCause(err)
                 .addContext(`cplAsset`, asset)

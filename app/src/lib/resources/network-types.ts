@@ -1,20 +1,19 @@
 /**
  * This file holds constants relevant to the networking layer
  */
-import * as PACKAGE from "../package.js";
 
 /**
  * Hard coded client id, extracted from previous requests
  */
-const CLIENT_ID = `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d`;
+export const CLIENT_ID = `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d`;
 /**
  * User Agent this CLI is using. Emulating a Firefox Browser
  */
-const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`;
+export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`;
 /**
  * Client information shared with the iCloud backend based on the user agent
  */
-const CLIENT_INFO = JSON.stringify({
+export const CLIENT_INFO = JSON.stringify({
     U: USER_AGENT,
     L: `en-US`,
     Z: `GMT+01:00`,
@@ -37,33 +36,6 @@ export const HEADER_KEYS = {
 export const COOKIE_KEYS = {
     AASP: `aasp`,
     X_APPLE: `X-APPLE-`,
-};
-
-export const HEADER = {
-    /**
-     * Default base header for most iCloud requests
-     */
-    DEFAULT: {
-        'User-Agent': USER_AGENT,
-        Accept: `application/json`,
-        'Content-Type': `application/json`,
-        Origin: `https://www.icloud.com`,
-        Connection: `keep-alive`,
-        'Accept-Encoding': `gzip, deflate, br`,
-    },
-    /**
-     * Additional header used for authentication flow
-     */
-    AUTH: {
-        Origin: `https://idmsa.apple.com`,
-        Referer: `https://idmsa.apple.com/`,
-        'X-Apple-Widget-Key': CLIENT_ID,
-        'X-Apple-OAuth-Client-Id': CLIENT_ID,
-        'X-Apple-I-FD-Client-Info': CLIENT_INFO,
-        'X-Apple-OAuth-Response-Type': `code`,
-        'X-Apple-OAuth-Response-Mode': `web_message`,
-        'X-Apple-OAuth-Client-Type': `firstPartyAuth`,
-    },
 };
 
 /**
@@ -124,32 +96,6 @@ export const ENDPOINTS = {
         },
     },
 };
-
-export const EMPTY_HAR = {
-    log: {
-        version: `1.2`,
-        creator: {
-            name: PACKAGE.NAME,
-            version: PACKAGE.VERSION,
-        },
-        pages: [],
-        entries: [],
-    },
-};
-
-/**
- * Non persistent network resources, required to access the iCloud API
- */
-export type NetworkResources = {
-    /**
-     * Session secret, either acquired on successful sign in, or after trusting the device
-     */
-    sessionSecret?: string,
-    /**
-     * The dynamic iCloud photos URL
-     */
-    photosUrl?: string,
-}
 
 /**
  * The expected response format for the signin request

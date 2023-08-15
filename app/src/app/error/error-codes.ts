@@ -11,7 +11,7 @@ type ErrorName =
     `LibraryError` |
     `AppError` |
     `QueryParserError` |
-    `ResManagerError` |
+    `ResourceError` |
     `ValidatorError` |
     `SyncError`
 
@@ -57,9 +57,9 @@ import * as LIBRARY_ERR from './codes/library.js';
 import * as APP_ERR from './codes/app.js';
 import * as QUERY_PARSER_ERR from './codes/icloud-query-parser.js';
 import * as SYNC_ERR from './codes/sync.js';
-import * as RES_MANAGER_ERR from './codes/resource-manager.js';
+import * as RESOURCES_ERR from './codes/resources.js';
 import * as VALIDATOR_ERR from './codes/validator.js';
-export {MFA_ERR, ARCHIVE_ERR, AUTH_ERR, ICLOUD_PHOTOS_ERR, LIBRARY_ERR, APP_ERR, QUERY_PARSER_ERR, SYNC_ERR, RES_MANAGER_ERR, VALIDATOR_ERR};
+export {MFA_ERR, ARCHIVE_ERR, AUTH_ERR, ICLOUD_PHOTOS_ERR, LIBRARY_ERR, APP_ERR, QUERY_PARSER_ERR, SYNC_ERR, RESOURCES_ERR, VALIDATOR_ERR};
 
 export const ERR_UNKNOWN: ErrorStruct = {
     name: `iCPSError`,

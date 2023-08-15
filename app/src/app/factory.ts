@@ -3,7 +3,7 @@ import Cron from "croner";
 import * as PACKAGE_INFO from '../lib/package.js';
 import {ErrorHandler} from "./event/error-handler.js";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
-import {ResourceManager} from "../lib/resource-manager/resource-manager.js";
+import {Resources} from "../lib/resources/main.js";
 import {LogLevel} from "./event/log.js";
 
 /**
@@ -93,6 +93,7 @@ export type iCPSAppOptions = {
     downloadThreads: number,
     schedule: string,
     enableCrashReporting: boolean,
+    enableNetworkCapture: boolean,
     failOnMfa: boolean,
     force: boolean,
     refreshToken: boolean,
@@ -102,7 +103,6 @@ export type iCPSAppOptions = {
     logToCli: boolean,
     suppressWarnings: boolean,
     exportMetrics: boolean,
-    networkCapture: boolean,
     metadataRate: [number, number]
 }
 
@@ -131,7 +131,7 @@ export function appFactory(argv: string[]): iCPSApp {
         .addOption(new Option(`-p, --password <password>`, `AppleID password.`)
             .env(`APPLE_ID_PWD`)
             .makeOptionMandatory(true))
-        .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, '.trust-token.icloud' in data dir is tried to be read. If all fails, a new trust token will be acquired, requiring the input of an MFA code.`)
+        .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, the trust token is read from the '.icloud-photos-sync' resource file in data dir. If all fails, a new trust token will be acquired, requiring the input of an MFA code.`)
             .env(`TRUST_TOKEN`))
         .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library.`)
             .env(`DATA_DIR`)
@@ -183,8 +183,8 @@ export function appFactory(argv: string[]): iCPSApp {
         .addOption(new Option(`--export-metrics`, `Enables the export of sync metrics to a file using the Influx Line Protocol.`)
             .env(`EXPORT_METRICS`)
             .default(false))
-        .addOption(new Option(`--network-capture`, `Enables network capture, and generate a HAR file for debugging purposes. Written to '.icloud-photos-sync.har' in the data dir.`)
-            .env(`NETWORK_CAPTURE`)
+        .addOption(new Option(`--enable-network-capture`, `Enables network capture, and generate a HAR file for debugging purposes. Written to '.icloud-photos-sync.har' in the data dir.`)
+            .env(`ENABLE_NETWORK_CAPTURE`)
             .default(false))
         .addOption(new Option(`--metadata-rate <interval>`, `Limits the rate of metadata fetching in order to avoid getting throttled by the API. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one request in 20ms.`)
             .env(`METADATA_RATE`)
@@ -193,28 +193,28 @@ export function appFactory(argv: string[]): iCPSApp {
 
     program.command(AppCommands.daemon)
         .action((_, command) => {
-            ResourceManager.setup(command.parent.opts());
+            Resources.setup(command.parent.opts());
             app = new DaemonApp();
         })
         .description(`Starts the synchronization in scheduled daemon mode - continuously running based on the provided cron schedule.`);
 
     program.command(AppCommands.token)
         .action((_, command) => {
-            ResourceManager.setup(command.parent.opts());
+            Resources.setup(command.parent.opts());
             app = new TokenApp();
         })
         .description(`Validates the current trust token, fetches a new one (if necessary) and prints it to the CLI.`);
 
     program.command(AppCommands.sync)
         .action((_, command) => {
-            ResourceManager.setup(command.parent.opts());
+            Resources.setup(command.parent.opts());
             app = new SyncApp();
         })
         .description(`This command will fetch the remote state and persist it to the local disk.`);
 
     program.command(AppCommands.archive)
         .action((archivePath, _, command) => {
-            ResourceManager.setup(command.parent.opts());
+            Resources.setup(command.parent.opts());
             app = new ArchiveApp(archivePath);
         })
         .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)

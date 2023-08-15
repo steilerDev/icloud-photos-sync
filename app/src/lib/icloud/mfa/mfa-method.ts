@@ -1,4 +1,4 @@
-import {ENDPOINTS} from '../../resource-manager/network.js';
+import {ENDPOINTS} from '../../resources/network-types.js';
 
 /**
  * Indicating, which MFA method should be used

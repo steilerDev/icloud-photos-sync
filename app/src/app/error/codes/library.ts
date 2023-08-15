@@ -78,3 +78,7 @@ export const ASSET_MODIFICATION_TIME: ErrorStruct = buildErrorStruct(
 export const ASSET_SIZE: ErrorStruct = buildErrorStruct(
     name, prefix, `ASSET_SIZE`, `File's size does not match iCloud record`,
 );
+
+export const VERSION_MISMATCH: ErrorStruct = buildErrorStruct(
+    name, prefix, `VERSION_MISMATCH`, `Library version mismatch`,
+);

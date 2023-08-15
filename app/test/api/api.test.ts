@@ -4,36 +4,37 @@ import {iCloud} from '../../src/lib/icloud/icloud.js';
 import crypto from 'crypto';
 
 import * as Config from '../_helpers/_config';
-import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
-import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
-import expectedMastersAlbum from "../_data/api.expected.album-cpl-masters.json";
-import expectedAssetsAlbum from "../_data/api.expected.album-cpl-assets.json";
-import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
-import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData, prepareResourceManagerForApiTests} from '../_helpers/api.helper';
+import expectedAssetsAll from "./_data/expected.all-cpl-assets.json";
+import expectedMastersAll from "./_data/expected.all-cpl-masters.json";
+import expectedMastersAlbum from "./_data/expected.album-cpl-masters.json";
+import expectedAssetsAlbum from "./_data/expected.album-cpl-assets.json";
+import expectedAlbumsAll from "./_data/expected.all-cpl-albums.json";
+import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/api.helper';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder.js';
-import {ResourceManager} from '../../src/lib/resource-manager/resource-manager.js';
+import {prepareResourceForApiTests} from '../_helpers/_general.js';
+import {Resources} from '../../src/lib/resources/main.js';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(30 * 1000);
 
 describe(`API E2E Tests`, () => {
     test(`API Prerequisite`, () => {
-        const resourceManager = prepareResourceManagerForApiTests();
-        expect(resourceManager._resources.username).toBeDefined();
-        expect(resourceManager._resources.username.length).toBeGreaterThan(0);
-        expect(resourceManager._resources.password).toBeDefined();
-        expect(resourceManager._resources.password.length).toBeGreaterThan(0);
-        expect(resourceManager._resources.trustToken).toBeDefined();
-        expect(resourceManager._resources.trustToken?.length).toBeGreaterThan(0);
+        const resourceManager = prepareResourceForApiTests().manager;
+        expect(resourceManager.username).toBeDefined();
+        expect(resourceManager.username.length).toBeGreaterThan(0);
+        expect(resourceManager.password).toBeDefined();
+        expect(resourceManager.password.length).toBeGreaterThan(0);
+        expect(resourceManager.trustToken).toBeDefined();
+        expect(resourceManager.trustToken!.length).toBeGreaterThan(0);
     });
 
     describe(`Login flow`, () => {
-        let resourceManager: ResourceManager;
+        let instances: Resources.Types.Instances;
 
         beforeEach(() => {
-            resourceManager = prepareResourceManagerForApiTests();
+            instances = prepareResourceForApiTests();
             mockfs({
                 [Config.defaultConfig.dataDir]: {},
             });
@@ -44,8 +45,8 @@ describe(`API E2E Tests`, () => {
         });
 
         test(`Invalid username/password`, async () => {
-            resourceManager._resources.username = `test@apple.com`;
-            resourceManager._resources.password = `somePassword`;
+            instances.manager._resources.username = `test@apple.com`;
+            instances.manager._resources.password = `somePassword`;
 
             const icloud = new iCloud();
 
@@ -53,14 +54,15 @@ describe(`API E2E Tests`, () => {
         });
 
         test(`Invalid password`, async () => {
-            resourceManager._resources.password = `somePassword`;
+            instances.manager._resources.password = `somePassword`;
             const icloud = new iCloud();
             await expect(icloud.authenticate()).rejects.toThrow(/^Username\/Password does not seem to match$/);
         });
 
         test(`Without token & failOnMfa`, async () => {
-            resourceManager._resources.trustToken = undefined;
-            resourceManager._resources.failOnMfa = true;
+            instances = prepareResourceForApiTests();
+            instances.manager._resources.trustToken = undefined;
+
             const icloud = new iCloud();
             await expect(icloud.authenticate()).rejects.toThrow(/^MFA code required, failing due to failOnMfa flag$/);
         });
@@ -75,7 +77,7 @@ describe(`API E2E Tests`, () => {
         let icloud: iCloud;
 
         beforeAll(async () => {
-            prepareResourceManagerForApiTests();
+            prepareResourceForApiTests();
             icloud = new iCloud();
             await icloud.authenticate();
         });

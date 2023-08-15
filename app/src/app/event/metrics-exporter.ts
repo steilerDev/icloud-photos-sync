@@ -1,9 +1,9 @@
 import * as fs from "fs";
-import {ResourceManager} from "../../lib/resource-manager/resource-manager.js";
-import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resource-manager/events.js';
+import {Resources} from "../../lib/resources/main.js";
+import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {iCPSError} from '../error/error.js';
 import {APP_ERR} from '../error/error-codes.js';
-import {FILE_ENCODING} from '../../lib/resource-manager/resources.js';
+import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 
 /**
  * The InfluxLineProtocol field set type
@@ -107,7 +107,7 @@ class InfluxLineProtocolPoint {
      */
     constructor(measurement: string) {
         if (measurement.startsWith(`_`)) {
-            ResourceManager.logger(this).debug(`Measurement (${measurement}) cannot start with '_': Removing leading characters`);
+            Resources.logger(this).debug(`Measurement (${measurement}) cannot start with '_': Removing leading characters`);
             measurement = measurement.replace(/^_+/, ``);
         }
 
@@ -125,12 +125,12 @@ class InfluxLineProtocolPoint {
      */
     toString(): string {
         if (!this.measurement || this.measurement.length === 0) {
-            ResourceManager.logger(this).debug(`Measurement name required!`);
+            Resources.logger(this).debug(`Measurement name required!`);
             return `# Invalid data point: Measurement name is required\n`;
         }
 
         if (Object.keys(this.fieldSet).length === 0) {
-            ResourceManager.logger(this).debug(`At least one field is required!`);
+            Resources.logger(this).debug(`At least one field is required!`);
             return `# Invalid data point: At least one field is required\n`;
         }
 
@@ -208,7 +208,7 @@ class InfluxLineProtocolPoint {
                 return this;
             }
 
-            ResourceManager.logger(this).debug(`Provided field value number is neither integer, nor finite, ignoring...`);
+            Resources.logger(this).debug(`Provided field value number is neither integer, nor finite, ignoring...`);
             return this;
         }
 
@@ -228,7 +228,7 @@ class InfluxLineProtocolPoint {
      */
     private replaceIfExists(input: string, disallowedSequence: string, replacement: string = `_`): string {
         if (input.indexOf(disallowedSequence) >= 0) {
-            ResourceManager.logger(this).debug(`Input **${input}** contains '${disallowedSequence}': Replacing with ${replacement}`);
+            Resources.logger(this).debug(`Input **${input}** contains '${disallowedSequence}': Replacing with ${replacement}`);
             input = input.replaceAll(disallowedSequence, replacement);
         }
 
@@ -272,15 +272,15 @@ export class MetricsExporter {
      * @param options - The CLI options
      */
     constructor() {
-        if (!ResourceManager.exportMetrics) {
+        if (!Resources.manager().exportMetrics) {
             return;
         }
 
         try {
             // Try opening the file - truncate if exists
-            this.metricsFileDescriptor = fs.openSync(ResourceManager.metricsFilePath, `w`);
+            this.metricsFileDescriptor = fs.openSync(Resources.manager().metricsFilePath, `w`);
 
-            ResourceManager.events(this)
+            Resources.events(this)
                 .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
                     this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                         .logStatus(FIELDS.STATUS.values.AUTHENTICATION_STARTED));
@@ -302,7 +302,7 @@ export class MetricsExporter {
                         .logStatus(FIELDS.STATUS.values.ACCOUNT_READY));
                 });
 
-            ResourceManager.events(this)
+            Resources.events(this)
                 .on(iCPSEventMFA.MFA_RECEIVED, () => {
                     this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                         .logStatus(FIELDS.STATUS.values.MFA_RECEIVED));
@@ -312,13 +312,13 @@ export class MetricsExporter {
                         .logStatus(FIELDS.STATUS.values.MFA_NOT_PROVIDED));
                 });
 
-            ResourceManager.events(this)
+            Resources.events(this)
                 .on(iCPSEventPhotos.READY, () => {
                     this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                         .logStatus(FIELDS.STATUS.values.ICLOUD_READY));
                 });
 
-            ResourceManager.events(this)
+            Resources.events(this)
                 .on(iCPSEventApp.SCHEDULED, (next: Date) => {
                     this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                         .logStatus(FIELDS.STATUS.values.SCHEDULED)
@@ -335,7 +335,7 @@ export class MetricsExporter {
                         .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
                 });
 
-            ResourceManager.events(this)
+            Resources.events(this)
                 .on(iCPSEventSyncEngine.START, () => {
                     this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                         .logStatus(FIELDS.STATUS.values.SYNC_START));
@@ -407,7 +407,7 @@ export class MetricsExporter {
                         .logStatus(FIELDS.STATUS.values.SYNC_RETRY));
                 });
 
-            ResourceManager.events(this)
+            Resources.events(this)
                 .on(iCPSEventArchiveEngine.PERSISTING_START, (numberOfAssets: number) => {
                     this.logDataPoint(new iCPSInfluxLineProtocolPoint().addField(FIELDS.ASSETS_ARCHIVED, numberOfAssets));
                 })
@@ -415,7 +415,7 @@ export class MetricsExporter {
                     this.logDataPoint(new iCPSInfluxLineProtocolPoint().addField(FIELDS.REMOTE_ASSETS_DELETED, numberOfAssets));
                 });
 
-            ResourceManager.events(this)
+            Resources.events(this)
                 .on(iCPSEventError.HANDLER_ERROR, (err: string) => {
                     this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                         .logStatus(FIELDS.STATUS.values.ERROR)
@@ -427,9 +427,9 @@ export class MetricsExporter {
                         .addField(FIELDS.WARNING, err));
                 });
 
-            ResourceManager.logger(this).info(`Enabling metrics exporter to file ${ResourceManager.metricsFilePath}`);
+            Resources.logger(this).info(`Enabling metrics exporter to file ${Resources.manager().metricsFilePath}`);
         } catch (err) {
-            ResourceManager.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(APP_ERR.METRICS_EXPORTER).setWarning().addCause(err));
+            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(APP_ERR.METRICS_EXPORTER).setWarning().addCause(err));
         }
     }
 

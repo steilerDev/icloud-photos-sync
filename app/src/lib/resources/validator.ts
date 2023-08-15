@@ -7,10 +7,10 @@ import SetupResponseSchema from "./schemas/setup-response.json" assert { type: "
 import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" assert { type: "json" }; // eslint-disable-line
 import ResendMFADeviceResponseSchema from "./schemas/resend-mfa-device-response.json" assert { type: "json" }; // eslint-disable-line
 import ResendMFAPhoneResponseSchema from "./schemas/resend-mfa-phone-response.json" assert { type: "json" }; // eslint-disable-line
-import {ResourceFile} from "./resources.js";
+import {ResourceFile} from "./resource-types.js";
 import {iCPSError} from "../../app/error/error.js";
 import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
-import {COOKIE_KEYS, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninResponse, TrustResponse} from "./network.js";
+import {COOKIE_KEYS, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninResponse, TrustResponse} from "./network-types.js";
 
 const AJV_CONF = {
     verbose: true,

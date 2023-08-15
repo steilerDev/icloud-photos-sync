@@ -1,7 +1,7 @@
 import {describe, test, expect, beforeEach} from '@jest/globals';
-import {Validator} from '../../src/lib/resource-manager/validator';
+import {Validator} from '../../src/lib/resources/validator';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
-import {ResendMFADeviceResponse, ResendMFAPhoneResponse, TrustResponse} from '../../src/lib/resource-manager/network';
+import {ResendMFADeviceResponse, ResendMFAPhoneResponse, TrustResponse} from '../../src/lib/resources/network-types';
 import {getICloudCookieHeader} from '../_helpers/icloud.helper';
 import * as Config from '../_helpers/_config';
 

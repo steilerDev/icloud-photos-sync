@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import * as PACKAGE_INFO from '../../lib/package.js';
 import {SingleBar} from 'cli-progress';
-import {ResourceManager} from '../../lib/resource-manager/resource-manager.js';
-import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resource-manager/events.js';
+import {Resources} from '../../lib/resources/main.js';
+import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 
 /**
@@ -26,7 +26,7 @@ export class CLIInterface {
             barIncompleteChar: ` `,
         });
 
-        if (ResourceManager.silent) {
+        if (Resources.manager().silent) {
             return;
         }
 
@@ -37,23 +37,23 @@ export class CLIInterface {
         this.print(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
         this.print(chalk.green(`Made with <3 by steilerDev`));
 
-        if (ResourceManager.logToCli) {
-            ResourceManager.events(this)
+        if (Resources.manager().logToCli) {
+            Resources.events(this)
                 .on(iCPSEventLog.DEBUG, (instance: any, msg: string) => this.printLog(`debug`, instance, msg))
                 .on(iCPSEventLog.INFO, (instance: any, msg: string) => this.printLog(`info`, instance, msg))
                 .on(iCPSEventLog.WARN, (instance: any, msg: string) => this.printLog(`warn`, instance, msg))
                 .on(iCPSEventLog.ERROR, (instance: any, msg: string) => this.printLog(`error`, instance, msg));
         }
 
-        if (!ResourceManager.suppressWarnings) {
-            ResourceManager.events(this)
+        if (!Resources.manager().suppressWarnings) {
+            Resources.events(this)
                 .on(iCPSEventError.HANDLER_WARN, (msg: string) => this.printWarning(msg));
         }
 
-        ResourceManager.events(this)
+        Resources.events(this)
             .on(iCPSEventError.HANDLER_ERROR, (msg: string) => this.printFatalError(msg));
 
-        ResourceManager.events(this)
+        Resources.events(this)
             .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
                 this.print(chalk.white(this.getHorizontalLine()));
                 this.print(chalk.white(`Authenticating user...`));
@@ -71,7 +71,7 @@ export class CLIInterface {
                 this.print(chalk.white(`Sign in successful!`));
             });
 
-        ResourceManager.events(this)
+        Resources.events(this)
             .on(iCPSEventMFA.STARTED, port => {
                 this.print(chalk.white(`Listening for input on port ${port}`));
             })
@@ -85,7 +85,7 @@ export class CLIInterface {
                 this.print(chalk.yellowBright(`MFA code not provided in time, aborting...`));
             });
 
-        ResourceManager.events(this)
+        Resources.events(this)
             .on(iCPSEventPhotos.SETUP_COMPLETED, () => {
                 this.print(chalk.white(`iCloud Photos setup completed, checking indexing status...`));
             })
@@ -93,7 +93,7 @@ export class CLIInterface {
                 this.print(chalk.white(`iCloud Photos ready!`));
             });
 
-        ResourceManager.events(this)
+        Resources.events(this)
             .on(iCPSEventApp.TOKEN, token => {
                 this.print(chalk.green(`Validated token:\n${token}`));
             })
@@ -115,7 +115,7 @@ export class CLIInterface {
                 this.print(chalk.green(this.getHorizontalLine()));
             });
 
-        ResourceManager.events(this)
+        Resources.events(this)
             .on(iCPSEventSyncEngine.START, () => {
                 this.print(chalk.white(this.getHorizontalLine()));
                 this.print(chalk.white.bold(`Starting sync at ${this.getDateTime()}`));
@@ -168,7 +168,7 @@ export class CLIInterface {
                 this.print(chalk.white(this.getHorizontalLine()));
             });
 
-        ResourceManager.events(this)
+        Resources.events(this)
             .on(iCPSEventArchiveEngine.ARCHIVE_START, (path: string) => {
                 this.print(chalk.white.bold(`Archiving local path ${path}`));
             })

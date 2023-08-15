@@ -1,11 +1,11 @@
 import {EventEmitter} from "events";
-import {iCPSEvent, iCPSEventLog} from "./events.js";
-import {ResourceManager} from "./resource-manager.js";
+import {iCPSEvent} from "./events-types.js";
+import {Resources} from "./main.js";
 
 /**
  * Callbacks for event listeners
  */
-type ListenerFunction = (...args: any[]) => void;
+export type ListenerFunction = (...args: any[]) => void;
 
 /**
  * Internal storage type for event registry
@@ -31,21 +31,6 @@ export class EventManager {
     _eventRegistry: Map<any, EventRegistryObject[]> = new Map();
 
     /**
-     * Returns a logger interface, that binds to log events from the event bus to a source
-     * @param source - The source of the log message - either an object or a string
-     * @returns The logger interface
-     */
-    logger(source: any | string): StaticLogger {
-        return {
-            log: (...args: any[]) => this.emit(iCPSEventLog.INFO, source, format(args)),
-            debug: (...args: any[]) => this.emit(iCPSEventLog.DEBUG, source, format(args)),
-            info: (...args: any[]) => this.emit(iCPSEventLog.INFO, source, format(args)),
-            warn: (...args: any[]) => this.emit(iCPSEventLog.WARN, source, format(args)),
-            error: (...args: any[]) => this.emit(iCPSEventLog.ERROR, source, format(args)),
-        };
-    }
-
-    /**
      * Emits an event on the event bus
      * @param event - The event to emit
      * @param args - The arguments to pass to the event
@@ -53,19 +38,6 @@ export class EventManager {
      */
     emit(event: iCPSEvent, ...args: any[]): boolean {
         return this._eventBus.emit(event, ...args);
-    }
-
-    /**
-     * Returns an event interface, that binds to event bus listener functions to a source
-     * @param source - The source of the registration request, used to track the listeners and enable cleanup
-     * @returns The events interface
-     */
-    events(source: any): StaticEvents {
-        return {
-            on: (event: iCPSEvent, listener: ListenerFunction) => this.on(source, event, listener).events(source),
-            once: (event: iCPSEvent, listener: ListenerFunction) => this.once(source, event, listener).events(source),
-            removeListeners: (event?: iCPSEvent) => this.removeListenersFromRegistry(source, event).events(source),
-        };
     }
 
     /**
@@ -101,7 +73,7 @@ export class EventManager {
      * @param listener - The registered listener function
      */
     addListenerToRegistry(source: any, event: iCPSEvent, listener: ListenerFunction) {
-        ResourceManager.logger(this).debug(`Registering listener for event ${event} from source ${source.constructor.name}`);
+        Resources.logger(this).debug(`Registering listener for event ${event} from source ${source.constructor.name}`);
         if (!this._eventRegistry.has(source)) {
             this._eventRegistry.set(source, []);
         }
@@ -118,7 +90,7 @@ export class EventManager {
      */
     removeListenersFromRegistry(source: any, event?: iCPSEvent): EventManager {
         if (!this._eventRegistry.has(source)) {
-            ResourceManager.logger(this).debug(`No listeners registered for source ${source.constructor.name}`);
+            Resources.logger(this).debug(`No listeners registered for source ${source.constructor.name}`);
             return this;
         }
 
@@ -136,10 +108,10 @@ export class EventManager {
             }
         }
 
-        ResourceManager.logger(this).debug(`Removed ${removedListenerCount} listeners for source ${source.constructor.name}`);
+        Resources.logger(this).debug(`Removed ${removedListenerCount} listeners for source ${source.constructor.name}`);
 
         if (updatedSourceRegistry.length === 0) {
-            ResourceManager.logger(this).debug(`No more listeners for source ${source.constructor.name} registered`);
+            Resources.logger(this).debug(`No more listeners for source ${source.constructor.name} registered`);
             this._eventRegistry.delete(source);
             return this;
         }
@@ -147,69 +119,4 @@ export class EventManager {
         this._eventRegistry.set(source, updatedSourceRegistry);
         return this;
     }
-}
-
-/**
- * Interface to logger event bus, with a source bound to it
- */
-export type StaticLogger = {
-    /**
-     * Logs a message to the event bus
-     * @param args - The arguments to log
-     */
-    log: (...args: any[]) => void,
-    /**
-     * Logs a debug message to the event bus
-     * @param args - The arguments to log
-     */
-    debug: (...args: any[]) => void,
-    /**
-     * Logs an info message to the event bus
-     * @param args - The arguments to log
-     */
-    info: (...args: any[]) => void,
-    /**
-     * Logs a warn message to the event bus
-     * @param args - The arguments to log
-     */
-    warn: (...args: any[]) => void,
-    /**
-     * Logs an error message to the event bus
-     * @param args - The arguments to log
-     */
-    error: (...args: any[]) => void,
-}
-
-/**
- * Interface to listener functions of the event bus, with a source bound to it
- */
-export type StaticEvents = {
-    /**
-     * Registers an event listener to the event bus
-     * @param event - The event to listen to
-     * @param listener - The listener function to call upon the event
-     * @returns This instance for chaining
-     */
-    on: (event: iCPSEvent, listener: ListenerFunction) => StaticEvents,
-    /**
-     * Registers an one-time event listener to the event bus
-     * @param event - The event to listen to
-     * @param listener - The listener function to call upon the event
-     * @returns This instance for chaining
-     */
-    once: (event: iCPSEvent, listener: ListenerFunction) => StaticEvents,
-    /**
-     * Removes all listeners from the source from the event bus
-     * @param event - Optional event to remove listeners for - otherwise all will be removed
-     */
-    removeListeners: (event?: iCPSEvent) => StaticEvents,
-}
-
-/**
- * Formats the provided arguments as a string
- * @param args - The arguments to format
- * @returns The formatted string
- */
-function format(...args: unknown[]): string {
-    return args.map(arg => String(arg)).join(` `);
 }
