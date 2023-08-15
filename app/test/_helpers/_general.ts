@@ -93,7 +93,7 @@ export function prepareResources(initiate: boolean = true, appOptions: iCPSAppOp
 
         instances.manager._writeResourceFile = ResourceManager.prototype._writeResourceFile as jest.Mock<typeof ResourceManager.prototype._writeResourceFile>;
 
-        instances.manager._readResourceFile = ResourceManager.prototype._readResourceFile as jest.Mock<typeof ResourceManager.prototype._readResourceFile>;;
+        instances.manager._readResourceFile = ResourceManager.prototype._readResourceFile as jest.Mock<typeof ResourceManager.prototype._readResourceFile>;
 
         ResourceManager.prototype._writeResourceFile = originalWriteResourceFile;
         ResourceManager.prototype._readResourceFile = originalReadResourceFile;

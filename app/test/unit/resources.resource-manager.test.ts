@@ -20,7 +20,7 @@ describe(`ResourceManager`, () => {
             ResourceManager.prototype._writeResourceFile = jest.fn<typeof ResourceManager.prototype._writeResourceFile>()
                 .mockReturnValue();
 
-            ResourceManager.prototype._readResourceFile = jest.fn<typeof ResourceManager.prototype._readResourceFile>()
+            ResourceManager.prototype._readResourceFile = jest.fn<typeof ResourceManager.prototype._readResourceFile>();
         });
 
         afterEach(() => {
@@ -38,8 +38,8 @@ describe(`ResourceManager`, () => {
             expect(resourceManager).toBeInstanceOf(ResourceManager);
             expect(resourceManager._readResourceFile).toHaveBeenCalledTimes(1);
             expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toBeUndefined()
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1)
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toBeUndefined();
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1);
             expect(resourceManager._resources).toEqual({
                 ...Config.defaultConfig,
                 libraryVersion: 1,
@@ -49,18 +49,18 @@ describe(`ResourceManager`, () => {
         test(`should set the trustToken property if it is present in the appOptions`, () => {
             (ResourceManager.prototype._readResourceFile as jest.Mock)
                 .mockReturnValue({
-                    libraryVersion: 1
+                    libraryVersion: 1,
                 });
 
             const resourceManager = new ResourceManager({
                 ...Config.defaultConfig,
                 trustToken: Config.trustToken,
-            });       
+            });
 
             expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
             // Checking what would have been written
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toEqual(Config.trustToken)
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1)
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toEqual(Config.trustToken);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1);
             expect(resourceManager._resources).toEqual({
                 ...Config.defaultConfig,
                 libraryVersion: 1,
@@ -75,12 +75,12 @@ describe(`ResourceManager`, () => {
                     trustToken: Config.trustToken,
                 });
 
-            const resourceManager = new ResourceManager(Config.defaultConfig);       
+            const resourceManager = new ResourceManager(Config.defaultConfig);
 
             expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
             // Checking what would have been written
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toEqual(Config.trustToken)
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1)
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toEqual(Config.trustToken);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1);
             expect(resourceManager._resources).toEqual({
                 ...Config.defaultConfig,
                 libraryVersion: 1,
@@ -98,12 +98,12 @@ describe(`ResourceManager`, () => {
             const resourceManager = new ResourceManager({
                 ...Config.defaultConfig,
                 trustToken: Config.trustToken,
-            });       
+            });
 
             expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
             // Checking what would have been written
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toEqual(Config.trustToken)
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1)
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toEqual(Config.trustToken);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1);
             expect(resourceManager._resources).toEqual({
                 ...Config.defaultConfig,
                 libraryVersion: 1,
@@ -121,18 +121,18 @@ describe(`ResourceManager`, () => {
             const resourceManager = new ResourceManager({
                 ...Config.defaultConfig,
                 trustToken: Config.trustToken,
-                refreshToken: true
-            });       
+                refreshToken: true,
+            });
 
             expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
             // Checking what would have been written
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toBeUndefined()
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1)
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toBeUndefined();
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1);
             expect(resourceManager._resources).toEqual({
                 ...Config.defaultConfig,
                 libraryVersion: 1,
                 trustToken: undefined,
-                refreshToken: true
+                refreshToken: true,
             });
         });
     });
@@ -340,43 +340,43 @@ describe(`ResourceManager`, () => {
 
         describe(`libraryVersion`, () => {
             test(`should return the library version from the resources`, () => {
-                (resourceManager._readResourceFile as jest.Mock).mockReset() // was called during construction
+                (resourceManager._readResourceFile as jest.Mock).mockReset(); // Was called during construction
                 expect(resourceManager.libraryVersion).toEqual(resources.libraryVersion);
-                expect(resourceManager._readResourceFile).not.toHaveBeenCalled()
+                expect(resourceManager._readResourceFile).not.toHaveBeenCalled();
             });
         });
 
         describe(`trustToken`, () => {
             test(`should return the trust token from the file`, () => {
-                resourceManager._resources.trustToken = Config.trustTokenModified
+                resourceManager._resources.trustToken = Config.trustTokenModified;
                 resourceManager._readResourceFile = jest.fn<typeof resourceManager._readResourceFile>()
                     .mockReturnValue({
                         libraryVersion: 1,
-                        trustToken: resources.trustToken
-                    })
+                        trustToken: resources.trustToken,
+                    });
                 expect(resourceManager.trustToken).toEqual(resources.trustToken);
-                expect(resourceManager._readResourceFile).toHaveBeenCalled()
+                expect(resourceManager._readResourceFile).toHaveBeenCalled();
             });
 
             test(`should return undefined, if trust token is not set in file`, () => {
                 resourceManager._readResourceFile = jest.fn<typeof resourceManager._readResourceFile>()
                     .mockReturnValue({
                         libraryVersion: 1,
-                        trustToken: undefined
-                    })
-                expect(resourceManager.trustToken).toBeUndefined()
-                expect(resourceManager._readResourceFile).toHaveBeenCalled()
+                        trustToken: undefined,
+                    });
+                expect(resourceManager.trustToken).toBeUndefined();
+                expect(resourceManager._readResourceFile).toHaveBeenCalled();
             });
         });
 
         describe(`trustToken setter`, () => {
             test(`should set the trust token in the resources and write it to the resource file`, () => {
-                (resourceManager._writeResourceFile as jest.Mock).mockReset()
+                (resourceManager._writeResourceFile as jest.Mock).mockReset();
                 resourceManager.trustToken = Config.trustTokenModified;
                 expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
                 // Checking what would have been written
-                expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toEqual(Config.trustTokenModified)
-                expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1)
+                expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toEqual(Config.trustTokenModified);
+                expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1);
                 expect(resourceManager._resources.trustToken).toEqual(Config.trustTokenModified);
             });
         });

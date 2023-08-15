@@ -148,7 +148,7 @@ export class ResourceManager {
      */
     get trustToken(): string | undefined {
         const resourceFile = this._readResourceFile();
-        this._resources.trustToken = resourceFile.trustToken
+        this._resources.trustToken = resourceFile.trustToken;
 
         return this._resources.trustToken;
     }

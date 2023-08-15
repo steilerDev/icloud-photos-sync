@@ -119,8 +119,8 @@ describe.each([
         mockedResourceManager._readResourceFile
             .mockReturnValue({
                 libraryVersion: 1,
-                trustToken: Config.trustToken
-            })
+                trustToken: Config.trustToken,
+            });
         mockedNetworkManager.photosUrl = photosDomain;
     });
 
@@ -160,8 +160,8 @@ describe.each([
             mockedResourceManager._readResourceFile
                 .mockReturnValue({
                     libraryVersion: 1,
-                    trustToken: undefined
-                })
+                    trustToken: undefined,
+                });
 
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
             icloud.ready = new Promise<void>((resolve, _reject) => resolve());
