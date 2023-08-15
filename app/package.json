@@ -8,6 +8,9 @@
   "bin": {
     "icloud-photos-sync": "bin/main.js"
   },
+  "files": [
+    "bin/**/*"
+  ],
   "scripts": {
     "clean": "rm -rf bin/ coverage/ doc/ node_modules/ package-lock.json src/lib/resource-manager/schemas/",
     "prebuild:lint": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
