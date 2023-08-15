@@ -106,8 +106,9 @@ export class ErrorHandler {
         const _err = iCPSError.toiCPSError(err);
 
         let message = _err.getDescription();
-
         const rootErrorCode = _err.getRootErrorCode(true);
+
+        Resources.logger(this).info(`Handling error ${_err.code} caused by ${rootErrorCode}`);
 
         // Report error and append error code
         if (
@@ -189,7 +190,7 @@ export class ErrorHandler {
             return [];
         }
 
-        Resources.emit(iCPSEventError.HANDLER_ERROR, `Crash report saved to ${attachmentDir}`);
+        Resources.logger(this).info(`Crash report saved to ${attachmentDir}`);
 
         return attachments;
     }

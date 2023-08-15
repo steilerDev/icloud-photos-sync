@@ -1,11 +1,12 @@
 
-import {test, expect, describe} from '@jest/globals';
+import {test, expect, describe, beforeEach, beforeAll} from '@jest/globals';
 import {Header, HeaderJar} from "../../src/lib/resources/network-manager";
 import axios from 'axios';
 import {Cookie} from 'tough-cookie';
-import {addHoursToCurrentDate, getDateInThePast} from '../_helpers/_general';
+import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
 
 describe(`HeaderJar`, () => {
+
     test(`Should initialize`, () => {
         const axiosInstance = axios.create();
         const headerJar = new HeaderJar(axiosInstance);
@@ -82,7 +83,12 @@ describe(`HeaderJar`, () => {
                 },
             },
         ])(`$desc`, ({headers, injectedHeaders}) => {
-            test.only.each([
+
+            beforeAll(() => {
+                prepareResources() // Only setting up for access to logger
+            })
+
+            test.each([
                 {
                     desc: `No Cookies`,
                     cookies: [],

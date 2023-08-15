@@ -155,7 +155,7 @@ export class SyncEngine {
      * @returns A promise that resolves, once the file has been successfully written to disk
      */
     async addAsset(asset: Asset) {
-        Resources.logger(this).info(`Adding asset ${asset.getDisplayName()}`);
+        Resources.logger(this).debug(`Adding asset ${asset.getDisplayName()}`);
 
         const response = await this.icloud.photos.downloadAsset(asset);
 

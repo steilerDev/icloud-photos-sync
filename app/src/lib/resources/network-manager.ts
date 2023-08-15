@@ -73,11 +73,7 @@ export class HeaderJar {
     _injectHeaders(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
         const requestCookieString = Array.from(this.cookies.values())
             .filter(cookie => this.isApplicable(config, cookie))
-            .filter(
-                cookie => cookie.TTL() > 0
-                || (cookie.expires as Date).getTime() === 1000, // Cookie.expires could also be the string 'Infinity', but then TTL() would be the number Infinity
-                // For some reason some Apple Headers have a magic expire unix time of 1000 (X-APPLE-WEBAUTH-HSA-LOGIN)
-            )
+            .filter(cookie => this.isNotExpired(cookie))
             .map(cookie => cookie.cookieString()).join(`; `);
 
         if (requestCookieString.length > 0) {
@@ -91,6 +87,25 @@ export class HeaderJar {
             });
 
         return config;
+    }
+
+    /**
+     * Checks metadata of the provided cookie to check if it's still valid
+     * @param cookie - The cookie to check
+     * @returns False if expired, true otherwise
+     */
+    isNotExpired(cookie: Cookie): boolean {
+        if (cookie.TTL() > 0) {
+            return true;
+        }
+
+        // Cookie.expires could also be the string 'Infinity', but then TTL() would be the number Infinity
+        if ((cookie.expires as Date).getTime() === 1000) { // For some reason some Apple Headers have a magic expire unix time of 1000 (X-APPLE-WEBAUTH-HSA-LOGIN), including them for now...
+            return true;
+        }
+
+        Resources.logger(this).debug(`Not applying expired cookie ${cookie.key}`);
+        return false;
     }
 
     /**
@@ -429,7 +444,13 @@ export class NetworkManager {
      */
     // async getDataStream<R = AxiosResponse<Readable>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R> {
     async getDataStream(url: string): Promise<AxiosResponse<Readable>> {
-        return this._streamingCCYLimiter.add(async () => this._streamingAxios.get(url)) as Promise<AxiosResponse<Readable>>;
+        Resources.logger(this).debug(`Adding ${url} to download queue`);
+        return this._streamingCCYLimiter.add(async () => {
+            Resources.logger(this).debug(`Starting download of ${url}`);
+            const response = await this._streamingAxios.get(url);
+            Resources.logger(this).debug(`Finished download of ${url}`);
+            return response;
+        }) as Promise<AxiosResponse<Readable>>;
     }
 
     /**

@@ -38,8 +38,10 @@ export class LogInterface {
                 Resources.events(this).on(iCPSEventLog.INFO, (source: any, msg: string) => this.logMessage(LogLevel.INFO, source, msg));
             case `warn`:
                 Resources.events(this).on(iCPSEventLog.WARN, (source: any, msg: string) => this.logMessage(LogLevel.WARN, source, msg));
+                Resources.events(this).on(iCPSEventError.HANDLER_WARN, (msg: string) => this.logMessage(LogLevel.WARN, `ErrorHandler`, msg));
             case `error`:
                 Resources.events(this).on(iCPSEventLog.ERROR, (source: any, msg: string) => this.logMessage(LogLevel.ERROR, source, msg));
+                Resources.events(this).on(iCPSEventError.HANDLER_ERROR, (msg: string) => this.logMessage(LogLevel.WARN, `ErrorHandler`, msg));
             }
         } catch (err) {
             Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(APP_ERR.LOGGER).setWarning().addCause(err));

@@ -505,6 +505,7 @@ export class iCloudPhotos {
 
         // Post-processing response
         const seen = new Set<string>();
+        const ignoredAssets: iCPSError[] = [];
         for (const record of allRecords) {
             try {
                 this.filterPictureRecord(record, seen);
@@ -519,8 +520,16 @@ export class iCloudPhotos {
                     seen.add(record.recordName);
                 }
             } catch (err) {
-                Resources.logger(this).info(`Error processing asset ${JSON.stringify(record)}: ${err.message}`);
+                // Summarizing errors/warnings
+                ignoredAssets.push((err as iCPSError));
             }
+        }
+
+        // Pretty printing ignored assets
+        if (ignoredAssets.length > 0) {
+            Resources.logger(this).info(`Ignoring ${ignoredAssets.length} assets for ${parentId === undefined ? `All photos` : parentId}:`);
+            const erroredAssets = ignoredAssets.filter(err => err.code !== ICLOUD_PHOTOS_ERR.UNWANTED_RECORD_TYPE.code); // Filtering 'expected' errors
+            Resources.logger(this).debug(`${erroredAssets.length} unexpected errors: ${erroredAssets.map(err => err.code).join(`, `)}`);
         }
 
         // There should be one CPLMaster and one CPLAsset per record, however the iCloud response is sometimes not adhering to this.
@@ -543,7 +552,6 @@ export class iCloudPhotos {
      * @returns A promise, that -once resolved-, contains the Axios response
      */
     async downloadAsset(asset: Asset): Promise<AxiosResponse<Readable, any>> {
-        Resources.logger(this).debug(`Starting download of asset ${asset.getDisplayName()}`);
         return Resources.network().getDataStream(asset.downloadURL);
     }
 
