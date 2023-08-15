@@ -116,7 +116,11 @@ describe.each([
     },
 ])(`Setup iCloud: $desc`, ({photosDomain}) => {
     beforeEach(() => {
-        mockedResourceManager._resources.trustToken = Config.trustToken;
+        mockedResourceManager._readResourceFile
+            .mockReturnValue({
+                libraryVersion: 1,
+                trustToken: Config.trustToken
+            })
         mockedNetworkManager.photosUrl = photosDomain;
     });
 
@@ -153,7 +157,11 @@ describe.each([
         });
 
         test(`Invalid Trust Token - MFA Required`, async () => {
-            mockedResourceManager._resources.trustToken = undefined;
+            mockedResourceManager._readResourceFile
+                .mockReturnValue({
+                    libraryVersion: 1,
+                    trustToken: undefined
+                })
 
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
             icloud.ready = new Promise<void>((resolve, _reject) => resolve());

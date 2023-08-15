@@ -24,7 +24,10 @@ export type MockedNetworkManager = NetworkManager & {
     mock: MockAdapter;
 };
 
-export type MockedResourceManager = ResourceManager
+export type MockedResourceManager = ResourceManager & {
+    _readResourceFile: jest.Mock<typeof ResourceManager.prototype._readResourceFile>
+    _writeResourceFile: jest.Mock<typeof ResourceManager.prototype._writeResourceFile>
+}
 
 export type MockedValidator = Validator
 
@@ -88,9 +91,9 @@ export function prepareResources(initiate: boolean = true, appOptions: iCPSAppOp
 
         const instances = Resources.setup(appOptions) as MockedResourceInstances;
 
-        instances.manager._writeResourceFile = ResourceManager.prototype._writeResourceFile;
+        instances.manager._writeResourceFile = ResourceManager.prototype._writeResourceFile as jest.Mock<typeof ResourceManager.prototype._writeResourceFile>;
 
-        instances.manager._readResourceFile = ResourceManager.prototype._readResourceFile;
+        instances.manager._readResourceFile = ResourceManager.prototype._readResourceFile as jest.Mock<typeof ResourceManager.prototype._readResourceFile>;;
 
         ResourceManager.prototype._writeResourceFile = originalWriteResourceFile;
         ResourceManager.prototype._readResourceFile = originalReadResourceFile;

@@ -26,14 +26,15 @@ export class ResourceManager {
      */
     constructor(appOptions: iCPSAppOptions) {
         // Cannot use logger here
-        Object.assign(this._resources, this._readResourceFile());
         Object.assign(this._resources, appOptions);
 
-        if (this._resources.refreshToken) {
-            this.trustToken = undefined;
-        }
+        const resourceFile = this._readResourceFile(); // Getting data from the resource file
+        this._resources.libraryVersion = resourceFile.libraryVersion; // 'soft' setting the library version (not writing back to file)
 
-        this._writeResourceFile();
+        // writing back whatever trust token should be used
+        this.trustToken = this._resources.refreshToken
+            ? undefined // If we force refresh the token set to undefined
+            : this._resources.trustToken ?? resourceFile.trustToken; // Use app option over whatever was already in the file
     }
 
     /**
@@ -134,25 +135,20 @@ export class ResourceManager {
     }
 
     /**
+     * Even though present in the resource file, this will only be loaded once and not re-read
      * @returns The currently loaded libraries version
      */
     get libraryVersion(): number {
-        if (isNaN(this._resources.libraryVersion)) {
-            const {libraryVersion} = this._readResourceFile();
-            this._resources.libraryVersion = libraryVersion;
-        }
-
         return this._resources.libraryVersion;
     }
 
     /**
-     * @returns The currently used trust token, or undefined if none is set. The supplied trust token from the CLI options takes precedence over the one from the resource file.
+     * This will always read the resource file for the most recently trust token and update the internal data structure
+     * @returns The currently used trust token, or undefined if none is set.
      */
     get trustToken(): string | undefined {
-        if (!this._resources.trustToken) {
-            const {trustToken} = this._readResourceFile();
-            this._resources.trustToken = trustToken;
-        }
+        const resourceFile = this._readResourceFile();
+        this._resources.trustToken = resourceFile.trustToken
 
         return this._resources.trustToken;
     }
