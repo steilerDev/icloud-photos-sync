@@ -1,5 +1,5 @@
 
-import {test, beforeEach, expect, jest, describe} from '@jest/globals';
+import {test, expect, describe} from '@jest/globals';
 import {Header, HeaderJar} from "../../src/lib/resources/network-manager";
 import axios from 'axios';
 import {Cookie} from 'tough-cookie';
