@@ -1,5 +1,6 @@
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import fs from "fs/promises";
+import {createWriteStream} from "fs";
 import * as PACKAGE from "../package.js";
 import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network-types.js";
 import {Cookie} from "tough-cookie";
@@ -7,10 +8,10 @@ import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {AxiosHarTracker} from "axios-har-tracker";
 import {FILE_ENCODING} from "./resource-types.js";
-import {Readable} from "stream";
 import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
+import {pEvent} from "p-event";
 
 export class Header {
     key: string;
@@ -274,14 +275,14 @@ export class NetworkManager {
      * Pending jobs will be cancelled and running jobs will be awaited
      * @param queue - The queue to settle
      */
-    async settleQueue(queue: PQueue) {
-        if (queue.size > 0) {
+    async settleQueue(queue: PQueue, clearQueuedJobs: boolean = true) {
+        if (clearQueuedJobs && queue.size > 0) {
             Resources.logger(this).info(`Clearing queue with ${queue.size} queued job(s)...`);
             queue.clear();
         }
 
         if (queue.pending > 0) {
-            Resources.logger(this).info(`${queue.pending} pending job(s), waiting for them to settle...`);
+            Resources.logger(this).info(`${queue.pending} pending job(s) (${queue.size} queued jobs), waiting for them to settle...`);
             await queue.onIdle();
         }
 
@@ -437,20 +438,21 @@ export class NetworkManager {
     }
 
     /**
-     * Performs a GET request to acquire a asset's data stream
-     * Uses concurrency limiting to ensure that the available bandwidth is used most efficiently
-     * @param url - The location of the asset
-     * @returns A promise, that resolves once the request has been completed.
+     * Downloads the provided url's content and writes it to the provided location
+     * @param url - The url to download
+     * @param location - The location to write the file to (existing files will be overwritten)
      */
-    // async getDataStream<R = AxiosResponse<Readable>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R> {
-    async getDataStream(url: string): Promise<AxiosResponse<Readable>> {
+    async downloadData(url: string, location: string): Promise<void> {
         Resources.logger(this).debug(`Adding ${url} to download queue`);
-        return this._streamingCCYLimiter.add(async () => {
+        await this._streamingCCYLimiter.add(async () => {
             Resources.logger(this).debug(`Starting download of ${url}`);
             const response = await this._streamingAxios.get(url);
+            Resources.logger(this).debug(`Starting to write ${url} to ${location}`);
+            const writeStream = createWriteStream(location, {flags: `w`});
+            response.data.pipe(writeStream);
+            await pEvent(writeStream, `finish`, {rejectionEvents: [`error`]});
             Resources.logger(this).debug(`Finished download of ${url}`);
-            return response;
-        }) as Promise<AxiosResponse<Readable>>;
+        });
     }
 
     /**

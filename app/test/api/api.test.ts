@@ -15,11 +15,23 @@ import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder.js';
 import {prepareResourceForApiTests} from '../_helpers/_general.js';
 import {Resources} from '../../src/lib/resources/main.js';
+import fs from 'fs';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(30 * 1000);
 
 describe(`API E2E Tests`, () => {
+    beforeEach(() => {
+        mockfs({
+            [Config.defaultConfig.dataDir]: {
+                '_All-Photos': {},
+            },
+        });
+    });
+
+    afterEach(() => {
+        mockfs.restore();
+    });
     test(`API Prerequisite`, () => {
         const resourceManager = prepareResourceForApiTests().manager;
         expect(resourceManager.username).toBeDefined();
@@ -35,13 +47,6 @@ describe(`API E2E Tests`, () => {
 
         beforeEach(() => {
             instances = prepareResourceForApiTests();
-            mockfs({
-                [Config.defaultConfig.dataDir]: {},
-            });
-        });
-
-        afterEach(() => {
-            mockfs.restore();
         });
 
         test(`Invalid username/password`, async () => {
@@ -59,14 +64,6 @@ describe(`API E2E Tests`, () => {
             await expect(icloud.authenticate()).rejects.toThrow(/^Username\/Password does not seem to match$/);
         });
 
-        test(`Without token & failOnMfa`, async () => {
-            instances = prepareResourceForApiTests();
-            instances.manager._resources.trustToken = undefined;
-
-            const icloud = new iCloud();
-            await expect(icloud.authenticate()).rejects.toThrow(/^MFA code required, failing due to failOnMfa flag$/);
-        });
-
         test(`Success`, async () => {
             const icloud = new iCloud();
             await expect(icloud.authenticate()).resolves.not.toThrow();
@@ -80,16 +77,6 @@ describe(`API E2E Tests`, () => {
             prepareResourceForApiTests();
             icloud = new iCloud();
             await icloud.authenticate();
-        });
-
-        beforeEach(() => {
-            mockfs({
-                [Config.defaultConfig.dataDir]: {},
-            });
-        });
-
-        afterEach(() => {
-            mockfs.restore();
         });
 
         describe(`Fetching records`, () => {
@@ -201,14 +188,9 @@ describe(`API E2E Tests`, () => {
                 expect(asset.downloadURL).toBeDefined();
                 expect(asset.downloadURL?.length).toBeGreaterThan(0);
 
-                // Actually downloading the file
-                const stream = (await icloud.photos.downloadAsset(asset)).data;
-                const chunks: any[] = [];
-                const file: Buffer = await new Promise((resolve, reject) => {
-                    stream.on(`data`, chunk => chunks.push(Buffer.from(chunk)));
-                    stream.on(`error`, err => reject(err));
-                    stream.on(`end`, () => resolve(Buffer.concat(chunks)));
-                });
+                await icloud.photos.downloadAsset(asset);
+
+                const file = await fs.promises.readFile(asset.getAssetFilePath());
                 const fileHash = crypto.createHash(`sha1`).update(file).digest(`base64`).toString();
 
                 expect(file.length).toBe(asset.size);

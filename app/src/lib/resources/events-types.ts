@@ -154,6 +154,10 @@ export enum iCPSEventSyncEngine {
      */
     WRITE_ASSET_COMPLETED = `write-asset-completed`,
     /**
+     * Emitted when the write process has experienced an error writing an asset - provides the asset name as argument
+     */
+    WRITE_ASSET_ERROR = `write-asset-error`,
+    /**
      * Emitted when the write process has completed writing all assets
      */
     WRITE_ASSETS_COMPLETED = `write-assets-completed`,

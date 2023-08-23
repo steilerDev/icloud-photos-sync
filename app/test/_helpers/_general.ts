@@ -57,6 +57,7 @@ export function prepareResourceForApiTests(): Resources.Types.Instances {
     instances.manager._readResourceFile = jest.fn<typeof instances.manager._readResourceFile>()
         .mockReturnValue({
             libraryVersion: 1,
+            trustToken: process.env.TEST_TRUST_TOKEN!,
         });
 
     return instances;

@@ -15,6 +15,11 @@ export class CLIInterface {
     progressBar: SingleBar;
 
     /**
+     * Keeps track of write errors during sync to provide a summary at the end
+     */
+    writeErrors: number = 0;
+
+    /**
      * Creates a new CLI interface based on the provided components
      * @param options - Parsed CLI Options
      */
@@ -140,13 +145,21 @@ export class CLIInterface {
             .on(iCPSEventSyncEngine.WRITE_ASSETS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
                 this.print(chalk.cyan(`Syncing assets, by keeping ${toBeKept} and removing ${toBeDeletedCount} local assets, as well as adding ${toBeAddedCount} remote assets...`));
                 this.progressBar.start(toBeAddedCount, 0);
+                this.writeErrors = 0;
             })
             .on(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, _recordName => {
+                this.progressBar.increment();
+            })
+            .on(iCPSEventSyncEngine.WRITE_ASSET_ERROR, _recordName => {
+                this.writeErrors++;
                 this.progressBar.increment();
             })
             .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {
                 this.progressBar.stop();
                 this.print(chalk.greenBright(`Successfully synced assets!`));
+                if (this.writeErrors > 0) {
+                    this.print(`Detected ${this.writeErrors} errors while adding assets, please check the logs for more details.`);
+                }
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
                 this.print(chalk.cyan(`Syncing albums, by keeping ${toBeKept} and removing ${toBeDeletedCount} local albums, as well as adding ${toBeAddedCount} remote albums...`));

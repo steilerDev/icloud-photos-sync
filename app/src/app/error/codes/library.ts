@@ -31,10 +31,6 @@ export const EXTRANEOUS_FILE: ErrorStruct = buildErrorStruct(
     name, prefix, `EXTRANEOUS_FILE`, `Extraneous file found while processing a folder`,
 );
 
-export const INVALID_ASSET: ErrorStruct = buildErrorStruct(
-    name, prefix, `INVALID_ASSET`, `Unable to verify asset`,
-);
-
 export const NO_PARENT: ErrorStruct = buildErrorStruct(
     name, prefix, `NO_PARENT`, `Unable to find parent of album`,
 );

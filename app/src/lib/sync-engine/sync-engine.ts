@@ -42,15 +42,13 @@ export class SyncEngine {
     async sync(): Promise<[Asset[], Album[]]> {
         Resources.logger(this).info(`Starting sync`);
         Resources.emit(iCPSEventSyncEngine.START);
-        let retryCount = 0;
-        while (Resources.manager().maxRetries > retryCount) {
-            retryCount++;
+        let retryCount = 1;
+        while (Resources.manager().maxRetries >= retryCount) {
             Resources.logger(this).info(`Performing sync, try #${retryCount}`);
 
-            const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await this.fetchAndLoadState();
-            const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums, localAssets, localAlbums);
-
             try {
+                const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await this.fetchAndLoadState();
+                const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums, localAssets, localAlbums);
                 await this.writeState(assetQueue, albumQueue);
                 Resources.logger(this).info(`Completed sync!`);
                 Resources.emit(iCPSEventSyncEngine.DONE);
@@ -63,6 +61,10 @@ export class SyncEngine {
                 }
 
                 await Resources.network().settleCCYLimiter();
+                Resources.logger(this).debug(`Refreshing iCloud cookies...`);
+                await this.icloud.setupAccount();
+
+                retryCount++;
                 Resources.emit(iCPSEventSyncEngine.RETRY, retryCount);
             }
         }
@@ -156,10 +158,13 @@ export class SyncEngine {
      */
     async addAsset(asset: Asset) {
         Resources.logger(this).debug(`Adding asset ${asset.getDisplayName()}`);
-
-        const response = await this.icloud.photos.downloadAsset(asset);
-
-        await this.photosLibrary.writeAsset(asset, response);
+        try {
+            await this.icloud.photos.downloadAsset(asset);
+        } catch (err) {
+            Resources.logger(this).info(`Error while downloading asset ${asset.getDisplayName()}: ${err.message}`);
+            Resources.emit(iCPSEventSyncEngine.WRITE_ASSET_ERROR, asset.getDisplayName());
+            return;
+        }
 
         Resources.emit(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, asset.getDisplayName());
     }

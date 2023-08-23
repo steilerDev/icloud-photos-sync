@@ -38,6 +38,7 @@ const FIELDS = {
     ASSETS_ARCHIVED: `assets_archived`,
     REMOTE_ASSETS_DELETED: `remote_assets_deleted`,
     ASSET_WRITTEN: `asset_written`,
+    ASSET_ERROR: `asset_error`,
     ALBUMS_TO_BE_ADDED: `albums_to_be_added`,
     ALBUMS_TO_BE_KEPT: `albums_to_be_kept`,
     ALBUMS_TO_BE_DELETED: `albums_to_be_deleted`,
@@ -376,6 +377,11 @@ export class MetricsExporter {
                 .on(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, (recordName: string) => {
                     this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                         .addField(FIELDS.ASSET_WRITTEN, recordName),
+                    );
+                })
+                .on(iCPSEventSyncEngine.WRITE_ASSET_ERROR, (recordName: string) => {
+                    this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                        .addField(FIELDS.ASSET_ERROR, recordName),
                     );
                 })
                 .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {

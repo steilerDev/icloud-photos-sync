@@ -38,6 +38,7 @@ afterEach(() => {
 describe(`Coordination`, () => {
     beforeEach(() => {
         mockedNetworkManager.settleCCYLimiter = jest.fn<typeof mockedNetworkManager.settleCCYLimiter>();
+        syncEngine.icloud.setupAccount = jest.fn<typeof syncEngine.icloud.setupAccount>();
     });
 
     describe(`Sync`, () => {
@@ -63,6 +64,7 @@ describe(`Coordination`, () => {
             expect(mockedNetworkManager.settleCCYLimiter).not.toHaveBeenCalled();
             expect(retryEvent).not.toHaveBeenCalled();
             expect(handlerEvent).not.toHaveBeenCalled();
+            expect(syncEngine.icloud.setupAccount).not.toHaveBeenCalled();
         });
 
         test(`Reach maximum retries`, async () => {
@@ -106,6 +108,7 @@ describe(`Coordination`, () => {
             expect(syncEngine.writeState).toHaveBeenNthCalledWith(3, ...diffStateReturnValue);
             expect(syncEngine.writeState).toHaveBeenNthCalledWith(4, ...diffStateReturnValue);
             expect(mockedNetworkManager.settleCCYLimiter).toHaveBeenCalledTimes(4);
+            expect(syncEngine.icloud.setupAccount).toHaveBeenCalledTimes(4);
         });
 
         test.each([
@@ -134,7 +137,7 @@ describe(`Coordination`, () => {
             await syncEngine.sync();
 
             expect(startEvent).toHaveBeenCalled();
-            expect(retryEvent).toHaveBeenCalledWith(1);
+            expect(retryEvent).toHaveBeenCalledTimes(1);
             expect(handlerEvent).toHaveBeenCalledWith(expectedError);
             expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(2);
             expect(syncEngine.diffState).toHaveBeenCalledTimes(2);
@@ -144,57 +147,9 @@ describe(`Coordination`, () => {
             expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, ...diffStateReturnValue);
             expect(syncEngine.writeState).toHaveBeenNthCalledWith(2, ...diffStateReturnValue);
             expect(mockedNetworkManager.settleCCYLimiter).toHaveBeenCalledTimes(1);
+            expect(syncEngine.icloud.setupAccount).toHaveBeenCalledTimes(1);
             expect(doneEvent).toHaveBeenCalledTimes(1);
         });
-
-        // @todo: Implement in network manager tests
-        //     test.each([
-        //         {
-        //             queue: undefined,
-        //             msg: `Undefined queue`,
-        //         },
-        //         {
-        //             queue: new PQueue(),
-        //             msg: `Empty queue`,
-        //         },
-        //         {
-        //             queue: (() => {
-        //                 const queue = new PQueue({concurrency: 2, autoStart: true});
-        //                 for (let i = 0; i < 10; i++) {
-        //                     queue.add(() => new Promise(resolve => setTimeout(resolve, 40)));
-        //                 }
-
-        //                 return queue;
-        //             })(),
-        //             msg: `Non-Empty queue`,
-        //         },
-        //         {
-        //             queue: (() => {
-        //                 const queue = new PQueue({concurrency: 2, autoStart: true});
-        //                 for (let i = 0; i < 10; i++) {
-        //                     queue.add(() => new Promise(resolve => setTimeout(resolve, 40)));
-        //                 }
-
-        //                 return queue;
-        //             })(),
-        //             msg: `Started queue`,
-        //         },
-        //     ])(`Prepare Retry - $msg`, async ({queue}) => {
-        //         syncEngine.downloadQueue = queue as unknown as PQueue;
-        //         syncEngine.icloud.setupAccount = jest.fn<typeof syncEngine.icloud.setupAccount>()
-        //             .mockResolvedValue();
-        //         syncEngine.icloud.getReady = jest.fn<typeof syncEngine.icloud.getReady>()
-        //             .mockResolvedValue();
-
-        //         await syncEngine.prepareRetry();
-
-        //         expect.assertions(queue ? 2 : 0);
-        //         // Expect(syncEngine.icloud.setupAccount).toHaveBeenCalledTimes(1);
-        //         if (syncEngine.downloadQueue) {
-        //             expect(syncEngine.downloadQueue.size).toEqual(0);
-        //             expect(syncEngine.downloadQueue.pending).toEqual(0);
-        //         }
-        //     });
     });
 
     test(`Fetch & Load State`, async () => {
@@ -300,8 +255,6 @@ describe(`Handle processing queue`, () => {
         let writeAssetCompleteEvent: jest.Mock<UnknownFunction>;
 
         beforeEach(() => {
-            syncEngine.photosLibrary.writeAsset = jest.fn<typeof syncEngine.photosLibrary.writeAsset>()
-                .mockResolvedValue();
             syncEngine.photosLibrary.deleteAsset = jest.fn<typeof syncEngine.photosLibrary.deleteAsset>()
                 .mockResolvedValue();
             syncEngine.icloud.photos.downloadAsset = jest.fn<typeof syncEngine.icloud.photos.downloadAsset>()
@@ -313,7 +266,6 @@ describe(`Handle processing queue`, () => {
         test(`Empty processing queue`, async () => {
             await syncEngine.writeAssets([[], [], []]);
 
-            expect(syncEngine.photosLibrary.writeAsset).not.toHaveBeenCalled();
             expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
             expect(syncEngine.icloud.photos.downloadAsset).not.toHaveBeenCalled();
             expect(writeAssetCompleteEvent).not.toHaveBeenCalled();
@@ -327,7 +279,6 @@ describe(`Handle processing queue`, () => {
 
             await syncEngine.writeAssets([toBeDeleted, [], []]);
 
-            expect(syncEngine.photosLibrary.writeAsset).not.toHaveBeenCalled();
             expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenCalledTimes(3);
             expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(1, asset1);
             expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(2, asset2);
@@ -349,7 +300,6 @@ describe(`Handle processing queue`, () => {
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
 
-            expect(syncEngine.photosLibrary.writeAsset).toHaveBeenCalledTimes(3);
             expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(3);
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(1, `somechecksum1`);
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);
@@ -375,7 +325,6 @@ describe(`Handle processing queue`, () => {
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
 
-            expect(syncEngine.photosLibrary.writeAsset).toHaveBeenCalledTimes(3);
             expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(3);
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(1, `somechecksum1`);
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);

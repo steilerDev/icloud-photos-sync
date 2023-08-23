@@ -1,4 +1,4 @@
-import {AxiosRequestConfig, AxiosResponse} from 'axios';
+import {AxiosRequestConfig} from 'axios';
 import * as QueryBuilder from './query-builder.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
@@ -9,7 +9,7 @@ import {Resources} from '../../resources/main.js';
 import {ENDPOINTS} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
 import {iCPSEventError, iCPSEventPhotos} from '../../resources/events-types.js';
-import {Readable} from 'stream';
+import fs from 'fs/promises';
 
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now
@@ -529,7 +529,9 @@ export class iCloudPhotos {
         if (ignoredAssets.length > 0) {
             Resources.logger(this).info(`Ignoring ${ignoredAssets.length} assets for ${parentId === undefined ? `All photos` : parentId}:`);
             const erroredAssets = ignoredAssets.filter(err => err.code !== ICLOUD_PHOTOS_ERR.UNWANTED_RECORD_TYPE.code); // Filtering 'expected' errors
-            Resources.logger(this).debug(`${erroredAssets.length} unexpected errors: ${erroredAssets.map(err => err.code).join(`, `)}`);
+            if (erroredAssets.length > 0) {
+                Resources.logger(this).warn(`${erroredAssets.length} unexpected errors for ${parentId === undefined ? `All photos` : parentId}: ${erroredAssets.map(err => err.code).join(`, `)}`);
+            }
         }
 
         // There should be one CPLMaster and one CPLAsset per record, however the iCloud response is sometimes not adhering to this.
@@ -549,10 +551,13 @@ export class iCloudPhotos {
     /**
      * Downloads an asset using the 'stream' method
      * @param asset - The asset to be downloaded
-     * @returns A promise, that -once resolved-, contains the Axios response
+     * @returns A promise, that resolves, once the asset has been written to disk
      */
-    async downloadAsset(asset: Asset): Promise<AxiosResponse<Readable, any>> {
-        return Resources.network().getDataStream(asset.downloadURL);
+    async downloadAsset(asset: Asset): Promise<void> {
+        const location = asset.getAssetFilePath();
+        await Resources.network().downloadData(asset.downloadURL, location);
+        await fs.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
+        await asset.verify();
     }
 
     /**

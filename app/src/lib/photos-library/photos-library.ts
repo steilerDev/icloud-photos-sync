@@ -4,14 +4,11 @@ import {Album, AlbumType} from './model/album.js';
 import fs from 'fs';
 import {Asset} from './model/asset.js';
 import {PLibraryEntities} from './model/photos-entity.js';
-import {AxiosResponse} from 'axios';
-import {pEvent} from 'p-event';
 import {iCPSError} from '../../app/error/error.js';
 import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
 import {Resources} from '../resources/main.js';
 import {iCPSEventError} from '../resources/events-types.js';
-import {Readable} from 'stream';
 
 type PathTuple = [namePath: string, uuidPath: string]
 
@@ -255,33 +252,6 @@ export class PhotosLibrary {
         }
 
         return AlbumType.ALBUM;
-    }
-
-    /**
-     * Writes the contents of the Axios response (as stream) to the filesystem, based on the associated Asset
-     * @param asset - The asset associated to the request
-     * @param response - The response -as a stream- containing the data of the asset
-     * @returns A promise, that resolves once this asset was written to disk and verified
-     */
-    async writeAsset(asset: Asset, response: AxiosResponse<Readable, any>): Promise<void> {
-        Resources.logger(this).debug(`Writing asset ${asset.getDisplayName()}`);
-        const location = asset.getAssetFilePath();
-        const writeStream = fs.createWriteStream(location, {flags: `w`});
-        response.data.pipe(writeStream);
-        await pEvent(writeStream, `finish`, {rejectionEvents: [`error`]});
-        try {
-            await fs.promises.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
-            await this.verifyAsset(asset);
-            Resources.logger(this).debug(`Asset ${asset.getDisplayName()} successfully downloaded`);
-        } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT,
-                new iCPSError(LIBRARY_ERR.INVALID_ASSET)
-                    .addMessage(asset.getDisplayName())
-                    .addContext(`asset`, asset)
-                    .addCause(err)
-                    .setWarning(),
-            );
-        }
     }
 
     /**
