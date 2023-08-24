@@ -252,15 +252,17 @@ describe(`Coordination`, () => {
 
 describe(`Handle processing queue`, () => {
     describe(`Handle asset queue`, () => {
-        let writeAssetCompleteEvent: jest.Mock<UnknownFunction>;
+        let writeAssetCompleteEvent: jest.Mock<UnknownFunction>
+        let writeAssetErrorEvent: jest.Mock<UnknownFunction>;
 
         beforeEach(() => {
             syncEngine.photosLibrary.deleteAsset = jest.fn<typeof syncEngine.photosLibrary.deleteAsset>()
                 .mockResolvedValue();
             syncEngine.icloud.photos.downloadAsset = jest.fn<typeof syncEngine.icloud.photos.downloadAsset>()
-                .mockResolvedValue({} as any);
+                .mockResolvedValue();
 
-            writeAssetCompleteEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
+            writeAssetCompleteEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED); 
+            writeAssetErrorEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_ERROR);
         });
 
         test(`Empty processing queue`, async () => {
@@ -289,8 +291,11 @@ describe(`Handle processing queue`, () => {
 
         test(`Only adding`, async () => {
             const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            asset1.verify = jest.fn<typeof asset1.verify>()
             const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+            asset2.verify = jest.fn<typeof asset2.verify>()
             const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
+            asset3.verify = jest.fn<typeof asset3.verify>()
             const toBeAdded = [asset1, asset2, asset3];
 
             await syncEngine.writeAssets([[], toBeAdded, []]);
@@ -305,13 +310,75 @@ describe(`Handle processing queue`, () => {
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(3, `somechecksum3`);
 
+            expect(writeAssetErrorEvent).not.toHaveBeenCalled();
+
+            expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
+        });
+
+        test(`Only adding with verification error`, async () => {
+            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            asset1.verify = jest.fn<typeof asset1.verify>()
+            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+            asset2.verify = jest.fn<typeof asset2.verify>()
+            const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
+            asset3.verify = jest.fn<typeof asset3.verify>()
+                .mockRejectedValue(new Error(`verification error`))
+
+            const toBeAdded = [asset1, asset2, asset3];
+
+            await syncEngine.writeAssets([[], toBeAdded, []]);
+
+            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
+            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
+            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
+            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
+
+            expect(writeAssetErrorEvent).toHaveBeenCalledTimes(1);
+
+            expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(2);
+            expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(1, `somechecksum1`);
+            expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);
+
+            expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
+        });
+        
+        test(`Only adding with download error`, async () => {
+            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            asset1.verify = jest.fn<typeof asset1.verify>()
+            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+            asset2.verify = jest.fn<typeof asset2.verify>()
+            const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
+            asset3.verify = jest.fn<typeof asset3.verify>()
+
+            syncEngine.icloud.photos.downloadAsset = jest.fn<typeof syncEngine.icloud.photos.downloadAsset>()
+                .mockResolvedValueOnce()
+                .mockResolvedValueOnce()
+                .mockRejectedValueOnce(new Error());
+
+
+            const toBeAdded = [asset1, asset2, asset3];
+
+            await expect(syncEngine.writeAssets([[], toBeAdded, []])).rejects.toThrowError();
+
+            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledTimes(3); 
+            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
+            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
+            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
+
+            expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(2);
+            expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(1, `somechecksum1`);
+            expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);
+
             expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
         });
 
         test(`Adding & deleting`, async () => {
             const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            asset1.verify = jest.fn<typeof asset1.verify>()
             const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+            asset2.verify = jest.fn<typeof asset2.verify>()
             const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
+            asset3.verify = jest.fn<typeof asset3.verify>()
             const asset4 = new Asset(`somechecksum4`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test4`, `somekey`, `somechecksum4`, `https://icloud.com`, `somerecordname4`, false);
             const asset5 = new Asset(`somechecksum5`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test5`, `somekey`, `somechecksum5`, `https://icloud.com`, `somerecordname5`, false);
             const asset6 = new Asset(`somechecksum6`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test6`, `somekey`, `somechecksum6`, `https://icloud.com`, `somerecordname6`, false);

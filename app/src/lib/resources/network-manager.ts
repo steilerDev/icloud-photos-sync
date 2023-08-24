@@ -443,7 +443,6 @@ export class NetworkManager {
      * @param location - The location to write the file to (existing files will be overwritten)
      */
     async downloadData(url: string, location: string): Promise<void> {
-        Resources.logger(this).debug(`Adding ${url} to download queue`);
         await this._streamingCCYLimiter.add(async () => {
             Resources.logger(this).debug(`Starting download of ${url}`);
             const response = await this._streamingAxios.get(url);

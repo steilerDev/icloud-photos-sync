@@ -8,7 +8,7 @@ import {iCPSError} from '../../app/error/error.js';
 import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
 import {Resources} from '../resources/main.js';
-import {iCPSEventError} from '../resources/events-types.js';
+import {iCPSEventError, iCPSEventSyncEngine} from '../resources/events-types.js';
 
 type PathTuple = [namePath: string, uuidPath: string]
 
@@ -416,12 +416,12 @@ export class PhotosLibrary {
                 fs.symlinkSync(relativeAssetPath, linkedAsset);
                 fs.lutimesSync(linkedAsset, assetTime, assetTime);
             } catch (err) {
-                Resources.emit(iCPSEventError.HANDLER_EVENT,
-                    new iCPSError(LIBRARY_ERR.LINK)
-                        .setWarning()
-                        .addMessage(`${relativeAssetPath} to ${linkedAsset}`)
-                        .addCause(err),
-                );
+                const linkErr = new iCPSError(LIBRARY_ERR.LINK)
+                    .setWarning()
+                    .addMessage(`${relativeAssetPath} to ${linkedAsset}`)
+                    .addCause(err);
+                Resources.emit(iCPSEventSyncEngine.LINK_ERROR, assetUUID, album.getDisplayName());
+                Resources.logger(this).info(`Unable to link ${relativeAssetPath} to ${linkedAsset}: ${linkErr.getDescription()}`);
             }
         });
     }

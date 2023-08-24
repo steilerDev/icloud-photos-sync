@@ -42,6 +42,7 @@ const FIELDS = {
     ALBUMS_TO_BE_ADDED: `albums_to_be_added`,
     ALBUMS_TO_BE_KEPT: `albums_to_be_kept`,
     ALBUMS_TO_BE_DELETED: `albums_to_be_deleted`,
+    LINK_ERROR: `link_error`,
     ERROR: `errors`,
     WARNING: `warnings`,
     STATUS_TIME: `status_time`,
@@ -394,6 +395,11 @@ export class MetricsExporter {
                         .addField(FIELDS.ALBUMS_TO_BE_ADDED, toBeAddedCount)
                         .addField(FIELDS.ALBUMS_TO_BE_DELETED, toBeDeletedCount)
                         .addField(FIELDS.ALBUMS_TO_BE_KEPT, toBeKept),
+                    );
+                })
+                .on(iCPSEventSyncEngine.LINK_ERROR, (_assetUUID: string, _albumName: string) => {
+                    this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                        .addField(FIELDS.LINK_ERROR, `${_assetUUID} -> ${_albumName}`) 
                     );
                 })
                 .on(iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED, () => {

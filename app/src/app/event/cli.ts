@@ -4,6 +4,7 @@ import {SingleBar} from 'cli-progress';
 import {Resources} from '../../lib/resources/main.js';
 import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
+import { iCPSError } from '../error/error.js';
 
 /**
  * This class handles the input/output to the command line
@@ -18,6 +19,11 @@ export class CLIInterface {
      * Keeps track of write errors during sync to provide a summary at the end
      */
     writeErrors: number = 0;
+
+    /**
+     * Keeps track of album link errors during sync to provide a summary at the end
+     */
+    linkErrors: number = 0;
 
     /**
      * Creates a new CLI interface based on the provided components
@@ -156,16 +162,27 @@ export class CLIInterface {
             })
             .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {
                 this.progressBar.stop();
-                this.print(chalk.greenBright(`Successfully synced assets!`));
+
+                this.print(chalk.greenBright(`Asset sync completed!`));
                 if (this.writeErrors > 0) {
                     this.print(`Detected ${this.writeErrors} errors while adding assets, please check the logs for more details.`);
+                    return;
                 }
+                this.print(chalk.greenBright(`Successfully synced assets without errors!`));
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
                 this.print(chalk.cyan(`Syncing albums, by keeping ${toBeKept} and removing ${toBeDeletedCount} local albums, as well as adding ${toBeAddedCount} remote albums...`));
+                this.linkErrors = 0;
+            })
+            .on(iCPSEventSyncEngine.LINK_ERROR, (_assetUUID: string, _albumName: string) => {
+                this.linkErrors++;
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED, () => {
-                this.print(chalk.greenBright(`Successfully synced albums!`));
+                this.print(chalk.greenBright(`Album sync completed!`));
+                if (this.linkErrors > 0) {
+                    this.print(`Detected ${this.linkErrors} errors while linking album assets, please check the logs for more details.`);
+                }
+                this.print(chalk.greenBright(`Successfully synced albums without errors!`));
             })
             .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
                 this.print(chalk.green(`Successfully wrote diff to disk!`));

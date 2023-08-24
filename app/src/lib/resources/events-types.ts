@@ -154,7 +154,7 @@ export enum iCPSEventSyncEngine {
      */
     WRITE_ASSET_COMPLETED = `write-asset-completed`,
     /**
-     * Emitted when the write process has experienced an error writing an asset - provides the asset name as argument
+     * Emitted when the write process has experienced an error while verifying a written asset - provides the asset name as argument
      */
     WRITE_ASSET_ERROR = `write-asset-error`,
     /**
@@ -165,6 +165,10 @@ export enum iCPSEventSyncEngine {
      * Emitted when the write process has started writing albums - provides the number of albums to be deleted, added and kept as arguments
      */
     WRITE_ALBUMS = `write-albums`,
+    /**
+     * Emitted when an asset cannot be linked to an album - provides the asset UUID and album name as arguments
+     */
+    LINK_ERROR = `link-error`,
     /**
      * Emitted when the write process has completed writing all albums
      */

@@ -157,14 +157,16 @@ export class SyncEngine {
      * @returns A promise that resolves, once the file has been successfully written to disk
      */
     async addAsset(asset: Asset) {
-        Resources.logger(this).debug(`Adding asset ${asset.getDisplayName()}`);
+        await this.icloud.photos.downloadAsset(asset);
+
         try {
-            await this.icloud.photos.downloadAsset(asset);
+            await asset.verify()
         } catch (err) {
-            Resources.logger(this).info(`Error while downloading asset ${asset.getDisplayName()}: ${err.message}`);
+            Resources.logger(this).info(`Unable to verify asset ${asset.getDisplayName()} at ${asset.getAssetFilePath()}: ${err.message}`);
             Resources.emit(iCPSEventSyncEngine.WRITE_ASSET_ERROR, asset.getDisplayName());
             return;
         }
+        
 
         Resources.emit(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, asset.getDisplayName());
     }

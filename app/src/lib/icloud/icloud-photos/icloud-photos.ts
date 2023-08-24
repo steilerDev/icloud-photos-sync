@@ -549,7 +549,7 @@ export class iCloudPhotos {
     }
 
     /**
-     * Downloads an asset using the 'stream' method
+     * Downloads an asset using the 'stream' method and applies relevant metadata to the file
      * @param asset - The asset to be downloaded
      * @returns A promise, that resolves, once the asset has been written to disk
      */
@@ -557,7 +557,6 @@ export class iCloudPhotos {
         const location = asset.getAssetFilePath();
         await Resources.network().downloadData(asset.downloadURL, location);
         await fs.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
-        await asset.verify();
     }
 
     /**

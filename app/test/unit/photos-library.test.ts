@@ -10,6 +10,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import * as Config from '../_helpers/_config';
 import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
+import { iCPSEventSyncEngine } from '../../src/lib/resources/events-types';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
 const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR);
@@ -1190,7 +1191,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.LINK_ERROR)
 
                 library.writeAlbum(folder);
 
@@ -1204,8 +1205,8 @@ describe(`Write state`, () => {
                 const albumAsset1Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
                 expect(fs.existsSync(albumAsset1Path)).toBeFalsy();
 
-                expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to link assets`));
-                expect(handlerEvent).toHaveBeenCalledTimes(1);
+                expect(linkErrorEvent).toHaveBeenCalledWith(albumAsset1Filename, albumName);
+                expect(linkErrorEvent).toHaveBeenCalledTimes(1);
 
                 const albumAsset2Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
                 const albumAsset2Stat = fs.lstatSync(albumAsset2Path);
@@ -1352,7 +1353,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.LINK_ERROR)
 
                 library.writeAlbum(folder);
 
@@ -1370,8 +1371,8 @@ describe(`Write state`, () => {
                 const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
                 expect(albumAsset1Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset1Filename));
 
-                expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to link assets`));
-                expect(handlerEvent).toHaveBeenCalledTimes(1);
+                expect(linkErrorEvent).toHaveBeenCalledWith(albumAsset2Filename, albumName);
+                expect(linkErrorEvent).toHaveBeenCalledTimes(1);
             });
         });
 
