@@ -4,7 +4,6 @@ import {SingleBar} from 'cli-progress';
 import {Resources} from '../../lib/resources/main.js';
 import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import { iCPSError } from '../error/error.js';
 
 /**
  * This class handles the input/output to the command line
@@ -168,6 +167,7 @@ export class CLIInterface {
                     this.print(`Detected ${this.writeErrors} errors while adding assets, please check the logs for more details.`);
                     return;
                 }
+
                 this.print(chalk.greenBright(`Successfully synced assets without errors!`));
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
@@ -182,6 +182,7 @@ export class CLIInterface {
                 if (this.linkErrors > 0) {
                     this.print(`Detected ${this.linkErrors} errors while linking album assets, please check the logs for more details.`);
                 }
+
                 this.print(chalk.greenBright(`Successfully synced albums without errors!`));
             })
             .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
@@ -194,7 +195,7 @@ export class CLIInterface {
             })
             .on(iCPSEventSyncEngine.RETRY, retryCount => {
                 this.progressBar.stop();
-                this.print(chalk.magenta(`Detected recoverable error, refreshing iCloud connection & retrying (#${retryCount})...`));
+                this.print(chalk.magenta(`Detected error during sync, refreshing iCloud connection & retrying (attempt #${retryCount})...`));
                 this.print(chalk.white(this.getHorizontalLine()));
             });
 

@@ -43,6 +43,10 @@ export class SyncEngine {
         Resources.logger(this).info(`Starting sync`);
         Resources.emit(iCPSEventSyncEngine.START);
         let retryCount = 1;
+
+        // Keeping track of all previous errors in case we reache retry limit
+        const retryError = new iCPSError(SYNC_ERR.MAX_RETRY);
+
         while (Resources.manager().maxRetries >= retryCount) {
             Resources.logger(this).info(`Performing sync, try #${retryCount}`);
 
@@ -55,23 +59,30 @@ export class SyncEngine {
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
                 if (err instanceof AxiosError) {
-                    Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.NETWORK).addCause(err));
+                    Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.NETWORK)
+                        .addCause(err)
+                        .setWarning(),
+                    );
                 } else {
-                    Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.UNKNOWN).addCause(err));
+                    Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.UNKNOWN)
+                        .addCause(err)
+                        .setWarning(),
+                    );
                 }
 
-                await Resources.network().settleCCYLimiter();
-                Resources.logger(this).debug(`Refreshing iCloud cookies...`);
-                await this.icloud.setupAccount();
-
+                retryError.addContext(`error-try-${retryCount}`, err);
                 retryCount++;
                 Resources.emit(iCPSEventSyncEngine.RETRY, retryCount);
+
+                await Resources.network().settleCCYLimiter();
+
+                Resources.logger(this).debug(`Refreshing iCloud cookies...`);
+                await this.icloud.setupAccount();
             }
         }
 
         // We'll only reach this, if we exceeded retryCount
-        throw new iCPSError(SYNC_ERR.MAX_RETRY)
-            .addMessage(`${retryCount}`);
+        throw retryError.addMessage(`${retryCount}`);
     }
 
     /**
@@ -160,13 +171,12 @@ export class SyncEngine {
         await this.icloud.photos.downloadAsset(asset);
 
         try {
-            await asset.verify()
+            await asset.verify();
         } catch (err) {
-            Resources.logger(this).info(`Unable to verify asset ${asset.getDisplayName()} at ${asset.getAssetFilePath()}: ${err.message}`);
+            Resources.logger(this).warn(`Unable to verify asset ${asset.getDisplayName()} at ${asset.getAssetFilePath()}: ${err.message}`);
             Resources.emit(iCPSEventSyncEngine.WRITE_ASSET_ERROR, asset.getDisplayName());
             return;
         }
-        
 
         Resources.emit(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, asset.getDisplayName());
     }

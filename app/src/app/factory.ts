@@ -91,6 +91,7 @@ export type iCPSAppOptions = {
     port: number,
     maxRetries: number,
     downloadThreads: number,
+    downloadTimeout: number,
     schedule: string,
     enableCrashReporting: boolean,
     enableNetworkCapture: boolean,
@@ -148,6 +149,10 @@ export function appFactory(argv: string[]): iCPSApp {
             .env(`DOWNLOAD_THREADS`)
             .default(5)
             .argParser(commanderParsePositiveIntOrInfinity))
+        .addOption(new Option(`--download-timeout <number>`, `Sets the request timeout (in minutes) for downloading assets, should be increased on slower connections and/or if there are large assets in the library ('0' will remove the timeout).`)
+            .env(`DOWNLOAD_TIMEOUT`)
+            .default(5)
+            .argParser(commanderParsePositiveInt))
         .addOption(new Option(`-S, --schedule <cron-string>`, `In case this app is executed in daemon mode, it will use this cron schedule to perform regular syncs.`)
             .env(`SCHEDULE`)
             .default(`0 2 * * *`)

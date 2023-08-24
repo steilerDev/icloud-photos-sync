@@ -421,7 +421,7 @@ export class PhotosLibrary {
                     .addMessage(`${relativeAssetPath} to ${linkedAsset}`)
                     .addCause(err);
                 Resources.emit(iCPSEventSyncEngine.LINK_ERROR, assetUUID, album.getDisplayName());
-                Resources.logger(this).info(`Unable to link ${relativeAssetPath} to ${linkedAsset}: ${linkErr.getDescription()}`);
+                Resources.logger(this).warn(`Unable to link ${relativeAssetPath} to ${linkedAsset}: ${linkErr.getDescription()}`);
             }
         });
     }

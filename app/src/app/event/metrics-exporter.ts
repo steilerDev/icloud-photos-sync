@@ -399,7 +399,7 @@ export class MetricsExporter {
                 })
                 .on(iCPSEventSyncEngine.LINK_ERROR, (_assetUUID: string, _albumName: string) => {
                     this.logDataPoint(new iCPSInfluxLineProtocolPoint()
-                        .addField(FIELDS.LINK_ERROR, `${_assetUUID} -> ${_albumName}`) 
+                        .addField(FIELDS.LINK_ERROR, `${_assetUUID} -> ${_albumName}`),
                     );
                 })
                 .on(iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED, () => {

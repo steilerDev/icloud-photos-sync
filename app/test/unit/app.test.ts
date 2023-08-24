@@ -59,7 +59,7 @@ describe(`App Factory`, () => {
         test.each(nonRejectOptions)(`$_desc`, ({options, expectedOptions}) => {
             const setupSpy = jest.spyOn(Resources, `setup`);
             const app = appFactory([...options, ...command]);
-            expect(setupSpy).toHaveBeenCalledWith(expectedOptions);
+            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, ...expectedOptions});
             expect(app).toBeInstanceOf(appType);
         });
     });

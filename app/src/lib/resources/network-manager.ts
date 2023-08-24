@@ -211,6 +211,7 @@ export class NetworkManager {
 
         this._streamingAxios = axios.create({
             responseType: `stream`,
+            timeout: (1000 * 60 * resources.downloadTimeout),
         });
 
         if (resources.enableNetworkCapture) {

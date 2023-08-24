@@ -10,7 +10,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import * as Config from '../_helpers/_config';
 import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
-import { iCPSEventSyncEngine } from '../../src/lib/resources/events-types';
+import {iCPSEventSyncEngine} from '../../src/lib/resources/events-types';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
 const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR);
@@ -1191,7 +1191,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.LINK_ERROR)
+                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.LINK_ERROR);
 
                 library.writeAlbum(folder);
 
@@ -1353,7 +1353,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.LINK_ERROR)
+                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.LINK_ERROR);
 
                 library.writeAlbum(folder);
 

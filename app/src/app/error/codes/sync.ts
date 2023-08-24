@@ -28,9 +28,9 @@ export const MAX_RETRY: ErrorStruct = buildErrorStruct(
 );
 
 export const NETWORK: ErrorStruct = buildErrorStruct(
-    name, prefix, `NETWORK`, `Network error during sync, trying to retry`,
+    name, prefix, `NETWORK`, `Network error during sync`,
 );
 
 export const UNKNOWN: ErrorStruct = buildErrorStruct(
-    name, prefix, `UNKNOWN`, `Unknown error during sync, trying to retry`,
+    name, prefix, `UNKNOWN`, `Unknown error during sync`,
 );
