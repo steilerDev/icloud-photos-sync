@@ -8,7 +8,7 @@ import {appFactory} from '../../src/app/factory';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {prepareResources, spyOnEvent} from '../_helpers/_general';
 import path from 'path';
-import {iCPSEventApp, iCPSEventCloud} from '../../src/lib/resources/events-types';
+import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
 
 beforeEach(() => {
@@ -350,6 +350,7 @@ describe(`App control flow`, () => {
         test(`Scheduled sync fails`, async () => {
             const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
             const retryEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_RETRY);
+            const errorEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeError.SCHEDULED_ERROR);
 
             const syncApp = new SyncApp();
             syncApp.run = jest.fn<typeof syncApp.run>()
@@ -359,6 +360,7 @@ describe(`App control flow`, () => {
 
             expect(syncApp.run).toHaveBeenCalled();
             expect(retryEvent).toHaveBeenCalled();
+            expect(errorEvent).toHaveBeenCalled();
         });
     });
 });

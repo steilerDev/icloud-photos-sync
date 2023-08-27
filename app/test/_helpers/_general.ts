@@ -5,7 +5,7 @@ import {iCPSAppOptions} from '../../src/app/factory';
 import {ResourceManager} from '../../src/lib/resources/resource-manager';
 import MockAdapter from 'axios-mock-adapter';
 import {NetworkManager} from '../../src/lib/resources/network-manager';
-import {iCPSEvent, iCPSEventError} from '../../src/lib/resources/events-types';
+import {iCPSEvent} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
 import {Validator} from '../../src/lib/resources/validator';
 import {EventManager} from '../../src/lib/resources/event-manager';
@@ -33,7 +33,6 @@ export type MockedValidator = Validator
 
 export type MockedEventManager = EventManager & {
     spyOnEvent: (event: iCPSEvent, removeListeners?: boolean) => jest.Mock;
-    spyOnHandlerEvent: (removeListeners?: boolean) => jest.Mock;
 }
 
 /**
@@ -101,7 +100,6 @@ export function prepareResources(initiate: boolean = true, appOptions: iCPSAppOp
 
         instances.network.mock = new MockAdapter(instances.network._axios, {onNoMatch: `throwException`});
         instances.event.spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(instances.event._eventBus, event, removeListeners);
-        instances.event.spyOnHandlerEvent = (removeListeners: boolean = true) => spyOnEvent(instances.event._eventBus, iCPSEventError.HANDLER_EVENT, removeListeners);
         return instances;
     }
 

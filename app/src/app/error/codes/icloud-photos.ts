@@ -70,7 +70,3 @@ export const COUNT_DATA: ErrorStruct = buildErrorStruct(
 export const FETCH_RECORDS: ErrorStruct = buildErrorStruct(
     name, prefix, `FETCH_RECORDS`, `Unable to fetch records`,
 );
-
-export const COUNT_MISMATCH: ErrorStruct = buildErrorStruct(
-    name, prefix, `COUNT_MISMATCH`, `Received unexpected amount of records`,
-);

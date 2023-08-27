@@ -8,7 +8,7 @@ import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
 import {Resources} from '../../resources/main.js';
 import {ENDPOINTS} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
-import {iCPSEventError, iCPSEventPhotos} from '../../resources/events-types.js';
+import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
 import fs from 'fs/promises';
 
 /**
@@ -439,7 +439,6 @@ export class iCloudPhotos {
 
         if (record.recordType === QueryBuilder.RECORD_TYPES.CONTAINER_RELATION) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNWANTED_RECORD_TYPE)
-                .setWarning()
                 .addMessage(record.recordType)
                 .addContext(`recordType`, record.recordType);
         }
@@ -536,10 +535,11 @@ export class iCloudPhotos {
 
         // There should be one CPLMaster and one CPLAsset per record, however the iCloud response is sometimes not adhering to this.
         if (cplMasters.length !== expectedNumberOfRecords || cplAssets.length !== expectedNumberOfRecords) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT,
-                new iCPSError(ICLOUD_PHOTOS_ERR.COUNT_MISMATCH)
-                    .setWarning()
-                    .addMessage(`expected ${expectedNumberOfRecords} CPLMaster & ${expectedNumberOfRecords} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`),
+            Resources.emit(iCPSEventRuntimeWarning.COUNT_MISMATCH,
+                parentId === undefined ? `All photos` : parentId,
+                expectedNumberOfRecords,
+                cplAssets.length,
+                cplMasters.length,
             );
         } else {
             Resources.logger(this).debug(`Received expected amount (${expectedNumberOfRecords}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);

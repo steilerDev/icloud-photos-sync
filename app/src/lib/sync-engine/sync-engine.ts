@@ -8,7 +8,7 @@ import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
 import {Resources} from '../resources/main.js';
 import {SyncEngineHelper} from './helper.js';
-import {iCPSEventError, iCPSEventSyncEngine} from '../resources/events-types.js';
+import {iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../resources/events-types.js';
 import {AxiosError} from 'axios';
 
 /**
@@ -44,7 +44,7 @@ export class SyncEngine {
         Resources.emit(iCPSEventSyncEngine.START);
         let retryCount = 1;
 
-        // Keeping track of all previous errors in case we reache retry limit
+        // Keeping track of all previous errors in case we reach retry limit
         const retryError = new iCPSError(SYNC_ERR.MAX_RETRY);
 
         while (Resources.manager().maxRetries >= retryCount) {
@@ -58,21 +58,12 @@ export class SyncEngine {
                 Resources.emit(iCPSEventSyncEngine.DONE);
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
-                if (err instanceof AxiosError) {
-                    Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.NETWORK)
-                        .addCause(err)
-                        .setWarning(),
-                    );
-                } else {
-                    Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.UNKNOWN)
-                        .addCause(err)
-                        .setWarning(),
-                    );
-                }
-
                 retryError.addContext(`error-try-${retryCount}`, err);
                 retryCount++;
-                Resources.emit(iCPSEventSyncEngine.RETRY, retryCount);
+
+                Resources.emit(iCPSEventSyncEngine.RETRY, retryCount, err instanceof AxiosError
+                    ? new iCPSError(SYNC_ERR.NETWORK).addCause(err)
+                    : new iCPSError(SYNC_ERR.UNKNOWN).addCause(err));
 
                 await Resources.network().settleCCYLimiter();
 
@@ -173,8 +164,7 @@ export class SyncEngine {
         try {
             await asset.verify();
         } catch (err) {
-            Resources.logger(this).warn(`Unable to verify asset ${asset.getDisplayName()} at ${asset.getAssetFilePath()}: ${err.message}`);
-            Resources.emit(iCPSEventSyncEngine.WRITE_ASSET_ERROR, asset.getDisplayName());
+            Resources.emit(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, asset, err);
             return;
         }
 
@@ -221,11 +211,9 @@ export class SyncEngine {
             try {
                 this.photosLibrary.retrieveStashedAlbum(album);
             } catch (err) {
-                Resources.emit(iCPSEventError.HANDLER_EVENT,
-                    new iCPSError(SYNC_ERR.STASH_RETRIEVE)
-                        .addMessage(album.getDisplayName())
-                        .addCause(err),
-                );
+                throw new iCPSError(SYNC_ERR.STASH_RETRIEVE)
+                    .addMessage(album.getDisplayName())
+                    .addCause(err);
             }
 
             return;
@@ -234,12 +222,7 @@ export class SyncEngine {
         try {
             this.photosLibrary.writeAlbum(album);
         } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT,
-                new iCPSError(SYNC_ERR.ADD_ALBUM)
-                    .addMessage(album.getDisplayName())
-                    .addCause(err)
-                    .setWarning(),
-            );
+            Resources.emit(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, album, new iCPSError(SYNC_ERR.ADD_ALBUM).addCause(err));
         }
     }
 
@@ -255,11 +238,9 @@ export class SyncEngine {
             try {
                 this.photosLibrary.stashArchivedAlbum(album);
             } catch (err) {
-                Resources.emit(iCPSEventError.HANDLER_EVENT,
-                    new iCPSError(SYNC_ERR.STASH)
-                        .addMessage(album.getDisplayName())
-                        .addCause(err),
-                );
+                throw new iCPSError(SYNC_ERR.STASH)
+                    .addMessage(album.getDisplayName())
+                    .addCause(err);
             }
 
             return;
@@ -268,11 +249,7 @@ export class SyncEngine {
         try {
             this.photosLibrary.deleteAlbum(album);
         } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT,
-                new iCPSError(SYNC_ERR.DELETE_ALBUM)
-                    .addMessage(album.getDisplayName())
-                    .addCause(err),
-            );
+            Resources.emit(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, album, new iCPSError(SYNC_ERR.DELETE_ALBUM).addCause(err));
         }
     }
 }

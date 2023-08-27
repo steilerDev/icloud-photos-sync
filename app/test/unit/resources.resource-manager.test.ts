@@ -7,9 +7,9 @@ import {ResourceManager} from '../../src/lib/resources/resource-manager';
 import {MockedResourceManager, prepareResources, spyOnEvent} from '../_helpers/_general';
 import {Resources} from '../../src/lib/resources/main';
 import {EventManager} from '../../src/lib/resources/event-manager';
-import {iCPSEventError, iCPSEventResourceManager} from '../../src/lib/resources/events-types';
 import {Validator} from '../../src/lib/resources/validator';
 import path from 'path';
+import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 
 describe(`ResourceManager`, () => {
     describe(`constructor`, () => {
@@ -187,7 +187,7 @@ describe(`ResourceManager`, () => {
                     }),
                 });
 
-                const noResourceFileFoundEvent = spyOnEvent(eventManager._eventBus, iCPSEventResourceManager.NO_RESOURCE_FILE_FOUND);
+                const noResourceFileFoundEvent = spyOnEvent(eventManager._eventBus, iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR);
 
                 const result = resourceManager._readResourceFile();
 
@@ -204,7 +204,7 @@ describe(`ResourceManager`, () => {
                         invalid: `json`,
                     }),
                 });
-                const noResourceFileFoundEvent = spyOnEvent(eventManager._eventBus, iCPSEventResourceManager.NO_RESOURCE_FILE_FOUND);
+                const noResourceFileFoundEvent = spyOnEvent(eventManager._eventBus, iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR);
 
                 const result = resourceManager._readResourceFile();
 
@@ -241,11 +241,11 @@ describe(`ResourceManager`, () => {
                         mode: 0o444, // Make the file read-only
                     }),
                 });
-                const handlerEvent = spyOnEvent(eventManager._eventBus, iCPSEventError.HANDLER_EVENT);
+                const warningEvent = spyOnEvent(eventManager._eventBus, iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR);
 
                 resourceManager._writeResourceFile();
 
-                expect(handlerEvent).toHaveBeenCalledWith(expect.any(Error));
+                expect(warningEvent).toHaveBeenCalledWith(expect.any(Error));
             });
 
             test(`should overwrite an existing resource file with the correct contents`, () => {

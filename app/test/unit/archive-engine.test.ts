@@ -8,7 +8,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
 import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
-import {iCPSEventArchiveEngine} from '../../src/lib/resources/events-types';
+import {iCPSEventArchiveEngine, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {ArchiveEngine} from '../../src/lib/archive-engine/archive-engine';
 import {iCloud} from '../../src/lib/icloud/icloud';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
@@ -161,7 +161,7 @@ describe.each([{
             const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
             const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
             const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
-            const errorEvent = mockedEventManager.spyOnHandlerEvent();
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
@@ -395,7 +395,7 @@ describe.each([{
             const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
             const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
             const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
-            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve())
                 .mockRejectedValueOnce(`Persisting failed`)
@@ -424,7 +424,7 @@ describe.each([{
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`));
+            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`));
         });
 
         test(`Prepare remote delete throws error`, async () => {
@@ -468,7 +468,7 @@ describe.each([{
             const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
             const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
             const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
-            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
@@ -496,7 +496,7 @@ describe.each([{
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to find asset`));
+            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`));
         });
 
         test(`Delete assets throws error`, async () => {

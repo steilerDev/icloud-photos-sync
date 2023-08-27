@@ -6,7 +6,7 @@ import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR, MFA_ERR} from '../error/
 import fs from 'fs/promises';
 import path from 'path';
 import {Resources} from '../../lib/resources/main.js';
-import {iCPSEventApp, iCPSEventError} from '../../lib/resources/events-types.js';
+import {iCPSEventApp, iCPSEventRuntimeError, iCPSEventRuntimeWarning} from '../../lib/resources/events-types.js';
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 import * as zlib from 'zlib';
 import {Readable} from 'stream';
@@ -23,14 +23,6 @@ const reportDenyList = [
     MFA_ERR.SERVER_TIMEOUT.code, // Only happens if user does not interact within 10 minutes
     LIBRARY_ERR.LOCKED.code, // Only happens if library is locked
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
-];
-
-/**
- * List of errors that will get reported, even though it's only a warning
- */
-const reportAllowList = [
-    LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR.code,
-    LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION.code,
 ];
 
 const BACKTRACE_SUBMISSION = {
@@ -51,11 +43,6 @@ export class ErrorHandler {
      * The error reporting client - if activated
      */
     btClient?: bt.BacktraceClient;
-
-    /**
-     * Flag to indicate verbose error output
-     */
-    verbose: boolean = false;
 
     constructor() {
         if (Resources.manager().enableCrashReporting) {
@@ -78,22 +65,17 @@ export class ErrorHandler {
             });
         }
 
-        Resources.events(this).on(iCPSEventError.HANDLER_EVENT, async (err: unknown) => {
-            await this.handle(err);
-        });
-
-        if (Resources.manager().logLevel === `debug`) {
-            this.verbose = true;
-        }
+        Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, this.handleError.bind(this));
+        Resources.events(this).on(iCPSEventRuntimeWarning.FILETYPE_ERROR, this.handleFiletype.bind(this));
 
         // Register handlers for interrupts
         process.on(`SIGTERM`, async () => {
-            await this.handle(new iCPSError(ERR_SIGTERM));
+            await this.handleError(new iCPSError(ERR_SIGTERM));
             process.exit(2);
         });
 
         process.on(`SIGINT`, async () => {
-            await this.handle(new iCPSError(ERR_SIGINT));
+            await this.handleError(new iCPSError(ERR_SIGINT));
             process.exit(2);
         });
     }
@@ -102,39 +84,22 @@ export class ErrorHandler {
      * Handles a given error. Report fatal errors and provide appropriate output.
      * @param err - The occurred error
      */
-    async handle(err: unknown) {
+    async handleError(err: unknown) {
         const _err = iCPSError.toiCPSError(err);
-
-        let message = _err.getDescription();
         const rootErrorCode = _err.getRootErrorCode(true);
 
         Resources.logger(this).info(`Handling error ${_err.code} caused by ${rootErrorCode}`);
 
         // Report error and append error code
-        if (
-            (_err.sev === `FATAL` || reportAllowList.indexOf(rootErrorCode) > -1) // Report fatal errors and errors in allow list
-            && reportDenyList.indexOf(rootErrorCode) === -1 // Exclude errors in deny list
-        ) {
-            const errorId = await this.reportError(_err);
-            message += ` (Error Code: ${errorId})`;
-        } else {
-            message += ` (Not reporting ${rootErrorCode})`;
+        if (reportDenyList.indexOf(rootErrorCode) === -1) {
+            _err.btUUID = await this.reportError(_err);
         }
 
-        if (this.verbose && Object.keys(_err.context).length > 0) {
-            message += `\ncontext:${JSON.stringify(_err.context)}`;
-        }
+        Resources.emit(iCPSEventRuntimeError.HANDLED_ERROR, _err);
+    }
 
-        // Performing output based on severity
-        switch (_err.sev) {
-        case `WARN`:
-            Resources.emit(iCPSEventError.HANDLER_WARN, message);
-            break;
-        default:
-        case `FATAL`:
-            Resources.emit(iCPSEventError.HANDLER_ERROR, message);
-            break;
-        }
+    async handleFiletype(_ext: string, _descriptor?: string) {
+        // Todo: report the filetype
     }
 
     /**
@@ -185,7 +150,7 @@ export class ErrorHandler {
         }
 
         if (attachments.length === 0) {
-            Resources.emit(iCPSEventError.HANDLER_WARN, `No attachments found for error report`);
+            Resources.logger(this).warn(`No attachments found for error report`);
             await fs.rmdir(attachmentDir);
             return [];
         }
@@ -237,7 +202,7 @@ export class ErrorHandler {
 
             return targetPath;
         } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare log file for crash report`, err);
+            Resources.logger(this).warn(`Unable to prepare log file for crash report: ${err.message}`);
             return undefined;
         }
     }
@@ -261,7 +226,7 @@ export class ErrorHandler {
             const harStream = harData.createReadStream();
             await this.compressStream(targetPath, harStream);
         } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare HAR file for crash report`, err);
+            Resources.logger(this).warn(`Unable to prepare HAR file for crash report: ${err.message}`);
             return undefined;
         } finally {
             await harData?.close();

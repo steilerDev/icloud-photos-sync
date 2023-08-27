@@ -73,6 +73,8 @@ export class FileType {
     static fromAssetType(descriptor: string, ext: string): FileType {
         if (!EXT[descriptor]) {
             throw new iCPSError(LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR)
+                .addContext(`extension`, ext)
+                .addContext(`descriptor`, descriptor)
                 .addMessage(`${descriptor} (with potential extension ${ext})`);
         }
 
@@ -93,6 +95,7 @@ export class FileType {
         const descriptor = Object.keys(EXT).find(key => EXT[key] === ext);
         if (!descriptor) {
             throw new iCPSError(LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION)
+                .addContext(`extension`, ext)
                 .addMessage(ext);
         }
 

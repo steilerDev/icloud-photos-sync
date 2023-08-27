@@ -31,6 +31,10 @@ export const UNABLE_TO_WRITE_FILE: ErrorStruct = buildErrorStruct(
     name, prefix, `UNABLE_TO_WRITE_FILE`, `Unable to write resource file`,
 );
 
+export const UNABLE_TO_READ_FILE: ErrorStruct = buildErrorStruct(
+    name, prefix, `UNABLE_TO_READ_FILE`, `Unable to read resource file`,
+);
+
 export const NO_SESSION_SECRET: ErrorStruct = buildErrorStruct(
     name, prefix, `NO_SESSION_SECRET`, `No session secret present`,
 );

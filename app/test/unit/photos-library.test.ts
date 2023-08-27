@@ -10,7 +10,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import * as Config from '../_helpers/_config';
 import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
-import {iCPSEventSyncEngine} from '../../src/lib/resources/events-types';
+import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
 const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR);
@@ -253,12 +253,12 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+            const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.EXTRANEOUS_FILE);
 
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(2);
-            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Extraneous file found while processing a folder`));
+            expect(warnEvent).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, `.${someFolderUUID}`));
         });
 
         test(`Orphaned album`, async () => {
@@ -274,12 +274,10 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const orphanEvent = mockedEventManager.spyOnHandlerEvent();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(0);
 
-            expect(orphanEvent).toHaveBeenCalledWith(new Error(`Found dead symlink (removing it)`));
             expect(() => fs.lstatSync(path.join(Config.defaultConfig.dataDir, orphanedAlbumName))).toThrow(/^ENOENT: no such file or directory, lstat '\/opt\/icloud-photos-library\/Orphan'$/);
         });
 
@@ -1191,7 +1189,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.LINK_ERROR);
+                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.LINK_ERROR);
 
                 library.writeAlbum(folder);
 
@@ -1203,10 +1201,8 @@ describe(`Write state`, () => {
                 expect(namedFolderTarget).toEqual(`.${albumUUID}`);
 
                 const albumAsset1Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
+                const albumAsset1TargetPath = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR, albumAsset1Filename);
                 expect(fs.existsSync(albumAsset1Path)).toBeFalsy();
-
-                expect(linkErrorEvent).toHaveBeenCalledWith(albumAsset1Filename, albumName);
-                expect(linkErrorEvent).toHaveBeenCalledTimes(1);
 
                 const albumAsset2Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
                 const albumAsset2Stat = fs.lstatSync(albumAsset2Path);
@@ -1214,6 +1210,8 @@ describe(`Write state`, () => {
                 expect(albumAsset2Stat.mtime).toEqual(new Date(albumAsset2mTime));
                 const albumAsset2Target = fs.readlinkSync(albumAsset2Path);
                 expect(albumAsset2Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset2Filename));
+
+                expect(linkErrorEvent).toHaveBeenCalledTimes(1);
 
                 const albumAsset3Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset3PrettyFilename);
                 const albumAsset3Stat = fs.lstatSync(albumAsset3Path);
@@ -1353,7 +1351,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.LINK_ERROR);
+                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.LINK_ERROR);
 
                 library.writeAlbum(folder);
 
@@ -1371,7 +1369,6 @@ describe(`Write state`, () => {
                 const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
                 expect(albumAsset1Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset1Filename));
 
-                expect(linkErrorEvent).toHaveBeenCalledWith(albumAsset2Filename, albumName);
                 expect(linkErrorEvent).toHaveBeenCalledTimes(1);
             });
         });

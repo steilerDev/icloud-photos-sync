@@ -2,8 +2,9 @@ import chalk from 'chalk';
 import * as PACKAGE_INFO from '../../lib/package.js';
 import {SingleBar} from 'cli-progress';
 import {Resources} from '../../lib/resources/main.js';
-import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventError, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
+import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
+import {iCPSError} from '../error/error.js';
 
 /**
  * This class handles the input/output to the command line
@@ -15,23 +16,13 @@ export class CLIInterface {
     progressBar: SingleBar;
 
     /**
-     * Keeps track of write errors during sync to provide a summary at the end
-     */
-    writeErrors: number = 0;
-
-    /**
-     * Keeps track of album link errors during sync to provide a summary at the end
-     */
-    linkErrors: number = 0;
-
-    /**
      * Creates a new CLI interface based on the provided components
      * @param options - Parsed CLI Options
      */
     constructor() {
         this.progressBar = new SingleBar({
             etaAsynchronousUpdate: true,
-            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
+            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded\n`,
             barCompleteChar: `\u25A0`,
             barIncompleteChar: ` `,
         });
@@ -47,21 +38,15 @@ export class CLIInterface {
         this.print(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
         this.print(chalk.green(`Made with <3 by steilerDev`));
 
-        if (Resources.manager().logToCli) {
-            Resources.events(this)
-                .on(iCPSEventLog.DEBUG, (instance: any, msg: string) => this.printLog(`debug`, instance, msg))
-                .on(iCPSEventLog.INFO, (instance: any, msg: string) => this.printLog(`info`, instance, msg))
-                .on(iCPSEventLog.WARN, (instance: any, msg: string) => this.printLog(`warn`, instance, msg))
-                .on(iCPSEventLog.ERROR, (instance: any, msg: string) => this.printLog(`error`, instance, msg));
-        }
-
         if (!Resources.manager().suppressWarnings) {
             Resources.events(this)
-                .on(iCPSEventError.HANDLER_WARN, (msg: string) => this.printWarning(msg));
+                .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: Error) => this.printWarning(err.message))
+                .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => this.printWarning(`Detected unknown filetype (${descriptor} with ${ext}), please report in GH issue 143`))
+                .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: iCPSError) => this.printWarning(err.getDescription()));
         }
 
         Resources.events(this)
-            .on(iCPSEventError.HANDLER_ERROR, (msg: string) => this.printFatalError(msg));
+            .on(iCPSEventRuntimeError.HANDLED_ERROR, (err: iCPSError) => this.printError(err.getDescription()));
 
         Resources.events(this)
             .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
@@ -133,10 +118,35 @@ export class CLIInterface {
             .on(iCPSEventSyncEngine.FETCH_N_LOAD, () => {
                 this.print(chalk.white(this.getHorizontalLine()));
                 this.print(chalk.white(`Loading local & fetching remote iCloud Library state...`));
+                Resources.event().resetEventCounter(iCPSEventRuntimeWarning.EXTRANEOUS_FILE);
+                Resources.event().resetEventCounter(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR);
+
+                Resources.event().resetEventCounter(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+                Resources.event().resetEventCounter(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR);
             })
             .on(iCPSEventSyncEngine.FETCH_N_LOAD_COMPLETED, (remoteAssetCount: number, remoteAlbumCount: number, localAssetCount: number, localAlbumCount: number) => {
                 this.print(chalk.green(`Loaded local state: ${localAssetCount} assets & ${localAlbumCount} albums`));
+
+                const extraneousFiles = Resources.event().getEventCount(iCPSEventRuntimeWarning.EXTRANEOUS_FILE);
+                if (extraneousFiles > 0) {
+                    this.printWarning(`Detected ${extraneousFiles} extraneous files, please check the logs for more details.`);
+                }
+
+                const libraryLoadErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR);
+                if (libraryLoadErrors > 0) {
+                    this.printWarning(`Unable to load ${libraryLoadErrors} local assets, please check the logs for more details.`);
+                }
+
                 this.print(chalk.green(`Fetched remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
+                const mismatchErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+                if (mismatchErrors > 0) {
+                    this.printWarning(`Detected ${mismatchErrors} albums, where asset counts don't match, please check the logs for more details.`);
+                }
+
+                const iCloudLoadErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR);
+                if (iCloudLoadErrors > 0) {
+                    this.printWarning(`Unable to load ${iCloudLoadErrors} remote assets, please check the logs for more details.`);
+                }
             })
             .on(iCPSEventSyncEngine.DIFF, () => {
                 this.print(chalk.white(`Diffing remote with local state...`));
@@ -150,40 +160,40 @@ export class CLIInterface {
             .on(iCPSEventSyncEngine.WRITE_ASSETS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
                 this.print(chalk.cyan(`Syncing assets, by keeping ${toBeKept} and removing ${toBeDeletedCount} local assets, as well as adding ${toBeAddedCount} remote assets...`));
                 this.progressBar.start(toBeAddedCount, 0);
-                this.writeErrors = 0;
+
+                Resources.event().resetEventCounter(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR);
             })
-            .on(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, _recordName => {
+            .on(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, () => {
                 this.progressBar.increment();
             })
-            .on(iCPSEventSyncEngine.WRITE_ASSET_ERROR, _recordName => {
-                this.writeErrors++;
+            .on(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, () => {
                 this.progressBar.increment();
             })
             .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {
                 this.progressBar.stop();
 
                 this.print(chalk.greenBright(`Asset sync completed!`));
-                if (this.writeErrors > 0) {
-                    this.print(`Detected ${this.writeErrors} errors while adding assets, please check the logs for more details.`);
-                    return;
+                const writeAssetErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR);
+                if (writeAssetErrors > 0) {
+                    this.printWarning(`Detected ${writeAssetErrors} errors while adding assets, please check the logs for more details.`);
                 }
-
-                this.print(chalk.greenBright(`Successfully synced assets without errors!`));
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
                 this.print(chalk.cyan(`Syncing albums, by keeping ${toBeKept} and removing ${toBeDeletedCount} local albums, as well as adding ${toBeAddedCount} remote albums...`));
-                this.linkErrors = 0;
-            })
-            .on(iCPSEventSyncEngine.LINK_ERROR, (_assetUUID: string, _albumName: string) => {
-                this.linkErrors++;
+                Resources.event().resetEventCounter(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR);
+                Resources.event().resetEventCounter(iCPSEventRuntimeWarning.LINK_ERROR);
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED, () => {
                 this.print(chalk.greenBright(`Album sync completed!`));
-                if (this.linkErrors > 0) {
-                    this.print(`Detected ${this.linkErrors} errors while linking album assets, please check the logs for more details.`);
+                const linkErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.LINK_ERROR);
+                if (linkErrors > 0) {
+                    this.printWarning(`Detected ${linkErrors} errors while linking assets to albums, please check the logs for more details.`);
                 }
 
-                this.print(chalk.greenBright(`Successfully synced albums without errors!`));
+                const writeAlbumErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR);
+                if (writeAlbumErrors > 0) {
+                    this.printWarning(`Detected ${writeAlbumErrors} errors while writing albums, please check the logs for more details.`);
+                }
             })
             .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
                 this.print(chalk.green(`Successfully wrote diff to disk!`));
@@ -193,15 +203,17 @@ export class CLIInterface {
                 this.print(chalk.green.bold(`Successfully completed sync at ${this.getDateTime()}`));
                 this.print(chalk.white(this.getHorizontalLine()));
             })
-            .on(iCPSEventSyncEngine.RETRY, retryCount => {
+            .on(iCPSEventSyncEngine.RETRY, (retryCount: number, err: iCPSError) => {
                 this.progressBar.stop();
-                this.print(chalk.magenta(`Detected error during sync, refreshing iCloud connection & retrying (attempt #${retryCount})...`));
+                this.print(chalk.magenta(`Detected error during sync: ${err.getDescription()}`));
+                this.print(chalk.magenta(`Refreshing iCloud connection & retrying (attempt #${retryCount})...`));
                 this.print(chalk.white(this.getHorizontalLine()));
             });
 
         Resources.events(this)
             .on(iCPSEventArchiveEngine.ARCHIVE_START, (path: string) => {
                 this.print(chalk.white.bold(`Archiving local path ${path}`));
+                Resources.event().resetEventCounter(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
             })
             .on(iCPSEventArchiveEngine.PERSISTING_START, (numberOfAssets: number) => {
                 this.print(chalk.cyan(`Persisting ${numberOfAssets} assets`));
@@ -212,6 +224,11 @@ export class CLIInterface {
             .on(iCPSEventArchiveEngine.ARCHIVE_DONE, () => {
                 this.print(chalk.white(this.getHorizontalLine()));
                 this.print(chalk.green.bold(`Successfully completed archiving`));
+                const archiveAssetErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
+                if (archiveAssetErrors > 0) {
+                    this.printWarning(`Detected ${archiveAssetErrors} errors while archiving assets, please check the logs for more details.`);
+                }
+
                 this.print(chalk.white(this.getHorizontalLine()));
             });
     }
@@ -226,26 +243,20 @@ export class CLIInterface {
         }
     }
 
-    printLog(level: string, instance: any, msg: string) {
-        console.log(`${chalk.gray(`[${new Date().toLocaleString()}] ${level.toUpperCase()}`)} ${chalk.white(`${String(instance.constructor.name)}: ${msg}`)}`);
-    }
-
     /**
      * Prints a warning
-     * @param msg - The message string
+     * @param msg - The warning string
      */
     printWarning(msg: string) {
-        this.print(chalk.yellow(msg));
+        this.print(chalk.yellow(`Warning: ${msg}`));
     }
 
     /**
-     * Prints a fatal error
+     * Prints an error
      * @param err - The error string
      */
-    printFatalError(err: string) {
-        this.print(chalk.red(this.getHorizontalLine()));
-        this.print(chalk.red(`Experienced fatal error at ${this.getDateTime()}: ${err}`));
-        this.print(chalk.red(this.getHorizontalLine()));
+    printError(err: string) {
+        this.print(chalk.red(`Error: ${err}`));
     }
 
     /**

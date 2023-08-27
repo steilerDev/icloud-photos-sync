@@ -10,7 +10,7 @@ import path from "path";
 import {Cron} from "croner";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {Resources} from "../lib/resources/main.js";
-import {iCPSEventApp, iCPSEventCloud, iCPSEventError, iCPSEventPhotos} from "../lib/resources/events-types.js";
+import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError} from "../lib/resources/events-types.js";
 
 /**
  * Filename for library lock file located in DATA_DIR
@@ -55,7 +55,7 @@ export class DaemonApp extends iCPSApp {
             await syncApp.run();
             Resources.emit(iCPSEventApp.SCHEDULED_DONE, this.job?.nextRun());
         } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(APP_ERR.DAEMON).addCause(err));
+            Resources.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, new iCPSError(APP_ERR.DAEMON).addCause(err));
             Resources.emit(iCPSEventApp.SCHEDULED_RETRY, this.job?.nextRun());
         }
     }

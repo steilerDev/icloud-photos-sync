@@ -9,9 +9,9 @@ import * as PHOTOS_LIBRARY from '../photos-library/constants.js';
 import * as path from 'path';
 import {readFileSync, writeFileSync} from "fs";
 import {FILE_ENCODING, HAR_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resource-types.js";
-import {iCPSEventError, iCPSEventResourceManager} from "./events-types.js";
 import {LogLevel} from "../../app/event/log.js";
 import {Resources} from "./main.js";
+import {iCPSEventRuntimeWarning} from "./events-types.js";
 
 export class ResourceManager {
     /**
@@ -46,8 +46,8 @@ export class ResourceManager {
             const resourceFileData = JSON.parse(readFileSync(this.resourceFilePath, {encoding: FILE_ENCODING}));
             return Resources.validator().validateResourceFile(resourceFileData);
         } catch (err) {
-            Resources.emit(iCPSEventResourceManager.NO_RESOURCE_FILE_FOUND);
-            Resources.logger(this).debug(`No valid resource file found returning default values`);
+            Resources.emit(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR,
+                new iCPSError(RESOURCES_ERR.UNABLE_TO_READ_FILE).addCause(err));
             return {
                 libraryVersion: PHOTOS_LIBRARY.LIBRARY_VERSION,
                 trustToken: undefined,
@@ -69,9 +69,8 @@ export class ResourceManager {
 
             writeFileSync(this.resourceFilePath, resourceFileData, {encoding: FILE_ENCODING});
         } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(RESOURCES_ERR.UNABLE_TO_WRITE_FILE)
-                .setWarning()
-                .addCause(err));
+            Resources.emit(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR,
+                new iCPSError(RESOURCES_ERR.UNABLE_TO_WRITE_FILE).addCause(err));
         }
     }
 

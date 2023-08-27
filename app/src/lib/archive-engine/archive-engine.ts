@@ -7,7 +7,7 @@ import {iCloud} from '../icloud/icloud.js';
 import {iCPSError} from '../../app/error/error.js';
 import {ARCHIVE_ERR} from '../../app/error/error-codes.js';
 import {Resources} from '../resources/main.js';
-import {iCPSEventArchiveEngine, iCPSEventError} from '../resources/events-types.js';
+import {iCPSEventArchiveEngine, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 
 export class ArchiveEngine {
     /**
@@ -69,19 +69,13 @@ export class ArchiveEngine {
 
             try {
                 await this.persistAsset(assetPath, archivedAssetPath);
+                return this.prepareForRemoteDeletion(assetPath, assetList);
             } catch (err) {
-                Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
+                Resources.emit(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
                     .addCause(err)
                     .addContext(`assetPath`, assetPath)
                     .addContext(`archivedAssetPath`, archivedAssetPath),
                 );
-                return undefined;
-            }
-
-            try {
-                return this.prepareForRemoteDeletion(assetPath, assetList);
-            } catch (err) {
-                Resources.emit(iCPSEventError.HANDLER_EVENT, err);
                 return undefined;
             }
         }));
@@ -109,11 +103,18 @@ export class ArchiveEngine {
      */
     async persistAsset(assetPath: string, archivedAssetPath: string): Promise<void> {
         Resources.logger(this).debug(`Persisting ${assetPath} to ${archivedAssetPath}`);
-        const fileStat = await fs.stat(assetPath);
-        // Const lFileStat = await fs.lstat(archivedAssetPath)
-        await fs.unlink(archivedAssetPath);
-        await fs.copyFile(assetPath, archivedAssetPath);
-        await fs.utimes(archivedAssetPath, fileStat.mtime, fileStat.mtime);
+        try {
+            const fileStat = await fs.stat(assetPath);
+            // Const lFileStat = await fs.lstat(archivedAssetPath)
+            await fs.unlink(archivedAssetPath);
+            await fs.copyFile(assetPath, archivedAssetPath);
+            await fs.utimes(archivedAssetPath, fileStat.mtime, fileStat.mtime);
+        } catch (err) {
+            new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
+                .addCause(err)
+                .addContext(`assetPath`, assetPath)
+                .addContext(`archivedAssetPath`, archivedAssetPath);
+        }
     }
 
     /**
@@ -135,15 +136,13 @@ export class ArchiveEngine {
         if (!asset) {
             throw new iCPSError(ARCHIVE_ERR.NO_REMOTE_ASSET)
                 .addMessage(assetUUID)
-                .addContext(`assetList`, assetList)
-                .setWarning();
+                .addContext(`assetList`, assetList);
         }
 
         if (!asset.recordName) {
             throw new iCPSError(ARCHIVE_ERR.NO_REMOTE_RECORD_NAME)
                 .addMessage(asset.getDisplayName())
-                .addContext(`asset`, asset)
-                .setWarning();
+                .addContext(`asset`, asset);
         }
 
         if (asset.isFavorite) {

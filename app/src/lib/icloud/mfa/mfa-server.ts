@@ -4,7 +4,7 @@ import * as PACKAGE from '../../package.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {MFA_ERR} from '../../../app/error/error-codes.js';
 import {Resources} from '../../resources/main.js';
-import {iCPSEventError, iCPSEventMFA} from '../../resources/events-types.js';
+import {iCPSEventMFA, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
 
 /**
  * The MFA timeout value in milliseconds
@@ -52,7 +52,7 @@ export class MFAServer {
 
             icpsErr.addCause(err);
 
-            Resources.emit(iCPSEventError.HANDLER_EVENT, icpsErr);
+            Resources.emit(iCPSEventMFA.ERROR, icpsErr);
         });
 
         // Default MFA request always goes to device
@@ -94,8 +94,7 @@ export class MFAServer {
         }
 
         if (req.method !== `POST`) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.METHOD_NOT_FOUND)
-                .setWarning()
+            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.METHOD_NOT_FOUND)
                 .addMessage(`endpoint ${req.url}, method ${req.method}`)
                 .addContext(`request`, req));
             this.sendResponse(res, 400, `Method not supported: ${req.method}`);
@@ -107,9 +106,8 @@ export class MFAServer {
         } else if (req.url.startsWith(MFA_SERVER_ENDPOINTS.RESEND_CODE)) {
             this.handleMFAResend(req, res);
         } else {
-            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.ROUTE_NOT_FOUND)
+            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.ROUTE_NOT_FOUND)
                 .addMessage(req.url)
-                .setWarning()
                 .addContext(`request`, req));
             this.sendResponse(res, 404, `Route not found, available endpoints: ${JSON.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
         }
@@ -122,9 +120,8 @@ export class MFAServer {
      */
     handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!req.url.match(/\?code=\d{6}$/)) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.CODE_FORMAT)
+            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.CODE_FORMAT)
                 .addMessage(req.url)
-                .setWarning()
                 .addContext(`request`, req));
             this.sendResponse(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
             return;
@@ -146,7 +143,7 @@ export class MFAServer {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
         if (!methodMatch) {
             this.sendResponse(res, 400, `Resend method does not match expected format`);
-            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_METHOD_FORMAT)
+            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.RESEND_METHOD_FORMAT)
                 .addContext(`requestURL`, req.url));
             return;
         }

@@ -8,7 +8,7 @@ import {fetchAndLoadStateReturnValue, diffStateReturnValue, convertCPLAssetsRetu
 import {MockedEventManager, MockedNetworkManager, MockedResourceManager, UnknownFunction, prepareResources} from '../_helpers/_general';
 import {AxiosError, AxiosResponse} from 'axios';
 import {SyncEngineHelper} from '../../src/lib/sync-engine/helper';
-import {iCPSEventError, iCPSEventSyncEngine} from '../../src/lib/resources/events-types';
+import {iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../src/lib/resources/events-types';
 import {SyncEngine} from '../../src/lib/sync-engine/sync-engine';
 import {iCloud} from '../../src/lib/icloud/icloud';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
@@ -52,7 +52,6 @@ describe(`Coordination`, () => {
                 .mockResolvedValue();
             const doneEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.DONE);
             const retryEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.RETRY);
-            const handlerEvent = mockedEventManager.spyOnEvent(iCPSEventError.HANDLER_EVENT);
 
             await syncEngine.sync();
 
@@ -63,7 +62,6 @@ describe(`Coordination`, () => {
             expect(doneEvent).toHaveBeenCalledTimes(1);
             expect(mockedNetworkManager.settleCCYLimiter).not.toHaveBeenCalled();
             expect(retryEvent).not.toHaveBeenCalled();
-            expect(handlerEvent).not.toHaveBeenCalled();
             expect(syncEngine.icloud.setupAccount).not.toHaveBeenCalled();
         });
 
@@ -72,7 +70,6 @@ describe(`Coordination`, () => {
 
             const startEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.START);
             const retryEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.RETRY);
-            const handlerEvent = mockedEventManager.spyOnEvent(iCPSEventError.HANDLER_EVENT);
             syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
                 .mockResolvedValue(fetchAndLoadStateReturnValue);
             syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
@@ -95,7 +92,6 @@ describe(`Coordination`, () => {
 
             expect(startEvent).toHaveBeenCalled();
             expect(retryEvent).toHaveBeenCalledTimes(4);
-            expect(handlerEvent).toHaveBeenCalledTimes(4);
             expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(4);
             expect(syncEngine.diffState).toHaveBeenCalledTimes(4);
             expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
@@ -124,7 +120,6 @@ describe(`Coordination`, () => {
         ])(`Perform retry - $desc`, async ({error, expectedError}) => {
             const startEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.START);
             const retryEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.RETRY);
-            const handlerEvent = mockedEventManager.spyOnEvent(iCPSEventError.HANDLER_EVENT);
             syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
                 .mockResolvedValue(fetchAndLoadStateReturnValue);
             syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
@@ -137,8 +132,7 @@ describe(`Coordination`, () => {
             await syncEngine.sync();
 
             expect(startEvent).toHaveBeenCalled();
-            expect(retryEvent).toHaveBeenCalledTimes(1);
-            expect(handlerEvent).toHaveBeenCalledWith(expectedError);
+            expect(retryEvent).toHaveBeenCalledWith(2, expectedError);
             expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(2);
             expect(syncEngine.diffState).toHaveBeenCalledTimes(2);
             expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
@@ -262,7 +256,7 @@ describe(`Handle processing queue`, () => {
                 .mockResolvedValue();
 
             writeAssetCompleteEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
-            writeAssetErrorEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.WRITE_ASSET_ERROR);
+            writeAssetErrorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR);
         });
 
         test(`Empty processing queue`, async () => {
@@ -490,8 +484,8 @@ describe(`Handle processing queue`, () => {
             expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(3, addAlbumChildChild);
         });
 
-        test(`Adding - HANDLER_EVENT fired on error`, async () => {
-            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+        test(`Adding - Warning fired on error`, async () => {
+            const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR);
 
             const addAlbumParent = new Album(`someUUID1`, AlbumType.ALBUM, `someAlbumName1`, ``);
             const addAlbumChild = new Album(`someUUID1-1`, AlbumType.ALBUM, `someAlbumName2`, `someUUID1`);
@@ -517,11 +511,11 @@ describe(`Handle processing queue`, () => {
             expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(2, addAlbumChild);
             expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenNthCalledWith(3, addAlbumChildChild);
 
-            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to add album`));
+            expect(warnEvent).toHaveBeenCalled();
         });
 
         test(`Deleting - HANDLER_EVENT fired on error`, async () => {
-            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+            const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR);
 
             const removeAlbumParent = new Album(`someUUID2`, AlbumType.ALBUM, `someAlbumName4`, ``);
             const removeAlbumChild = new Album(`someUUID2-1`, AlbumType.ALBUM, `someAlbumName5`, `someUUID2`);
@@ -547,7 +541,7 @@ describe(`Handle processing queue`, () => {
 
             expect(syncEngine.photosLibrary.writeAlbum).toHaveBeenCalledTimes(0);
 
-            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to delete album`));
+            expect(warnEvent).toHaveBeenCalledTimes(1);
         });
 
         describe(`Archive albums`, () => {
@@ -594,46 +588,38 @@ describe(`Handle processing queue`, () => {
                 expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
             });
 
-            test(`Retrieving from stash - ERROR_HANDLE fired on error`, async () => {
+            test(`Retrieving from stash - Unable to retrieve album`, async () => {
                 const album1 = new Album(`someUUID1`, AlbumType.ARCHIVED, `someAlbumName1`, ``);
                 const album2 = new Album(`someUUID2`, AlbumType.ARCHIVED, `someAlbumName2`, ``);
 
-                const handlerEvent = mockedEventManager.spyOnHandlerEvent();
                 syncEngine.photosLibrary.retrieveStashedAlbum = jest.fn<typeof syncEngine.photosLibrary.retrieveStashedAlbum>()
                     .mockImplementationOnce(() => {
                         throw new Error(`Unable to retrieve album`);
                     });
 
-                syncEngine.writeAlbums([[], [album1, album2], []]);
+                await expect(syncEngine.writeAlbums([[], [album1, album2], []])).rejects.toThrowError(/^Unable to retrieve stashed archived album$/);
 
-                expect(syncEngine.photosLibrary.retrieveStashedAlbum).toHaveBeenCalledTimes(2);
+                expect(syncEngine.photosLibrary.retrieveStashedAlbum).toHaveBeenCalledTimes(1);
                 expect(syncEngine.photosLibrary.retrieveStashedAlbum).toHaveBeenNthCalledWith(1, album1);
-                expect(syncEngine.photosLibrary.retrieveStashedAlbum).toHaveBeenNthCalledWith(2, album2);
 
                 expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
-
-                expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to retrieve stashed archived album`));
             });
 
-            test(`Stash - ERROR_HANDLE fired on error`, async () => {
+            test(`Stash - Unable to stash album`, async () => {
                 const album1 = new Album(`someUUID1`, AlbumType.ARCHIVED, `someAlbumName1`, ``);
                 const album2 = new Album(`someUUID2`, AlbumType.ARCHIVED, `someAlbumName2`, ``);
 
-                const handlerEvent = mockedEventManager.spyOnHandlerEvent();
                 syncEngine.photosLibrary.stashArchivedAlbum = jest.fn<typeof syncEngine.photosLibrary.stashArchivedAlbum>()
                     .mockImplementationOnce(() => {
                         throw new Error(`Unable to retrieve album`);
                     });
 
-                syncEngine.writeAlbums([[album1, album2], [], []]);
+                await expect(() => syncEngine.writeAlbums([[album1, album2], [], []])).rejects.toThrowError(/^Unable to stash archived album$/);
 
-                expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenCalledTimes(2);
+                expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenCalledTimes(1);
                 expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenNthCalledWith(1, album2);
-                expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenNthCalledWith(2, album1);
 
                 expect(syncEngine.photosLibrary.writeAlbum).not.toHaveBeenCalled();
-
-                expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to stash archived album`));
             });
         });
     });

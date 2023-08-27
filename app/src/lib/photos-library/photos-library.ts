@@ -8,7 +8,7 @@ import {iCPSError} from '../../app/error/error.js';
 import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
 import {Resources} from '../resources/main.js';
-import {iCPSEventError, iCPSEventSyncEngine} from '../resources/events-types.js';
+import {iCPSEventRuntimeWarning} from '../resources/events-types.js';
 
 type PathTuple = [namePath: string, uuidPath: string]
 
@@ -85,21 +85,21 @@ export class PhotosLibrary {
             .filter(file => file.isFile())
             .filter(file => PHOTOS_LIBRARY.SAFE_FILES.every(regex => !regex.test(file.name)))
             .forEach(file => {
+                const filePath = path.format({
+                    dir: zonePath,
+                    base: file.name,
+                });
                 try {
-                    const fileStat = fs.statSync(path.format({
-                        dir: zonePath,
-                        base: file.name,
-                    }));
+                    const fileStat = fs.statSync(filePath);
                     const asset = Asset.fromFile(file.name, fileStat, zone);
                     libAssets[asset.getUUID()] = asset;
                     Resources.logger(this).debug(`Loaded asset ${asset.getDisplayName()}`);
                 } catch (err) {
-                    Resources.emit(iCPSEventError.HANDLER_EVENT,
-                        new iCPSError(LIBRARY_ERR.INVALID_FILE)
-                            .setWarning()
-                            .addMessage(file.name)
-                            .addCause(err),
-                    );
+                    if (err instanceof iCPSError && err.code === LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION.code) {
+                        Resources.emit(iCPSEventRuntimeWarning.FILETYPE_ERROR, err.context.extension);
+                    }
+
+                    Resources.emit(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, filePath, err);
                 }
             });
         return libAssets;
@@ -179,18 +179,12 @@ export class PhotosLibrary {
         try {
             // Checking if there is actually a dead symlink
             if (await fs.promises.lstat(symlinkPath) && !fs.existsSync(symlinkPath)) {
-                Resources.emit(iCPSEventError.HANDLER_EVENT,
-                    new iCPSError(LIBRARY_ERR.DEAD_SYMLINK)
-                        .setWarning()
-                        .addMessage(symlinkPath)
-                        .addCause(cause),
-                );
-                await fs.promises.unlink(symlinkPath);
-            } else {
-                throw new iCPSError(LIBRARY_ERR.UNKNOWN_SYMLINK_ERROR)
-                    .addMessage(symlinkPath)
-                    .addCause(cause);
+                return await fs.promises.unlink(symlinkPath);
             }
+
+            throw new iCPSError(LIBRARY_ERR.UNKNOWN_SYMLINK_ERROR)
+                .addMessage(symlinkPath)
+                .addCause(cause);
         } catch (err) {
             throw new iCPSError(LIBRARY_ERR.UNKNOWN_SYMLINK_ERROR)
                 .addMessage(symlinkPath)
@@ -237,11 +231,7 @@ export class PhotosLibrary {
         if (directoryPresent) {
             // AlbumType.Folder cannot be archived!
             if (filePresent) {
-                Resources.emit(iCPSEventError.HANDLER_EVENT,
-                    new iCPSError(LIBRARY_ERR.EXTRANEOUS_FILE)
-                        .setWarning()
-                        .addMessage(thisPath),
-                );
+                Resources.emit(iCPSEventRuntimeWarning.EXTRANEOUS_FILE, thisPath);
             }
 
             return AlbumType.FOLDER;
@@ -416,12 +406,7 @@ export class PhotosLibrary {
                 fs.symlinkSync(relativeAssetPath, linkedAsset);
                 fs.lutimesSync(linkedAsset, assetTime, assetTime);
             } catch (err) {
-                const linkErr = new iCPSError(LIBRARY_ERR.LINK)
-                    .setWarning()
-                    .addMessage(`${relativeAssetPath} to ${linkedAsset}`)
-                    .addCause(err);
-                Resources.emit(iCPSEventSyncEngine.LINK_ERROR, assetUUID, album.getDisplayName());
-                Resources.logger(this).warn(`Unable to link ${relativeAssetPath} to ${linkedAsset}: ${linkErr.getDescription()}`);
+                Resources.emit(iCPSEventRuntimeWarning.LINK_ERROR, err, assetPath, linkedAsset);
             }
         });
     }

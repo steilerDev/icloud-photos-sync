@@ -2,7 +2,7 @@
 import {test, beforeEach, expect, jest, describe} from '@jest/globals';
 import * as Config from '../_helpers/_config';
 import {EventManager} from "../../src/lib/resources/event-manager";
-import {iCPSEventError, iCPSEventLog} from "../../src/lib/resources/events-types";
+import {iCPSEvent, iCPSEventLog} from "../../src/lib/resources/events-types";
 import {prepareResources} from '../_helpers/_general';
 import {Resources} from '../../src/lib/resources/main';
 
@@ -75,6 +75,7 @@ describe(`Initializes correctly`, () => {
 
 describe(`Creates static helper functions correctly`, () => {
     let eventManager: EventManager;
+    const testEvent = `test-event` as iCPSEvent;
 
     beforeEach(() => {
         eventManager = prepareResources()!.event;
@@ -84,9 +85,9 @@ describe(`Creates static helper functions correctly`, () => {
         eventManager.emit = jest.fn<typeof eventManager.emit>()
             .mockReturnValue(true);
 
-        Resources.emit(iCPSEventError.HANDLER_EVENT, `Hello, world!`);
+        Resources.emit(testEvent, `Hello, world!`);
 
-        expect(eventManager.emit).toHaveBeenCalledWith(iCPSEventError.HANDLER_EVENT, `Hello, world!`);
+        expect(eventManager.emit).toHaveBeenCalledWith(testEvent, `Hello, world!`);
     });
 
     describe(`Creates static events element correctly`, () => {
@@ -99,8 +100,8 @@ describe(`Creates static helper functions correctly`, () => {
             const staticEvents = Resources.events(listener);
             expect(staticEvents).toHaveProperty(`on`);
 
-            staticEvents.on(iCPSEventError.HANDLER_EVENT, () => {});
-            expect(eventManager.on).toHaveBeenCalledWith(listener, iCPSEventError.HANDLER_EVENT, expect.any(Function));
+            staticEvents.on(testEvent, () => {});
+            expect(eventManager.on).toHaveBeenCalledWith(listener, testEvent, expect.any(Function));
         });
 
         test(`once function`, () => {
@@ -112,8 +113,8 @@ describe(`Creates static helper functions correctly`, () => {
             const staticEvents = Resources.events(listener);
             expect(staticEvents).toHaveProperty(`once`);
 
-            staticEvents.once(iCPSEventError.HANDLER_EVENT, () => {});
-            expect(eventManager.once).toHaveBeenCalledWith(listener, iCPSEventError.HANDLER_EVENT, expect.any(Function));
+            staticEvents.once(testEvent, () => {});
+            expect(eventManager.once).toHaveBeenCalledWith(listener, testEvent, expect.any(Function));
         });
 
         test(`removeListener function`, () => {
@@ -125,8 +126,8 @@ describe(`Creates static helper functions correctly`, () => {
             const staticEvents = Resources.events(listener);
             expect(staticEvents).toHaveProperty(`removeListeners`);
 
-            staticEvents.removeListeners(iCPSEventError.HANDLER_EVENT);
-            expect(eventManager.removeListenersFromRegistry).toHaveBeenCalledWith(listener, iCPSEventError.HANDLER_EVENT);
+            staticEvents.removeListeners(testEvent);
+            expect(eventManager.removeListenersFromRegistry).toHaveBeenCalledWith(listener, testEvent);
         });
 
         test(`removeListener function without event`, () => {
