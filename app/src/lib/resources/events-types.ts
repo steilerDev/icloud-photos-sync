@@ -104,7 +104,7 @@ export enum iCPSEventRuntimeWarning {
      */
     COUNT_MISMATCH = `warn-count_mismatch`,
     /**
-     * Emitted, if a local asset could not be loaded - provides the file path and error as arguments
+     * Emitted, if a local asset could not be loaded - provides the error and file path as arguments
      */
     LIBRARY_LOAD_ERROR = `warn-library_load_error`,
     /**
@@ -117,11 +117,11 @@ export enum iCPSEventRuntimeWarning {
     ICLOUD_LOAD_ERROR = `warn-icloud_load_error`,
 
     /**
-     * Emitted when the write process has experienced an error while verifying a written asset - provides the asset and error as argument
+     * Emitted when the write process has experienced an error while verifying a written asset - provides the error and asset as argument
      */
     WRITE_ASSET_ERROR = `warn-write_asset_error`,
     /**
-     * Emitted when the write process has experienced an error while writing an album - provides the album and error as argument
+     * Emitted when the write process has experienced an error while writing an album - provides the error and album as argument
      */
     WRITE_ALBUM_ERROR = `warn-write_album_error`,
     /**

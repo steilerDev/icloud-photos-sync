@@ -1201,7 +1201,6 @@ describe(`Write state`, () => {
                 expect(namedFolderTarget).toEqual(`.${albumUUID}`);
 
                 const albumAsset1Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
-                const albumAsset1TargetPath = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR, albumAsset1Filename);
                 expect(fs.existsSync(albumAsset1Path)).toBeFalsy();
 
                 const albumAsset2Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset2PrettyFilename);

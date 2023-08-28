@@ -22,6 +22,9 @@ on:
         gh-token:
           description: The Github Token, in order to deploy the wiki asset
           required: false
+        bt-token:
+          description: The Backtrace symbol access token, in order to deploy the source maps
+          required: false
 
 jobs:
   app-build:
@@ -56,6 +59,7 @@ jobs:
         uses: ./.github/actions/release/app
         with:
           npm-token: ${{ secrets.npm-token }}
+          bt-token: ${{ secrets.bt-token }}
 
   docker-build:
     runs-on: ubuntu-latest

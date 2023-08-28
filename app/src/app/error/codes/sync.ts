@@ -3,10 +3,6 @@ import {buildErrorStruct, ErrorStruct} from "../error-codes.js";
 const name = `SyncError`;
 const prefix = `SYNC`;
 
-export const CONVERSION: ErrorStruct = buildErrorStruct(
-    name, prefix, `CONVERSION`, `Asset could not be converted - ignoring it`,
-);
-
 export const STASH_RETRIEVE: ErrorStruct = buildErrorStruct(
     name, prefix, `STASH_RETRIEVE`, `Unable to retrieve stashed archived album`,
 );

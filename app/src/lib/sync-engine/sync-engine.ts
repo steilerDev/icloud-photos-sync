@@ -68,9 +68,9 @@ export class SyncEngine {
                 await Resources.network().settleCCYLimiter();
 
                 Resources.logger(this).debug(`Refreshing iCloud cookies...`);
-                const iCloudReady = this.icloud.getReady()
+                const iCloudReady = this.icloud.getReady();
                 await this.icloud.setupAccount();
-                await iCloudReady
+                await iCloudReady;
             }
         }
 
@@ -166,7 +166,7 @@ export class SyncEngine {
         try {
             await asset.verify();
         } catch (err) {
-            Resources.emit(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, asset, err);
+            Resources.emit(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, err, asset);
             return;
         }
 
@@ -224,7 +224,7 @@ export class SyncEngine {
         try {
             this.photosLibrary.writeAlbum(album);
         } catch (err) {
-            Resources.emit(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, album, new iCPSError(SYNC_ERR.ADD_ALBUM).addCause(err));
+            Resources.emit(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, new iCPSError(SYNC_ERR.ADD_ALBUM).addCause(err), album);
         }
     }
 
@@ -251,7 +251,7 @@ export class SyncEngine {
         try {
             this.photosLibrary.deleteAlbum(album);
         } catch (err) {
-            Resources.emit(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, album, new iCPSError(SYNC_ERR.DELETE_ALBUM).addCause(err));
+            Resources.emit(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, new iCPSError(SYNC_ERR.DELETE_ALBUM).addCause(err), album);
         }
     }
 }

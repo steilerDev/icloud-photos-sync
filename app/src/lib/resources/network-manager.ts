@@ -218,6 +218,7 @@ export class NetworkManager {
 
         if (resources.enableNetworkCapture) {
             this._harTracker = new AxiosHarTracker(this._axios as any);
+            this.resetHarTracker(this._harTracker);
         }
 
         this._headerJar = new HeaderJar(this._axios);
@@ -238,21 +239,28 @@ export class NetworkManager {
 
         if (Resources.manager().enableNetworkCapture) {
             await this.writeHarFile();
-            // Resets the generated HAR file to make sure it does not grow too much while reusing the same instance
-            // Unfortunately this object is private, so we have to cast it to any
-            (this._harTracker as any).generatedHar = {
-                log: {
-                    version: `1.2`,
-                    creator: {
-                        name: PACKAGE.NAME,
-                        version: PACKAGE.VERSION,
-                    },
-                    pages: [],
-                    entries: [],
-                },
-            };
-            (this._harTracker as any).newEntry = (this._harTracker as any).generateNewEntry();
+            this.resetHarTracker(this._harTracker);
         }
+    }
+
+    /**
+     * Resets the generated HAR file to make sure it does not grow too much while reusing the same instance
+     * Unfortunately the relevant members are private, so we have to cast it to any
+     * @param tracker - The AxiosHarTracker instance to reset
+     */
+    resetHarTracker(tracker: AxiosHarTracker) {
+        (tracker as any).generatedHar = {
+            log: {
+                version: `1.2`,
+                creator: {
+                    name: PACKAGE.NAME,
+                    version: PACKAGE.VERSION,
+                },
+                pages: [],
+                entries: [],
+            },
+        };
+        (tracker as any).newEntry = (this._harTracker as any).generateNewEntry();
     }
 
     /**
@@ -294,7 +302,7 @@ export class NetworkManager {
 
     /**
      * Writes the HAR file to disk, if network capture was enabled
-     * @returns - True if the file could be written, false otherwise
+     * @returns - Returns false, if network capture was disabled or no entries were captured, true if a file was written
      */
     async writeHarFile(): Promise<boolean> {
         if (!Resources.manager().harFilePath) {
@@ -314,12 +322,11 @@ export class NetworkManager {
 
             await fs.writeFile(Resources.manager().harFilePath, JSON.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
             Resources.logger(this).info(`HAR file written`);
+            return true;
         } catch (err) {
             Resources.logger(this).error(`Unable to write HAR file: ${err.message}`);
             return false;
         }
-
-        return true;
     }
 
     /**

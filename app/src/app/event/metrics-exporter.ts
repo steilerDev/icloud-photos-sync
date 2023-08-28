@@ -314,7 +314,7 @@ export class MetricsExporter {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.FILETYPE_ERROR, `${descriptor} (${ext})`));
             })
-            .on(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, (filePath: string, err: Error) => {
+            .on(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, (err: Error, filePath: string) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.LIBRARY_LOAD_ERROR, `${filePath} - ${iCPSError.toiCPSError(err).getDescription()}`));
             })
@@ -326,11 +326,11 @@ export class MetricsExporter {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.ICLOUD_LOAD_ERROR, `${asset.recordName} - ${iCPSError.toiCPSError(err).getDescription()}`));
             })
-            .on(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, (asset: Asset, err: Error) => {
+            .on(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, (err: Error, asset: Asset) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.WRITE_ASSET_ERROR, `${asset.getDisplayName()} - ${iCPSError.toiCPSError(err).getDescription()}`));
             })
-            .on(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, (album: Album, err: Error) => {
+            .on(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, (err: Error, album: Album) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.WRITE_ALBUM_ERROR, `${album.getDisplayName()} - ${iCPSError.toiCPSError(err).getDescription()}`));
             })

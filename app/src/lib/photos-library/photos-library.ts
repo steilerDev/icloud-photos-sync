@@ -99,7 +99,7 @@ export class PhotosLibrary {
                         Resources.emit(iCPSEventRuntimeWarning.FILETYPE_ERROR, err.context.extension);
                     }
 
-                    Resources.emit(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, filePath, err);
+                    Resources.emit(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, err, filePath);
                 }
             });
         return libAssets;

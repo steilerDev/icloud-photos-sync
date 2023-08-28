@@ -4,6 +4,9 @@ inputs:
   npm-token:
     description: The npm token used for releasing the package
     required: true
+  bt-token:
+    description: The Backtrace symbol access token, in order to deploy the source maps
+    required: true
   artifact-name:
     description: The name of the uploaded app artifact
     required: false
@@ -25,6 +28,8 @@ runs:
         export NPM_TOKEN=${{ inputs.npm-token }}
         export NPM_CONFIG_PROVENANCE=true
         (cd ${{ inputs.release-dir }}; npx semantic-release)
+    - id: upload-source-map
+      run: (cd ${{ inputs.release-dir }}; npx backtrace-js upload --subdomain steilerdev --token ${{ inputs.bt-token }} app/bin/)
     - id: get-git-metadata
       uses: ./.github/actions/helper/git-metadata
     - id: get-npm-metadata

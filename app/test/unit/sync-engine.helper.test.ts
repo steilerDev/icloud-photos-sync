@@ -11,8 +11,6 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {PEntity, PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
 import {prepareResources} from '../_helpers/_general';
-import {iCPSError} from '../../src/app/error/error';
-import {SYNC_ERR} from '../../src/app/error/error-codes';
 import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 
 describe(`Processing remote records`, () => {

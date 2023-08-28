@@ -1,7 +1,6 @@
 import {Command, Option, InvalidArgumentError} from "commander";
 import Cron from "croner";
 import * as PACKAGE_INFO from '../lib/package.js';
-import {ErrorHandler} from "./event/error-handler.js";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 import {Resources} from "../lib/resources/main.js";
 import {LogLevel} from "./event/log.js";
@@ -226,6 +225,5 @@ export function appFactory(argv: string[]): iCPSApp {
         .argument(`<path>`, `Path to the folder that should be archived`);
 
     program.parse(argv);
-    ErrorHandler.cleanEnv();
     return app;
 }
