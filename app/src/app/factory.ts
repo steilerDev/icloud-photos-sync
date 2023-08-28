@@ -1,7 +1,5 @@
 import {Command, Option, InvalidArgumentError} from "commander";
 import Cron from "croner";
-import * as PACKAGE_INFO from '../lib/package.js';
-import {ErrorHandler} from "./event/error-handler.js";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 import {Resources} from "../lib/resources/main.js";
 import {LogLevel} from "./event/log.js";
@@ -91,6 +89,7 @@ export type iCPSAppOptions = {
     port: number,
     maxRetries: number,
     downloadThreads: number,
+    downloadTimeout: number,
     schedule: string,
     enableCrashReporting: boolean,
     enableNetworkCapture: boolean,
@@ -122,9 +121,9 @@ export function appFactory(argv: string[]): iCPSApp {
     const program = new Command();
     let app: iCPSApp;
 
-    program.name(PACKAGE_INFO.NAME)
-        .description(PACKAGE_INFO.DESC)
-        .version(PACKAGE_INFO.VERSION)
+    program.name(Resources.PackageInfo.name)
+        .description(Resources.PackageInfo.description)
+        .version(Resources.PackageInfo.version)
         .addOption(new Option(`-u, --username <email>`, `AppleID username.`)
             .env(`APPLE_ID_USER`)
             .makeOptionMandatory(true))
@@ -148,6 +147,10 @@ export function appFactory(argv: string[]): iCPSApp {
             .env(`DOWNLOAD_THREADS`)
             .default(5)
             .argParser(commanderParsePositiveIntOrInfinity))
+        .addOption(new Option(`--download-timeout <number>`, `Sets the request timeout (in minutes) for downloading assets, should be increased on slower connections and/or if there are large assets in the library ('0' will remove the timeout).`)
+            .env(`DOWNLOAD_TIMEOUT`)
+            .default(5)
+            .argParser(commanderParsePositiveInt))
         .addOption(new Option(`-S, --schedule <cron-string>`, `In case this app is executed in daemon mode, it will use this cron schedule to perform regular syncs.`)
             .env(`SCHEDULE`)
             .default(`0 2 * * *`)
@@ -221,6 +224,5 @@ export function appFactory(argv: string[]): iCPSApp {
         .argument(`<path>`, `Path to the folder that should be archived`);
 
     program.parse(argv);
-    ErrorHandler.cleanEnv();
     return app;
 }

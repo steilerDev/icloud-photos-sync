@@ -31,13 +31,43 @@ export class EventManager {
     _eventRegistry: Map<any, EventRegistryObject[]> = new Map();
 
     /**
+     * Keeps track of the number of times an event was emitted
+     */
+    _eventCounter: Map<iCPSEvent, number> = new Map();
+
+    /**
      * Emits an event on the event bus
      * @param event - The event to emit
      * @param args - The arguments to pass to the event
      * @returns True if the event had listeners
      */
     emit(event: iCPSEvent, ...args: any[]): boolean {
+        this.increaseEventCounter(event);
         return this._eventBus.emit(event, ...args);
+    }
+
+    /**
+     * @param event - The event to check
+     * @returns The number of times an event was emitted since the last reset
+     */
+    getEventCount(event: iCPSEvent): number {
+        return this._eventCounter.get(event) ?? 0;
+    }
+
+    /**
+     * Increases the event counter of the associated event by one
+     * @param event - The event to increase the counter of
+     */
+    increaseEventCounter(event: iCPSEvent) {
+        this._eventCounter.set(event, this.getEventCount(event) + 1);
+    }
+
+    /**
+     * Resets the event counter of the associated event
+     * @param event - The event to reset the counter of
+     */
+    resetEventCounter(event: iCPSEvent) {
+        this._eventCounter.set(event, 0);
     }
 
     /**

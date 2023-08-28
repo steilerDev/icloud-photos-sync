@@ -1,17 +1,16 @@
-import * as bt from 'backtrace-node';
-import * as PACKAGE_INFO from '../../lib/package.js';
 import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
-import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
+import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
 import fs from 'fs/promises';
 import path from 'path';
 import {Resources} from '../../lib/resources/main.js';
-import {iCPSEventApp, iCPSEventError} from '../../lib/resources/events-types.js';
+import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 import * as zlib from 'zlib';
 import {Readable} from 'stream';
-import os from 'os';
 import {pEvent} from 'p-event';
+import bt from '@backtrace-labs/node';
+import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 
 /**
  * List of errors that will never get reported
@@ -23,14 +22,6 @@ const reportDenyList = [
     MFA_ERR.SERVER_TIMEOUT.code, // Only happens if user does not interact within 10 minutes
     LIBRARY_ERR.LOCKED.code, // Only happens if library is locked
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
-];
-
-/**
- * List of errors that will get reported, even though it's only a warning
- */
-const reportAllowList = [
-    LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR.code,
-    LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION.code,
 ];
 
 const BACKTRACE_SUBMISSION = {
@@ -52,88 +43,250 @@ export class ErrorHandler {
      */
     btClient?: bt.BacktraceClient;
 
-    /**
-     * Flag to indicate verbose error output
-     */
-    verbose: boolean = false;
-
     constructor() {
-        if (Resources.manager().enableCrashReporting) {
-            const endpoint = `${BACKTRACE_SUBMISSION.DOMAIN}/${BACKTRACE_SUBMISSION.UNIVERSE}/`
-                                + `${PACKAGE_INFO.VERSION === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
-                                + BACKTRACE_SUBMISSION.TYPE;
-
-            this.btClient = bt.initialize({
-                endpoint,
-                handlePromises: true,
-                enableMetricsSupport: true,
-                attributes: {
-                    application: PACKAGE_INFO.NAME,
-                    'application.version': PACKAGE_INFO.VERSION,
-                },
-            });
-            // This.btClient.setSymbolication();
-            Resources.events(this).on(iCPSEventApp.SCHEDULED_START, async () => {
-                await this.reportSyncStart();
-            });
-        }
-
-        Resources.events(this).on(iCPSEventError.HANDLER_EVENT, async (err: unknown) => {
-            await this.handle(err);
-        });
-
-        if (Resources.manager().logLevel === `debug`) {
-            this.verbose = true;
-        }
-
         // Register handlers for interrupts
         process.on(`SIGTERM`, async () => {
-            await this.handle(new iCPSError(ERR_SIGTERM));
+            await this.handleError(new iCPSError(ERR_SIGTERM));
             process.exit(2);
         });
 
         process.on(`SIGINT`, async () => {
-            await this.handle(new iCPSError(ERR_SIGINT));
+            await this.handleError(new iCPSError(ERR_SIGINT));
             process.exit(2);
         });
+
+        Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, this.handleError.bind(this));
+
+        if (Resources.manager().enableCrashReporting) {
+            const endpoint = `${BACKTRACE_SUBMISSION.DOMAIN}/${BACKTRACE_SUBMISSION.UNIVERSE}/`
+                                + `${Resources.PackageInfo.version === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
+                                + BACKTRACE_SUBMISSION.TYPE;
+
+            this.btClient = bt.BacktraceClient.initialize({
+
+                userAttributes: {
+                    application: Resources.PackageInfo.name,
+                    'application.version': Resources.PackageInfo.version,
+                },
+                url: endpoint,
+                database: {
+                    enable: true,
+                    path: path.join(Resources.manager().dataDir, `.crash-reporter`),
+                    captureNativeCrashes: true,
+                    createDatabaseDirectory: true,
+                    autoSend: true,
+                },
+                breadcrumbs: {
+                    enable: true,
+                    eventType: bt.BreadcrumbType.Manual,
+                },
+                beforeSend(data: bt.BacktraceData) {
+                    return Object.assign(
+                        data,
+                        JSON.parse(ErrorHandler.maskConfidentialData(JSON.stringify(data))),
+                    );
+                },
+            });
+
+            // This.btClient.setSymbolication();
+            Resources.events(this).on(iCPSEventApp.SCHEDULED_START, () => {
+                this.btClient.metrics.addSummedEvent(`SyncExecution`);
+            });
+
+            Resources.events(this).on(iCPSEventArchiveEngine.ARCHIVE_START, () => {
+                this.btClient.metrics.addSummedEvent(`ArchiveExecution`);
+            });
+
+            Resources.events(this).on(iCPSEventRuntimeWarning.FILETYPE_ERROR, this.handleFiletype.bind(this));
+
+            this.registerBreadcrumbs();
+        }
     }
 
     /**
      * Handles a given error. Report fatal errors and provide appropriate output.
      * @param err - The occurred error
      */
-    async handle(err: unknown) {
+    async handleError(err: unknown) {
         const _err = iCPSError.toiCPSError(err);
-
-        let message = _err.getDescription();
-
         const rootErrorCode = _err.getRootErrorCode(true);
 
+        Resources.logger(this).info(`Handling error ${_err.code} caused by ${rootErrorCode}`);
+
         // Report error and append error code
-        if (
-            (_err.sev === `FATAL` || reportAllowList.indexOf(rootErrorCode) > -1) // Report fatal errors and errors in allow list
-            && reportDenyList.indexOf(rootErrorCode) === -1 // Exclude errors in deny list
-        ) {
-            const errorId = await this.reportError(_err);
-            message += ` (Error Code: ${errorId})`;
-        } else {
-            message += ` (Not reporting ${rootErrorCode})`;
+        if (reportDenyList.indexOf(rootErrorCode) === -1) {
+            _err.btUUID = await this.reportError(_err);
         }
 
-        if (this.verbose && Object.keys(_err.context).length > 0) {
-            message += `\ncontext:${JSON.stringify(_err.context)}`;
-        }
+        Resources.emit(iCPSEventRuntimeError.HANDLED_ERROR, _err);
+    }
 
-        // Performing output based on severity
-        switch (_err.sev) {
-        case `WARN`:
-            Resources.emit(iCPSEventError.HANDLER_WARN, message);
-            break;
-        default:
-        case `FATAL`:
-            Resources.emit(iCPSEventError.HANDLER_ERROR, message);
-            break;
-        }
+    async handleFiletype(_ext: string, _descriptor?: string) {
+        const report = new bt.BacktraceReport(new iCPSError(FILETYPE_REPORT),
+            {
+                'icps.filetype.extension': _ext,
+                'icps.filetype.descriptor': _descriptor,
+            },
+            [],
+            {
+                skipFrames: Infinity,
+            });
+
+        await this.btClient.send(report);
+    }
+
+    /**
+     * Registers event listeners to provide breadcrumbs
+     */
+    registerBreadcrumbs() {
+        Resources.events(this)
+            .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: Error) => {
+                this.btClient.breadcrumbs.warn(`MFA_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+            })
+            .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
+                this.btClient.breadcrumbs.warn(`FILETYPE_ERROR`, {ext, descriptor});
+            })
+            .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: iCPSError) => {
+                this.btClient.breadcrumbs.warn(`RESOURCE_FILE_ERROR`, {error: err.getDescription()});
+            })
+            .on(iCPSEventRuntimeWarning.EXTRANEOUS_FILE, () => {
+                this.btClient.breadcrumbs.warn(`EXTRANEOUS_FILE`);
+            })
+            .on(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, (err: Error) => {
+                this.btClient.breadcrumbs.warn(`LIBRARY_LOAD_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+            })
+            .on(iCPSEventRuntimeWarning.COUNT_MISMATCH, (_album: string, expectedCount: number, actualCPLAssets: number, actualCPLMasters: number) => {
+                this.btClient.breadcrumbs.warn(`COUNT_MISMATCH`, {
+                    expectedCount,
+                    actualCPLAssets,
+                    actualCPLMasters,
+                });
+            })
+            .on(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR, (err: Error) => {
+                this.btClient.breadcrumbs.warn(`ICLOUD_LOAD_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+            })
+            .on(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, (err: Error) => {
+                this.btClient.breadcrumbs.warn(`WRITE_ASSET_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+            })
+            .on(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, (err: Error) => {
+                this.btClient.breadcrumbs.warn(`WRITE_ALBUM_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+            })
+            .on(iCPSEventRuntimeWarning.LINK_ERROR, (err: Error) => {
+                this.btClient.breadcrumbs.warn(`LINK_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+            })
+            .on(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, (err: Error) => {
+                this.btClient.breadcrumbs.warn(`ARCHIVE_ASSET_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+            });
+
+        Resources.events(this)
+            .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
+                this.btClient.breadcrumbs.info(`AUTHENTICATION_STARTED`);
+            })
+            .on(iCPSEventCloud.AUTHENTICATED, () => {
+                this.btClient.breadcrumbs.info(`AUTHENTICATED`);
+            })
+            .on(iCPSEventCloud.MFA_REQUIRED, () => {
+                this.btClient.breadcrumbs.warn(`MFA_REQUIRED`);
+            })
+            .on(iCPSEventCloud.TRUSTED, () => {
+                this.btClient.breadcrumbs.info(`TRUSTED`);
+            })
+            .on(iCPSEventCloud.ACCOUNT_READY, () => {
+                this.btClient.breadcrumbs.info(`ACCOUNT_READY`);
+            });
+
+        Resources.events(this)
+            .on(iCPSEventMFA.STARTED, () => {
+                this.btClient.breadcrumbs.info(`MFA_STARTED`);
+            })
+            .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {
+                this.btClient.breadcrumbs.info(`MFA_RESEND`, {method: method.toString()});
+            })
+            .on(iCPSEventMFA.MFA_RECEIVED, (method: MFAMethod) => {
+                this.btClient.breadcrumbs.info(`MFA_RECEIVED`, {method: method.toString()});
+            })
+            .on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
+                this.btClient.breadcrumbs.error(`MFA_NOT_PROVIDED`);
+            });
+
+        Resources.events(this)
+            .on(iCPSEventPhotos.SETUP_COMPLETED, () => {
+                this.btClient.breadcrumbs.info(`SETUP_COMPLETED`);
+            })
+            .on(iCPSEventPhotos.READY, () => {
+                this.btClient.breadcrumbs.info(`PHOTOS_READY`);
+            });
+
+        Resources.events(this)
+            .on(iCPSEventSyncEngine.START, () => {
+                this.btClient.breadcrumbs.info(`SYNC_STARTED`);
+            })
+            .on(iCPSEventSyncEngine.FETCH_N_LOAD, () => {
+                this.btClient.breadcrumbs.info(`FETCH_N_LOAD`);
+            })
+            .on(iCPSEventSyncEngine.FETCH_N_LOAD_COMPLETED, (remoteAssetCount: number, remoteAlbumCount: number, localAssetCount: number, localAlbumCount: number) => {
+                this.btClient.breadcrumbs.info(`FETCH_N_LOAD_COMPLETED`, {
+                    remoteAssetCount,
+                    remoteAlbumCount,
+                    localAssetCount,
+                    localAlbumCount,
+                });
+            })
+            .on(iCPSEventSyncEngine.DIFF, () => {
+                this.btClient.breadcrumbs.info(`DIFF`);
+            })
+            .on(iCPSEventSyncEngine.DIFF_COMPLETED, () => {
+                this.btClient.breadcrumbs.info(`DIFF_COMPLETED`);
+            })
+            .on(iCPSEventSyncEngine.WRITE, () => {
+                this.btClient.breadcrumbs.info(`WRITE`);
+            })
+            .on(iCPSEventSyncEngine.WRITE_ASSETS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
+                this.btClient.breadcrumbs.info(`WRITE_ASSETS`, {
+                    toBeDeletedCount,
+                    toBeAddedCount,
+                    toBeKept,
+                });
+            })
+            .on(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, () => {
+                this.btClient.breadcrumbs.info(`WRITE_ASSET_COMPLETED`);
+            })
+            .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {
+                this.btClient.breadcrumbs.info(`WRITE_ASSETS_COMPLETED`);
+            })
+            .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
+                this.btClient.breadcrumbs.info(`WRITE_ALBUMS`, {
+                    toBeDeletedCount,
+                    toBeAddedCount,
+                    toBeKept,
+                });
+            })
+            .on(iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED, () => {
+                this.btClient.breadcrumbs.info(`WRITE_ALBUMS_COMPLETED`);
+            })
+            .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
+                this.btClient.breadcrumbs.info(`WRITE_COMPLETED`);
+            })
+            .on(iCPSEventSyncEngine.DONE, () => {
+                this.btClient.breadcrumbs.info(`SYNC_COMPLETED`);
+            })
+            .on(iCPSEventSyncEngine.RETRY, (retryCount: number, err: iCPSError) => {
+                this.btClient.breadcrumbs.warn(`SYNC_RETRY`, {retryCount, error: iCPSError.toiCPSError(err).getDescription()});
+            });
+
+        Resources.events(this)
+            .on(iCPSEventArchiveEngine.ARCHIVE_START, () => {
+                this.btClient.breadcrumbs.info(`ARCHIVE_STARTED`);
+            })
+            .on(iCPSEventArchiveEngine.PERSISTING_START, (numberOfAssets: number) => {
+                this.btClient.breadcrumbs.info(`PERSISTING_START`, {numberOfAssets});
+            })
+            .on(iCPSEventArchiveEngine.REMOTE_DELETE, (numberOfAssets: number) => {
+                this.btClient.breadcrumbs.info(`REMOTE_DELETE`, {numberOfAssets});
+            })
+            .on(iCPSEventArchiveEngine.ARCHIVE_DONE, () => {
+                this.btClient.breadcrumbs.info(`ARCHIVE_COMPLETED`);
+            });
     }
 
     /**
@@ -148,48 +301,41 @@ export class ErrorHandler {
 
         const errorUUID = randomUUID();
 
-        const attachments = await this.prepareAttachments(errorUUID);
+        const attachments = await this.prepareAttachments();
 
-        const report = this.btClient.createReport(err, {
+        const report = new bt.BacktraceReport(err, {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
             'icps.rootErrorCode': err.getRootErrorCode(),
             'icps.errorCodeStack': err.getErrorCodeStack().join(`->`),
         }, attachments);
 
-        await this.btClient.sendAsync(report);
+        await this.btClient.send(report);
         return errorUUID;
     }
 
     /**
      * Prepares and compresses the error attachments
-     * @param errorUUID - The UUID of the error, used to identify the files
      * @returns A promise that resolves to an array of file paths (might be empty)
      */
-    async prepareAttachments(errorUUID: string): Promise<string[]> {
-        const attachmentDir = await fs.mkdtemp(path.join(os.tmpdir(), `icps-crash-report-`));
-
-        const attachments: string[] = [];
+    async prepareAttachments(): Promise<bt.BacktraceAttachment[]> {
+        const attachments: bt.BacktraceAttachment[] = [];
 
         // Adding log file
-        const logFilePath = await this.prepareLogFile(attachmentDir, errorUUID);
-        if (logFilePath) {
-            attachments.push(logFilePath);
+        const logFile = await this.prepareLogFile();
+        if (logFile) {
+            attachments.push(new bt.BacktraceBufferAttachment(`icps.log.br`, logFile));
         }
 
         // Adding HAR file
-        const harFilePath = await this.prepareHarFile(attachmentDir, errorUUID);
-        if (harFilePath) {
-            attachments.push(harFilePath);
+        const harFile = await this.prepareHarFile();
+        if (harFile) {
+            attachments.push(new bt.BacktraceBufferAttachment(`icps.har.br`, harFile));
         }
 
         if (attachments.length === 0) {
-            Resources.emit(iCPSEventError.HANDLER_WARN, `No attachments found for error report`);
-            await fs.rmdir(attachmentDir);
-            return [];
+            Resources.logger(this).warn(`No attachments found for error report`);
         }
-
-        Resources.emit(iCPSEventError.HANDLER_ERROR, `Crash report saved to ${attachmentDir}`);
 
         return attachments;
     }
@@ -197,17 +343,18 @@ export class ErrorHandler {
     /**
      * Prepares the log file for submission.
      * This function extracts relevant parts of the log file, in order to streamline error reporting
-     * @param attachmentDir - The directory to store the prepared log file in
-     * @param errorUUID - The UUID of the error, used to identify the log file
-     * @returns A promise that resolves to the path of the prepared log file - compressed using the brotli algorithm
+     * @returns A promise that resolves to a Buffer holding the prepared log file - compressed using the brotli algorithm
      */
-    async prepareLogFile(attachmentDir: string, errorUUID: string): Promise<string | undefined> {
+    async prepareLogFile(): Promise<Buffer | undefined> {
         const maxNumberOfLines = 200;
-        const targetPath = path.join(attachmentDir, `icps-crash-${errorUUID}.log`);
+        const filePath = Resources.manager().logFilePath;
+        if (!filePath) {
+            return undefined;
+        }
 
         try {
             // Reading current log file and determining length
-            const data = (await fs.readFile(Resources.manager().logFilePath, {encoding: FILE_ENCODING})).split(`\n`);
+            const data = (await fs.readFile(filePath, {encoding: FILE_ENCODING})).split(`\n`);
             const totalNumberOfLines = data.length;
 
             if (totalNumberOfLines === 0) {
@@ -226,119 +373,65 @@ export class ErrorHandler {
 
             for (let i = 0; i < totalNumberOfLines; i++) {
                 if (i > (totalNumberOfLines - maxNumberOfLines)) {
-                    truncatedData.push(`${data[i]}\n`);
+                    truncatedData.push(
+                        ErrorHandler.maskConfidentialData(data[i]) + `\n`,
+                    );
                 }
             }
 
             truncatedData.push(null);
 
-            await this.compressStream(targetPath, truncatedData);
-
-            return targetPath;
+            return await this.compressStream(truncatedData);
         } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare log file for crash report`, err);
+            Resources.logger(this).warn(`Unable to prepare log file for crash report: ${err.message}`);
             return undefined;
         }
     }
 
     /**
      * Prepares the HAR file for submission
-     * @param attachmentDir - The directory to store the prepared log file in
-     * @param errorUUID - The UUID of the error, used to identify the log file
-     * @returns A promise that resolves to the path of the prepared HAR file, or undefined if no file was written - compressed using the brotli algorithm
+     * @returns A promise that resolves to a Buffer holding the prepared HAR file, or undefined if no file is available - compressed using the brotli algorithm
      */
-    async prepareHarFile(attachmentDir: string, errorUUID: string): Promise<string | undefined> {
-        if (!(await Resources.network().writeHarFile())) {
+    async prepareHarFile(): Promise<Buffer | undefined> {
+        const filePath = Resources.manager().harFilePath;
+        if (!filePath) {
             return undefined;
         }
 
-        const targetPath = path.join(attachmentDir, `icps-crash-${errorUUID}.har`);
-        let harData: fs.FileHandle;
         try {
-            harData = await fs.open(Resources.manager().harFilePath, `r`);
+            const harData = await fs.readFile(Resources.manager().harFilePath, {encoding: FILE_ENCODING});
 
-            const harStream = harData.createReadStream();
-            await this.compressStream(targetPath, harStream);
+            const dataStream = new Readable();
+            dataStream.push(ErrorHandler.maskConfidentialData(harData));
+            dataStream.push(null);
+
+            return this.compressStream(dataStream);
         } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_ERROR, `Unable to prepare HAR file for crash report`, err);
+            Resources.logger(this).warn(`Unable to prepare HAR file for crash report: ${err.message}`);
             return undefined;
-        } finally {
-            await harData?.close();
         }
-
-        return targetPath;
     }
 
-    async compressStream(targetPath: string, data: Readable): Promise<void> {
-        let targetFd: fs.FileHandle;
-        try {
-            targetFd = await fs.open(`${targetPath}.br`, `w`);
-            const output = targetFd.createWriteStream();
-
-            const brotliStream = zlib.createBrotliCompress();
-            data.pipe(brotliStream).pipe(output);
-            await pEvent(output, `finish`, {rejectionEvents: [`error`]});
-        } finally {
-            await targetFd?.close();
-        }
+    async compressStream(data: Readable): Promise<Buffer> {
+        const brotliStream = zlib.createBrotliCompress();
+        const chunks = [];
+        brotliStream.on(`data`, chunk => {
+            chunks.push(chunk);
+        });
+        data.pipe(brotliStream);
+        await pEvent(brotliStream, `end`, {rejectionEvents: [`error`]});
+        return Buffer.concat(chunks);
     }
 
     /**
-     * Reports a scheduled sync start
-     * Only runs if this.btClient is defined (i.e. error reporting is enabled)
+     * This function masks confidential data from the provided input string
+     * @param input - The input string to mask
+     * @returns The masked string
      */
-    async reportSyncStart() {
-        try {
-            await (this.btClient as any)._backtraceMetrics.sendSummedEvent(`Sync`);
-        } catch (err) {
-            await this.reportError(new iCPSError({name: `iCPSError`, code: `METRIC_FAILED`, message: `Unable to report sync start`}).addCause(err));
-        }
-    }
-
-    /**
-    * This function removes confidential data from the environment after parsing arguments, to make sure, nothing is collected.
-    */
-    static cleanEnv() {
-        const confidentialData = {
-            username: {
-                env: `APPLE_ID_USER`,
-                cli: [
-                    `-u`, `--username`,
-                ],
-                replacement: `<APPLE ID USERNAME>`,
-            },
-            password: {
-                env: `APPLE_ID_PWD`,
-                cli: [
-                    `-p`, `--password`,
-                ],
-                replacement: `<APPLE ID PASSWORD>`,
-            },
-            "trust-token": {
-                env: `TRUST_TOKEN`,
-                cli: [
-                    `-T`, `--trust-token`,
-                ],
-                replacement: `<TRUST TOKEN>`,
-            },
-        };
-
-        for (const confidentialEntry of Object.values(confidentialData)) {
-            if (process.env[confidentialEntry.env]) {
-                process.env[confidentialEntry.env] = confidentialEntry.replacement;
-            }
-
-            for (const confidentialCliValue of confidentialEntry.cli) {
-                const confidentialCliValueIndexArgV = process.argv.findIndex(value => value === confidentialCliValue);
-                if (confidentialCliValueIndexArgV !== -1) {
-                    process.argv[confidentialCliValueIndexArgV + 1] = confidentialEntry.replacement;
-                }
-
-                const confidentialCliValueIndexExecArgV = process.execArgv.findIndex(value => value === confidentialCliValue);
-                if (confidentialCliValueIndexExecArgV !== -1) {
-                    process.argv[confidentialCliValueIndexExecArgV + 1] = confidentialEntry.replacement;
-                }
-            }
-        }
+    static maskConfidentialData(input: string): string {
+        return input
+            .replaceAll(Resources.manager().username, `<APPLE ID USERNAME>`)
+            .replaceAll(Resources.manager().password, `<APPLE ID PASSWORD>`)
+            .replaceAll(Resources.manager().trustToken, `<TRUST TOKEN>`);
     }
 }

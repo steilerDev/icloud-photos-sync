@@ -1,4 +1,4 @@
-import {AxiosRequestConfig, AxiosResponse} from 'axios';
+import {AxiosRequestConfig} from 'axios';
 import * as QueryBuilder from './query-builder.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
@@ -8,8 +8,8 @@ import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
 import {Resources} from '../../resources/main.js';
 import {ENDPOINTS} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
-import {iCPSEventError, iCPSEventPhotos} from '../../resources/events-types.js';
-import {Readable} from 'stream';
+import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
+import fs from 'fs/promises';
 
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now
@@ -439,7 +439,6 @@ export class iCloudPhotos {
 
         if (record.recordType === QueryBuilder.RECORD_TYPES.CONTAINER_RELATION) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNWANTED_RECORD_TYPE)
-                .setWarning()
                 .addMessage(record.recordType)
                 .addContext(`recordType`, record.recordType);
         }
@@ -505,6 +504,7 @@ export class iCloudPhotos {
 
         // Post-processing response
         const seen = new Set<string>();
+        const ignoredAssets: iCPSError[] = [];
         for (const record of allRecords) {
             try {
                 this.filterPictureRecord(record, seen);
@@ -519,16 +519,27 @@ export class iCloudPhotos {
                     seen.add(record.recordName);
                 }
             } catch (err) {
-                Resources.logger(this).info(`Error processing asset ${JSON.stringify(record)}: ${err.message}`);
+                // Summarizing errors/warnings
+                ignoredAssets.push((err as iCPSError));
+            }
+        }
+
+        // Pretty printing ignored assets
+        if (ignoredAssets.length > 0) {
+            Resources.logger(this).info(`Ignoring ${ignoredAssets.length} assets for ${parentId === undefined ? `All photos` : parentId}:`);
+            const erroredAssets = ignoredAssets.filter(err => err.code !== ICLOUD_PHOTOS_ERR.UNWANTED_RECORD_TYPE.code); // Filtering 'expected' errors
+            if (erroredAssets.length > 0) {
+                Resources.logger(this).warn(`${erroredAssets.length} unexpected errors for ${parentId === undefined ? `All photos` : parentId}: ${erroredAssets.map(err => err.code).join(`, `)}`);
             }
         }
 
         // There should be one CPLMaster and one CPLAsset per record, however the iCloud response is sometimes not adhering to this.
         if (cplMasters.length !== expectedNumberOfRecords || cplAssets.length !== expectedNumberOfRecords) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT,
-                new iCPSError(ICLOUD_PHOTOS_ERR.COUNT_MISMATCH)
-                    .setWarning()
-                    .addMessage(`expected ${expectedNumberOfRecords} CPLMaster & ${expectedNumberOfRecords} CPLAsset records, but got ${cplMasters.length} CPLMaster & ${cplAssets.length} CPLAsset records for album ${parentId === undefined ? `'All photos'` : parentId}`),
+            Resources.emit(iCPSEventRuntimeWarning.COUNT_MISMATCH,
+                parentId === undefined ? `All photos` : parentId,
+                expectedNumberOfRecords,
+                cplAssets.length,
+                cplMasters.length,
             );
         } else {
             Resources.logger(this).debug(`Received expected amount (${expectedNumberOfRecords}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
@@ -538,13 +549,14 @@ export class iCloudPhotos {
     }
 
     /**
-     * Downloads an asset using the 'stream' method
+     * Downloads an asset using the 'stream' method and applies relevant metadata to the file
      * @param asset - The asset to be downloaded
-     * @returns A promise, that -once resolved-, contains the Axios response
+     * @returns A promise, that resolves, once the asset has been written to disk
      */
-    async downloadAsset(asset: Asset): Promise<AxiosResponse<Readable, any>> {
-        Resources.logger(this).debug(`Starting download of asset ${asset.getDisplayName()}`);
-        return Resources.network().getDataStream(asset.downloadURL);
+    async downloadAsset(asset: Asset): Promise<void> {
+        const location = asset.getAssetFilePath();
+        await Resources.network().downloadData(asset.downloadURL, location);
+        await fs.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
     }
 
     /**

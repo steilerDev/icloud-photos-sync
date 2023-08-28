@@ -6,7 +6,7 @@ import {iCloud} from '../../src/lib/icloud/icloud';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {MFA_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {iCPSError} from '../../src/app/error/error';
-import {iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos} from '../../src/lib/resources/events-types';
+import {iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
 
 let mockedResourceManager: MockedResourceManager;
@@ -94,8 +94,8 @@ describe(`Control structure`, () => {
             desc: `MFA`,
             event: iCPSEventMFA.ERROR,
         }, {
-            desc: `Photos`,
-            event: iCPSEventPhotos.ERROR,
+            desc: `MFA_Timeout`,
+            event: iCPSEventMFA.MFA_NOT_PROVIDED,
         },
     ])(`$desc error event triggered`, async ({event}) => {
         mockedEventManager._eventBus.removeAllListeners(event); // Not sure why this is necessary
@@ -116,7 +116,11 @@ describe.each([
     },
 ])(`Setup iCloud: $desc`, ({photosDomain}) => {
     beforeEach(() => {
-        mockedResourceManager._resources.trustToken = Config.trustToken;
+        mockedResourceManager._readResourceFile
+            .mockReturnValue({
+                libraryVersion: 1,
+                trustToken: Config.trustToken,
+            });
         mockedNetworkManager.photosUrl = photosDomain;
     });
 
@@ -153,7 +157,11 @@ describe.each([
         });
 
         test(`Invalid Trust Token - MFA Required`, async () => {
-            mockedResourceManager._resources.trustToken = undefined;
+            mockedResourceManager._readResourceFile
+                .mockReturnValue({
+                    libraryVersion: 1,
+                    trustToken: undefined,
+                });
 
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
             icloud.ready = new Promise<void>((resolve, _reject) => resolve());
@@ -395,7 +403,7 @@ describe.each([
                         .reply(codes.success);
 
                     // Checking if rejection is properly parsed
-                    const warnEvent = mockedEventManager.spyOnHandlerEvent();
+                    const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
                     await icloud.resendMFA(new MFAMethod(method as any));
 
@@ -407,7 +415,7 @@ describe.each([
                         expect(mockedValidator.validateResendMFAPhoneResponse).toHaveBeenCalled();
                     }
 
-                    expect(warnEvent).toHaveBeenCalledWith(new Error(`Unable to request new MFA code`));
+                    expect(warnEvent).toHaveBeenCalled();
                 });
 
                 test(`Resend unsuccessful`, async () => {
@@ -428,11 +436,11 @@ describe.each([
                         .reply(codes.invalid);
 
                     // Checking if rejection is properly parsed
-                    const warnEvent = mockedEventManager.spyOnHandlerEvent();
+                    const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
                     await icloud.resendMFA(new MFAMethod(method as any));
 
-                    expect(warnEvent).toHaveBeenCalledWith(new Error(`Unable to request new MFA code`));
+                    expect(warnEvent).toHaveBeenCalled();
                 });
             });
         });

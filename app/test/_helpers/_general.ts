@@ -5,7 +5,7 @@ import {iCPSAppOptions} from '../../src/app/factory';
 import {ResourceManager} from '../../src/lib/resources/resource-manager';
 import MockAdapter from 'axios-mock-adapter';
 import {NetworkManager} from '../../src/lib/resources/network-manager';
-import {iCPSEvent, iCPSEventError} from '../../src/lib/resources/events-types';
+import {iCPSEvent} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
 import {Validator} from '../../src/lib/resources/validator';
 import {EventManager} from '../../src/lib/resources/event-manager';
@@ -24,13 +24,15 @@ export type MockedNetworkManager = NetworkManager & {
     mock: MockAdapter;
 };
 
-export type MockedResourceManager = ResourceManager
+export type MockedResourceManager = ResourceManager & {
+    _readResourceFile: jest.Mock<typeof ResourceManager.prototype._readResourceFile>
+    _writeResourceFile: jest.Mock<typeof ResourceManager.prototype._writeResourceFile>
+}
 
 export type MockedValidator = Validator
 
 export type MockedEventManager = EventManager & {
     spyOnEvent: (event: iCPSEvent, removeListeners?: boolean) => jest.Mock;
-    spyOnHandlerEvent: (removeListeners?: boolean) => jest.Mock;
 }
 
 /**
@@ -54,6 +56,7 @@ export function prepareResourceForApiTests(): Resources.Types.Instances {
     instances.manager._readResourceFile = jest.fn<typeof instances.manager._readResourceFile>()
         .mockReturnValue({
             libraryVersion: 1,
+            trustToken: process.env.TEST_TRUST_TOKEN!,
         });
 
     return instances;
@@ -88,16 +91,15 @@ export function prepareResources(initiate: boolean = true, appOptions: iCPSAppOp
 
         const instances = Resources.setup(appOptions) as MockedResourceInstances;
 
-        instances.manager._writeResourceFile = ResourceManager.prototype._writeResourceFile;
+        instances.manager._writeResourceFile = ResourceManager.prototype._writeResourceFile as jest.Mock<typeof ResourceManager.prototype._writeResourceFile>;
 
-        instances.manager._readResourceFile = ResourceManager.prototype._readResourceFile;
+        instances.manager._readResourceFile = ResourceManager.prototype._readResourceFile as jest.Mock<typeof ResourceManager.prototype._readResourceFile>;
 
         ResourceManager.prototype._writeResourceFile = originalWriteResourceFile;
         ResourceManager.prototype._readResourceFile = originalReadResourceFile;
 
         instances.network.mock = new MockAdapter(instances.network._axios, {onNoMatch: `throwException`});
         instances.event.spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(instances.event._eventBus, event, removeListeners);
-        instances.event.spyOnHandlerEvent = (removeListeners: boolean = true) => spyOnEvent(instances.event._eventBus, iCPSEventError.HANDLER_EVENT, removeListeners);
         return instances;
     }
 

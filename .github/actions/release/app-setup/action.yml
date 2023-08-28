@@ -25,4 +25,3 @@ runs:
     - id: setup-app-artifact
       shell: bash
       run: (cd ${{ inputs.release-dir }}/app; tar --strip-components 1 -xf *.tgz package/; rm -f *.tgz;)
-

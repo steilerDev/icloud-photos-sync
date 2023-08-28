@@ -23,10 +23,6 @@ export const ADDR_IN_USE_ERR: ErrorStruct = buildErrorStruct(
     name, prefix, `ADDR_IN_USE`, `HTTP Server could not start, because address/port is in use`,
 );
 
-export const RESEND_FAILED: ErrorStruct = buildErrorStruct(
-    name, prefix, `RESEND_FAILED`, `Unable to request new MFA code`,
-);
-
 export const SUBMIT_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `SUBMIT_FAILED`, `Unable to submit MFA code`,
 );

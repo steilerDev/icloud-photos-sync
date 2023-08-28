@@ -13,7 +13,8 @@ type ErrorName =
     `QueryParserError` |
     `ResourceError` |
     `ValidatorError` |
-    `SyncError`
+    `SyncError` |
+    `FileTypeReport`
 
 /**
  * Error structure
@@ -77,4 +78,10 @@ export const ERR_SIGTERM: ErrorStruct = {
     name: `InterruptError`,
     code: `SIGTERM`,
     message: `Received user interrupt: SIGTERM`,
+};
+
+export const FILETYPE_REPORT: ErrorStruct = {
+    name: `FileTypeReport`,
+    code: `FILETYPE_REPORT`,
+    message: `Reporting unknown file type`,
 };

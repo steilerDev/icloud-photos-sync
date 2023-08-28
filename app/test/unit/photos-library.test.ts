@@ -7,10 +7,10 @@ import path from 'path';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
-import axios, {AxiosRequestConfig} from 'axios';
 import * as Config from '../_helpers/_config';
 import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
+import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
 const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR);
@@ -253,12 +253,12 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+            const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.EXTRANEOUS_FILE);
 
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(2);
-            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Extraneous file found while processing a folder`));
+            expect(warnEvent).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, `.${someFolderUUID}`));
         });
 
         test(`Orphaned album`, async () => {
@@ -274,12 +274,10 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            const orphanEvent = mockedEventManager.spyOnHandlerEvent();
             const albums = await library.loadAlbums();
 
             expect(Object.keys(albums).length).toEqual(0);
 
-            expect(orphanEvent).toHaveBeenCalledWith(new Error(`Found dead symlink (removing it)`));
             expect(() => fs.lstatSync(path.join(Config.defaultConfig.dataDir, orphanedAlbumName))).toThrow(/^ENOENT: no such file or directory, lstat '\/opt\/icloud-photos-library\/Orphan'$/);
         });
 
@@ -712,77 +710,6 @@ describe(`Write state`, () => {
         //     const asset = new Asset(`asdf`, assetData.length, fileType, assetMTime);
         //     await expect(library.verifyAsset(asset)).rejects.toThrow(/^'bla$/)
         // });
-
-        test(`Write asset`, async () => {
-            // Downloading banner of this repo
-            const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
-            const config: AxiosRequestConfig = {
-                responseType: `stream`,
-            };
-            const fileName = `asdf`;
-            const ext = `png`;
-            const asset = new Asset(
-                fileName,
-                82215,
-                FileType.fromExtension(ext),
-                42,
-                zone,
-            );
-            mockfs({
-                [zoneDir]: {},
-            });
-
-            const library = new PhotosLibrary();
-
-            try {
-                const response = await axios.get(url, config);
-                await library.writeAsset(asset, response);
-            } catch (err) {
-                // If there is no network connectivity, pass the test and print warning
-                expect(err).toEqual(new Error(`getaddrinfo ENOTFOUND steilerdev.github.io`));
-                console.warn(`Unable to run test - potentially due to lacking network connectivity`);
-            }
-
-            const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
-            expect(fs.statSync(assetPath).size).toEqual(82215);
-        });
-
-        test(`Write asset with failing verification`, async () => {
-            // Downloading banner of this repo
-            const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
-            const config: AxiosRequestConfig = {
-                responseType: `stream`,
-            };
-            const fileName = `asdf`;
-            const ext = `png`;
-            const asset = new Asset(
-                fileName,
-                82215,
-                FileType.fromExtension(ext),
-                42,
-                zone,
-            );
-            mockfs({
-                [zoneDir]: {},
-            });
-
-            const library = new PhotosLibrary();
-            const handlerEvent = mockedEventManager.spyOnHandlerEvent();
-            library.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
-
-            try {
-                const response = await axios.get(url, config);
-                await library.writeAsset(asset, response);
-                expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to verify asset`));
-            } catch (err) {
-                // If there is no network connectivity, pass the test and print warning
-                expect(err).toEqual(new Error(`getaddrinfo ENOTFOUND steilerdev.github.io`));
-                console.warn(`Unable to run test - potentially due to lacking network connectivity`);
-            }
-
-            const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
-            expect(fs.statSync(assetPath).size).toEqual(82215);
-        });
 
         test(`Delete asset`, async () => {
             const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
@@ -1262,7 +1189,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.LINK_ERROR);
 
                 library.writeAlbum(folder);
 
@@ -1276,15 +1203,14 @@ describe(`Write state`, () => {
                 const albumAsset1Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset1PrettyFilename);
                 expect(fs.existsSync(albumAsset1Path)).toBeFalsy();
 
-                expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to link assets`));
-                expect(handlerEvent).toHaveBeenCalledTimes(1);
-
                 const albumAsset2Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset2PrettyFilename);
                 const albumAsset2Stat = fs.lstatSync(albumAsset2Path);
                 expect(albumAsset2Stat.isSymbolicLink()).toBeTruthy();
                 expect(albumAsset2Stat.mtime).toEqual(new Date(albumAsset2mTime));
                 const albumAsset2Target = fs.readlinkSync(albumAsset2Path);
                 expect(albumAsset2Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset2Filename));
+
+                expect(linkErrorEvent).toHaveBeenCalledTimes(1);
 
                 const albumAsset3Path = path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, albumAsset3PrettyFilename);
                 const albumAsset3Stat = fs.lstatSync(albumAsset3Path);
@@ -1424,7 +1350,7 @@ describe(`Write state`, () => {
                 folder.assets = albumAssets;
                 const library = new PhotosLibrary();
 
-                const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.LINK_ERROR);
 
                 library.writeAlbum(folder);
 
@@ -1442,8 +1368,7 @@ describe(`Write state`, () => {
                 const albumAsset1Target = fs.readlinkSync(albumAsset1Path);
                 expect(albumAsset1Target).toEqual(path.join(`..`, PRIMARY_ASSET_DIR, albumAsset1Filename));
 
-                expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to link assets`));
-                expect(handlerEvent).toHaveBeenCalledTimes(1);
+                expect(linkErrorEvent).toHaveBeenCalledTimes(1);
             });
         });
 

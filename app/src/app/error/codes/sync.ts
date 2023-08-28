@@ -3,10 +3,6 @@ import {buildErrorStruct, ErrorStruct} from "../error-codes.js";
 const name = `SyncError`;
 const prefix = `SYNC`;
 
-export const CONVERSION: ErrorStruct = buildErrorStruct(
-    name, prefix, `CONVERSION`, `Asset could not be converted - ignoring it`,
-);
-
 export const STASH_RETRIEVE: ErrorStruct = buildErrorStruct(
     name, prefix, `STASH_RETRIEVE`, `Unable to retrieve stashed archived album`,
 );
@@ -28,9 +24,9 @@ export const MAX_RETRY: ErrorStruct = buildErrorStruct(
 );
 
 export const NETWORK: ErrorStruct = buildErrorStruct(
-    name, prefix, `NETWORK`, `Network error during sync, trying to retry`,
+    name, prefix, `NETWORK`, `Network error during sync`,
 );
 
 export const UNKNOWN: ErrorStruct = buildErrorStruct(
-    name, prefix, `UNKNOWN`, `Unknown error during sync, trying to retry`,
+    name, prefix, `UNKNOWN`, `Unknown error during sync`,
 );

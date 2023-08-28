@@ -15,24 +15,8 @@ export const UNKNOWN_FILETYPE_EXTENSION: ErrorStruct = buildErrorStruct(
     name, prefix, `UNKNOWN_FILETYPE_EXTENSION`, `Unknown filetype extension, please report in GH issue 143`,
 );
 
-export const INVALID_FILE: ErrorStruct = buildErrorStruct(
-    name, prefix, `INVALID_FILE`, `Found invalid file`,
-);
-
-export const DEAD_SYMLINK: ErrorStruct = buildErrorStruct(
-    name, prefix, `DEAD_SYMLINK`, `Found dead symlink (removing it)`,
-);
-
 export const UNKNOWN_SYMLINK_ERROR: ErrorStruct = buildErrorStruct(
     name, prefix, `UNKNOWN_SYMLINK_ERROR`, `Unknown error while processing symlink`,
-);
-
-export const EXTRANEOUS_FILE: ErrorStruct = buildErrorStruct(
-    name, prefix, `EXTRANEOUS_FILE`, `Extraneous file found while processing a folder`,
-);
-
-export const INVALID_ASSET: ErrorStruct = buildErrorStruct(
-    name, prefix, `INVALID_ASSET`, `Unable to verify asset`,
 );
 
 export const NO_PARENT: ErrorStruct = buildErrorStruct(
@@ -45,10 +29,6 @@ export const MULTIPLE_MATCHES: ErrorStruct = buildErrorStruct(
 
 export const EXISTS: ErrorStruct = buildErrorStruct(
     name, prefix, `EXISTS`, `Unable to create album: Already exists`,
-);
-
-export const LINK: ErrorStruct = buildErrorStruct(
-    name, prefix, `LINK`, `Unable to link assets`,
 );
 
 export const FIND_PATH: ErrorStruct = buildErrorStruct(

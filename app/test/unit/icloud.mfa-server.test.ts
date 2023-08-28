@@ -1,11 +1,10 @@
 
 import {expect, describe, test, jest, beforeEach} from '@jest/globals';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import * as PACKAGE from '../../src/lib/package';
 import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {MockedEventManager, prepareResources} from '../_helpers/_general';
 import {MFAServer, MFA_SERVER_ENDPOINTS, MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
-import {iCPSEventMFA} from '../../src/lib/resources/events-types';
+import {iCPSEventMFA, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {MFA_ERR} from '../../src/app/error/error-codes';
 import {iCPSError} from '../../src/app/error/error';
 
@@ -38,7 +37,7 @@ describe(`MFA Code`, () => {
         const code = `123 456`;
 
         server.sendResponse = jest.fn<typeof server.sendResponse>();
-        const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?code=${code}`);
         const res = responseFactory();
@@ -46,7 +45,7 @@ describe(`MFA Code`, () => {
         server.handleMFACode(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
-        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Received unexpected MFA code format, expecting 6 digits`));
+        expect(warnEvent).toHaveBeenCalledWith(new Error(`Received unexpected MFA code format, expecting 6 digits`));
     });
 });
 
@@ -120,7 +119,7 @@ describe(`MFA Resend`, () => {
     test(`Invalid resend method`, () => {
         const method = `invalid`;
 
-        const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
         const res = responseFactory();
@@ -128,7 +127,7 @@ describe(`MFA Resend`, () => {
         server.handleMFAResend(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Resend method does not match expected format`);
-        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Resend method does not match expected format`));
+        expect(warnEvent).toHaveBeenCalledWith(new Error(`Resend method does not match expected format`));
     });
 });
 
@@ -145,7 +144,7 @@ describe(`Request routing`, () => {
 
         server.handleRequest(req, res);
 
-        expect(server.sendResponse).toHaveBeenCalledWith(res, 200, `MFA Server up & running - ${PACKAGE.NAME}@v${PACKAGE.VERSION}`);
+        expect(server.sendResponse).toHaveBeenCalledWith(res, 200, `MFA Server up & running - icloud-photos-sync@v0.0.0-development`);
         expect(server.handleMFACode).not.toHaveBeenCalled();
         expect(server.handleMFAResend).not.toHaveBeenCalled();
     });
@@ -177,12 +176,12 @@ describe(`Request routing`, () => {
         const req = requestFactory(`/invalid`, method);
         const res = responseFactory();
 
-        const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
         server.handleRequest(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Method not supported: ${method}`);
-        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Received request with unsupported method`));
+        expect(warnEvent).toHaveBeenCalledWith(new Error(`Received request with unsupported method`));
         expect(server.handleMFAResend).not.toHaveBeenCalled();
         expect(server.handleMFACode).not.toHaveBeenCalled();
     });
@@ -192,12 +191,12 @@ describe(`Request routing`, () => {
         const req = requestFactory(method, `POST`);
         const res = responseFactory();
 
-        const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
         server.handleRequest(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 404, `Route not found, available endpoints: ["/mfa","/resend_mfa"]`);
-        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Received request to unknown endpoint`));
+        expect(warnEvent).toHaveBeenCalledWith(new Error(`Received request to unknown endpoint`));
         expect(server.handleMFAResend).not.toHaveBeenCalled();
         expect(server.handleMFACode).not.toHaveBeenCalled();
     });
@@ -253,19 +252,19 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Handle unknown server error`, () => {
-        const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
         server.server.emit(`error`, new Error(`some server error`));
 
-        expect(handlerEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.SERVER_ERR));
+        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.SERVER_ERR));
     });
 
     test(`Handle address in use error`, () => {
-        const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
         const error = new Error(`Address in use`);
         (error as any).code = `EADDRINUSE`;
         server.server.emit(`error`, new Error(`Address in use`));
 
-        expect(handlerEvent).toHaveBeenCalledWith(new Error(`HTTP Server Error`));
+        expect(errorEvent).toHaveBeenCalledWith(new Error(`HTTP Server Error`));
     });
 
     test(`Handle MFA timeout`, () => {

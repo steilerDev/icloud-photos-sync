@@ -6,7 +6,7 @@ import {iCPSError} from '../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
 import {Resources} from '../resources/main.js';
 import {ENDPOINTS} from '../resources/network-types.js';
-import {iCPSEventCloud, iCPSEventError, iCPSEventMFA, iCPSEventPhotos} from '../resources/events-types.js';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 
 /**
  * This class holds the iCloud connection
@@ -73,7 +73,6 @@ export class iCloud {
             Resources.events(this)
                 .once(iCPSEventPhotos.READY, () => resolve())
                 .once(iCPSEventCloud.ERROR, err => reject(err))
-                .once(iCPSEventPhotos.ERROR, err => reject(err))
                 .once(iCPSEventMFA.MFA_NOT_PROVIDED, err => reject(err))
                 .once(iCPSEventMFA.ERROR, err => reject(err));
         });
@@ -187,7 +186,7 @@ export class iCloud {
                 Resources.logger(this).info(`Successfully requested new MFA code using ${validatedResponse.data.trustedDeviceCount} trusted device(s)`);
             }
         } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(MFA_ERR.RESEND_FAILED).setWarning().addCause(err));
+            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, err);
         }
     }
 

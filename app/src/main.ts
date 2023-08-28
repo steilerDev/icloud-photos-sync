@@ -18,6 +18,6 @@ const _metricsExporter = new MetricsExporter();
 try {
     await app.run();
 } catch (err) {
-    await _errorHandler.handle(err);
+    await _errorHandler.handleError(err);
     process.exit(1);
 }

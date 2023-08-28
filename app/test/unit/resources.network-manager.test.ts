@@ -1,9 +1,9 @@
 
-import {test, expect, describe} from '@jest/globals';
+import {test, expect, describe, beforeAll} from '@jest/globals';
 import {Header, HeaderJar} from "../../src/lib/resources/network-manager";
 import axios from 'axios';
 import {Cookie} from 'tough-cookie';
-import {addHoursToCurrentDate, getDateInThePast} from '../_helpers/_general';
+import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
 
 describe(`HeaderJar`, () => {
     test(`Should initialize`, () => {
@@ -82,7 +82,11 @@ describe(`HeaderJar`, () => {
                 },
             },
         ])(`$desc`, ({headers, injectedHeaders}) => {
-            test.only.each([
+            beforeAll(() => {
+                prepareResources(); // Only setting up for access to logger
+            });
+
+            test.each([
                 {
                     desc: `No Cookies`,
                     cookies: [],
@@ -170,3 +174,52 @@ describe(`HeaderJar`, () => {
         });
     });
 });
+
+// @todo: Implement in network manager tests
+//     test.each([
+//         {
+//             queue: undefined,
+//             msg: `Undefined queue`,
+//         },
+//         {
+//             queue: new PQueue(),
+//             msg: `Empty queue`,
+//         },
+//         {
+//             queue: (() => {
+//                 const queue = new PQueue({concurrency: 2, autoStart: true});
+//                 for (let i = 0; i < 10; i++) {
+//                     queue.add(() => new Promise(resolve => setTimeout(resolve, 40)));
+//                 }
+
+//                 return queue;
+//             })(),
+//             msg: `Non-Empty queue`,
+//         },
+//         {
+//             queue: (() => {
+//                 const queue = new PQueue({concurrency: 2, autoStart: true});
+//                 for (let i = 0; i < 10; i++) {
+//                     queue.add(() => new Promise(resolve => setTimeout(resolve, 40)));
+//                 }
+
+//                 return queue;
+//             })(),
+//             msg: `Started queue`,
+//         },
+//     ])(`Prepare Retry - $msg`, async ({queue}) => {
+//         syncEngine.downloadQueue = queue as unknown as PQueue;
+//         syncEngine.icloud.setupAccount = jest.fn<typeof syncEngine.icloud.setupAccount>()
+//             .mockResolvedValue();
+//         syncEngine.icloud.getReady = jest.fn<typeof syncEngine.icloud.getReady>()
+//             .mockResolvedValue();
+
+//         await syncEngine.prepareRetry();
+
+//         expect.assertions(queue ? 2 : 0);
+//         // Expect(syncEngine.icloud.setupAccount).toHaveBeenCalledTimes(1);
+//         if (syncEngine.downloadQueue) {
+//             expect(syncEngine.downloadQueue.size).toEqual(0);
+//             expect(syncEngine.downloadQueue.pending).toEqual(0);
+//         }
+//     });

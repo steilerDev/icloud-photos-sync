@@ -1,12 +1,12 @@
 import path from "path";
-import {SYNC_ERR} from "../../app/error/error-codes.js";
+import {LIBRARY_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
 import {CPLAlbum, CPLAsset, CPLMaster} from "../icloud/icloud-photos/query-parser.js";
 import {Album} from "../photos-library/model/album.js";
 import {Asset, AssetType} from "../photos-library/model/asset.js";
 import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../photos-library/model/photos-entity.js";
 import {Resources} from "../resources/main.js";
-import {iCPSEventError} from "../resources/events-types.js";
+import {iCPSEventRuntimeWarning} from "../resources/events-types.js";
 
 /**
  * This object exposes various static helpers required to perform a sync
@@ -66,12 +66,11 @@ function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Asset
                 remoteAssets.push(Asset.fromCPL(asset.resource, asset.resourceType, origExt, asset.modified, origFilename, AssetType.EDIT, asset.recordName, asset.favorite, asset.zoneName));
             }
         } catch (err) {
-            Resources.emit(iCPSEventError.HANDLER_EVENT, new iCPSError(SYNC_ERR.CONVERSION)
-                .setWarning()
-                .addCause(err)
-                .addContext(`cplAsset`, asset)
-                .addContext(`cplMaster`, master),
-            );
+            if (err instanceof iCPSError && err.code === LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR.code) {
+                Resources.emit(iCPSEventRuntimeWarning.FILETYPE_ERROR, err.context.extension, err.context.descriptor);
+            }
+
+            Resources.emit(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR, err, asset, master);
         }
     });
     return remoteAssets;

@@ -1,3 +1,4 @@
+import PackageData from '../../../package.json' assert { type: 'json' }; // eslint-disable-line
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -15,6 +16,15 @@ export namespace Resources {
      * The singleton instances of the shared resources
      */
     export let _instances: Resources.Types.Instances;
+
+    /**
+     * Static package info
+     */
+    export const PackageInfo: Resources.Types.PackageInfo = {
+        name: PackageData.name,
+        version: PackageData.version,
+        description: PackageData.description,
+    };
 
     /**
      * Prepares the global singleton instances. This includes the ResourceManager, NetworkManager, Validator and EventManager.
@@ -164,18 +174,21 @@ export namespace Resources {
         return Resources.event().emit(event, ...args);
     }
 
-    /**
-     * Formats the provided arguments as a string
-     * @param args - The arguments to format
-     * @returns The formatted string
-     */
-
     export namespace Types {
         export type Instances = {
             manager: ResourceManager,
             network: NetworkManager,
             validator: Validator,
             event: EventManager,
+        }
+
+        /**
+         * Package Metadata
+         */
+        export type PackageInfo = {
+            name: string,
+            version: string,
+            description: string,
         }
         /**
         * Interface to logger event bus, with a source bound to it

@@ -380,6 +380,9 @@ This schedule is expecting to be in [cron](https://crontab.guru) format. For mor
             daemon
         ```
 
+!!! tip "MFA Code during scheduled executions"
+    The trust token (used to circumvent the MFA code) is usually expiring after 30 days. Each authentication will read the trust token from file and exit execution if a trust token has expired and no MFA code was supplied in time (this usually happens during scheduled runs in the night). In this scenario, running the `token` command to update the trust token is possible, without having to restart the scheduled execution.
+
 ## Archiving
 
 In order to reduce complexity and storage needs in the iCloud Photos Library, archiving allows you to take a snapshot of a provided album and ignore changes to the album moving forward. This allows you to remove some or all of the photos within the album in iCloud after it was archived, while retaining a copy of all pictures locally.

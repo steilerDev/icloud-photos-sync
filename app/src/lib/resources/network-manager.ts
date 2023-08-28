@@ -1,16 +1,16 @@
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import fs from "fs/promises";
-import * as PACKAGE from "../package.js";
+import {createWriteStream} from "fs";
 import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network-types.js";
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {AxiosHarTracker} from "axios-har-tracker";
 import {FILE_ENCODING} from "./resource-types.js";
-import {Readable} from "stream";
 import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
+import {pEvent} from "p-event";
 
 export class Header {
     key: string;
@@ -73,11 +73,7 @@ export class HeaderJar {
     _injectHeaders(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
         const requestCookieString = Array.from(this.cookies.values())
             .filter(cookie => this.isApplicable(config, cookie))
-            .filter(
-                cookie => cookie.TTL() > 0
-                || (cookie.expires as Date).getTime() === 1000, // Cookie.expires could also be the string 'Infinity', but then TTL() would be the number Infinity
-                // For some reason some Apple Headers have a magic expire unix time of 1000 (X-APPLE-WEBAUTH-HSA-LOGIN)
-            )
+            .filter(cookie => this.isNotExpired(cookie))
             .map(cookie => cookie.cookieString()).join(`; `);
 
         if (requestCookieString.length > 0) {
@@ -91,6 +87,25 @@ export class HeaderJar {
             });
 
         return config;
+    }
+
+    /**
+     * Checks metadata of the provided cookie to check if it's still valid
+     * @param cookie - The cookie to check
+     * @returns False if expired, true otherwise
+     */
+    isNotExpired(cookie: Cookie): boolean {
+        if (cookie.TTL() > 0) {
+            return true;
+        }
+
+        // Cookie.expires could also be the string 'Infinity', but then TTL() would be the number Infinity
+        if ((cookie.expires as Date).getTime() === 1000) { // For some reason some Apple Headers have a magic expire unix time of 1000 (X-APPLE-WEBAUTH-HSA-LOGIN), including them for now...
+            return true;
+        }
+
+        Resources.logger(this).debug(`Not applying expired cookie ${cookie.key}`);
+        return false;
     }
 
     /**
@@ -191,7 +206,10 @@ export class NetworkManager {
             },
         });
 
-        this._streamingCCYLimiter = new PQueue({concurrency: resources.downloadThreads});
+        this._streamingCCYLimiter = new PQueue({
+            concurrency: resources.downloadThreads,
+            timeout: (1000 * 60 * resources.downloadTimeout),
+        });
 
         this._streamingAxios = axios.create({
             responseType: `stream`,
@@ -199,6 +217,7 @@ export class NetworkManager {
 
         if (resources.enableNetworkCapture) {
             this._harTracker = new AxiosHarTracker(this._axios as any);
+            this.resetHarTracker(this._harTracker);
         }
 
         this._headerJar = new HeaderJar(this._axios);
@@ -219,21 +238,28 @@ export class NetworkManager {
 
         if (Resources.manager().enableNetworkCapture) {
             await this.writeHarFile();
-            // Resets the generated HAR file to make sure it does not grow too much while reusing the same instance
-            // Unfortunately this object is private, so we have to cast it to any
-            (this._harTracker as any).generatedHar = {
-                log: {
-                    version: `1.2`,
-                    creator: {
-                        name: PACKAGE.NAME,
-                        version: PACKAGE.VERSION,
-                    },
-                    pages: [],
-                    entries: [],
-                },
-            };
-            (this._harTracker as any).newEntry = (this._harTracker as any).generateNewEntry();
+            this.resetHarTracker(this._harTracker);
         }
+    }
+
+    /**
+     * Resets the generated HAR file to make sure it does not grow too much while reusing the same instance
+     * Unfortunately the relevant members are private, so we have to cast it to any
+     * @param tracker - The AxiosHarTracker instance to reset
+     */
+    resetHarTracker(tracker: AxiosHarTracker) {
+        (tracker as any).generatedHar = {
+            log: {
+                version: `1.2`,
+                creator: {
+                    name: Resources.PackageInfo.name,
+                    version: Resources.PackageInfo.version,
+                },
+                pages: [],
+                entries: [],
+            },
+        };
+        (tracker as any).newEntry = (this._harTracker as any).generateNewEntry();
     }
 
     /**
@@ -259,14 +285,14 @@ export class NetworkManager {
      * Pending jobs will be cancelled and running jobs will be awaited
      * @param queue - The queue to settle
      */
-    async settleQueue(queue: PQueue) {
-        if (queue.size > 0) {
+    async settleQueue(queue: PQueue, clearQueuedJobs: boolean = true) {
+        if (clearQueuedJobs && queue.size > 0) {
             Resources.logger(this).info(`Clearing queue with ${queue.size} queued job(s)...`);
             queue.clear();
         }
 
         if (queue.pending > 0) {
-            Resources.logger(this).info(`${queue.pending} pending job(s), waiting for them to settle...`);
+            Resources.logger(this).info(`${queue.pending} pending job(s) (${queue.size} queued jobs), waiting for them to settle...`);
             await queue.onIdle();
         }
 
@@ -275,7 +301,7 @@ export class NetworkManager {
 
     /**
      * Writes the HAR file to disk, if network capture was enabled
-     * @returns - True if the file could be written, false otherwise
+     * @returns - Returns false, if network capture was disabled or no entries were captured, true if a file was written
      */
     async writeHarFile(): Promise<boolean> {
         if (!Resources.manager().harFilePath) {
@@ -295,12 +321,11 @@ export class NetworkManager {
 
             await fs.writeFile(Resources.manager().harFilePath, JSON.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
             Resources.logger(this).info(`HAR file written`);
+            return true;
         } catch (err) {
             Resources.logger(this).error(`Unable to write HAR file: ${err.message}`);
             return false;
         }
-
-        return true;
     }
 
     /**
@@ -422,14 +447,20 @@ export class NetworkManager {
     }
 
     /**
-     * Performs a GET request to acquire a asset's data stream
-     * Uses concurrency limiting to ensure that the available bandwidth is used most efficiently
-     * @param url - The location of the asset
-     * @returns A promise, that resolves once the request has been completed.
+     * Downloads the provided url's content and writes it to the provided location
+     * @param url - The url to download
+     * @param location - The location to write the file to (existing files will be overwritten)
      */
-    // async getDataStream<R = AxiosResponse<Readable>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R> {
-    async getDataStream(url: string): Promise<AxiosResponse<Readable>> {
-        return this._streamingCCYLimiter.add(async () => this._streamingAxios.get(url)) as Promise<AxiosResponse<Readable>>;
+    async downloadData(url: string, location: string): Promise<void> {
+        await this._streamingCCYLimiter.add(async () => {
+            Resources.logger(this).debug(`Starting download of ${url}`);
+            const response = await this._streamingAxios.get(url);
+            Resources.logger(this).debug(`Starting to write ${url} to ${location}`);
+            const writeStream = createWriteStream(location, {flags: `w`});
+            response.data.pipe(writeStream);
+            await pEvent(writeStream, `finish`, {rejectionEvents: [`error`]});
+            Resources.logger(this).debug(`Finished download of ${url}`);
+        });
     }
 
     /**

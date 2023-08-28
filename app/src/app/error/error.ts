@@ -1,11 +1,6 @@
 import {ErrorStruct, ERR_UNKNOWN} from "./error-codes.js";
 
 /**
- * Severity of the error
- */
-type Severity = `WARN` | `FATAL`
-
-/**
  * Base class for this tool's error type
  */
 export class iCPSError extends Error {
@@ -35,9 +30,9 @@ export class iCPSError extends Error {
     messages: string[] = [];
 
     /**
-     * The severity of this error - fatal by default
+     * If this error was reported, it will receive a UUID for future reference
      */
-    sev: Severity = `FATAL`;
+    btUUID: string = undefined;
 
     /**
      * Creates an application specific error using the provided
@@ -94,20 +89,11 @@ export class iCPSError extends Error {
     }
 
     /**
-     * Sets the severity of this error to warning
-     * @returns This object for chaining convenience
-     */
-    setWarning(): iCPSError {
-        this.sev = `WARN`;
-        return this;
-    }
-
-    /**
      *
      * @returns A description for this error, containing its cause chain's description
      */
     getDescription(): string {
-        let desc = `${this.code} (${this.sev}): ${this.message}`;
+        let desc = `${this.code}: ${this.message}`;
 
         if (this.messages.length > 0) {
             desc += ` (${this.messages.join(`, `)})`;
@@ -120,6 +106,10 @@ export class iCPSError extends Error {
             } else {
                 desc += this.cause.message;
             }
+        }
+
+        if (this.btUUID) {
+            desc += ` (error code: ${this.btUUID})`;
         }
 
         return desc;

@@ -382,6 +382,76 @@ describe.each([
 // });
 
 // describe(`Download asset`, () => {
+// test(`Write asset`, async () => {
+//     // Downloading banner of this repo
+//     const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
+//     const config: AxiosRequestConfig = {
+//         responseType: `stream`,
+//     };
+//     const fileName = `asdf`;
+//     const ext = `png`;
+//     const asset = new Asset(
+//         fileName,
+//         82215,
+//         FileType.fromExtension(ext),
+//         42,
+//         zone,
+//     );
+//     mockfs({
+//         [zoneDir]: {},
+//     });
+
+//     const library = new PhotosLibrary();
+
+//     try {
+//         const response = await axios.get(url, config);
+//         await library.writeAsset(asset, response);
+//     } catch (err) {
+//         // If there is no network connectivity, pass the test and print warning
+//         expect(err).toEqual(new Error(`getaddrinfo ENOTFOUND steilerdev.github.io`));
+//         console.warn(`Unable to run test - potentially due to lacking network connectivity`);
+//     }
+
+//     const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
+//     expect(fs.statSync(assetPath).size).toEqual(82215);
+// });
+
+// test(`Write asset with failing verification`, async () => {
+//     // Downloading banner of this repo
+//     const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
+//     const config: AxiosRequestConfig = {
+//         responseType: `stream`,
+//     };
+//     const fileName = `asdf`;
+//     const ext = `png`;
+//     const asset = new Asset(
+//         fileName,
+//         82215,
+//         FileType.fromExtension(ext),
+//         42,
+//         zone,
+//     );
+//     mockfs({
+//         [zoneDir]: {},
+//     });
+
+//     const library = new PhotosLibrary();
+//     const handlerEvent = mockedEventManager.spyOnHandlerEvent();
+//     library.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
+
+//     try {
+//         const response = await axios.get(url, config);
+//         await library.writeAsset(asset, response);
+//         expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to verify asset`));
+//     } catch (err) {
+//         // If there is no network connectivity, pass the test and print warning
+//         expect(err).toEqual(new Error(`getaddrinfo ENOTFOUND steilerdev.github.io`));
+//         console.warn(`Unable to run test - potentially due to lacking network connectivity`);
+//     }
+
+//     const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
+//     expect(fs.statSync(assetPath).size).toEqual(82215);
+// });
 //     test.todo(`Success`);
 //     test.todo(`No download url`);
 // });

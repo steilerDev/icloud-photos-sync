@@ -9,6 +9,7 @@ export const defaultConfig = {
     port: 80,
     maxRetries: 10,
     downloadThreads: 5,
+    downloadTimeout: 5,
     schedule: `0 2 * * *`,
     enableCrashReporting: false,
     failOnMfa: false,
