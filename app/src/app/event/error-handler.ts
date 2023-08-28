@@ -79,6 +79,7 @@ export class ErrorHandler {
                 breadcrumbs: {
                     enable: true,
                     eventType: bt.BreadcrumbType.Manual,
+                    maximumBreadcrumbs: 300,
                 },
                 beforeSend(data: bt.BacktraceData) {
                     return Object.assign(
@@ -248,11 +249,9 @@ export class ErrorHandler {
                     toBeKept,
                 });
             })
-            .on(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`WRITE_ASSET_COMPLETED`);
-            })
             .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`WRITE_ASSETS_COMPLETED`);
+                const writeAssetCount = Resources.event().getEventCount(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
+                this.btClient.breadcrumbs.info(`WRITE_ASSETS_COMPLETED`, {writeAssetCount});
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
                 this.btClient.breadcrumbs.info(`WRITE_ALBUMS`, {
