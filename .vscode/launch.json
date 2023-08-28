@@ -12,7 +12,7 @@
                 "<node_internals>/**"
             ],
             "preLaunchTask": "Build App",
-            "program": "${workspaceFolder}/app/src/main.ts",
+            "program": "${workspaceFolder}/app/bin/main.js",
             "args": ["sync"],
             "outFiles": [
                 "${workspaceFolder}/app/bin/**/*.js",

@@ -63,6 +63,11 @@ export class ErrorHandler {
                                 + BACKTRACE_SUBMISSION.TYPE;
 
             this.btClient = bt.BacktraceClient.initialize({
+
+                userAttributes: {
+                    application: Resources.PackageInfo.name,
+                    'application.version': Resources.PackageInfo.version,
+                },
                 url: endpoint,
                 database: {
                     enable: true,
