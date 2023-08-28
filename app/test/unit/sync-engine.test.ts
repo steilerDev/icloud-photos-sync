@@ -39,6 +39,8 @@ describe(`Coordination`, () => {
     beforeEach(() => {
         mockedNetworkManager.settleCCYLimiter = jest.fn<typeof mockedNetworkManager.settleCCYLimiter>();
         syncEngine.icloud.setupAccount = jest.fn<typeof syncEngine.icloud.setupAccount>();
+        syncEngine.icloud.getReady = jest.fn<typeof syncEngine.icloud.getReady>()
+            .mockResolvedValue();
     });
 
     describe(`Sync`, () => {

@@ -68,7 +68,9 @@ export class SyncEngine {
                 await Resources.network().settleCCYLimiter();
 
                 Resources.logger(this).debug(`Refreshing iCloud cookies...`);
+                const iCloudReady = this.icloud.getReady()
                 await this.icloud.setupAccount();
+                await iCloudReady
             }
         }
 

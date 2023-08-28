@@ -22,7 +22,7 @@ export class CLIInterface {
     constructor() {
         this.progressBar = new SingleBar({
             etaAsynchronousUpdate: true,
-            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded\n`,
+            format: ` {bar} {percentage}% | Elapsed: {duration_formatted} | {value}/{total} assets downloaded`,
             barCompleteChar: `\u25A0`,
             barIncompleteChar: ` `,
         });
