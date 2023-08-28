@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import * as PACKAGE_INFO from '../../lib/package.js';
+// Import {version, name, } from '../../../package.json' assert { type: 'json' }; // eslint-disable-line
 import {SingleBar} from 'cli-progress';
 import {Resources} from '../../lib/resources/main.js';
 import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
@@ -35,7 +35,7 @@ export class CLIInterface {
 
         // An error handler is only supplied on the initial run, this is not needed on scheduled runs
         this.print(chalk.white(this.getHorizontalLine()));
-        this.print(chalk.white.bold(`Welcome to ${PACKAGE_INFO.NAME}, v.${PACKAGE_INFO.VERSION}!`));
+        this.print(chalk.white.bold(`Welcome to ${Resources.PackageInfo.name}, v.${Resources.PackageInfo.version}!`));
         this.print(chalk.green(`Made with <3 by steilerDev`));
 
         if (!Resources.manager().suppressWarnings) {

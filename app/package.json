@@ -20,6 +20,7 @@
     "build:typescript": "npx tsc",
     "build:typedoc": "npx typedoc --plugin typedoc-plugin-markdown --plugin typedoc-github-wiki-theme",
     "build": "npm run build:schema && npm run build:typescript",
+    "postbuild": "npx backtrace-js process bin/",
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json test/unit/",
     "test:all": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
     "test:api": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json test/api/",
@@ -50,6 +51,7 @@
     "!win32"
   ],
   "devDependencies": {
+    "@backtrace-labs/javascript-cli": "^0.0.1",
     "@jest/globals": "^29.6.2",
     "@types/cli-progress": "^3.11.0",
     "@types/jest": "^29.5.2",

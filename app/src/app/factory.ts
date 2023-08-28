@@ -1,6 +1,5 @@
 import {Command, Option, InvalidArgumentError} from "commander";
 import Cron from "croner";
-import * as PACKAGE_INFO from '../lib/package.js';
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 import {Resources} from "../lib/resources/main.js";
 import {LogLevel} from "./event/log.js";
@@ -122,9 +121,9 @@ export function appFactory(argv: string[]): iCPSApp {
     const program = new Command();
     let app: iCPSApp;
 
-    program.name(PACKAGE_INFO.NAME)
-        .description(PACKAGE_INFO.DESC)
-        .version(PACKAGE_INFO.VERSION)
+    program.name(Resources.PackageInfo.name)
+        .description(Resources.PackageInfo.description)
+        .version(Resources.PackageInfo.version)
         .addOption(new Option(`-u, --username <email>`, `AppleID username.`)
             .env(`APPLE_ID_USER`)
             .makeOptionMandatory(true))

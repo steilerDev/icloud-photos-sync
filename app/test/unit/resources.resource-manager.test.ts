@@ -285,6 +285,8 @@ describe(`ResourceManager`, () => {
             resourceManager = prepareResources(true, resources as any)!.manager;
         });
 
+        
+
         describe(`dataDir`, () => {
             test(`should return the data dir from the resources`, () => {
                 expect(resourceManager.dataDir).toEqual(resources.dataDir);

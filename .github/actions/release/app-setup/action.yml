@@ -25,8 +25,3 @@ runs:
     - id: setup-app-artifact
       shell: bash
       run: (cd ${{ inputs.release-dir }}/app; tar --strip-components 1 -xf *.tgz package/; rm -f *.tgz;)
-    - id: generate-source-map
-      shell: bash
-      run: (cd ${{ inputs.release-dir }}; npx backtrace-js process app/bin/)
-
-

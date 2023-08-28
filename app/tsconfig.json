@@ -4,7 +4,7 @@
     "target": "ESNext",
     "moduleResolution": "NodeNext",
     "sourceMap": true,
-    "declaration": true,
+    "declaration": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "strictNullChecks": false,

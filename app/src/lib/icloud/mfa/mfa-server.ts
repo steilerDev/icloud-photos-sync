@@ -1,6 +1,5 @@
 import http from 'http';
 import {MFAMethod} from './mfa-method.js';
-import * as PACKAGE from '../../package.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {MFA_ERR} from '../../../app/error/error-codes.js';
 import {Resources} from '../../resources/main.js';
@@ -89,7 +88,7 @@ export class MFAServer {
      */
     handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if (req.method === `GET` && req.url === `/`) {
-            this.sendResponse(res, 200, `MFA Server up & running - ${PACKAGE.NAME}@v${PACKAGE.VERSION}`);
+            this.sendResponse(res, 200, `MFA Server up & running - ${Resources.PackageInfo.name}@v${Resources.PackageInfo.version}`);
             return;
         }
 

@@ -174,3 +174,17 @@ describe(`Creates static helper functions correctly`, () => {
         });
     });
 });
+
+describe(`package.json metadata`, () => {
+    test(`should return the application version`, () => {
+        expect(Resources.PackageInfo.version).toEqual(`0.0.0-development`);
+    });
+
+    test(`should return the application name`, () => {
+        expect(Resources.PackageInfo.name).toEqual(`icloud-photos-sync`);
+    });
+
+    test(`should return the application description`, () => {
+        expect(Resources.PackageInfo.description).toEqual(`One-way sync engine for the iCloud Photos Library into the native file system with archiving capabilities`);
+    });
+});

@@ -1,4 +1,3 @@
-import * as PACKAGE_INFO from '../../lib/package.js';
 import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
 import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
@@ -60,7 +59,7 @@ export class ErrorHandler {
 
         if (Resources.manager().enableCrashReporting) {
             const endpoint = `${BACKTRACE_SUBMISSION.DOMAIN}/${BACKTRACE_SUBMISSION.UNIVERSE}/`
-                                + `${PACKAGE_INFO.VERSION === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
+                                + `${Resources.PackageInfo.version === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
                                 + BACKTRACE_SUBMISSION.TYPE;
 
             this.btClient = bt.BacktraceClient.initialize({

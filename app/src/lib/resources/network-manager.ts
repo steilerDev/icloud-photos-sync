@@ -1,7 +1,6 @@
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import fs from "fs/promises";
 import {createWriteStream} from "fs";
-import * as PACKAGE from "../package.js";
 import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network-types.js";
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
@@ -253,8 +252,8 @@ export class NetworkManager {
             log: {
                 version: `1.2`,
                 creator: {
-                    name: PACKAGE.NAME,
-                    version: PACKAGE.VERSION,
+                    name: Resources.PackageInfo.name,
+                    version: Resources.PackageInfo.version,
                 },
                 pages: [],
                 entries: [],

@@ -1,7 +1,6 @@
 
 import {expect, describe, test, jest, beforeEach} from '@jest/globals';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import * as PACKAGE from '../../src/lib/package';
 import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {MockedEventManager, prepareResources} from '../_helpers/_general';
 import {MFAServer, MFA_SERVER_ENDPOINTS, MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
@@ -145,7 +144,7 @@ describe(`Request routing`, () => {
 
         server.handleRequest(req, res);
 
-        expect(server.sendResponse).toHaveBeenCalledWith(res, 200, `MFA Server up & running - ${PACKAGE.NAME}@v${PACKAGE.VERSION}`);
+        expect(server.sendResponse).toHaveBeenCalledWith(res, 200, `MFA Server up & running - icloud-photos-sync@v0.0.0-development`);
         expect(server.handleMFACode).not.toHaveBeenCalled();
         expect(server.handleMFAResend).not.toHaveBeenCalled();
     });
