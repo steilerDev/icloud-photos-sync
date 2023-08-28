@@ -24,7 +24,7 @@ export namespace Resources {
         name: PackageData.name,
         version: PackageData.version,
         description: PackageData.description,
-    }
+    };
 
     /**
      * Prepares the global singleton instances. This includes the ResourceManager, NetworkManager, Validator and EventManager.
