@@ -200,7 +200,10 @@ export class ErrorHandler {
             })
             .on(iCPSEventCloud.ACCOUNT_READY, () => {
                 this.btClient.breadcrumbs.info(`ACCOUNT_READY`);
-            });
+            })
+            .on(iCPSEventCloud.SESSION_EXPIRED, async () => {
+                this.btClient.breadcrumbs.info(`SESSION_EXPIRED`)
+            })
 
         Resources.events(this)
             .on(iCPSEventMFA.STARTED, () => {

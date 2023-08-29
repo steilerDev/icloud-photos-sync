@@ -70,6 +70,9 @@ export class CLIInterface {
             })
             .on(iCPSEventCloud.ACCOUNT_READY, () => {
                 this.print(chalk.white(`Sign in successful!`));
+            })
+            .on(iCPSEventCloud.SESSION_EXPIRED, () => {
+                this.print(chalk.yellowBright(`Session expired, re-authenticating...`));
             });
 
         Resources.events(this)

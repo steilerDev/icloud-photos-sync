@@ -53,6 +53,15 @@ describe(`Control structure`, () => {
         expect(icloud.getPhotosReady).toHaveBeenCalled();
     });
 
+    test(`SESSION_EXPIRED event triggered`, () => {
+        icloud.authenticate = jest.fn<typeof icloud.authenticate>()
+            .mockResolvedValue(true);
+
+        mockedEventManager.emit(iCPSEventCloud.SESSION_EXPIRED);
+
+        expect(icloud.authenticate).toHaveBeenCalled();
+    });
+
     describe(`MFA_REQUIRED event triggered`, () => {
         test(`Start MFA Server`, () => {
             icloud.mfaServer.startServer = jest.fn<typeof icloud.mfaServer.startServer>();
@@ -634,6 +643,25 @@ describe.each([
             expect(mockedNetworkManager.applySetupResponse).toHaveBeenCalled();
             expect(accountReadyEvent).toHaveBeenCalledTimes(1);
             expect(icloud.photos).toBeDefined();
+        });
+
+        test(`Session expired`, async () => {
+            mockedNetworkManager.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>(() => {
+                throw new iCPSError(VALIDATOR_ERR.SETUP_RESPONSE);
+            });
+
+            const sessionExpiredEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.SESSION_EXPIRED);
+
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(421);
+
+            await icloud.setupAccount();
+
+            expect(sessionExpiredEvent).toHaveBeenCalled()
+            expect(mockedValidator.validateSetupResponse).not.toHaveBeenCalled();
         });
 
         test(`Error - Invalid Response`, async () => {

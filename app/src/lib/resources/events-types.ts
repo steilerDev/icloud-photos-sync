@@ -45,6 +45,10 @@ export enum iCPSEventCloud {
      * Emitted when the iCloud account information have been retrieved
      */
     ACCOUNT_READY = `icloud-account_ready`,
+    /**
+     * Emitted if the session token expired
+     */
+    SESSION_EXPIRED = `icloud-session_expired`,
      /**
       * Emitted when the iCloud connection has experienced an error - provides an iCPSError as argument
       */

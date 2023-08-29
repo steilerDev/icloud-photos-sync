@@ -59,7 +59,10 @@ export class iCloud {
             })
             .on(iCPSEventCloud.ACCOUNT_READY, async () => {
                 await this.getPhotosReady();
-            });
+            })
+            .on(iCPSEventCloud.SESSION_EXPIRED,async () => {
+                await this.authenticate()
+            })
 
         this.ready = this.getReady();
     }
@@ -261,6 +264,12 @@ export class iCloud {
             Resources.logger(this).debug(`Account ready`);
             Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
+            if ((err as any).isAxiosError && err.response.status === 421) {
+                Resources.logger(this).debug(`Session token expired, re-acquiring...`);
+                Resources.emit(iCPSEventCloud.SESSION_EXPIRED);
+                return;
+            }
+
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACCOUNT_SETUP).addCause(err));
         }
     }
