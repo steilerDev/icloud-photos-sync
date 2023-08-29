@@ -8,7 +8,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "strictNullChecks": false,
-    "outDir": "bin",
+    "outDir": "build/out/",
     "skipLibCheck": true
   },
   "include": ["src/**/*"],  

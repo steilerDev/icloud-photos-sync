@@ -75,7 +75,7 @@ export class iCloud {
         return new Promise<boolean>((resolve, reject) => {
             Resources.events(this)
                 .once(iCPSEventPhotos.READY, () => resolve(true))
-                .once(iCPSEventMFA.MFA_NOT_PROVIDED, err => resolve(false))
+                .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => resolve(false))
                 .once(iCPSEventCloud.ERROR, err => reject(err))
                 .once(iCPSEventMFA.ERROR, err => reject(err));
         });
