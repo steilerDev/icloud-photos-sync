@@ -431,6 +431,6 @@ export class ErrorHandler {
         return input
             .replaceAll(Resources.manager().username, `<APPLE ID USERNAME>`)
             .replaceAll(Resources.manager().password, `<APPLE ID PASSWORD>`)
-            .replaceAll(Resources.manager().trustToken, `<TRUST TOKEN>`);
+            .replaceAll(Resources.manager()._resources.trustToken, `<TRUST TOKEN>`); // Reading cached trust token, instead of re-reading from file
     }
 }
