@@ -26,9 +26,9 @@
     "dist:package": "cp -r ./build/out/src/* bin/ && cp ../README.md ../LICENSE .",
     "dist:sourcemap": "npx backtrace-js process bin/",
     "dist": "npm run dist:clean && npm run dist:package && npm run dist:sourcemap",
-    "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json test/unit/",
-    "test:all": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
-    "test:api": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json test/api/",
+    "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
+    "test:unit": "npm run test test/unit/",
+    "test:api": "npm run test test/api/",
     "execute": "node bin/main.js",
     "execute:debug": "node --inspect=0.0.0.0:9229 bin/main.js daemon"
   },
