@@ -9,21 +9,23 @@
     "icloud-photos-sync": "bin/main.js"
   },
   "files": [
-    "bin/**/*"
+    "bin/**/*",
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
-    "clean": "rm -rf bin/ coverage/ doc/ node_modules/ package-lock.json src/lib/resource-manager/schemas/",
+    "clean": "rm -rf LICENSE README.md build/out/ bin/ coverage/ doc/ node_modules/ package-lock.json src/lib/resource-manager/schemas/",
     "prebuild:lint": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
     "prebuild:knip": "npx knip --no-exit-code --config knip.config.jsonc",
-    "prebuild:clean": "rm -rf bin/",
-    "prebuild": "npm run prebuild:lint && npm run prebuild:knip && npm run prebuild:clean",
+    "prebuild": "npm run prebuild:lint && npm run prebuild:knip",
     "build:schema": "./build/schema.sh",
     "build:typescript": "npx tsc",
     "build:typedoc": "npx typedoc --plugin typedoc-plugin-markdown --plugin typedoc-github-wiki-theme",
     "build": "npm run build:schema && npm run build:typescript",
-    "postbuild:clean": "mv bin/src/* bin/ && rm -rf bin/src bin/package.json",
-    "postbuild:sourcemap": "npx backtrace-js process bin/",
-    "postbuild": "npm run postbuild:clean && npm run postbuild:sourcemap",
+    "dist:clean": "rm -rf bin/ && mkdir -p bin/",
+    "dist:package": "cp -r ./build/out/src/* bin/ && cp ../README.md ../LICENSE .",
+    "dist:sourcemap": "npx backtrace-js process bin/",
+    "dist": "npm run dist:clean && npm run dist:package && npm run dist:sourcemap",
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json test/unit/",
     "test:all": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
     "test:api": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json test/api/",
