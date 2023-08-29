@@ -80,7 +80,7 @@ export class CLIInterface {
                 this.print(chalk.white(`Resending MFA code via ${method.toString()}...`));
             })
             .on(iCPSEventMFA.MFA_RECEIVED, (method: MFAMethod, code: string) => {
-                this.print(chalk.white(`MFA code received via ${method.toString()} (${code})`));
+                this.print(chalk.white(`MFA code received from ${method.toString()} (${code})`));
             })
             .on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
                 this.print(chalk.yellowBright(`MFA code not provided in time, aborting...`));

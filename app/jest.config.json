@@ -1,5 +1,5 @@
 {
-    "preset": "ts-jest/presets/default-esm-legacy",
+    "preset": "ts-jest/presets/default-esm",
     "testEnvironment": "node",
     "slowTestThreshold": 30,
     "reporters": [
@@ -20,15 +20,6 @@
       "html",
       "json-summary"
     ],
-    "extensionsToTreatAsEsm": [".ts"],
-    "transform": {
-      "\\.ts$": [
-        "ts-jest",
-        {
-          "useESM": true
-        }
-      ]
-    },
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
     }

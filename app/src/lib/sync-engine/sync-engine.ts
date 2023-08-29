@@ -37,7 +37,7 @@ export class SyncEngine {
 
     /**
      * Performs the sync and handles all connections
-     * @returns A list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync)
+     * @returns A list of assets and albums as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync)
      */
     async sync(): Promise<[Asset[], Album[]]> {
         Resources.logger(this).info(`Starting sync`);
@@ -70,7 +70,9 @@ export class SyncEngine {
                 Resources.logger(this).debug(`Refreshing iCloud cookies...`);
                 const iCloudReady = this.icloud.getReady();
                 await this.icloud.setupAccount();
-                await iCloudReady;
+                if (!await iCloudReady) {
+                    return [[], []];
+                }
             }
         }
 

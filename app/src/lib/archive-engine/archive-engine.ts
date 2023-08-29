@@ -41,6 +41,10 @@ export class ArchiveEngine {
         Resources.logger(this).debug(`Archiving path ${archivePath}`);
         Resources.emit(iCPSEventArchiveEngine.ARCHIVE_START, archivePath);
 
+        if (assetList.length === 0) {
+            throw new iCPSError(ARCHIVE_ERR.NO_ASSETS);
+        }
+
         const albumName = path.basename(archivePath);
         if (albumName.startsWith(`.`)) {
             throw new iCPSError(ARCHIVE_ERR.UUID_PATH);

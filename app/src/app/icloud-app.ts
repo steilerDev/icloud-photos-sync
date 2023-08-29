@@ -52,8 +52,11 @@ export class DaemonApp extends iCPSApp {
     async performScheduledSync(syncApp: SyncApp = new SyncApp()) {
         try {
             Resources.emit(iCPSEventApp.SCHEDULED_START);
-            await syncApp.run();
-            Resources.emit(iCPSEventApp.SCHEDULED_DONE, this.job?.nextRun());
+            const [remoteAssets] = await syncApp.run() as [Asset[], Album[]];
+
+            if (remoteAssets.length > 0) {
+                Resources.emit(iCPSEventApp.SCHEDULED_DONE, this.job?.nextRun());
+            }
         } catch (err) {
             Resources.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, new iCPSError(APP_ERR.DAEMON).addCause(err));
             Resources.emit(iCPSEventApp.SCHEDULED_RETRY, this.job?.nextRun());
@@ -89,7 +92,7 @@ abstract class iCloudApp extends iCPSApp {
     /**
      * This function acquires the library lock and establishes the iCloud connection.
      * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
-     * @returns A promise that resolves once the iCloud service is fully available
+     * @returns A promise that resolves to true once the iCloud service is fully available. If it resolves to false, the MFA code was not provided in time and the object is not ready.
      * @throws A iCPSError in case an error occurs
      */
     async run(): Promise<unknown> {
@@ -177,7 +180,7 @@ export class TokenApp extends iCloudApp {
                 // Emitting event for CLI
                 Resources.emit(iCPSEventApp.TOKEN, token);
             });
-            await super.run();
+            return await super.run();
         } catch (err) {
             throw new iCPSError(APP_ERR.TOKEN)
                 .addCause(err);
@@ -187,9 +190,6 @@ export class TokenApp extends iCloudApp {
                 await this.clean();
             }
         }
-
-        // Has to return something (TS2355)
-        return true;
     }
 
     /**
@@ -227,12 +227,16 @@ export class SyncApp extends iCloudApp {
     /**
      * Runs the synchronization of the local Photo Library
      * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
-     * @returns A Promise that resolves to a tuple containing a list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync).
+     * @returns A Promise that resolves to a tuple containing a list of assets and albums as fetched from the remote state. The returned arrays might be empty, if the iCloud connection was not established successfully.
      * @throws A SyncError in case an error occurs
      */
     async run(): Promise<unknown> {
         try {
-            await super.run();
+            const ready = await super.run() as boolean;
+            if (!ready) {
+                return [[], []];
+            }
+
             return await this.syncEngine.sync();
         } catch (err) {
             throw new iCPSError(APP_ERR.SYNC)

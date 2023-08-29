@@ -32,7 +32,7 @@ export class iCPSError extends Error {
     /**
      * If this error was reported, it will receive a UUID for future reference
      */
-    btUUID: string = undefined;
+    btUUID?: string = undefined;
 
     /**
      * Creates an application specific error using the provided
@@ -121,7 +121,8 @@ export class iCPSError extends Error {
      * @returns the error code for the first thrown error
      */
     getRootErrorCode(onlyICPSError: boolean = false): string {
-        return this.getErrorCodeStack(onlyICPSError).pop();
+        // getErrorCodeStack returns at least one item
+        return this.getErrorCodeStack(onlyICPSError).pop()!;
     }
 
     /**

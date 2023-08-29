@@ -123,6 +123,9 @@ export class ErrorHandler {
     }
 
     async handleFiletype(_ext: string, _descriptor?: string) {
+        if(this.btClient === undefined){
+            return
+        }
         const report = new bt.BacktraceReport(new iCPSError(FILETYPE_REPORT),
             {
                 'icps.filetype.extension': _ext,
@@ -140,6 +143,9 @@ export class ErrorHandler {
      * Registers event listeners to provide breadcrumbs
      */
     registerBreadcrumbs() {
+        if (this.btClient === undefined || this.btClient.breadcrumbs === undefined ){
+            return;
+        }
         Resources.events(this)
             .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: Error) => {
                 this.btClient.breadcrumbs.warn(`MFA_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});

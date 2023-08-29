@@ -83,7 +83,7 @@ describe(`Control structure`, () => {
 
     test(`MFA_NOT_PROVIDED event triggered`, async () => {
         mockedEventManager.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
-        await expect(icloud.ready).rejects.toThrow(/^MFA server timeout \(code needs to be provided within 10 minutes\)$/);
+        await expect(icloud.ready).resolves.toBeFalsy()
     });
 
     test.each([
@@ -93,9 +93,6 @@ describe(`Control structure`, () => {
         }, {
             desc: `MFA`,
             event: iCPSEventMFA.ERROR,
-        }, {
-            desc: `MFA_Timeout`,
-            event: iCPSEventMFA.MFA_NOT_PROVIDED,
         },
     ])(`$desc error event triggered`, async ({event}) => {
         mockedEventManager._eventBus.removeAllListeners(event); // Not sure why this is necessary
@@ -127,7 +124,7 @@ describe.each([
     describe(`Authenticate`, () => {
         test(`Valid Trust Token`, async () => {
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
-            icloud.ready = new Promise<void>((resolve, _reject) => resolve());
+            icloud.ready = new Promise<boolean>((resolve, _reject) => resolve(true));
 
             const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
             const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
@@ -164,7 +161,7 @@ describe.each([
                 });
 
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
-            icloud.ready = new Promise<void>((resolve, _reject) => resolve());
+            icloud.ready = new Promise<boolean>((resolve, _reject) => resolve(true));
 
             const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
             const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.MFA_REQUIRED);
@@ -216,7 +213,7 @@ describe.each([
         });
 
         describe(`Authentication backend error`, () => {
-            test.each([
+        test.each([
                 {
                     desc: `Unknown username`,
                     status: 403,

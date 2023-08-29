@@ -1,4 +1,4 @@
-import {AxiosRequestConfig} from 'axios';
+import {AxiosError, AxiosRequestConfig} from 'axios';
 import {MFAServer} from './mfa/mfa-server.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {MFAMethod} from './mfa/mfa-method.js';
@@ -24,9 +24,9 @@ export class iCloud {
     photos: iCloudPhotos;
 
     /**
-     * A promise that will resolve, once the object is ready or reject, in case there is an error
+     * A promise that will resolve to true, if the connection was established successfully, false in case the MFA code was not provided in time or reject, in case there is an error
      */
-    ready: Promise<void>;
+    ready: Promise<boolean>;
 
     /**
      * Creates a new iCloud Object
@@ -66,14 +66,14 @@ export class iCloud {
 
     /**
      *
-     * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR' or the MFA server times out
+     * @returns A promise that will resolve to true, if the connection was established successfully, false in case the MFA code was not provided in time or reject, in case there is an error
      */
-    getReady(): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
+    getReady(): Promise<boolean> {
+        return new Promise<boolean>((resolve, reject) => {
             Resources.events(this)
-                .once(iCPSEventPhotos.READY, () => resolve())
+                .once(iCPSEventPhotos.READY, () => resolve(true))
+                .once(iCPSEventMFA.MFA_NOT_PROVIDED, err => resolve(false))
                 .once(iCPSEventCloud.ERROR, err => reject(err))
-                .once(iCPSEventMFA.MFA_NOT_PROVIDED, err => reject(err))
                 .once(iCPSEventMFA.ERROR, err => reject(err));
         });
     }
@@ -82,7 +82,7 @@ export class iCloud {
      * Initiates authentication flow
      * Tries to directly login using trustToken, otherwise starts MFA flow
      */
-    async authenticate(): Promise<void> {
+    async authenticate(): Promise<boolean> {
         Resources.logger(this).info(`Authenticating user`);
         Resources.emit(iCPSEventCloud.AUTHENTICATION_STARTED);
 
@@ -131,7 +131,9 @@ export class iCloud {
                 return;
             }
 
-            if (err?.response?.status) {
+            // Does not seem to work
+            //if (err instanceof AxiosError) {
+            if ((err as AxiosError).isAxiosError) {
                 switch (err.response.status) {
                 case 401:
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));

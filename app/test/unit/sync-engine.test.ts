@@ -40,7 +40,7 @@ describe(`Coordination`, () => {
         mockedNetworkManager.settleCCYLimiter = jest.fn<typeof mockedNetworkManager.settleCCYLimiter>();
         syncEngine.icloud.setupAccount = jest.fn<typeof syncEngine.icloud.setupAccount>();
         syncEngine.icloud.getReady = jest.fn<typeof syncEngine.icloud.getReady>()
-            .mockResolvedValue();
+            .mockResolvedValue(true);
     });
 
     describe(`Sync`, () => {
@@ -145,6 +145,36 @@ describe(`Coordination`, () => {
             expect(mockedNetworkManager.settleCCYLimiter).toHaveBeenCalledTimes(1);
             expect(syncEngine.icloud.setupAccount).toHaveBeenCalledTimes(1);
             expect(doneEvent).toHaveBeenCalledTimes(1);
+        });
+
+        test(`MFA timeout after retry`, async () => {
+            syncEngine.icloud.getReady = jest.fn<typeof syncEngine.icloud.getReady>()
+                .mockResolvedValue(false);
+
+            const error = new Error();
+
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.START);
+            const retryEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.RETRY);
+            syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
+                .mockResolvedValue(fetchAndLoadStateReturnValue);
+            syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
+                .mockResolvedValue(diffStateReturnValue);
+            syncEngine.writeState = jest.fn<typeof syncEngine.writeState>()
+                .mockRejectedValue(error);
+            const doneEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.DONE);
+
+            await expect(syncEngine.sync()).resolves.toEqual([[], []]);
+
+            expect(startEvent).toHaveBeenCalled();
+            expect(retryEvent).toHaveBeenCalledWith(2, expect.objectContaining({message: "Unknown error during sync"}));
+            expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
+            expect(syncEngine.diffState).toHaveBeenCalledTimes(1);
+            expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);
+            expect(syncEngine.writeState).toHaveBeenCalledTimes(1);
+            expect(syncEngine.writeState).toHaveBeenNthCalledWith(1, ...diffStateReturnValue);
+            expect(mockedNetworkManager.settleCCYLimiter).toHaveBeenCalledTimes(1);
+            expect(syncEngine.icloud.setupAccount).toHaveBeenCalledTimes(1);
+            expect(doneEvent).not.toHaveBeenCalled();
         });
     });
 
