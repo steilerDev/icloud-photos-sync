@@ -41,7 +41,13 @@ export class CLIInterface {
         if (!Resources.manager().suppressWarnings) {
             Resources.events(this)
                 .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: Error) => this.printWarning(err.message))
-                .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => this.printWarning(`Detected unknown filetype (${descriptor} with ${ext}), please report in GH issue 143`))
+                .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
+                    if (Resources.manager().enableCrashReporting) {
+                        this.print(`Detected unknown filetype (${descriptor} with ${ext}): This error will be automatically reported (See GH issue 143 for more information)`);
+                    } else {
+                        this.printWarning(`Detected unknown filetype (${descriptor} with ${ext}): Please report in GH issue 143`);
+                    }
+                })
                 .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: iCPSError) => this.printWarning(err.getDescription()));
         }
 
