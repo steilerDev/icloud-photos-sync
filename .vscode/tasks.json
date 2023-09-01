@@ -3,7 +3,7 @@
 	"tasks": [
 		{
 			"type": "npm",
-			"script": "build",
+			"script": "build:dev",
 			"path": "app/",
 			"group": "build",
 			"problemMatcher": [],

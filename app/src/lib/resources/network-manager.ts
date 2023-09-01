@@ -208,7 +208,7 @@ export class NetworkManager {
 
         this._streamingCCYLimiter = new PQueue({
             concurrency: resources.downloadThreads,
-            timeout: (1000 * 60 * resources.downloadTimeout),
+            timeout: resources.downloadTimeout === Infinity ? undefined : (1000 * 60 * resources.downloadTimeout),
         });
 
         this._streamingAxios = axios.create({

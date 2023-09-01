@@ -22,18 +22,15 @@ afterEach(() => {
 });
 
 describe(`App Factory`, () => {
-    test.each(rejectOptions)(`Reject CLI: $_desc`, ({options, expected}) => {
+    test.each(rejectOptions)(`Reject CLI: $_desc`, async ({options, expected}) => {
         const originalFunction = Resources.setup;
         Resources.setup = jest.fn<typeof Resources.setup>();
-        const mockExit = jest.spyOn(process, `exit`).mockImplementation(() => {
-            throw new Error(`Process Exit`);
-        });
         const mockStderr = jest.spyOn(process.stderr, `write`).mockImplementation(() => true);
 
-        expect(() => appFactory(options)).toThrow(/^Process Exit$/);
+        await expect(() => appFactory(options)).rejects.toThrowError(expected);
 
-        expect(mockExit).toHaveBeenCalledWith(1);
-        expect(mockStderr).toBeCalledWith(expected);
+        // Expect(mockExit).toHaveBeenCalledWith(1);
+        expect(mockStderr).toBeCalledWith(expected + `\n`);
         expect(Resources.setup).not.toHaveBeenCalled();
 
         Resources.setup = originalFunction;
@@ -56,16 +53,16 @@ describe(`App Factory`, () => {
         command: [`archive`, `/some/valid/path`],
         appType: ArchiveApp,
     }])(`Valid CLI for $desc app`, ({command, appType}) => {
-        test.each(nonRejectOptions)(`$_desc`, ({options, expectedOptions}) => {
+        test.each(nonRejectOptions)(`$_desc`, async ({options, expectedOptions}) => {
             const setupSpy = jest.spyOn(Resources, `setup`);
-            const app = appFactory([...options, ...command]);
+            const app = await appFactory([...options, ...command]);
             expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, ...expectedOptions});
             expect(app).toBeInstanceOf(appType);
         });
     });
 
-    test(`Create Token App`, () => {
-        const tokenApp = appFactory(validOptions.token) as TokenApp;
+    test(`Create Token App`, async () => {
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
 
         expect(tokenApp).toBeInstanceOf(TokenApp);
         expect(tokenApp.icloud).toBeDefined();
@@ -77,8 +74,8 @@ describe(`App Factory`, () => {
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 
-    test(`Create Sync App`, () => {
-        const syncApp = appFactory(validOptions.sync) as SyncApp;
+    test(`Create Sync App`, async () => {
+        const syncApp = await appFactory(validOptions.sync) as SyncApp;
 
         expect(syncApp).toBeInstanceOf(SyncApp);
         expect(syncApp.icloud).toBeDefined();
@@ -92,8 +89,8 @@ describe(`App Factory`, () => {
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 
-    test(`Create Archive App`, () => {
-        const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
+    test(`Create Archive App`, async () => {
+        const archiveApp = await appFactory(validOptions.archive) as ArchiveApp;
 
         expect(archiveApp).toBeInstanceOf(ArchiveApp);
         expect(archiveApp.icloud).toBeDefined();
@@ -108,8 +105,8 @@ describe(`App Factory`, () => {
         expect(fs.existsSync(`/opt/icloud-photos-library`));
     });
 
-    test(`Create Daemon App`, () => {
-        const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
+    test(`Create Daemon App`, async () => {
+        const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
 
         expect(daemonApp).toBeInstanceOf(DaemonApp);
         expect(Resources._instances).toBeDefined();
@@ -118,7 +115,7 @@ describe(`App Factory`, () => {
 
 describe(`App control flow`, () => {
     test(`Handle authentication error`, async () => {
-        const tokenApp = appFactory(validOptions.token) as TokenApp;
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
         tokenApp.acquireLibraryLock = jest.fn<typeof tokenApp.acquireLibraryLock>()
             .mockResolvedValue();
         tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>()
@@ -140,7 +137,7 @@ describe(`App control flow`, () => {
     });
 
     test(`Handle MFA not provided`, async () => {
-        const tokenApp = appFactory(validOptions.token) as TokenApp;
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
         tokenApp.acquireLibraryLock = jest.fn<typeof tokenApp.acquireLibraryLock>()
             .mockResolvedValue();
         tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>()
@@ -162,7 +159,7 @@ describe(`App control flow`, () => {
     });
 
     test(`Handle lock acquisition error`, async () => {
-        const tokenApp = appFactory(validOptions.token) as TokenApp;
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
         tokenApp.acquireLibraryLock = jest.fn<typeof tokenApp.acquireLibraryLock>()
             .mockRejectedValue(new Error());
         tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>()
@@ -186,7 +183,7 @@ describe(`App control flow`, () => {
 
     describe(`Token App`, () => {
         test(`Execute token actions`, async () => {
-            const tokenApp = appFactory(validOptions.token) as TokenApp;
+            const tokenApp = await appFactory(validOptions.token) as TokenApp;
 
             const tokenEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.TOKEN);
 
@@ -222,7 +219,7 @@ describe(`App control flow`, () => {
 
     describe(`Sync App`, () => {
         test(`Execute sync actions`, async () => {
-            const syncApp = appFactory(validOptions.sync) as SyncApp;
+            const syncApp = await appFactory(validOptions.sync) as SyncApp;
 
             syncApp.acquireLibraryLock = jest.fn<typeof syncApp.acquireLibraryLock>()
                 .mockResolvedValue();
@@ -248,7 +245,7 @@ describe(`App control flow`, () => {
         });
 
         test(`Handle MFA not provided`, async () => {
-            const syncApp = appFactory(validOptions.sync) as SyncApp;
+            const syncApp = await appFactory(validOptions.sync) as SyncApp;
 
             syncApp.acquireLibraryLock = jest.fn<typeof syncApp.acquireLibraryLock>()
                 .mockResolvedValue();
@@ -274,7 +271,7 @@ describe(`App control flow`, () => {
         });
 
         test(`Handle sync error`, async () => {
-            const syncApp = appFactory(validOptions.sync) as SyncApp;
+            const syncApp = await appFactory(validOptions.sync) as SyncApp;
 
             syncApp.acquireLibraryLock = jest.fn<typeof syncApp.acquireLibraryLock>()
                 .mockResolvedValue();
@@ -302,7 +299,7 @@ describe(`App control flow`, () => {
 
     describe(`Archive App`, () => {
         test(`Execute archive actions`, async () => {
-            const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
+            const archiveApp = await appFactory(validOptions.archive) as ArchiveApp;
             archiveApp.acquireLibraryLock = jest.fn<typeof archiveApp.acquireLibraryLock>()
                 .mockResolvedValue();
             archiveApp.icloud.authenticate = jest.fn<typeof archiveApp.icloud.authenticate>()
@@ -333,7 +330,7 @@ describe(`App control flow`, () => {
         });
 
         test(`Handle MFA not provided`, async () => {
-            const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
+            const archiveApp = await appFactory(validOptions.archive) as ArchiveApp;
             archiveApp.acquireLibraryLock = jest.fn<typeof archiveApp.acquireLibraryLock>()
                 .mockResolvedValue();
             archiveApp.icloud.authenticate = jest.fn<typeof archiveApp.icloud.authenticate>()
@@ -364,7 +361,7 @@ describe(`App control flow`, () => {
         });
 
         test(`Handle archive error`, async () => {
-            const archiveApp = appFactory(validOptions.archive) as ArchiveApp;
+            const archiveApp = await appFactory(validOptions.archive) as ArchiveApp;
             archiveApp.acquireLibraryLock = jest.fn<typeof archiveApp.acquireLibraryLock>()
                 .mockResolvedValue();
             archiveApp.icloud.authenticate = jest.fn<typeof archiveApp.icloud.authenticate>()
@@ -396,7 +393,7 @@ describe(`App control flow`, () => {
 
     describe(`Daemon App`, () => {
         test(`Schedule job`, async () => {
-            const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
             daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
                 .mockResolvedValue();
             Resources._instances.manager._resources.schedule = `*/1 * * * * *`; // Every second
@@ -413,7 +410,7 @@ describe(`App control flow`, () => {
         });
 
         test(`Scheduled sync succeeds`, async () => {
-            const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
             const successEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_DONE);
 
             const remoteState = [{fileChecksum: `someChecksum`}] as Asset[];
@@ -428,7 +425,7 @@ describe(`App control flow`, () => {
         });
 
         test(`Scheduled sync requires MFA`, async () => {
-            const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
             const successEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_DONE);
 
             const syncApp = new SyncApp();
@@ -442,7 +439,7 @@ describe(`App control flow`, () => {
         });
 
         test(`Scheduled sync fails`, async () => {
-            const daemonApp = appFactory(validOptions.daemon) as DaemonApp;
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
             const retryEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_RETRY);
             const errorEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeError.SCHEDULED_ERROR);
 
@@ -461,7 +458,7 @@ describe(`App control flow`, () => {
 
 describe(`Library Lock`, () => {
     test(`Acquire lock`, async () => {
-        const tokenApp = appFactory(validOptions.token) as TokenApp;
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
         const thisPID = process.pid.toString();
 
         await tokenApp.acquireLibraryLock();
@@ -471,7 +468,7 @@ describe(`Library Lock`, () => {
     });
 
     test(`Acquire lock error - already locked`, async () => {
-        const tokenApp = appFactory(validOptions.token) as TokenApp;
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
@@ -485,7 +482,7 @@ describe(`Library Lock`, () => {
     });
 
     test(`Acquire lock warning - already locked with --force`, async () => {
-        const tokenApp = appFactory(validOptions.tokenWithForce) as TokenApp;
+        const tokenApp = await appFactory(validOptions.tokenWithForce) as TokenApp;
         const thisPID = process.pid.toString();
         const notThisPID = (process.pid + 1).toString();
 
@@ -502,7 +499,7 @@ describe(`Library Lock`, () => {
     });
 
     test(`Release lock`, async () => {
-        const tokenApp = appFactory(validOptions.token) as TokenApp;
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
         const thisPID = process.pid.toString();
 
         mockfs({
@@ -517,7 +514,7 @@ describe(`Library Lock`, () => {
     });
 
     test(`Release lock error - not this process' lock`, async () => {
-        const tokenApp = appFactory(validOptions.token) as TokenApp;
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
@@ -532,7 +529,7 @@ describe(`Library Lock`, () => {
     });
 
     test(`Release lock error - not this process' lock --force`, async () => {
-        const tokenApp = appFactory(validOptions.tokenWithForce) as TokenApp;
+        const tokenApp = await appFactory(validOptions.tokenWithForce) as TokenApp;
         const notThisPID = (process.pid + 1).toString();
 
         mockfs({
@@ -547,7 +544,7 @@ describe(`Library Lock`, () => {
     });
 
     test(`Release lock error - no lock`, async () => {
-        const tokenApp = appFactory(validOptions.token) as TokenApp;
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
 
         await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined();
 

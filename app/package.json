@@ -15,12 +15,12 @@
   ],
   "scripts": {
     "clean": "rm -rf LICENSE README.md build/out/ bin/ coverage/ doc/ node_modules/ package-lock.json src/lib/resources/schemas/",
-    "prebuild:lint": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test",
+    "prebuild:lint": "npx eslint -c eslint.config.json --fix --ext .ts ./src ./test ./build",
     "prebuild:knip": "npx knip --no-exit-code --config knip.config.jsonc",
     "prebuild": "npm run prebuild:lint && npm run prebuild:knip",
     "build:schema": "npx ts-node-esm build/schema.ts",
     "build:typescript": "npx tsc",
-    "build:typedoc": "npx typedoc --plugin typedoc-plugin-markdown --plugin typedoc-github-wiki-theme",
+    "build:dev": "npm run build:schema && npm run build:typescript",
     "build": "npm run build:schema && npm run build:typescript",
     "dist:clean": "rm -rf bin/ && mkdir -p bin/",
     "dist:package": "cp -r ./build/out/src/* bin/ && cp ../README.md ../LICENSE .",
@@ -29,6 +29,8 @@
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
     "test:unit": "npm run test test/unit/",
     "test:api": "npm run test test/api/",
+    "doc:typedoc": "npx typedoc --plugin typedoc-plugin-markdown --plugin typedoc-github-wiki-theme",
+    "doc:cli": "NODE_NO_WARNINGS=1 npx ts-node-esm build/cli-reference.ts",
     "execute": "NODE_NO_WARNINGS=1 node build/out/src/main.js",
     "execute:debug": "NODE_NO_WARNINGS=1 node --inspect=0.0.0.0:9229 build/out/src/main.js daemon"
   },

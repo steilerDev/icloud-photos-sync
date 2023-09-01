@@ -1,0 +1,65 @@
+# CLI Reference
+
+## Description
+
+{{ description }}.
+
+## Synopsis
+
+```
+{{ synopsis }}
+```
+
+Use `{{ commandName }} {{ helpCommandName }} [command]` for information on a specific command. The following commands are available:
+{% for command in globalCommands %}
+  * [{{ command.name }}](#{{ command.name }})
+{% endfor %}
+
+## Options
+{% for option in globalOptions %}
+### {{ option.pretty }}
+
+{% if option.required -%}
+    `{{- ' REQUIRED' -}}`
+{%- else -%}
+    `{{- ' OPTIONAL' -}}`
+{%- endif -%}
+{{- ' | ' -}} 
+`{{- option.type }}`
+
+{{ option.description }}
+
+{% if option.long %}
+  * *Long Option*: `{{ option.long }}`
+{%- endif -%}
+{% if option.short %}
+  * *Short Option*: `{{ option.short }}`
+{%- endif -%}
+{% if option.environment %}
+  * *Environment Variable*: `{{ option.environment }}`
+{%- endif -%}
+{% if option.defaultValue %}
+  * *Default*: `{{ option.defaultValue }}`
+{%- endif -%}
+{% endfor %}
+
+## Commands
+
+{% for command in globalCommands %}
+### {{ command.name }}
+
+{{ command.description}}
+
+Usage:
+```
+{{ command.usage}}
+```
+
+{% if command.arguments.length > 0 %}
+Arguments:
+{% for argument in command.arguments %}
+  * `{{ argument.name}}` ({% if argument.required -%} `REQUIRED` {%- else -%} `OPTIONAL` {%- endif %}): {{ argument.description }} 
+{%- endfor %}
+{% endif %}
+
+{% endfor %}
