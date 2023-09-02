@@ -69,17 +69,21 @@ export class ErrorHandler {
                     'application.version': Resources.PackageInfo.version,
                 },
                 url: endpoint,
-                database: {
-                    enable: true,
-                    path: path.join(Resources.manager().dataDir, `.crash-reporter`),
-                    captureNativeCrashes: true,
-                    createDatabaseDirectory: true,
-                    autoSend: true,
-                },
+                // database: {
+                //     enable: true,
+                //     path: path.join(Resources.manager().dataDir, `.crash-reporter`),
+                //     captureNativeCrashes: true,
+                //     createDatabaseDirectory: true,
+                //     autoSend: true,
+                // },
                 breadcrumbs: {
                     enable: true,
                     eventType: bt.BreadcrumbType.Manual,
-                    maximumBreadcrumbs: 300,
+                    maximumBreadcrumbs: 200,
+                },
+                metrics: {
+                    enable: true,
+                    autoSendInterval: 0
                 },
                 beforeSend(data: bt.BacktraceData) {
                     return Object.assign(
@@ -95,9 +99,11 @@ export class ErrorHandler {
             // Usage statistics
             Resources.events(this).on(iCPSEventSyncEngine.START, () => {
                 this.btClient.metrics.addSummedEvent(`SyncExecution`);
+                this.btClient.metrics.send()
             });
             Resources.events(this).on(iCPSEventArchiveEngine.ARCHIVE_START, () => {
                 this.btClient.metrics.addSummedEvent(`ArchiveExecution`);
+                this.btClient.metrics.send()
             });
 
             this.registerBreadcrumbs();
