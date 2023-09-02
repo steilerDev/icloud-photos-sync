@@ -1,13 +1,9 @@
 
-import {jest, test, expect, describe, beforeAll} from '@jest/globals';
-import {Header, HeaderJar, NetworkManager} from "../../src/lib/resources/network-manager";
+import {test, expect, describe, beforeAll} from '@jest/globals';
+import {Header, HeaderJar} from "../../src/lib/resources/network-manager";
 import axios from 'axios';
 import {Cookie} from 'tough-cookie';
 import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
-import { afterEach, beforeEach } from 'node:test';
-import { defaultConfig } from '../_helpers/_config';
-import * as PQueueModule from 'p-queue';
-import { AxiosHarTracker } from 'axios-har-tracker';
 
 describe(`HeaderJar`, () => {
     test(`Should initialize`, () => {
@@ -194,7 +190,7 @@ describe(`HeaderJar`, () => {
 
             expect(injectedRequestConfig.headers).toEqual({});
         });
-            
+
         test(`Don't clear unrelated header`, () => {
             const axiosInstance = axios.create();
             const headerJar = new HeaderJar(axiosInstance);
@@ -213,10 +209,10 @@ describe(`HeaderJar`, () => {
                 someOtherKey: `someOtherValue`,
             });
         });
-     })
+    });
 });
 
-// describe(`NetworkManager`, () => {
+// Describe(`NetworkManager`, () => {
 //     describe(`Constructor`, () => {
 
 //         test(`Creates a new instance with default config`, () => {
@@ -237,7 +233,6 @@ describe(`HeaderJar`, () => {
 
 //             // expect(HeaderJar.prototype.constructor).toHaveBeenCalledTimes(1);
 //         })
-
 
 //         // test(`Creates a new instance with network capture enabled`, () => {
 //         //     const networkManager = new NetworkManager({

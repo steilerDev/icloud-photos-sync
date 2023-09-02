@@ -2,7 +2,6 @@ import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
 import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
 import fs from 'fs/promises';
-import path from 'path';
 import {Resources} from '../../lib/resources/main.js';
 import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
@@ -69,7 +68,7 @@ export class ErrorHandler {
                     'application.version': Resources.PackageInfo.version,
                 },
                 url: endpoint,
-                // database: {
+                // Database: {
                 //     enable: true,
                 //     path: path.join(Resources.manager().dataDir, `.crash-reporter`),
                 //     captureNativeCrashes: true,
@@ -83,7 +82,7 @@ export class ErrorHandler {
                 },
                 metrics: {
                     enable: true,
-                    autoSendInterval: 0
+                    autoSendInterval: 0,
                 },
                 beforeSend(data: bt.BacktraceData) {
                     return Object.assign(
@@ -99,11 +98,11 @@ export class ErrorHandler {
             // Usage statistics
             Resources.events(this).on(iCPSEventSyncEngine.START, () => {
                 this.btClient.metrics.addSummedEvent(`SyncExecution`);
-                this.btClient.metrics.send()
+                this.btClient.metrics.send();
             });
             Resources.events(this).on(iCPSEventArchiveEngine.ARCHIVE_START, () => {
                 this.btClient.metrics.addSummedEvent(`ArchiveExecution`);
-                this.btClient.metrics.send()
+                this.btClient.metrics.send();
             });
 
             this.registerBreadcrumbs();

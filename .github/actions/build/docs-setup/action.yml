@@ -34,3 +34,6 @@ runs:
     - id: setup-npm
       shell: bash
       run: (cd ${{ inputs.app-path }}; npm ci)
+    - id: setup-app
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm run build:dev)
