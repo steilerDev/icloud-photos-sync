@@ -6,7 +6,6 @@ import {MetricsExporter} from "./app/event/metrics-exporter.js";
 import {LogInterface} from "./app/event/log.js";
 import {iCPSApp} from "./app/icloud-app.js";
 
-// Creates the appropriate application and initiates the ResourceManager
 let app: iCPSApp;
 try {
     app = await appFactory(process.argv);
@@ -15,13 +14,11 @@ try {
     process.exit(3);
 }
 
-// Creates helper infrastructure on global level, which will subscribe to the global event bus provided by the ResourceManager
 const _errorHandler = new ErrorHandler();
 const _logInterface = new LogInterface();
 const _cliInterface = new CLIInterface();
 const _metricsExporter = new MetricsExporter();
 
-// Executes app
 try {
     await app.run();
 } catch (err) {
