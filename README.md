@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://steilerdev.github.io/icloud-photos-sync/">
-    <img alt="icloud-photos-sync Logo" src="https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png">
+  <a href="https://icps.steiler.dev/">
+    <img alt="icloud-photos-sync Logo" src="https://icps.steiler.dev/assets/icloud-photos-sync-open-graph.png">
   </a>
 </p>
 
@@ -19,22 +19,22 @@
 </p>
 <hr>
 <p align="center">
-  <a href="https://steilerdev.github.io/icloud-photos-sync/get-started/">
+  <a href="https://icps.steiler.dev/get-started/">
     <img alt="Get Started" src="https://img.shields.io/static/v1?label=&message=Get%20Started&color=important&style=for-the-badge&logo=readthedocs&logoColor=white" style="width: 50%;">
   </a>
 </p>
 <p align="center">
-  <a href="https://steilerdev.github.io/icloud-photos-sync/user-guides/cli">
+  <a href="https://icps.steiler.dev/user-guides/cli">
     <img alt="CLI Reference" src="https://img.shields.io/static/v1?label=&message=CLI%20Reference&color=grey&style=for-the-badge" style="width: 30%;">
   </a>
 </p>
 <hr>
 <p align="center">
-  <a href="https://steilerdev.github.io/icloud-photos-sync/dev/coverage/">
-    <img alt="Test Coverage (Lines)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Lines%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.lines.pct&suffix=%25&url=https%3A%2F%2Fsteilerdev.github.io%2Ficloud-photos-sync%2Fdev%2Fcoverage%2Fcoverage-summary.json">
+  <a href="https://icps.steiler.dev/dev/coverage/">
+    <img alt="Test Coverage (Lines)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Lines%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.lines.pct&suffix=%25&url=https%3A%2F%2Ficps.steiler.dev%2Fdev%2Fcoverage%2Fcoverage-summary.json">
   </a>
-  <a href="https://steilerdev.github.io/icloud-photos-sync/dev/coverage/">
-    <img alt="Test Coverage (Functions)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Functions%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.functions.pct&suffix=%25&url=https%3A%2F%2Fsteilerdev.github.io%2Ficloud-photos-sync%2Fdev%2Fcoverage%2Fcoverage-summary.json">
+  <a href="https://icps.steiler.dev/dev/coverage/">
+    <img alt="Test Coverage (Functions)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Functions%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.functions.pct&suffix=%25&url=https%3A%2F%2Ficps.steiler.dev%2Fdev%2Fcoverage%2Fcoverage-summary.json">
   </a>
 </p>
 <p align="center">
@@ -56,10 +56,10 @@ This CLI Application offers the following high level functionality:
   <p>
     <ul>
       <li>iCloud Shared Photo Library support</li>
-      <li>Support of MFA authentication through trusted devices, SMS and voice authentication - [Security Key Support pending, please help out if you have this use case](https://github.com/steilerDev/icloud-photos-sync/issues/207)!</li>
+      <li>Support of MFA authentication through trusted devices, SMS and voice authentication - <a href="https://github.com/steilerDev/icloud-photos-sync/issues/207">Security Key Support pending, please help out if you have this use case</a>!</li>
       <li>Enable autonomous operation, by caching of MFA trust token</li>
       <li>Support of large libraries, through efficient diffing algorithm instead of full library pull</li>
-      <li>Full iCloud Photos Library backup with all important files in their original state and edits - [Live Photos support pending](https://github.com/steilerDev/icloud-photos-sync/issues/121)</li>
+      <li>Full iCloud Photos Library backup with all important files in their original state and edits - <a href="https://github.com/steilerDev/icloud-photos-sync/issues/121">Live Photos support pending</a></li>
     </ul>
   </p>
 </details>
@@ -100,7 +100,7 @@ This CLI Application offers the following high level functionality:
 
 ## Documentation
 
-A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/icloud-photos-sync/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/) - are published there as well. 
+A [*Get Started Guide* can be found on GH Pages](https://icps.steiler.dev/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://icps.steiler.dev/dev/motivation/) - are published there as well. 
 
 I am also trying to publish regular updates on the progress of this project in a [development blog](https://github.com/steilerDev/icloud-photos-sync/discussions/305).
 

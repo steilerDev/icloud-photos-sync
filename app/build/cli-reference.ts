@@ -38,6 +38,7 @@ type GlobalOption = {
     short?: string,
     environment?: string,
     defaultValue?: string,
+    choices?: string
 }
 
 const templateInput = {
@@ -60,6 +61,7 @@ for (const option of program.options) {
             defaultValue: option.defaultValueDescription ?? option.defaultValue?.toString(),
             type: (option.flags.match(/<(.*)>/) ?? [``, `boolean`])[1],
             description: option.description,
+            choices: ((option as any).argChoices as string[])?.map(choice => `\`${choice}\``).join(`, `),
         },
     );
 }

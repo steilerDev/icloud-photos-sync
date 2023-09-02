@@ -41,6 +41,9 @@ Use `{{ commandName }} {{ helpCommandName }} [command]` for information on a spe
 {% if option.defaultValue %}
   * *Default*: `{{ option.defaultValue }}`
 {%- endif -%}
+{% if option.choices %}
+  * *Choices*: {{ option.choices }}
+{%- endif -%}
 {% endfor %}
 
 ## Commands

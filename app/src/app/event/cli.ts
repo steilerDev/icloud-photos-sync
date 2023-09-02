@@ -139,23 +139,23 @@ export class CLIInterface {
 
                 const extraneousFiles = Resources.event().getEventCount(iCPSEventRuntimeWarning.EXTRANEOUS_FILE);
                 if (extraneousFiles > 0) {
-                    this.printWarning(`Detected ${extraneousFiles} extraneous files, please check the logs for more details (and see https://icps.steierdev.de/warnings/ for context)`);
+                    this.printWarning(`Detected ${extraneousFiles} extraneous files, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
                 const libraryLoadErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR);
                 if (libraryLoadErrors > 0) {
-                    this.printWarning(`Unable to load ${libraryLoadErrors} local assets, please check the logs for more details (and see https://icps.steierdev.de/warnings/ for context)`);
+                    this.printWarning(`Unable to load ${libraryLoadErrors} local assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
                 this.print(chalk.green(`Fetched remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
                 const mismatchErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.COUNT_MISMATCH);
                 if (mismatchErrors > 0) {
-                    this.printWarning(`Detected ${mismatchErrors} albums, where asset counts don't match, please check the logs for more details (and see https://icps.steierdev.de/warnings/ for context)`);
+                    this.printWarning(`Detected ${mismatchErrors} albums, where asset counts don't match, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
                 const iCloudLoadErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR);
                 if (iCloudLoadErrors > 0) {
-                    this.printWarning(`Unable to load ${iCloudLoadErrors} remote assets, please check the logs for more details (and see https://icps.steierdev.de/warnings/ for context)`);
+                    this.printWarning(`Unable to load ${iCloudLoadErrors} remote assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
             })
             .on(iCPSEventSyncEngine.DIFF, () => {
@@ -185,7 +185,7 @@ export class CLIInterface {
                 this.print(chalk.greenBright(`Asset sync completed!`));
                 const writeAssetErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR);
                 if (writeAssetErrors > 0) {
-                    this.printWarning(`Detected ${writeAssetErrors} errors while adding assets, please check the logs for more details.`);
+                    this.printWarning(`Detected ${writeAssetErrors} errors while adding assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
@@ -197,12 +197,12 @@ export class CLIInterface {
                 this.print(chalk.greenBright(`Album sync completed!`));
                 const linkErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.LINK_ERROR);
                 if (linkErrors > 0) {
-                    this.printWarning(`Detected ${linkErrors} errors while linking assets to albums, please check the logs for more details.`);
+                    this.printWarning(`Detected ${linkErrors} errors while linking assets to albums, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
                 const writeAlbumErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR);
                 if (writeAlbumErrors > 0) {
-                    this.printWarning(`Detected ${writeAlbumErrors} errors while writing albums, please check the logs for more details.`);
+                    this.printWarning(`Detected ${writeAlbumErrors} errors while writing albums, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
             })
             .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
@@ -236,7 +236,7 @@ export class CLIInterface {
                 this.print(chalk.green.bold(`Successfully completed archiving`));
                 const archiveAssetErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
                 if (archiveAssetErrors > 0) {
-                    this.printWarning(`Detected ${archiveAssetErrors} errors while archiving assets, please check the logs for more details.`);
+                    this.printWarning(`Detected ${archiveAssetErrors} errors while archiving assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
                 this.print(chalk.white(this.getHorizontalLine()));

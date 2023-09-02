@@ -2,36 +2,62 @@
 
 While using this application, warnings might appear. This is either due to the fact that the API is not completely understood and/or inconsistent. The overall goals of the application can still be achieved, however a small percentage of assets might be miss-represented. The impact can be gauged by observing the below messages.
 
-Warnings can be suppressed with a [configuration options](https://steilerdev.github.io/icloud-photos-sync/user-guides/cli/).
+Warnings can be suppressed with the [suppress warnings flag](../cli/#suppress-warnings).
 
-### Authentication
+## Syncing
 
-  - `MFA_RESEND_FAILED (WARN): Unable to request new MFA code caused by <cause>`
-    Requesting a new MFA code was unsuccessful. The cause should provide information about this - probably the selected method is not available. Re-try using a different method.
-  - `MFA_METHOD_NOT_FOUND (WARN): Received request with unsupported method (endpoint <endpoint>, method <method>)` or `MFA_ROUTE_NOT_FOUND (WARN): Received request to unknown endpoint (<url>)` or `MFA_CODE_FORMAT (WARN): Received unexpected MFA code format, expecting 6 digits (<url>)`
-    The local server, listening for commands in the context of multi-factor authentication received an unexpected request. Make sure your requests are [formatted correctly](https://steilerdev.github.io/icloud-photos-sync/get-started/#multi-factor-authentication).
+### Warning: Detected unknown filetype (`descriptor` with `ext`)
 
-### Syncing
+Supported filetypes need to be hardcoded in the application. This error indicates that one of your assets has a filetype that is currently not supported. If you have error reporting enabled, your filetype has been automatically reported to the author. Alternatively report your filetype in the [open issue](https://github.com/steilerDev/icloud-photos-sync/issues/143).
 
-  - Local Library:
-    - `LIBRARY_INVALID_FILE (WARN): Found invalid file (<fileName>) caused by <cause>`
-      An invalid file was found in the directory tree and will be ignored - consider removing it.
-    - `LIBRARY_DEAD_SYMLINK (WARN): Found dead symlink (removing it) (<path>) caused by <cause>`
-      A dead symlink was found and removed.
-    - `LIBRARY_EXTRANEOUS_FILE (WARN): Extraneous file found while processing a folder (<path>)`
-      An un-safe file was found in the directory tree - consider removing it.
-  - Remote Library:
-    - `ICLOUD_PHOTOS_COUNT_MISMATCH (WARN): Received unexpected amount of records (expected <n> CPLMaster & <m> CPLAsset records, but got <x> CPLMaster & <y> CPLAsset records for album <albumName>)`
-      In an initial set, the API is queried for the number of assets in a given album. This is followed by a query to get all assets associated with the album. For some reason those APIs sometimes return contradicting results. (I suspect an error within the iCloud backend)
-  - State write:
-    - `LIBRARY_INVALID_ASSET (warn): Unable to verify asset (<assetName>) caused by <cause>`
-      After writing the asset, there is a conflict between the expected and actual state of the asset. Since this check fails, the file will be removed during the next sync execution and the retrieval of the remote asset is performed again. This might lead to temporary inconsistencies of the local library.
-    - `LIBRARY_LINK (WARN): Unable to link assets (<pathA> to <pathB>) caused by <cause>`
-      An asset could not be linked into an album. The cause provided should indicate if this is due to an issue within the folder or a missing asset. This is probably related to previous errors and indicates temporary inconsistencies of the local library.
-    - `SYNC_ADD_ALBUM (WARN): Unable to add album (<albumName>) caused by <cause>`
-      The given album could not be added to the file tree. This does not affect the actual assets, since those are only linked to the album. The cause provided should indicate the root cause. This will lead to temporary inconsistencies of the local library.
+The assets with unknown filetype will be ignored during syncing, the remaining files will sync as expected.
 
-### Archiving
+### Warning: Detected `number` extraneous files
 
-  - `ARCHIVE_NO_REMOTE_ASSET (WARN): Unable to find remote asset (<uuid>)` or `ARCHIVE_NO_REMOTE_RECORD_NAME (WARN): Unable to get record name (<name>)`
-    An asset that should be remotely deleted can not be retrieved. The remote asset will not be deleted by this process.
+There should only be symlinks in folders and non-archived albums. Extraneous files are highlighted during library loading.
+
+Search the log file for a `RuntimeError` of the format `Extraneous file found in directory ${filePath}`, to find and remove the extraneous file from your file system.
+
+### Warning: Unable to load `number` local assets
+
+There are various reasons, why the application cannot load an asset from the user's local library (e.g. permission issues). The assets that could not be loaded will be ignored during the synchronization.
+
+Search the log file for a `RuntimeError` of the format `Error while loading file ${filePath}: ${errDescription}` to get an idea, why loading fails.
+
+### Warning: Detected `number` albums, where asset counts don't match
+
+In an initial set, the API is queried for the number of assets in a given album. This is followed by a query to get all assets associated with the album. For some reason those APIs sometimes return contradicting results (I suspect an error within the iCloud backend).
+
+Search the log file for a `RuntimeError` of the format `Expected ${expectedCount} CPLAssets & CPLMasters, but got ${actualCPLAssetCount} CPLAssets and ${actualCPLMasterCount} CPLMasters for album ${albumName}` to understand which albums and assets are impacted.
+
+### Warning: Unable to load `number` remote assets
+
+There are various reasons, why the application cannot load an asset from the iCloud Photos Library backend (e.g. unreliable network connection). The assets that could not be loaded will be ignored during the synchronization.
+
+Search the log file for a `RuntimeError` of the format `Error while loading iCloud asset ${recordName}: ${errDescription}` to understand which assets are impacted.
+
+### Warning: Detected `number` errors while adding assets
+
+There are various reasons, why the application cannot write an asset to disk (e.g. network connection or permission issues). The assets experiencing this error are most likely not written to disk or corrupted.
+
+Search the log file for a `RuntimeError` of the format `Error while verifying asset ${assetName}: ${errDescription}` to understand which assets are impacted.
+
+### Warning: Detected `number` errors while linking assets to albums
+
+When linking assets into the directory tree various errors can happen (e.g. assets with a naming conflict in the same folder). This leads to assets missing within the album structure, while still being within the `_All-Photos` folder.
+
+Search the log file for a `RuntimeError` of the format `Error while linking ${srcPath} to ${dstPath}: ${errDescription}` to understand which assets and albums are impacted.
+
+### Detected `number` errors while writing albums
+
+There are various reasons, why the application cannot write an an album to disk (e.g. permission issues). The albums experiencing this error are most likely not written to disk or missing assets.
+
+Search the log file for a `RuntimeError` of the format `Error while writing album ${albumName}: ${errDescription}` to understand which albums are impacted.
+
+## Archiving
+
+### Detected `number` errors while archiving assets
+
+There are various reasons, why the application cannot archive an asset (e.g. permission issues). The asset experiencing this error might not be correctly archived or corrupted. The remote asset will not be deleted in this case.
+
+Search the log file for a `RuntimeError` of the format `Error while archiving asset ${assetPath}: ${errDescription}` to understand which assets are impacted.

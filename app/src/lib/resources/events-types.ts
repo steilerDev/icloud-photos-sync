@@ -142,7 +142,7 @@ export enum iCPSEventRuntimeWarning {
       */
     MFA_ERROR = `warn-mfa_error`,
     /**
-     * Emitted when an asset could not be archived - provides the error as argument
+     * Emitted when an asset could not be archived - provides the error and errored asset file path as argument
      */
     ARCHIVE_ASSET_ERROR = `warn-archive_asset_error`,
     /**

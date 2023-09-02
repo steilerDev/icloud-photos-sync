@@ -58,14 +58,17 @@ const FIELDS = {
     ASSETS_TO_BE_ADDED: `assets_to_be_added`,
     ASSETS_TO_BE_KEPT: `assets_to_be_kept`,
     ASSETS_TO_BE_DELETED: `assets_to_be_deleted`,
-    ASSETS_ARCHIVED: `assets_archived`,
-    REMOTE_ASSETS_DELETED: `remote_assets_deleted`,
     ASSET_WRITTEN: `asset_written`,
     ALBUMS_TO_BE_ADDED: `albums_to_be_added`,
     ALBUMS_TO_BE_KEPT: `albums_to_be_kept`,
     ALBUMS_TO_BE_DELETED: `albums_to_be_deleted`,
     STATUS_TIME: `status_time`,
     NEXT_SCHEDULE: `next_schedule`,
+    /**
+     * Archive metrics
+     */
+    ASSETS_ARCHIVED: `assets_archived`,
+    REMOTE_ASSETS_DELETED: `remote_assets_deleted`,
     STATUS: {
         name: `status`,
         values: {

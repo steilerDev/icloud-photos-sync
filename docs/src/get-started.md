@@ -415,3 +415,7 @@ In order to archive an album, the [`archive` command](../user-guides/cli/#archiv
             archive \
             </path/to/your/local/library>/<path/to/album>
         ```
+
+## Contributing & Feedback
+
+Please check the [contributing guidelines](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md) to learn how to engage with this project. The document outlines the bug reporting, feature and support request process for this tool.

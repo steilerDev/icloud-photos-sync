@@ -128,7 +128,7 @@ describe.each([
                 trustToken: Config.trustToken,
             });
 
-        if(photosDomain) {
+        if (photosDomain) {
             mockedNetworkManager.photosUrl = photosDomain;
         }
     });

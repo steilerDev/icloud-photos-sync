@@ -424,7 +424,7 @@ describe.each([{
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`));
+            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`), path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()));
         });
 
         test(`Prepare remote delete throws error`, async () => {
@@ -496,7 +496,7 @@ describe.each([{
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`));
+            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`), path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()));
         });
 
         test(`Delete assets throws error`, async () => {

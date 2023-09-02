@@ -44,6 +44,7 @@ export class ArchiveEngine {
      * @emits PERSISTING_START - When the persisting starts
      * @emits REMOTE_DELETE - When the remote deletion starts
      * @emits ARCHIVE_DONE - When the archiving is done
+     * @emits ARCHIVE_ASSET_ERROR - When an error occurs while persisting an asset
      */
     async archivePath(archivePath: string, assetList: Asset[]) {
         Resources.logger(this).debug(`Archiving path ${archivePath}`);
@@ -86,7 +87,7 @@ export class ArchiveEngine {
                 Resources.emit(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
                     .addCause(err)
                     .addContext(`assetPath`, assetPath)
-                    .addContext(`archivedAssetPath`, archivedAssetPath),
+                    .addContext(`archivedAssetPath`, archivedAssetPath), assetPath,
                 );
                 return undefined;
             }
@@ -111,24 +112,15 @@ export class ArchiveEngine {
      * Persists a locally cached asset in the proper folder - applying original files m & a times accordingly
      * @param assetPath - Path to the assets file path in the Assets folder
      * @param archivedAssetPath - The target path of the asset (with filename)
-     * @returns A Promise that resolves, once the file has been copied
-     * @emits ARCHIVE_ASSET_ERROR if the asset could not be persisted - provides an iCPSError as argument
+     * @returns A Promise that resolves, once the file has been copied or rejects, in case there was an error
      */
     async persistAsset(assetPath: string, archivedAssetPath: string): Promise<void> {
         Resources.logger(this).debug(`Persisting ${assetPath} to ${archivedAssetPath}`);
-        try {
-            const fileStat = await fs.stat(assetPath);
-            // Const lFileStat = await fs.lstat(archivedAssetPath)
-            await fs.unlink(archivedAssetPath);
-            await fs.copyFile(assetPath, archivedAssetPath);
-            await fs.utimes(archivedAssetPath, fileStat.mtime, fileStat.mtime);
-        } catch (err) {
-            Resources.emit(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
-                .addCause(err)
-                .addContext(`assetPath`, assetPath)
-                .addContext(`archivedAssetPath`, archivedAssetPath),
-            );
-        }
+        const fileStat = await fs.stat(assetPath);
+        // Const lFileStat = await fs.lstat(archivedAssetPath)
+        await fs.unlink(archivedAssetPath);
+        await fs.copyFile(assetPath, archivedAssetPath);
+        await fs.utimes(archivedAssetPath, fileStat.mtime, fileStat.mtime);
     }
 
     /**
