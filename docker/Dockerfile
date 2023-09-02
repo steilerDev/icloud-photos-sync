@@ -21,6 +21,5 @@ RUN chmod 755 /root/enter_mfa.sh && \
 # Installing application binary
 RUN npm install -g /opt/*.tgz
 
-
 ENTRYPOINT ["icloud-photos-sync"]
 CMD ["daemon"]

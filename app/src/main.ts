@@ -24,7 +24,6 @@ const _metricsExporter = new MetricsExporter();
 // Executes app
 try {
     await app.run();
-    process.exit(0);
 } catch (err) {
     await _errorHandler.handleError(err);
     process.exit(1);
