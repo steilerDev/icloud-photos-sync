@@ -138,7 +138,7 @@ export enum iCPSEventRuntimeWarning {
       */
      FILETYPE_ERROR = `warn-filetype_error`,
      /**
-      * Emitted when there is an error related to the MFA flow - provides the error as argument
+      * Emitted when there is an error related to the MFA flow - provides an iCPS error as argument
       */
     MFA_ERROR = `warn-mfa_error`,
     /**
@@ -179,7 +179,6 @@ export enum iCPSEventSyncEngine {
      * Emitted when the fetch and load process has started
      */
     FETCH_N_LOAD = `sync-fetch_n_load`,
-
     /**
      * Emitted when the fetch and load process has completed - provides the number of remote assets and albums as well as the number of local assets and albums as arguments
      */
@@ -204,7 +203,6 @@ export enum iCPSEventSyncEngine {
      * Emitted when the write process has completed writing an asset - provides the asset name as argument
      */
     WRITE_ASSET_COMPLETED = `sync-write_asset_completed`,
-
     /**
      * Emitted when the write process has completed writing all assets
      */
@@ -213,7 +211,6 @@ export enum iCPSEventSyncEngine {
      * Emitted when the write process has started writing albums - provides the number of albums to be deleted, added and kept as arguments
      */
     WRITE_ALBUMS = `sync-write_albums`,
-
     /**
      * Emitted when the write process has completed writing all albums
      */

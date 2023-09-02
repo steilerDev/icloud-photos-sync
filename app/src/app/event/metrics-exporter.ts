@@ -339,9 +339,9 @@ export class MetricsExporter {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.LINK_ERROR, `${srcPath} -> ${dstPath} - ${iCPSError.toiCPSError(err).getDescription()}`));
             })
-            .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: Error) => {
+            .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
-                    .addField(FIELDS.MFA_RESEND_ERROR, iCPSError.toiCPSError(err).getDescription()));
+                    .addField(FIELDS.MFA_RESEND_ERROR, err.getDescription()));
             })
             .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: Error) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
@@ -491,9 +491,13 @@ export class MetricsExporter {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint().addField(FIELDS.REMOTE_ASSETS_DELETED, numberOfAssets));
             });
 
-        Resources.logger(this).info(`Enabling metrics exporter to file ${Resources.manager().metricsFilePath}`);
+        Resources.logger(this).info(`Enabled metrics exporter to file ${Resources.manager().metricsFilePath}`);
     }
 
+    /**
+     * Appends the data point to the metrics output file
+     * @param dataPoint - The data point to log
+     */
     logDataPoint(dataPoint: InfluxLineProtocolPoint) {
         fs.appendFileSync(this.metricsFileDescriptor, dataPoint.toString(), {encoding: FILE_ENCODING});
     }

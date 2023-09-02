@@ -17,6 +17,9 @@ import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError} fr
  */
 export const LIBRARY_LOCK_FILE = `.library.lock`;
 
+/**
+ * Abstract class returned by the factory function
+ */
 export abstract class iCPSApp {
     /**
      * Executes this app
@@ -31,7 +34,7 @@ export class DaemonApp extends iCPSApp {
     /**
      * Holds the cron job
      */
-    job?: Cron;
+    job: Cron;
 
     /**
      * Schedule the synchronization based on the provided cron string
@@ -45,8 +48,7 @@ export class DaemonApp extends iCPSApp {
     }
 
     /**
-     * Perform a scheduled sync using the provided event handlers
-     * @param eventHandlers - Event handlers of daemon app
+     * Perform a scheduled sync
      * @param syncApp - Parametrized for testability - will be freshly initiated if omitted
      */
     async performScheduledSync(syncApp: SyncApp = new SyncApp()) {
@@ -75,7 +77,6 @@ abstract class iCloudApp extends iCPSApp {
 
     /**
      * Creates and sets up the necessary infrastructure
-     * @param options - The parsed CLI options
      */
     constructor() {
         super();
@@ -85,15 +86,14 @@ abstract class iCloudApp extends iCPSApp {
             fs.mkdirSync(Resources.manager().dataDir, {recursive: true});
         }
 
-        // Creating necessary objects for this scope
+        // Creating necessary object for this scope
         this.icloud = new iCloud();
     }
 
     /**
      * This function acquires the library lock and establishes the iCloud connection.
-     * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      * @returns A promise that resolves to true once the iCloud service is fully available. If it resolves to false, the MFA code was not provided in time and the object is not ready.
-     * @throws A iCPSError in case an error occurs
+     * @throws An iCPSError in case an error occurs
      */
     async run(): Promise<unknown> {
         try {
@@ -112,7 +112,7 @@ abstract class iCloudApp extends iCPSApp {
     }
 
     /**
-     * Removes all established event listeners and releases the library lock
+     * Removes all established event listeners, resets the network connection and releases the library lock
      */
     async clean() {
         await Resources.network().resetSession();
@@ -123,7 +123,7 @@ abstract class iCloudApp extends iCPSApp {
 
     /**
      * Tries to acquire the lock for the local library to execute a sync
-     * @throws A Library Error, if the lock could not be acquired
+     * @throws An iCPSError, if the lock could not be acquired
      */
     async acquireLibraryLock() {
         const lockFilePath = path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE);
@@ -142,7 +142,7 @@ abstract class iCloudApp extends iCPSApp {
 
     /**
      * Tries to release the lock for the local library after completing a sync
-     * @throws A Library Error, if the lock could not be released
+     * @throws An iCPSError, if the lock could not be released
      */
     async releaseLibraryLock() {
         const lockFilePath = path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE);
@@ -167,7 +167,9 @@ export class TokenApp extends iCloudApp {
     /**
      * This function will validate the currently stored account token and print it afterwards
      * @returns A promise that resolves once the operation has been completed
-     * @throws A TokenError in case an error occurs
+     * @throws An iCPSError in case an error occurs
+     * @emits iCPSEventPhotos.READY - Once the token has been validated in order for the Promise to resolve
+     * @emits iCPSEventApp.TOKEN - Once the token has been validated in order for the CLI to print it
      */
     async run(): Promise<unknown> {
         try {
@@ -175,9 +177,7 @@ export class TokenApp extends iCloudApp {
             Resources.events(this.icloud).removeListeners(iCPSEventCloud.TRUSTED);
 
             Resources.events(this).once(iCPSEventCloud.TRUSTED, token => {
-                // Fulfilling promise
                 Resources.emit(iCPSEventPhotos.READY);
-                // Emitting event for CLI
                 Resources.emit(iCPSEventApp.TOKEN, token);
             });
             return await super.run();
@@ -226,9 +226,8 @@ export class SyncApp extends iCloudApp {
 
     /**
      * Runs the synchronization of the local Photo Library
-     * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
-     * @returns A Promise that resolves to a tuple containing a list of assets and albums as fetched from the remote state. The returned arrays might be empty, if the iCloud connection was not established successfully.
-     * @throws A SyncError in case an error occurs
+     * @returns A Promise that resolves to a tuple containing containing the list of assets and albums as fetched from the remote state. The returned arrays might be empty, if the iCloud connection was not established successfully.
+     * @throws An iCPSError in case an error occurs
      */
     async run(): Promise<unknown> {
         try {
@@ -273,7 +272,6 @@ export class ArchiveApp extends SyncApp {
 
     /**
      * Creates and sets up the necessary infrastructure for this app
-     * @param options - The parsed CLI options
      * @param archivePath - The path to the folder that should get archived
      */
     constructor(archivePath: string) {
@@ -284,7 +282,6 @@ export class ArchiveApp extends SyncApp {
 
     /**
      * This function will first perform a synchronization run and then attempt to archive the provided path
-     * @param eventHandlers - A list of EventHandlers that will be registering relevant objects
      * @returns A promise that resolves once the operation has finished
      * @throws An ArchiveError in case an error occurs
      */

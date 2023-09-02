@@ -92,7 +92,7 @@ describe(`Control structure`, () => {
 
     test(`MFA_NOT_PROVIDED event triggered`, async () => {
         mockedEventManager.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
-        await expect(icloud.ready).resolves.toBeFalsy()
+        await expect(icloud.ready).resolves.toBeFalsy();
     });
 
     test.each([
@@ -127,7 +127,10 @@ describe.each([
                 libraryVersion: 1,
                 trustToken: Config.trustToken,
             });
-        mockedNetworkManager.photosUrl = photosDomain;
+
+        if(photosDomain) {
+            mockedNetworkManager.photosUrl = photosDomain;
+        }
     });
 
     describe(`Authenticate`, () => {
@@ -222,7 +225,7 @@ describe.each([
         });
 
         describe(`Authentication backend error`, () => {
-        test.each([
+            test.each([
                 {
                     desc: `Unknown username`,
                     status: 403,
@@ -660,7 +663,7 @@ describe.each([
 
             await icloud.setupAccount();
 
-            expect(sessionExpiredEvent).toHaveBeenCalled()
+            expect(sessionExpiredEvent).toHaveBeenCalled();
             expect(mockedValidator.validateSetupResponse).not.toHaveBeenCalled();
         });
 

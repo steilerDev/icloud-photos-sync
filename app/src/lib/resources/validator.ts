@@ -12,13 +12,16 @@ import {iCPSError} from "../../app/error/error.js";
 import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
 import {COOKIE_KEYS, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninResponse, TrustResponse} from "./network-types.js";
 
+/**
+ * Common configuration for the schema validator
+ */
 const AJV_CONF = {
     verbose: true,
     // Logger: ResourceManager.logger(`AjvValidator`),
 };
 
 /**
- * This class is responsible for validating 3rd party provided JSON based resources
+ * This class is responsible for validating 3rd party provided JSON based resources using previously compiled JSON schemas
  */
 export class Validator {
     /**

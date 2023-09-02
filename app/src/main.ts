@@ -11,7 +11,7 @@ let app: iCPSApp;
 try {
     app = await appFactory(process.argv);
 } catch (_err) {
-    // Commander will print appropriate error messages
+    // AppFactory will print appropriate error messages
     process.exit(3);
 }
 

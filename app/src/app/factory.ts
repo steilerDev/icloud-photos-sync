@@ -67,7 +67,7 @@ function commanderParseInterval(value: string, _dummyPrevious?: unknown): [numbe
     const expectedRegExp = /^([0-9]+|Infinity)\/([0-9]+)$/;
     const match = value.match(expectedRegExp);
     if (!match) {
-        throw new InvalidArgumentError(`Not a valid interval pattern. Expects the format \`<numberOfRequests|Infinity>/<timeInMs>\`, e.g. \`1/20\` to limit requests to one in 20ms.`);
+        throw new InvalidArgumentError(`Not a valid interval pattern. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one in 20ms.`);
     }
 
     const intervalCap = commanderParsePositiveIntOrInfinity(match[1]);
@@ -110,15 +110,13 @@ export type iCPSAppOptions = {
 
 /**
  * Creates the argument parser for the CLI and environment variables
- * @param callback - A callback function that will be called with the created app, based on the provided options or a commander error in case of an error
+ * @param callback - A callback function that will be called with the created app, based on the provided options.
  * @returns The commander command object, awaiting .parse() to be called
  */
-export function argParser(callback: (res: iCPSApp | CommanderError) => void): Command {
+export function argParser(callback: (res: iCPSApp) => void): Command {
     // Overwriting commander\`s _exit function, because exitOverwrite will still call process.exit
     (Command.prototype as any)._exit = (exitCode: number, code: string, message: string) => {
-        const err = new CommanderError(exitCode, code, message);
-        callback(err);
-        throw err; // Function needs to return \`never\`, otherwise errors will be ignored
+        throw new CommanderError(exitCode, code, message); // Function needs to return \`never\`, otherwise errors will be ignored
     };
 
     const program = new Command();
@@ -230,18 +228,16 @@ export function argParser(callback: (res: iCPSApp | CommanderError) => void): Co
 /**
  * This function will parse the provided string array and environment variables and return the correct application object.
  * @param argv - The argument vector to be parsed
- * @returns - A promise that resolves to the correct application object. Once the promise resolves, the global resource singleton will also be available. If the program is not able to parse the options, or required options are missing, the promise will reject with a CommanderError.
+ * @returns - A promise that resolves to the correct application object. Once the promise resolves, the global resource singleton will also be available. If the program is not able to parse the options, or required options are missing, an error message is printed to stderr and the promise rejects with a CommanderError.
  */
 export async function appFactory(argv: string[]): Promise<iCPSApp> {
     return new Promise((resolve, reject) => {
         try {
-            argParser((res: (iCPSApp | CommanderError)) => {
-                if (res instanceof iCPSApp) {
-                    resolve(res);
-                }
-
-                reject(res);
+            argParser((res: iCPSApp) => {
+                resolve(res);
             }).parse(argv);
-        } catch {} // Error needs to be thrown, but can be ignored, because Promise will reject
+        } catch (err) {
+            reject(err);
+        }
     });
 }

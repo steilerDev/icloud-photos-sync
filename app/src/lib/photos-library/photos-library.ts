@@ -17,12 +17,12 @@ type PathTuple = [namePath: string, uuidPath: string]
  */
 export class PhotosLibrary {
     /**
-     * The full path to the sub-dirs within 'photoDataDir', containing all assets from the primary library
+     * The full path to the sub-dir within 'photoDataDir', containing all assets from the primary library
      */
     primaryAssetDir: string;
 
     /**
-     * The full path to the sub-dirs within 'photoDataDir', containing all assets from the shared library
+     * The full path to the sub-dir within 'photoDataDir', containing all assets from the shared library
      */
     sharedAssetDir: string;
 
@@ -37,8 +37,8 @@ export class PhotosLibrary {
     stashDir: string;
 
     /**
-     * Creates the local PhotoLibrary, based on the provided CLI options
-     * @param app - The app object holding CLI options
+     * Creates the local PhotoLibrary
+     * @throws An iCPSError if the library version does not match
      */
     constructor() {
         if (Resources.manager().libraryVersion !== PHOTOS_LIBRARY.LIBRARY_VERSION) {
@@ -57,7 +57,7 @@ export class PhotosLibrary {
      * @param subpaths - An array of subpaths
      * @returns The full path
      */
-    getFullPathAndCreate(subpaths: string[]) {
+    getFullPathAndCreate(subpaths: string[]): string {
         const thisDir = path.join(Resources.manager().dataDir, ...subpaths);
         if (!fs.existsSync(thisDir)) {
             Resources.logger(this).debug(`${thisDir} does not exist, creating`);
@@ -78,6 +78,13 @@ export class PhotosLibrary {
         };
     }
 
+    /**
+     * Loads all assets from disk for a given zone
+     * @param zone - Either 'primary' or 'shared'
+     * @returns A structured list of assets, as they are currently present on disk
+     * @emits iCPSEventRuntimeWarning.FILETYPE_ERROR - If a file with an unknown extension is found
+     * @emits iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR - If any other error occurs while loading an asset
+     */
     async loadAssetsForZone(zone: Zones): Promise<PLibraryEntities<Asset>> {
         const libAssets: PLibraryEntities<Asset> = {};
         const zonePath = zone === Zones.Primary ? this.primaryAssetDir : this.sharedAssetDir;
@@ -173,7 +180,7 @@ export class PhotosLibrary {
      * Will try and remove a dead symlink
      * @param symlinkPath - Location of the potential dead symlink
      * @param cause - Optional cause of the execution of this function
-     * @throws A LibraryError in case the provided path is NOT a dead symlink
+     * @throws An iCPSError in case the provided path is NOT a dead symlink
      */
     async removeDeadSymlink(symlinkPath: string, cause?: Error) {
         try {
@@ -212,6 +219,7 @@ export class PhotosLibrary {
      * Derives the album type of a given folder, based on its content
      * @param thisPath - The path to the folder on disk
      * @returns The album type of the folder
+     * @emits iCPSEventRuntimeWarning.EXTRANEOUS_FILE - If an album contains extraneous files (instead of only symlinks)
      */
     async readAlbumTypeFromPath(thisPath: string): Promise<AlbumType> {
         // If the folder contains other folders, it will be of AlbumType.Folder
@@ -270,7 +278,7 @@ export class PhotosLibrary {
      * The path is created, by finding the parent on filesystem. The folder paths do not necessarily exist, the parent path needs to exist.
      * @param album - The album
      * @returns A tuple containing the albumNamePath, uuidPath
-     * @throws An error, if the parent path cannot be found
+     * @throws An iCPSError, if the parent path cannot be found
      */
     findAlbumPaths(album: Album): PathTuple {
         // Directory path of the parent folder
@@ -309,6 +317,7 @@ export class PhotosLibrary {
      * @param albumUUID - The UUID of the album
      * @param rootPath  - The path in which the album should be searched
      * @returns The path to the album, relative to the provided path, or the empty string if the album could not be found, or the full path including photoDataDir, if _rootPath was undefined
+     * @throws An iCPSError, if multiple albums with the same UUID are found
      */
     findAlbumByUUIDInPath(albumUUID: string, rootPath: string): string {
         // Get all folders in the path
@@ -351,6 +360,7 @@ export class PhotosLibrary {
     /**
      * Writes a given album to disk & links the necessary assets
      * @param album - The album to be written to disk
+     * @throws An iCPSError, if any album related directories already exist
      */
     writeAlbum(album: Album) {
         const [albumNamePath, uuidPath] = this.findAlbumPaths(album);
@@ -385,6 +395,7 @@ export class PhotosLibrary {
      * @remarks ALbums only refer to PrimaryAssets - hardcoding this
      * @param album - Album holding information about the linked assets
      * @param albumPath - Album path to link assets to
+     * @emits iCPSEventRuntimeWarning.LINK_ERROR - If linking of an asset fails
      */
     linkAlbumAssets(album: Album, albumPath: string) {
         Object.keys(album.assets).forEach(assetUUID => {
@@ -414,6 +425,7 @@ export class PhotosLibrary {
     /**
      * Deletes the given album. The folder will only be deleted, if it contains no 'real' files
      * @param album - The album that needs to be removed
+     * @throws An iCPSError, if the album is not empty or could not be found
      */
     deleteAlbum(album: Album) {
         Resources.logger(this).debug(`Deleting folder ${album.getDisplayName()}`);
@@ -474,6 +486,7 @@ export class PhotosLibrary {
      * Modified time is applied to target's modified and access time (atime is not reliable)
      * @param src - The source of folders
      * @param dest - The destination of folders
+     * @throws An iCPSError, if the source paths cannot be found or destination paths already exist
      */
     movePathTuple(src: PathTuple, dest: PathTuple) {
         const [srcNamePath, srcUUIDPath] = src;

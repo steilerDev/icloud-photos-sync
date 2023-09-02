@@ -17,7 +17,7 @@ import fs from 'fs/promises';
 const RECORD_CHANGE_TAG = `21h2`;
 
 /**
- * The max record limit, requested & returned by iCloud.
+ * The max record limit returned by iCloud.
  * Should be 200, but in order to divide by 3 (for albums) and 2 (for all pictures) 198 is more convenient
  */
 const MAX_RECORDS_LIMIT = 198;
@@ -55,9 +55,11 @@ export class iCloudPhotos {
     }
 
     /**
-     * Starting iCloud Photos service, acquiring all necessary account information stored in iCloudAuth.iCloudPhotosAccount. This includes information about a shared library
+     * Starting iCloud Photos service, acquiring all necessary account information required to interact with the backend. This includes information about a shared library
      * Will emit SETUP_COMPLETE or ERROR
      * @returns A promise, that will resolve once the service is available or reject in case of an error
+     * @emits iCPSEventPhotos.SETUP_COMPLETED - Once the setup is completed
+     * @emits iCPSEventPhotos.ERROR - In case of an error during setup - The iCPSError is provided as argument
      */
     async setup() {
         try {
@@ -78,6 +80,8 @@ export class iCloudPhotos {
 
     /**
      * Checking indexing state of all available zones of the photos service (sync should only safely be performed, after indexing is completed)
+     * @emits iCPSEventPhotos.READY - If indexing is completed
+     * @emits iCPSEventPhotos.ERROR - If indexing is not completed - The iCPSError is provided as argument
      * Will emit READY, or ERROR
      */
     async checkingIndexingStatus() {
@@ -143,6 +147,7 @@ export class iCloudPhotos {
      * @param resultsLimit - Results limit is maxed at 66 * 3 records (because every picture is returned three times)
      * @param desiredKeys - The fields requested from the backend
      * @returns An array of records as returned by the backend
+     * @throws An iCPSError if the query fails
      */
     async performQuery(zone: QueryBuilder.Zones, recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
         const config: AxiosRequestConfig = {
@@ -189,7 +194,7 @@ export class iCloudPhotos {
      * @param fields - The fields to be altered
      * @returns An array of records that have been altered
      */
-    async performOperation(zone: QueryBuilder.Zones, operationType: string, fields: any, recordNames: string[]) {
+    async performOperation(zone: QueryBuilder.Zones, operationType: string, fields: any, recordNames: string[]): Promise<any[]> {
         const config: AxiosRequestConfig = {
             params: {
                 remapEnums: `True`,
@@ -225,8 +230,9 @@ export class iCloudPhotos {
     /**
      * Fetches all album records, traversing the directory tree
      * @remarks Since the shared library currently does not support it's own directory tree / WebUI does not show pictures in folders we only do this for the primary zone
+     * @remarks Since we are requesting them based on parent folder and are starting from the root folder the results array should yield: If folder A is closer to the root than folder B, the index of A is smaller than the index of B
      * @returns An array of all album records in the account
-     * Since we are requesting them based on parent folder and are starting from the root folder the results array should yield: If folder A is closer to the root than folder B, the index of A is smaller than the index of B
+     * @throws An iCPSError if fetching fails
      */
     async fetchAllCPLAlbums(): Promise<CPLAlbum[]> {
         try {
@@ -278,7 +284,7 @@ export class iCloudPhotos {
     /**
      * Filters unwanted picture records before post-processing
      * @param record - The record to be filtered
-     * @throws An error, in case the provided record should be ignored
+     * @throws An iCPSError, in case the provided record should be ignored
      */
     filterAlbumRecord(record: any) {
         if (record.deleted === true) {
@@ -346,7 +352,7 @@ export class iCloudPhotos {
      * @param zone - Defines the zone to be used
      * @param albumId - The record name of the album, if undefined all pictures will be returned
      * @returns The number of assets within the given album
-     * @throws An error in case the count cannot be obtained
+     * @throws An iCPSError in case the count cannot be obtained
      */
     async getPictureRecordsCountForZone(zone: QueryBuilder.Zones, albumId?: string): Promise<number> {
         try {
@@ -418,7 +424,7 @@ export class iCloudPhotos {
      * Filters unwanted picture records before post-processing
      * @param record - The record to be filtered
      * @param seen - An array of previously seen recordNames
-     * @throws An error, in case the provided record should be ignored
+     * @throws An iCPSError, in case the provided record should be ignored
      */
     filterPictureRecord(record: any, seen: Set<string>) {
         if (record?.deleted === true) {
@@ -478,6 +484,8 @@ export class iCloudPhotos {
      * Fetching all pictures associated to an album, identified by parentId
      * @param parentId - The record name of the album, if undefined all pictures will be returned
      * @returns An array of CPLMaster and CPLAsset records
+     * @throws An iCPSError, in case the records could not be fetched
+     * @emits iCPSEventRuntimeWarning.COUNT_MISMATCH - In case the number of fetched records does not match the expected number of records -  provides the album id, number of expected assets, actual CPL Assets and actual CPL Masters
      */
     async fetchAllCPLAssetsMasters(parentId?: string): Promise<[CPLAsset[], CPLMaster[]]> {
         Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
@@ -549,9 +557,10 @@ export class iCloudPhotos {
     }
 
     /**
-     * Downloads an asset using the 'stream' method and applies relevant metadata to the file
+     * Downloads an asset to the correct file location and applies relevant metadata to the file
      * @param asset - The asset to be downloaded
      * @returns A promise, that resolves, once the asset has been written to disk
+     * @throws An error, in case the asset could not be downloaded
      */
     async downloadAsset(asset: Asset): Promise<void> {
         const location = asset.getAssetFilePath();
@@ -564,6 +573,7 @@ export class iCloudPhotos {
      * @remarks Since the shared library currently does not support it's own directory tree / WebUI does not show pictures in folders we only do this for the primary zone, because archiving is only possible of folders
      * @param recordNames - A list of record names that need to be deleted
      * @returns A Promise, that fulfils once the operation has been performed
+     * @throws An iCPSError, in case the records could not be deleted
      */
     async deleteAssets(recordNames: string[]) {
         Resources.logger(this).debug(`Deleting ${recordNames.length} assets: ${JSON.stringify(recordNames)}`);

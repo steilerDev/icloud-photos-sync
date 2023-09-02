@@ -1,3 +1,7 @@
+/**
+ * This file holds relevant information about the resources used by this application
+ */
+
 import {iCPSAppOptions} from "../../app/factory.js";
 
 /**

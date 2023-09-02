@@ -11,6 +11,5 @@
     ],
     "ignoreBinaries": [ // Not sure why they are reported as unused
         "eslint.config.json",
-        "package.json"
     ]
 }

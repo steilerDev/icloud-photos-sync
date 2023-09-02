@@ -9,8 +9,17 @@ export enum MFAMethodType {
     VOICE = 3
 }
 
+/**
+ * A class to hold the status of the currently executed MFA method
+ */
 export class MFAMethod {
+    /**
+     * The type of MFA method used
+     */
     type: MFAMethodType;
+    /**
+     * The id of the device used
+     */
     numberId: number;
 
     /**
@@ -102,7 +111,7 @@ export class MFAMethod {
 
     /**
      *
-     * @returns The appropriate data for resending the code, given the currently selected MFA Method
+     * @returns The appropriate payload for resending the code, given the currently selected MFA Method
      */
     getResendPayload(): any {
         switch (this.type) {
@@ -127,8 +136,8 @@ export class MFAMethod {
     }
 
     /**
-     *
-     * @param res - The status code for the response received from the backend
+     * Checks if the status code matches our expectation for a successful resend
+     * @param status - The status code for the response received from the backend
      * @returns True, if the response was successful, based on the currently selected MFA Method
      */
     resendSuccessful(status: number) {
@@ -194,7 +203,7 @@ export class MFAMethod {
     }
 
     /**
-     *
+     * Checks if the status code matches our expectation for a successful enter
      * @param status - The status code for the response received from the backend
      * @returns True, if the response was successful, based on the currently selected MFA Method
      */

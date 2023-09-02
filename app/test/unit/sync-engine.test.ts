@@ -166,7 +166,7 @@ describe(`Coordination`, () => {
             await expect(syncEngine.sync()).resolves.toEqual([[], []]);
 
             expect(startEvent).toHaveBeenCalled();
-            expect(retryEvent).toHaveBeenCalledWith(2, expect.objectContaining({message: "Unknown error during sync"}));
+            expect(retryEvent).toHaveBeenCalledWith(2, expect.objectContaining({message: `Unknown error during sync`}));
             expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(1);
             expect(syncEngine.diffState).toHaveBeenCalledTimes(1);
             expect(syncEngine.diffState).toHaveBeenNthCalledWith(1, ...fetchAndLoadStateReturnValue);

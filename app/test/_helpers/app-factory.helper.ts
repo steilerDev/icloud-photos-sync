@@ -6,7 +6,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Missing username & password`,
-        expected: `error: required option '-u, --username <email>' not specified`,
+        expected: `error: required option '-u, --username <string>' not specified`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -16,7 +16,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Missing password`,
-        expected: `error: required option '-p, --password <password>' not specified`,
+        expected: `error: required option '-p, --password <string>' not specified`,
     }, {
         options: [
             `/usr/bin/node`,

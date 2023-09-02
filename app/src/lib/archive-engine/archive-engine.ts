@@ -9,6 +9,9 @@ import {ARCHIVE_ERR} from '../../app/error/error-codes.js';
 import {Resources} from '../resources/main.js';
 import {iCPSEventArchiveEngine, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 
+/**
+ * This class handles the archiving of albums
+ */
 export class ArchiveEngine {
     /**
      * The local photos library
@@ -36,6 +39,11 @@ export class ArchiveEngine {
      * @param archivePath - The path to the local album. The named path is expected.
      * @param assetList - The current remote asset list
      * @returns A Promise, that resolves once the path has been archived
+     * @throws An iCPSError if the album could not be archived
+     * @emits ARCHIVE_START - When the archiving starts
+     * @emits PERSISTING_START - When the persisting starts
+     * @emits REMOTE_DELETE - When the remote deletion starts
+     * @emits ARCHIVE_DONE - When the archiving is done
      */
     async archivePath(archivePath: string, assetList: Asset[]) {
         Resources.logger(this).debug(`Archiving path ${archivePath}`);
@@ -104,6 +112,7 @@ export class ArchiveEngine {
      * @param assetPath - Path to the assets file path in the Assets folder
      * @param archivedAssetPath - The target path of the asset (with filename)
      * @returns A Promise that resolves, once the file has been copied
+     * @emits ARCHIVE_ASSET_ERROR if the asset could not be persisted - provides an iCPSError as argument
      */
     async persistAsset(assetPath: string, archivedAssetPath: string): Promise<void> {
         Resources.logger(this).debug(`Persisting ${assetPath} to ${archivedAssetPath}`);
@@ -114,10 +123,11 @@ export class ArchiveEngine {
             await fs.copyFile(assetPath, archivedAssetPath);
             await fs.utimes(archivedAssetPath, fileStat.mtime, fileStat.mtime);
         } catch (err) {
-            new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
+            Resources.emit(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, new iCPSError(ARCHIVE_ERR.PERSIST_FAILED)
                 .addCause(err)
                 .addContext(`assetPath`, assetPath)
-                .addContext(`archivedAssetPath`, archivedAssetPath);
+                .addContext(`archivedAssetPath`, archivedAssetPath),
+            );
         }
     }
 
@@ -126,7 +136,7 @@ export class ArchiveEngine {
      * @param assetPath - The path to the assets location in the Assets folder
      * @param assetList - A full list of all remote assets
      * @returns A string containing the asset's recordName or undefined, if the asset should not be deleted
-     * @throws An ArchiveWarning if loading fails
+     * @throws An iCPSError if loading fails
      */
     prepareForRemoteDeletion(assetPath: string, assetList: Asset[]): string | undefined {
         if (!Resources.manager().remoteDelete) {

@@ -1,7 +1,3 @@
-/**
- * This class handles access to the .icloud-photos-sync resource file and handles currently applied configurations from the CLI and environment variables as well as other shared resources
- */
-
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -13,6 +9,9 @@ import {LogLevel} from "../../app/event/log.js";
 import {Resources} from "./main.js";
 import {iCPSEventRuntimeWarning} from "./events-types.js";
 
+/**
+ * This class handles access to the .icloud-photos-sync resource file and handles currently applied configurations from the CLI and environment variables
+ */
 export class ResourceManager {
     /**
      * The shared resources held by this instances of the icps application

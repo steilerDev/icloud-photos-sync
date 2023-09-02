@@ -1,15 +1,17 @@
 /**
- * This file holds constants relevant to the networking layer
+ * This file holds information relevant to networking, as well as type definitions of the expected responses
  */
 
 /**
  * Hard coded client id, extracted from previous requests
  */
 export const CLIENT_ID = `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d`;
+
 /**
  * User Agent this CLI is using. Emulating a Firefox Browser
  */
 export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`;
+
 /**
  * Client information shared with the iCloud backend based on the user agent
  */

@@ -1,3 +1,4 @@
+#!/usr/bin/env ts-node
 // This script generates the CLI reference documentation from the CLI options - if doc root path is provided, it will write the output to the provided path, otherwise it will print to stdout
 
 import {Argument, Help} from 'commander';

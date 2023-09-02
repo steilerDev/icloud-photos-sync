@@ -3,7 +3,7 @@ import {iCPSEvent} from "./events-types.js";
 import {Resources} from "./main.js";
 
 /**
- * Callbacks for event listeners
+ * Callback type for event listeners
  */
 export type ListenerFunction = (...args: any[]) => void;
 
@@ -26,7 +26,7 @@ export class EventManager {
 
     /**
      * Keeps track of classes listening to events
-     * This is a map of objects to a map of events to a list of listeners
+     * This maps object instances to an array of events they are listening to
      */
     _eventRegistry: Map<any, EventRegistryObject[]> = new Map();
 

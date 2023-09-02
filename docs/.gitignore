@@ -1,5 +1,5 @@
 site/
-docs/README.md
-docs/CHANGELOG.md
-docs/LICENSE
+src/LICENSE
+src/README.md
+src/user-guides/cli.md
 *.rar

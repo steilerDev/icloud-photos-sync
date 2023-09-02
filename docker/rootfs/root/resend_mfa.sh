@@ -3,6 +3,7 @@ if [ -z "$1" ]; then
     echo "No resend method provided!"
     echo "Run this utility through:"
     echo "    $0 <method (sms|voice|device)> <phoneNumberId (optional, '1' as default> <host (optional, 'localhost' as default)>"
+    echo "The script will read the server's port through the environmental variable \$PORT, or use 80 if the variable is not set." 
     exit
 fi
 

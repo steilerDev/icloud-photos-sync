@@ -20,7 +20,6 @@ export const MFA_SERVER_ENDPOINTS = {
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
- * todo - Implement re-request of MFA code
  */
 export class MFAServer {
     /**
@@ -40,6 +39,7 @@ export class MFAServer {
 
     /**
      * Creates the server object
+     * @emits iCPSEventMFA.ERROR - When an error associated to the server occurs - Provides iCPSError as argument
      */
     constructor() {
         Resources.logger(this).debug(`Preparing MFA server on port ${Resources.manager().mfaServerPort}`);
@@ -60,6 +60,9 @@ export class MFAServer {
 
     /**
      * Starts the server and listens for incoming requests to perform MFA actions
+     * @emits iCPSEventMFA.STARTED - When the server has started - Provides port number as argument
+     * @emits iCPSEventMFA.MFA_NOT_PROVIDED - When the MFA code was not provided within timeout period - Provides MFA method and iCPSError as arguments
+     * @emits iCPSEventMFA.ERROR - When an error associated to the server startup occurs - Provides iCPSError as argument
      */
     startServer() {
         try {
@@ -85,6 +88,7 @@ export class MFAServer {
      * Handles incoming http requests
      * @param req - The HTTP request object
      * @param res - The HTTP response object
+     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the request method or endpoint of server could not be found - Provides iCPSError as argument
      */
     handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if (req.method === `GET` && req.url === `/`) {
@@ -113,9 +117,11 @@ export class MFAServer {
     }
 
     /**
-     * This function will handle requests send to the MFA Code Input Endpoint
+     * This function will handle requests send to the MFA code input endpoint
      * @param req - The HTTP request object
      * @param res - The HTTP response object
+     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the MFA code format is not as expected - Provides iCPSError as argument
+     * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
      */
     handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!req.url.match(/\?code=\d{6}$/)) {
@@ -134,9 +140,11 @@ export class MFAServer {
     }
 
     /**
-     * This function will handle the request send to the MFA Code Resend Endpoint
+     * This function will handle the request send to the MFA code resend endpoint
      * @param req - The HTTP request object
      * @param res - The HTTP response object
+     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the MFA resend method is not as expected - Provides iCPSError as argument
+     * @emits iCPSEventMFA.MFA_RESEND - When the MFA code resend was requested - Provides MFA method as argument
      */
     handleMFAResend(req: http.IncomingMessage, res: http.ServerResponse) {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
@@ -173,7 +181,7 @@ export class MFAServer {
     }
 
     /**
-     * Stops the server
+     * Stops the server and clears any outstanding timeout
      */
     stopServer() {
         Resources.logger(this).debug(`Stopping server`);
