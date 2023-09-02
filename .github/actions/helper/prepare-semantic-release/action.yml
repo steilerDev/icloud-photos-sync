@@ -1,5 +1,5 @@
 name: prepare-semantic-release
-description: Extracts metadata from the npm package
+description: Prepares the environment for semantic release
 inputs:
   release-config-dir:
     description: The location of the release configuration
@@ -7,6 +7,10 @@ inputs:
   release-dir:
     description: The target dir, in which the release will be performed
     required: true
+  node-version-file: 
+    description: The location of the node version file
+    required: false
+    default: app/node-version
 runs:
   using: composite
   steps:
@@ -18,9 +22,8 @@ runs:
       run: |
         mkdir ${{ inputs.release-dir }}
 
-        cp ${{ inputs.release-config-dir }}/package.json \
-          ${{ inputs.release-config-dir }}/package-lock.json \
-          ${{ inputs.release-config-dir }}//../node-version \
+        cp ${{ github.action_path }}/package.json \
+          ${{ github.action_path }}/package-lock.json \
           ${{ inputs.release-dir }}/
 
         cat ${{ inputs.release-config-dir}}/releaserc.json |\
@@ -55,7 +58,7 @@ runs:
     - id: setup-node
       uses: actions/setup-node@v3
       with:
-        node-version-file: ${{ inputs.release-dir }}/node-version
+        node-version-file: ${{ inputs.node-version-file }}
         cache: npm
         cache-dependency-path: ${{ inputs.release-dir }}
     - id: setup-npm

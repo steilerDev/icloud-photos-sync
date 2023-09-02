@@ -58,3 +58,18 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-minor", "version-update:semver-patch"] # only alert about major update
+
+  # Maintain dependencies for semantic release
+  - package-ecosystem: "npm"
+    directory: "/.github/actions/helper/prepare-semantic-release"
+    target-branch: "dev"
+    commit-message:
+      prefix: "chore: [semantic-release] "
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+      timezone: "Europe/Berlin"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"] # only alert about major update
