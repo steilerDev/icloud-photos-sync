@@ -352,6 +352,22 @@ describe.each([{
 
                 expect(startEvent).toHaveBeenCalled();
             });
+
+            test(`Throws error, if no assets are available`, async () => {
+                const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+
+                archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
+                archiveEngine.prepareForRemoteDeletion = jest.fn(() => undefined);
+                archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
+
+                await expect(archiveEngine.archivePath(`${Config.defaultConfig.dataDir}/Random`, [])).rejects.toThrow(/^No remote assets available$/);
+
+                expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
+                expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
+                expect(archiveEngine.icloud.photos.deleteAssets).not.toHaveBeenCalled();
+
+                expect(startEvent).toHaveBeenCalled();
+            });
         });
 
         test(`Persist asset throws error`, async () => {

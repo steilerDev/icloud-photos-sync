@@ -1,9 +1,13 @@
 
-import {test, expect, describe, beforeAll} from '@jest/globals';
-import {Header, HeaderJar} from "../../src/lib/resources/network-manager";
+import {jest, test, expect, describe, beforeAll} from '@jest/globals';
+import {Header, HeaderJar, NetworkManager} from "../../src/lib/resources/network-manager";
 import axios from 'axios';
 import {Cookie} from 'tough-cookie';
 import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
+import { afterEach, beforeEach } from 'node:test';
+import { defaultConfig } from '../_helpers/_config';
+import * as PQueueModule from 'p-queue';
+import { AxiosHarTracker } from 'axios-har-tracker';
 
 describe(`HeaderJar`, () => {
     test(`Should initialize`, () => {
@@ -173,7 +177,111 @@ describe(`HeaderJar`, () => {
             });
         });
     });
+
+    describe(`Clear header`, () => {
+        test(`Don't inject cleared header`, () => {
+            const axiosInstance = axios.create();
+            const headerJar = new HeaderJar(axiosInstance);
+            headerJar.headers.clear();
+
+            headerJar.setHeader(new Header(`icloud.com`, `someKey`, `someValue`));
+            headerJar.clearHeader(`someKey`);
+
+            const injectedRequestConfig = headerJar._injectHeaders({
+                url: `https://icloud.com/`,
+                headers: {},
+            } as any);
+
+            expect(injectedRequestConfig.headers).toEqual({});
+        });
+            
+        test(`Don't clear unrelated header`, () => {
+            const axiosInstance = axios.create();
+            const headerJar = new HeaderJar(axiosInstance);
+            headerJar.headers.clear();
+
+            headerJar.setHeader(new Header(`icloud.com`, `someKey`, `someValue`));
+            headerJar.setHeader(new Header(`icloud.com`, `someOtherKey`, `someOtherValue`));
+            headerJar.clearHeader(`someKey`);
+
+            const injectedRequestConfig = headerJar._injectHeaders({
+                url: `https://icloud.com/`,
+                headers: {},
+            } as any);
+
+            expect(injectedRequestConfig.headers).toEqual({
+                someOtherKey: `someOtherValue`,
+            });
+        });
+     })
 });
+
+// describe(`NetworkManager`, () => {
+//     describe(`Constructor`, () => {
+
+//         test(`Creates a new instance with default config`, () => {
+//             const pqueueConstructor = jest.spyOn(PQueueModule, `PQueue`);
+//             const networkManager = new NetworkManager(defaultConfig);
+//             expect(networkManager).toBeInstanceOf(NetworkManager);
+
+//             expect(pqueueConstructor).toHaveBeenCalledTimes(2);
+//             expect(pqueueConstructor).toHaveBeenNthCalledWith(1, {intervalCap: defaultConfig.metadataRate[0], interval: defaultConfig.metadataRate[1]});
+//             expect(pqueueConstructor).toHaveBeenNthCalledWith(2, {concurrency: defaultConfig.downloadThreads, timeout: defaultConfig.downloadTimeout});
+
+//             // expect(axios.create).toHaveBeenCalledTimes(2);
+//             // expect(axios.create).toHaveBeenNthCalledWith(1);
+//             // expect(axios.create).toHaveBeenNthCalledWith(2, {responseType: `stream`});
+
+//             // expect(AxiosHarTracker.prototype.constructor).not.toHaveBeenCalled();
+//             // expect(networkManager.resetHarTracker).not.toHaveBeenCalled();
+
+//             // expect(HeaderJar.prototype.constructor).toHaveBeenCalledTimes(1);
+//         })
+
+
+//         // test(`Creates a new instance with network capture enabled`, () => {
+//         //     const networkManager = new NetworkManager({
+//         //         ...defaultConfig,
+//         //         enableNetworkCapture: true,
+//         //     });
+//         //     expect(networkManager).toBeInstanceOf(NetworkManager);
+
+//         //     expect(PQueue.prototype.constructor).toHaveBeenCalledTimes(2);
+//         //     expect(PQueue.prototype.constructor).toHaveBeenNthCalledWith(1, {intervalCap: defaultConfig.metadataRate[0], interval: defaultConfig.metadataRate[1]});
+//         //     expect(PQueue.prototype.constructor).toHaveBeenNthCalledWith(2, {concurrency: defaultConfig.downloadThreads, timeout: defaultConfig.downloadTimeout});
+
+//         //     expect(axios.create).toHaveBeenCalledTimes(2);
+//         //     expect(axios.create).toHaveBeenNthCalledWith(1);
+//         //     expect(axios.create).toHaveBeenNthCalledWith(2, {responseType: `stream`});
+
+//         //     expect(AxiosHarTracker.prototype.constructor).toHaveBeenCalled();
+//         //     expect(networkManager.resetHarTracker).toHaveBeenCalled();
+
+//         //     expect(HeaderJar.prototype.constructor).toHaveBeenCalledTimes(1);
+//         // })
+
+//         // test(`Creates a new instance with download timeout disabled`, () => {
+//         //     const networkManager = new NetworkManager({
+//         //         ...defaultConfig,
+//         //         downloadTimeout: Infinity
+//         //     });
+//         //     expect(networkManager).toBeInstanceOf(NetworkManager);
+
+//         //     expect(PQueue.prototype.constructor).toHaveBeenCalledTimes(2);
+//         //     expect(PQueue.prototype.constructor).toHaveBeenNthCalledWith(1, {intervalCap: defaultConfig.metadataRate[0], interval: defaultConfig.metadataRate[1]});
+//         //     expect(PQueue.prototype.constructor).toHaveBeenNthCalledWith(2, {concurrency: defaultConfig.downloadThreads, timeout: undefined});
+
+//         //     expect(axios.create).toHaveBeenCalledTimes(2);
+//         //     expect(axios.create).toHaveBeenNthCalledWith(1);
+//         //     expect(axios.create).toHaveBeenNthCalledWith(2, {responseType: `stream`});
+
+//         //     expect(AxiosHarTracker.prototype.constructor).toHaveBeenCalled();
+//         //     expect(networkManager.resetHarTracker).toHaveBeenCalled();
+
+//         //     expect(HeaderJar.prototype.constructor).toHaveBeenCalledTimes(1);
+//         // })
+//     });
+// });
 
 // @todo: Implement in network manager tests
 //     test.each([

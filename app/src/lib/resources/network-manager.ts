@@ -215,6 +215,7 @@ export class NetworkManager {
                 Origin: `https://www.icloud.com`,
             },
         });
+        this._headerJar = new HeaderJar(this._axios);
 
         this._streamingCCYLimiter = new PQueue({
             concurrency: resources.downloadThreads,
@@ -229,8 +230,6 @@ export class NetworkManager {
             this._harTracker = new AxiosHarTracker(this._axios as any);
             this.resetHarTracker(this._harTracker);
         }
-
-        this._headerJar = new HeaderJar(this._axios);
     }
 
     /**

@@ -23,6 +23,30 @@ test(`EventManager emits events correctly`, () => {
     expect(eventListener).toHaveBeenCalledWith(testData);
 });
 
+describe(`EventManager keeps track of listeners correctly`, () => {
+    test(`EventManager counts single event correctly`, () => {
+        eventManager.emit(testEvent);
+        expect(eventManager.getEventCount(testEvent)).toBe(1);
+        expect(eventManager.getEventCount(testEvent2)).toBe(0);
+    });
+
+    test(`EventManager counts multiple events correctly`, () => {
+        eventManager.emit(testEvent);
+        eventManager.emit(testEvent);
+        eventManager.emit(testEvent2);
+        expect(eventManager.getEventCount(testEvent)).toBe(2);
+        expect(eventManager.getEventCount(testEvent2)).toBe(1);
+    });
+
+    test(`EventManager resets event count correctly`, () => {
+        eventManager.emit(testEvent);
+        eventManager.emit(testEvent2);
+        eventManager.resetEventCounter(testEvent);
+        expect(eventManager.getEventCount(testEvent)).toBe(0);
+        expect(eventManager.getEventCount(testEvent2)).toBe(1);
+    });
+});
+
 describe(`EventManager manages registry correctly`, () => {
     describe(`EventManager subscribes to events correctly`, () => {
         test(`Permanent listener`, () => {
