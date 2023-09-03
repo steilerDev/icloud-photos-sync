@@ -23,8 +23,8 @@ runs:
       run: |
         icloud-photos-sync \
           --username ${{ inputs.test-apple-id-user }} \
-          --password ${{ inputs.test-apple-id-pwd }}
-          --refresh-token
+          --password ${{ inputs.test-apple-id-pwd }} \
+          --refresh-token \
           token
     - id: persist-token
       shell: bash
