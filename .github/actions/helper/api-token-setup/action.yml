@@ -40,7 +40,7 @@ runs:
       run: (cd ${{ inputs.app-path }}; npm ci)
     - id: build-app
       shell: bash
-      run: (cd ${{ inputs.app-path }}; npm run build)
+      run: (cd ${{ inputs.app-path }}; npm run build && npm run dist)
     - id: install-app
       shell: bash
       run: (cd ${{ inputs.app-path }}; npm link)
