@@ -29,7 +29,7 @@ runs:
     - id: persist-token
       shell: bash
       run: |
-        export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+        export GITHUB_TOKEN="${{ inputs.gh-token }}"
         cat /opt/icloud-photos-library/.icloud-photos-sync | \
           jq -r .trustToken | \
           gh secret set TEST_TRUST_TOKEN
