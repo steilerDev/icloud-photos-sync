@@ -26,6 +26,9 @@ inputs:
   wg-listen-port:
     description: The port to listen on
     required: true
+  wg-dns:
+    description: The dns server to use
+    required: true
 runs:
   using: composite
   steps:
@@ -54,6 +57,7 @@ runs:
         echo "Address = ${{ inputs.wg-address }}" | sudo tee -a /etc/wireguard/wg0.conf
         echo "PrivateKey = ${{ inputs.wg-private-key }}" | sudo tee -a /etc/wireguard/wg0.conf
         echo "ListenPort = ${{ inputs.wg-listen-port }}" | sudo tee -a /etc/wireguard/wg0.conf
+        echo "DNS = ${{ inputs.wg-dns }}" | sudo tee -a /etc/wireguard/wg0.conf
         echo "" | sudo tee -a /etc/wireguard/wg0.conf
         echo "[Peer]" | sudo tee -a /etc/wireguard/wg0.conf
         echo "PublicKey = ${{ inputs.wg-endpoint-public-key }}" | sudo tee -a /etc/wireguard/wg0.conf

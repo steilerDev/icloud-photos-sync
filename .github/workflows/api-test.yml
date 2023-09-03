@@ -34,6 +34,10 @@ on:
         description: The port to listen on
         required: true
         type: string
+      wg-dns:
+        description: The DNS server to use
+        required: true
+        type: string
 
 permissions: {}
 
@@ -55,6 +59,7 @@ jobs:
         wg-private-key: ${{ inputs.wg-private-key }}
         wg-preshared-key: ${{ inputs.wg-preshared-key }}
         wg-listen-port: ${{ inputs.wg-listen-port }}
+        wg-dns: ${{ inputs.wg-dns }}
     - name: action/api-token
       uses: ./.github/actions/helper/api-token
       with:
