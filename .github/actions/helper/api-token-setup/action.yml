@@ -1,0 +1,52 @@
+name: test-api-token-setup
+description: Sets up the environment for acquiring an API token for GH runners and connects to a wireguard peer, in order to enable MFA input
+inputs:
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+  wg-endpoint: 
+    description: The endpoint of the wireguard server
+    required: true
+  wg-endpoint-public-key:
+    description: The wireguard server's public key
+    required: true
+  wg-ip:
+    description: The IP address to assign to the runner
+    required: true
+  wg-allowed-ips:
+    description: The IPs to route through the wireguard tunnel
+    required: true
+  wg-private-key:
+    description: The private key for the runner
+    required: true
+  wg-preshared-key:
+    description: The preshared key for the runner
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: setup-node
+      uses: actions/setup-node@v3
+      with:
+        node-version-file: ${{ inputs.app-path }}/node-version
+        cache: npm
+        cache-dependency-path: ${{ inputs.app-path }}
+    - id: setup-npm
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm ci)
+    - id: build-app
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm run build)
+    - id: install-app
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm link)
+    - id: start-wg
+      uses: egor-tensin/setup-wireguard@v1
+      with:
+        endpoint: ${{ inputs.wg-endpoint }}
+        endpoint_public_key: ${{ inputs.wg-endpoint-public-key }}
+        ips: ${{ inputs.wg-ip }}
+        allowed_ips: ${{ inputs.wg-allowed-ips }}
+        private_key: ${{ inputs.wg-private-key }}
+        preshared_key: ${{ inputs.wg-preshared-key}}

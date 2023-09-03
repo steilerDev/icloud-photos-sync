@@ -1,0 +1,5 @@
+name: "[action] iCloud API trust token acquisition"
+# If the MFA token stored in the secrets of this repository expires, this workflow can be executed manually in order to acquire a new token. 
+# Use the 'acquire-trust-token.sh' script, located in the .github directory to run this action
+
+
