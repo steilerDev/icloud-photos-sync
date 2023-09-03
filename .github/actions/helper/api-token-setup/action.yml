@@ -47,22 +47,12 @@ runs:
     - id: install-app
       shell: bash
       run: (cd ${{ inputs.app-path }}; npm link)
-    - id: setup-wg
-      shell: bash
-      run: |
-        sudo apt-get install wireguard
-
-        sudo rm -f /etc/wireguard/wg0.conf
-        echo "[Interface]" | sudo tee -a /etc/wireguard/wg0.conf
-        echo "Address = ${{ inputs.wg-address }}" | sudo tee -a /etc/wireguard/wg0.conf
-        echo "PrivateKey = ${{ inputs.wg-private-key }}" | sudo tee -a /etc/wireguard/wg0.conf
-        echo "ListenPort = ${{ inputs.wg-listen-port }}" | sudo tee -a /etc/wireguard/wg0.conf
-        echo "" | sudo tee -a /etc/wireguard/wg0.conf
-        echo "[Peer]" | sudo tee -a /etc/wireguard/wg0.conf
-        echo "PublicKey = ${{ inputs.wg-endpoint-public-key }}" | sudo tee -a /etc/wireguard/wg0.conf
-        echo "PresharedKey = ${{ inputs.wg-preshared-key }}" | sudo tee -a /etc/wireguard/wg0.conf
-        echo "Endpoint = ${{ inputs.wg-endpoint }}" | sudo tee -a /etc/wireguard/wg0.conf
-        echo "AllowedIPs = ${{ inputs.wg-allowed-ips }}" | sudo tee -a /etc/wireguard/wg0.conf
     - id: start-wg
-      shell: bash
-      run: wg-quick up wg0
+      uses: egor-tensin/setup-wireguard@v1
+      with:
+        endpoint: ${{ inputs.wg-endpoint }}
+        endpoint_public_key: ${{ inputs.wg-endpoint-public-key }}
+        ips: ${{ inputs.wg-address }}
+        allowed_ips: ${{ inputs.wg-allowed-ips }}
+        private_key: ${{ inputs.wg-private-key }}
+        preshared_key: ${{ inputs.wg-preshared-key}}
