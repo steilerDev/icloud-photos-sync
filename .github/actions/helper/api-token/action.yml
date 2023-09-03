@@ -24,6 +24,7 @@ runs:
         icloud-photos-sync \
           --username ${{ inputs.test-apple-id-user }} \
           --password ${{ inputs.test-apple-id-pwd }} \
+          --port 8080 \
           --refresh-token \
           token
     - id: persist-token
