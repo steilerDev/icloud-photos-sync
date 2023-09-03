@@ -14,7 +14,7 @@ on:
         description: The wireguard server's public key
         required: true
         type: string
-      wg-ip:
+      wg-address:
         description: The IP address to assign to the runner
         required: true
         type: string
@@ -28,6 +28,10 @@ on:
         type: string
       wg-preshared-key:
         description: The preshared key for the runner
+        required: true
+        type: string
+      wg-listen-port:
+        description: The port to listen on
         required: true
         type: string
 
@@ -50,10 +54,11 @@ jobs:
       with:
         wg-endpoint: ${{ inputs.wg-endpoint}}
         wg-endpoint-public-key: ${{ inputs.wg-endpoint-public-key }}
-        wg-ip: ${{ inputs.wg-ip }}
+        wg-address: ${{ inputs.wg-address }}
         wg-allowed-ips: ${{ inputs.wg-allowed-ips }}
         wg-private-key: ${{ inputs.wg-private-key }}
         wg-preshared-key: ${{ inputs.wg-preshared-key }}
+        wg-listen-port: ${{ inputs.wg-listen-port }}
     - name: action/api-token
       uses: ./.github/actions/helper/api-token
       with:
