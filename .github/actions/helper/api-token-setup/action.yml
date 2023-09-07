@@ -54,7 +54,6 @@ runs:
         sudo rm -f /etc/wireguard/wg0.conf
         sudo touch /etc/wireguard/wg0.conf
         echo "[Interface]" | sudo tee -a /etc/wireguard/wg0.conf
-        echo "Address = ${{ inputs.wg-address }}" | sudo tee -a /etc/wireguard/wg0.conf
         echo "PrivateKey = ${{ inputs.wg-private-key }}" | sudo tee -a /etc/wireguard/wg0.conf
         echo "ListenPort = ${{ inputs.wg-listen-port }}" | sudo tee -a /etc/wireguard/wg0.conf
         echo "" | sudo tee -a /etc/wireguard/wg0.conf
