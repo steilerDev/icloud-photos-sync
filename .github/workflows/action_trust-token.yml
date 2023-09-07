@@ -2,4 +2,66 @@ name: "[action] iCloud API trust token acquisition"
 # If the MFA token stored in the secrets of this repository expires, this workflow can be executed manually in order to acquire a new token. 
 # Use the 'acquire-trust-token.sh' script, located in the .github directory to run this action
 
+on:
+  workflow_dispatch:
+    inputs:
+      wg-endpoint: 
+        description: The endpoint of the wireguard server
+        required: true
+        type: string
+      wg-endpoint-public-key:
+        description: The wireguard server's public key
+        required: true
+        type: string
+      wg-address:
+        description: The IP address to assign to the runner
+        required: true
+        type: string
+      wg-allowed-ips:
+        description: The IPs to route through the wireguard tunnel
+        required: true
+        type: string
+      wg-private-key:
+        description: The private key for the runner
+        required: true
+        type: string
+      wg-preshared-key:
+        description: The preshared key for the runner
+        required: true
+        type: string
+      wg-listen-port:
+        description: The port to listen on
+        required: true
+        type: string
+      wg-dns:
+        description: The DNS server to use
+        required: true
+        type: string
 
+permissions: {}
+
+jobs:
+  acquire-token:
+    name: acquire-token
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+    - name: setup/checkout
+      uses: actions/checkout@v3
+    - name: setup/api-token
+      uses: ./.github/actions/helper/api-token-setup
+      with:
+        wg-endpoint: ${{ inputs.wg-endpoint}}
+        wg-endpoint-public-key: ${{ inputs.wg-endpoint-public-key }}
+        wg-address: ${{ inputs.wg-address }}
+        wg-allowed-ips: ${{ inputs.wg-allowed-ips }}
+        wg-private-key: ${{ inputs.wg-private-key }}
+        wg-preshared-key: ${{ inputs.wg-preshared-key }}
+        wg-listen-port: ${{ inputs.wg-listen-port }}
+        wg-dns: ${{ inputs.wg-dns }}
+    - name: action/api-token
+      uses: ./.github/actions/helper/api-token
+      with:
+        test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
+        test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
+        gh-token: ${{ secrets.GH_TOKEN }}
