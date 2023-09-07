@@ -35,7 +35,7 @@ export class SyncEngine {
     }
 
     /**
-     * Performs the sync and handles all connections
+     * Performs the sync and handles all connections and retries
      * @returns A tuple consisting of assets and albums as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync)
      * @throws An iCPSError, in case the sync could not be completed within the amount of allowed retries
      * @emits iCPSEventSyncEngine.START - When the sync starts
@@ -53,7 +53,6 @@ export class SyncEngine {
 
         while (Resources.manager().maxRetries >= retryCount) {
             Resources.logger(this).info(`Performing sync, try #${retryCount}`);
-
             try {
                 const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await this.fetchAndLoadState();
                 const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums, localAssets, localAlbums);
@@ -71,9 +70,9 @@ export class SyncEngine {
 
                 await Resources.network().settleCCYLimiter();
 
-                Resources.logger(this).debug(`Refreshing iCloud cookies...`);
+                Resources.logger(this).debug(`Refreshing iCloud connection...`);
                 const iCloudReady = this.icloud.getReady();
-                await this.icloud.setupAccount();
+                this.icloud.setupAccount();
                 if (!await iCloudReady) {
                     return [[], []];
                 }

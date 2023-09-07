@@ -190,8 +190,9 @@ describe(`App control flow`, () => {
             tokenApp.acquireLibraryLock = jest.fn<typeof tokenApp.acquireLibraryLock>()
                 .mockResolvedValue();
             tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>(() => {
+                const ready = tokenApp.icloud.getReady();
                 Resources.emit(iCPSEventCloud.TRUSTED);
-                return tokenApp.icloud.ready;
+                return ready;
             });
             tokenApp.releaseLibraryLock = jest.fn<typeof tokenApp.releaseLibraryLock>()
                 .mockResolvedValue();

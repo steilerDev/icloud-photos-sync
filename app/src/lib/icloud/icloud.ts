@@ -7,6 +7,7 @@ import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.
 import {Resources} from '../resources/main.js';
 import {ENDPOINTS} from '../resources/network-types.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
+import pTimeout from 'p-timeout';
 
 /**
  * This class holds the iCloud connection
@@ -21,11 +22,6 @@ export class iCloud {
      * Access to the iCloud Photos service
      */
     photos: iCloudPhotos;
-
-    /**
-     * A promise that will resolve to true, if the connection was established successfully, false in case the MFA code was not provided in time or reject, in case there is an error
-     */
-    ready: Promise<boolean>;
 
     /**
      * Creates a new iCloud Object
@@ -62,8 +58,6 @@ export class iCloud {
             .on(iCPSEventCloud.SESSION_EXPIRED, async () => {
                 await this.authenticate();
             });
-
-        this.ready = this.getReady();
     }
 
     /**
@@ -71,13 +65,18 @@ export class iCloud {
      * @returns A promise that will resolve to true, if the connection was established successfully, false in case the MFA code was not provided in time or reject, in case there is an error
      */
     getReady(): Promise<boolean> {
-        return new Promise<boolean>((resolve, reject) => {
-            Resources.events(this)
-                .once(iCPSEventPhotos.READY, () => resolve(true))
-                .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => resolve(false))
-                .once(iCPSEventCloud.ERROR, err => reject(err))
-                .once(iCPSEventMFA.ERROR, err => reject(err));
-        });
+        return pTimeout(
+            new Promise<boolean>((resolve, reject) => {
+                Resources.events(this)
+                    .once(iCPSEventPhotos.READY, () => resolve(true))
+                    .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => resolve(false))
+                    .once(iCPSEventCloud.ERROR, err => reject(err))
+                    .once(iCPSEventMFA.ERROR, err => reject(err));
+            }), {
+                milliseconds: 1000 * 60 * 5, // 5 minutes should be sufficient
+                message: new iCPSError(AUTH_ERR.SETUP_TIMEOUT),
+            },
+        );
     }
 
     /**
@@ -88,6 +87,7 @@ export class iCloud {
      * @emits iCPSEventCloud.ERROR - When an error occurs - provides iCPSError as argument
      */
     async authenticate(): Promise<boolean> {
+        const ready = this.getReady();
         Resources.logger(this).info(`Authenticating user`);
         Resources.emit(iCPSEventCloud.AUTHENTICATION_STARTED);
 
@@ -159,7 +159,7 @@ export class iCloud {
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNKNOWN).addCause(err));
             return;
         } finally {
-            return this.ready;
+            return ready;
         }
     }
 

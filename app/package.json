@@ -94,6 +94,7 @@
     "croner": "^6.0.3",
     "p-event": "^5.0.1",
     "p-queue": "^7.2.0",
+    "p-timeout": "^6.1.2",
     "tough-cookie": "^4.0.0"
   }
 }
