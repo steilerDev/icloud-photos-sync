@@ -47,7 +47,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     steps:
     - name: setup/checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: setup/api-token
       uses: ./.github/actions/helper/api-token-setup
       with:
