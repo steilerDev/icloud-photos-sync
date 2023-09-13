@@ -50,8 +50,7 @@ runs:
     - id: setup-wg
       shell: bash
       run: |
-        sudo mkdir -p /etc/wireguard
-        sudo apt install wireguard
+        sudo apt-get -y install wireguard
 
         echo "${{ inputs.wg-private-key }}" > private.key
         echo "${{ inputs.wg-preshared-key }}" > preshared.key
