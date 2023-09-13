@@ -9,12 +9,16 @@ on:
         description: The endpoint of the wireguard server
         required: true
         type: string
-      wg-endpoint-public-key:
-        description: The wireguard server's public key
+      wg-peer-public-key:
+        description: The wireguard peer's public key
         required: true
         type: string
-      wg-address:
+      wg-local-address:
         description: The IP address to assign to the runner
+        required: true
+        type: string
+      wg-remote-address:
+        description: The IP address of the peer
         required: true
         type: string
       wg-allowed-ips:
@@ -26,15 +30,11 @@ on:
         required: true
         type: string
       wg-preshared-key:
-        description: The preshared key for the runner
+        description: The preshared key
         required: true
         type: string
       wg-listen-port:
         description: The port to listen on
-        required: true
-        type: string
-      wg-dns:
-        description: The DNS server to use
         required: true
         type: string
 
@@ -52,13 +52,13 @@ jobs:
       uses: ./.github/actions/helper/api-token-setup
       with:
         wg-endpoint: ${{ inputs.wg-endpoint}}
-        wg-endpoint-public-key: ${{ inputs.wg-endpoint-public-key }}
-        wg-address: ${{ inputs.wg-address }}
+        wg-peer-public-key: ${{ inputs.wg-peer-public-key }}
+        wg-local-address: ${{ inputs.wg-local-address }}
+        wg-remote-address: ${{ inputs.wg-remote-address }}
         wg-allowed-ips: ${{ inputs.wg-allowed-ips }}
         wg-private-key: ${{ inputs.wg-private-key }}
         wg-preshared-key: ${{ inputs.wg-preshared-key }}
         wg-listen-port: ${{ inputs.wg-listen-port }}
-        wg-dns: ${{ inputs.wg-dns }}
     - name: action/api-token
       uses: ./.github/actions/helper/api-token
       with:
