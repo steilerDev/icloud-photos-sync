@@ -34,7 +34,7 @@ on:
         required: true
         type: string
 
-#permissions: {}
+permissions: write-all
 
 jobs:
   acquire-token:
