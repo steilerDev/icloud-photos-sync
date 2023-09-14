@@ -57,7 +57,14 @@ runs:
 
         sudo ip link add dev wg0 type wireguard
         sudo ip address add dev wg0 ${{ inputs.wg-local-address }} peer ${{ inputs.wg-remote-address }}
-        sudo wg set wg0 listen-port ${{ inputs.wg-listen-port }} private-key private.key peer ${{ inputs.wg-peer-public-key }} allowed-ips ${{ inputs.wg-allowed-ips }} preshared-key preshared.key endpoint ${{ inputs.wg-endpoint }}
+        sudo wg set wg0 \
+          listen-port ${{ inputs.wg-listen-port }} \
+          private-key private.key \
+          preshared-key preshared.key \
+          peer ${{ inputs.wg-peer-public-key }} \
+          allowed-ips ${{ inputs.wg-allowed-ips }} \
+          persistent-keepalive 10 \
+          endpoint ${{ inputs.wg-endpoint }}
     - id: start-wg
       shell: bash
       run: |
