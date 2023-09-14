@@ -59,4 +59,4 @@ jobs:
       with:
         test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
         test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
-        gh-token: ${{ secrets.GITHUB_TOKEN }}
+        gh-token: ${{ secrets.GH_SECRETS_PAT }}
