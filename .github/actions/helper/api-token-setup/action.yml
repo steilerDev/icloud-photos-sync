@@ -26,9 +26,6 @@ inputs:
   wg-preshared-key:
     description: The preshared key
     required: true
-  wg-listen-port:
-    description: The port to listen on
-    required: true
 runs:
   using: composite
   steps:
@@ -58,7 +55,7 @@ runs:
         sudo ip link add dev wg0 type wireguard
         sudo ip address add dev wg0 ${{ inputs.wg-local-address }} peer ${{ inputs.wg-remote-address }}
         sudo wg set wg0 \
-          listen-port ${{ inputs.wg-listen-port }} \
+          listen-port 48123 \
           private-key private.key \
           peer ${{ inputs.wg-peer-public-key }} \
           preshared-key preshared.key \
@@ -67,6 +64,4 @@ runs:
           allowed-ips ${{ inputs.wg-allowed-ips }}
     - id: start-wg
       shell: bash
-      run: |
-        sudo ip link set up dev wg0
-        sudo wg show
+      run: sudo ip link set up dev wg0

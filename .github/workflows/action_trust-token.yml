@@ -33,12 +33,8 @@ on:
         description: The preshared key
         required: true
         type: string
-      wg-listen-port:
-        description: The port to listen on
-        required: true
-        type: string
 
-permissions: {}
+#permissions: {}
 
 jobs:
   acquire-token:
@@ -58,10 +54,9 @@ jobs:
         wg-allowed-ips: ${{ inputs.wg-allowed-ips }}
         wg-private-key: ${{ inputs.wg-private-key }}
         wg-preshared-key: ${{ inputs.wg-preshared-key }}
-        wg-listen-port: ${{ inputs.wg-listen-port }}
     - name: action/api-token
       uses: ./.github/actions/helper/api-token
       with:
         test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
         test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
-        gh-token: ${{ secrets.GH_TOKEN }}
+        gh-token: ${{ secrets.GITHUB_TOKEN }}
