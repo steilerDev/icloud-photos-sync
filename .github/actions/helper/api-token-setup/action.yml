@@ -60,11 +60,11 @@ runs:
         sudo wg set wg0 \
           listen-port ${{ inputs.wg-listen-port }} \
           private-key private.key \
-          preshared-key preshared.key \
           peer ${{ inputs.wg-peer-public-key }} \
-          allowed-ips ${{ inputs.wg-allowed-ips }} \
+          preshared-key preshared.key \
+          endpoint ${{ inputs.wg-endpoint }} \
           persistent-keepalive 10 \
-          endpoint ${{ inputs.wg-endpoint }}
+          allowed-ips ${{ inputs.wg-allowed-ips }}
     - id: start-wg
       shell: bash
       run: |
