@@ -10,7 +10,7 @@ import {ENDPOINTS} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
 import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
 import fs from 'fs/promises';
-import { jsonc } from 'jsonc';
+import {jsonc} from 'jsonc';
 
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now

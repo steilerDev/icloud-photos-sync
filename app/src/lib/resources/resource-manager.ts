@@ -8,7 +8,7 @@ import {FILE_ENCODING, HAR_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAc
 import {LogLevel} from "../../app/event/log.js";
 import {Resources} from "./main.js";
 import {iCPSEventRuntimeWarning} from "./events-types.js";
-import { jsonc } from "jsonc";
+import {jsonc} from "jsonc";
 
 /**
  * This class handles access to the .icloud-photos-sync resource file and handles currently applied configurations from the CLI and environment variables

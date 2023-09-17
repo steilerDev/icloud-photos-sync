@@ -11,7 +11,7 @@ import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
 import {pEvent} from "p-event";
-import { jsonc } from "jsonc";
+import {jsonc} from "jsonc";
 
 /**
  * Object holding all necessary information for a specific header value, that needs to be reused across multiple requests

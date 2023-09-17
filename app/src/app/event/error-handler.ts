@@ -10,7 +10,7 @@ import {Readable} from 'stream';
 import {pEvent} from 'p-event';
 import bt from '@backtrace-labs/node';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import { jsonc } from "jsonc";
+import {jsonc} from "jsonc";
 
 /**
  * List of errors that will never get reported

@@ -4,7 +4,7 @@ import {iCPSError} from '../../../app/error/error.js';
 import {MFA_ERR} from '../../../app/error/error-codes.js';
 import {Resources} from '../../resources/main.js';
 import {iCPSEventMFA, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
-import { jsonc } from 'jsonc';
+import {jsonc} from 'jsonc';
 
 /**
  * The MFA timeout value in milliseconds

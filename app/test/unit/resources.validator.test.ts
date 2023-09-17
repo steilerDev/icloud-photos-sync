@@ -657,7 +657,7 @@ describe(`Validator`, () => {
                                     ownerRecordName: `someOwnerId`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
                                 },
-                                deleted: true
+                                deleted: true,
                             },
                         ],
                     },
@@ -785,7 +785,7 @@ describe(`Validator`, () => {
                     },
                 },
                 desc: `zoneName is missing`,
-            },{
+            }, {
                 data: {
                     data: {
                         moreComing: false,
@@ -793,7 +793,7 @@ describe(`Validator`, () => {
                         zones: [
                             {
                                 zoneID: {
-                                    zoneName: 'SharedSync-12345678-1234-1234-1234-123456789012-',
+                                    zoneName: `SharedSync-12345678-1234-1234-1234-123456789012-`,
                                     ownerRecordName: `someOwnerId`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
                                 },
@@ -810,7 +810,7 @@ describe(`Validator`, () => {
                         zones: [
                             {
                                 zoneID: {
-                                    zoneName: 'SharedSync-abc',
+                                    zoneName: `SharedSync-abc`,
                                     ownerRecordName: `someOwnerId`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
                                 },
@@ -819,7 +819,7 @@ describe(`Validator`, () => {
                     },
                 },
                 desc: `Shared zone has wrong format - wrong id string`,
-            },{
+            }, {
                 data: {
                     data: {
                         moreComing: false,
@@ -827,7 +827,7 @@ describe(`Validator`, () => {
                         zones: [
                             {
                                 zoneID: {
-                                    zoneName: 'CMM-12345678-1234-1234-1234-123456789012-',
+                                    zoneName: `CMM-12345678-1234-1234-1234-123456789012-`,
                                     ownerRecordName: `someOwnerId`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
                                 },
@@ -844,7 +844,7 @@ describe(`Validator`, () => {
                         zones: [
                             {
                                 zoneID: {
-                                    zoneName: 'CMM-#',
+                                    zoneName: `CMM-#`,
                                     ownerRecordName: `someOwnerId`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
                                 },

@@ -8,7 +8,7 @@ import {Resources} from '../resources/main.js';
 import {ENDPOINTS} from '../resources/network-types.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 import pTimeout from 'p-timeout';
-import { jsonc } from 'jsonc';
+import {jsonc} from 'jsonc';
 
 /**
  * This class holds the iCloud connection
@@ -74,7 +74,7 @@ export class iCloud {
                     .once(iCPSEventCloud.ERROR, err => reject(err))
                     .once(iCPSEventMFA.ERROR, err => reject(err));
             }), {
-                milliseconds: MFA_TIMEOUT_VALUE + 1000 * 60 * 5, // 5 minutes on top of mfa timeout should be sufficient
+                milliseconds: MFA_TIMEOUT_VALUE + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
                 message: new iCPSError(AUTH_ERR.SETUP_TIMEOUT),
             },
         );

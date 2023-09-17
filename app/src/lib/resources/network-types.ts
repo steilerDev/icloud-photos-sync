@@ -2,7 +2,7 @@
  * This file holds information relevant to networking, as well as type definitions of the expected responses
  */
 
-import { jsonc } from "jsonc";
+import {jsonc} from "jsonc";
 
 /**
  * Hard coded client id, extracted from previous requests
