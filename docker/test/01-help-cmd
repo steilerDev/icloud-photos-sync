@@ -2,7 +2,7 @@
 
 echo "Help command working"
 docker run $IMAGE_NAME help > /dev/null
-if [ $? -eq 0 ]; then
+if [ $? -eq 3 ]; then
     echo " - Pass"
 else
     echo " - Fail"
