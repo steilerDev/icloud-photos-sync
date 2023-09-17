@@ -91,7 +91,7 @@
     "chalk": "^5.0.0",
     "cli-progress": "^3.11.2",
     "commander": "^10.0.0",
-    "croner": "^6.0.3",
+    "croner": "^7.0.1",
     "jsonc": "^2.0.0",
     "p-event": "^5.0.1",
     "p-queue": "^7.2.0",
