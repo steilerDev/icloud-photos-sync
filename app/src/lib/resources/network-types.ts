@@ -2,6 +2,8 @@
  * This file holds information relevant to networking, as well as type definitions of the expected responses
  */
 
+import { jsonc } from "jsonc";
+
 /**
  * Hard coded client id, extracted from previous requests
  */
@@ -15,7 +17,7 @@ export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0
 /**
  * Client information shared with the iCloud backend based on the user agent
  */
-export const CLIENT_INFO = JSON.stringify({
+export const CLIENT_INFO = jsonc.stringify({
     U: USER_AGENT,
     L: `en-US`,
     Z: `GMT+01:00`,

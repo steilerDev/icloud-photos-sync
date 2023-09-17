@@ -8,6 +8,7 @@ import {Resources} from '../resources/main.js';
 import {ENDPOINTS} from '../resources/network-types.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 import pTimeout from 'p-timeout';
+import { jsonc } from 'jsonc';
 
 /**
  * This class holds the iCloud connection
@@ -178,7 +179,7 @@ export class iCloud {
         };
         const data = method.getResendPayload();
 
-        Resources.logger(this).debug(`Requesting MFA code via URL ${url} with data ${JSON.stringify(data)}`);
+        Resources.logger(this).debug(`Requesting MFA code via URL ${url} with data ${jsonc.stringify(data)}`);
 
         try {
             const response = await Resources.network().put(url, data, config);
@@ -215,7 +216,7 @@ export class iCloud {
             };
             const data = method.getEnterPayload(mfa);
 
-            Resources.logger(this).debug(`Entering MFA code via URL ${url} with data ${JSON.stringify(data)}`);
+            Resources.logger(this).debug(`Entering MFA code via URL ${url} with data ${jsonc.stringify(data)}`);
             await Resources.network().post(url, data, config);
 
             Resources.logger(this).info(`MFA code correct!`);

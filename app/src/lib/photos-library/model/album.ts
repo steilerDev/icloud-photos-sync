@@ -1,3 +1,4 @@
+import { jsonc } from "jsonc";
 import {LIBRARY_ERR} from "../../../app/error/error-codes.js";
 import {iCPSError} from "../../../app/error/error.js";
 import {CPLAlbum} from "../../icloud/icloud-photos/query-parser.js";
@@ -145,7 +146,7 @@ export class Album implements PEntity<Album> {
         // Assets might be undefined
         const thisAssets = this.assets ? this.assets : {};
         const otherAssets = assets ? assets : {};
-        return JSON.stringify(Object.keys(thisAssets).sort()) === JSON.stringify(Object.keys(otherAssets).sort());
+        return jsonc.stringify(Object.keys(thisAssets).sort()) === jsonc.stringify(Object.keys(otherAssets).sort());
     }
 
     /**

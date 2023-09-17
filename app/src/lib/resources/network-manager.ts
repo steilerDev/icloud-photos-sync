@@ -11,6 +11,7 @@ import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
 import {pEvent} from "p-event";
+import { jsonc } from "jsonc";
 
 /**
  * Object holding all necessary information for a specific header value, that needs to be reused across multiple requests
@@ -327,7 +328,7 @@ export class NetworkManager {
 
             Resources.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
-            await fs.writeFile(Resources.manager().harFilePath, JSON.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
+            await fs.writeFile(Resources.manager().harFilePath, jsonc.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
             Resources.logger(this).info(`HAR file written`);
             return true;
         } catch (err) {

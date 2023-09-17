@@ -4,6 +4,7 @@ import {iCPSError} from '../../../app/error/error.js';
 import {MFA_ERR} from '../../../app/error/error-codes.js';
 import {Resources} from '../../resources/main.js';
 import {iCPSEventMFA, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
+import { jsonc } from 'jsonc';
 
 /**
  * The MFA timeout value in milliseconds
@@ -70,7 +71,7 @@ export class MFAServer {
                 /* c8 ignore start */
                 // Never starting the server just to see logger message
                 Resources.emit(iCPSEventMFA.STARTED, Resources.manager().mfaServerPort);
-                Resources.logger(this).info(`Exposing endpoints: ${JSON.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
+                Resources.logger(this).info(`Exposing endpoints: ${jsonc.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
                 /* c8 ignore stop */
             });
 
@@ -112,7 +113,7 @@ export class MFAServer {
             Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.ROUTE_NOT_FOUND)
                 .addMessage(req.url)
                 .addContext(`request`, req));
-            this.sendResponse(res, 404, `Route not found, available endpoints: ${JSON.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
+            this.sendResponse(res, 404, `Route not found, available endpoints: ${jsonc.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
         }
     }
 
@@ -177,7 +178,7 @@ export class MFAServer {
      */
     sendResponse(res: http.ServerResponse, code: number, msg: string) {
         res.writeHead(code, {"Content-Type": `application/json`});
-        res.end(JSON.stringify({message: msg}));
+        res.end(jsonc.stringify({message: msg}));
     }
 
     /**

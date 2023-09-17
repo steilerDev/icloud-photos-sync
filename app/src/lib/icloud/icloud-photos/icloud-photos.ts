@@ -10,6 +10,7 @@ import {ENDPOINTS} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
 import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
 import fs from 'fs/promises';
+import { jsonc } from 'jsonc';
 
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now
@@ -339,7 +340,7 @@ export class iCloudPhotos {
                     cplAlbums.push(CPLAlbum.parseFromQuery(album));
                 }
             } catch (err) {
-                Resources.logger(this).info(`Error processing CPLAlbum: ${JSON.stringify(album)}: ${err.message}`);
+                Resources.logger(this).info(`Error processing CPLAlbum: ${jsonc.stringify(album)}: ${err.message}`);
             }
         }
 
@@ -576,7 +577,7 @@ export class iCloudPhotos {
      * @throws An iCPSError, in case the records could not be deleted
      */
     async deleteAssets(recordNames: string[]) {
-        Resources.logger(this).debug(`Deleting ${recordNames.length} assets: ${JSON.stringify(recordNames)}`);
+        Resources.logger(this).debug(`Deleting ${recordNames.length} assets: ${jsonc.stringify(recordNames)}`);
         await this.performOperation(QueryBuilder.Zones.Primary, `update`, QueryBuilder.getIsDeletedField(), recordNames);
     }
 }
