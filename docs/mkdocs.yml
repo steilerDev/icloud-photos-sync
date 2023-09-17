@@ -1,5 +1,5 @@
 site_name: iCloud Photos Sync
-site_url: https://steilerdev.github.io/icloud-photos-sync/
+site_url: https://icps.steiler.dev
 site_description: Documentation for icloud-photos-sync by steilerDev
 site_author: Frank Steiler
 copyright: steilerDev
@@ -65,3 +65,6 @@ markdown_extensions:
   - admonition
 plugins:
   - search
+  - redirects: 
+     redirect_maps: 
+        warnings.md: user-guides/common-warnings.md

@@ -9,7 +9,7 @@ import {ResourceManager} from "./resource-manager.js";
 import {Validator} from "./validator.js";
 
 /**
- * This namespace handles the static access to the singleton functions of the ResourceManager, NetworkManager and EventManager
+ * This namespace handles the static access to the singleton functions of the ResourceManager, NetworkManager, Validator and EventManager
  */
 export namespace Resources {
     /**
@@ -112,7 +112,7 @@ export namespace Resources {
     }
 
     /**
-     * Returns a logger interface, that binds to log events from the event bus to a source
+     * Returns a logger interface, that allows emitting log events to the event bus by providing a source object
      * Used to log messages associated to the source object
      * @param source - The source of the log message - either an object or a string
      * @returns The logger interface
@@ -142,7 +142,7 @@ export namespace Resources {
     }
 
     /**
-     * Returns an event interface, that binds to event bus listener functions to a source
+     * Returns an event interface, that allows listening to events emitted on the event bus, while binding the listener to the registry
      * Used to manage listeners for the listener object
      * @param listenerObject - The source of the registration request, used to track the listeners and enable cleanup
      * @returns The events interface
@@ -174,11 +174,29 @@ export namespace Resources {
         return Resources.event().emit(event, ...args);
     }
 
+    /**
+     * Typing namespace
+     */
     export namespace Types {
+        /**
+         * Type holding all the singleton instances
+         */
         export type Instances = {
+            /**
+             * The resource manager instance
+             */
             manager: ResourceManager,
+            /**
+             * The network manager instance
+             */
             network: NetworkManager,
+            /**
+             * The validator instance
+             */
             validator: Validator,
+            /**
+             * The event manager instance
+             */
             event: EventManager,
         }
 
@@ -186,8 +204,17 @@ export namespace Resources {
          * Package Metadata
          */
         export type PackageInfo = {
+            /**
+             * The name of this package
+             */
             name: string,
+            /**
+             * The version of this package
+             */
             version: string,
+            /**
+             * A short description of this package
+             */
             description: string,
         }
         /**
@@ -222,7 +249,7 @@ export namespace Resources {
        }
 
        /**
-        * Interface to listener functions of the event bus, with a source bound to it
+        * Interface to listener functions of the event bus, with a listener bound to it
         */
        export type Events = {
            /**

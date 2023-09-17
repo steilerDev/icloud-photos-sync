@@ -18,8 +18,12 @@ The root folder is specified through environment variable `DATA_DIR`. All assets
   * [`_Archive` folder](#archive-dir) (aka. `ARCHIVE_DIR`, [see src](https://github.com/steilerDev/icloud-photos-sync/wiki/lib.photos-library.constants#archive_dir))
   * `.icloud-photos-sync` file holding resource information about the current photos library (including authentication secrets for re-authentication without MFA)
   * `.icloud-photos-sync.log` log file (overwritten upon application restart)
-  * `icloud-photos-sync.metrics` file that [export metrics using the Influx Line Protocol](https://steilerdev.github.io/icloud-photos-sync/user-guides/sync-metrics/) (overwritten upon application restart)
+  * `icloud-photos-sync.metrics` file, that [export metrics using the Influx Line Protocol](https://steilerdev.github.io/icloud-photos-sync/user-guides/sync-metrics/) (overwritten upon application restart), if [metrics export is enabled](../../user-guides/cli/#export-metrics)
+  * `icloud-photos-sync.har` file, that contains a HAR file capture of the last execution, if [network capture is enabled](../../user-guides/cli/#enable-network-capture)
+  * `.crash-reporter` folder, that contains unsent error reports, in case the reporter was not able to send it before the application exited. Only present if [crash reporting is enabled](../../user-guides/cli/#enable-crash-reporting)
   * [User created folders](#user-folders) from the iCloud Library
+  * lock file .library.lock
+  * crash reporting db
 
 ### Asset Directories
 

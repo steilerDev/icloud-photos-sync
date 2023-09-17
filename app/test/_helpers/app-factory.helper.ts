@@ -6,7 +6,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Missing username & password`,
-        expected: `error: required option '-u, --username <email>' not specified\n`,
+        expected: `error: required option '-u, --username <string>' not specified`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -16,7 +16,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Missing password`,
-        expected: `error: required option '-p, --password <password>' not specified\n`,
+        expected: `error: required option '-p, --password <string>' not specified`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -30,7 +30,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Invalid port`,
-        expected: `error: option '-P, --port <number>' argument 'eight' is invalid. Not a number.\n`,
+        expected: `error: option '-P, --port <number>' argument 'eight' is invalid. Not a number.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -44,7 +44,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Negative port`,
-        expected: `error: option '-P, --port <number>' argument '-5' is invalid. Not a positive number.\n`,
+        expected: `error: option '-P, --port <number>' argument '-5' is invalid. Not a positive number.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -58,7 +58,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Invalid log level`,
-        expected: `error: option '-l, --log-level <level>' argument 'superInfo' is invalid. Allowed choices are debug, info, warn, error.\n`,
+        expected: `error: option '-l, --log-level <level>' argument 'superInfo' is invalid. Allowed choices are debug, info, warn, error.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -72,7 +72,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Invalid download threads`,
-        expected: `error: option '-t, --download-threads <number>' argument 'five' is invalid. Not a number.\n`,
+        expected: `error: option '-t, --download-threads <number>' argument 'five' is invalid. Not a number.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -86,7 +86,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Negative download threads`,
-        expected: `error: option '-t, --download-threads <number>' argument '-1' is invalid. Not a positive number.\n`,
+        expected: `error: option '-t, --download-threads <number>' argument '-1' is invalid. Not a positive number.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -100,7 +100,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Invalid download timeout`,
-        expected: `error: option '--download-timeout <number>' argument 'eight' is invalid. Not a number.\n`,
+        expected: `error: option '--download-timeout <number>' argument 'eight' is invalid. Not a number.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -114,7 +114,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Negative download timeout`,
-        expected: `error: option '--download-timeout <number>' argument '-5' is invalid. Not a positive number.\n`,
+        expected: `error: option '--download-timeout <number>' argument '-5' is invalid. Not a positive number.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -126,7 +126,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Invalid retries`,
-        expected: `error: option '-r, --max-retries <number>' argument 'inf' is invalid. Not a number.\n`,
+        expected: `error: option '-r, --max-retries <number>' argument 'inf' is invalid. Not a number.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -140,7 +140,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Negative retries`,
-        expected: `error: option '-r, --max-retries <number>' argument '-5' is invalid. Not a positive number.\n`,
+        expected: `error: option '-r, --max-retries <number>' argument '-5' is invalid. Not a positive number.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -154,7 +154,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Invalid metadata rate format`,
-        expected: `error: option '--metadata-rate <interval>' argument '1s' is invalid. Not a valid interval pattern. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one in 20ms.\n`,
+        expected: `error: option '--metadata-rate <interval>' argument '1s' is invalid. Not a valid interval pattern. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one in 20ms.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -168,7 +168,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Invalid metadata rate - Infinite times`,
-        expected: `error: option '--metadata-rate <interval>' argument '1/Infinity' is invalid. Not a valid interval pattern. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one in 20ms.\n`,
+        expected: `error: option '--metadata-rate <interval>' argument '1/Infinity' is invalid. Not a valid interval pattern. Expects the format '<numberOfRequests|Infinity>/<timeInMs>', e.g. '1/20' to limit requests to one in 20ms.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -182,7 +182,7 @@ export const rejectOptions = [
             `token`,
         ],
         _desc: `Invalid metadata rate - No runs`,
-        expected: `error: option '--metadata-rate <interval>' argument '0/20' is invalid. Not a valid interval. Number of runs needs to be >0\n`,
+        expected: `error: option '--metadata-rate <interval>' argument '0/20' is invalid. Not a valid interval. Number of runs needs to be >0.`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -194,7 +194,7 @@ export const rejectOptions = [
             `archive`,
         ],
         _desc: `Missing archive path`,
-        expected: `error: missing required argument 'path'\n`,
+        expected: `error: missing required argument 'path'`,
     }, {
         options: [
             `/usr/bin/node`,
@@ -208,7 +208,7 @@ export const rejectOptions = [
             `daemon`,
         ],
         _desc: `Mis-formatted schedule`,
-        expected: `error: option '-S, --schedule <cron-string>' argument 'asdf' is invalid. Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern)\n`,
+        expected: `error: option '-S, --schedule <cron-string>' argument 'asdf' is invalid. Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern).`,
     },
 ];
 
@@ -353,12 +353,12 @@ export const nonRejectOptions = [
             `-p`,
             `testPass`,
             `--download-timeout`,
-            `0`,
+            `Infinity`,
 
         ],
-        _desc: `Download timeout set to 0`,
+        _desc: `Download timeout set to Infinity`,
         expectedOptions: {
-            downloadTimeout: 0,
+            downloadTimeout: Infinity,
         },
     }, {
         options: [

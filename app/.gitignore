@@ -3,3 +3,5 @@ node_modules/
 docs/
 coverage/
 src/lib/resources/schemas/
+LICENSE
+README.md

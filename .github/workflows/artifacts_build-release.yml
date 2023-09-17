@@ -20,7 +20,7 @@ on:
           description: The npm token used for releasing the package
           required: false
         gh-token:
-          description: The Github Token, in order to deploy the wiki asset
+          description: The Github Token, in order to deploy assets to Github
           required: false
         bt-token:
           description: The Backtrace symbol access token, in order to deploy the source maps

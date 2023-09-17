@@ -120,6 +120,7 @@ export class Asset implements PEntity<Asset> {
      * @param assetType - If this asset is the original or an edit
      * @param zone - Specifies the zone this asset is belonging to
      * @returns An Asset based on the backend objects
+     * @throws An iCPSError, if the asset file descriptor is not supported
      */
     static fromCPL(asset: AssetID, fileTypeDescriptor: string, fileTypeExt: string, modified: number, origFilename: string, assetType: AssetType, recordName: string, isFavorite: number, zone: string): Asset {
         return new Asset(
@@ -144,6 +145,7 @@ export class Asset implements PEntity<Asset> {
      * @param stats - The metadata associated with the file
      * @param zone - Specifies the zone this asset is belonging to
      * @returns An Asset based on the file information
+     * @throws An iCPSError, if the asset file extension is not supported
      */
     static fromFile(fileName: string, stats: Stats, zone: Zones): Asset {
         return new Asset(

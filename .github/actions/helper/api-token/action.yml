@@ -1,0 +1,36 @@
+name: test-api-token
+description: Retrieves a valid API token for GH runners
+inputs:
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+  test-apple-id-user:
+    description: The test user's Apple ID
+    required: true
+  test-apple-id-pwd:
+    description: The test user's Apple ID password
+    required: true
+  gh-token:
+    description: The GH token used for storing the acquired trust token using the gh cli
+    required: true
+  
+runs:
+  using: composite
+  steps:
+    - id: run-icps
+      shell: bash
+      run: |
+        icloud-photos-sync \
+          --username ${{ inputs.test-apple-id-user }} \
+          --password ${{ inputs.test-apple-id-pwd }} \
+          --port 8080 \
+          --refresh-token \
+          token
+    - id: persist-token
+      shell: bash
+      run: |
+        export GITHUB_TOKEN="${{ inputs.gh-token }}"
+        cat /opt/icloud-photos-library/.icloud-photos-sync | \
+          jq -r .trustToken | \
+          gh secret set TEST_TRUST_TOKEN

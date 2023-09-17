@@ -56,6 +56,9 @@ export const QUERY_KEYS = [
     DESIRED_KEYS.ADJUSTMENT_TYPE,
 ];
 
+/**
+ * Aliases for the different available libraries
+ */
 export enum Zones {
     Primary = `PrimaryLibrary`,
     Shared = `SharedLibrary`

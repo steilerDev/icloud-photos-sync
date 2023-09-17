@@ -590,9 +590,6 @@ describe(`Validator`, () => {
                         zones: [
                             {
                                 zoneID: {
-                                    /**
-                                     * @pattern ^PrimarySync|SharedSync-[0-9A-F-]+$
-                                     */
                                     zoneName: `PrimarySync`,
                                     ownerRecordName: `someOwnerId`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
@@ -610,9 +607,6 @@ describe(`Validator`, () => {
                         zones: [
                             {
                                 zoneID: {
-                                    /**
-                                     * @pattern ^PrimarySync|SharedSync-[0-9A-F-]+$
-                                     */
                                     zoneName: `PrimarySync`,
                                     ownerRecordName: `someOwnerId`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
@@ -628,6 +622,47 @@ describe(`Validator`, () => {
                     },
                 },
                 desc: `valid primary and shared zone`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            }, {
+                                zoneID: {
+                                    zoneName: `CMM-12345678-1234-1234-1234-123456789012`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `valid primary, shared zone and CMM zone`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                                deleted: true,
+                            },
+                        ],
+                    },
+                },
+                desc: `zone marked as deleted`,
             },
         ])(`should validate a valid photos setup response: $desc`, ({data}) => {
             expect(() => validator.validatePhotosSetupResponse(data)).not.toThrow();
@@ -758,6 +793,74 @@ describe(`Validator`, () => {
                         zones: [
                             {
                                 zoneID: {
+                                    zoneName: `SharedSync-12345678-1234-1234-1234-123456789012-`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `Shared zone has wrong format - additional dash`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `SharedSync-abc`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `Shared zone has wrong format - wrong id string`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `CMM-12345678-1234-1234-1234-123456789012-`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `CMM zone has wrong format - additional dash`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
+                                    zoneName: `CMM-#`,
+                                    ownerRecordName: `someOwnerId`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                },
+                            },
+                        ],
+                    },
+                },
+                desc: `CMM zone has wrong format - wrong id string`,
+            }, {
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [
+                            {
+                                zoneID: {
                                     zoneName: `PrimarySync`,
                                     ownerRecordName: ``,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
@@ -783,35 +886,6 @@ describe(`Validator`, () => {
                     },
                 },
                 desc: `ownerRecordName is missing`,
-            }, {
-                data: {
-                    data: {
-                        moreComing: false,
-                        syncToken: `someToken`,
-                        zones: [
-                            {
-                                zoneID: {
-                                    zoneName: `PrimarySync`,
-                                    ownerRecordName: `someOwnerId`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            }, {
-                                zoneID: {
-                                    zoneName: `SharedSync-12345678-1234-1234-1234-123456789012`,
-                                    ownerRecordName: `someOwnerId`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            }, {
-                                zoneID: {
-                                    zoneName: `SharedSync-98765432-4321-4321-4321-432109876543`,
-                                    ownerRecordName: `someOwnerId`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            },
-                        ],
-                    },
-                },
-                desc: `too many zones`,
             }, {
                 data: {
                     data: {

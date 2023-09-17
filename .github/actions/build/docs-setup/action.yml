@@ -29,13 +29,11 @@ runs:
       uses: actions/setup-node@v3
       with:
         node-version-file: ${{ inputs.app-path }}/node-version
-    - id: download-app-artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: ${{ inputs.app-artifact-name }}
-        path: ${{ inputs.app-path }}
-    - id: install-app-artifact
+        cache: npm
+        cache-dependency-path: ${{ inputs.app-path }}
+    - id: setup-npm
       shell: bash
-      run: |
-        tree -a ${{ inputs.app-path }}
-        npm install -g ./${{ inputs.app-path }}/npm-pack.tgz
+      run: (cd ${{ inputs.app-path }}; npm ci)
+    - id: setup-app
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm run build:dev)

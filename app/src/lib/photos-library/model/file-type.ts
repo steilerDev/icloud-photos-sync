@@ -68,7 +68,7 @@ export class FileType {
      * @param descriptor - The descriptor as provided by the backend
      * @param ext - The extension as provided by the encoded filename
      * @returns The newly created FileType
-     * @throws An Error, if the provided descriptor is unknown to the script
+     * @throws An iCPSError, if the provided descriptor is unknown to the script
      */
     static fromAssetType(descriptor: string, ext: string): FileType {
         if (!EXT[descriptor]) {
@@ -85,7 +85,7 @@ export class FileType {
      * Creates a file type from a file extension
      * @param ext - The file extension of the file
      * @returns The newly created FileType
-     * @throws An error, if the provided extension is unknown to the script
+     * @throws An iCPSError, if the provided extension is unknown to the script
      */
     static fromExtension(ext: string): FileType {
         if (ext.startsWith(`.`)) {

@@ -1,7 +1,7 @@
 import {ErrorStruct, ERR_UNKNOWN} from "./error-codes.js";
 
 /**
- * Base class for this tool's error type
+ * Custom error class
  */
 export class iCPSError extends Error {
     /**
@@ -32,10 +32,10 @@ export class iCPSError extends Error {
     /**
      * If this error was reported, it will receive a UUID for future reference
      */
-    btUUID: string = undefined;
+    btUUID?: string = undefined;
 
     /**
-     * Creates an application specific error using the provided
+     * Creates an application specific error using the provided data
      * @param err - The error structure
      */
     constructor(err: ErrorStruct = ERR_UNKNOWN) {
@@ -68,7 +68,7 @@ export class iCPSError extends Error {
     }
 
     /**
-     * Adds a random object to this error as context for error reporting
+     * Adds any object to this error as context for error reporting
      * @param key - The key to store the object
      * @param ctx - The context
      * @returns This object for chaining convenience
@@ -121,7 +121,8 @@ export class iCPSError extends Error {
      * @returns the error code for the first thrown error
      */
     getRootErrorCode(onlyICPSError: boolean = false): string {
-        return this.getErrorCodeStack(onlyICPSError).pop();
+        // GetErrorCodeStack returns at least one item
+        return this.getErrorCodeStack(onlyICPSError).pop()!;
     }
 
     /**

@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-// Import {version, name, } from '../../../package.json' assert { type: 'json' }; // eslint-disable-line
 import {SingleBar} from 'cli-progress';
 import {Resources} from '../../lib/resources/main.js';
 import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
@@ -17,7 +16,6 @@ export class CLIInterface {
 
     /**
      * Creates a new CLI interface based on the provided components
-     * @param options - Parsed CLI Options
      */
     constructor() {
         this.progressBar = new SingleBar({
@@ -33,16 +31,26 @@ export class CLIInterface {
 
         console.clear();
 
-        // An error handler is only supplied on the initial run, this is not needed on scheduled runs
         this.print(chalk.white(this.getHorizontalLine()));
         this.print(chalk.white.bold(`Welcome to ${Resources.PackageInfo.name}, v.${Resources.PackageInfo.version}!`));
         this.print(chalk.green(`Made with <3 by steilerDev`));
+        this.print(chalk.white(this.getHorizontalLine()));
 
         if (!Resources.manager().suppressWarnings) {
             Resources.events(this)
-                .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: Error) => this.printWarning(err.message))
-                .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => this.printWarning(`Detected unknown filetype (${descriptor} with ${ext}), please report in GH issue 143`))
-                .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: iCPSError) => this.printWarning(err.getDescription()));
+                .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
+                    this.printWarning(err.getDescription());
+                })
+                .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
+                    if (Resources.manager().enableCrashReporting) {
+                        this.print(`Detected unknown filetype (${descriptor} with ${ext}): This error will be automatically reported (See GH issue 143 for more information)`);
+                    } else {
+                        this.printWarning(`Detected unknown filetype (${descriptor} with ${ext}): Please report in GH issue 143`);
+                    }
+                })
+                .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: iCPSError) => {
+                    this.printWarning(err.getDescription());
+                });
         }
 
         Resources.events(this)
@@ -50,7 +58,6 @@ export class CLIInterface {
 
         Resources.events(this)
             .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
-                this.print(chalk.white(this.getHorizontalLine()));
                 this.print(chalk.white(`Authenticating user...`));
             })
             .on(iCPSEventCloud.AUTHENTICATED, () => {
@@ -64,6 +71,9 @@ export class CLIInterface {
             })
             .on(iCPSEventCloud.ACCOUNT_READY, () => {
                 this.print(chalk.white(`Sign in successful!`));
+            })
+            .on(iCPSEventCloud.SESSION_EXPIRED, () => {
+                this.print(chalk.yellowBright(`Session expired, re-authenticating...`));
             });
 
         Resources.events(this)
@@ -74,7 +84,7 @@ export class CLIInterface {
                 this.print(chalk.white(`Resending MFA code via ${method.toString()}...`));
             })
             .on(iCPSEventMFA.MFA_RECEIVED, (method: MFAMethod, code: string) => {
-                this.print(chalk.white(`MFA code received via ${method.toString()} (${code})`));
+                this.print(chalk.white(`MFA code received from ${method.toString()} (${code})`));
             })
             .on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
                 this.print(chalk.yellowBright(`MFA code not provided in time, aborting...`));
@@ -129,23 +139,23 @@ export class CLIInterface {
 
                 const extraneousFiles = Resources.event().getEventCount(iCPSEventRuntimeWarning.EXTRANEOUS_FILE);
                 if (extraneousFiles > 0) {
-                    this.printWarning(`Detected ${extraneousFiles} extraneous files, please check the logs for more details.`);
+                    this.printWarning(`Detected ${extraneousFiles} extraneous files, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
                 const libraryLoadErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR);
                 if (libraryLoadErrors > 0) {
-                    this.printWarning(`Unable to load ${libraryLoadErrors} local assets, please check the logs for more details.`);
+                    this.printWarning(`Unable to load ${libraryLoadErrors} local assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
                 this.print(chalk.green(`Fetched remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
                 const mismatchErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.COUNT_MISMATCH);
                 if (mismatchErrors > 0) {
-                    this.printWarning(`Detected ${mismatchErrors} albums, where asset counts don't match, please check the logs for more details.`);
+                    this.printWarning(`Detected ${mismatchErrors} albums, where asset counts don't match, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
                 const iCloudLoadErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR);
                 if (iCloudLoadErrors > 0) {
-                    this.printWarning(`Unable to load ${iCloudLoadErrors} remote assets, please check the logs for more details.`);
+                    this.printWarning(`Unable to load ${iCloudLoadErrors} remote assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
             })
             .on(iCPSEventSyncEngine.DIFF, () => {
@@ -175,7 +185,7 @@ export class CLIInterface {
                 this.print(chalk.greenBright(`Asset sync completed!`));
                 const writeAssetErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR);
                 if (writeAssetErrors > 0) {
-                    this.printWarning(`Detected ${writeAssetErrors} errors while adding assets, please check the logs for more details.`);
+                    this.printWarning(`Detected ${writeAssetErrors} errors while adding assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
@@ -187,12 +197,12 @@ export class CLIInterface {
                 this.print(chalk.greenBright(`Album sync completed!`));
                 const linkErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.LINK_ERROR);
                 if (linkErrors > 0) {
-                    this.printWarning(`Detected ${linkErrors} errors while linking assets to albums, please check the logs for more details.`);
+                    this.printWarning(`Detected ${linkErrors} errors while linking assets to albums, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
                 const writeAlbumErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR);
                 if (writeAlbumErrors > 0) {
-                    this.printWarning(`Detected ${writeAlbumErrors} errors while writing albums, please check the logs for more details.`);
+                    this.printWarning(`Detected ${writeAlbumErrors} errors while writing albums, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
             })
             .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
@@ -226,7 +236,7 @@ export class CLIInterface {
                 this.print(chalk.green.bold(`Successfully completed archiving`));
                 const archiveAssetErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
                 if (archiveAssetErrors > 0) {
-                    this.printWarning(`Detected ${archiveAssetErrors} errors while archiving assets, please check the logs for more details.`);
+                    this.printWarning(`Detected ${archiveAssetErrors} errors while archiving assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
                 this.print(chalk.white(this.getHorizontalLine()));
@@ -234,13 +244,11 @@ export class CLIInterface {
     }
 
     /**
-     * Will print the message to the correct target (console or log file)
-     * @param msg - The message to be printed, or 'undefined' if message should be ignored
+     * Will print the message to the console
+     * @param msg - The message to be printed
      */
     print(msg: string) {
-        if (msg !== `undefined`) {
-            console.log(msg);
-        }
+        console.log(msg);
     }
 
     /**
@@ -261,7 +269,7 @@ export class CLIInterface {
 
     /**
      *
-     * @returns A horizontal line
+     * @returns A horizontal line of the width of the screen
      */
     getHorizontalLine(): string {
         return `-`.repeat(process.stdout.columns);

@@ -17,16 +17,12 @@ runs:
       run: | 
         echo "site-dir=$(grep -oP "site_dir: '\K.+'" ${{ inputs.docs-path }}/mkdocs.yml | head -c-2)" >> $GITHUB_OUTPUT
         echo "docs-dir=$(grep -oP "docs_dir: '\K.+'" ${{ inputs.docs-path }}/mkdocs.yml | head -c-2)" >> $GITHUB_OUTPUT
-    - id: get-npm-metadata
-      uses: ./.github/actions/helper/npm-metadata
-      with:
-        package: ${{ inputs.app-path }}/package.json
     - id: setup-fs
       shell: bash
       run: cp README.md LICENSE ${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.docs-dir }}/
     - id: build-cli-reference
       shell: bash
-      run: ${{ github.action_path }}/build_cli.sh "${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.docs-dir }}" "${{ steps.get-npm-metadata.outputs.command }}"
+      run: (cd ${{ inputs.app-path }}; npm run doc:cli -- "${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.docs-dir }}")
     - id: build-mkdocs
       shell: bash
       run: (cd ${{ inputs.docs-path }}; mkdocs build)

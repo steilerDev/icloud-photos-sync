@@ -11,12 +11,22 @@ import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
 import {pEvent} from "p-event";
+import {jsonc} from "jsonc";
 
+/**
+ * Object holding all necessary information for a specific header value, that needs to be reused across multiple requests
+ */
 export class Header {
     key: string;
     value: string;
     domain: string;
 
+    /**
+     * Creates a new header object
+     * @param domain - The domain the header should be applied to, or an empty string if it should be applied to all domains
+     * @param key - The header key
+     * @param value - The header value
+     */
     constructor(domain: string, key: string, value: string) {
         this.domain = domain;
         this.key = key;
@@ -188,11 +198,12 @@ export class NetworkManager {
     /**
      * Axios HAR tracker to capture network requests
      */
-    _harTracker: AxiosHarTracker | undefined;
+    _harTracker?: AxiosHarTracker;
 
     /**
      * Creates a new network manager
-     * @param resources - The global configuration resources - because Resources Singleton is not yet available
+     * Should not be called directly, but through the static setup function.
+     * @param resources - The global configuration resources - because Resources Singleton is not yet available, but required for setup
      */
     constructor(resources: iCPSAppOptions) {
         this._rateLimiter = new PQueue({
@@ -205,10 +216,11 @@ export class NetworkManager {
                 Origin: `https://www.icloud.com`,
             },
         });
+        this._headerJar = new HeaderJar(this._axios);
 
         this._streamingCCYLimiter = new PQueue({
             concurrency: resources.downloadThreads,
-            timeout: (1000 * 60 * resources.downloadTimeout),
+            timeout: resources.downloadTimeout === Infinity ? undefined : (1000 * 60 * resources.downloadTimeout),
         });
 
         this._streamingAxios = axios.create({
@@ -219,13 +231,10 @@ export class NetworkManager {
             this._harTracker = new AxiosHarTracker(this._axios as any);
             this.resetHarTracker(this._harTracker);
         }
-
-        this._headerJar = new HeaderJar(this._axios);
     }
 
     /**
-     * This closes the current session and clears resources that are not persisted
-     * This will write the HAR file to disk, in case network capture is enabled
+     * This closes the current session, clears resources that are not persisted and writes the HAR file to disk, in case network capture is enabled
      */
     async resetSession() {
         this._axios.defaults.baseURL = undefined;
@@ -301,7 +310,7 @@ export class NetworkManager {
 
     /**
      * Writes the HAR file to disk, if network capture was enabled
-     * @returns - Returns false, if network capture was disabled or no entries were captured, true if a file was written
+     * @returns - Returns a promise that resolves to false, if network capture was disabled or no entries were captured, true if a file was written
      */
     async writeHarFile(): Promise<boolean> {
         if (!Resources.manager().harFilePath) {
@@ -319,7 +328,7 @@ export class NetworkManager {
 
             Resources.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
-            await fs.writeFile(Resources.manager().harFilePath, JSON.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
+            await fs.writeFile(Resources.manager().harFilePath, jsonc.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
             Resources.logger(this).info(`HAR file written`);
             return true;
         } catch (err) {
@@ -330,7 +339,7 @@ export class NetworkManager {
 
     /**
      * Persists the scnt header required for the MFA flow and adds the relevant header to the header jar
-     * @param scnt - The scnt value to use,  undefined to delete the header
+     * @param scnt - The scnt value to use
      */
     set scnt(scnt: string) {
         Resources.logger(this).debug(`Setting scnt header to ${scnt}`);
@@ -338,8 +347,8 @@ export class NetworkManager {
     }
 
     /**
-     * Persists the X-Apple-Id-Session-Id header required for the MFA flow and adds the relevant header to the header jar
-     * @param sessionId - The session id value to use - undefined to delete the header
+     * Persists the X-Apple-Id-Session-Id header required for the MFA flow, stores it as sessionSecret and adds the relevant header to the header jar
+     * @param sessionId - The session id value to use
      */
     set sessionId(sessionId: string) {
         Resources.logger(this).debug(`Setting session secret to ${sessionId}`);
@@ -359,15 +368,13 @@ export class NetworkManager {
      * Sets the photos URL including the default path to be the default base url going forward
      * @param url - The url to set, including the protocol and port.
      */
-    set photosUrl(url: string | undefined) {
+    set photosUrl(url: string) {
         Resources.logger(this).debug(`Setting photosUrl to ${url}`);
-        this._axios.defaults.baseURL = url === undefined
-            ? undefined
-            : url + ENDPOINTS.PHOTOS.BASE_PATH;
+        this._axios.defaults.baseURL = url + ENDPOINTS.PHOTOS.BASE_PATH;
     }
 
     /**
-     * Applies configurations from the response received if the MFA code is required
+     * Applies configurations from the response received if the MFA code is required. This includes setting the AASP cookie, the scnt header and session token.
      * @param mfaRequiredResponse - The response received from the server
      */
     applySigninResponse(signinResponse: SigninResponse) {
@@ -384,7 +391,7 @@ export class NetworkManager {
     }
 
     /**
-     * Applies configurations from the response received after the device was trusted
+     * Applies configurations from the response received after the device was trusted. This includes setting the trust and session token.
      * @param trustResponse - The response received from the server
      */
     applyTrustResponse(trustResponse: TrustResponse) {
@@ -393,7 +400,7 @@ export class NetworkManager {
     }
 
     /**
-     * Applies configurations from the response received after the setup request
+     * Applies configurations from the response received after the setup request. This includes setting the photos URL and persisting the iCloud authentication cookies.
      * @param setupResponse - The response received from the server
      */
     applySetupResponse(setupResponse: SetupResponse) {
@@ -402,14 +409,14 @@ export class NetworkManager {
     }
 
     /**
-     * Applies configurations from the response received after the photos setup request
+     * Applies configurations from the response received after the photos setup request. This includes information about the available zones.
      * @param photosSetupResponse - The response received from the server
      */
     applyPhotosSetupResponse(photosSetupResponse: PhotosSetupResponse) {
         Resources.logger(this).info(`Found ${photosSetupResponse.data.zones.length} available zones: ${photosSetupResponse.data.zones.map(zone => zone.zoneID.zoneName).join(`, `)}`);
 
         const primaryZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName === `PrimarySync`);
-        if (!primaryZoneData) {
+        if (!primaryZoneData || (primaryZoneData.deleted !== undefined && primaryZoneData.deleted === true)) {
             throw new iCPSError(RESOURCES_ERR.NO_PRIMARY_ZONE)
                 .addContext(`zones`, photosSetupResponse.data.zones);
         }
@@ -417,7 +424,7 @@ export class NetworkManager {
         Resources.manager().primaryZone = primaryZoneData.zoneID;
 
         const sharedZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName.startsWith(`SharedSync-`));
-        if (sharedZoneData) {
+        if (sharedZoneData && (sharedZoneData.deleted === undefined || sharedZoneData.deleted === false)) {
             Resources.logger(this).debug(`Found shared zone ${sharedZoneData.zoneID.zoneName}`);
             Resources.manager().sharedZone = sharedZoneData.zoneID;
         }
@@ -429,7 +436,7 @@ export class NetworkManager {
      * @param url - The url to request
      * @param data - The data to send
      * @param config - Additional configuration
-     * @returns A promise, that resolves once the request has been completed.
+     * @returns A promise, that resolves once the request has been completed, or rejects if the request was not successful.
      */
     async post<T = any, R = AxiosResponse<T>, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R> {
         return this._rateLimiter.add(async () => this._axios.post(url, data, config)) as R;
@@ -440,27 +447,10 @@ export class NetworkManager {
      * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
      * @param config - Additional configuration
-     * @returns A promise, that resolves once the request has been completed.
+     * @returns A promise, that resolves once the request has been completed, or rejects if the request was not successful.
      */
     async get<T = any, R = AxiosResponse<T>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R> {
         return this._rateLimiter.add(async () => this._axios.get(url, config)) as Promise<R>;
-    }
-
-    /**
-     * Downloads the provided url's content and writes it to the provided location
-     * @param url - The url to download
-     * @param location - The location to write the file to (existing files will be overwritten)
-     */
-    async downloadData(url: string, location: string): Promise<void> {
-        await this._streamingCCYLimiter.add(async () => {
-            Resources.logger(this).debug(`Starting download of ${url}`);
-            const response = await this._streamingAxios.get(url);
-            Resources.logger(this).debug(`Starting to write ${url} to ${location}`);
-            const writeStream = createWriteStream(location, {flags: `w`});
-            response.data.pipe(writeStream);
-            await pEvent(writeStream, `finish`, {rejectionEvents: [`error`]});
-            Resources.logger(this).debug(`Finished download of ${url}`);
-        });
     }
 
     /**
@@ -473,5 +463,24 @@ export class NetworkManager {
      */
     async put<T = any, R = AxiosResponse<T>, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R> {
         return this._rateLimiter.add(async () => this._axios.put(url, data, config)) as R;
+    }
+
+    /**
+     * Downloads the provided url's content and writes it to the provided location
+     * Uses the CCY limiter to ensure that the network is not overwhelmed
+     * @param url - The url to download
+     * @param location - The location to write the file to (existing files will be overwritten)
+     * @returns A promise, that resolves once the download has been completed, or rejects if the download was not successful.
+     */
+    async downloadData(url: string, location: string): Promise<void> {
+        await this._streamingCCYLimiter.add(async () => {
+            Resources.logger(this).debug(`Starting download of ${url}`);
+            const response = await this._streamingAxios.get(url);
+            Resources.logger(this).debug(`Starting to write ${url} to ${location}`);
+            const writeStream = createWriteStream(location, {flags: `w`});
+            response.data.pipe(writeStream);
+            await pEvent(writeStream, `finish`, {rejectionEvents: [`error`]});
+            Resources.logger(this).debug(`Finished download of ${url}`);
+        });
     }
 }

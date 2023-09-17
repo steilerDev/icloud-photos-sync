@@ -1,5 +1,5 @@
-import {AxiosRequestConfig} from 'axios';
-import {MFAServer} from './mfa/mfa-server.js';
+import {AxiosError, AxiosRequestConfig} from 'axios';
+import {MFAServer, MFA_TIMEOUT_VALUE} from './mfa/mfa-server.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {MFAMethod} from './mfa/mfa-method.js';
 import {iCPSError} from '../../app/error/error.js';
@@ -7,10 +7,11 @@ import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.
 import {Resources} from '../resources/main.js';
 import {ENDPOINTS} from '../resources/network-types.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
+import pTimeout from 'p-timeout';
+import {jsonc} from 'jsonc';
 
 /**
  * This class holds the iCloud connection
- * The authentication flow -followed by this class- is documented in a [Miro Board](https://miro.com/app/board/uXjVOxcisIM=/?share_link_id=646572552229).
  */
 export class iCloud {
     /**
@@ -24,12 +25,8 @@ export class iCloud {
     photos: iCloudPhotos;
 
     /**
-     * A promise that will resolve, once the object is ready or reject, in case there is an error
-     */
-    ready: Promise<void>;
-
-    /**
      * Creates a new iCloud Object
+     * @emits iCPSEventCloud.ERROR - If the MFA code is required and the failOnMfa flag is set - the iCPSError is provided as argument
      */
     constructor() {
         // MFA Server & lifecycle management
@@ -41,7 +38,6 @@ export class iCloud {
         this.photos = new iCloudPhotos();
 
         // ICloud lifecycle management
-
         Resources.events(this)
             .on(iCPSEventCloud.MFA_REQUIRED, () => {
                 if (Resources.manager().failOnMfa) {
@@ -59,30 +55,40 @@ export class iCloud {
             })
             .on(iCPSEventCloud.ACCOUNT_READY, async () => {
                 await this.getPhotosReady();
+            })
+            .on(iCPSEventCloud.SESSION_EXPIRED, async () => {
+                await this.authenticate();
             });
-
-        this.ready = this.getReady();
     }
 
     /**
      *
-     * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR' or the MFA server times out
+     * @returns A promise that will resolve to true, if the connection was established successfully, false in case the MFA code was not provided in time or reject, in case there is an error
      */
-    getReady(): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            Resources.events(this)
-                .once(iCPSEventPhotos.READY, () => resolve())
-                .once(iCPSEventCloud.ERROR, err => reject(err))
-                .once(iCPSEventMFA.MFA_NOT_PROVIDED, err => reject(err))
-                .once(iCPSEventMFA.ERROR, err => reject(err));
-        });
+    getReady(): Promise<boolean> {
+        return pTimeout(
+            new Promise<boolean>((resolve, reject) => {
+                Resources.events(this)
+                    .once(iCPSEventPhotos.READY, () => resolve(true))
+                    .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => resolve(false))
+                    .once(iCPSEventCloud.ERROR, err => reject(err))
+                    .once(iCPSEventMFA.ERROR, err => reject(err));
+            }), {
+                milliseconds: MFA_TIMEOUT_VALUE + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
+                message: new iCPSError(AUTH_ERR.SETUP_TIMEOUT),
+            },
+        );
     }
 
     /**
-     * Initiates authentication flow
-     * Tries to directly login using trustToken, otherwise starts MFA flow
+     * Initiates authentication flow. Tries to directly login using trustToken, otherwise starts MFA flow
+     * @emits iCPSEventCloud.AUTHENTICATION_STARTED - When authentication is started
+     * @emits iCPSEventCloud.MFA_REQUIRED - When MFA is required
+     * @emits iCPSEventCloud.TRUSTED - When device is trusted - provides trust token as argument
+     * @emits iCPSEventCloud.ERROR - When an error occurs - provides iCPSError as argument
      */
-    async authenticate(): Promise<void> {
+    async authenticate(): Promise<boolean> {
+        const ready = this.getReady();
         Resources.logger(this).info(`Authenticating user`);
         Resources.emit(iCPSEventCloud.AUTHENTICATION_STARTED);
 
@@ -131,7 +137,9 @@ export class iCloud {
                 return;
             }
 
-            if (err?.response?.status) {
+            // Does not seem to work
+            // if (err instanceof AxiosError) {
+            if ((err as AxiosError).isAxiosError) {
                 switch (err.response.status) {
                 case 401:
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
@@ -152,7 +160,7 @@ export class iCloud {
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNKNOWN).addCause(err));
             return;
         } finally {
-            return this.ready;
+            return ready;
         }
     }
 
@@ -160,6 +168,7 @@ export class iCloud {
      * This function will ask the iCloud backend, to re-send the MFA token, using the provided method and number
      * @param method - The method to be used
      * @returns A promise that resolves once all activity has been completed
+     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the resend failed - provides iCPSError as argument
      */
     async resendMFA(method: MFAMethod) {
         Resources.logger(this).info(`Resending MFA code with ${method}`);
@@ -170,7 +179,7 @@ export class iCloud {
         };
         const data = method.getResendPayload();
 
-        Resources.logger(this).debug(`Requesting MFA code via URL ${url} with data ${JSON.stringify(data)}`);
+        Resources.logger(this).debug(`Requesting MFA code via URL ${url} with data ${jsonc.stringify(data)}`);
 
         try {
             const response = await Resources.network().put(url, data, config);
@@ -186,13 +195,15 @@ export class iCloud {
                 Resources.logger(this).info(`Successfully requested new MFA code using ${validatedResponse.data.trustedDeviceCount} trusted device(s)`);
             }
         } catch (err) {
-            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, err);
+            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.RESEND_FAILED).addCause(err));
         }
     }
 
     /**
      * Enters and validates the MFA code in order to acquire necessary account tokens
      * @param mfa - The MFA code
+     * @emits iCPSEventCloud.AUTHENTICATED - When authentication is successful
+     * @emits iCPSEventCloud.ERROR - When an error occurs - provides iCPSError as argument
      */
     async submitMFA(method: MFAMethod, mfa: string) {
         try {
@@ -205,7 +216,7 @@ export class iCloud {
             };
             const data = method.getEnterPayload(mfa);
 
-            Resources.logger(this).debug(`Entering MFA code via URL ${url} with data ${JSON.stringify(data)}`);
+            Resources.logger(this).debug(`Entering MFA code via URL ${url} with data ${jsonc.stringify(data)}`);
             await Resources.network().post(url, data, config);
 
             Resources.logger(this).info(`MFA code correct!`);
@@ -217,6 +228,8 @@ export class iCloud {
 
     /**
      * Acquires sessionToken and two factor trust token after successful authentication
+     * @emits iCPSEventCloud.TRUSTED - When trust token has been acquired - provides trust token as argument
+     * @emits iCPSEventCloud.ERROR - When an error occurs - provides iCPSError as argument
      */
     async getTokens() {
         try {
@@ -239,8 +252,10 @@ export class iCloud {
     }
 
     /**
-     * Acquiring necessary cookies from trust and auth token for further processing & gets the user specific domain to interact with the Photos backend
-     * If trustToken has recently been acquired, this function can be used to reset the iCloud Connection
+     * Acquiring necessary cookies from trust and auth token for further processing. Also gets the user specific domain to interact with the Photos backend
+     * @emits iCPSEventCloud.ACCOUNT_READY - When account is ready to be used
+     * @emits iCPSEventCloud.SESSION_EXPIRED - When the session token has expired
+     * @emits iCPSEventCloud.ERROR - When an error occurs - provides iCPSError as argument
      */
     async setupAccount() {
         try {
@@ -259,12 +274,19 @@ export class iCloud {
             Resources.logger(this).debug(`Account ready`);
             Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
+            if ((err as any).isAxiosError && err.response.status === 421) {
+                Resources.logger(this).debug(`Session token expired, re-acquiring...`);
+                Resources.emit(iCPSEventCloud.SESSION_EXPIRED);
+                return;
+            }
+
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACCOUNT_SETUP).addCause(err));
         }
     }
 
     /**
      * Creating iCloud Photos sub-class and linking it
+     * @emits iCPSEventCloud.ERROR - When an error occurs - provides iCPSError as argument
     */
     async getPhotosReady() {
         try {

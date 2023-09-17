@@ -3,7 +3,6 @@ import {PhotosLibrary} from '../photos-library/photos-library.js';
 import {Asset} from '../photos-library/model/asset.js';
 import {Album, AlbumType} from '../photos-library/model/album.js';
 import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
-
 import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
 import {Resources} from '../resources/main.js';
@@ -36,8 +35,13 @@ export class SyncEngine {
     }
 
     /**
-     * Performs the sync and handles all connections
-     * @returns A list of assets as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync)
+     * Performs the sync and handles all connections and retries
+     * @returns A tuple consisting of assets and albums as fetched from the remote state. It can be assumed that this reflects the local state (given a warning free execution of the sync)
+     * @throws An iCPSError, in case the sync could not be completed within the amount of allowed retries
+     * @emits iCPSEventSyncEngine.START - When the sync starts
+     * @emits iCPSEventSyncEngine.DONE - When the sync is done
+     * @emits iCPSEventSyncEngine.RETRY - When the sync is retried - The first argument is the retry count, the second argument is the error that caused the retry
+     *
      */
     async sync(): Promise<[Asset[], Album[]]> {
         Resources.logger(this).info(`Starting sync`);
@@ -49,7 +53,6 @@ export class SyncEngine {
 
         while (Resources.manager().maxRetries >= retryCount) {
             Resources.logger(this).info(`Performing sync, try #${retryCount}`);
-
             try {
                 const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await this.fetchAndLoadState();
                 const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums, localAssets, localAlbums);
@@ -61,16 +64,18 @@ export class SyncEngine {
                 retryError.addContext(`error-try-${retryCount}`, err);
                 retryCount++;
 
-                Resources.emit(iCPSEventSyncEngine.RETRY, retryCount, err instanceof AxiosError
+                Resources.emit(iCPSEventSyncEngine.RETRY, retryCount, (err as AxiosError).isAxiosError
                     ? new iCPSError(SYNC_ERR.NETWORK).addCause(err)
                     : new iCPSError(SYNC_ERR.UNKNOWN).addCause(err));
 
                 await Resources.network().settleCCYLimiter();
 
-                Resources.logger(this).debug(`Refreshing iCloud cookies...`);
+                Resources.logger(this).debug(`Refreshing iCloud connection...`);
                 const iCloudReady = this.icloud.getReady();
-                await this.icloud.setupAccount();
-                await iCloudReady;
+                this.icloud.setupAccount();
+                if (!await iCloudReady) {
+                    return [[], []];
+                }
             }
         }
 
@@ -81,6 +86,8 @@ export class SyncEngine {
     /**
      * This function fetches the remote state and loads the local state from disk
      * @returns A promise that resolve once the fetch was completed, containing the remote & local state - remote album state is in order
+     * @emits iCPSEventSyncEngine.FETCH_N_LOAD - When the fetch & load starts
+     * @emits iCPSEventSyncEngine.FETCH_N_LOAD_COMPLETED - When the fetch & load is done - The first argument is the amount of remote assets, the second argument is the amount of remote albums, the third argument is the amount of local assets, the fourth argument is the amount of local albums
      */
     async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         Resources.emit(iCPSEventSyncEngine.FETCH_N_LOAD);
@@ -104,6 +111,8 @@ export class SyncEngine {
      * @param localAssets - A list of local assets
      * @param localAlbums - A list of local albums
      * @returns A promise that, once resolved, will contain processing queues that can be used in order to sync the remote state.
+     * @emits iCPSEventSyncEngine.DIFF - When the diff starts
+     * @emits iCPSEventSyncEngine.DIFF_COMPLETED - When the diff is done
      */
     async diffState(remoteAssets: Asset[], remoteAlbums: Album[], localAssets: PLibraryEntities<Asset>, localAlbums: PLibraryEntities<Album>): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
         Resources.emit(iCPSEventSyncEngine.DIFF);
@@ -122,6 +131,12 @@ export class SyncEngine {
      * @param assetQueue - The queue containing assets that need to be written to, or deleted from disk
      * @param albumQueue - The queue containing albums that need to be written to, or deleted from disk
      * @returns A promise that will settle, once the state has been written to disk
+     * @emits iCPSEventSyncEngine.WRITE - When the write starts
+     * @emits iCPSEventSyncEngine.WRITE_ASSETS - When the write of assets starts - The first argument is the amount of assets that need to be delete, the second argument is the amount of assets that need to be added, the third argument is the amount of assets that will be kept
+     * @emits iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED - When the write of assets is done
+     * @emits iCPSEventSyncEngine.WRITE_ALBUMS - When the write of albums starts - The first argument is the amount of albums that need to be delete, the second argument is the amount of albums that need to be added, the third argument is the amount of albums that will be kept
+     * @emits iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED - When the write of albums is done
+     * @emits iCPSEventSyncEngine.WRITE_COMPLETED - When the write is done
      */
     async writeState(assetQueue: PLibraryProcessingQueues<Asset>, albumQueue: PLibraryProcessingQueues<Album>) {
         Resources.emit(iCPSEventSyncEngine.WRITE);
@@ -159,6 +174,8 @@ export class SyncEngine {
      * Downloads and stores a given asset, unless file is already present on disk
      * @param asset - The asset that needs to be downloaded
      * @returns A promise that resolves, once the file has been successfully written to disk
+     * @emits iCPSEventSyncEngine.WRITE_ASSET_COMPLETED - When the asset has been written to disk - The first argument is the name of the asset
+     * @emits iCPSEventRuntimeWarning.WRITE_ASSET_ERROR - When an error occurs while writing the asset to disk - The first argument is the error, the second argument is the asset
      */
     async addAsset(asset: Asset) {
         await this.icloud.photos.downloadAsset(asset);
@@ -204,6 +221,8 @@ export class SyncEngine {
      *   * Create a link to the hidden folder, containing the real name of the album
      *   * (If possible) link correct pictures from the assetFolder to the newly created album
      * @param album - The album, that should be written to disk
+     * @throws An iCPSError, if an archived album could not be retrieved from the stash
+     * @emits iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR - When an error occurs while writing the album to disk - The first argument is the iCPSError, the second argument is the album
      */
     addAlbum(album: Album) {
         // If albumType == Archive -> Check in 'archivedFolder' and move
@@ -232,6 +251,8 @@ export class SyncEngine {
      * This will delete an album from disk and remove all associated symlinks
      * Deletion will only happen if the album is 'empty'. This means it only contains symlinks or 'safe' files. Any other folder or file will result in the folder not being deleted.
      * @param album - The album that needs to be deleted
+     * @throws An iCPSError, if an archived album could not be stashed
+     * @emits iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR - When an error occurs while writing the album to disk - The first argument is the iCPSError, the second argument is the album
      */
     removeAlbum(album: Album) {
         Resources.logger(this).debug(`Removing album ${album.getDisplayName()}`);

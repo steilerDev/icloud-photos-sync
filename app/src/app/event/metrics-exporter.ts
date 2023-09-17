@@ -58,14 +58,17 @@ const FIELDS = {
     ASSETS_TO_BE_ADDED: `assets_to_be_added`,
     ASSETS_TO_BE_KEPT: `assets_to_be_kept`,
     ASSETS_TO_BE_DELETED: `assets_to_be_deleted`,
-    ASSETS_ARCHIVED: `assets_archived`,
-    REMOTE_ASSETS_DELETED: `remote_assets_deleted`,
     ASSET_WRITTEN: `asset_written`,
     ALBUMS_TO_BE_ADDED: `albums_to_be_added`,
     ALBUMS_TO_BE_KEPT: `albums_to_be_kept`,
     ALBUMS_TO_BE_DELETED: `albums_to_be_deleted`,
     STATUS_TIME: `status_time`,
     NEXT_SCHEDULE: `next_schedule`,
+    /**
+     * Archive metrics
+     */
+    ASSETS_ARCHIVED: `assets_archived`,
+    REMOTE_ASSETS_DELETED: `remote_assets_deleted`,
     STATUS: {
         name: `status`,
         values: {
@@ -76,6 +79,7 @@ const FIELDS = {
             MFA_NOT_PROVIDED: `MFA_NOT_PROVIDED`,
             DEVICE_TRUSTED: `DEVICE_TRUSTED`,
             ACCOUNT_READY: `ACCOUNT_READY`,
+            SESSION_EXPIRED: `SESSION_EXPIRED`,
             ICLOUD_READY: `ICLOUD_READY`,
             SYNC_START: `SYNC_START`,
             FETCH_N_LOAD_STARTED: `FETCH_N_LOAD_STARTED`,
@@ -338,9 +342,9 @@ export class MetricsExporter {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.LINK_ERROR, `${srcPath} -> ${dstPath} - ${iCPSError.toiCPSError(err).getDescription()}`));
             })
-            .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: Error) => {
+            .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
-                    .addField(FIELDS.MFA_RESEND_ERROR, iCPSError.toiCPSError(err).getDescription()));
+                    .addField(FIELDS.MFA_RESEND_ERROR, err.getDescription()));
             })
             .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: Error) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
@@ -371,6 +375,10 @@ export class MetricsExporter {
             .on(iCPSEventCloud.ACCOUNT_READY, () => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.ACCOUNT_READY));
+            })
+            .on(iCPSEventCloud.SESSION_EXPIRED, () => {
+                this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                    .logStatus(FIELDS.STATUS.values.SESSION_EXPIRED));
             });
 
         Resources.events(this)
@@ -486,9 +494,13 @@ export class MetricsExporter {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint().addField(FIELDS.REMOTE_ASSETS_DELETED, numberOfAssets));
             });
 
-        Resources.logger(this).info(`Enabling metrics exporter to file ${Resources.manager().metricsFilePath}`);
+        Resources.logger(this).info(`Enabled metrics exporter to file ${Resources.manager().metricsFilePath}`);
     }
 
+    /**
+     * Appends the data point to the metrics output file
+     * @param dataPoint - The data point to log
+     */
     logDataPoint(dataPoint: InfluxLineProtocolPoint) {
         fs.appendFileSync(this.metricsFileDescriptor, dataPoint.toString(), {encoding: FILE_ENCODING});
     }

@@ -24,16 +24,16 @@
       "version": "9.2.6"
     },
     {
+      "type": "panel",
+      "id": "grafana-polystat-panel",
+      "name": "Polystat",
+      "version": "1.2.11"
+    },
+    {
       "type": "datasource",
       "id": "influxdb",
       "name": "InfluxDB",
       "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "logs",
-      "name": "Logs",
-      "version": ""
     },
     {
       "type": "panel",
@@ -45,6 +45,12 @@
       "type": "panel",
       "id": "state-timeline",
       "name": "State timeline",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
       "version": ""
     }
   ],
@@ -70,7 +76,7 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
@@ -247,7 +253,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 5,
+        "w": 6,
         "x": 0,
         "y": 0
       },
@@ -314,7 +320,7 @@
           "alias": "status",
           "datasource": {
             "type": "influxdb",
-            "uid": "ODP_NQfnk"
+            "uid": "${DS_MONITORING}"
           },
           "groupBy": [
             {
@@ -363,169 +369,6 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Error"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Warning"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "orange",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 5,
-        "y": 0
-      },
-      "id": 13,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "Error|Warning",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "9.2.6",
-      "targets": [
-        {
-          "alias": "Error",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_MONITORING}"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "none"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "icloud_photos_sync",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "errors"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "count"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "Warning",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_MONITORING}"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "none"
-              ],
-              "type": "fill"
-            }
-          ],
-          "hide": false,
-          "measurement": "icloud_photos_sync",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "B",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "warnings"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "count"
-              }
-            ]
-          ],
-          "tags": []
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_MONITORING}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
             "mode": "fixed"
           },
           "custom": {
@@ -536,11 +379,6 @@
           "mappings": [
             {
               "options": {
-                " SCHEDULED": {
-                  "color": "super-light-green",
-                  "index": 21,
-                  "text": "Run scheduled"
-                },
                 "ACCOUNT_READY": {
                   "color": "dark-blue",
                   "index": 5,
@@ -605,6 +443,11 @@
                   "color": "dark-blue",
                   "index": 20,
                   "text": "MFA Timeout"
+                },
+                "SCHEDULED": {
+                  "color": "super-light-green",
+                  "index": 21,
+                  "text": "Run scheduled"
                 },
                 "SCHEDULED_FAILURE": {
                   "color": "semi-dark-red",
@@ -673,9 +516,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 15,
-        "x": 9,
+        "h": 4,
+        "w": 18,
+        "x": 6,
         "y": 0
       },
       "id": 4,
@@ -684,7 +527,7 @@
         "legend": {
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "mergeValues": false,
         "rowHeight": 0.7,
@@ -775,7 +618,7 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 5,
+        "w": 6,
         "x": 0,
         "y": 4
       },
@@ -841,6 +684,870 @@
       "type": "stat"
     },
     {
+      "colors": [
+        "#299c46",
+        "#ED8128",
+        "#d44a3a",
+        "#4040a0"
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_MONITORING}"
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 5,
+        "x": 6,
+        "y": 4
+      },
+      "id": 20,
+      "mappingType": 1,
+      "nullPointMode": "connected",
+      "polystat": {
+        "animationSpeed": 2500,
+        "columnAutoSize": true,
+        "columns": "",
+        "defaultClickThrough": "",
+        "defaultClickThroughNewTab": false,
+        "defaultClickThroughSanitize": false,
+        "displayLimit": 100,
+        "ellipseCharacters": 18,
+        "ellipseEnabled": false,
+        "fontAutoColor": true,
+        "fontAutoScale": true,
+        "fontSize": 12,
+        "fontType": "Roboto",
+        "globalDecimals": 0,
+        "globalDisplayMode": "triggered",
+        "globalDisplayTextTriggeredEmpty": "OK",
+        "globalOperatorName": "total",
+        "globalThresholds": [
+          {
+            "color": "#299c46",
+            "state": 0,
+            "value": 0
+          },
+          {
+            "color": "#ED8128",
+            "state": 1,
+            "value": 1
+          },
+          {
+            "color": "#d44a3a",
+            "state": 2,
+            "value": 10
+          }
+        ],
+        "globalUnitFormat": "short",
+        "gradientEnabled": true,
+        "hexagonSortByDirection": 4,
+        "hexagonSortByField": "value",
+        "maxMetrics": 0,
+        "polygonBorderColor": "#000000",
+        "polygonBorderSize": 2,
+        "polygonGlobalFillColor": "#0a55a1",
+        "radius": "",
+        "radiusAutoSize": true,
+        "regexPattern": "",
+        "rowAutoSize": true,
+        "rows": "",
+        "shape": "hexagon_pointed_top",
+        "tooltipDisplayMode": "all",
+        "tooltipDisplayTextTriggeredEmpty": "OK",
+        "tooltipEnabled": false,
+        "tooltipFontSize": 12,
+        "tooltipFontType": "Roboto",
+        "tooltipPrimarySortDirection": 2,
+        "tooltipPrimarySortField": "thresholdLevel",
+        "tooltipSecondarySortDirection": 2,
+        "tooltipSecondarySortField": "value",
+        "tooltipTimestampEnabled": false,
+        "valueEnabled": true
+      },
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "savedComposites": [],
+      "savedOverrides": [],
+      "targets": [
+        {
+          "alias": "Count Mismatch",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-count_mismatch"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Library Load",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-library_load_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Extraneous File",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "C",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-extraneous_file"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "iCloud Load",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "D",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-icloud_load_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Write Asset",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "E",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-write_asset_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Write Album",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "F",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-write_album_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Link",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "G",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-link_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Filetype",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "H",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-filetype_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "MFA Resend",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "I",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-mfa_resend_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Resource File",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "J",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-resource_file_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Archive Asset",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "K",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-archive_asset_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Unexpected Error",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "L",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "errors"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "Error/Warning Overview",
+      "type": "grafana-polystat-panel",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_MONITORING}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisGridShow": true,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "decimals": 0,
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Adding"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deleting"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Keeping"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status Time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 13,
+        "x": 11,
+        "y": 4
+      },
+      "id": 26,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": false
+        },
+        "orientation": "vertical",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "xField": "Time",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": -100
+      },
+      "targets": [
+        {
+          "alias": "Adding",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "albums_to_be_added"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Deleting",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "albums_to_be_deleted"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Keeping",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "C",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "albums_to_be_kept"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "Albums",
+      "type": "barchart"
+    },
+    {
       "datasource": {
         "type": "influxdb",
         "uid": "${DS_MONITORING}"
@@ -866,7 +1573,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 12,
+        "h": 14,
         "w": 3,
         "x": 0,
         "y": 6
@@ -1000,8 +1707,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 12,
-        "w": 2,
+        "h": 14,
+        "w": 3,
         "x": 3,
         "y": 6
       },
@@ -1122,8 +1829,9 @@
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
+            "axisGridShow": true,
             "axisLabel": "",
-            "axisPlacement": "auto",
+            "axisPlacement": "left",
             "fillOpacity": 80,
             "gradientMode": "none",
             "hideFrom": {
@@ -1133,7 +1841,8 @@
             },
             "lineWidth": 1,
             "scaleDistribution": {
-              "type": "linear"
+              "log": 10,
+              "type": "symlog"
             }
           },
           "decimals": 0,
@@ -1153,7 +1862,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Added"
+              "options": "Adding"
             },
             "properties": [
               {
@@ -1168,7 +1877,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Deleted"
+              "options": "Deleting"
             },
             "properties": [
               {
@@ -1183,7 +1892,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Kept"
+              "options": "Keeping"
             },
             "properties": [
               {
@@ -1206,16 +1915,32 @@
                 "value": "dateTimeFromNow"
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Written"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "super-light-green",
+                  "mode": "fixed"
+                }
+              }
+            ]
           }
         ]
       },
       "gridPos": {
-        "h": 6,
-        "w": 10,
-        "x": 5,
-        "y": 6
+        "h": 9,
+        "w": 13,
+        "x": 11,
+        "y": 11
       },
-      "id": 7,
+      "id": 24,
+      "interval": "1h",
       "options": {
         "barRadius": 0,
         "barWidth": 0.97,
@@ -1224,22 +1949,22 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "right",
-          "showLegend": true
+          "showLegend": false
         },
-        "orientation": "horizontal",
-        "showValue": "auto",
+        "orientation": "vertical",
+        "showValue": "always",
         "stacking": "none",
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         },
-        "xField": "Status Time",
+        "xField": "Time",
         "xTickLabelRotation": 0,
-        "xTickLabelSpacing": -100
+        "xTickLabelSpacing": 100
       },
       "targets": [
         {
-          "alias": "Added",
+          "alias": "Adding",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_MONITORING}"
@@ -1280,7 +2005,7 @@
           "tags": []
         },
         {
-          "alias": "Deleted",
+          "alias": "Deleting",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_MONITORING}"
@@ -1322,7 +2047,7 @@
           "tags": []
         },
         {
-          "alias": "Kept",
+          "alias": "Keeping",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_MONITORING}"
@@ -1336,12 +2061,12 @@
             },
             {
               "params": [
-                "previous"
+                "none"
               ],
               "type": "fill"
             }
           ],
-          "hide": true,
+          "hide": false,
           "measurement": "icloud_photos_sync",
           "orderByTime": "ASC",
           "policy": "default",
@@ -1364,7 +2089,7 @@
           "tags": []
         },
         {
-          "alias": "Status Time",
+          "alias": "Written",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_MONITORING}"
@@ -1387,426 +2112,7 @@
           "measurement": "icloud_photos_sync",
           "orderByTime": "ASC",
           "policy": "default",
-          "refId": "D",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "status_time"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": []
-        }
-      ],
-      "title": "Changed Assets",
-      "type": "barchart"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_MONITORING}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisGridShow": true,
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          },
-          "decimals": 0,
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Added"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Deleted"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Kept"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Status Time"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "dateTimeFromNow"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 9,
-        "x": 15,
-        "y": 6
-      },
-      "id": 14,
-      "options": {
-        "barRadius": 0,
-        "barWidth": 0.97,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "right",
-          "showLegend": true
-        },
-        "orientation": "horizontal",
-        "showValue": "auto",
-        "stacking": "none",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        },
-        "xField": "Status Time",
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": -100
-      },
-      "targets": [
-        {
-          "alias": "Added",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_MONITORING}"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "none"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "icloud_photos_sync",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "albums_to_be_added"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "Deleted",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_MONITORING}"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "none"
-              ],
-              "type": "fill"
-            }
-          ],
-          "hide": false,
-          "measurement": "icloud_photos_sync",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "B",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "albums_to_be_deleted"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "Kept",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_MONITORING}"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "previous"
-              ],
-              "type": "fill"
-            }
-          ],
-          "hide": true,
-          "measurement": "icloud_photos_sync",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "C",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "albums_to_be_kept"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "Status Time",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_MONITORING}"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "none"
-              ],
-              "type": "fill"
-            }
-          ],
-          "hide": false,
-          "measurement": "icloud_photos_sync",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "D",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "status_time"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": []
-        }
-      ],
-      "title": "Changed Albums",
-      "type": "barchart"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_MONITORING}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 19,
-        "x": 5,
-        "y": 12
-      },
-      "id": 16,
-      "options": {
-        "barRadius": 0,
-        "barWidth": 0.97,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "orientation": "auto",
-        "showValue": "auto",
-        "stacking": "none",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        },
-        "xField": "Time",
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 100
-      },
-      "targets": [
-        {
-          "alias": "Assets Written",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_MONITORING}"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "1h"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "0"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "icloud_photos_sync",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
+          "refId": "E",
           "resultFormat": "time_series",
           "select": [
             [
@@ -1825,7 +2131,7 @@
           "tags": []
         }
       ],
-      "title": "Asset Writes",
+      "title": "Assets",
       "type": "barchart"
     },
     {
@@ -1833,27 +2139,71 @@
         "type": "influxdb",
         "uid": "${DS_MONITORING}"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "color-text",
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 157
+              }
+            ]
+          }
+        ]
+      },
       "gridPos": {
-        "h": 10,
+        "h": 20,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 20
       },
-      "hideTimeOverride": false,
-      "id": 12,
+      "id": 22,
+      "maxDataPoints": -1,
       "options": {
-        "dedupStrategy": "numbers",
-        "enableLogDetails": false,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "footer": {
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "distinctCount"
+          ],
+          "show": false
+        },
+        "frameIndex": 3,
+        "showHeader": true,
+        "sortBy": []
       },
       "pluginVersion": "9.2.6",
       "targets": [
         {
+          "alias": "Count Mismatch",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_MONITORING}"
@@ -1861,7 +2211,7 @@
           "groupBy": [
             {
               "params": [
-                "1ms"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -1876,12 +2226,12 @@
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
-          "resultFormat": "logs",
+          "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "errors"
+                  "warn-count_mismatch"
                 ],
                 "type": "field"
               },
@@ -1894,6 +2244,7 @@
           "tags": []
         },
         {
+          "alias": "Library Load",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_MONITORING}"
@@ -1901,7 +2252,7 @@
           "groupBy": [
             {
               "params": [
-                "1ms"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -1917,12 +2268,432 @@
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
-          "resultFormat": "logs",
+          "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "warnings"
+                  "warn-library_load_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Extraneous File",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "C",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-extraneous_file"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "iCloud Load",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "D",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-icloud_load_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Write Asset",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "E",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-write_asset_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Write Album",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "F",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-write_album_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Link",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "G",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-link_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Filetype",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "H",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-filetype_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "MFA Resend",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "I",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-mfa_resend_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Resource File",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "J",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-resource_file_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Archive Asset",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "K",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "warn-archive_asset_error"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Unexpected Error",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "icloud_photos_sync",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "L",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "errors"
                 ],
                 "type": "field"
               },
@@ -1935,9 +2706,8 @@
           "tags": []
         }
       ],
-      "timeFrom": "12h",
-      "title": "Log",
-      "type": "logs"
+      "title": "Logs",
+      "type": "table"
     }
   ],
   "refresh": false,
@@ -1945,16 +2715,35 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "Monitoring",
+          "value": "Monitoring"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "label": "Data Source",
+        "multi": false,
+        "name": "source",
+        "options": [],
+        "query": "influxdb",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
   },
   "time": {
-    "from": "now-1d",
+    "from": "now-7d",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "icloud-photos-sync",
   "uid": "iwq-NHxVz",
-  "version": 13,
+  "version": 32,
   "weekStart": ""
 }

@@ -20,7 +20,7 @@ body:
     id: error-code
     attributes:
       label: Error Code
-      description: Provide the error code, generate upon crash
+      description: Provide the error code, generated upon crash
       placeholder: ex. 01234567-89ab-cdef-0123-456789abcdef
     validations:
       required: true

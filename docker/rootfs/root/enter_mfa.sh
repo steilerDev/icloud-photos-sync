@@ -3,6 +3,7 @@ if [ -z "$1" ]; then
     echo "No code provided"
     echo "Run this utility through:"
     echo "    $0 <6-digits-code> <host (optional, localhost as default)>"
+    echo "The script will read the server's port through the environmental variable \$PORT, or use 80 if the variable is not set." 
     exit
 fi
 

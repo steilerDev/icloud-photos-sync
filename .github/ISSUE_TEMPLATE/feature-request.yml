@@ -20,7 +20,7 @@ body:
       label: Checklist
       description: Before submitting this issue, make sure you completed the following steps
       options:
-        - label: This is a [feature request](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#feature), not an [issue](https://github.com/steilerDev/icloud-photos-sync/blob/beta/CONTRIBUTING.md#issue) or [a question](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#question)
+        - label: This is a [feature request](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#feature), not an [issue](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#issue) or [a question](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#question)
           required: true
         - label: Checked out [existing feature requests](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3Aclass%28feature%29+label%3Astatus%28open%29%2Cstatus%28wontfix%29%2Cstatus%28backlog%29%2C%22status%28help+needed%29%22%2C%22status%28in+progress%29%22%2Cstatus%28investigating%29%2Cstatus%28previewed%29+)
           required: true

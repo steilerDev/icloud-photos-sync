@@ -34,3 +34,7 @@ export const ACQUIRE_ACCOUNT_TOKENS: ErrorStruct = buildErrorStruct(
 export const ACCOUNT_SETUP: ErrorStruct = buildErrorStruct(
     name, prefix, `ACCOUNT_SETUP`, `Unable to setup iCloud Account`,
 );
+
+export const SETUP_TIMEOUT: ErrorStruct = buildErrorStruct(
+    name, prefix, `SETUP_TIMEOUT`, `iCloud setup did not complete successfully within expected amount of time`,
+);

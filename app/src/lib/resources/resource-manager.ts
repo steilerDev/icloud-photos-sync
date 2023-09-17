@@ -1,7 +1,3 @@
-/**
- * This class handles access to the .icloud-photos-sync resource file and handles currently applied configurations from the CLI and environment variables as well as other shared resources
- */
-
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -12,7 +8,11 @@ import {FILE_ENCODING, HAR_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAc
 import {LogLevel} from "../../app/event/log.js";
 import {Resources} from "./main.js";
 import {iCPSEventRuntimeWarning} from "./events-types.js";
+import {jsonc} from "jsonc";
 
+/**
+ * This class handles access to the .icloud-photos-sync resource file and handles currently applied configurations from the CLI and environment variables
+ */
 export class ResourceManager {
     /**
      * The shared resources held by this instances of the icps application
@@ -43,7 +43,7 @@ export class ResourceManager {
     _readResourceFile(): ResourceFile {
         try {
             Resources.logger(this).debug(`Reading resource file from ${this.resourceFilePath}`);
-            const resourceFileData = JSON.parse(readFileSync(this.resourceFilePath, {encoding: FILE_ENCODING}));
+            const resourceFileData = jsonc.parse(readFileSync(this.resourceFilePath, {encoding: FILE_ENCODING}));
             return Resources.validator().validateResourceFile(resourceFileData);
         } catch (err) {
             Resources.emit(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR,
@@ -64,7 +64,7 @@ export class ResourceManager {
                 libraryVersion: this._resources.libraryVersion,
                 trustToken: this._resources.trustToken,
             };
-            const resourceFileData = JSON.stringify(formattedResourceFile, null, 4);
+            const resourceFileData = jsonc.stringify(formattedResourceFile, null, 4);
             Resources.logger(this).debug(`Writing resource file to ${this.resourceFilePath}`);
 
             writeFileSync(this.resourceFilePath, resourceFileData, {encoding: FILE_ENCODING});

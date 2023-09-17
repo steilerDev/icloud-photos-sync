@@ -27,6 +27,10 @@ export const SUBMIT_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `SUBMIT_FAILED`, `Unable to submit MFA code`,
 );
 
+export const RESEND_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `RESEND_FAILED`, `Unable to resend MFA code`,
+);
+
 export const CODE_FORMAT: ErrorStruct = buildErrorStruct(
     name, prefix, `CODE_FORMAT`, `Received unexpected MFA code format, expecting 6 digits`,
 );

@@ -3,7 +3,7 @@ import {expect, describe, test, jest, beforeEach} from '@jest/globals';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 import {MockedEventManager, prepareResources} from '../_helpers/_general';
-import {MFAServer, MFA_SERVER_ENDPOINTS, MFA_TIMEOUT_VALUE} from '../../src/lib/icloud/mfa/mfa-server';
+import {MFAServer, MFA_SERVER_ENDPOINTS} from '../../src/lib/icloud/mfa/mfa-server';
 import {iCPSEventMFA, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {MFA_ERR} from '../../src/app/error/error-codes';
 import {iCPSError} from '../../src/app/error/error';
@@ -280,7 +280,8 @@ describe(`Server lifecycle`, () => {
         expect(server.stopServer).not.toHaveBeenCalled();
 
         // Advancing time slightly before timeout occurs
-        jest.advanceTimersByTime(MFA_TIMEOUT_VALUE - 1);
+        const timeoutValue = 1000 * 60 * 10;
+        jest.advanceTimersByTime(timeoutValue - 1);
         expect(timeoutEvent).not.toHaveBeenCalled();
         expect(server.stopServer).not.toHaveBeenCalled();
 

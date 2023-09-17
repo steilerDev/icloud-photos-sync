@@ -32,6 +32,11 @@
         {
             "tagName": "@default",
             "syntaxKind": "modifier"
+        },
+        {
+            "tagName": "@emits",
+            "syntaxKind": "modifier",
+            "allowMultiple":  true
         }
     ],
     "supportForTags": {
@@ -48,6 +53,7 @@
         "@minLength": true,
         "@maxItems": true,
         "@minItems": true,
-        "@pattern": true
+        "@pattern": true,
+        "@emits": true
     }
 }

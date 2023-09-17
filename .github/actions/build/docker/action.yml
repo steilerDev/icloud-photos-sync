@@ -1,5 +1,5 @@
 name: build-docker
-description: Builds the cross platform docker containers and uploads the artifact
+description: Builds the cross platform docker container and uploads the artifact
 inputs:
   docker-path:
     description: The path to the docker directory

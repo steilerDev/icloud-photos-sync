@@ -4,7 +4,7 @@ This application can export various sync related metrics, which can be used to m
 
 ## Usage
 
-Set the `export-metrics` flag, in order to activate the exporter. The file will be written to the root of the data directory and is named `.icloud-photos-sync.metrics`. This file can be consumed using [telegraf's](https://www.influxdata.com/time-series-platform/telegraf/) [tail input plugin](https://github.com/influxdata/telegraf/blob/release-1.25/plugins/inputs/tail/README.md). The following is a sample configuration:
+Set the [export metrics flag](../cli/#export-metrics), in order to activate the exporter. The file will be written to the root of the data directory and is named `.icloud-photos-sync.metrics`. This file can be consumed using [telegraf's](https://www.influxdata.com/time-series-platform/telegraf/) [tail input plugin](https://github.com/influxdata/telegraf/blob/release-1.25/plugins/inputs/tail/README.md). The following is a sample configuration:
 
 ```
 [[inputs.tail]]                                                                 
@@ -20,7 +20,7 @@ After importing the metrics into an InfluxDB through telegraf, you can use Grafa
 
 ## Metrics
 
-All metrics are created using the measurement name `icloud-photos-sync`. 
+All metrics are created using the measurement name `icloud_photos_sync`. 
 
 The following fields will be written:
 
@@ -29,8 +29,9 @@ The following fields will be written:
     - `AUTHENTICATED`
     - `MFA_REQUIRED`
     - `MFA_RECEIVED`
-    - `MFA_NOT_PROVIDED`
+    - `MFA_NOT_PROVIDED` (if the MFA code was not provided before timeout)
     - `DEVICE_TRUSTED`
+    - `SESSION_EXPIRED` (if the current session expired and needs to be refreshed)
     - `ACCOUNT_READY`
     - `ICLOUD_READY`
     - `SYNC_START`
@@ -50,18 +51,35 @@ The following fields will be written:
     - `SCHEDULED` (no previous run)
     - `SCHEDULED_SUCCESS` (last run successful)
     - `SCHEDULED_FAILURE` (error during last run)
-  - `assetsArchived`: The amount of assets archived during an archive operation
-  - `remoteAssetsDeleted`: The amount of remote assets deleted during an archive operation (if remote delete is enabled)
-  - `localAssetsLoaded`: Gives the amount of local assets loaded during a sync
-  - `localAlbumsLoaded`: Gives the amount of local albums loaded during a sync
-  - `remoteAssetsFetched`: Gives the amount of remote assets loaded during a sync
-  - `remoteAlbumsFetched`: Gives the amount of remote albums loaded during a sync
-  - `assetsToBeAdded`: Gives the amount of assets that are meant to be added after diffing the local and remote state
-  - `assetsToBeKept`: Gives the amount of assets that are meant to be kept after diffing the local and remote state
-  - `assetsToBeDeleted`: Gives the amount of assets that are meant to be deleted after diffing the local and remote state
-  - `assetWritten`: The record name of each asset written to disk
-  - `albumsToBeAdded`: Gives the amount of albums that are meant to be added after diffing the local and remote state
-  - `albumsToBeKept`: Gives the amount of albums that are meant to be kept after diffing the local and remote state
-  - `albumsToBeDeleted`: Gives the amount of albums that are meant to be deleted after diffing the local and remote state
-  - `errors`: Gives each error message recorded during operation
-  - `warnings`: Gives each warning message recorded during operation
+  - `status_time`: Provides the time, when the status was last updated
+  - Local and remote library state:
+    - `local_assets_loaded`: Gives the amount of local assets loaded during a sync
+    - `local_albums_loaded`: Gives the amount of local albums loaded during a sync
+    - `remote_assets_fetched`: Gives the amount of remote assets loaded during a sync
+    - `remote_albums_fetched`: Gives the amount of remote albums loaded during a sync
+  - Sync metrics:
+    - `assets_to_be_added`: Gives the amount of assets that are meant to be added after diffing the local and remote state
+    - `assets_to_be_kept`: Gives the amount of assets that are meant to be kept after diffing the local and remote state
+    - `assets_to_be_deleted`: Gives the amount of assets that are meant to be deleted after diffing the local and remote state
+    - `asset_written`: The record name of each asset written to disk
+    - `albums_to_be_added`: Gives the amount of albums that are meant to be added after diffing the local and remote state
+    - `albums_to_be_kept`: Gives the amount of albums that are meant to be kept after diffing the local and remote state
+    - `albums_to_be_deleted`: Gives the amount of albums that are meant to be deleted after diffing the local and remote state
+  - Daemon metrics:
+    - `next_schedule`: Gives the time of the next scheduled execution
+  - Archive metrics:
+    - `assets_archived`: Gives the amount of assets archived during an archive operation
+    - `remote_assets_deleted`: Gives the amount of remote assets deleted during an archive operation
+  - `errors`: Gives an error message for each recorded error
+  - Warnings (see [common warnings for context](../common-warnings/)), gives an error message for each recorded warning
+    - `warn-count_mismatch`
+    - `warn-library_load_error`
+    - `warn-extraneous_file`
+    - `warn-icloud_load_error`
+    - `warn-write_asset_error`
+    - `warn-write_album_error`
+    - `warn-link_error`
+    - `warn-filetype_error`
+    - `warn-mfa_resend_error`
+    - `warn-resource_file_error`
+    - `warn-archive_asset_error`

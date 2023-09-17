@@ -81,7 +81,6 @@ describe(`API E2E Tests`, () => {
 
         describe(`Fetching records`, () => {
             test(`Fetch all records`, async () => {
-                await icloud.ready;
                 const [assets, masters] = await icloud.photos.fetchAllCPLAssetsMasters();
                 // _writeTestData(assets.map(postProcessAssetData), "all-assets-data")
                 // _writeTestData(masters.map(postProcessMasterData), "all-master-data")
@@ -108,7 +107,6 @@ describe(`API E2E Tests`, () => {
             });
 
             test(`Fetch all records of one album`, async () => {
-                await icloud.ready;
                 const albumRecordName = `311f9778-1f40-4762-9e57-569ebf5fb070`;
                 const [assets, masters] = await icloud.photos.fetchAllCPLAssetsMasters(albumRecordName);
 
@@ -121,7 +119,6 @@ describe(`API E2E Tests`, () => {
             });
 
             test(`Fetch records of empty album`, async () => {
-                await icloud.ready;
                 const albumRecordName = `6dcb67d9-a073-40ba-9441-3a792da34cf5`;
                 const [assets, masters] = await icloud.photos.fetchAllCPLAssetsMasters(albumRecordName);
                 expect(assets.length).toEqual(0);
@@ -130,7 +127,6 @@ describe(`API E2E Tests`, () => {
         });
         describe(`Fetching albums`, () => {
             test(`Fetch all albums`, async () => {
-                await icloud.ready;
                 const fetchedAlbums = await icloud.photos.fetchAllCPLAlbums();
                 expect(fetchedAlbums.length).toEqual(8);
 
@@ -145,7 +141,6 @@ describe(`API E2E Tests`, () => {
             });
 
             test(`Fetch empty folder`, async () => {
-                await icloud.ready;
                 const recordName = `7198a6a0-27fe-4fb6-961b-74231e425858`; // 'Stuff' folder
                 const fetchedAlbum = await icloud.photos.fetchCPLAlbums(recordName);
                 // Verifying only structure, not content, as content was validated in the all case
@@ -153,7 +148,6 @@ describe(`API E2E Tests`, () => {
             });
 
             test(`Fetch folder with multiple albums`, async () => {
-                await icloud.ready;
                 const recordName = `6e7f4f44-445a-41ee-a87e-844a9109069d`; // '2022' folder
                 const fetchedAlbums = await icloud.photos.fetchCPLAlbums(recordName);
                 // Verifying only structure, not content, as content was validated in the all case
@@ -163,7 +157,6 @@ describe(`API E2E Tests`, () => {
 
         describe(`Assets & Records`, () => {
             test(`Download an asset`, async () => {
-                await icloud.ready;
                 // Defining the asset
                 const assetRecordName = `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`;
                 const assetHash = `tplrgnWiXEttU0xmKPzRWhUMrtE=`; // Pre-calculated

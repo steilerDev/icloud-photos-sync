@@ -60,14 +60,14 @@ export class LogInterface {
                 .on(iCPSEventRuntimeWarning.LINK_ERROR, (err: Error, srcPath: string, dstPath: string) => {
                     this.logMessage(LogLevel.WARN, `RuntimeWarning`, `Error while linking ${srcPath} to ${dstPath}: ${iCPSError.toiCPSError(err).getDescription()}`);
                 })
-                .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: Error) => {
-                    this.logMessage(LogLevel.WARN, `RuntimeWarning`, `Error within MFA flow: ${iCPSError.toiCPSError(err).getDescription()}`);
+                .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
+                    this.logMessage(LogLevel.WARN, `RuntimeWarning`, `Error within MFA flow: ${err.getDescription()}`);
                 })
                 .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: Error) => {
                     this.logMessage(LogLevel.WARN, `RuntimeWarning`, `Error while accessing resource file: ${iCPSError.toiCPSError(err).getDescription()}`);
                 })
-                .on(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, (err: Error) => {
-                    this.logMessage(LogLevel.WARN, `RuntimeWarning`, `Error while archiving asset: ${iCPSError.toiCPSError(err).getDescription()}`);
+                .on(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, (err: Error, assetPath: string) => {
+                    this.logMessage(LogLevel.WARN, `RuntimeWarning`, `Error while archiving asset ${assetPath}: ${iCPSError.toiCPSError(err).getDescription()}`);
                 });
             Resources.events(this)
                 .on(iCPSEventSyncEngine.RETRY, (_retryCount: number, err: Error) => {

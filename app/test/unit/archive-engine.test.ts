@@ -352,6 +352,22 @@ describe.each([{
 
                 expect(startEvent).toHaveBeenCalled();
             });
+
+            test(`Throws error, if no assets are available`, async () => {
+                const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+
+                archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
+                archiveEngine.prepareForRemoteDeletion = jest.fn(() => undefined);
+                archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
+
+                await expect(archiveEngine.archivePath(`${Config.defaultConfig.dataDir}/Random`, [])).rejects.toThrow(/^No remote assets available$/);
+
+                expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
+                expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
+                expect(archiveEngine.icloud.photos.deleteAssets).not.toHaveBeenCalled();
+
+                expect(startEvent).toHaveBeenCalled();
+            });
         });
 
         test(`Persist asset throws error`, async () => {
@@ -424,7 +440,7 @@ describe.each([{
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`));
+            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`), path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()));
         });
 
         test(`Prepare remote delete throws error`, async () => {
@@ -496,7 +512,7 @@ describe.each([{
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`));
+            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`), path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()));
         });
 
         test(`Delete assets throws error`, async () => {

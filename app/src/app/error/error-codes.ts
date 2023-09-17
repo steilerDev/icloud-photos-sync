@@ -17,7 +17,7 @@ type ErrorName =
     `FileTypeReport`
 
 /**
- * Error structure
+ * Error structure for generating iCPSError objects
  */
 export type ErrorStruct = {
     /**
@@ -38,7 +38,7 @@ export type ErrorStruct = {
  * Builds an error struct using the provided parameters
  * @param name - The error name
  * @param errorCodePrefix - The error code prefix
- * @param errorCode - The error code (combined with errorCodePrefix through '_')
+ * @param errorCode - The error code (will be combined with errorCodePrefix through '_')
  * @param message - A readable message
  * @returns The corresponding error construct
  */

@@ -2,15 +2,15 @@ import {iCPSError} from "../error/error.js";
 import {randomUUID} from "crypto";
 import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
 import fs from 'fs/promises';
-import path from 'path';
 import {Resources} from '../../lib/resources/main.js';
-import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
+import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 import * as zlib from 'zlib';
 import {Readable} from 'stream';
 import {pEvent} from 'p-event';
 import bt from '@backtrace-labs/node';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
+import {jsonc} from "jsonc";
 
 /**
  * List of errors that will never get reported
@@ -35,7 +35,7 @@ const BACKTRACE_SUBMISSION = {
 };
 
 /**
- * This class handles errors thrown or `HANDLER_EVENT` emitted by classes of this application
+ * This class handles errors and error reporting
  */
 export class ErrorHandler {
     /**
@@ -55,6 +55,7 @@ export class ErrorHandler {
             process.exit(2);
         });
 
+        // Register handler for errors during scheduled execution
         Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, this.handleError.bind(this));
 
         if (Resources.manager().enableCrashReporting) {
@@ -63,49 +64,56 @@ export class ErrorHandler {
                                 + BACKTRACE_SUBMISSION.TYPE;
 
             this.btClient = bt.BacktraceClient.initialize({
-
                 userAttributes: {
                     application: Resources.PackageInfo.name,
                     'application.version': Resources.PackageInfo.version,
                 },
                 url: endpoint,
-                database: {
-                    enable: true,
-                    path: path.join(Resources.manager().dataDir, `.crash-reporter`),
-                    captureNativeCrashes: true,
-                    createDatabaseDirectory: true,
-                    autoSend: true,
-                },
+                // Database: {
+                //     enable: true,
+                //     path: path.join(Resources.manager().dataDir, `.crash-reporter`),
+                //     captureNativeCrashes: true,
+                //     createDatabaseDirectory: true,
+                //     autoSend: true,
+                // },
                 breadcrumbs: {
                     enable: true,
                     eventType: bt.BreadcrumbType.Manual,
+                    maximumBreadcrumbs: 200,
+                },
+                metrics: {
+                    enable: true,
+                    autoSendInterval: 0,
                 },
                 beforeSend(data: bt.BacktraceData) {
                     return Object.assign(
                         data,
-                        JSON.parse(ErrorHandler.maskConfidentialData(JSON.stringify(data))),
+                        jsonc.parse(ErrorHandler.maskConfidentialData(jsonc.stringify(data))),
                     );
                 },
             });
 
-            // This.btClient.setSymbolication();
-            Resources.events(this).on(iCPSEventApp.SCHEDULED_START, () => {
-                this.btClient.metrics.addSummedEvent(`SyncExecution`);
-            });
+            // Register listener for unknown filetypes
+            Resources.events(this).on(iCPSEventRuntimeWarning.FILETYPE_ERROR, this.handleFiletype.bind(this));
 
+            // Usage statistics
+            Resources.events(this).on(iCPSEventSyncEngine.START, () => {
+                this.btClient.metrics.addSummedEvent(`SyncExecution`);
+                this.btClient.metrics.send();
+            });
             Resources.events(this).on(iCPSEventArchiveEngine.ARCHIVE_START, () => {
                 this.btClient.metrics.addSummedEvent(`ArchiveExecution`);
+                this.btClient.metrics.send();
             });
-
-            Resources.events(this).on(iCPSEventRuntimeWarning.FILETYPE_ERROR, this.handleFiletype.bind(this));
 
             this.registerBreadcrumbs();
         }
     }
 
     /**
-     * Handles a given error. Report fatal errors and provide appropriate output.
+     * Handles a given error, by providing error reporting (if enabled)
      * @param err - The occurred error
+     * @emits iCPSEventRuntimeError.HANDLED_ERROR - providing the handled iCPSError as argument once the error was handled
      */
     async handleError(err: unknown) {
         const _err = iCPSError.toiCPSError(err);
@@ -121,7 +129,16 @@ export class ErrorHandler {
         Resources.emit(iCPSEventRuntimeError.HANDLED_ERROR, _err);
     }
 
-    async handleFiletype(_ext: string, _descriptor?: string) {
+    /**
+     * Creates a specific error report, in case an unknown filetype descriptor/extension is detected
+     * @param _ext - The unknown extension
+     * @param _descriptor  - The unknown descriptor, can be empty
+     */
+    async handleFiletype(_ext: string, _descriptor: string = ``) {
+        if (this.btClient === undefined) {
+            return;
+        }
+
         const report = new bt.BacktraceReport(new iCPSError(FILETYPE_REPORT),
             {
                 'icps.filetype.extension': _ext,
@@ -139,9 +156,13 @@ export class ErrorHandler {
      * Registers event listeners to provide breadcrumbs
      */
     registerBreadcrumbs() {
+        if (this.btClient === undefined || this.btClient.breadcrumbs === undefined) {
+            return;
+        }
+
         Resources.events(this)
-            .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`MFA_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+            .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
+                this.btClient.breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
             })
             .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
                 this.btClient.breadcrumbs.warn(`FILETYPE_ERROR`, {ext, descriptor});
@@ -193,6 +214,9 @@ export class ErrorHandler {
             })
             .on(iCPSEventCloud.ACCOUNT_READY, () => {
                 this.btClient.breadcrumbs.info(`ACCOUNT_READY`);
+            })
+            .on(iCPSEventCloud.SESSION_EXPIRED, async () => {
+                this.btClient.breadcrumbs.info(`SESSION_EXPIRED`);
             });
 
         Resources.events(this)
@@ -248,11 +272,9 @@ export class ErrorHandler {
                     toBeKept,
                 });
             })
-            .on(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`WRITE_ASSET_COMPLETED`);
-            })
             .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`WRITE_ASSETS_COMPLETED`);
+                const writeAssetCount = Resources.event().getEventCount(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
+                this.btClient.breadcrumbs.info(`WRITE_ASSETS_COMPLETED`, {writeAssetCount});
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
                 this.btClient.breadcrumbs.info(`WRITE_ALBUMS`, {
@@ -292,7 +314,7 @@ export class ErrorHandler {
     /**
      * Reports the provided error to the error reporting backend
      * @param err - The occurred error
-     * @returns - An unique error code
+     * @returns - An unique error code for tracing
      */
     async reportError(err: iCPSError): Promise<string> {
         if (!this.btClient) {
@@ -316,7 +338,7 @@ export class ErrorHandler {
 
     /**
      * Prepares and compresses the error attachments
-     * @returns A promise that resolves to an array of file paths (might be empty)
+     * @returns A promise that resolves to an array of buffer attachments
      */
     async prepareAttachments(): Promise<bt.BacktraceAttachment[]> {
         const attachments: bt.BacktraceAttachment[] = [];
@@ -412,6 +434,11 @@ export class ErrorHandler {
         }
     }
 
+    /**
+     * Compresses the provided data stream into a Buffer object, using the brotli algorithm
+     * @param data - A readable stream of uncompressed data
+     * @returns A buffer containing the compressed data
+     */
     async compressStream(data: Readable): Promise<Buffer> {
         const brotliStream = zlib.createBrotliCompress();
         const chunks = [];
@@ -426,12 +453,12 @@ export class ErrorHandler {
     /**
      * This function masks confidential data from the provided input string
      * @param input - The input string to mask
-     * @returns The masked string
+     * @returns The string, with masked confidential data
      */
     static maskConfidentialData(input: string): string {
         return input
             .replaceAll(Resources.manager().username, `<APPLE ID USERNAME>`)
             .replaceAll(Resources.manager().password, `<APPLE ID PASSWORD>`)
-            .replaceAll(Resources.manager().trustToken, `<TRUST TOKEN>`);
+            .replaceAll(Resources.manager()._resources.trustToken, `<TRUST TOKEN>`); // Reading cached trust token, instead of re-reading from file
     }
 }

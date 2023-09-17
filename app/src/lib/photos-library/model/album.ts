@@ -1,3 +1,4 @@
+import {jsonc} from "jsonc";
 import {LIBRARY_ERR} from "../../../app/error/error-codes.js";
 import {iCPSError} from "../../../app/error/error.js";
 import {CPLAlbum} from "../../icloud/icloud-photos/query-parser.js";
@@ -86,7 +87,7 @@ export class Album implements PEntity<Album> {
     }
 
     /**
-     * Creates an album form a CPLAlbum instance (as returned from the backend)
+     * Creates an album from a CPLAlbum instance (as returned from the backend)
      * @param cplAlbum - The album retrieved from the backend
      * @returns An Album based on the CPL object
      */
@@ -145,7 +146,7 @@ export class Album implements PEntity<Album> {
         // Assets might be undefined
         const thisAssets = this.assets ? this.assets : {};
         const otherAssets = assets ? assets : {};
-        return JSON.stringify(Object.keys(thisAssets).sort()) === JSON.stringify(Object.keys(otherAssets).sort());
+        return jsonc.stringify(Object.keys(thisAssets).sort()) === jsonc.stringify(Object.keys(otherAssets).sort());
     }
 
     /**
@@ -193,7 +194,7 @@ export class Album implements PEntity<Album> {
      * @param album - The album, whose depth needs to be calculated
      * @param fullQueue - The list of all albums
      * @returns The number of albums between the given album and the root album
-     * @throws A LibraryError, in case there is no link from the given album to root
+     * @throws An iCPSError, in case there is no link from the given album to root
      */
     static distanceToRoot(album: Album, fullQueue: Album[]): number {
         if (album.parentAlbumUUID === ``) {

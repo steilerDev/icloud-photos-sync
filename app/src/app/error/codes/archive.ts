@@ -3,6 +3,10 @@ import {buildErrorStruct, ErrorStruct} from "../error-codes.js";
 const name = `ArchiveError`;
 const prefix = `ARCHIVE`;
 
+export const NO_ASSETS: ErrorStruct = buildErrorStruct(
+    name, prefix, `NO_ASSETS`, `No remote assets available`,
+);
+
 export const UUID_PATH: ErrorStruct = buildErrorStruct(
     name, prefix, `UUID_PATH`, `UUID path selected, use named path only`,
 );

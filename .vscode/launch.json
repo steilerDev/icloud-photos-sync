@@ -12,10 +12,10 @@
                 "<node_internals>/**"
             ],
             "preLaunchTask": "Build App",
-            "program": "${workspaceFolder}/app/bin/main.js",
-            "args": ["sync"],
+            "program": "${workspaceFolder}/app/src/main.ts",
+            "args": ["token"],
             "outFiles": [
-                "${workspaceFolder}/app/bin/**/*.js",
+                "${workspaceFolder}/app/build/out/**/*.js",
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"
@@ -46,7 +46,6 @@
                 "--experimental-vm-modules",
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
-                //"test/unit/.*.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
@@ -66,7 +65,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/resources.resource-manager.test.ts"
+                "test/unit/icloud.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"
