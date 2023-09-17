@@ -416,7 +416,7 @@ export class NetworkManager {
         Resources.logger(this).info(`Found ${photosSetupResponse.data.zones.length} available zones: ${photosSetupResponse.data.zones.map(zone => zone.zoneID.zoneName).join(`, `)}`);
 
         const primaryZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName === `PrimarySync`);
-        if (!primaryZoneData) {
+        if (!primaryZoneData || (primaryZoneData.deleted !== undefined && primaryZoneData.deleted === true)) {
             throw new iCPSError(RESOURCES_ERR.NO_PRIMARY_ZONE)
                 .addContext(`zones`, photosSetupResponse.data.zones);
         }
@@ -424,7 +424,7 @@ export class NetworkManager {
         Resources.manager().primaryZone = primaryZoneData.zoneID;
 
         const sharedZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName.startsWith(`SharedSync-`));
-        if (sharedZoneData) {
+        if (sharedZoneData && (sharedZoneData.deleted === undefined || sharedZoneData.deleted === false)) {
             Resources.logger(this).debug(`Found shared zone ${sharedZoneData.zoneID.zoneName}`);
             Resources.manager().sharedZone = sharedZoneData.zoneID;
         }

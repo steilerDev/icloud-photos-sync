@@ -290,7 +290,6 @@ export type PhotosSetupResponse = {
         /**
          * The list of photos account zones - either primary or primary and shared
          * @minItems 1
-         * @maxItems 2
          */
         zones: PhotosSetupResponseZone[]
     }
@@ -303,13 +302,20 @@ type PhotosSetupResponseZone = {
     zoneID: {
         /**
          * @minLength 1
-         * @pattern ^PrimarySync|SharedSync-[0-9A-F-]+$
+         * @pattern ^(PrimarySync|SharedSync(-[0-9A-F?]+)+|CMM(-[0-9A-F]+)+)$
          */
         zoneName: string,
         /**
          * @minLength 1
          */
         ownerRecordName: string,
+        /**
+         * Fixed zone type
+         */
         zoneType: `REGULAR_CUSTOM_ZONE`,
     }
+    /**
+     * Might be marked as deleted
+     */
+    deleted?: boolean
 }
