@@ -1,5 +1,5 @@
 import {AxiosError, AxiosRequestConfig} from 'axios';
-import {MFAServer} from './mfa/mfa-server.js';
+import {MFAServer, MFA_TIMEOUT_VALUE} from './mfa/mfa-server.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {MFAMethod} from './mfa/mfa-method.js';
 import {iCPSError} from '../../app/error/error.js';
@@ -73,7 +73,7 @@ export class iCloud {
                     .once(iCPSEventCloud.ERROR, err => reject(err))
                     .once(iCPSEventMFA.ERROR, err => reject(err));
             }), {
-                milliseconds: 1000 * 60 * 5, // 5 minutes should be sufficient
+                milliseconds: MFA_TIMEOUT_VALUE + 1000 * 60 * 5, // 5 minutes on top of mfa timeout should be sufficient
                 message: new iCPSError(AUTH_ERR.SETUP_TIMEOUT),
             },
         );

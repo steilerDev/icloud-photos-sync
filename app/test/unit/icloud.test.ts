@@ -26,6 +26,7 @@ beforeEach(() => {
 });
 
 describe(`Control structure`, () => {
+    jest.useFakeTimers();
     test(`TRUSTED event triggered`, () => {
         icloud.setupAccount = jest.fn<typeof icloud.setupAccount>()
             .mockResolvedValue();
@@ -113,6 +114,13 @@ describe(`Control structure`, () => {
         mockedEventManager.emit(event, new iCPSError());
         await expect(iCloudReady).rejects.toThrow(/^Unknown error occurred$/);
     });
+
+    test(`Authentication timeout`, async () => {
+        const iCloudReady = icloud.getReady();
+        const timeoutValue = 1000 * 60 * (10 + 5)
+        jest.advanceTimersByTime(timeoutValue + 1)
+        await expect(iCloudReady).rejects.toThrow(/iCloud setup did not complete successfully within expected amount of time$/);
+    })
 });
 
 describe.each([
