@@ -1,7 +1,6 @@
 {
-    "preset": "ts-jest/presets/default-esm-legacy",
+    "preset": "ts-jest/presets/default-esm",
     "testEnvironment": "node",
-    "testRegex": "\\.test\\.ts$",
     "slowTestThreshold": 30,
     "reporters": [
       "default",
@@ -13,8 +12,6 @@
       "!src/main.ts",
       "!src/app/event/**/*",
       "!src/app/error/**/*",
-      "!src/lib/package.ts",
-      "!src/lib/logger.ts",
       "!src/lib/photos-library/model/photos-entity.ts"
     ],
     "coverageProvider": "v8",
@@ -23,18 +20,7 @@
       "html",
       "json-summary"
     ],
-    "extensionsToTreatAsEsm": [".ts"],
-    "transform": {
-      "\\.ts$": [
-        "ts-jest",
-        {
-          "useESM": true
-        }
-      ]
-    },
     "moduleNameMapper": {
-      ".*/logger.js": "<rootDir>/test/_mocks/logger.ts",
-      ".*/cli.js": "<rootDir>/test/_mocks/cli.ts",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     }
   }

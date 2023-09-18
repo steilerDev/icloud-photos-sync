@@ -3,23 +3,25 @@ import {ErrorHandler} from "./app/event/error-handler.js";
 import {CLIInterface} from "./app/event/cli.js";
 import {appFactory} from "./app/factory.js";
 import {MetricsExporter} from "./app/event/metrics-exporter.js";
-import {registerObjectsToEventHandlers} from './app/event/event-handler.js';
+import {LogInterface} from "./app/event/log.js";
+import {iCPSApp} from "./app/icloud-app.js";
 
-// Creates the appropriate application
-const app = appFactory(process.argv);
-
-// Creates helper infrastructure on global level and linking to underlying app
-const errorHandler = new ErrorHandler(app.options);
-const cliInterface = new CLIInterface(app.options);
-const metricsExporter = new MetricsExporter(app.options);
-
-// Registering error handler to EventHandlers
-registerObjectsToEventHandlers([cliInterface, metricsExporter], errorHandler);
-
-// Executes app
+let app: iCPSApp;
 try {
-    await app.run(errorHandler, cliInterface, metricsExporter);
+    app = await appFactory(process.argv);
+} catch (_err) {
+    // AppFactory will print appropriate error messages
+    process.exit(3);
+}
+
+const _errorHandler = new ErrorHandler();
+const _logInterface = new LogInterface();
+const _cliInterface = new CLIInterface();
+const _metricsExporter = new MetricsExporter();
+
+try {
+    await app.run();
 } catch (err) {
-    await errorHandler.handle(err);
+    await _errorHandler.handleError(err);
     process.exit(1);
 }

@@ -1,40 +1,40 @@
 /**
  * This file helps building queries for the iCloud Photos backend service
  */
-
-import {iCloudAuth} from "../auth.js";
+import {Resources} from "../../resources/main.js";
+import {PhotosAccountZone} from "../../resources/resource-types.js";
 
 /**
  * All relevant record types for this application
  */
 export const RECORD_TYPES = {
-    "PHOTO_MASTER_RECORD": `CPLMaster`,
-    "PHOTO_ASSET_RECORD": `CPLAsset`,
-    "PHOTO_ALBUM_RECORD": `CPLAlbum`,
-    "CONTAINER_RELATION": `CPLContainerRelation`, // Useless at the moment
-    "PHOTO_RECORDS": `CPLContainerRelationLiveByPosition`, // Record CPLContainerRelationLiveByAssetDate
-    "ALBUM_RECORDS": `CPLAlbumByPositionLive`,
-    "INDEX_COUNT": `HyperionIndexCountLookup`,
-    "ALL_PHOTOS": `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted`, // CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted
+    PHOTO_MASTER_RECORD: `CPLMaster`,
+    PHOTO_ASSET_RECORD: `CPLAsset`,
+    PHOTO_ALBUM_RECORD: `CPLAlbum`,
+    CONTAINER_RELATION: `CPLContainerRelation`, // Useless at the moment
+    PHOTO_RECORDS: `CPLContainerRelationLiveByPosition`, // Record CPLContainerRelationLiveByAssetDate
+    ALBUM_RECORDS: `CPLAlbumByPositionLive`,
+    INDEX_COUNT: `HyperionIndexCountLookup`,
+    ALL_PHOTOS: `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted`, // CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted
 };
 
 /**
  * All relevant desired keys as provided to the backend
  */
 const DESIRED_KEYS = {
-    "RECORD_NAME": `recordName`,
-    "IS_DELETED": `isDeleted`,
-    "ORIGINAL_RESOURCE": `resOriginalRes`,
-    "ORIGINAL_RESOURCE_FILE_TYPE": `resOriginalFileType`,
-    "JPEG_RESOURCE": `resJPEGFullRes`,
-    "JPEG_RESOURCE_FILE_TYPE": `resJPEGFullFileType`,
-    "VIDEO_RESOURCE": `resVidFullRes`,
-    "VIDEO_RESOURCE_FILE_TYPE": `resVidFullFileType`,
-    "ENCODED_FILE_NAME": `filenameEnc`,
-    "FAVORITE": `isFavorite`,
-    "IS_HIDDEN": `isHidden`,
-    "ADJUSTMENT_TYPE": `adjustmentType`,
-    "MASTER_REF": `masterRef`,
+    RECORD_NAME: `recordName`,
+    IS_DELETED: `isDeleted`,
+    ORIGINAL_RESOURCE: `resOriginalRes`,
+    ORIGINAL_RESOURCE_FILE_TYPE: `resOriginalFileType`,
+    JPEG_RESOURCE: `resJPEGFullRes`,
+    JPEG_RESOURCE_FILE_TYPE: `resJPEGFullFileType`,
+    VIDEO_RESOURCE: `resVidFullRes`,
+    VIDEO_RESOURCE_FILE_TYPE: `resVidFullFileType`,
+    ENCODED_FILE_NAME: `filenameEnc`,
+    FAVORITE: `isFavorite`,
+    IS_HIDDEN: `isHidden`,
+    ADJUSTMENT_TYPE: `adjustmentType`,
+    MASTER_REF: `masterRef`,
 };
 
 /**
@@ -56,6 +56,9 @@ export const QUERY_KEYS = [
     DESIRED_KEYS.ADJUSTMENT_TYPE,
 ];
 
+/**
+ * Aliases for the different available libraries
+ */
 export enum Zones {
     Primary = `PrimaryLibrary`,
     Shared = `SharedLibrary`
@@ -64,23 +67,14 @@ export enum Zones {
 /**
  * Returns the zoneID object needed as part of requests against the iCloudPhotos backend
  * @param zone - The zone details to get
- * @param auth - The auth object, holding zone information
  * @returns
  */
-export function getZoneID(zone: Zones, auth: iCloudAuth) {
+export function getZoneID(zone: Zones): PhotosAccountZone {
     if (zone === Zones.Shared) {
-        return {
-            "ownerRecordName": auth.iCloudPhotosAccount.shared.ownerName,
-            "zoneName": auth.iCloudPhotosAccount.shared.zoneName,
-            "zoneType": auth.iCloudPhotosAccount.shared.zoneType,
-        };
+        return Resources.manager().sharedZone;
     }
 
-    return {
-        "ownerRecordName": auth.iCloudPhotosAccount.primary.ownerName,
-        "zoneName": auth.iCloudPhotosAccount.primary.zoneName,
-        "zoneType": auth.iCloudPhotosAccount.primary.zoneType,
-    };
+    return Resources.manager().primaryZone;
 }
 
 /**
@@ -90,11 +84,11 @@ export function getZoneID(zone: Zones, auth: iCloudAuth) {
  */
 export function getParentFilterForParentId(parentId: string): any {
     return {
-        "fieldName": `parentId`,
-        "comparator": `EQUALS`,
-        "fieldValue": {
-            "value": parentId,
-            "type": `STRING`,
+        fieldName: `parentId`,
+        comparator: `EQUALS`,
+        fieldValue: {
+            value: parentId,
+            type: `STRING`,
         },
     };
 }
@@ -106,11 +100,11 @@ export function getParentFilterForParentId(parentId: string): any {
  */
 export function getDirectionFilterForDirection(direction: string = `ASCENDING`): any {
     return {
-        "fieldName": `direction`,
-        "comparator": `EQUALS`,
-        "fieldValue": {
-            "value": direction,
-            "type": `STRING`,
+        fieldName: `direction`,
+        comparator: `EQUALS`,
+        fieldValue: {
+            value: direction,
+            type: `STRING`,
         },
     };
 }
@@ -122,11 +116,11 @@ export function getDirectionFilterForDirection(direction: string = `ASCENDING`):
  */
 export function getStartRankFilterForStartRank(startRank: number): any {
     return {
-        "fieldName": `startRank`,
-        "comparator": `EQUALS`,
-        "fieldValue": {
-            "value": startRank,
-            "type": `INT64`,
+        fieldName: `startRank`,
+        comparator: `EQUALS`,
+        fieldValue: {
+            value: startRank,
+            type: `INT64`,
         },
     };
 }
@@ -139,21 +133,21 @@ export function getStartRankFilterForStartRank(startRank: number): any {
 export function getIndexCountFilter(parentId?: string): any {
     if (parentId) {
         return {
-            "fieldName": `indexCountID`,
-            "comparator": `IN`,
-            "fieldValue": {
-                "value": [`CPLContainerRelationNotDeletedByAssetDate:${parentId}`],
-                "type": `STRING_LIST`,
+            fieldName: `indexCountID`,
+            comparator: `IN`,
+            fieldValue: {
+                value: [`CPLContainerRelationNotDeletedByAssetDate:${parentId}`],
+                type: `STRING_LIST`,
             },
         };
     }
 
     return {
-        "fieldName": `indexCountID`,
-        "comparator": `IN`,
-        "fieldValue": {
-            "value": [`CPLAssetByAssetDateWithoutHiddenOrDeleted`],
-            "type": `STRING_LIST`,
+        fieldName: `indexCountID`,
+        comparator: `IN`,
+        fieldValue: {
+            value: [`CPLAssetByAssetDateWithoutHiddenOrDeleted`],
+            type: `STRING_LIST`,
         },
     };
 }
@@ -165,7 +159,7 @@ export function getIndexCountFilter(parentId?: string): any {
  */
 export function getIsDeletedField(value: number = 1): any {
     return {
-        "isDeleted": {
+        isDeleted: {
             value,
         },
     };

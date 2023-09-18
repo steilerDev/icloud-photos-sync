@@ -13,11 +13,14 @@
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["sync"],
+            "args": ["token"],
             "outFiles": [
-                "${workspaceFolder}/app/bin/**/*.js",
+                "${workspaceFolder}/app/build/out/**/*.js",
             ],
-            "envFile": "${workspaceFolder}/.vscode/private-account.env"
+            "env": {
+                "NODE_NO_WARNINGS": "1"
+            },
+            "envFile": "${workspaceFolder}/.vscode/test.env"
         }, {
             "name": "Run API Tests",
             "type": "node",
@@ -31,7 +34,10 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/test.env"
+            "env": {
+                "NODE_NO_WARNINGS": "1"
+            },
+            "envFile": "${workspaceFolder}/.vscode/api-test.env"
         }, {
             "name": "Run All Tests",
             "type": "node",
@@ -40,12 +46,14 @@
                 "--experimental-vm-modules",
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
-                //"test/unit/.*.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/test.env"
+            "envFile": "${workspaceFolder}/.vscode/api-test.env",
+            "env": {
+                "NODE_NO_WARNINGS": "1"
+            },
         }, {
             "name": "Debug Test",
             "type": "node",
@@ -57,25 +65,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/photos-library.test.ts"
-            ],
-            "env": {
-                "NODE_NO_WARNINGS": "1"
-            },
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "cwd": "${workspaceFolder}/app",
-        }, {
-            "name": "vscode-jest-tests",
-            "type": "node",
-            "request": "launch",
-            "runtimeArgs": [
-                "--experimental-vm-modules",
-                "--inspect-brk",
-                "node_modules/.bin/jest",
-                "--runInBand",
-                "--config", "jest.config.json",
-                //"--detectOpenHandles",
+                "test/unit/icloud.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"

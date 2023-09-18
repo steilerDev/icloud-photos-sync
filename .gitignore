@@ -1,3 +1,4 @@
 .DS_Store
 .vscode/*.env
 *.zip
+app-data-dir/

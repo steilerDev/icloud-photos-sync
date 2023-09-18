@@ -1,0 +1,4 @@
+mkdocs ~= 1.4.3
+mkdocs-material ~= 9.1.15
+mkdocs-material-extensions ~= 1.1.1
+mkdocs-redirects ~= 1.2.1

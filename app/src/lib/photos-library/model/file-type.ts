@@ -35,6 +35,15 @@ const EXT = {
     'com.nikon.raw-image': `nef`,
     'com.olympus.raw-image': `orf`,
     'public.avi': `avi`,
+    'com.adobe.pdf': `pdf`,
+    'public.avchd-mpeg-2-transport-stream': `mts`,
+    'com.adobe.illustrator.ai-image': `ai`,
+    'com.canon.cr3-raw-image': `cr3`,
+    'com.olympus.or-raw-image': `orf`,
+    'public.item': `largeThumbnail`,
+    'public.mpo-image': `mpo`,
+    'com.dji.mimo.pano.jpeg': `jpg`,
+    'public.avif': `avif`,
 };
 
 /**
@@ -59,11 +68,13 @@ export class FileType {
      * @param descriptor - The descriptor as provided by the backend
      * @param ext - The extension as provided by the encoded filename
      * @returns The newly created FileType
-     * @throws An Error, if the provided descriptor is unknown to the script
+     * @throws An iCPSError, if the provided descriptor is unknown to the script
      */
     static fromAssetType(descriptor: string, ext: string): FileType {
         if (!EXT[descriptor]) {
             throw new iCPSError(LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR)
+                .addContext(`extension`, ext)
+                .addContext(`descriptor`, descriptor)
                 .addMessage(`${descriptor} (with potential extension ${ext})`);
         }
 
@@ -74,7 +85,7 @@ export class FileType {
      * Creates a file type from a file extension
      * @param ext - The file extension of the file
      * @returns The newly created FileType
-     * @throws An error, if the provided extension is unknown to the script
+     * @throws An iCPSError, if the provided extension is unknown to the script
      */
     static fromExtension(ext: string): FileType {
         if (ext.startsWith(`.`)) {
@@ -84,6 +95,7 @@ export class FileType {
         const descriptor = Object.keys(EXT).find(key => EXT[key] === ext);
         if (!descriptor) {
             throw new iCPSError(LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION)
+                .addContext(`extension`, ext)
                 .addMessage(ext);
         }
 

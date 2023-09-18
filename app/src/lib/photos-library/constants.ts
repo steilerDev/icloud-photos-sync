@@ -7,6 +7,14 @@ export const ARCHIVE_DIR = `_Archive`;
 export const STASH_DIR = `.stash`;
 
 /**
- * A list of files, that are safe to ignore for the application.
+ * The version of the local photos library
  */
-export const SAFE_FILES = [`.DS_Store`];
+export const LIBRARY_VERSION = 1;
+
+/**
+ * A list of file patterns, that are safe to ignore for the application.
+ */
+export const SAFE_FILES = [
+    /^\.DS_Store$/,
+    /^\.fuse_hidden.*/,
+];

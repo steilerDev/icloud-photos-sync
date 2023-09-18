@@ -1,9 +1,7 @@
 import {ErrorStruct, ERR_UNKNOWN} from "./error-codes.js";
 
-type Severity = `WARN` | `FATAL`
-
 /**
- * Base class for this tool's error type
+ * Custom error class
  */
 export class iCPSError extends Error {
     /**
@@ -32,15 +30,15 @@ export class iCPSError extends Error {
     messages: string[] = [];
 
     /**
-     * The severity of this error - fatal by default
+     * If this error was reported, it will receive a UUID for future reference
      */
-    sev: Severity = `FATAL`;
+    btUUID?: string = undefined;
 
     /**
-     * Creates an application specific error using the provided
+     * Creates an application specific error using the provided data
      * @param err - The error structure
      */
-    constructor(err: ErrorStruct) {
+    constructor(err: ErrorStruct = ERR_UNKNOWN) {
         super(err.message);
 
         this.name = err.name;
@@ -70,7 +68,7 @@ export class iCPSError extends Error {
     }
 
     /**
-     * Adds a random object to this error as context for error reporting
+     * Adds any object to this error as context for error reporting
      * @param key - The key to store the object
      * @param ctx - The context
      * @returns This object for chaining convenience
@@ -91,20 +89,11 @@ export class iCPSError extends Error {
     }
 
     /**
-     * Sets the severity of this error to warning
-     * @returns This object for chaining convenience
-     */
-    setWarning(): iCPSError {
-        this.sev = `WARN`;
-        return this;
-    }
-
-    /**
      *
      * @returns A description for this error, containing its cause chain's description
      */
     getDescription(): string {
-        let desc = `${this.code} (${this.sev}): ${this.message}`;
+        let desc = `${this.code}: ${this.message}`;
 
         if (this.messages.length > 0) {
             desc += ` (${this.messages.join(`, `)})`;
@@ -119,26 +108,51 @@ export class iCPSError extends Error {
             }
         }
 
+        if (this.btUUID) {
+            desc += ` (error code: ${this.btUUID})`;
+        }
+
         return desc;
     }
 
     /**
-     * @returns the error code for the first thrown iCPSError
+     * Returns the root error code for this error.
+     * @param onlyICPSError - If set to true, will only take iCPS Errors into consideration
+     * @returns the error code for the first thrown error
      */
-    getRootErrorCode(): string {
+    getRootErrorCode(onlyICPSError: boolean = false): string {
+        // GetErrorCodeStack returns at least one item
+        return this.getErrorCodeStack(onlyICPSError).pop()!;
+    }
+
+    /**
+     * Returns the list of error codes associated to this error.
+     * @param onlyICPSError - If set to true, will only take iCPS Errors into consideration
+     * @returns The stack of thrown errors, where 'last()' is the root cause
+     */
+    getErrorCodeStack(onlyICPSError: boolean = false): string[] {
+        const errorCodeStack = [this.code];
         if (!this.cause) {
-            return this.code;
+            return errorCodeStack;
         }
 
         if (this.cause instanceof iCPSError) {
-            return this.cause.getRootErrorCode();
+            errorCodeStack.push(...this.cause.getErrorCodeStack(onlyICPSError));
+            return errorCodeStack;
+        }
+
+        // If we only want to get iCPSError codes, at this point the root cause is non-iCPS - therefore returning only this error's code
+        if (onlyICPSError) {
+            return errorCodeStack;
         }
 
         if (Object.hasOwn(this.cause, `code`)) {
-            return `EXT#${(this.cause as any).code}`;
+            errorCodeStack.push(`EXT#${(this.cause as any).code}`);
+            return errorCodeStack;
         }
 
-        return `UNKNOWN_ROOT_ERROR`;
+        errorCodeStack.push(`NO_ROOT_ERROR_CODE`);
+        return errorCodeStack;
     }
 
     /**
@@ -151,7 +165,7 @@ export class iCPSError extends Error {
             return err;
         }
 
-        const _err = new iCPSError(ERR_UNKNOWN);
+        const _err = new iCPSError();
 
         if (err instanceof Error) {
             return _err.addCause(err);

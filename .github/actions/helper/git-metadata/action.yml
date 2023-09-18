@@ -1,0 +1,21 @@
+name: git-metadata
+description: Reads and returns git metadata
+outputs:
+  current-tag:
+    description: The tag of the current commit, might be empty
+    value: ${{ steps.get-config.outputs.current-tag }}
+  name:
+    description: The name of the git repository
+    value: ${{ steps.get-config.outputs.name }}
+  owner:
+    description: The name of the git repository owner
+    value: ${{ steps.get-config.outputs.owner }}
+runs:
+  using: "composite"
+  steps:
+    - id: get-config
+      shell: bash
+      run: |
+        echo "owner=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+        echo "name=${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
+        echo "current-tag=$(git tag --points-at HEAD | head -n 1)" >> $GITHUB_OUTPUT

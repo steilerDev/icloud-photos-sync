@@ -3,16 +3,8 @@ import {buildErrorStruct, ErrorStruct} from "../error-codes.js";
 const name = `iCloudPhotosError`;
 const prefix = `ICLOUD_PHOTOS`;
 
-export const NOT_FOUND: ErrorStruct = buildErrorStruct(
-    name, prefix, `NOT_FOUND`, `iCloud Photos object does not exist`,
-);
-
 export const SETUP_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `SETUP_FAILED`, `Unable to get iCloud Photos service ready`,
-);
-
-export const DOMAIN_MISSING: ErrorStruct = buildErrorStruct(
-    name, prefix, `DOMAIN_MISSING`, `Unable to get service endpoint: Photos Domain not defined`,
 );
 
 export const SETUP_ERROR: ErrorStruct = buildErrorStruct(
@@ -37,10 +29,6 @@ export const UNEXPECTED_QUERY_RESPONSE: ErrorStruct = buildErrorStruct(
 
 export const UNEXPECTED_OPERATIONS_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `UNEXPECTED_OPERATIONS_RESPONSE`, `Received unexpected operations response format`,
-);
-
-export const ALBUM_PROCESSING: ErrorStruct = buildErrorStruct(
-    name, prefix, `ALBUM_PROCESSING`, `Error while processing album`,
 );
 
 export const FOLDER_STRUCTURE: ErrorStruct = buildErrorStruct(
@@ -81,12 +69,4 @@ export const COUNT_DATA: ErrorStruct = buildErrorStruct(
 
 export const FETCH_RECORDS: ErrorStruct = buildErrorStruct(
     name, prefix, `FETCH_RECORDS`, `Unable to fetch records`,
-);
-
-export const FILTER_RECORDS: ErrorStruct = buildErrorStruct(
-    name, prefix, `FILTER_RECORDS`, `Unable to filter records`,
-);
-
-export const COUNT_MISMATCH: ErrorStruct = buildErrorStruct(
-    name, prefix, `COUNT_MISMATCH`, `Received unexpected amount of records`,
 );

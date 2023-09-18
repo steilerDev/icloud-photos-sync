@@ -1,0 +1,7 @@
+name: release-docs-setup
+description: Sets up the docs release environment
+runs:
+  using: composite
+  steps:
+    - id: configure-pages
+      uses: actions/configure-pages@v3

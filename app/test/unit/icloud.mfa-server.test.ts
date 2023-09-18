@@ -1,22 +1,30 @@
 
-import {expect, describe, test, jest} from '@jest/globals';
-import {HANDLER_EVENT} from '../../src/app/event/error-handler';
-import {EVENTS, ENDPOINT} from '../../src/lib/icloud/mfa/constants';
+import {expect, describe, test, jest, beforeEach} from '@jest/globals';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import * as PACKAGE from '../../src/lib/package';
-import {mfaServerFactory, requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
-import {spyOnEvent} from '../_helpers/_general';
+import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
+import {MockedEventManager, prepareResources} from '../_helpers/_general';
+import {MFAServer, MFA_SERVER_ENDPOINTS} from '../../src/lib/icloud/mfa/mfa-server';
+import {iCPSEventMFA, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
+import {MFA_ERR} from '../../src/app/error/error-codes';
+import {iCPSError} from '../../src/app/error/error';
+
+let server: MFAServer;
+let mockedEventManager: MockedEventManager;
+
+beforeEach(() => {
+    mockedEventManager = prepareResources()!.event;
+    server = new MFAServer();
+});
 
 describe(`MFA Code`, () => {
     test(`Valid Code format`, () => {
         const code = `123456`;
         const mfaMethod = new MFAMethod(`device`);
 
-        const server = mfaServerFactory();
-        server.sendResponse = jest.fn();
-        const mfaReceivedEvent = spyOnEvent(server, EVENTS.MFA_RECEIVED);
+        server.sendResponse = jest.fn<typeof server.sendResponse>();
+        const mfaReceivedEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RECEIVED);
 
-        const req = requestFactory(`${ENDPOINT.CODE_INPUT}?code=${code}`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?code=${code}`);
         const res = responseFactory();
 
         server.handleMFACode(req, res);
@@ -28,30 +36,31 @@ describe(`MFA Code`, () => {
     test(`Invalid code format`, () => {
         const code = `123 456`;
 
-        const server = mfaServerFactory();
-        server.sendResponse = jest.fn();
-        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        server.sendResponse = jest.fn<typeof server.sendResponse>();
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
-        const req = requestFactory(`${ENDPOINT.CODE_INPUT}?code=${code}`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?code=${code}`);
         const res = responseFactory();
 
         server.handleMFACode(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
-        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Received unexpected MFA code format, expecting 6 digits`));
+        expect(warnEvent).toHaveBeenCalledWith(new Error(`Received unexpected MFA code format, expecting 6 digits`));
     });
 });
 
 describe(`MFA Resend`, () => {
+    beforeEach(() => {
+        server.sendResponse = jest.fn<typeof server.sendResponse>();
+    });
+
     test(`In app resend`, () => {
         const method = `device`;
         const mfaMethod = new MFAMethod(method);
 
-        const server = mfaServerFactory();
-        server.sendResponse = jest.fn();
-        const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
+        const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-        const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
         const res = responseFactory();
 
         server.handleMFAResend(req, res);
@@ -64,11 +73,9 @@ describe(`MFA Resend`, () => {
         test(`Default id`, () => {
             const mfaMethod = new MFAMethod(method as `sms` | `voice`);
 
-            const server = mfaServerFactory();
-            server.sendResponse = jest.fn();
-            const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
+            const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
+            const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
             const res = responseFactory();
 
             server.handleMFAResend(req, res);
@@ -81,11 +88,10 @@ describe(`MFA Resend`, () => {
             const phoneNumberId = 3;
             const mfaMethod = new MFAMethod(method as `sms` | `voice`, phoneNumberId);
 
-            const server = mfaServerFactory();
-            server.sendResponse = jest.fn();
-            const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
+            server.sendResponse = jest.fn<typeof server.sendResponse>();
+            const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
+            const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
             const res = responseFactory();
 
             server.handleMFAResend(req, res);
@@ -98,11 +104,9 @@ describe(`MFA Resend`, () => {
             const phoneNumberId = `invalid`;
             const mfaMethod = new MFAMethod(method as `sms` | `voice`);
 
-            const server = mfaServerFactory();
-            server.sendResponse = jest.fn();
-            const mfaResendEvent = spyOnEvent(server, EVENTS.MFA_RESEND);
+            const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-            const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
+            const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
             const res = responseFactory();
 
             server.handleMFAResend(req, res);
@@ -115,124 +119,39 @@ describe(`MFA Resend`, () => {
     test(`Invalid resend method`, () => {
         const method = `invalid`;
 
-        const server = mfaServerFactory();
-        server.sendResponse = jest.fn();
-        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
-        const req = requestFactory(`${ENDPOINT.RESEND_CODE}?method=${method}`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
         const res = responseFactory();
 
         server.handleMFAResend(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Resend method does not match expected format`);
-        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Resend method does not match expected format`));
-    });
-
-    describe(`Process resend errors`, () => {
-        describe.each([`sms`, `voice`, `device`])(`Common errors`, method => {
-            test(`Unknown error`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                expect(mfaMethod.processResendError(new Error())).toEqual(new Error(`No response received`));
-            });
-
-            test(`Timeout`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                const error = {
-                    "name": `AxiosError`,
-                    "response": {
-                        "status": 403,
-                    },
-                };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`Timeout`));
-            });
-
-            test(`No response data`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                const error = {
-                    "name": `AxiosError`,
-                    "response": {
-                        "status": 412,
-                    },
-                };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`Precondition Failed (412) with no response`));
-            });
-
-            test(`Unexpected status code`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                const error = {
-                    "name": `AxiosError`,
-                    "response": {
-                        "status": 500,
-                    },
-                };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`Unknown error, while trying to resend MFA code`));
-            });
-        });
-
-        describe.each([`sms`, `voice`])(`Phone errors`, method => {
-            test(`No trusted phone numbers`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                const error = {
-                    "name": `AxiosError`,
-                    "response": {
-                        "status": 412,
-                        "data": {},
-                    },
-                };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`No trusted phone numbers registered`));
-            });
-
-            test(`Phone number ID does not exist`, () => {
-                const mfaMethod = new MFAMethod(method as `sms` | `voice` | `device`);
-                const error = {
-                    "name": `AxiosError`,
-                    "response": {
-                        "status": 412,
-                        "data": {
-                            "trustedPhoneNumbers": [
-                                {
-                                    "id": 2,
-                                    "numberWithDialCode": `+49-123-456`,
-                                },
-                                {
-                                    "id": 3,
-                                    "numberWithDialCode": `+49-789-123`,
-                                },
-                            ],
-                        },
-                    },
-                };
-                expect(mfaMethod.processResendError(error)).toEqual(new Error(`Selected Phone Number ID does not exist.`));
-            });
-        });
+        expect(warnEvent).toHaveBeenCalledWith(new Error(`Resend method does not match expected format`));
     });
 });
 
 describe(`Request routing`, () => {
+    beforeEach(() => {
+        server.sendResponse = jest.fn<typeof server.sendResponse>();
+        server.handleMFAResend = jest.fn<typeof server.handleMFAResend>();
+        server.handleMFACode = jest.fn<typeof server.handleMFACode>();
+    });
+
     test(`GET /`, () => {
         const req = requestFactory(`/`, `GET`);
         const res = responseFactory();
 
-        const server = mfaServerFactory();
-        server.sendResponse = jest.fn();
-        server.handleMFAResend = jest.fn();
-        server.handleMFACode = jest.fn();
-
         server.handleRequest(req, res);
 
-        expect(server.sendResponse).toHaveBeenCalledWith(res, 200, `MFA Server up & running - ${PACKAGE.NAME}@v${PACKAGE.VERSION}`);
+        expect(server.sendResponse).toHaveBeenCalledWith(res, 200, `MFA Server up & running - icloud-photos-sync@v0.0.0-development`);
         expect(server.handleMFACode).not.toHaveBeenCalled();
         expect(server.handleMFAResend).not.toHaveBeenCalled();
     });
 
     test(`POST /ENDPOINT.CODE_INPUT`, () => {
-        const req = requestFactory(`${ENDPOINT.CODE_INPUT}?testparam=abc`, `POST`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?testparam=abc`, `POST`);
         const res = responseFactory();
-
-        const server = mfaServerFactory();
-        server.sendResponse = jest.fn();
-        server.handleMFAResend = jest.fn();
-        server.handleMFACode = jest.fn();
 
         server.handleRequest(req, res);
 
@@ -242,13 +161,8 @@ describe(`Request routing`, () => {
     });
 
     test(`POST /ENDPOINT.RESEND_CODE`, () => {
-        const req = requestFactory(`${ENDPOINT.RESEND_CODE}?testparam=abc`, `POST`);
+        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?testparam=abc`, `POST`);
         const res = responseFactory();
-
-        const server = mfaServerFactory();
-        server.sendResponse = jest.fn();
-        server.handleMFAResend = jest.fn();
-        server.handleMFACode = jest.fn();
 
         server.handleRequest(req, res);
 
@@ -262,16 +176,12 @@ describe(`Request routing`, () => {
         const req = requestFactory(`/invalid`, method);
         const res = responseFactory();
 
-        const server = mfaServerFactory();
-        server.sendResponse = jest.fn();
-        server.handleMFAResend = jest.fn();
-        server.handleMFACode = jest.fn();
-        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
         server.handleRequest(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 400, `Method not supported: ${method}`);
-        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Received request with unsupported method`));
+        expect(warnEvent).toHaveBeenCalledWith(new Error(`Received request with unsupported method`));
         expect(server.handleMFAResend).not.toHaveBeenCalled();
         expect(server.handleMFACode).not.toHaveBeenCalled();
     });
@@ -281,45 +191,103 @@ describe(`Request routing`, () => {
         const req = requestFactory(method, `POST`);
         const res = responseFactory();
 
-        const server = mfaServerFactory();
-        server.sendResponse = jest.fn();
-        server.handleMFAResend = jest.fn();
-        server.handleMFACode = jest.fn();
-        const handlerEvent = spyOnEvent(server, HANDLER_EVENT);
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
         server.handleRequest(req, res);
 
         expect(server.sendResponse).toHaveBeenCalledWith(res, 404, `Route not found, available endpoints: ["/mfa","/resend_mfa"]`);
-        expect(handlerEvent).toHaveBeenCalledWith(new Error(`Received request to unknown endpoint`));
+        expect(warnEvent).toHaveBeenCalledWith(new Error(`Received request to unknown endpoint`));
         expect(server.handleMFAResend).not.toHaveBeenCalled();
         expect(server.handleMFACode).not.toHaveBeenCalled();
     });
 });
 
 describe(`Server lifecycle`, () => {
+    jest.useFakeTimers();
+
     test(`Startup`, () => {
-        const server = mfaServerFactory();
-        server.server.listen = jest.fn() as any;
+        server.server.listen = jest.fn<typeof server.server.listen>() as any;
 
         server.startServer();
         expect((server.server.listen as any).mock.lastCall[0]).toEqual(80);
+        expect(server.mfaTimeout).toBeDefined();
+        clearTimeout(server.mfaTimeout);
+    });
+
+    test(`Startup Error`, () => {
+        server.server.listen = jest.fn<typeof server.server.listen>(() => {
+            throw new Error(`some server error`);
+        }) as any;
+
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
+
+        server.startServer();
+
+        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.STARTUP_FAILED));
+
+        expect(server.mfaTimeout).toBeUndefined();
     });
 
     test(`Shutdown`, () => {
-        const server = mfaServerFactory();
-        const closeFn = jest.fn() as any;
-        server.server.close = closeFn;
+        const closeFunction = jest.fn<typeof server.server.close>();
+        server.server.close = closeFunction;
+
+        const timeoutFunction = jest.fn();
+        server.mfaTimeout = setTimeout(() => timeoutFunction, 1000);
 
         server.stopServer();
-        expect(closeFn).toHaveBeenCalled();
+        jest.advanceTimersByTime(1001);
+
+        expect(closeFunction).toHaveBeenCalled();
         expect(server.server).toBeUndefined();
+        expect(server.mfaTimeout).toBeUndefined();
+        expect(timeoutFunction).not.toHaveBeenCalled();
     });
 
     test(`Send response`, () => {
         const res = responseFactory();
-        const server = mfaServerFactory();
         server.sendResponse(res, 200, `test`);
         expect(res.writeHead).toHaveBeenCalledWith(200, {"Content-Type": `application/json`});
         expect(res.end).toHaveBeenCalledWith(`{"message":"test"}`);
+    });
+
+    test(`Handle unknown server error`, () => {
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
+        server.server.emit(`error`, new Error(`some server error`));
+
+        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.SERVER_ERR));
+    });
+
+    test(`Handle address in use error`, () => {
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
+        const error = new Error(`Address in use`);
+        (error as any).code = `EADDRINUSE`;
+        server.server.emit(`error`, new Error(`Address in use`));
+
+        expect(errorEvent).toHaveBeenCalledWith(new Error(`HTTP Server Error`));
+    });
+
+    test(`Handle MFA timeout`, () => {
+        server.server.listen = jest.fn<typeof server.server.listen>() as any;
+        server.stopServer = jest.fn<typeof server.stopServer>();
+
+        const timeoutEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_NOT_PROVIDED);
+
+        server.startServer();
+
+        // Not called on start server
+        expect(timeoutEvent).not.toHaveBeenCalled();
+        expect(server.stopServer).not.toHaveBeenCalled();
+
+        // Advancing time slightly before timeout occurs
+        const timeoutValue = 1000 * 60 * 10;
+        jest.advanceTimersByTime(timeoutValue - 1);
+        expect(timeoutEvent).not.toHaveBeenCalled();
+        expect(server.stopServer).not.toHaveBeenCalled();
+
+        // Timers should have been called now
+        jest.advanceTimersByTime(2);
+        expect(timeoutEvent).toHaveBeenCalledWith(new MFAMethod(), new Error(`MFA server timeout (code needs to be provided within 10 minutes)`));
+        expect(server.stopServer).toHaveBeenCalled();
     });
 });

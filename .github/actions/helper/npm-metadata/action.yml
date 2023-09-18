@@ -1,0 +1,25 @@
+name: npm-metadata
+description: Extracts metadata from the npm package
+inputs:
+  package:
+    description: The path to the package.json file containing the metadata
+    required: true
+outputs:
+  version:
+    description: The current version of the npm package
+    value: ${{ steps.get-config.outputs.version }}
+  name:
+    description: The name of the npm package
+    value: ${{ steps.get-config.outputs.name }}
+  command:
+    description: The command name of the installable binary
+    value: ${{ steps.get-config.outputs.command }} 
+runs:
+  using: composite
+  steps:
+    - id: get-config
+      shell: bash
+      run: |
+        echo "version=$(jq -r .version ${{ inputs.package }})" >> $GITHUB_OUTPUT
+        echo "name=$(jq -r .name ${{ inputs.package }})" >> $GITHUB_OUTPUT
+        echo "command=$(jq .bin ${{ inputs.package }} | jq -r 'keys[0]')" >> $GITHUB_OUTPUT

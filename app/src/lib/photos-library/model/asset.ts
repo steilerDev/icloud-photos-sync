@@ -8,6 +8,7 @@ import {iCPSError} from '../../../app/error/error.js';
 import {LIBRARY_ERR} from '../../../app/error/error-codes.js';
 import {Zones} from '../../icloud/icloud-photos/query-builder.js';
 import {PRIMARY_ASSET_DIR, SHARED_ASSET_DIR} from '../constants.js';
+import {Resources} from '../../resources/main.js';
 
 /**
  * Representing the possible asset types
@@ -119,6 +120,7 @@ export class Asset implements PEntity<Asset> {
      * @param assetType - If this asset is the original or an edit
      * @param zone - Specifies the zone this asset is belonging to
      * @returns An Asset based on the backend objects
+     * @throws An iCPSError, if the asset file descriptor is not supported
      */
     static fromCPL(asset: AssetID, fileTypeDescriptor: string, fileTypeExt: string, modified: number, origFilename: string, assetType: AssetType, recordName: string, isFavorite: number, zone: string): Asset {
         return new Asset(
@@ -143,6 +145,7 @@ export class Asset implements PEntity<Asset> {
      * @param stats - The metadata associated with the file
      * @param zone - Specifies the zone this asset is belonging to
      * @returns An Asset based on the file information
+     * @throws An iCPSError, if the asset file extension is not supported
      */
     static fromFile(fileName: string, stats: Stats, zone: Zones): Asset {
         return new Asset(
@@ -164,7 +167,7 @@ export class Asset implements PEntity<Asset> {
                 && this.fileChecksum === asset.fileChecksum
                 && this.fileType.equal(asset.fileType)
                 && this.size === asset.size
-                && this.withinRange(this.modified, asset.modified, 10);
+                && this.withinRange(this.modified, asset.modified, 1000);
     }
 
     /**
@@ -178,13 +181,12 @@ export class Asset implements PEntity<Asset> {
 
     /**
      *
-     * @param dataDir - The photos data dir
      * @returns The full asset file path under the provided directory
      */
-    getAssetFilePath(dir: string) {
+    getAssetFilePath() {
         return path.format({
-            "dir": path.join(dir, this.zone === Zones.Primary ? PRIMARY_ASSET_DIR : SHARED_ASSET_DIR),
-            "name": this.getAssetFilename(),
+            dir: path.join(Resources.manager().dataDir, this.zone === Zones.Primary ? PRIMARY_ASSET_DIR : SHARED_ASSET_DIR),
+            name: this.getAssetFilename(),
         });
     }
 
@@ -194,8 +196,8 @@ export class Asset implements PEntity<Asset> {
      */
     getAssetFilename(): string {
         return path.format({
-            "name": Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
-            "ext": this.fileType.getExtension(),
+            name: Buffer.from(this.fileChecksum, `base64`).toString(`base64url`), // Since checksum seems to be base64 encoded
+            ext: this.fileType.getExtension(),
         });
     }
 
@@ -205,8 +207,8 @@ export class Asset implements PEntity<Asset> {
      */
     getPrettyFilename(): string {
         return path.format({
-            "name": this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``) + (this.assetType === AssetType.LIVE ? `-live` : ``),
-            "ext": this.fileType.getExtension(),
+            name: this.origFilename + (this.assetType === AssetType.EDIT ? `-edited` : ``) + (this.assetType === AssetType.LIVE ? `-live` : ``),
+            ext: this.fileType.getExtension(),
         });
     }
 
@@ -224,8 +226,9 @@ export class Asset implements PEntity<Asset> {
      * @returns True if the provided file matches this object representation
      * @throws An error, if verification fails
      */
-    async verify(filePath: string): Promise<boolean> {
+    async verify(): Promise<boolean> {
         let fileStat: Stats;
+        const filePath = this.getAssetFilePath();
         try {
             fileStat = await fs.stat(filePath);
         } catch (err) {

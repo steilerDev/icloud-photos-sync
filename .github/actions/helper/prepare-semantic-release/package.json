@@ -1,0 +1,13 @@
+{
+    "description": "dependencies for releasing semantic release",
+    "devDependencies": {
+        "semantic-release": "^21.0.5",
+        "@semantic-release/release-notes-generator": "^11.0.3",
+        "conventional-changelog": "^4.0.0",
+        "conventional-changelog-conventionalcommits": "^6.1.0",
+        "@backtrace-labs/javascript-cli": "^0.0.1",
+        "@semantic-release-plus/docker": "^3.1.2",
+        "@semantic-release/github": "^9.0.3"
+  }
+}
+  

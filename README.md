@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://steilerdev.github.io/icloud-photos-sync/">
-    <img alt="icloud-photos-sync Logo" src="https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png">
+  <a href="https://icps.steiler.dev/">
+    <img alt="icloud-photos-sync Logo" src="https://icps.steiler.dev/assets/icloud-photos-sync-open-graph.png">
   </a>
 </p>
 
@@ -19,33 +19,27 @@
 </p>
 <hr>
 <p align="center">
-  <a href="https://steilerdev.github.io/icloud-photos-sync/get-started/">
+  <a href="https://icps.steiler.dev/get-started/">
     <img alt="Get Started" src="https://img.shields.io/static/v1?label=&message=Get%20Started&color=important&style=for-the-badge&logo=readthedocs&logoColor=white" style="width: 50%;">
   </a>
 </p>
 <p align="center">
-  <a href="https://steilerdev.github.io/icloud-photos-sync/user-guides/cli">
+  <a href="https://icps.steiler.dev/user-guides/cli">
     <img alt="CLI Reference" src="https://img.shields.io/static/v1?label=&message=CLI%20Reference&color=grey&style=for-the-badge" style="width: 30%;">
   </a>
 </p>
 <hr>
 <p align="center">
-  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml">
-    <img alt="API Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/api-test.yml?branch=main&label=API%20Status&style=for-the-badge&logo=githubactions&logoColor=white">
+  <a href="https://icps.steiler.dev/dev/coverage/">
+    <img alt="Test Coverage (Lines)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Lines%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.lines.pct&suffix=%25&url=https%3A%2F%2Ficps.steiler.dev%2Fdev%2Fcoverage%2Fcoverage-summary.json">
   </a>
-  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/dev-release.yml">
-    <img alt="Development Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/dev-release.yml?branch=dev&label=Dev%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
-  </a>
-  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/prod-release.yml">
-    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/prod-release.yml?branch=v1.1.0&label=Prod%20Release&style=for-the-badge&logo=githubactions&logoColor=white">
+  <a href="https://icps.steiler.dev/dev/coverage/">
+    <img alt="Test Coverage (Functions)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Functions%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.functions.pct&suffix=%25&url=https%3A%2F%2Ficps.steiler.dev%2Fdev%2Fcoverage%2Fcoverage-summary.json">
   </a>
 </p>
 <p align="center">
-  <a href="https://steilerdev.github.io/icloud-photos-sync/dev/coverage/">
-    <img alt="Test Coverage (Lines)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Lines%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.lines.pct&suffix=%25&url=https%3A%2F%2Fsteilerdev.github.io%2Ficloud-photos-sync%2Fdev%2Fcoverage%2Fcoverage-summary.json">
-  </a>
-  <a href="https://steilerdev.github.io/icloud-photos-sync/dev/coverage/">
-    <img alt="Test Coverage (Functions)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Functions%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.functions.pct&suffix=%25&url=https%3A%2F%2Fsteilerdev.github.io%2Ficloud-photos-sync%2Fdev%2Fcoverage%2Fcoverage-summary.json">
+  <a href="https://github.com/steilerDev/icloud-photos-sync/blob/main/CODE_OF_CONDUCT.md">
+    <img alt="Code of Conduct" src="https://img.shields.io/badge/Contributor_Covenant-2.1-blue?style=for-the-badge">
   </a>
 </p>
 <hr>
@@ -62,10 +56,10 @@ This CLI Application offers the following high level functionality:
   <p>
     <ul>
       <li>iCloud Shared Photo Library support</li>
-      <li>Support of MFA authentication through trusted devices, SMS and voice authentication - [Security Key Support pending, please help out if you have this use case](https://github.com/steilerDev/icloud-photos-sync/issues/207)!</li>
+      <li>Support of MFA authentication through trusted devices, SMS and voice authentication - <a href="https://github.com/steilerDev/icloud-photos-sync/issues/207">Security Key Support pending, please help out if you have this use case</a>!</li>
       <li>Enable autonomous operation, by caching of MFA trust token</li>
       <li>Support of large libraries, through efficient diffing algorithm instead of full library pull</li>
-      <li>Full iCloud Photos Library backup with all important files in their original state and edits - [Live Photos support pending](https://github.com/steilerDev/icloud-photos-sync/issues/121)</li>
+      <li>Full iCloud Photos Library backup with all important files in their original state and edits - <a href="https://github.com/steilerDev/icloud-photos-sync/issues/121">Live Photos support pending</a></li>
     </ul>
   </p>
 </details>
@@ -106,7 +100,9 @@ This CLI Application offers the following high level functionality:
 
 ## Documentation
 
-A [*Get Started Guide* can be found on GH Pages](https://steilerdev.github.io/icloud-photos-sync/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://steilerdev.github.io/icloud-photos-sync/dev/motivation/) - are published there as well.
+A [*Get Started Guide* can be found on GH Pages](https://icps.steiler.dev/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://icps.steiler.dev/dev/motivation/) - are published there as well. 
+
+I am also trying to publish regular updates on the progress of this project in a [development blog](https://github.com/steilerDev/icloud-photos-sync/discussions/305).
 
 ## Limitations
 
@@ -136,6 +132,26 @@ As this application is using an undocumented public API, there are a couple of k
 
 ## Contributing & Feedback
 
-Please re-try the sync a couple of times before reporting an issue. The application will reload from the filesystem and therefore recover from "corrupted" states. After that, check [known issues](https://github.com/steilerDev/icloud-photos-sync/labels/known%20issue) before [opening an issue](https://github.com/steilerDev/icloud-photos-sync/issues/new?assignees=&labels=open&template=issue-template.md&title=). Always [enable crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/), so this crash and all required technical details are recorded and reported.
+Please check the [contributing guidelines](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md) to learn how to engage with this project.
 
-Pull requests are always welcomed! Please open them against the `dev` branch for quick consideration. I tried to make this codebase as maintainable and automated as possible, in order to make future releases and contributions quick and easy, while ensuring functionality. This includes [unit](https://steilerdev.github.io/icloud-photos-sync/dev/coverage/), [API](https://github.com/steilerDev/icloud-photos-sync/actions/workflows/api-test.yml) & [E2E](https://github.com/steilerDev/icloud-photos-sync/tree/main/docker/test) tests.
+### Release Workflow
+
+<p align="center">
+  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/event_push.yml">
+    <img alt="Nightly Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/event_push.yml?branch=dev&label=Nightly&style=for-the-badge&logo=githubactions&logoColor=white">
+  </a>
+  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/event_push.yml">
+    <img alt="Beta Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/event_push.yml?branch=beta&label=Beta&style=for-the-badge&logo=githubactions&logoColor=white">
+  </a>
+  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/event_push.yml">
+    <img alt="Production Release Status" src="https://img.shields.io/github/actions/workflow/status/steilerDev/icloud-photos-sync/event_push.yml?branch=main&label=Production&style=for-the-badge&logo=githubactions&logoColor=white">
+  </a>
+</p>
+
+### Monitoring Workflow
+
+<p align="center">
+  <a href="https://github.com/steilerDev/icloud-photos-sync/actions/workflows/monitor_api.yml">
+    <img alt="API Status" src="https://img.shields.io/github/actions/workflow/status/steilerdev/icloud-photos-sync/monitor_api.yml?branch=main&event=schedule&style=for-the-badge&logo=githubactions&logoColor=white&label=API%20Status">
+  </a>
+</p>

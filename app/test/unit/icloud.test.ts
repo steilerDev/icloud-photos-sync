@@ -1,795 +1,753 @@
-import mockfs from 'mock-fs';
-import {describe, test, beforeEach, afterEach, expect, jest} from '@jest/globals';
-import path from 'path';
-import * as ICLOUD from '../../src/lib/icloud/constants';
-import {appDataDir} from '../_helpers/_config';
-import fs from 'fs';
-import {iCloudAuth} from '../../src/lib/icloud/auth';
-import {AxiosRequestConfig} from 'axios';
+import {MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources} from '../_helpers/_general';
+import {describe, test, beforeEach, expect, jest} from '@jest/globals';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import {expectedAxiosPost, expectedAxiosPut} from '../_helpers/icloud-mfa.helper';
-import * as ICLOUD_PHOTOS from '../../src/lib/icloud/icloud-photos/constants';
-import {spyOnEvent} from '../_helpers/_general';
-import {expectedICloudSetupHeaders, expectedTokenGetCall, getICloudCookieHeader, iCloudFactory, _defaultCliOpts} from '../_helpers/icloud.helper';
 import * as Config from '../_helpers/_config';
 import {iCloud} from '../../src/lib/icloud/icloud';
-import {getICloudCookies} from '../_helpers/icloud-auth.helper';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
-import {appWithOptions} from '../_helpers/app-factory.helper';
-import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import {MFA_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
+import {iCPSError} from '../../src/app/error/error';
+import {iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
+import {Resources} from '../../src/lib/resources/main';
 
-describe(`CLI Options`, () => {
-    test(`Refresh Token`, () => {
-        const cliOpts = _defaultCliOpts;
-        cliOpts.refreshToken = true;
-        const icloud = iCloudFactory(cliOpts);
-        expect(icloud.auth.iCloudAccountTokens.trustToken).toEqual(``);
-    });
+let mockedResourceManager: MockedResourceManager;
+let mockedEventManager: MockedEventManager;
+let mockedValidator: MockedValidator;
+let mockedNetworkManager: MockedNetworkManager;
+let icloud: iCloud;
 
-    // For some reason this 'throws' an error
-    test(`Fail on MFA`, async () => {
-        const cliOpts = _defaultCliOpts;
-        cliOpts.failOnMfa = true;
+beforeEach(() => {
+    const instances = prepareResources()!;
+    mockedResourceManager = instances.manager;
+    mockedEventManager = instances.event;
+    mockedValidator = instances.validator;
+    mockedNetworkManager = instances.network;
 
-        const icloud = new iCloud(appWithOptions(cliOpts));
-
-        icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
-        await expect(icloud.ready).rejects.toThrowError(new Error(`MFA code required, failing due to failOnMfa flag`));
-
-        expect(icloud.mfaServer.server.listening).toBeFalsy();
-    });
-
-    test(`MFA Server Startup error`, async () => {
-        const cliOpts = _defaultCliOpts;
-        cliOpts.failOnMfa = false;
-
-        const icloud = new iCloud(appWithOptions(cliOpts));
-
-        icloud.mfaServer.startServer = jest.fn(() => {
-            throw new Error(`Unable to start server`);
-        });
-
-        icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
-        await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to start MFA server`));
-
-        expect(icloud.mfaServer.server.listening).toBeFalsy();
-    });
-});
-
-describe(`Load Trust Token File`, () => {
-    beforeEach(() => {
-        mockfs({
-            [appDataDir]: {
-                [ICLOUD.TRUST_TOKEN_FILE_NAME]: Config.trustToken,
-            },
-        });
-    });
-
-    afterEach(() => {
-        mockfs.restore();
-    });
-
-    test(`Read token from file if no trust token is supplied`, () => {
-        const icloudAuth = new iCloudAuth(`testuser@steilerdev.de`, `testpassword`, ``, appDataDir);
-        expect(icloudAuth.iCloudAccountTokens.trustToken).toEqual(Config.trustToken);
-    });
-
-    test(`Don't read token file, if token is supplied`, () => {
-        const icloudAuth = new iCloudAuth(`testuser@steilerdev.de`, `testpassword`, Config.trustToken + `asdf`, appDataDir);
-        expect(icloudAuth.iCloudAccountTokens.trustToken).toEqual(Config.trustToken + `asdf`);
-    });
+    icloud = new iCloud();
 });
 
 describe(`Control structure`, () => {
+    jest.useFakeTimers();
     test(`TRUSTED event triggered`, () => {
-        const icloud = new iCloud(appWithOptions(_defaultCliOpts));
-        icloud.setupAccount = jest.fn(() => Promise.resolve());
+        icloud.setupAccount = jest.fn<typeof icloud.setupAccount>()
+            .mockResolvedValue();
 
-        icloud.emit(ICLOUD.EVENTS.TRUSTED);
+        mockedEventManager.emit(iCPSEventCloud.TRUSTED);
 
         expect(icloud.setupAccount).toHaveBeenCalled();
     });
-    test(`AUTHENTICATED event triggered`, () => {
-        const icloud = new iCloud(appWithOptions(_defaultCliOpts));
-        icloud.getTokens = jest.fn(() => Promise.resolve());
 
-        icloud.emit(ICLOUD.EVENTS.AUTHENTICATED);
+    test(`AUTHENTICATED event triggered`, () => {
+        icloud.getTokens = jest.fn<typeof icloud.getTokens>()
+            .mockResolvedValue();
+
+        mockedEventManager.emit(iCPSEventCloud.AUTHENTICATED);
 
         expect(icloud.getTokens).toHaveBeenCalled();
     });
-    test(`ACCOUNT_READY event triggered`, () => {
-        const icloud = new iCloud(appWithOptions(_defaultCliOpts));
-        icloud.getPhotosReady = jest.fn(() => Promise.resolve());
 
-        icloud.emit(ICLOUD.EVENTS.ACCOUNT_READY);
+    test(`ACCOUNT_READY event triggered`, () => {
+        icloud.getPhotosReady = jest.fn<typeof icloud.getPhotosReady>()
+            .mockResolvedValue();
+
+        mockedEventManager.emit(iCPSEventCloud.ACCOUNT_READY);
 
         expect(icloud.getPhotosReady).toHaveBeenCalled();
     });
-});
 
-describe(`Authenticate`, () => {
-    test.todo(`Expected call for authentication!`);
-    test(`Authentication - Valid Trust Token`, async () => {
-        const icloud = iCloudFactory();
-        // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
-        icloud.ready = new Promise<void>((resolve, _reject) => {
-            icloud.once(ICLOUD.EVENTS.TRUSTED, resolve);
+    test(`SESSION_EXPIRED event triggered`, () => {
+        icloud.authenticate = jest.fn<typeof icloud.authenticate>()
+            .mockResolvedValue(true);
+
+        mockedEventManager.emit(iCPSEventCloud.SESSION_EXPIRED);
+
+        expect(icloud.authenticate).toHaveBeenCalled();
+    });
+
+    describe(`MFA_REQUIRED event triggered`, () => {
+        test(`Start MFA Server`, () => {
+            icloud.mfaServer.startServer = jest.fn<typeof icloud.mfaServer.startServer>();
+
+            mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
+
+            expect(icloud.mfaServer.startServer).toHaveBeenCalled();
         });
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-        const trustedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.TRUSTED);
-        const errorEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR);
 
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "headers": {
-                "x-apple-session-token": Config.iCloudAuthSecrets.sessionId,
-                "scnt": Config.iCloudAuthSecrets.scnt,
-                "set-cookie": [
-                    `dslang=US-EN; Domain=apple.com; Path=/; Secure; HttpOnly`,
-                    `site=USA; Domain=apple.com; Path=/; Secure; HttpOnly`,
-                    `acn01=; Max-Age=0; Expires=Thu, 01-Jan-1970 00:00:10 GMT; Domain=apple.com; Path=/; Secure; HttpOnly`,
-                    `aasp=${Config.iCloudAuthSecrets.aasp}; Domain=idmsa.apple.com; Path=/; Secure; HttpOnly`,
-                ],
-            },
-        }));
+        test(`MFA Server Startup error`, async () => {
+            const iCloudReady = icloud.getReady();
+            mockedEventManager.emit(iCPSEventMFA.ERROR, new iCPSError(MFA_ERR.STARTUP_FAILED));
 
-        await icloud.authenticate();
-        expect(authenticationEvent).toHaveBeenCalled();
-        expect(trustedEvent).toHaveBeenCalled();
-        expect(errorEvent).not.toHaveBeenCalled();
-        expect(icloud.auth.iCloudAuthSecrets).toEqual(Config.iCloudAuthSecrets);
-    });
-
-    test(`Authentication - Invalid Trust Token - MFA Required`, async () => {
-        const icloud = iCloudFactory();
-        // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
-        icloud.ready = new Promise<void>((resolve, _reject) => {
-            icloud.once(ICLOUD.EVENTS.MFA_REQUIRED, resolve);
+            await expect(iCloudReady).rejects.toThrow(/^Unable to start MFA server$/);
         });
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-        const mfaEvent = spyOnEvent(icloud, ICLOUD.EVENTS.MFA_REQUIRED);
-        const trustedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.TRUSTED);
-        const errorEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR);
-        const responseError = new Error(`Conflict`);
 
-        (responseError as any).response = {
-            "status": 409,
-            "headers": {
-                "x-apple-session-token": Config.iCloudAuthSecrets.sessionId,
-                "scnt": Config.iCloudAuthSecrets.scnt,
-                "set-cookie": [
-                    `dslang=US-EN; Domain=apple.com; Path=/; Secure; HttpOnly`,
-                    `site=USA; Domain=apple.com; Path=/; Secure; HttpOnly`,
-                    `acn01=; Max-Age=0; Expires=Thu, 01-Jan-1970 00:00:10 GMT; Domain=apple.com; Path=/; Secure; HttpOnly`,
-                    `aasp=${Config.iCloudAuthSecrets.aasp}; Domain=idmsa.apple.com; Path=/; Secure; HttpOnly`,
-                ],
-            },
-        };
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
+        test(`Fail on MFA`, async () => {
+            mockedResourceManager._resources.failOnMfa = true;
+            const iCloudReady = icloud.getReady();
 
-        await icloud.authenticate();
+            icloud.mfaServer.startServer = jest.fn<typeof icloud.mfaServer.startServer>();
 
-        expect(trustedEvent).not.toHaveBeenCalled();
-        expect(authenticationEvent).toHaveBeenCalled();
-        expect(mfaEvent).toHaveBeenCalledWith(0);
-        expect(errorEvent).not.toHaveBeenCalled();
-        expect(icloud.auth.iCloudAuthSecrets).toEqual(Config.iCloudAuthSecrets);
+            mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
+
+            await expect(iCloudReady).rejects.toThrow(/^MFA code required, failing due to failOnMfa flag$/);
+
+            expect(icloud.mfaServer.startServer).not.toHaveBeenCalled();
+        });
     });
 
-    test(`Authentication - Auth secrets missing in authentication response`, async () => {
-        const icloud = iCloudFactory();
-
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "headers": {},
-        }));
-
-        await expect(icloud.authenticate()).rejects.toThrowError(new Error(`Unable to process auth secrets`));
-        expect(authenticationEvent).toHaveBeenCalled();
-    });
-
-    test(`Authentication - Auth secrets missing in mfa response`, async () => {
-        const icloud = iCloudFactory();
-
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-
-        const responseError = new Error(`Conflict`);
-        (responseError as any).response = {
-            "status": 409,
-            "headers": {},
-        };
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
-
-        await expect(icloud.authenticate()).rejects.toThrowError(new Error(`Unable to process cookies`));
-        expect(authenticationEvent).toHaveBeenCalled();
-    });
-
-    test(`Authentication - Unexpected success status code`, async () => {
-        const icloud = iCloudFactory();
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-        const errorEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR);
-        const trustedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.TRUSTED);
-        const mfaEvent = spyOnEvent(icloud, ICLOUD.EVENTS.MFA_REQUIRED);
-
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 204,
-        }));
-
-        const expectedError = new Error(`Unexpected HTTP response`);
-        await expect(icloud.authenticate()).rejects.toThrowError(expectedError);
-
-        expect(authenticationEvent).toHaveBeenCalled();
-        expect(trustedEvent).not.toHaveBeenCalled();
-        expect(mfaEvent).not.toHaveBeenCalled();
-        expect(errorEvent).toHaveBeenCalledWith(expectedError);
-        expect(errorEvent).toHaveBeenCalledTimes(1);
+    test(`MFA_NOT_PROVIDED event triggered`, async () => {
+        const iCloudReady = icloud.getReady();
+        mockedEventManager.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
+        await expect(iCloudReady).resolves.toBeFalsy();
     });
 
     test.each([
         {
-            "desc": `Unknown username`,
-            "axiosErrorMessage": `Conflict`,
-            "axiosErrorResponse": {
-                "status": 403,
-            },
-            "expectedError": new Error(`Username does not seem to exist`),
+            desc: `iCloud`,
+            event: iCPSEventCloud.ERROR,
         }, {
-            "desc": `Wrong username/password combination`,
-            "axiosErrorMessage": `Unauthorized`,
-            "axiosErrorResponse": {
-                "status": 401,
-            },
-            "expectedError": new Error(`Username/Password does not seem to match`),
-        }, {
-            "desc": `PreCondition failed`,
-            "axiosErrorMessage": `PreCondition Failed`,
-            "axiosErrorResponse": {
-                "status": 412,
-            },
-            "expectedError": new Error(`iCloud refused login - you might need to update your password`),
-        }, {
-            "desc": `Unexpected failure status code`,
-            "axiosErrorMessage": `Conflict`,
-            "axiosErrorResponse": {
-                "status": 500,
-            },
-            "expectedError": new Error(`Unexpected HTTP response`),
-        }, {
-            "desc": `No response`,
-            "axiosErrorMessage": `No Network`,
-            "axiosErrorResponse": undefined,
-            "expectedError": new Error(`No response received during authentication`),
+            desc: `MFA`,
+            event: iCPSEventMFA.ERROR,
         },
-    ])(`Authentication backend error - $desc`, async ({axiosErrorMessage, axiosErrorResponse, expectedError}) => {
-        const icloud = iCloudFactory();
-        const authenticationEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATION_STARTED);
-        const trustedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.TRUSTED);
-        const mfaEvent = spyOnEvent(icloud, ICLOUD.EVENTS.MFA_REQUIRED);
-        const errorEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ERROR);
+    ])(`$desc error event triggered`, async ({event}) => {
+        mockedEventManager._eventBus.removeAllListeners(event); // Not sure why this is necessary
+        const iCloudReady = icloud.getReady();
 
-        const responseError = new Error(axiosErrorMessage);
-        (responseError as any).response = axiosErrorResponse;
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(responseError));
+        mockedEventManager.emit(event, new iCPSError());
+        await expect(iCloudReady).rejects.toThrow(/^Unknown error occurred$/);
+    });
 
-        await expect(icloud.authenticate()).rejects.toThrowError(expectedError);
-        expect(authenticationEvent).toHaveBeenCalled();
-        expect(trustedEvent).not.toHaveBeenCalled();
-        expect(mfaEvent).not.toHaveBeenCalled();
-        expect(errorEvent).toHaveBeenCalledWith(expectedError);
-        expect(errorEvent).toHaveBeenCalledTimes(1);
+    test(`Authentication timeout`, async () => {
+        const iCloudReady = icloud.getReady();
+        const timeoutValue = 1000 * 60 * (10 + 5);
+        jest.advanceTimersByTime(timeoutValue + 1);
+        await expect(iCloudReady).rejects.toThrow(/iCloud setup did not complete successfully within expected amount of time$/);
     });
 });
 
-describe(`MFA Flow`, () => {
-    test(`Start MFA Server`, () => {
-        const icloud = new iCloud(
-            appWithOptions(
-                {
-                    ..._defaultCliOpts,
-                    "failOnMfa": false,
-                },
-            ),
-        );
+describe.each([
+    {
+        desc: `Initial setup`,
+        photosDomain: undefined,
+    }, {
+        desc: `Re-authentication`,
+        photosDomain: Config.photosDomain,
+    },
+])(`Setup iCloud: $desc`, ({photosDomain}) => {
+    beforeEach(() => {
+        mockedResourceManager._readResourceFile
+            .mockReturnValue({
+                libraryVersion: 1,
+                trustToken: Config.trustToken,
+            });
 
-        icloud.emit(ICLOUD.EVENTS.MFA_REQUIRED);
-        expect(icloud.mfaServer.server.listening).toBeTruthy();
-        icloud.mfaServer.stopServer();
+        if (photosDomain) {
+            mockedNetworkManager.photosUrl = photosDomain;
+        }
     });
 
-    describe(`Resend MFA`, () => {
-        describe.each([new MFAMethod(`device`)])(`Device`, method => {
-            test(`Resend MFA with ${method} - Success`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
+    describe(`Authenticate`, () => {
+        test(`Valid Trust Token`, async () => {
+            // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
+            icloud.getReady = jest.fn<typeof icloud.getReady>().mockResolvedValue(true);
 
-                // Mocking actual network request
-                icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 202,
-                    "data": {
-                        "trustedDeviceCount": 1,
-                    },
-                }));
+            const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
+            const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR);
 
-                // Only trace is found in logging
-                icloud.logger.info = jest.fn();
+            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>();
+            mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
-                await icloud.resendMFA(method);
+            mockedNetworkManager.mock
+                .onPost(`https://idmsa.apple.com/appleauth/auth/signin`, {
+                    accountName: Config.defaultConfig.username,
+                    password: Config.defaultConfig.password,
+                    trustTokens: [
+                        Config.trustToken,
+                    ],
+                }, Config.REQUEST_HEADER.AUTH,
+                )
+                .reply(200);
 
-                expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                expect(icloud.logger.info).toHaveBeenLastCalledWith(`Successfully requested new MFA code using 1 trusted device(s)`);
+            await icloud.authenticate();
+
+            expect(authenticationEvent).toHaveBeenCalled();
+            expect(trustedEvent).toHaveBeenCalled();
+            expect(errorEvent).not.toHaveBeenCalled();
+            expect(mockedValidator.validateSigninResponse).toHaveBeenCalled();
+            expect(mockedNetworkManager.applySigninResponse).toHaveBeenCalled();
+        });
+
+        test(`Invalid Trust Token - MFA Required`, async () => {
+            mockedResourceManager._readResourceFile
+                .mockReturnValue({
+                    libraryVersion: 1,
+                    trustToken: undefined,
+                });
+
+            // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
+            icloud.getReady = jest.fn<typeof icloud.getReady>().mockResolvedValue(true);
+
+            const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
+            const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.MFA_REQUIRED);
+            const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR);
+
+            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>();
+            mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
+
+            mockedNetworkManager.mock
+                .onPost(`https://idmsa.apple.com/appleauth/auth/signin`, {
+                    accountName: Config.defaultConfig.username,
+                    password: Config.defaultConfig.password,
+                    trustTokens: [null],
+                }, Config.REQUEST_HEADER.AUTH)
+                .reply(409);
+
+            await icloud.authenticate();
+
+            expect(trustedEvent).not.toHaveBeenCalled();
+            expect(authenticationEvent).toHaveBeenCalled();
+            expect(mfaEvent).toHaveBeenCalled();
+            expect(errorEvent).not.toHaveBeenCalled();
+            expect(mockedValidator.validateSigninResponse).toHaveBeenCalled();
+            expect(mockedNetworkManager.applySigninResponse).toHaveBeenCalled();
+            jest.resetAllMocks();
+        });
+
+        test(`Authentication response not matching validator`, async () => {
+            const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
+
+            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>(() => {
+                throw new iCPSError(VALIDATOR_ERR.SIGNIN_RESPONSE);
             });
 
-            test(`Resend MFA with ${method} - Network Failure`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
+            mockedNetworkManager.mock
+                .onPost(`https://idmsa.apple.com/appleauth/auth/signin`, {
+                    accountName: Config.defaultConfig.username,
+                    password: Config.defaultConfig.password,
+                    trustTokens: [
+                        Config.trustToken,
+                    ],
+                }, Config.REQUEST_HEADER.AUTH,
+                )
+                .reply(200);
 
-                // Mocking actual network request
-                icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error()));
+            await expect(icloud.authenticate()).rejects.toThrow(/^Unable to parse and validate signin response$/);
+            expect(authenticationEvent).toHaveBeenCalled();
+        });
 
-                // Checking if rejection is properly parsed
-                const warnEvent = spyOnEvent(icloud, HANDLER_EVENT);
+        describe(`Authentication backend error`, () => {
+            test.each([
+                {
+                    desc: `Unknown username`,
+                    status: 403,
+                    expectedError: /^Username does not seem to exist$/,
+                }, {
+                    desc: `Wrong username/password combination`,
+                    status: 401,
+                    expectedError: /^Username\/Password does not seem to match$/,
+                }, {
+                    desc: `PreCondition failed`,
+                    status: 412,
+                    expectedError: /^iCloud refused login - you might need to update your password$/,
+                }, {
+                    desc: `Unexpected failure status code`,
+                    status: 500,
+                    expectedError: /^Unexpected HTTP response$/,
+                },
+            ])(`$desc`, async ({status, expectedError}) => {
+                mockedNetworkManager.mock
+                    .onPost(`https://idmsa.apple.com/appleauth/auth/signin`, {
+                        accountName: Config.defaultConfig.username,
+                        password: Config.defaultConfig.password,
+                        trustTokens: [
+                            Config.trustToken,
+                        ],
+                    }, Config.REQUEST_HEADER.AUTH,
+                    )
+                    .reply(status);
 
-                await icloud.resendMFA(method);
+                const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
+                const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
+                const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.MFA_REQUIRED);
+                const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR, false); // Required for promise to resolve
 
-                expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                expect(warnEvent).toHaveBeenCalledWith(new Error(`Unable to request new MFA code`));
-            });
-
-            test(`Resend MFA with ${method} - Resend unsuccessful`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-                // Mocking actual network request
-                icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 404,
-                }));
-
-                // Checking if rejection is properly parsed
-                const warnEvent = spyOnEvent(icloud, HANDLER_EVENT);
-
-                await icloud.resendMFA(method);
-
-                expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                expect(warnEvent).toHaveBeenCalledWith(new Error(`Unable to request new MFA code`));
+                await expect(icloud.authenticate()).rejects.toThrow(expectedError);
+                expect(authenticationEvent).toHaveBeenCalled();
+                expect(trustedEvent).not.toHaveBeenCalled();
+                expect(mfaEvent).not.toHaveBeenCalled();
+                expect(errorEvent).toHaveBeenCalledTimes(1);
             });
         });
 
-        describe.each([new MFAMethod(`voice`), new MFAMethod(`sms`)])(`Phone number`, method => {
-            test(`Resend MFA with ${method} - Success`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
+        test(`Unknown authentication error`, async () => {
+            mockedNetworkManager.post = (jest.fn<UnknownAsyncFunction>() as any)
+                .mockRejectedValue(new Error(`Unknown Error`));
 
-                // Mocking actual network request
-                icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 200,
-                    "data": {
-                        "trustedPhoneNumber": {
-                            "numberWithDialCode": `+123`,
+            const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
+            const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
+            const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.MFA_REQUIRED);
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR, false); // Required for promise to resolve
+
+            await expect(icloud.authenticate()).rejects.toThrow(/^Received unknown error during authentication$/);
+            expect(authenticationEvent).toHaveBeenCalled();
+            expect(trustedEvent).not.toHaveBeenCalled();
+            expect(mfaEvent).not.toHaveBeenCalled();
+            expect(errorEvent).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe(`MFA Flow`, () => {
+        describe(`Resend MFA`, () => {
+            describe.each([
+                {
+                    method: `device`,
+                    endpoint: `https://idmsa.apple.com/appleauth/auth/verify/trusteddevice`,
+                    payload: undefined,
+                    codes: {
+                        success: 202,
+                        invalid: 403,
+                    },
+                    validatedResponse: {
+                        data: {
+                            trustedDeviceCount: 1,
                         },
                     },
-                }));
+                    successMessage: `Successfully requested new MFA code using 1 trusted device(s)`,
+                },
+                {
+                    method: `voice`,
+                    endpoint: `https://idmsa.apple.com/appleauth/auth/verify/phone`,
+                    payload: undefined,
+                    codes: {
+                        success: 200,
+                        invalid: 403,
+                    },
+                    validatedResponse: {
+                        data: {
+                            trustedPhoneNumber: {
+                                numberWithDialCode: `someNumber`,
+                            },
+                        },
+                    },
+                    successMessage: `Successfully requested new MFA code using phone someNumber`,
+                },
+                {
+                    method: `sms`,
+                    endpoint: `https://idmsa.apple.com/appleauth/auth/verify/phone`,
+                    payload: undefined,
+                    codes: {
+                        success: 200,
+                        invalid: 403,
+                    },
+                    validatedResponse: {
+                        data: {
+                            trustedPhoneNumber: {
+                                numberWithDialCode: `someNumber`,
+                            },
+                        },
+                    },
+                    successMessage: `Successfully requested new MFA code using phone someNumber`,
+                },
 
-                // Only trace is found in logging
-                icloud.logger.info = jest.fn();
+            ])(`Method: $method`, ({method, endpoint, payload, codes, validatedResponse, successMessage}) => {
+                test(`Success`, async () => {
+                    mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
-                await icloud.resendMFA(method);
+                    if (method === `device`) {
+                        mockedValidator.validateResendMFADeviceResponse = jest.fn<typeof mockedValidator.validateResendMFADeviceResponse>()
+                            .mockReturnValue(validatedResponse as any);
+                    }
 
-                expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                expect(icloud.logger.info).toHaveBeenLastCalledWith(`Successfully requested new MFA code using phone +123`);
-            });
+                    if (method === `sms` || method === `voice`) {
+                        mockedValidator.validateResendMFAPhoneResponse = jest.fn<typeof mockedValidator.validateResendMFAPhoneResponse>()
+                            .mockReturnValue(validatedResponse as any);
+                    }
 
-            test(`Resend MFA with ${method} - Network Failure`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
+                    mockedNetworkManager.mock
+                        .onPut(endpoint,
+                            payload,
+                            {
+                                ...Config.REQUEST_HEADER.AUTH,
+                                scnt: Config.iCloudAuthSecrets.scnt,
+                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                            },
+                        )
+                        .reply(codes.success);
 
-                // Mocking actual network request
-                icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error()));
+                    const infoLogEvent = mockedEventManager.spyOnEvent(iCPSEventLog.INFO);
 
-                // Checking if rejection is properly parsed
-                const warnEvent = spyOnEvent(icloud, HANDLER_EVENT);
+                    await icloud.resendMFA(new MFAMethod(method as any));
 
-                await icloud.resendMFA(method);
+                    if (method === `device`) {
+                        expect(mockedValidator.validateResendMFADeviceResponse).toHaveBeenCalled();
+                    }
 
-                expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                expect(warnEvent).toHaveBeenCalledWith(new Error(`Unable to request new MFA code`));
-            });
+                    if (method === `sms` || method === `voice`) {
+                        expect(mockedValidator.validateResendMFAPhoneResponse).toHaveBeenCalled();
+                    }
 
-            test(`Resend MFA with ${method} - Resend unsuccessful`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
+                    // Event is called with 'this' and message - getting the second argument of the last call
+                    expect(infoLogEvent.mock.calls.pop()?.pop()).toEqual(successMessage);
+                });
 
-                // Mocking actual network request
-                icloud.axios.put = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 404,
-                }));
+                test(`Response not matching validator`, async () => {
+                    mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
-                // Checking if rejection is properly parsed
-                const warnEvent = spyOnEvent(icloud, HANDLER_EVENT);
+                    if (method === `device`) {
+                        mockedValidator.validateResendMFADeviceResponse = jest.fn<typeof mockedValidator.validateResendMFADeviceResponse>(() => {
+                            throw new iCPSError(VALIDATOR_ERR.RESEND_MFA_DEVICE_RESPONSE);
+                        });
+                    }
 
-                await icloud.resendMFA(method);
+                    if (method === `sms` || method === `voice`) {
+                        mockedValidator.validateResendMFAPhoneResponse = jest.fn<typeof mockedValidator.validateResendMFAPhoneResponse>(() => {
+                            throw new iCPSError(VALIDATOR_ERR.RESEND_MFA_PHONE_RESPONSE);
+                        });
+                    }
 
-                expect(icloud.axios.put).toHaveBeenCalledWith(...expectedAxiosPut(method));
-                expect(warnEvent).toHaveBeenCalledWith(new Error(`Unable to request new MFA code`));
+                    mockedNetworkManager.mock
+                        .onPut(endpoint,
+                            payload,
+                            {
+                                ...Config.REQUEST_HEADER.AUTH,
+                                scnt: Config.iCloudAuthSecrets.scnt,
+                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                            },
+                        )
+                        .reply(codes.success);
+
+                    // Checking if rejection is properly parsed
+                    const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
+
+                    await icloud.resendMFA(new MFAMethod(method as any));
+
+                    if (method === `device`) {
+                        expect(mockedValidator.validateResendMFADeviceResponse).toHaveBeenCalled();
+                    }
+
+                    if (method === `sms` || method === `voice`) {
+                        expect(mockedValidator.validateResendMFAPhoneResponse).toHaveBeenCalled();
+                    }
+
+                    expect(warnEvent).toHaveBeenCalled();
+                });
+
+                test(`Resend unsuccessful`, async () => {
+                    mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+                    mockedNetworkManager.mock
+                        .onPut(endpoint,
+                            payload,
+                            {
+                                ...Config.REQUEST_HEADER.AUTH,
+                                scnt: Config.iCloudAuthSecrets.scnt,
+                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                            },
+                        )
+                        .reply(codes.invalid);
+
+                    // Checking if rejection is properly parsed
+                    const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
+
+                    await icloud.resendMFA(new MFAMethod(method as any));
+
+                    expect(warnEvent).toHaveBeenCalled();
+                });
             });
         });
-    });
 
-    describe(`Enter Code`, () => {
-        describe.each([new MFAMethod(`device`)])(`Device`, method => {
-            test(`Enter MFA with ${method} - Success`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-                icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 204,
-                }));
-
-                const authenticatedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATED);
-
-                await icloud.submitMFA(method, `123456`);
-
-                expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                expect(authenticatedEvent).toHaveBeenCalled();
-            });
-
-            test(`Enter MFA with ${method} - Network failure`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-                icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Unknown error`)));
-
-                await icloud.submitMFA(method, `123456`);
-
-                expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to submit MFA code`));
-            });
-
-            test(`Enter MFA with ${method} - Send unsuccessful`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-                icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 404,
-                    "statusText": `Not found`,
-                }));
-
-                await icloud.submitMFA(method, `123456`);
-
-                expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to submit MFA code`));
-            });
-        });
-
-        describe.each([new MFAMethod(`voice`), new MFAMethod(`sms`)])(`Phone Number`, method => {
-            test(`Enter MFA with ${method} - Success`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-                icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 200,
-                }));
-
-                const authenticatedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.AUTHENTICATED);
-
-                await icloud.submitMFA(method, `123456`);
-
-                expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                expect(authenticatedEvent).toHaveBeenCalled();
-            });
-
-            test(`Enter MFA with ${method} - Network failure`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-                icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Unknown error`)));
-
-                await icloud.submitMFA(method, `123456`);
-
-                expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to submit MFA code`));
-            });
-
-            test(`Enter MFA with ${method} - Send unsuccessful`, async () => {
-                const icloud = iCloudFactory();
-                icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-                icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-                    "status": 404,
-                    "statusText": `Not found`,
-                }));
-
-                await icloud.submitMFA(method, `123456`);
-
-                expect(icloud.axios.post).toHaveBeenCalledWith(...expectedAxiosPost(method));
-                await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to submit MFA code`));
-            });
-        });
-    });
-});
-
-describe(`Trust Token`, () => {
-    beforeEach(() => {
-        mockfs({
-            [appDataDir]: {
-                [ICLOUD.TRUST_TOKEN_FILE_NAME]: Config.trustToken,
-            },
-        });
-    });
-
-    afterEach(() => {
-        mockfs.restore();
-    });
-
-    test(`Acquire trust token`, async () => {
-        const icloud = iCloudFactory();
-        icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-        const trustedEvent = spyOnEvent(icloud, ICLOUD.EVENTS.TRUSTED);
-
-        icloud.axios.get = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "headers": {
-                [ICLOUD.AUTH_RESPONSE_HEADER.SESSION_TOKEN.toLowerCase()]: Config.iCloudAuthSecrets.sessionId,
-                [ICLOUD.AUTH_RESPONSE_HEADER.TRUST_TOKEN.toLowerCase()]: Config.trustTokenModified,
-            },
-        }));
-
-        await icloud.getTokens();
-
-        expect(icloud.axios.get).toBeCalledWith(...expectedTokenGetCall);
-        const writtenFile = fs.readFileSync(path.join(appDataDir, ICLOUD.TRUST_TOKEN_FILE_NAME)).toString();
-        expect(writtenFile).toEqual(Config.trustTokenModified);
-        expect(trustedEvent).toHaveBeenCalled();
-    });
-
-    test(`Invalid trust token response`, async () => {
-        const icloud = iCloudFactory();
-        icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-        icloud.axios.get = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 500,
-            "headers": {},
-        }));
-
-        await icloud.getTokens();
-
-        expect(icloud.axios.get).toBeCalledWith(...expectedTokenGetCall);
-        await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to acquire account tokens`));
-
-        const writtenFile = fs.readFileSync(path.join(appDataDir, ICLOUD.TRUST_TOKEN_FILE_NAME)).toString();
-        expect(writtenFile).toEqual(Config.trustToken);
-    });
-
-    test(`Acquire trust token - Network Failure`, async () => {
-        const icloud = iCloudFactory();
-        icloud.auth.iCloudAuthSecrets = Config.iCloudAuthSecrets;
-
-        const requestError = new Error(`Network Failure`);
-
-        icloud.axios.get = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(requestError));
-
-        await icloud.getTokens();
-
-        expect(icloud.axios.get).toBeCalledWith(...expectedTokenGetCall);
-        await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to acquire account tokens`));
-
-        const writtenFile = fs.readFileSync(path.join(appDataDir, ICLOUD.TRUST_TOKEN_FILE_NAME)).toString();
-        expect(writtenFile).toEqual(Config.trustToken);
-    });
-});
-
-describe(`Setup iCloud`, () => {
-    test(`Acquire iCloud Cookies & Photos Account Data`, async () => {
-        const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
-
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "data": { // Actual response contains significant more -potential useful- data, only the following is really necessary
-                "webservices": {
-                    "ckdatabasews": {
-                        "url": `https://p00-ckdatabasews.icloud.com:443`,
+        describe(`Enter Code`, () => {
+            describe.each([
+                {
+                    method: `device`,
+                    endpoint: `https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode`,
+                    payload: {
+                        securityCode: {
+                            code: `123456`,
+                        },
+                    },
+                    codes: {
+                        success: 204,
+                        failure: 403,
+                    },
+                }, {
+                    method: `sms`,
+                    endpoint: `https://idmsa.apple.com/appleauth/auth/verify/phone/securitycode`,
+                    payload: {
+                        securityCode: {
+                            code: `123456`,
+                        },
+                        phoneNumber: {
+                            id: 1,
+                        },
+                        mode: `sms`,
+                    },
+                    codes: {
+                        success: 200,
+                        failure: 403,
+                    },
+                }, {
+                    method: `voice`,
+                    endpoint: `https://idmsa.apple.com/appleauth/auth/verify/phone/securitycode`,
+                    payload: {
+                        securityCode: {
+                            code: `123456`,
+                        },
+                        phoneNumber: {
+                            id: 1,
+                        },
+                        mode: `voice`,
+                    },
+                    codes: {
+                        success: 200,
+                        failure: 403,
                     },
                 },
-            },
-            "headers": getICloudCookieHeader(),
-        }));
+            ])(`Method: $method`, ({method, endpoint, payload, codes}) => {
+                test(`Success`, async () => {
+                    mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
-        const readyEvent = spyOnEvent(icloud, ICLOUD.EVENTS.ACCOUNT_READY);
+                    mockedNetworkManager.mock
+                        .onPost(endpoint,
+                            payload,
+                            {
+                                ...Config.REQUEST_HEADER.AUTH,
+                                scnt: Config.iCloudAuthSecrets.scnt,
+                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                            },
+                        )
+                        .reply(codes.success);
 
-        await icloud.setupAccount();
+                    // Checking if rejection is properly parsed
+                    const authenticatedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATED);
 
-        expect(icloud.axios.post).toHaveBeenCalledWith(
-            `https://setup.icloud.com/setup/ws/1/accountLogin`,
-            {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
-            },
-            {
-                "headers": expectedICloudSetupHeaders,
-            },
-        );
-        expect(readyEvent).toHaveBeenCalled();
-        expect(icloud.auth.iCloudCookies.length).toEqual(16);
-        expect(icloud.photos).toBeDefined();
+                    await icloud.submitMFA(new MFAMethod(method as any), `123456`);
+
+                    expect(authenticatedEvent).toHaveBeenCalled();
+                });
+
+                test(`Failure`, async () => {
+                    const iCloudReady = icloud.getReady();
+                    mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+                    mockedNetworkManager.mock
+                        .onPost(endpoint,
+                            payload,
+                            {
+                                ...Config.REQUEST_HEADER.AUTH,
+                                scnt: Config.iCloudAuthSecrets.scnt,
+                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                            },
+                        )
+                        .reply(codes.failure);
+
+                    await icloud.submitMFA(new MFAMethod(method as any), `123456`);
+
+                    await expect(iCloudReady).rejects.toThrow(/^Unable to submit MFA code$/);
+                });
+            });
+        });
     });
 
-    test(`Receive empty set-cookies during setup`, async () => {
-        const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
+    describe(`Trust Token`, () => {
+        test(`Success`, async () => {
+            mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+            mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "data": { // Actual response contains significant more -potential useful- data, only the following is really necessary
-                "webservices": {
-                    "ckdatabasews": {
-                        "url": `https://p00-ckdatabasews.icloud.com:443`,
-                    },
-                },
-            },
-            "headers": {
-                'set-cookie': [],
-            },
-        }));
+            mockedValidator.validateTrustResponse = jest.fn<typeof mockedValidator.validateTrustResponse>();
+            mockedNetworkManager.applyTrustResponse = jest.fn<typeof mockedNetworkManager.applyTrustResponse>();
 
-        await icloud.setupAccount();
+            const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
 
-        expect(icloud.axios.post).toHaveBeenCalledWith(
-            `https://setup.icloud.com/setup/ws/1/accountLogin`,
-            {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
-            },
-            {
-                "headers": expectedICloudSetupHeaders,
-            },
-        );
-        await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to setup iCloud Account`));
-    });
+            mockedNetworkManager.mock
+                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {}, {
+                    ...Config.REQUEST_HEADER.AUTH,
+                    scnt: Config.iCloudAuthSecrets.scnt,
+                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                })
+                .reply(204);
 
-    test(`Receive expired iCloud Cookies during setup`, async () => {
-        const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
+            await icloud.getTokens();
 
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "data": { // Actual response contains significant more -potential useful- data, only the following is really necessary
-                "webservices": {
-                    "ckdatabasews": {
-                        "url": `https://p00-ckdatabasews.icloud.com:443`,
-                    },
-                },
-            },
-            "headers": getICloudCookieHeader(true),
-        }));
-
-        await icloud.setupAccount();
-
-        expect(icloud.axios.post).toHaveBeenCalledWith(
-            `https://setup.icloud.com/setup/ws/1/accountLogin`,
-            {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
-            },
-            {
-                "headers": expectedICloudSetupHeaders,
-            },
-        );
-        await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to setup iCloud Account`));
-    });
-
-    test(`Receive invalid status code during setup`, async () => {
-        const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
-
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 500,
-        }));
-
-        await icloud.setupAccount();
-
-        expect(icloud.axios.post).toHaveBeenCalledWith(
-            `https://setup.icloud.com/setup/ws/1/accountLogin`,
-            {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
-            },
-            {
-                "headers": expectedICloudSetupHeaders,
-            },
-        );
-        await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to setup iCloud Account`));
-    });
-
-    test(`Receive invalid response during setup`, async () => {
-        const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
-
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.resolve({
-            "status": 200,
-            "data": {},
-            "headers": getICloudCookieHeader(true),
-        }));
-
-        await icloud.setupAccount();
-
-        expect(icloud.axios.post).toHaveBeenCalledWith(
-            `https://setup.icloud.com/setup/ws/1/accountLogin`,
-            {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
-            },
-            {
-                "headers": expectedICloudSetupHeaders,
-            },
-        );
-        await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to setup iCloud Account`));
-    });
-
-    test(`Network failure`, async () => {
-        const icloud = iCloudFactory();
-        icloud.auth.iCloudAccountTokens.sessionToken = Config.iCloudAuthSecrets.sessionId;
-        icloud.auth.iCloudAccountTokens.trustToken = Config.trustToken;
-
-        icloud.axios.post = jest.fn((_url: string, _data?: any, _config?: AxiosRequestConfig<any>): Promise<any> => Promise.reject(new Error(`Network down!`)));
-
-        await icloud.setupAccount();
-
-        expect(icloud.axios.post).toHaveBeenCalledWith(
-            `https://setup.icloud.com/setup/ws/1/accountLogin`,
-            {
-                "dsWebAuthToken": Config.iCloudAuthSecrets.sessionId,
-                "trustToken": Config.trustToken,
-            },
-            {
-                "headers": expectedICloudSetupHeaders,
-            },
-        );
-        await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to setup iCloud Account`));
-    });
-
-    describe(`Get iCloud Photos Ready`, () => {
-        test(`Get iCloud Photos Ready`, async () => {
-            const icloud = iCloudFactory();
-            icloud.auth.iCloudCookies = getICloudCookies();
-            icloud.photos = new iCloudPhotos(appWithOptions({"metadataRate": Config.metadataRate}), icloud.auth);
-            icloud.photos.setup = jest.fn(() => Promise.resolve());
-
-            await icloud.getPhotosReady();
-
-            expect(icloud.photos.listenerCount(HANDLER_EVENT)).toBe(1);
-            await expect(icloud.ready).resolves.not.toThrow();
-
-            expect(icloud.photos.listenerCount(ICLOUD_PHOTOS.EVENTS.READY)).toBe(1);
-            expect(icloud.photos.setup).toHaveBeenCalled();
+            expect(mockedValidator.validateTrustResponse).toHaveBeenCalled();
+            expect(mockedNetworkManager.applyTrustResponse).toHaveBeenCalled();
+            expect(trustedEvent).toHaveBeenCalled();
         });
 
-        test(`Cookies invalid`, async () => {
-            const icloud = iCloudFactory();
-            icloud.auth.iCloudCookies = getICloudCookies(true);
-            icloud.photos = new iCloudPhotos(appWithOptions({"metadataRate": Config.metadataRate}), icloud.auth);
-            icloud.photos.setup = jest.fn(() => Promise.resolve());
+        test(`Error - Invalid Response`, async () => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+            mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
-            await icloud.getPhotosReady();
+            mockedValidator.validateTrustResponse = jest.fn<typeof mockedValidator.validateTrustResponse>(() => {
+                throw new iCPSError(VALIDATOR_ERR.TRUST_RESPONSE);
+            });
 
-            await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to get iCloud Photos service ready`));
-            expect(icloud.photos.setup).not.toHaveBeenCalled();
+            mockedNetworkManager.mock
+                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {}, {
+                    ...Config.REQUEST_HEADER.AUTH,
+                    scnt: Config.iCloudAuthSecrets.scnt,
+                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                })
+                .reply(204);
+
+            await icloud.getTokens();
+            await expect(iCloudReady).rejects.toThrow(/^Unable to acquire account tokens$/);
+
+            expect(mockedValidator.validateTrustResponse).toHaveBeenCalled();
         });
 
-        test(`Photos Object invalid`, async () => {
-            const icloud = iCloudFactory();
-            icloud.auth.iCloudCookies = getICloudCookies();
+        test(`Error - Invalid Status Code`, async () => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+            mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
-            await icloud.getPhotosReady();
+            mockedNetworkManager.mock
+                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {}, {
+                    ...Config.REQUEST_HEADER.AUTH,
+                    scnt: Config.iCloudAuthSecrets.scnt,
+                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                })
+                .reply(500);
 
-            await expect(icloud.ready).rejects.toThrowError(new Error(`Unable to get iCloud Photos service ready`));
+            await icloud.getTokens();
+            await expect(iCloudReady).rejects.toThrow(/^Unable to acquire account tokens$/);
+        });
+    });
+
+    describe(`Setup iCloud`, () => {
+        test(`Success`, async () => {
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+            mockedResourceManager._resources.trustToken = Config.trustToken;
+
+            mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>();
+            mockedNetworkManager.applySetupResponse = jest.fn<typeof mockedNetworkManager.applySetupResponse>();
+
+            const accountReadyEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ACCOUNT_READY);
+
+            mockedNetworkManager.mock
+                .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
+                    dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
+                    trustToken: Config.trustToken,
+                }, Config.REQUEST_HEADER.DEFAULT,
+                )
+                .reply(200);
+
+            await icloud.setupAccount();
+
+            expect(mockedValidator.validateSetupResponse).toHaveBeenCalled();
+            expect(mockedNetworkManager.applySetupResponse).toHaveBeenCalled();
+            expect(accountReadyEvent).toHaveBeenCalledTimes(1);
+            expect(icloud.photos).toBeDefined();
+        });
+
+        test(`Session expired`, async () => {
+            mockedNetworkManager.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>(() => {
+                throw new iCPSError(VALIDATOR_ERR.SETUP_RESPONSE);
+            });
+
+            const sessionExpiredEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.SESSION_EXPIRED);
+
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(421);
+
+            await icloud.setupAccount();
+
+            expect(sessionExpiredEvent).toHaveBeenCalled();
+            expect(mockedValidator.validateSetupResponse).not.toHaveBeenCalled();
+        });
+
+        test(`Error - Invalid Response`, async () => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>(() => {
+                throw new iCPSError(VALIDATOR_ERR.SETUP_RESPONSE);
+            });
+
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(200);
+
+            await icloud.setupAccount();
+            await expect(iCloudReady).rejects.toThrow(/^Unable to setup iCloud Account$/);
+
+            expect(mockedValidator.validateSetupResponse).toHaveBeenCalled();
+        });
+
+        test(`Error - Invalid Status Code`, async () => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(500);
+
+            await icloud.setupAccount();
+            await expect(iCloudReady).rejects.toThrow(/^Unable to setup iCloud Account$/);
+        });
+
+        describe(`Get iCloud Photos Ready`, () => {
+            beforeEach(() => {
+                icloud.photos = new iCloudPhotos();
+            });
+
+            test(`Setup resolves`, async () => {
+                const iCloudReady = icloud.getReady();
+                icloud.photos.setup = jest.fn<typeof icloud.photos.setup>(() => {
+                    Resources.emit(iCPSEventPhotos.READY);
+                    return Promise.resolve();
+                });
+
+                await icloud.getPhotosReady();
+
+                await expect(iCloudReady).resolves.not.toThrow();
+
+                expect(icloud.photos.setup).toHaveBeenCalled();
+            });
+
+            test(`Setup rejects`, async () => {
+                const iCloudReady = icloud.getReady();
+                icloud.photos.setup = jest.fn<typeof icloud.photos.setup>()
+                    .mockRejectedValue(new Error());
+
+                await icloud.getPhotosReady();
+                await expect(iCloudReady).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
+
+                expect(icloud.photos.setup).toHaveBeenCalled();
+            });
+
+            test(`Photos Object invalid`, async () => {
+                const iCloudReady = icloud.getReady();
+                icloud.photos = undefined as any;
+                await icloud.getPhotosReady();
+
+                await expect(iCloudReady).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
+            });
         });
     });
 });

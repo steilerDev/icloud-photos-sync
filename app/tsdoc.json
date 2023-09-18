@@ -1,0 +1,59 @@
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/tsdoc/v0/tsdoc.schema.json",
+    "tagDefinitions": [
+        {
+            "tagName": "@maximum",
+            "syntaxKind": "modifier"
+        },
+        {
+            "tagName": "@minimum",
+            "syntaxKind": "modifier"
+        },
+        {
+            "tagName": "@maxLength",
+            "syntaxKind": "modifier"
+        },
+        {
+            "tagName": "@minLength",
+            "syntaxKind": "modifier"
+        },
+        {
+            "tagName": "@maxItems",
+            "syntaxKind": "modifier"
+        },
+        {
+            "tagName": "@minItems",
+            "syntaxKind": "modifier"
+        },
+        {
+            "tagName": "@pattern",
+            "syntaxKind": "modifier"
+        },
+        {
+            "tagName": "@default",
+            "syntaxKind": "modifier"
+        },
+        {
+            "tagName": "@emits",
+            "syntaxKind": "modifier",
+            "allowMultiple":  true
+        }
+    ],
+    "supportForTags": {
+        "@maximum": true,
+        "@minimum": true,
+        "@default": true,
+        "@param": true,
+        "@returns": true,
+        "@throws": true,
+        "@remarks": true,
+        "@link": true,
+        "@see": true,
+        "@maxLength": true,
+        "@minLength": true,
+        "@maxItems": true,
+        "@minItems": true,
+        "@pattern": true,
+        "@emits": true
+    }
+}

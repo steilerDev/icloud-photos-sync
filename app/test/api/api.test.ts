@@ -3,113 +3,84 @@ import {beforeAll, describe, expect, test, jest, beforeEach, afterEach} from '@j
 import {iCloud} from '../../src/lib/icloud/icloud.js';
 import crypto from 'crypto';
 
-import expectedAssetsAll from "../_data/api.expected.all-cpl-assets.json";
-import expectedMastersAll from "../_data/api.expected.all-cpl-masters.json";
-import expectedMastersAlbum from "../_data/api.expected.album-cpl-masters.json";
-import expectedAssetsAlbum from "../_data/api.expected.album-cpl-assets.json";
-import expectedAlbumsAll from "../_data/api.expected.all-cpl-albums.json";
+import * as Config from '../_helpers/_config';
+import expectedAssetsAll from "./_data/expected.all-cpl-assets.json";
+import expectedMastersAll from "./_data/expected.all-cpl-masters.json";
+import expectedMastersAlbum from "./_data/expected.album-cpl-masters.json";
+import expectedAssetsAlbum from "./_data/expected.album-cpl-assets.json";
+import expectedAlbumsAll from "./_data/expected.all-cpl-albums.json";
 import {postProcessAssetData, postProcessMasterData, postProcessAlbumData, sortByRecordName, writeTestData as _writeTestData} from '../_helpers/api.helper';
-import {appDataDir} from '../_helpers/_config';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
-import {appWithOptions} from '../_helpers/app-factory.helper';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder.js';
+import {prepareResourceForApiTests} from '../_helpers/_general.js';
+import {Resources} from '../../src/lib/resources/main.js';
+import fs from 'fs';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs
 jest.setTimeout(30 * 1000);
 
-const username = process.env.TEST_APPLE_ID_USER;
-const password = process.env.TEST_APPLE_ID_PWD;
-const token = process.env.TEST_TRUST_TOKEN;
-
 describe(`API E2E Tests`, () => {
     beforeEach(() => {
         mockfs({
-            [appDataDir]: {},
+            [Config.defaultConfig.dataDir]: {
+                '_All-Photos': {},
+            },
         });
     });
 
     afterEach(() => {
         mockfs.restore();
     });
-
     test(`API Prerequisite`, () => {
-        expect(username).toBeDefined();
-        expect(username?.length).toBeGreaterThan(0);
-        expect(password).toBeDefined();
-        expect(password?.length).toBeGreaterThan(0);
-        expect(token).toBeDefined();
-        expect(token?.length).toBeGreaterThan(0);
+        const resourceManager = prepareResourceForApiTests().manager;
+        expect(resourceManager.username).toBeDefined();
+        expect(resourceManager.username.length).toBeGreaterThan(0);
+        expect(resourceManager.password).toBeDefined();
+        expect(resourceManager.password.length).toBeGreaterThan(0);
+        expect(resourceManager.trustToken).toBeDefined();
+        expect(resourceManager.trustToken!.length).toBeGreaterThan(0);
     });
 
     describe(`Login flow`, () => {
-        test(`Login flow with invalid username/password`, async () => {
-            const cliOpts = {
-                "username": `testuser@apple.com`,
-                "password": `test123`,
-                "dataDir": appDataDir,
-                "failOnMfa": true,
-                "metadataRate": [Infinity, 0],
-            };
-            const _icloud = new iCloud(appWithOptions(cliOpts));
-            await expect(_icloud.authenticate()).rejects.toEqual(new Error(`Username does not seem to exist`));
+        let instances: Resources.Types.Instances;
+
+        beforeEach(() => {
+            instances = prepareResourceForApiTests();
         });
 
-        test(`Login flow with invalid password`, async () => {
-            const cliOpts = {
-                username,
-                "password": `test123`,
-                "dataDir": appDataDir,
-                "failOnMfa": true,
-                "metadataRate": [Infinity, 0],
-            };
-            const _icloud = new iCloud(appWithOptions(cliOpts));
-            await expect(_icloud.authenticate()).rejects.toEqual(new Error(`Username/Password does not seem to match`));
+        test(`Invalid username/password`, async () => {
+            instances.manager._resources.username = `test@apple.com`;
+            instances.manager._resources.password = `somePassword`;
+
+            const icloud = new iCloud();
+
+            await expect(icloud.authenticate()).rejects.toThrow(/^Username does not seem to exist$/);
         });
 
-        test(`Login flow without token & failOnMfa`, async () => {
-            const cliOpts = {
-                username,
-                password,
-                "dataDir": appDataDir,
-                "failOnMfa": true,
-                "metadataRate": [Infinity, 0],
-            };
-            const _icloud = new iCloud(appWithOptions(cliOpts));
-            await expect(_icloud.authenticate()).rejects.toEqual(new Error(`MFA code required, failing due to failOnMfa flag`));
+        test(`Invalid password`, async () => {
+            instances.manager._resources.password = `somePassword`;
+            const icloud = new iCloud();
+            await expect(icloud.authenticate()).rejects.toThrow(/^Username\/Password does not seem to match$/);
         });
 
-        test(`Login flow`, async () => {
-            const cliOpts = {
-                username,
-                password,
-                "trustToken": token,
-                "dataDir": appDataDir,
-                "failOnMfa": true,
-                "metadataRate": [Infinity, 0],
-            };
-            const _icloud = new iCloud(appWithOptions(cliOpts));
-            await expect(_icloud.authenticate()).resolves.not.toThrow();
+        test(`Success`, async () => {
+            const icloud = new iCloud();
+            await expect(icloud.authenticate()).resolves.not.toThrow();
         });
     });
 
     describe(`Logged in test cases`, () => {
-        const icloud: iCloud = new iCloud(appWithOptions({
-            username,
-            password,
-            "trustToken": token,
-            "dataDir": appDataDir,
-            "failOnMfa": true,
-            "metadataRate": [Infinity, 0],
-        }));
+        let icloud: iCloud;
 
         beforeAll(async () => {
+            prepareResourceForApiTests();
+            icloud = new iCloud();
             await icloud.authenticate();
         });
 
         describe(`Fetching records`, () => {
             test(`Fetch all records`, async () => {
-                await icloud.ready;
                 const [assets, masters] = await icloud.photos.fetchAllCPLAssetsMasters();
                 // _writeTestData(assets.map(postProcessAssetData), "all-assets-data")
                 // _writeTestData(masters.map(postProcessMasterData), "all-master-data")
@@ -136,7 +107,6 @@ describe(`API E2E Tests`, () => {
             });
 
             test(`Fetch all records of one album`, async () => {
-                await icloud.ready;
                 const albumRecordName = `311f9778-1f40-4762-9e57-569ebf5fb070`;
                 const [assets, masters] = await icloud.photos.fetchAllCPLAssetsMasters(albumRecordName);
 
@@ -149,7 +119,6 @@ describe(`API E2E Tests`, () => {
             });
 
             test(`Fetch records of empty album`, async () => {
-                await icloud.ready;
                 const albumRecordName = `6dcb67d9-a073-40ba-9441-3a792da34cf5`;
                 const [assets, masters] = await icloud.photos.fetchAllCPLAssetsMasters(albumRecordName);
                 expect(assets.length).toEqual(0);
@@ -158,7 +127,6 @@ describe(`API E2E Tests`, () => {
         });
         describe(`Fetching albums`, () => {
             test(`Fetch all albums`, async () => {
-                await icloud.ready;
                 const fetchedAlbums = await icloud.photos.fetchAllCPLAlbums();
                 expect(fetchedAlbums.length).toEqual(8);
 
@@ -173,7 +141,6 @@ describe(`API E2E Tests`, () => {
             });
 
             test(`Fetch empty folder`, async () => {
-                await icloud.ready;
                 const recordName = `7198a6a0-27fe-4fb6-961b-74231e425858`; // 'Stuff' folder
                 const fetchedAlbum = await icloud.photos.fetchCPLAlbums(recordName);
                 // Verifying only structure, not content, as content was validated in the all case
@@ -181,7 +148,6 @@ describe(`API E2E Tests`, () => {
             });
 
             test(`Fetch folder with multiple albums`, async () => {
-                await icloud.ready;
                 const recordName = `6e7f4f44-445a-41ee-a87e-844a9109069d`; // '2022' folder
                 const fetchedAlbums = await icloud.photos.fetchCPLAlbums(recordName);
                 // Verifying only structure, not content, as content was validated in the all case
@@ -191,7 +157,6 @@ describe(`API E2E Tests`, () => {
 
         describe(`Assets & Records`, () => {
             test(`Download an asset`, async () => {
-                await icloud.ready;
                 // Defining the asset
                 const assetRecordName = `ARN5w7b2LvDDhsZ8DnbU3RuZeShX`;
                 const assetHash = `tplrgnWiXEttU0xmKPzRWhUMrtE=`; // Pre-calculated
@@ -216,14 +181,9 @@ describe(`API E2E Tests`, () => {
                 expect(asset.downloadURL).toBeDefined();
                 expect(asset.downloadURL?.length).toBeGreaterThan(0);
 
-                // Actually downloading the file
-                const stream = (await icloud.photos.downloadAsset(asset)).data;
-                const chunks: any[] = [];
-                const file: Buffer = await new Promise((resolve, reject) => {
-                    stream.on(`data`, chunk => chunks.push(Buffer.from(chunk)));
-                    stream.on(`error`, err => reject(err));
-                    stream.on(`end`, () => resolve(Buffer.concat(chunks)));
-                });
+                await icloud.photos.downloadAsset(asset);
+
+                const file = await fs.promises.readFile(asset.getAssetFilePath());
                 const fileHash = crypto.createHash(`sha1`).update(file).digest(`base64`).toString();
 
                 expect(file.length).toBe(asset.size);

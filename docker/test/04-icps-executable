@@ -1,0 +1,19 @@
+#!/bin/bash
+
+echo "'icloud-photos-sync' linked"
+BIN=$(docker run --entrypoint /usr/bin/which $IMAGE_NAME icloud-photos-sync)
+if [ $? -eq 1 ]; then
+    echo " - Fail: $BIN"
+    exit 1
+fi
+echo " - Pass: $BIN"
+
+echo "'icloud-photos-sync' executable"
+TARGET=$(docker run --entrypoint /usr/bin/readlink $IMAGE_NAME -f ${BIN})
+FILE_MODE=$(docker run --entrypoint /bin/stat $IMAGE_NAME -c %a ${TARGET})
+if [ "$FILE_MODE" != "755" ]; then
+    echo " - Fail: $FILE_MODE @ $TARGET"
+    exit 1
+fi
+echo " - Pass: $FILE_MODE @ $TARGET"
+exit 0

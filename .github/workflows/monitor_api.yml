@@ -1,0 +1,20 @@
+name: '[monitor] iCloud API'
+# This workflow continuously runs the API Tests for this project twice a day, in order to check, if the remote API is still compatible with this tool.
+
+on:
+  schedule:
+    - cron: '20 5,17 * * *'
+
+permissions: {}
+
+jobs:
+  api-test:
+    name: api-test
+    if: github.event_name == 'schedule'
+    uses: ./.github/workflows/artifacts_test.yml
+    with:
+      methods: '["api"]'
+    secrets:
+      test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
+      test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
+      test-trust-token: ${{ secrets.TEST_TRUST_TOKEN }}

@@ -3,7 +3,7 @@
 	"tasks": [
 		{
 			"type": "npm",
-			"script": "build",
+			"script": "build:dev",
 			"path": "app/",
 			"group": "build",
 			"problemMatcher": [],
@@ -11,7 +11,7 @@
 		},
 		{
 			"type": "shell",
-			"command": "/home/coder/.local/bin/mkdocs",
+			"command": "python3 -m mkdocs",
 			"args": [
 				"build"
 			],
@@ -19,7 +19,7 @@
 				"reveal": "always"
 			},
 			"options": {
-				"cwd": "/home/coder/project/icloud-photos-sync/pages/"
+				"cwd": "docs/"
 			},
 			"label": "Build Page",
 			"group": "build"

@@ -11,10 +11,13 @@ type ErrorName =
     `LibraryError` |
     `AppError` |
     `QueryParserError` |
-    `SyncError`
+    `ResourceError` |
+    `ValidatorError` |
+    `SyncError` |
+    `FileTypeReport`
 
 /**
- * Error structure
+ * Error structure for generating iCPSError objects
  */
 export type ErrorStruct = {
     /**
@@ -35,14 +38,14 @@ export type ErrorStruct = {
  * Builds an error struct using the provided parameters
  * @param name - The error name
  * @param errorCodePrefix - The error code prefix
- * @param errorCode - The error code (combined with errorCodePrefix through '_')
+ * @param errorCode - The error code (will be combined with errorCodePrefix through '_')
  * @param message - A readable message
  * @returns The corresponding error construct
  */
 export function buildErrorStruct(name: ErrorName, errorCodePrefix: string, errorCode: string, message: string): ErrorStruct {
     return {
         name,
-        "code": `${errorCodePrefix}_${errorCode}`,
+        code: `${errorCodePrefix}_${errorCode}`,
         message,
     };
 }
@@ -55,22 +58,30 @@ import * as LIBRARY_ERR from './codes/library.js';
 import * as APP_ERR from './codes/app.js';
 import * as QUERY_PARSER_ERR from './codes/icloud-query-parser.js';
 import * as SYNC_ERR from './codes/sync.js';
-export {MFA_ERR, ARCHIVE_ERR, AUTH_ERR, ICLOUD_PHOTOS_ERR, LIBRARY_ERR, APP_ERR, QUERY_PARSER_ERR, SYNC_ERR};
+import * as RESOURCES_ERR from './codes/resources.js';
+import * as VALIDATOR_ERR from './codes/validator.js';
+export {MFA_ERR, ARCHIVE_ERR, AUTH_ERR, ICLOUD_PHOTOS_ERR, LIBRARY_ERR, APP_ERR, QUERY_PARSER_ERR, SYNC_ERR, RESOURCES_ERR, VALIDATOR_ERR};
 
 export const ERR_UNKNOWN: ErrorStruct = {
-    "name": `iCPSError`,
-    "code": `UNKNOWN`,
-    "message": `Unknown error occurred`,
+    name: `iCPSError`,
+    code: `UNKNOWN`,
+    message: `Unknown error occurred`,
 };
 
 export const ERR_SIGINT: ErrorStruct = {
-    "name": `InterruptError`,
-    "code": `SIGINT`,
-    "message": `Received user interrupt: SIGINT`,
+    name: `InterruptError`,
+    code: `SIGINT`,
+    message: `Received user interrupt: SIGINT`,
 };
 
 export const ERR_SIGTERM: ErrorStruct = {
-    "name": `InterruptError`,
-    "code": `SIGTERM`,
-    "message": `Received user interrupt: SIGTERM`,
+    name: `InterruptError`,
+    code: `SIGTERM`,
+    message: `Received user interrupt: SIGTERM`,
+};
+
+export const FILETYPE_REPORT: ErrorStruct = {
+    name: `FileTypeReport`,
+    code: `FILETYPE_REPORT`,
+    message: `Reporting unknown file type`,
 };

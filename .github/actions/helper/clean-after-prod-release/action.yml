@@ -1,0 +1,20 @@
+name: clean-after-prod-release
+description: Merges the tags from the main branch to the dev branch and clears nightly tags
+inputs:
+  gh-token:
+    description: The Github token
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: merge-main-to-dev
+      uses: devmasx/merge-branch@master
+      with:
+        type: now
+        from_branch: main
+        target_branch: dev
+        message: merge main into dev
+        github_token: ${{ inputs.gh-token }}
+    - id: clear-nightly-tags
+      shell: bash
+      run: git push origin --delete $(git tag -l "*-nightly*")

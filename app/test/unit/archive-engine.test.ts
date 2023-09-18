@@ -1,27 +1,44 @@
 import mockfs from 'mock-fs';
-import {describe, test, afterEach, expect, jest} from '@jest/globals';
-import {archiveEngineFactory} from '../_helpers/archive-engine.helper';
-import {appDataDir as photosDataDir} from '../_helpers/_config';
+import {describe, test, beforeEach, afterEach, expect, jest} from '@jest/globals';
+import * as Config from '../_helpers/_config';
 import {PRIMARY_ASSET_DIR, ARCHIVE_DIR} from '../../src/lib/photos-library/constants';
 import path from 'path';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
-import {spyOnEvent} from '../_helpers/_general';
-import * as ARCHIVE_ENGINE from '../../src/lib/archive-engine/constants';
-import {HANDLER_EVENT} from '../../src/app/event/error-handler';
+import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
+import {iCPSEventArchiveEngine, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
+import {ArchiveEngine} from '../../src/lib/archive-engine/archive-engine';
+import {iCloud} from '../../src/lib/icloud/icloud';
+import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
+
+let mockedResourceManager: MockedResourceManager;
+let mockedEventManager: MockedEventManager;
+let archiveEngine: ArchiveEngine;
+
+beforeEach(() => {
+    mockfs();
+    const instances = prepareResources(true, {
+        ...Config.defaultConfig,
+        remoteDelete: true,
+    })!;
+    mockedResourceManager = instances.manager;
+    mockedEventManager = instances.event;
+
+    archiveEngine = new ArchiveEngine(new iCloud(), new PhotosLibrary());
+});
 
 afterEach(() => {
     mockfs.restore();
 });
 
 describe.each([{
-    "zone": Zones.Primary,
-    "ASSET_DIR": PRIMARY_ASSET_DIR,
+    zone: Zones.Primary,
+    ASSET_DIR: PRIMARY_ASSET_DIR,
 }, {
-    "zone": Zones.Shared,
-    "ASSET_DIR": PRIMARY_ASSET_DIR, // @remarks this should be SHARED_ASSET_DIR
+    zone: Zones.Shared,
+    ASSET_DIR: PRIMARY_ASSET_DIR, // @remarks this should be SHARED_ASSET_DIR
 }])(`Archive Engine $zone`, ({zone, ASSET_DIR}) => {
     describe(`Archive Path`, () => {
         test(`Valid path`, async () => {
@@ -37,7 +54,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -46,26 +63,25 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
 
-            const archiveEngine = archiveEngineFactory();
-            const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
-            const persistEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.PERSISTING_START);
-            const remoteDeleteEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE);
-            const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+            const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
+            const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
+            const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
@@ -77,14 +93,14 @@ describe.each([{
             await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
             expect(archiveEngine.icloud.photos.deleteAssets).toHaveBeenCalledWith([
                 asset1.recordName,
@@ -113,7 +129,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset1Edit.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
@@ -123,30 +139,29 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset1Edit.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1Edit.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1Edit.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
 
-            const archiveEngine = archiveEngineFactory();
-            const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
-            const persistEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.PERSISTING_START);
-            const remoteDeleteEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE);
-            const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
-            const errorEvent = spyOnEvent(archiveEngine, HANDLER_EVENT);
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+            const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
+            const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
+            const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
@@ -160,16 +175,16 @@ describe.each([{
 
             expect(errorEvent).not.toHaveBeenCalled();
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(4);
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1Edit.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1Edit.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1Edit.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1Edit.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(4);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1Edit.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1Edit.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset1Edit, asset2, asset3]);
 
             expect(archiveEngine.icloud.photos.deleteAssets).toHaveBeenCalledWith([
                 asset1.recordName,
@@ -197,7 +212,7 @@ describe.each([{
                 asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [ASSET_DIR]: {
                             [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                             [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -206,29 +221,28 @@ describe.each([{
                         [ARCHIVE_DIR]: {},
                         [albumUUIDPath]: {
                             [asset1.getPrettyFilename()]: mockfs.symlink({
-                                "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                                path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                             }),
                             [asset2.getPrettyFilename()]: mockfs.symlink({
-                                "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                                path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                             }),
                             [asset3.getPrettyFilename()]: mockfs.symlink({
-                                "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                                path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                             }),
                         },
                         [albumName]: mockfs.symlink({
-                            "path": albumUUIDPath,
+                            path: albumUUIDPath,
                         }),
                     },
                 });
 
-                const archiveEngine = archiveEngineFactory();
-                const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
+                const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
 
                 archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
                 archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/.cc40a239-2beb-483e-acee-e897db1b818a`, [asset1, asset2, asset3])).rejects.toThrowError(`UUID path selected, use named path only`);
+                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/.cc40a239-2beb-483e-acee-e897db1b818a`, [asset1, asset2, asset3])).rejects.toThrow(/^UUID path selected, use named path only$/);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
                 expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
@@ -253,7 +267,7 @@ describe.each([{
                 asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [ASSET_DIR]: {
                             [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                             [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -263,33 +277,32 @@ describe.each([{
                         [albumUUIDPath1]: {
                             [albumUUIDPath2]: {
                                 [asset1.getPrettyFilename()]: mockfs.symlink({
-                                    "path": `../../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                                    path: `../../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                                 }),
                                 [asset2.getPrettyFilename()]: mockfs.symlink({
-                                    "path": `../../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                                    path: `../../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                                 }),
                                 [asset3.getPrettyFilename()]: mockfs.symlink({
-                                    "path": `../../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                                    path: `../../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                                 }),
                             },
                             [albumName2]: mockfs.symlink({
-                                "path": albumUUIDPath2,
+                                path: albumUUIDPath2,
                             }),
                         },
                         [albumName1]: mockfs.symlink({
-                            "path": albumUUIDPath1,
+                            path: albumUUIDPath1,
                         }),
                     },
                 });
 
-                const archiveEngine = archiveEngineFactory();
-                const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
+                const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
 
                 archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
                 archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random1`, [asset1, asset2, asset3])).rejects.toThrowError(`Only able to archive non-archived albums`);
+                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random1`, [asset1, asset2, asset3])).rejects.toThrow(/^Only able to archive non-archived albums$/);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
                 expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
@@ -311,7 +324,7 @@ describe.each([{
                 asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
                 mockfs({
-                    [photosDataDir]: {
+                    [Config.defaultConfig.dataDir]: {
                         [ASSET_DIR]: {
                             [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                             [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -320,19 +333,34 @@ describe.each([{
                         [ARCHIVE_DIR]: {},
                         [albumUUIDPath]: {},
                         [albumName]: mockfs.symlink({
-                            "path": albumUUIDPath,
+                            path: albumUUIDPath,
                         }),
                     },
                 });
 
-                const archiveEngine = archiveEngineFactory();
-                const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
+                const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
 
                 archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
                 archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                await expect(archiveEngine.archivePath(`${photosDataDir}/${albumName}`, [asset1, asset2, asset3])).rejects.toThrowError(`Unable to load album`);
+                await expect(archiveEngine.archivePath(`${Config.defaultConfig.dataDir}/${albumName}`, [asset1, asset2, asset3])).rejects.toThrow(/^Unable to load album$/);
+
+                expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
+                expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
+                expect(archiveEngine.icloud.photos.deleteAssets).not.toHaveBeenCalled();
+
+                expect(startEvent).toHaveBeenCalled();
+            });
+
+            test(`Throws error, if no assets are available`, async () => {
+                const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+
+                archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
+                archiveEngine.prepareForRemoteDeletion = jest.fn(() => undefined);
+                archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
+
+                await expect(archiveEngine.archivePath(`${Config.defaultConfig.dataDir}/Random`, [])).rejects.toThrow(/^No remote assets available$/);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
                 expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
@@ -355,7 +383,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -364,27 +392,26 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
 
-            const archiveEngine = archiveEngineFactory();
-            const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
-            const persistEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.PERSISTING_START);
-            const remoteDeleteEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE);
-            const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
-            const handlerEvent = spyOnEvent(archiveEngine, HANDLER_EVENT);
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+            const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
+            const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
+            const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve())
                 .mockRejectedValueOnce(`Persisting failed`)
@@ -399,9 +426,9 @@ describe.each([{
             await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(2);
 
@@ -413,7 +440,7 @@ describe.each([{
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`));
+            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`), path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()));
         });
 
         test(`Prepare remote delete throws error`, async () => {
@@ -429,7 +456,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -438,27 +465,26 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
 
-            const archiveEngine = archiveEngineFactory();
-            const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
-            const persistEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.PERSISTING_START);
-            const remoteDeleteEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE);
-            const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
-            const handlerEvent = spyOnEvent(archiveEngine, HANDLER_EVENT);
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+            const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
+            const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
+            const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
@@ -472,21 +498,21 @@ describe.each([{
             await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
             expect(startEvent).toHaveBeenCalled();
             expect(persistEvent).toHaveBeenCalledWith(3);
             expect(remoteDeleteEvent).toHaveBeenCalledWith(2);
             expect(finishEvent).toHaveBeenCalled();
 
-            expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to find asset`));
+            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to persist asset`), path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()));
         });
 
         test(`Delete assets throws error`, async () => {
@@ -502,7 +528,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -511,26 +537,25 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
 
-            const archiveEngine = archiveEngineFactory();
-            const startEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_START);
-            const persistEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.PERSISTING_START);
-            const remoteDeleteEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.REMOTE_DELETE);
-            const finishEvent = spyOnEvent(archiveEngine, ARCHIVE_ENGINE.EVENTS.ARCHIVE_DONE);
+            const startEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_START);
+            const persistEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.PERSISTING_START);
+            const remoteDeleteEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.REMOTE_DELETE);
+            const finishEvent = mockedEventManager.spyOnEvent(iCPSEventArchiveEngine.ARCHIVE_DONE);
 
             archiveEngine.persistAsset = jest.fn(() => Promise.resolve());
             archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`)
@@ -539,17 +564,17 @@ describe.each([{
                 .mockReturnValueOnce(asset3.recordName);
             archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.reject());
 
-            await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3])).rejects.toThrowError(`Unable to delete remote assets`);
+            await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3])).rejects.toThrow(/^Unable to delete remote assets$/);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+            expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
             expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledTimes(3);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
-            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
+            expect(archiveEngine.prepareForRemoteDeletion).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
             expect(startEvent).toHaveBeenCalled();
             expect(persistEvent).toHaveBeenCalledWith(3);
@@ -571,64 +596,62 @@ describe.each([{
         asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
         mockfs({
-            [photosDataDir]: {
+            [Config.defaultConfig.dataDir]: {
                 [ASSET_DIR]: {
                     [asset1.getAssetFilename()]: mockfs.file({
-                        "content": Buffer.from([1, 1, 1, 1]),
-                        "ctime": new Date(asset1.modified),
-                        "mtime": new Date(asset1.modified),
+                        content: Buffer.from([1, 1, 1, 1]),
+                        ctime: new Date(asset1.modified),
+                        mtime: new Date(asset1.modified),
                     }),
                     [asset2.getAssetFilename()]: mockfs.file({
-                        "content": Buffer.from([1, 1, 1, 1, 1]),
-                        "ctime": new Date(asset2.modified),
-                        "mtime": new Date(asset2.modified),
+                        content: Buffer.from([1, 1, 1, 1, 1]),
+                        ctime: new Date(asset2.modified),
+                        mtime: new Date(asset2.modified),
                     }),
                     [asset3.getAssetFilename()]: mockfs.file({
-                        "content": Buffer.from([1, 1, 1, 1, 1, 1]),
-                        "ctime": new Date(asset3.modified),
-                        "mtime": new Date(asset3.modified),
+                        content: Buffer.from([1, 1, 1, 1, 1, 1]),
+                        ctime: new Date(asset3.modified),
+                        mtime: new Date(asset3.modified),
                     }),
                 },
                 [ARCHIVE_DIR]: {},
                 [albumUUIDPath]: {
                     [asset1.getPrettyFilename()]: mockfs.symlink({
-                        "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                        path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                     }),
                     [asset2.getPrettyFilename()]: mockfs.symlink({
-                        "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                        path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                     }),
                     [asset3.getPrettyFilename()]: mockfs.symlink({
-                        "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                        path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                     }),
                 },
                 [albumName]: mockfs.symlink({
-                    "path": albumUUIDPath,
+                    path: albumUUIDPath,
                 }),
             },
         });
 
-        const archiveEngine = archiveEngineFactory();
+        await archiveEngine.persistAsset(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
+        await archiveEngine.persistAsset(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
+        await archiveEngine.persistAsset(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
 
-        await archiveEngine.persistAsset(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
-        await archiveEngine.persistAsset(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
-        await archiveEngine.persistAsset(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
-
-        const asset1AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()));
-        const asset1ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset1.getPrettyFilename()));
+        const asset1AssetStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()));
+        const asset1ArchivedStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
         expect(asset1AssetStats.isFile()).toBeTruthy();
         expect(asset1ArchivedStats.mtimeMs).toEqual(asset1.modified);
         expect(asset1ArchivedStats.isFile()).toBeTruthy();
         expect(asset1ArchivedStats.mtimeMs).toEqual(asset1.modified);
 
-        const asset2AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()));
-        const asset2ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset2.getPrettyFilename()));
+        const asset2AssetStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()));
+        const asset2ArchivedStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
         expect(asset2AssetStats.isFile()).toBeTruthy();
         expect(asset2ArchivedStats.mtimeMs).toEqual(asset2.modified);
         expect(asset2ArchivedStats.isFile()).toBeTruthy();
         expect(asset2ArchivedStats.mtimeMs).toEqual(asset2.modified);
 
-        const asset3AssetStats = fs.lstatSync(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()));
-        const asset3ArchivedStats = fs.lstatSync(path.join(photosDataDir, albumUUIDPath, asset3.getPrettyFilename()));
+        const asset3AssetStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()));
+        const asset3ArchivedStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
         expect(asset3AssetStats.isFile()).toBeTruthy();
         expect(asset3ArchivedStats.mtimeMs).toEqual(asset3.modified);
         expect(asset3ArchivedStats.isFile()).toBeTruthy();
@@ -644,13 +667,9 @@ describe.each([{
             const asset3 = new Asset(`Aah0dUnhGFNWjAeqKEkB/SNLNpFf`, 6, FileType.fromExtension(`jpeg`), 10, zone, AssetType.ORIG, `steve-johnson-T12spiHYons-unsplash`);
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
-            mockfs({});
-
-            const archiveEngine = archiveEngineFactory();
-
-            const result1 = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
-            const result2 = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
-            const result3 = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
+            const result1 = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            const result2 = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
+            const result3 = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
             expect(result1).toEqual(asset1.recordName);
             expect(result2).toEqual(asset2.recordName);
@@ -670,7 +689,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -679,24 +698,22 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
 
-            const archiveEngine = archiveEngineFactory();
-
-            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrowError(`Unable to find remote asset`);
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset2, asset3])).toThrow(/^Unable to find remote asset$/);
         });
 
         test(`Unable to find remote asset's record name`, () => {
@@ -711,7 +728,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -720,27 +737,27 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
 
-            const archiveEngine = archiveEngineFactory();
-
-            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrowError(`Unable to get record name`);
+            expect(() => archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3])).toThrow(/^Unable to get record name$/);
         });
 
         test(`Don't delete asset if flag is set`, () => {
+            mockedResourceManager._resources.remoteDelete = false;
+
             const albumUUID = `cc40a239-2beb-483e-acee-e897db1b818a`;
             const albumUUIDPath = `.${albumUUID}`;
             const albumName = `Random`;
@@ -752,7 +769,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -761,25 +778,22 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
 
-            const archiveEngine = archiveEngineFactory();
-            archiveEngine.remoteDelete = false;
-
-            const result = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            const result = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
             expect(result).toBeUndefined();
         });
 
@@ -797,7 +811,7 @@ describe.each([{
             asset3.recordName = `9D672118-CCDB-4336-8D0D-CA4CD6BD1999`;
 
             mockfs({
-                [photosDataDir]: {
+                [Config.defaultConfig.dataDir]: {
                     [ASSET_DIR]: {
                         [asset1.getAssetFilename()]: Buffer.from([1, 1, 1, 1]),
                         [asset2.getAssetFilename()]: Buffer.from([1, 1, 1, 1, 1]),
@@ -806,24 +820,22 @@ describe.each([{
                     [ARCHIVE_DIR]: {},
                     [albumUUIDPath]: {
                         [asset1.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset1.getAssetFilename()}`,
                         }),
                         [asset2.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset2.getAssetFilename()}`,
                         }),
                         [asset3.getPrettyFilename()]: mockfs.symlink({
-                            "path": `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
+                            path: `../${ASSET_DIR}/${asset3.getAssetFilename()}`,
                         }),
                     },
                     [albumName]: mockfs.symlink({
-                        "path": albumUUIDPath,
+                        path: albumUUIDPath,
                     }),
                 },
             });
 
-            const archiveEngine = archiveEngineFactory();
-
-            const result = archiveEngine.prepareForRemoteDeletion(path.join(photosDataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
+            const result = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), [asset1, asset2, asset3]);
             expect(result).toBeUndefined();
         });
     });

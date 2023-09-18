@@ -1,0 +1,13 @@
+name: clear-git-tag
+description: Removes the provided git tag from the remote repository
+inputs:
+  git-tag:
+    description: The git tag to remove
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: get-config
+      if: inputs.git-tag != ''
+      shell: bash
+      run: git push --delete origin ${{ inputs.git-tag }}

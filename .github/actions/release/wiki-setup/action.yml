@@ -1,0 +1,19 @@
+name: release-wiki-setup
+description: Sets up the wiki release environment
+inputs:
+  artifact-name:
+    description: The name of the uploaded wiki artifact
+    required: false
+    default: wiki-artifact
+  release-dir:
+    description: Directory, where the release artifacts are located
+    required: false
+    default: release
+runs:
+  using: composite
+  steps:
+    - id: download-wiki-artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.release-dir }}
