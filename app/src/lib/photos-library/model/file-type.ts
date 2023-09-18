@@ -11,6 +11,7 @@ const EXT = {
     'public.jpeg': `jpeg`,
     'com.apple.quicktime-movie': `mov`,
     'public.heic': `heic`,
+    'public.image': `HEIC`,
     'com.sony.arw-raw-image': `arw`,
     'org.webmproject.webp': `webp`,
     'com.compuserve.gif': `gif`,
