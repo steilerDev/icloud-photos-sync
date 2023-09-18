@@ -90,7 +90,7 @@
     "axios-har-tracker": "^0.5.1",
     "chalk": "^5.0.0",
     "cli-progress": "^3.11.2",
-    "commander": "^10.0.0",
+    "commander": "^11.0.0",
     "croner": "^6.0.3",
     "jsonc": "^2.0.0",
     "p-event": "^5.0.1",
