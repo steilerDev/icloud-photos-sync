@@ -94,7 +94,7 @@
     "croner": "^7.0.1",
     "jsonc": "^2.0.0",
     "p-event": "^6.0.0",
-    "p-queue": "^7.2.0",
+    "p-queue": "^7.4.1",
     "p-timeout": "^6.1.2",
     "tough-cookie": "^4.0.0"
   }
