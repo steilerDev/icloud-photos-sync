@@ -22,7 +22,7 @@ runs:
       run: cp README.md LICENSE ${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.docs-dir }}/
     - id: build-cli-reference
       shell: bash
-      run: (cd ${{ inputs.app-path }}; npm run doc:cli -- "${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.docs-dir }}")
+      run: (cd ${{ inputs.app-path }}; npm run doc:cli -- "${{ github.workspace }}/${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.docs-dir }}")
     - id: build-mkdocs
       shell: bash
       run: (cd ${{ inputs.docs-path }}; mkdocs build)
