@@ -10,6 +10,7 @@ import {prepareResources, spyOnEvent} from '../_helpers/_general';
 import path from 'path';
 import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
+import { BasicOptions } from '@thundernetworkrad/readline-sync'
 
 beforeEach(() => {
     mockfs();
@@ -59,6 +60,38 @@ describe(`App Factory`, () => {
             expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, ...expectedOptions});
             expect(app).toBeInstanceOf(appType);
         });
+    });
+
+    // Currently don't know how to test this...
+    test.each([
+        {
+            desc: 'No parameter',
+            parameter: []
+        },{
+            desc: 'Empty parameter',
+            parameter: [
+                `-p`,
+                ``,
+            ]
+        }
+    ])(`Asking user to provide password: $desc`, async ({parameter}) => {
+        const setupSpy = jest.spyOn(Resources, `setup`);
+        const questionFct = jest.fn<(query?: any, options?: BasicOptions) => string>().mockReturnValue('testPass')
+        const app = await appFactory(
+            [
+                `/usr/bin/node`,
+                `/home/icloud-photos-sync/main.js`,
+                `-u`,
+                `test@icloud.com`,
+                ...parameter,
+                `token`,
+            ],
+            questionFct
+        );
+
+        expect(app).toBeInstanceOf(TokenApp);
+        expect(setupSpy).toHaveBeenCalledWith(Config.defaultConfig);
+        expect(questionFct).toHaveBeenCalled();
     });
 
     test(`Create Token App`, async () => {
