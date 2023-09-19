@@ -121,6 +121,7 @@ export type iCPSAppOptions = {
     logToCli: boolean,
     suppressWarnings: boolean,
     exportMetrics: boolean,
+    region: Resources.Types.Region,
     metadataRate: [number, number]
 }
 
@@ -144,7 +145,7 @@ export function argParser(callback: (res: iCPSApp) => void, questionFct: (query?
             .env(`APPLE_ID_USER`)
             .makeOptionMandatory(true))
         .addOption(new Option(`-p, --password [string]`, `AppleID password. Omitting the option or providing an empty string will result in the CLI to ask for user input before startup.`)
-            .preset('')
+            .preset(``)
             .makeOptionMandatory()
             .env(`APPLE_ID_PWD`)
             .argParser(commanderParseOptionalAndReadFromStdin.bind(this, questionFct)))
@@ -210,7 +211,11 @@ export function argParser(callback: (res: iCPSApp) => void, questionFct: (query?
         .addOption(new Option(`--metadata-rate <interval>`, `Limits the rate of metadata fetching in order to avoid getting throttled by the API. Expects the format \`<numberOfRequests|Infinity>/<timeInMs>\`, e.g. \`1/20\` to limit requests to one request in 20ms.`)
             .env(`METADATA_RATE`)
             .default([Infinity, 0], `Infinity/0`)
-            .argParser(commanderParseInterval));
+            .argParser(commanderParseInterval))
+        .addOption(new Option(`--region <string>`, `Changes the iCloud region. Experimental support for iCloud China.`)
+            .env(`REGION`)
+            .default(`world`)
+            .choices(Object.values(Resources.Types.Region)));
 
     program.command(`daemon`)
         .action((_, command) => {
@@ -256,12 +261,12 @@ export async function appFactory(argv: string[], questionFct: (query?: any, opti
             argParser((res: iCPSApp) => {
                 resolve(res);
             }, questionFct).parse(
-                argv.indexOf('-p') >=0
-                ? argv
-                : [
-                    ...argv,
-                    '-p' // making sure -p is present to trigger commander preset
-                ]
+                argv.indexOf(`-p`) >= 0
+                    ? argv
+                    : [
+                        ...argv,
+                        `-p`, // Making sure -p is present to trigger commander preset
+                    ],
             );
         } catch (err) {
             reject(err);

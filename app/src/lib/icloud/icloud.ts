@@ -261,7 +261,7 @@ export class iCloud {
         try {
             Resources.logger(this).info(`Setting up iCloud connection`);
 
-            const url = ENDPOINTS.SETUP.BASE + ENDPOINTS.SETUP.PATH.ACCOUNT;
+            const url = ENDPOINTS.SETUP.BASE() + ENDPOINTS.SETUP.PATH.ACCOUNT;
             const data = {
                 dsWebAuthToken: Resources.manager().sessionSecret,
                 trustToken: Resources.manager().trustToken,

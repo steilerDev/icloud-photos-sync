@@ -213,7 +213,7 @@ export class NetworkManager {
 
         this._axios = axios.create({
             headers: {
-                Origin: `https://www.icloud.com`,
+                Origin: `https://www.${this.iCloudRegionUrl(resources.region)}`,
             },
         });
         this._headerJar = new HeaderJar(this._axios);
@@ -362,6 +362,16 @@ export class NetworkManager {
     set sessionToken(sessionToken: string) {
         Resources.logger(this).debug(`Setting session secret to ${sessionToken}`);
         Resources.manager().sessionSecret = sessionToken;
+    }
+
+    /**
+     * @param region - The region to use, currently set region in resource manager is set as default
+     * @returns 'icloud.com.cn' if region is set to 'china', 'icloud.com' otherwise
+     */
+    iCloudRegionUrl(region: Resources.Types.Region = Resources.manager().region) {
+        return region === Resources.Types.Region.CHINA
+            ? `icloud.com.cn`
+            : `icloud.com`;
     }
 
     /**
