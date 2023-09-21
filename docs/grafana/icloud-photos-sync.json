@@ -3,10 +3,17 @@
     {
       "name": "DS_MONITORING",
       "label": "Monitoring",
-      "description": "",
+      "description": "The InfluxDB data source supporting InfluxQL",
       "type": "datasource",
       "pluginId": "influxdb",
       "pluginName": "InfluxDB"
+    },
+    {
+      "name": "VAR_MEASUREMENT",
+      "type": "constant",
+      "label": "measurement",
+      "value": "icloud_photos_sync",
+      "description": "The name of the measurement, where icloud-photos-sync data points are stored"
     }
   ],
   "__elements": {},
@@ -76,7 +83,7 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
@@ -275,6 +282,49 @@
       "pluginVersion": "9.2.6",
       "targets": [
         {
+          "alias": "status",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "/^$measurement$/",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT last(\"status\") FROM \"icloud_photos_sync\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "status"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
           "alias": "status_time",
           "datasource": {
             "type": "influxdb",
@@ -295,7 +345,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -315,50 +365,8 @@
             ]
           ],
           "tags": []
-        },
-        {
-          "alias": "status",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_MONITORING}"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "icloud_photos_sync",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "status"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": []
         }
       ],
-      "title": "Status",
       "type": "stat"
     },
     {
@@ -565,7 +573,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -658,7 +666,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -794,7 +802,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -836,7 +844,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -878,7 +886,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "C",
@@ -920,7 +928,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "D",
@@ -962,7 +970,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "E",
@@ -1004,7 +1012,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "F",
@@ -1046,7 +1054,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "G",
@@ -1088,7 +1096,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "H",
@@ -1130,7 +1138,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "I",
@@ -1172,7 +1180,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "J",
@@ -1214,7 +1222,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "K",
@@ -1256,7 +1264,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "L",
@@ -1313,7 +1321,8 @@
             },
             "lineWidth": 1,
             "scaleDistribution": {
-              "type": "linear"
+              "log": 2,
+              "type": "symlog"
             }
           },
           "decimals": 0,
@@ -1407,7 +1416,7 @@
           "showLegend": false
         },
         "orientation": "vertical",
-        "showValue": "auto",
+        "showValue": "always",
         "stacking": "none",
         "tooltip": {
           "mode": "multi",
@@ -1438,7 +1447,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -1480,7 +1489,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -1522,7 +1531,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "C",
@@ -1615,7 +1624,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -1657,7 +1666,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -1749,7 +1758,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -1791,7 +1800,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -1983,7 +1992,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -2025,7 +2034,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -2067,7 +2076,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "C",
@@ -2109,7 +2118,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "E",
@@ -2222,7 +2231,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -2264,7 +2273,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -2306,7 +2315,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "C",
@@ -2348,7 +2357,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "D",
@@ -2390,7 +2399,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "E",
@@ -2432,7 +2441,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "F",
@@ -2474,7 +2483,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "G",
@@ -2516,7 +2525,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "H",
@@ -2558,7 +2567,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "I",
@@ -2600,7 +2609,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "J",
@@ -2642,7 +2651,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "K",
@@ -2684,7 +2693,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "L",
@@ -2733,6 +2742,26 @@
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
+      },
+      {
+        "description": "Name of the Influx measurement that is holding the icloud-photos-sync data points",
+        "hide": 2,
+        "name": "measurement",
+        "query": "${VAR_MEASUREMENT}",
+        "skipUrlSync": false,
+        "type": "constant",
+        "current": {
+          "value": "${VAR_MEASUREMENT}",
+          "text": "${VAR_MEASUREMENT}",
+          "selected": false
+        },
+        "options": [
+          {
+            "value": "${VAR_MEASUREMENT}",
+            "text": "${VAR_MEASUREMENT}",
+            "selected": false
+          }
+        ]
       }
     ]
   },
@@ -2744,6 +2773,6 @@
   "timezone": "",
   "title": "icloud-photos-sync",
   "uid": "iwq-NHxVz",
-  "version": 32,
+  "version": 36,
   "weekStart": ""
 }

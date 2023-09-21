@@ -18,6 +18,10 @@ After importing the metrics into an InfluxDB through telegraf, you can use Grafa
 
 [![Dashboard](../assets/grafana-dashboard.png)](../assets/grafana-dashboard.png)
 
+When importing the JSON model you need to provide an InfluxDB datasource that supports InfluxQL. [InfluxDB 1.X supports this out of the box](https://docs.influxdata.com/influxdb/v1/query_language/), [InfluxDB 2.X needs to be configured to support InfluxQL](https://docs.influxdata.com/influxdb/v2/query-data/influxql/). 
+
+Additionally you need to specify the measurement name, where the sync metrics are stored. For InfluxDB 1.X this should always be `icloud_photos_sync` (as this is specified in the Influx Line Protocol written by this tool), InfluxDB 2.X however needs to include the [database and retention policy mapping](https://docs.influxdata.com/influxdb/v2/query-data/influxql/#query-a-mapped-bucket-with-influxql) in the measurement query. This could be something like `example-db.example-rp.icloud_photos_sync`, but depends [on the DBRP mapping you previously created](https://docs.influxdata.com/influxdb/v2/query-data/influxql/dbrp/#create-dbrp-mappings).
+
 ## Metrics
 
 All metrics are created using the measurement name `icloud_photos_sync`. 
