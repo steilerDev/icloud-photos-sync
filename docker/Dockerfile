@@ -6,7 +6,7 @@ ENV NODE_NO_WARNINGS=1
 VOLUME /opt/icloud-photos-library
 
 RUN apk update && \
-    apk add curl vim bash jq perl && \
+    apk add curl bash jq && \
     rm -rf /var/cache/apk/*
 
 # Applying fs patch for assets
