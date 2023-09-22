@@ -262,9 +262,18 @@ describe(`Server lifecycle`, () => {
         const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
         const error = new Error(`Address in use`);
         (error as any).code = `EADDRINUSE`;
-        server.server.emit(`error`, new Error(`Address in use`));
+        server.server.emit(`error`, error);
 
-        expect(errorEvent).toHaveBeenCalledWith(new Error(`HTTP Server Error`));
+        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.ADDR_IN_USE_ERR));
+    });
+
+    test(`Handle EACCES error`, () => {
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
+        const error = new Error(`No privileges`);
+        (error as any).code = `EACCES`;
+        server.server.emit(`error`, error);
+
+        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.INSUFFICIENT_PRIVILEGES));
     });
 
     test(`Handle MFA timeout`, () => {
