@@ -84,7 +84,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@backtrace-labs/node": "^0.0.1",
+    "@backtrace-labs/node": "^0.0.2",
     "@thundernetworkrad/readline-sync": "^2023.3.13-1",
     "ajv": "^8.12.0",
     "axios": "^1.2.2",
