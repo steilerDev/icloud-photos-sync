@@ -46,9 +46,17 @@ export class MFAServer {
         Resources.logger(this).debug(`Preparing MFA server on port ${Resources.manager().mfaServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
         this.server.on(`error`, err => {
-            const icpsErr = (Object.hasOwn(err, `code`) && (err as any).code === `EADDRINUSE`)
-                ? new iCPSError(MFA_ERR.ADDR_IN_USE_ERR).addContext(`port`, Resources.manager().mfaServerPort)
-                : new iCPSError(MFA_ERR.SERVER_ERR);
+            let icpsErr = new iCPSError(MFA_ERR.SERVER_ERR);
+
+            if (Object.hasOwn(err, `code`)) {
+                if ((err as any).code === `EADDRINUSE`) {
+                    icpsErr = new iCPSError(MFA_ERR.ADDR_IN_USE_ERR).addContext(`port`, Resources.manager().mfaServerPort);
+                }
+
+                if ((err as any).code === `EACCES`) {
+                    icpsErr = new iCPSError(MFA_ERR.INSUFFICIENT_PRIVILEGES).addContext(`port`, Resources.manager().mfaServerPort);
+                }
+            }
 
             icpsErr.addCause(err);
 

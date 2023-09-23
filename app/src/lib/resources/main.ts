@@ -272,5 +272,19 @@ export namespace Resources {
             */
            removeListeners: (event?: iCPSEvent) => Resources.Types.Events,
        }
+
+       /**
+        * Possible regions for this tool to operate in
+        */
+       export enum Region {
+        /**
+         * Will use icloud.com
+         */
+        WORLD = `world`,
+        /**
+         * Will use icloud.com.cn
+         */
+        CHINA = `china`,
+       }
    }
 }

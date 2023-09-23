@@ -65,5 +65,5 @@ body:
           required: true
         - label: Checked out [open and known issues](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3Aclass%28bug%29%2Cclass%28improvement%29%2C%22class%28known+issue%29%22)
           required: true
-        - label: Enabled [crash and error reporting](https://steilerdev.github.io/icloud-photos-sync/user-guides/error-reporting/)
+        - label: Enabled [crash and error reporting](https://icps.steiler.dev/user-guides/cli/#enable-crash-reporting)
           required: true

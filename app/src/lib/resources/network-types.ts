@@ -3,6 +3,7 @@
  */
 
 import {jsonc} from "jsonc";
+import {Resources} from "./main.js";
 
 /**
  * Hard coded client id, extracted from previous requests
@@ -80,7 +81,9 @@ export const ENDPOINTS = {
      * Setup endpoints needed to acquire cookies and Photos URL
      */
     SETUP: {
-        BASE: `https://setup.icloud.com`,
+        BASE(): string {
+            return `https://setup.${Resources.network().iCloudRegionUrl()}`;
+        },
         PATH: {
             ACCOUNT: `/setup/ws/1/accountLogin`,
         },

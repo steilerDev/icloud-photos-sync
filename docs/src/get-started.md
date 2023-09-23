@@ -39,6 +39,8 @@ The `latest` tag should always represent the latest stable release, whereas the 
               - <photos-dir>:/opt/icloud-photos-library
         ```
 
+        
+
         Get the latest image by running:
 
         ```
@@ -53,13 +55,15 @@ The `latest` tag should always represent the latest stable release, whereas the 
         docker pull steilerdev/icloud-photos-sync:latest
         ```
 
+    !!! tip "Plain text password"
+            If you don't want to store your plain text password in the environment, it is possible to omit the `APPLE_ID_PWD` option, which will lead to the application awaiting the password from the command line upon start. To input the password into the running Docker container [it needs to be started with `tty: true` and `stdin_open: true`](https://docs.docker.com/compose/compose-file/compose-file-v3/#domainname-hostname-ipc-mac_address-privileged-read_only-shm_size-stdin_open-tty-user-working_dir) / `docker run -itd` for [detached mode](https://docs.docker.com/engine/reference/run/#detached--d) with [tty and stdin open](https://docs.docker.com/engine/reference/run/#foreground). Once the container was started, you can attach to the running `icloud-photos-sync` process using [`docker attach photos-sync`](https://docs.docker.com/engine/reference/commandline/attach/)
 
 === "node"
 
     When setting up the environment, please keep the [currently recommended NodeJS version](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/node-version) in mind.
 
     !!! info "Experimental node modules"
-        This application uses experimental node modules, which are not yet available in the LTS version of NodeJS. This includes [import assertions](https://github.com/tc39/proposal-import-attributes) and importing JSON modules. To remove runtime warnings and ensuring proper execution, it is recommended to set the `NODE_NO_WARNINGS` environmental variable to `1``
+        This application uses experimental node modules, which are not yet available in the LTS version of NodeJS. This includes [import assertions](https://github.com/tc39/proposal-import-attributes) and importing JSON modules. To remove runtime warnings and ensuring proper execution, it is recommended to set the `NODE_NO_WARNINGS` environmental variable to `1`.
 
     === "NPM"
 

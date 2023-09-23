@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: setup/codeql
         uses: github/codeql-action/init@v2
         with:

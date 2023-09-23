@@ -281,6 +281,13 @@ export class ResourceManager {
     }
 
     /**
+     * @returns The region to be used for this app
+     */
+    get region(): Resources.Types.Region {
+        return this._resources.region;
+    }
+
+    /**
      * @returns The session secret of the account
      * @throws If no session secret is set
      */

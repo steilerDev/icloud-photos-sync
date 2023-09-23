@@ -1,4 +1,4 @@
-FROM node:18.17.1-alpine
+FROM node:18.18.0-alpine
 
 # Setting node environment to not show experimental warnings
 ENV NODE_NO_WARNINGS=1 
@@ -6,7 +6,7 @@ ENV NODE_NO_WARNINGS=1
 VOLUME /opt/icloud-photos-library
 
 RUN apk update && \
-    apk add curl vim bash jq && \
+    apk add curl bash jq && \
     rm -rf /var/cache/apk/*
 
 # Applying fs patch for assets

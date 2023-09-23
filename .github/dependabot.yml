@@ -24,9 +24,29 @@ updates:
       day: "saturday"
       time: "09:00"
       timezone: "Europe/Berlin"
+    groups:
+      jest:
+        patterns:
+        - "jest*"
+        - "@types/jest*"
+        - "ts-jest*"
+      mockfs:
+        patterns:
+        - "mock-fs*"
+        - "@types/mock-fs*"
+      typescript:
+        patterns:
+        - "@typescript-eslint*"
+        - "@types/typescript*"
+        - 'eslint*'
+        - "typescript*"
+        - "ts-node*"
+        - "typedoc*"
+      tough-cookie:
+        patterns:
+        - "tough-cookie*"
+        - "@types/tough-cookie*"
     ignore:
-      - dependency-name: "typedoc*"
-        update-types: ["version-update:semver-minor"] # ignore minor version for something like typedoc
       - dependency-name: "@types/node"
         versions: ["19.x.x", "20.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
   
@@ -55,9 +75,10 @@ updates:
       day: "saturday"
       time: "09:00"
       timezone: "Europe/Berlin"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-minor", "version-update:semver-patch"] # only alert about major update
+    groups:
+      mkdocs:
+        patterns:
+        - "mkdocs*"
 
   # Maintain dependencies for semantic release
   - package-ecosystem: "npm"
@@ -70,6 +91,9 @@ updates:
       day: "saturday"
       time: "09:00"
       timezone: "Europe/Berlin"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-minor", "version-update:semver-patch"] # only alert about major update
+    groups:
+      semantic-release:
+        patterns:
+        - "semantic-release*"
+        - "@semantic-release*"
+        - "conventional-changelog*"
