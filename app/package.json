@@ -58,7 +58,7 @@
     "!win32"
   ],
   "devDependencies": {
-    "@backtrace-labs/javascript-cli": "^0.0.3",
+    "@backtrace-labs/javascript-cli": "^0.1.2",
     "@jest/globals": "^29.6.2",
     "@types/cli-progress": "^3.11.0",
     "@types/jest": "^29.5.2",
@@ -84,7 +84,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@backtrace-labs/node": "^0.0.1",
+    "@backtrace-labs/node": "^0.0.2",
     "@thundernetworkrad/readline-sync": "^2023.3.13-1",
     "ajv": "^8.12.0",
     "axios": "^1.2.2",
