@@ -1,4 +1,4 @@
-FROM node:18.17.1-alpine
+FROM node:18.18.0-alpine
 
 # Setting node environment to not show experimental warnings
 ENV NODE_NO_WARNINGS=1 
