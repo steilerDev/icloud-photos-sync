@@ -47,8 +47,6 @@ updates:
         - "tough-cookie*"
         - "@types/tough-cookie*"
     ignore:
-      - dependency-name: "typedoc*"
-        update-types: ["version-update:semver-minor"] # ignore minor version for something like typedoc
       - dependency-name: "@types/node"
         versions: ["19.x.x", "20.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
   
