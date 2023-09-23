@@ -30,7 +30,7 @@ runs:
         (cd ${{ inputs.release-dir }}; npx semantic-release)
     - id: upload-source-map
       shell: bash
-      run: (cd ${{ inputs.release-dir }}; npx backtrace-js upload --subdomain steilerdev --token ${{ inputs.bt-token }} app/bin/)
+      run: (cd ${{ inputs.release-dir }}; npx backtrace-js upload app/bin/ --subdomain steilerdev --token ${{ inputs.bt-token }})
     - id: get-git-metadata
       uses: ./.github/actions/helper/git-metadata
     - id: get-npm-metadata
