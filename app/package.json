@@ -23,7 +23,7 @@
     "build:dev": "npm run build:schema && npm run build:typescript",
     "build": "npm run build:dev",
     "dist:clean": "rm -rf bin/ && mkdir -p bin/",
-    "dist:package": "cp -r ./build/out/src/* bin/ && cp ../README.md ../LICENSE .",
+    "dist:package": "npx ts-node-esm build/package.ts && cp ../README.md ../LICENSE .",
     "dist:sourcemap": "npx backtrace-js process bin/",
     "dist": "npm run dist:clean && npm run dist:package && npm run dist:sourcemap",
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
