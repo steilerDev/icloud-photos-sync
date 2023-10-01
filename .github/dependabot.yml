@@ -46,6 +46,10 @@ updates:
         patterns:
         - "tough-cookie*"
         - "@types/tough-cookie*"
+      inquirer:
+        patterns:
+        - "inquirer*"
+        - "@types/inquirer*"
     ignore:
       - dependency-name: "@types/node"
         versions: ["19.x.x", "20.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release

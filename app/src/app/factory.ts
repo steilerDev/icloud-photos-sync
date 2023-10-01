@@ -3,7 +3,7 @@ import Cron from "croner";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 import {Resources} from "../lib/resources/main.js";
 import {LogLevel} from "./event/log.js";
-import {question, BasicOptions} from '@thundernetworkrad/readline-sync';
+import inquirer from "inquirer";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -58,21 +58,6 @@ function commanderParseCron(value: string, _dummyPrevious?: unknown): string {
 }
 
 /**
- * This function reads a value that can be optionally empty and asks for user input to provide the actual value
- * @param questionFct - Function to query for input - parameterized for testability
- * @param value - The string literal, read from the CLI
- * @param _dummyPrevious - Conforming to the interface - unused
- * @returns The original string, or user provided input, in case the input was undefined or empty
- */
-function commanderParseOptionalAndReadFromStdin(questionFct: (query?: any, options?: BasicOptions) => string, value: string, _dummyPrevious?: unknown): string {
-    if (value && value.length > 0) {
-        return value;
-    }
-
-    return questionFct(`Please enter your iCloud password: `, {hideEchoBack: true});
-}
-
-/**
  * This function can be used as a commander argParser. It will try to parse the value as an interval with the format \<numberOfRequests|Infinity\>/\<timeInMs\>.
  * @param value - The string literal, read from the CLI
  * @param _dummyPrevious - Conforming to the interface - unused
@@ -95,6 +80,27 @@ function commanderParseInterval(value: string, _dummyPrevious?: unknown): [numbe
         intervalCap,
         commanderParsePositiveInt(match[2]),
     ];
+}
+
+/**
+ * Extracts the options from the parsed commander command - and asks for user input in case it is necessary
+ * @param parsedCommand - The parsed commander command returned from callback in Command.action((_, command any)
+ * @returns Validated iCPSAppOptions
+ */
+async function completeConfigurationOptionsFromCommand(parsedCommand: unknown): Promise<iCPSAppOptions> {
+    const opts = (parsedCommand as any).parent?.opts() as iCPSAppOptions;
+
+    if (!opts.username || opts.username.length === 0) {
+        const {username} = await inquirer.prompt({type: `input`, message: `Please enter your AppleID username`, name: `username`});
+        opts.username = username;
+    }
+
+    if (!opts.password || opts.password.length === 0) {
+        const {password} = await inquirer.prompt({type: `password`, message: `Please enter your AppleID password`, name: `password`, mask: `*`});
+        opts.password = password;
+    }
+
+    return opts;
 }
 
 /**
@@ -131,7 +137,7 @@ export type iCPSAppOptions = {
  * @param questionFct - The function to query for input from the CLI - parameterized for testing purposes
  * @returns The commander command object, awaiting .parse() to be called
  */
-export function argParser(callback: (res: iCPSApp) => void, questionFct: (query?: any, options?: BasicOptions) => string): Command {
+export function argParser(callback: (res: iCPSApp) => void): Command {
     // Overwriting commander\`s _exit function, because exitOverwrite will still call process.exit
     (Command.prototype as any)._exit = (exitCode: number, code: string, message: string) => {
         throw new CommanderError(exitCode, code, message); // Function needs to return \`never\`, otherwise errors will be ignored
@@ -141,14 +147,12 @@ export function argParser(callback: (res: iCPSApp) => void, questionFct: (query?
     program.name(Resources.PackageInfo.name)
         .description(Resources.PackageInfo.description)
         .version(Resources.PackageInfo.version)
-        .addOption(new Option(`-u, --username <string>`, `AppleID username.`)
+        .addOption(new Option(`-u, --username <string>`, `AppleID username. Omitting the option will result in the CLI to ask for user input before startup`)
             .env(`APPLE_ID_USER`)
-            .makeOptionMandatory(true))
-        .addOption(new Option(`-p, --password [string]`, `AppleID password. Omitting the option or providing an empty string will result in the CLI to ask for user input before startup.`)
-            .preset(``)
-            .makeOptionMandatory()
+            .makeOptionMandatory(false))
+        .addOption(new Option(`-p, --password <string>`, `AppleID password. Omitting the option will result in the CLI to ask for user input before startup.`)
             .env(`APPLE_ID_PWD`)
-            .argParser(commanderParseOptionalAndReadFromStdin.bind(this, questionFct)))
+            .makeOptionMandatory(false))
         .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, the trust token is read from the \`.icloud-photos-sync\` resource file in data dir. If no stored trust token could be loaded, a new trust token will be acquired (requiring the input of an MFA code).`)
             .env(`TRUST_TOKEN`))
         .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library.`)
@@ -218,29 +222,33 @@ export function argParser(callback: (res: iCPSApp) => void, questionFct: (query?
             .choices(Object.values(Resources.Types.Region)));
 
     program.command(`daemon`)
-        .action((_, command) => {
-            Resources.setup(command.parent.opts());
+        .action(async (_, command) => {
+            const opts = await completeConfigurationOptionsFromCommand(command);
+            Resources.setup(opts);
             callback(new DaemonApp());
         })
         .description(`Starts the synchronization in scheduled daemon mode - continuously running based on the provided cron schedule.`);
 
     program.command(`token`)
-        .action((_, command) => {
-            Resources.setup(command.parent.opts());
+        .action(async (_, command) => {
+            const opts = await completeConfigurationOptionsFromCommand(command);
+            Resources.setup(opts);
             callback(new TokenApp());
         })
         .description(`Validates the current trust token, fetches a new one (if necessary) and prints it to the CLI.`);
 
     program.command(`sync`)
-        .action((_, command) => {
-            Resources.setup(command.parent.opts());
+        .action(async (_, command) => {
+            const opts = await completeConfigurationOptionsFromCommand(command);
+            Resources.setup(opts);
             callback(new SyncApp());
         })
         .description(`Fetches the remote state and persist it to the local disk once.`);
 
     program.command(`archive`)
         .action(async (archivePath, _, command) => {
-            Resources.setup(command.parent.opts());
+            const opts = await completeConfigurationOptionsFromCommand(command);
+            Resources.setup(opts);
             callback(new ArchiveApp(archivePath));
         })
         .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)
@@ -255,19 +263,12 @@ export function argParser(callback: (res: iCPSApp) => void, questionFct: (query?
  * @param questionFct - The function to query for input from the CLI - parameterized for testing purposes, readline-sync used per default
  * @returns - A promise that resolves to the correct application object. Once the promise resolves, the global resource singleton will also be available. If the program is not able to parse the options, or required options are missing, an error message is printed to stderr and the promise rejects with a CommanderError.
  */
-export async function appFactory(argv: string[], questionFct: (query?: any, options?: BasicOptions) => string = question): Promise<iCPSApp> {
+export async function appFactory(argv: string[]): Promise<iCPSApp> {
     return new Promise((resolve, reject) => {
         try {
             argParser((res: iCPSApp) => {
                 resolve(res);
-            }, questionFct).parse(
-                argv.indexOf(`-p`) >= 0
-                    ? argv
-                    : [
-                        ...argv,
-                        `-p`, // Making sure -p is present to trigger commander preset
-                    ],
-            );
+            }).parse(argv);
         } catch (err) {
             reject(err);
         }

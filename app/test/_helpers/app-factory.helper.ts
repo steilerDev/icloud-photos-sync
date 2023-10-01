@@ -3,14 +3,6 @@ export const rejectOptions = [
         options: [
             `/usr/bin/node`,
             `/home/icloud-photos-sync/main.js`,
-            `token`,
-        ],
-        _desc: `Missing username`,
-        expected: `error: required option '-u, --username <string>' not specified`,
-    }, {
-        options: [
-            `/usr/bin/node`,
-            `/home/icloud-photos-sync/main.js`,
             `-u`,
             `test@icloud.com`,
             `-p`,
