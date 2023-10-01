@@ -20,6 +20,10 @@ export const SETUP_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `SETUP_RESPONSE`, `Unable to parse and validate setup response`,
 );
 
+export const PCS_RESPONSE: ErrorStruct = buildErrorStruct(
+    name, prefix, `PCS_RESPONSE`, `Unable to parse and validate PCS acquisition response`,
+);
+
 export const PHOTOS_SETUP_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `PHOTOS_SETUP_RESPONSE`, `Unable to parse and validate photos setup response`,
 );

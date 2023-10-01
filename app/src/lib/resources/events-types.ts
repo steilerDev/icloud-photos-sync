@@ -42,6 +42,10 @@ export enum iCPSEventCloud {
      */
     TRUSTED = `icloud-trusted`,
     /**
+     * Emitted when ADP is enabled and PCS Cookies are required
+     */
+    PCS_REQUIRED = `icloud-pcs_req`,
+    /**
      * Emitted when the iCloud account information have been retrieved
      */
     ACCOUNT_READY = `icloud-account_ready`,
@@ -49,10 +53,10 @@ export enum iCPSEventCloud {
      * Emitted if the session token expired
      */
     SESSION_EXPIRED = `icloud-session_expired`,
-     /**
-      * Emitted when the iCloud connection has experienced an error - provides an iCPSError as argument
-      */
-     ERROR = `icloud-error`,
+    /**
+     * Emitted when the iCloud connection has experienced an error - provides an iCPSError as argument
+     */
+    ERROR = `icloud-error`,
 }
 
 /**

@@ -41,6 +41,8 @@ export const HEADER_KEYS = {
 export const COOKIE_KEYS = {
     AASP: `aasp`,
     X_APPLE: `X-APPLE-`,
+    PCS_PHOTOS: `X-APPLE-WEBAUTH-PCS-Photos`,
+    PCS_SHARING: `X-APPLE-WEBAUTH-PCS-Sharing`,
 };
 
 /**
@@ -85,7 +87,8 @@ export const ENDPOINTS = {
             return `https://setup.${Resources.network().iCloudRegionUrl()}`;
         },
         PATH: {
-            ACCOUNT: `/setup/ws/1/accountLogin`,
+            ACCOUNT_LOGIN: `/setup/ws/1/accountLogin`,
+            REQUEST_PCS: `/setup/ws/1/requestPCS`,
         },
     },
     /**
@@ -268,11 +271,50 @@ export type SetupResponse = {
                  */
                 url: string,
                 /**
+                 * Shows if additional PCS cookies are required - if missing not necessary
+                 */
+                pcsRequired?: boolean,
+                /**
                  * Service needs to be active
                  */
                 status: `active`
             }
         }
+    }
+}
+
+/**
+ * The expected response when trying to acquire PCS cookies
+ */
+export type PCSResponse = {
+    headers: {
+        /**
+         * Should hold the PCS cookies
+         * @minItems 2
+         */
+        'set-cookie': string[],  // eslint-disable-line
+    }
+    data: {
+        /**
+         * Needs to be yes, otherwise this tool will not work
+         */
+        isWebAccessAllowed: true,
+        /**
+         * Consent needs to be previously provided, not yet supported by this tool
+         */
+        isDeviceConsentedForPCS: true,
+        /**
+         * There is also the case of "Requested the device to upload cookies." - not sure though what to do in this case, as I'll be sending all available cookies
+         */
+        message: `Cookies attached.` | `Cookies already present.`,
+        /**
+         * Gives a unix timestamp when the PCS consents expires
+         */
+        deviceConsentForPCSExpiry: number,
+        /**
+         * Can also be "failure" not sure how to handle this though
+         */
+        status: `success`
     }
 }
 

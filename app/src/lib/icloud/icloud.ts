@@ -58,6 +58,9 @@ export class iCloud {
             })
             .on(iCPSEventCloud.SESSION_EXPIRED, async () => {
                 await this.authenticate();
+            })
+            .on(iCPSEventCloud.PCS_REQUIRED, async () => {
+                await this.acquirePCSCookies();
             });
     }
 
@@ -255,13 +258,14 @@ export class iCloud {
      * Acquiring necessary cookies from trust and auth token for further processing. Also gets the user specific domain to interact with the Photos backend
      * @emits iCPSEventCloud.ACCOUNT_READY - When account is ready to be used
      * @emits iCPSEventCloud.SESSION_EXPIRED - When the session token has expired
+     * @emits iCPSEventCloud.PCS_REQUIRED - When the account is setup using ADP and PCS cookies are required
      * @emits iCPSEventCloud.ERROR - When an error occurs - provides iCPSError as argument
      */
     async setupAccount() {
         try {
             Resources.logger(this).info(`Setting up iCloud connection`);
 
-            const url = ENDPOINTS.SETUP.BASE() + ENDPOINTS.SETUP.PATH.ACCOUNT;
+            const url = ENDPOINTS.SETUP.BASE() + ENDPOINTS.SETUP.PATH.ACCOUNT_LOGIN;
             const data = {
                 dsWebAuthToken: Resources.manager().sessionSecret,
                 trustToken: Resources.manager().trustToken,
@@ -269,10 +273,13 @@ export class iCloud {
 
             const response = await Resources.network().post(url, data);
             const validatedResponse = Resources.validator().validateSetupResponse(response);
-            Resources.network().applySetupResponse(validatedResponse);
-
-            Resources.logger(this).debug(`Account ready`);
-            Resources.emit(iCPSEventCloud.ACCOUNT_READY);
+            if (Resources.network().applySetupResponse(validatedResponse)) {
+                Resources.logger(this).debug(`Account ready`);
+                Resources.emit(iCPSEventCloud.ACCOUNT_READY);
+            } else {
+                Resources.logger(this).debug(`PCS required, acquiring...`);
+                Resources.emit(iCPSEventCloud.PCS_REQUIRED);
+            }
         } catch (err) {
             if ((err as any).isAxiosError && err.response.status === 421) {
                 Resources.logger(this).debug(`Session token expired, re-acquiring...`);
@@ -281,6 +288,32 @@ export class iCloud {
             }
 
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACCOUNT_SETUP).addCause(err));
+        }
+    }
+
+    /**
+     * Acquires PCS cookies for ADP accounts
+     * @emits iCPSEventCloud.ACCOUNT_READY - When account is ready to be used
+     * @emits iCPSEventCloud.ERROR - When an error occurs - provides iCPSError as argument
+     */
+    async acquirePCSCookies() {
+        try {
+            Resources.logger(this).info(`Acquiring PCS cookies`);
+
+            const url = ENDPOINTS.SETUP.BASE() + ENDPOINTS.SETUP.PATH.REQUEST_PCS;
+            const data = {
+                appName: `photos`,
+                derivedFromUserAction: false,
+            };
+
+            const response = await Resources.network().post(url, data);
+            const validatedResponse = Resources.validator().validatePCSResponse(response);
+            Resources.network().applyPCSResponse(validatedResponse);
+
+            Resources.logger(this).debug(`Account ready with PCS cookies`);
+            Resources.emit(iCPSEventCloud.ACCOUNT_READY);
+        } catch (err) {
+            Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.PCS_REQUEST_FAILED).addCause(err));
         }
     }
 

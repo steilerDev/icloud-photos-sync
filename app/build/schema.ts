@@ -32,6 +32,10 @@ const schemaList = [
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
     }, {
+        typeName: `PCSResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
         typeName: `PhotosSetupResponse`,
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
