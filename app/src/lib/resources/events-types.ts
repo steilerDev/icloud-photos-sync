@@ -123,7 +123,6 @@ export enum iCPSEventRuntimeWarning {
      * Emitted, if an iCloud asset could not be loaded - provides the error, asset and master object as arguments
      */
     ICLOUD_LOAD_ERROR = `warn-icloud_load_error`,
-
     /**
      * Emitted when the write process has experienced an error while verifying a written asset - provides the error and asset as argument
      */
@@ -136,7 +135,6 @@ export enum iCPSEventRuntimeWarning {
      * Emitted when an asset cannot be linked to an album - provides the error, src and destination path as arguments
      */
     LINK_ERROR = `warn-link_error`,
-
      /**
       * Emitted when a filetype is unknown to the script - provides the extension and descriptor as arguments (if available)
       */
