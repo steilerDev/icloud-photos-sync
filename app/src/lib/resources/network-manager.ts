@@ -1,7 +1,7 @@
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import fs from "fs/promises";
 import {createWriteStream} from "fs";
-import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network-types.js";
+import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO, PCSResponse} from "./network-types.js";
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
@@ -412,10 +412,25 @@ export class NetworkManager {
     /**
      * Applies configurations from the response received after the setup request. This includes setting the photos URL and persisting the iCloud authentication cookies.
      * @param setupResponse - The response received from the server
+     * @returns True if necessary PCS cookies were found, false otherwise
      */
     applySetupResponse(setupResponse: SetupResponse) {
         this.photosUrl = setupResponse.data.webservices.ckdatabasews.url;
         this._headerJar.setCookie(...setupResponse.headers[`set-cookie`]);
+        if (!setupResponse.data.webservices.ckdatabasews.pcsRequired) {
+            return true;
+        }
+
+        return [...this._headerJar.cookies.values()]
+            .filter(cookie => cookie.key === COOKIE_KEYS.PCS_PHOTOS || cookie.key === COOKIE_KEYS.PCS_SHARING).length === 2;
+    }
+
+    /**
+     * Applies the acquired PCS cookies received from the PCS request to the header jar.
+     * @param pcsResponse - The response received from the server
+     */
+    applyPCSResponse(pcsResponse: PCSResponse) {
+        this._headerJar.setCookie(...pcsResponse.headers[`set-cookie`]);
     }
 
     /**
@@ -484,6 +499,15 @@ export class NetworkManager {
      */
     async downloadData(url: string, location: string): Promise<void> {
         await this._streamingCCYLimiter.add(async () => {
+            const fileExists = await fs.stat(location)
+                .then(stat => stat.isFile())
+                .catch(() => false);
+
+            if (fileExists) {
+                Resources.logger(this).warn(`Skipping download of ${url} to ${location} as file already exists`);
+                return;
+            }
+
             Resources.logger(this).debug(`Starting download of ${url}`);
             const response = await this._streamingAxios.get(url);
             Resources.logger(this).debug(`Starting to write ${url} to ${location}`);

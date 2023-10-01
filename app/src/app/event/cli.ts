@@ -74,6 +74,9 @@ export class CLIInterface {
             })
             .on(iCPSEventCloud.SESSION_EXPIRED, () => {
                 this.print(chalk.yellowBright(`Session expired, re-authenticating...`));
+            })
+            .on(iCPSEventCloud.PCS_REQUIRED, () => {
+                this.print(chalk.yellowBright(`Advanced Data Protection requires additional cookies, acquiring...`));
             });
 
         Resources.events(this)

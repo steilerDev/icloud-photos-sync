@@ -216,8 +216,11 @@ export class ErrorHandler {
             .on(iCPSEventCloud.ACCOUNT_READY, () => {
                 this.btClient.breadcrumbs.info(`ACCOUNT_READY`);
             })
-            .on(iCPSEventCloud.SESSION_EXPIRED, async () => {
+            .on(iCPSEventCloud.SESSION_EXPIRED, () => {
                 this.btClient.breadcrumbs.info(`SESSION_EXPIRED`);
+            })
+            .on(iCPSEventCloud.PCS_REQUIRED, () => {
+                this.btClient.breadcrumbs.info(`PCS_REQUIRED`);
             });
 
         Resources.events(this)

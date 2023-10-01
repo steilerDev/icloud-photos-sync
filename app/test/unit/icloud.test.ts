@@ -63,6 +63,15 @@ describe(`Control structure`, () => {
         expect(icloud.authenticate).toHaveBeenCalled();
     });
 
+    test(`PCS_REQUIRED event triggered`, () => {
+        icloud.acquirePCSCookies = jest.fn<typeof icloud.acquirePCSCookies>()
+            .mockResolvedValue();
+
+        mockedEventManager.emit(iCPSEventCloud.PCS_REQUIRED);
+
+        expect(icloud.acquirePCSCookies).toHaveBeenCalled();
+    });
+
     describe(`MFA_REQUIRED event triggered`, () => {
         test(`Start MFA Server`, () => {
             icloud.mfaServer.startServer = jest.fn<typeof icloud.mfaServer.startServer>();
@@ -641,8 +650,28 @@ describe.each([
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
             mockedResourceManager._resources.trustToken = Config.trustToken;
 
-            mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>();
-            mockedNetworkManager.applySetupResponse = jest.fn<typeof mockedNetworkManager.applySetupResponse>();
+            mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>()
+                .mockReturnValue({
+                    headers: {
+                        'set-cookie': [
+                            `X-APPLE-WEBAUTH-PCS-Photos="someVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                            `X-APPLE-WEBAUTH-PCS-Sharing="someOtherVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                        ],
+                    },
+                    data: {
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {
+                            ckdatabasews: {
+                                url: `someURL`,
+                                status: `active`,
+                            },
+                        },
+                    },
+                });
+            mockedNetworkManager.applySetupResponse = jest.fn<typeof mockedNetworkManager.applySetupResponse>()
+                .mockReturnValue(true);
 
             const accountReadyEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ACCOUNT_READY);
 
@@ -659,6 +688,48 @@ describe.each([
             expect(mockedValidator.validateSetupResponse).toHaveBeenCalled();
             expect(mockedNetworkManager.applySetupResponse).toHaveBeenCalled();
             expect(accountReadyEvent).toHaveBeenCalledTimes(1);
+            expect(icloud.photos).toBeDefined();
+        });
+
+        test(`PCS Required`, async () => {
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+            mockedResourceManager._resources.trustToken = Config.trustToken;
+
+            mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>()
+                .mockReturnValue({
+                    headers: {
+                        'set-cookie': [],  // eslint-disable-line
+                    },
+                    data: {
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {
+                            ckdatabasews: {
+                                url: `someURL`,
+                                pcsRequired: true,
+                                status: `active`,
+                            },
+                        },
+                    },
+                });
+            mockedNetworkManager.applySetupResponse = jest.fn<typeof mockedNetworkManager.applySetupResponse>();
+
+            const pcsRequiredEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.PCS_REQUIRED);
+
+            mockedNetworkManager.mock
+                .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
+                    dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
+                    trustToken: Config.trustToken,
+                }, Config.REQUEST_HEADER.DEFAULT,
+                )
+                .reply(200);
+
+            await icloud.setupAccount();
+
+            expect(mockedValidator.validateSetupResponse).toHaveBeenCalled();
+            expect(mockedNetworkManager.applySetupResponse).toHaveBeenCalled();
+            expect(pcsRequiredEvent).toHaveBeenCalledTimes(1);
             expect(icloud.photos).toBeDefined();
         });
 
@@ -710,44 +781,111 @@ describe.each([
             await icloud.setupAccount();
             await expect(iCloudReady).rejects.toThrow(/^Unable to setup iCloud Account$/);
         });
+    });
 
-        describe(`Get iCloud Photos Ready`, () => {
-            beforeEach(() => {
-                icloud.photos = new iCloudPhotos();
+    describe(`Acquire PCS Cookie`, () => {
+        test(`Success`, async () => {
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>();
+
+            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>();
+
+            const accountReadyEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ACCOUNT_READY);
+
+            mockedNetworkManager.mock
+                .onPost(`https://setup.icloud.com/setup/ws/1/requestPCS`, {
+                    appName: `photos`,
+                    derivedFromUserAction: false,
+                }, Config.REQUEST_HEADER.DEFAULT,
+                )
+                .reply(200);
+
+            await icloud.acquirePCSCookies();
+
+            expect(mockedValidator.validatePCSResponse).toHaveBeenCalled();
+            expect(mockedNetworkManager.applyPCSResponse).toHaveBeenCalled();
+            expect(accountReadyEvent).toHaveBeenCalledTimes(1);
+            expect(icloud.photos).toBeDefined();
+        });
+
+        test(`Error - Invalid Response`, async () => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>(() => {
+                throw new iCPSError(VALIDATOR_ERR.PCS_RESPONSE);
             });
 
-            test(`Setup resolves`, async () => {
-                const iCloudReady = icloud.getReady();
-                icloud.photos.setup = jest.fn<typeof icloud.photos.setup>(() => {
-                    Resources.emit(iCPSEventPhotos.READY);
-                    return Promise.resolve();
-                });
+            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>();
 
-                await icloud.getPhotosReady();
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(200);
 
-                await expect(iCloudReady).resolves.not.toThrow();
+            await icloud.acquirePCSCookies();
+            await expect(iCloudReady).rejects.toThrow(/^Unable to acquire PCS cookies$/);
 
-                expect(icloud.photos.setup).toHaveBeenCalled();
+            expect(mockedValidator.validatePCSResponse).toHaveBeenCalled();
+            expect(mockedNetworkManager.applyPCSResponse).not.toHaveBeenCalled();
+        });
+
+        test(`Error - Invalid Status Code`, async () => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>();
+
+            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>();
+
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(500);
+
+            await icloud.acquirePCSCookies();
+            await expect(iCloudReady).rejects.toThrow(/^Unable to acquire PCS cookies$/);
+
+            expect(mockedValidator.validatePCSResponse).not.toHaveBeenCalled();
+            expect(mockedNetworkManager.applyPCSResponse).not.toHaveBeenCalled();
+        });
+    });
+
+    describe(`Get iCloud Photos Ready`, () => {
+        beforeEach(() => {
+            icloud.photos = new iCloudPhotos();
+        });
+
+        test(`Setup resolves`, async () => {
+            const iCloudReady = icloud.getReady();
+            icloud.photos.setup = jest.fn<typeof icloud.photos.setup>(() => {
+                Resources.emit(iCPSEventPhotos.READY);
+                return Promise.resolve();
             });
 
-            test(`Setup rejects`, async () => {
-                const iCloudReady = icloud.getReady();
-                icloud.photos.setup = jest.fn<typeof icloud.photos.setup>()
-                    .mockRejectedValue(new Error());
+            await icloud.getPhotosReady();
 
-                await icloud.getPhotosReady();
-                await expect(iCloudReady).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
+            await expect(iCloudReady).resolves.not.toThrow();
 
-                expect(icloud.photos.setup).toHaveBeenCalled();
-            });
+            expect(icloud.photos.setup).toHaveBeenCalled();
+        });
 
-            test(`Photos Object invalid`, async () => {
-                const iCloudReady = icloud.getReady();
-                icloud.photos = undefined as any;
-                await icloud.getPhotosReady();
+        test(`Setup rejects`, async () => {
+            const iCloudReady = icloud.getReady();
+            icloud.photos.setup = jest.fn<typeof icloud.photos.setup>()
+                .mockRejectedValue(new Error());
 
-                await expect(iCloudReady).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
-            });
+            await icloud.getPhotosReady();
+            await expect(iCloudReady).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
+
+            expect(icloud.photos.setup).toHaveBeenCalled();
+        });
+
+        test(`Photos Object invalid`, async () => {
+            const iCloudReady = icloud.getReady();
+            icloud.photos = undefined as any;
+            await icloud.getPhotosReady();
+
+            await expect(iCloudReady).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
         });
     });
 });

@@ -42,6 +42,10 @@ export enum iCPSEventCloud {
      */
     TRUSTED = `icloud-trusted`,
     /**
+     * Emitted when ADP is enabled and PCS Cookies are required
+     */
+    PCS_REQUIRED = `icloud-pcs_req`,
+    /**
      * Emitted when the iCloud account information have been retrieved
      */
     ACCOUNT_READY = `icloud-account_ready`,
@@ -49,10 +53,10 @@ export enum iCPSEventCloud {
      * Emitted if the session token expired
      */
     SESSION_EXPIRED = `icloud-session_expired`,
-     /**
-      * Emitted when the iCloud connection has experienced an error - provides an iCPSError as argument
-      */
-     ERROR = `icloud-error`,
+    /**
+     * Emitted when the iCloud connection has experienced an error - provides an iCPSError as argument
+     */
+    ERROR = `icloud-error`,
 }
 
 /**
@@ -119,7 +123,6 @@ export enum iCPSEventRuntimeWarning {
      * Emitted, if an iCloud asset could not be loaded - provides the error, asset and master object as arguments
      */
     ICLOUD_LOAD_ERROR = `warn-icloud_load_error`,
-
     /**
      * Emitted when the write process has experienced an error while verifying a written asset - provides the error and asset as argument
      */
@@ -132,7 +135,6 @@ export enum iCPSEventRuntimeWarning {
      * Emitted when an asset cannot be linked to an album - provides the error, src and destination path as arguments
      */
     LINK_ERROR = `warn-link_error`,
-
      /**
       * Emitted when a filetype is unknown to the script - provides the extension and descriptor as arguments (if available)
       */

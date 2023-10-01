@@ -2,6 +2,9 @@
   "compilerOptions": {
     "module": "NodeNext",
     "target": "ESNext",
+    "lib": [
+      "ESNext"
+    ],
     "moduleResolution": "NodeNext",
     "sourceMap": true,
     "declaration": false,
@@ -12,7 +15,4 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*"],  
-  "lib": [
-    "ESNext"
-  ]
 }

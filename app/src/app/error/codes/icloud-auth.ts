@@ -38,3 +38,7 @@ export const ACCOUNT_SETUP: ErrorStruct = buildErrorStruct(
 export const SETUP_TIMEOUT: ErrorStruct = buildErrorStruct(
     name, prefix, `SETUP_TIMEOUT`, `iCloud setup did not complete successfully within expected amount of time`,
 );
+
+export const PCS_REQUEST_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `PCS_REQUEST_FAILED`, `Unable to acquire PCS cookies`,
+);

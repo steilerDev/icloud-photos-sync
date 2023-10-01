@@ -65,7 +65,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/app.test.ts"
+                "test/unit/resources.validator.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"

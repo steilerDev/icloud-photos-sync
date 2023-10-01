@@ -3,6 +3,7 @@ version: 2
 updates:
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
+    labels: [ ]
     directory: "/"
     target-branch: "dev"
     commit-message:
@@ -15,6 +16,7 @@ updates:
 
   # Maintain dependencies for npm
   - package-ecosystem: "npm"
+    labels: [ ]
     directory: "/app"
     target-branch: "dev"
     commit-message:
@@ -46,12 +48,17 @@ updates:
         patterns:
         - "tough-cookie*"
         - "@types/tough-cookie*"
+      inquirer:
+        patterns:
+        - "inquirer*"
+        - "@types/inquirer*"
     ignore:
       - dependency-name: "@types/node"
         versions: ["19.x.x", "20.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
   
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"
+    labels: [ ]
     directory: "/docker"
     target-branch: "dev"
     commit-message:
@@ -66,6 +73,7 @@ updates:
 
   # Maintain dependencies for pip (docs site)
   - package-ecosystem: "pip"
+    labels: [ ]
     directory: "/docs"
     target-branch: "dev"
     commit-message:
@@ -82,6 +90,7 @@ updates:
 
   # Maintain dependencies for semantic release
   - package-ecosystem: "npm"
+    labels: [ ]
     directory: "/.github/actions/helper/prepare-semantic-release"
     target-branch: "dev"
     commit-message:
