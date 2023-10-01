@@ -12,7 +12,7 @@ const outputPath = process.argv.pop() + `/user-guides/cli.md`;
 /**
  * The program from the app factory
  */
-const program = argParser(() => {}, () => `somePass`);
+const program = argParser(() => {});
 /**
  * Commander js helper to format
  */

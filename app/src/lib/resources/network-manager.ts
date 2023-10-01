@@ -499,11 +499,10 @@ export class NetworkManager {
      */
     async downloadData(url: string, location: string): Promise<void> {
         await this._streamingCCYLimiter.add(async () => {
-
             const fileExists = await fs.stat(location)
-                .then((stat) => stat.isFile())
-                .catch(() => false)
-            
+                .then(stat => stat.isFile())
+                .catch(() => false);
+
             if (fileExists) {
                 Resources.logger(this).warn(`Skipping download of ${url} to ${location} as file already exists`);
                 return;

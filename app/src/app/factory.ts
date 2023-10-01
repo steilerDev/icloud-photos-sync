@@ -147,7 +147,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
     program.name(Resources.PackageInfo.name)
         .description(Resources.PackageInfo.description)
         .version(Resources.PackageInfo.version)
-        .addOption(new Option(`-u, --username <string>`, `AppleID username. Omitting the option will result in the CLI to ask for user input before startup`)
+        .addOption(new Option(`-u, --username <string>`, `AppleID username. Omitting the option will result in the CLI to ask for user input before startup.`)
             .env(`APPLE_ID_USER`)
             .makeOptionMandatory(false))
         .addOption(new Option(`-p, --password <string>`, `AppleID password. Omitting the option will result in the CLI to ask for user input before startup.`)
