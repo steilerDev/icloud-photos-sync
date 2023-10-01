@@ -417,9 +417,10 @@ export class NetworkManager {
     applySetupResponse(setupResponse: SetupResponse) {
         this.photosUrl = setupResponse.data.webservices.ckdatabasews.url;
         this._headerJar.setCookie(...setupResponse.headers[`set-cookie`]);
-        if(!setupResponse.data.webservices.ckdatabasews.pcsRequired) {
+        if (!setupResponse.data.webservices.ckdatabasews.pcsRequired) {
             return true;
         }
+
         return [...this._headerJar.cookies.values()]
             .filter(cookie => cookie.key === COOKIE_KEYS.PCS_PHOTOS || cookie.key === COOKIE_KEYS.PCS_SHARING).length === 2;
     }

@@ -655,8 +655,8 @@ describe.each([
                     headers: {
                         'set-cookie': [
                             `X-APPLE-WEBAUTH-PCS-Photos="someVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
-                            'X-APPLE-WEBAUTH-PCS-Sharing="someOtherVal";Path=/;Domain=.icloud.com;Secure;HttpOnly'
-                        ]
+                            `X-APPLE-WEBAUTH-PCS-Sharing="someOtherVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                        ],
                     },
                     data: {
                         dsInfo: {
@@ -671,7 +671,7 @@ describe.each([
                     },
                 });
             mockedNetworkManager.applySetupResponse = jest.fn<typeof mockedNetworkManager.applySetupResponse>()
-                .mockReturnValue(true)
+                .mockReturnValue(true);
 
             const accountReadyEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ACCOUNT_READY);
 
@@ -787,9 +787,9 @@ describe.each([
         test(`Success`, async () => {
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
-            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>()
-        
-            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>()
+            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>();
+
+            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>();
 
             const accountReadyEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ACCOUNT_READY);
 
@@ -809,16 +809,15 @@ describe.each([
             expect(icloud.photos).toBeDefined();
         });
 
-        test('Error - Invalid Response', async () => {
+        test(`Error - Invalid Response`, async () => {
             const iCloudReady = icloud.getReady();
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>(() => {
                 throw new iCPSError(VALIDATOR_ERR.PCS_RESPONSE);
             });
-        
-            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>()
 
+            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>();
 
             mockedNetworkManager.mock
                 .onAny()
@@ -831,13 +830,13 @@ describe.each([
             expect(mockedNetworkManager.applyPCSResponse).not.toHaveBeenCalled();
         });
 
-        test('Error - Invalid Status Code', async () => {
+        test(`Error - Invalid Status Code`, async () => {
             const iCloudReady = icloud.getReady();
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>();
-        
-            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>()
+
+            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>();
 
             mockedNetworkManager.mock
                 .onAny()

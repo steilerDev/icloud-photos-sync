@@ -187,7 +187,7 @@ export class Validator {
             this._pcsResponseValidator,
             VALIDATOR_ERR.PCS_RESPONSE,
             data,
-            (data: PCSResponse) => data.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.PCS_PHOTOS) || cookieString.startsWith(COOKIE_KEYS.PCS_SHARING)).length === 2, 
+            (data: PCSResponse) => data.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.PCS_PHOTOS) || cookieString.startsWith(COOKIE_KEYS.PCS_SHARING)).length === 2,
         );
     }
 

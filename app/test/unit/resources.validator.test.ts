@@ -608,10 +608,10 @@ describe(`Validator`, () => {
                     isDeviceConsentedForPCS: true,
                     message: `Cookies attached.`,
                     deviceConsentForPCSExpiry: 1234,
-                    status: `success`
+                    status: `success`,
                 },
             },
-            desc: 'cookies attached',
+            desc: `cookies attached`,
         }, {
             data: {
                 headers: getICloudCookieHeader(),
@@ -620,10 +620,10 @@ describe(`Validator`, () => {
                     isDeviceConsentedForPCS: true,
                     message: `Cookies already present.`,
                     deviceConsentForPCSExpiry: 1234,
-                    status: `success`
+                    status: `success`,
                 },
             },
-            desc: 'cookies already present',
+            desc: `cookies already present`,
         }])(`should validate a valid PCS response: $desc`, ({data}) => {
             expect(() => validator.validatePCSResponse(data)).not.toThrow();
         });
@@ -637,7 +637,7 @@ describe(`Validator`, () => {
                         isDeviceConsentedForPCS: true,
                         message: `Cookies already present.`,
                         deviceConsentForPCSExpiry: 1234,
-                        status: `success`
+                        status: `success`,
                     },
                 },
                 desc: `web access not allowed`,
@@ -648,7 +648,7 @@ describe(`Validator`, () => {
                         isDeviceConsentedForPCS: true,
                         message: `Cookies already present.`,
                         deviceConsentForPCSExpiry: 1234,
-                        status: `success`
+                        status: `success`,
                     },
                 },
                 desc: `web access missing`,
@@ -660,7 +660,7 @@ describe(`Validator`, () => {
                         isDeviceConsentedForPCS: false,
                         message: `Cookies already present.`,
                         deviceConsentForPCSExpiry: 1234,
-                        status: `success`
+                        status: `success`,
                     },
                 },
                 desc: `not consented for PCS`,
@@ -671,7 +671,7 @@ describe(`Validator`, () => {
                         isWebAccessAllowed: true,
                         message: `Cookies already present.`,
                         deviceConsentForPCSExpiry: 1234,
-                        status: `success`
+                        status: `success`,
                     },
                 },
                 desc: `consented for PCS missing`,
@@ -683,7 +683,7 @@ describe(`Validator`, () => {
                         isDeviceConsentedForPCS: true,
                         message: `Unexpected message`,
                         deviceConsentForPCSExpiry: 1234,
-                        status: `success`
+                        status: `success`,
                     },
                 },
                 desc: `unexpected message`,
@@ -694,7 +694,7 @@ describe(`Validator`, () => {
                         isWebAccessAllowed: true,
                         isDeviceConsentedForPCS: true,
                         deviceConsentForPCSExpiry: 1234,
-                        status: `success`
+                        status: `success`,
                     },
                 },
                 desc: `message missing`,
@@ -705,10 +705,10 @@ describe(`Validator`, () => {
                         isWebAccessAllowed: true,
                         isDeviceConsentedForPCS: true,
                         message: `Cookies attached.`,
-                        status: `success`
+                        status: `success`,
                     },
                 },
-                desc: 'expiry missing',
+                desc: `expiry missing`,
             }, {
                 data: {
                     headers: getICloudCookieHeader(),
@@ -717,56 +717,56 @@ describe(`Validator`, () => {
                         isDeviceConsentedForPCS: true,
                         message: `Cookies attached.`,
                         deviceConsentForPCSExpiry: 1234,
-                        status: `failure`
+                        status: `failure`,
                     },
                 },
-                desc: 'status failure',
+                desc: `status failure`,
             }, {
                 data: {
                     headers: {
                         'set-cookie': [
-                            'X-APPLE-WEBAUTH-PCS-Sharing="someOtherVal";Path=/;Domain=.icloud.com;Secure;HttpOnly'
-                        ]
+                            `X-APPLE-WEBAUTH-PCS-Sharing="someOtherVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                        ],
                     },
                     data: {
                         isWebAccessAllowed: true,
                         isDeviceConsentedForPCS: true,
                         message: `Cookies attached.`,
                         deviceConsentForPCSExpiry: 1234,
-                        status: `success`
+                        status: `success`,
                     },
                 },
-                desc: 'photos PCS missing',
+                desc: `photos PCS missing`,
             }, {
                 data: {
                     headers: {
                         'set-cookie': [
                             `X-APPLE-WEBAUTH-PCS-Photos="someVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
-                        ]
+                        ],
                     },
                     data: {
                         isWebAccessAllowed: true,
                         isDeviceConsentedForPCS: true,
                         message: `Cookies attached.`,
                         deviceConsentForPCSExpiry: 1234,
-                        status: `success`
+                        status: `success`,
                     },
                 },
-                desc: 'sharing PCS missing',
+                desc: `sharing PCS missing`,
             }, {
                 data: {
                     headers: {
-                        'set-cookie': []
+                        'set-cookie': [],
                     },
                     data: {
                         isWebAccessAllowed: true,
                         isDeviceConsentedForPCS: true,
                         message: `Cookies attached.`,
                         deviceConsentForPCSExpiry: 1234,
-                        status: `success`
+                        status: `success`,
                     },
                 },
-                desc: 'no cookies',
+                desc: `no cookies`,
             },
         ])(`should throw an error for an invalid PCS response: $desc`, ({data}) => {
             expect(() => validator.validatePCSResponse(data)).toThrowError(VALIDATOR_ERR.PCS_RESPONSE);
