@@ -70,6 +70,7 @@ pano
 parens
 photoshop
 photoslibrary
+polystat
 postbuild
 prerequest
 preshared
@@ -80,6 +81,7 @@ releaserc
 rgba
 RIPEMD
 ritwickdey
+Roboto
 rootfs
 SCNT
 securitycode
@@ -92,6 +94,7 @@ Steiler
 steilerdev
 superfences
 Symbolication
+symlog
 templating
 testparam
 testpassword
