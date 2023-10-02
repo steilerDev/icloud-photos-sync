@@ -13,7 +13,7 @@ import {iCPSAppOptions} from "../../app/factory.js";
 import {pEvent} from "p-event";
 import {jsonc} from "jsonc";
 import path from "path";
-import { randomInt } from "crypto";
+import {randomInt} from "crypto";
 
 /**
  * Object holding all necessary information for a specific header value, that needs to be reused across multiple requests
@@ -516,8 +516,8 @@ export class NetworkManager {
                     await fs.mkdir(duplicateFolder);
                 }
 
-                const origFileName = fileName + '-orig';
-                const duplicateFileName = fileName + '-dup-' + randomInt(0, 1000000).toString()
+                const origFileName = fileName + `-orig`;
+                const duplicateFileName = fileName + `-dup-` + randomInt(0, 1000000).toString();
 
                 await fs.link(location, path.join(duplicateFolder, origFileName));
                 location = path.join(duplicateFolder, duplicateFileName);
