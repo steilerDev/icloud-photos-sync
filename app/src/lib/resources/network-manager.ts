@@ -517,9 +517,15 @@ export class NetworkManager {
                 }
 
                 const origFileName = fileName + `-orig`;
+                const origFileLinked = await fs.lstat(path.join(duplicateFolder, origFileName))
+                    .then(stat => stat.isSymbolicLink())
+                    .catch(() => false);
+                if (!origFileLinked) {
+                    await fs.link(location, path.join(duplicateFolder, origFileName));
+                }
+
                 const duplicateFileName = fileName + `-dup-` + randomInt(0, 1000000).toString();
 
-                await fs.link(location, path.join(duplicateFolder, origFileName));
                 location = path.join(duplicateFolder, duplicateFileName);
                 Resources.logger(this).warn(`${location} already exists - saving duplicate to ${location} and linking original file ${origFileName} to ${duplicateFolder}`);
             }
