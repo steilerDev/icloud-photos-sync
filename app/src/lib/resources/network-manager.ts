@@ -12,6 +12,8 @@ import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
 import {pEvent} from "p-event";
 import {jsonc} from "jsonc";
+import path from "path";
+import { randomInt } from "crypto";
 
 /**
  * Object holding all necessary information for a specific header value, that needs to be reused across multiple requests
@@ -504,8 +506,22 @@ export class NetworkManager {
                 .catch(() => false);
 
             if (fileExists) {
-                Resources.logger(this).warn(`Skipping download of ${url} to ${location} as file already exists`);
-                return;
+                const fileName = path.basename(location);
+                const duplicateFolder = path.join(Resources.manager().dataDir, `duplicates`);
+                const duplicateFolderExists = await fs.stat(duplicateFolder)
+                    .then(stat => stat.isDirectory())
+                    .catch(() => false);
+
+                if (!duplicateFolderExists) {
+                    await fs.mkdir(duplicateFolder);
+                }
+
+                const origFileName = fileName + '-orig';
+                const duplicateFileName = fileName + '-dup-' + randomInt(0, 1000000).toString()
+
+                await fs.link(location, path.join(duplicateFolder, origFileName));
+                location = path.join(duplicateFolder, duplicateFileName);
+                Resources.logger(this).warn(`${location} already exists - saving duplicate to ${location} and linking original file ${origFileName} to ${duplicateFolder}`);
             }
 
             Resources.logger(this).debug(`Starting download of ${url}`);
