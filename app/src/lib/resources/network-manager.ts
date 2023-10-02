@@ -506,7 +506,7 @@ export class NetworkManager {
                 .catch(() => false);
 
             if (fileExists) {
-                const fileName = path.basename(location);
+                const file = path.parse(location);
                 const duplicateFolder = path.join(Resources.manager().dataDir, `duplicates`);
                 const duplicateFolderExists = await fs.stat(duplicateFolder)
                     .then(stat => stat.isDirectory())
@@ -516,7 +516,7 @@ export class NetworkManager {
                     await fs.mkdir(duplicateFolder);
                 }
 
-                const origFileName = fileName + `-orig`;
+                const origFileName = file.name + `-orig` + file.ext;
                 const origFileLinked = await fs.lstat(path.join(duplicateFolder, origFileName))
                     .then(stat => stat.isSymbolicLink())
                     .catch(() => false);
@@ -524,7 +524,7 @@ export class NetworkManager {
                     await fs.link(location, path.join(duplicateFolder, origFileName));
                 }
 
-                const duplicateFileName = fileName + `-dup-` + randomInt(0, 1000000).toString();
+                const duplicateFileName = file.name + `-dup-` + randomInt(0, 1000000).toString() + file.ext;
 
                 location = path.join(duplicateFolder, duplicateFileName);
                 Resources.logger(this).warn(`${location} already exists - saving duplicate to ${location} and linking original file ${origFileName} to ${duplicateFolder}`);
