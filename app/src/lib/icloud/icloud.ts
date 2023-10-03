@@ -99,7 +99,7 @@ export class iCloud {
 
         const config: AxiosRequestConfig = {
             params: {
-                isRememberMeEnabled: true,
+                isRememberMeEnabled: `true`,
             },
             // 409 is expected, if MFA is required - 200 is expected, if authentication succeeds immediately
             validateStatus: status => status === 409 || status === 200,

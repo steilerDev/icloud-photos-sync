@@ -6,7 +6,6 @@ import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {AxiosHarTracker} from "axios-har-tracker";
-import {FILE_ENCODING} from "./resource-types.js";
 import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -218,6 +217,12 @@ export class NetworkManager {
                 Origin: `https://www.${this.iCloudRegionUrl(resources.region)}`,
             },
         });
+
+        if (resources.enableNetworkCapture) {
+            this._harTracker = new AxiosHarTracker(this._axios as any);
+            this.resetHarTracker(this._harTracker);
+        }
+
         this._headerJar = new HeaderJar(this._axios);
 
         this._streamingCCYLimiter = new PQueue({
@@ -228,11 +233,6 @@ export class NetworkManager {
         this._streamingAxios = axios.create({
             responseType: `stream`,
         });
-
-        if (resources.enableNetworkCapture) {
-            this._harTracker = new AxiosHarTracker(this._axios as any);
-            this.resetHarTracker(this._harTracker);
-        }
     }
 
     /**
@@ -330,7 +330,7 @@ export class NetworkManager {
 
             Resources.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
-            await fs.writeFile(Resources.manager().harFilePath, jsonc.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
+            jsonc.write(Resources.manager().harFilePath, generatedObject, {autoPath: true});
             Resources.logger(this).info(`HAR file written`);
             return true;
         } catch (err) {
@@ -509,19 +509,21 @@ export class NetworkManager {
                 const file = path.parse(location);
                 const duplicateFolder = path.join(Resources.manager().dataDir, `duplicates`);
                 const duplicateFolderExists = await fs.stat(duplicateFolder)
-                    .then(stat => stat.isDirectory())
+                    .then(() => true)
                     .catch(() => false);
 
                 if (!duplicateFolderExists) {
-                    await fs.mkdir(duplicateFolder);
+                    await fs.mkdir(duplicateFolder)
+                        .catch;
                 }
 
                 const origFileName = file.name + `-orig` + file.ext;
                 const origFileLinked = await fs.lstat(path.join(duplicateFolder, origFileName))
-                    .then(stat => stat.isSymbolicLink())
+                    .then(() => true)
                     .catch(() => false);
                 if (!origFileLinked) {
-                    await fs.link(location, path.join(duplicateFolder, origFileName));
+                    await fs.link(location, path.join(duplicateFolder, origFileName))
+                        .catch();
                 }
 
                 const duplicateFileName = file.name + `-dup-` + randomInt(0, 1000000).toString() + file.ext;

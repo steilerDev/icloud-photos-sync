@@ -13,7 +13,7 @@
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["token"],
+            "args": ["sync"],
             "outFiles": [
                 "${workspaceFolder}/app/build/out/**/*.js",
             ],
