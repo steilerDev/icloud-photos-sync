@@ -31,7 +31,7 @@ runs:
             { "type": "ci",           "release": "patch" },
             { "type": "chore",        "release": "patch" },
             { "type": "docs",         "release": "patch" },
-            { "type": "no-release"    "release": false },
+            { "type": "no-release",   "release": false },
             { "type": "style",        "release": false }
         ]'
     - id: setup-force-release
