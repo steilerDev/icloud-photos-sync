@@ -514,7 +514,7 @@ export class NetworkManager {
 
                 if (!duplicateFolderExists) {
                     await fs.mkdir(duplicateFolder)
-                        .catch;
+                        .catch(() => undefined);
                 }
 
                 const origFileName = file.name + `-orig` + file.ext;
@@ -523,7 +523,7 @@ export class NetworkManager {
                     .catch(() => false);
                 if (!origFileLinked) {
                     await fs.link(location, path.join(duplicateFolder, origFileName))
-                        .catch();
+                        .catch(() => undefined);
                 }
 
                 const duplicateFileName = file.name + `-dup-` + randomInt(0, 1000000).toString() + file.ext;

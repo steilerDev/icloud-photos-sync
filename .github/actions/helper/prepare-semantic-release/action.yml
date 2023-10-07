@@ -17,6 +17,28 @@ runs:
     - id: setup-dependencies
       shell: bash
       run: sudo apt-get install -y moreutils
+    - id: setup-release-rules
+      shell: bash
+      run: |
+        RELEASE_RULES='[
+            { "type": "majorfeat",    "release": "major" },
+            { "type": "feat",         "release": "minor" },
+            { "type": "fix",          "release": "patch" },
+            { "type": "refactor",     "release": "patch" },
+            { "type": "perf",         "release": "patch" },
+            { "type": "test",         "release": "patch" },
+            { "type": "build",        "release": "patch" },
+            { "type": "ci",           "release": "patch" },
+            { "type": "chore",        "release": "patch" },
+            { "type": "docs",         "release": "patch" },
+            { "type": "no-release"    "release": false },
+            { "type": "style",        "release": false }
+        ]'
+    - id: setup-force-release
+      if: ${{ github.ref_name == 'dev' }}
+      shell: bash
+      run: |
+        RELEASE_RULES=$(echo $RELEASE_RULES | jq '. += [{"message": "**", "release": "patch"}]')
     - id: setup-fs
       shell: bash
       run: |
@@ -39,22 +61,13 @@ runs:
             "@semantic-release/commit-analyzer",
             {
                 "preset": "conventionalcommits",
-                "releaseRules": [
-                    { "type": "majorfeat",    "release": "major" },
-                    { "type": "feat",         "release": "minor" },
-                    { "type": "fix",          "release": "patch" },
-                    { "type": "refactor",     "release": "patch" },
-                    { "type": "perf",         "release": "patch" },
-                    { "type": "test",         "release": "patch" },
-                    { "type": "build",        "release": "patch" },
-                    { "type": "ci",           "release": "patch" },
-                    { "type": "chore",        "release": "patch" },
-                    { "type": "docs",         "release": "patch" },
-                    { "type": "style",        "release": false }
-                ]
+                "releaseRules": '"${RELEASE_RULES}"'
             }
-        ]]' |\
-        sponge ${{ inputs.release-dir }}/.releaserc.json
+          ]]' |\
+          sponge ${{ inputs.release-dir }}/.releaserc.json
+
+        echo "Wrote:"
+        cat ${{ inputs.release-dir }}/.releaserc.json
     - id: setup-node
       uses: actions/setup-node@v3
       with:
