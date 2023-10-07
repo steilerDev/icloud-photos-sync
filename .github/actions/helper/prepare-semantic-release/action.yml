@@ -20,7 +20,7 @@ runs:
     - id: setup-release-rules
       shell: bash
       run: |
-        RELEASE_RULES='[
+        echo 'RELEASE_RULES=[
             { "type": "majorfeat",    "release": "major" },
             { "type": "feat",         "release": "minor" },
             { "type": "fix",          "release": "patch" },
@@ -33,12 +33,12 @@ runs:
             { "type": "docs",         "release": "patch" },
             { "type": "no-release",   "release": false },
             { "type": "style",        "release": false }
-        ]'
+        ]' >> $GITHUB_ENV
     - id: setup-force-release
       if: ${{ github.ref_name == 'dev' }}
       shell: bash
       run: |
-        RELEASE_RULES=$(echo $RELEASE_RULES | jq '. += [{"message": "**", "release": "patch"}]')
+        echo 'RELEASE_RULES='"$(echo ${{ env.RELEASE_RULES }} | jq '. += [{"message": "**", "release": "patch"}]')" >> $GITHUB_ENV
     - id: setup-fs
       shell: bash
       run: |
@@ -62,7 +62,7 @@ runs:
             "@semantic-release/commit-analyzer",
             {
                 "preset": "conventionalcommits",
-                "releaseRules": '"${RELEASE_RULES}"'
+                "releaseRules": ${{ env.RELEASE_RULES }}
             }
           ]]' |\
           sponge ${{ inputs.release-dir }}/.releaserc.json
