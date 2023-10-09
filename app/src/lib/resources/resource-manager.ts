@@ -92,17 +92,13 @@ export class ResourceManager {
     }
 
     /**
-     * @returns The path to the log file, or undefined if logging to CLI is enabled
+     * @returns The path to the log file
      */
     get logFilePath(): string | undefined {
-        if (!this._resources.logToCli) {
-            return path.format({
-                dir: this.dataDir,
-                base: LOG_FILE_NAME,
-            });
-        }
-
-        return undefined;
+        return path.format({
+            dir: this.dataDir,
+            base: LOG_FILE_NAME,
+        });
     }
 
     /**
