@@ -20,25 +20,33 @@ runs:
     - id: setup-release-rules
       shell: bash
       run: |
-        echo 'RELEASE_RULES=[
-            { "type": "majorfeat",    "release": "major" },
-            { "type": "feat",         "release": "minor" },
-            { "type": "fix",          "release": "patch" },
-            { "type": "refactor",     "release": "patch" },
-            { "type": "perf",         "release": "patch" },
-            { "type": "test",         "release": "patch" },
-            { "type": "build",        "release": "patch" },
-            { "type": "ci",           "release": "patch" },
-            { "type": "chore",        "release": "patch" },
-            { "type": "docs",         "release": "patch" },
-            { "type": "no-release",   "release": false },
-            { "type": "style",        "release": false }
-        ]' >> $GITHUB_ENV
+        {
+          echo 'RELEASE_RULES<<EOF'
+          echo '[
+              { "type": "majorfeat",    "release": "major" },
+              { "type": "feat",         "release": "minor" },
+              { "type": "fix",          "release": "patch" },
+              { "type": "refactor",     "release": "patch" },
+              { "type": "perf",         "release": "patch" },
+              { "type": "test",         "release": "patch" },
+              { "type": "build",        "release": "patch" },
+              { "type": "ci",           "release": "patch" },
+              { "type": "chore",        "release": "patch" },
+              { "type": "docs",         "release": "patch" },
+              { "type": "no-release",   "release": false },
+              { "type": "style",        "release": false }
+          ]'
+          echo EOF
+        } >> "$GITHUB_ENV"
     - id: setup-force-release
       if: ${{ github.ref_name == 'dev' }}
       shell: bash
       run: |
-        echo 'RELEASE_RULES='"$(echo ${{ env.RELEASE_RULES }} | jq '. += [{"message": "**", "release": "patch"}]')" >> $GITHUB_ENV
+        {
+          echo 'RELEASE_RULES<<EOF'
+          echo $RELEASE_RULES | jq -c '. += [{"message": "**", "release": "patch"}]'
+          echo EOF
+        } >> "$GITHUB_ENV"
     - id: setup-fs
       shell: bash
       run: |
