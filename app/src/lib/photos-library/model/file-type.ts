@@ -45,6 +45,7 @@ const EXT = {
     'public.mpo-image': `mpo`,
     'com.dji.mimo.pano.jpeg': `jpg`,
     'public.avif': `avif`,
+    'com.apple.m4a-audio': `m4a`,
 };
 
 /**
