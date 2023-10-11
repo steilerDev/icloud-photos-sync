@@ -46,6 +46,7 @@ const EXT = {
     'com.dji.mimo.pano.jpeg': `jpg`,
     'public.avif': `avif`,
     'com.apple.m4a-audio': `m4a`,
+    'com.canon.crw-raw-image': `crw`,
 };
 
 /**
