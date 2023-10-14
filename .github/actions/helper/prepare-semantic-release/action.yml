@@ -50,8 +50,7 @@ runs:
     - id: setup-fs
       shell: bash
       run: |
-        echo $RELEASE_RULES
-        mkdir ${{ inputs.release-dir }}
+        mkdir -p ${{ inputs.release-dir }}
 
         cp ${{ github.action_path }}/package.json \
           ${{ github.action_path }}/package-lock.json \
