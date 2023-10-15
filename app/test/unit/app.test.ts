@@ -11,7 +11,7 @@ import path from 'path';
 import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
 import {stdin} from 'mock-stdin';
-import { LIBRARY_LOCK_FILE_NAME} from '../../src/lib/resources/resource-types';
+import {LIBRARY_LOCK_FILE_NAME} from '../../src/lib/resources/resource-types';
 
 beforeEach(() => {
     mockfs();

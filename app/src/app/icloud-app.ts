@@ -6,13 +6,10 @@ import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {iCPSError} from "./error/error.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {Album} from "../lib/photos-library/model/album.js";
-import path from "path";
 import {Cron} from "croner";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {Resources} from "../lib/resources/main.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError} from "../lib/resources/events-types.js";
-
-
 
 /**
  * Abstract class returned by the factory function
@@ -123,7 +120,7 @@ abstract class iCloudApp extends iCPSApp {
      * @throws An iCPSError, if the lock could not be acquired
      */
     async acquireLibraryLock() {
-        const lockFilePath = Resources.manager().lockFilePath;
+        const {lockFilePath} = Resources.manager();
         const lockFileExists = await fs.promises.stat(lockFilePath)
             .then(stat => stat.isFile())
             .catch(() => false);
@@ -146,7 +143,7 @@ abstract class iCloudApp extends iCPSApp {
      * @throws An iCPSError, if the lock could not be released
      */
     async releaseLibraryLock() {
-        const lockFilePath = Resources.manager().lockFilePath;
+        const {lockFilePath} = Resources.manager();
         const lockFileExists = await fs.promises.stat(lockFilePath)
             .then(stat => stat.isFile())
             .catch(() => false);

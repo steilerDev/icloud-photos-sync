@@ -13,7 +13,7 @@ import {EventManager} from '../../src/lib/resources/event-manager';
 export type UnknownFunction = (...args: Array<unknown>) => unknown
 export type UnknownAsyncFunction = (...args: Array<unknown>) => Promise<unknown>
 
-export type MockedResourceInstances = {
+type MockedResourceInstances = {
     manager: MockedResourceManager,
     network: MockedNetworkManager,
     validator: MockedValidator,
