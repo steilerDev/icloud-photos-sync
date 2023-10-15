@@ -74,6 +74,7 @@ export class HeaderJar {
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Client-Type`, `firstPartyAuth`));
 
         axios.interceptors.request.use(config => this._injectHeaders(config));
+        // If scnt is in header store it
     }
 
     /**
@@ -506,30 +507,8 @@ export class NetworkManager {
                 .catch(() => false);
 
             if (fileExists) {
-                const file = path.parse(location);
-                const duplicateFolder = path.join(Resources.manager().dataDir, `duplicates`);
-                const duplicateFolderExists = await fs.stat(duplicateFolder)
-                    .then(() => true)
-                    .catch(() => false);
-
-                if (!duplicateFolderExists) {
-                    await fs.mkdir(duplicateFolder)
-                        .catch(() => undefined);
-                }
-
-                const origFileName = file.name + `-orig` + file.ext;
-                const origFileLinked = await fs.lstat(path.join(duplicateFolder, origFileName))
-                    .then(() => true)
-                    .catch(() => false);
-                if (!origFileLinked) {
-                    await fs.link(location, path.join(duplicateFolder, origFileName))
-                        .catch(() => undefined);
-                }
-
-                const duplicateFileName = file.name + `-dup-` + randomInt(0, 1000000).toString() + file.ext;
-
-                location = path.join(duplicateFolder, duplicateFileName);
-                Resources.logger(this).warn(`${location} already exists - saving duplicate to ${location} and linking original file ${origFileName} to ${duplicateFolder}`);
+                Resources.logger(this).info(`File ${location} already exists - skipping download`);
+                return;
             }
 
             Resources.logger(this).debug(`Starting download of ${url}`);
