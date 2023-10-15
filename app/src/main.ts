@@ -4,15 +4,9 @@ import {CLIInterface} from "./app/event/cli.js";
 import {appFactory} from "./app/factory.js";
 import {MetricsExporter} from "./app/event/metrics-exporter.js";
 import {LogInterface} from "./app/event/log.js";
-import {iCPSApp} from "./app/icloud-app.js";
 
-let app: iCPSApp;
-try {
-    app = await appFactory(process.argv);
-} catch (_err) {
-    // AppFactory will print appropriate error messages
-    process.exit(3);
-}
+const app = await appFactory(process.argv)
+    .catch(() => process.exit(3)); // Error message is printed by factory
 
 const _errorHandler = new ErrorHandler();
 const _logInterface = new LogInterface();

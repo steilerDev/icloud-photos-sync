@@ -128,6 +128,7 @@ export type iCPSAppOptions = {
     suppressWarnings: boolean,
     exportMetrics: boolean,
     region: Resources.Types.Region,
+    legacyLogin: boolean,
     metadataRate: [number, number]
 }
 
@@ -216,10 +217,13 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
             .env(`METADATA_RATE`)
             .default([Infinity, 0], `Infinity/0`)
             .argParser(commanderParseInterval))
-        .addOption(new Option(`--region <string>`, `Changes the iCloud region. Experimental support for iCloud China.`)
+        .addOption(new Option(`--region <string>`, `Changes the iCloud region.`)
             .env(`REGION`)
             .default(`world`)
-            .choices(Object.values(Resources.Types.Region)));
+            .choices(Object.values(Resources.Types.Region)))
+        .addOption(new Option(`--legacy-login`, `Enables plain text legacy login method.`)
+            .env(`LEGACY_LOGIN`)
+            .default(false));
 
     program.command(`daemon`)
         .action(async (_, command) => {

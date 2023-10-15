@@ -527,6 +527,20 @@ export const nonRejectOptions = [
         expectedOptions: {
             enableNetworkCapture: true,
         },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
+            `--legacy-login`,
+        ],
+        _desc: `Legacy login enabled`,
+        expectedOptions: {
+            legacyLogin: true,
+        },
     },
 ];
 

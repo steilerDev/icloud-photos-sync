@@ -10,6 +10,11 @@ import {iCPSAppOptions} from "../../app/factory.js";
 export const FILE_ENCODING = `utf8`;
 
 /**
+ * Filename for library lock file located in DATA_DIR
+ */
+export const LIBRARY_LOCK_FILE_NAME = `.library.lock`;
+
+/**
  * Filename of the resource file
  */
 export const RESOURCE_FILE_NAME = `.icloud-photos-sync`;

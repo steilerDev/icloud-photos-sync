@@ -42,3 +42,7 @@ export const SETUP_TIMEOUT: ErrorStruct = buildErrorStruct(
 export const PCS_REQUEST_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `PCS_REQUEST_FAILED`, `Unable to acquire PCS cookies`,
 );
+
+export const SRP_INIT_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `SRP_INIT_FAILED`, `Unable to initialize SRP authentication protocol`,
+);

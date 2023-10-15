@@ -45,6 +45,157 @@ describe(`Validator`, () => {
         });
     });
 
+    describe(`validateSigninInitResponse`, () => {
+        test.each([
+            {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `with s2k protocol`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `with s2k_fo protocol`,
+            },
+        ])(`should validate a valid signin init response: $desc`, ({data}) => {
+            expect(() => validator.validateSigninInitResponse(data)).not.toThrow();
+        });
+
+        test.each([
+            {
+                data: {
+                    data: {
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing iteration`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        protocol: `s2k_fo`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing salt`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing protocol`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `fobar`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `invalid protocol`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing b`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing c`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {},
+                },
+                desc: `missing scnt`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                },
+                desc: `missing headers`,
+            }, {
+                data: {
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing data`,
+            },
+        ])(`should throw an error for an invalid signin init response: $desc`, ({data}) => {
+            expect(() => validator.validateSigninInitResponse(data)).toThrowError(VALIDATOR_ERR.SIGNIN_INIT_RESPONSE);
+        });
+    });
+
     describe(`validateSigninResponse`, () => {
         test.each([
             {

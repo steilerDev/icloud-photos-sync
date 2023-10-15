@@ -9,6 +9,7 @@ import {ENDPOINTS} from '../resources/network-types.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 import pTimeout from 'p-timeout';
 import {jsonc} from 'jsonc';
+import {iCloudCrypto} from './icloud.crypto.js';
 
 /**
  * This class holds the iCloud connection
@@ -95,25 +96,19 @@ export class iCloud {
         Resources.logger(this).info(`Authenticating user`);
         Resources.emit(iCPSEventCloud.AUTHENTICATION_STARTED);
 
-        const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.SIGNIN;
-
         const config: AxiosRequestConfig = {
             params: {
-                isRememberMeEnabled: true,
+                isRememberMeEnabled: `true`,
             },
             // 409 is expected, if MFA is required - 200 is expected, if authentication succeeds immediately
             validateStatus: status => status === 409 || status === 200,
         };
 
-        const data = {
-            accountName: Resources.manager().username,
-            password: Resources.manager().password,
-            trustTokens: [
-                Resources.manager().trustToken,
-            ],
-        };
-
         try {
+            const [url, data] = Resources.manager().legacyLogin
+                ? this.getLegacyLogin()
+                : await this.getSRPLogin();
+
             const response = await Resources.network().post(url, data, config);
 
             const validatedResponse = Resources.validator().validateSigninResponse(response);
@@ -164,6 +159,63 @@ export class iCloud {
             return;
         } finally {
             return ready;
+        }
+    }
+
+    /**
+     * Generates the legacy plain-text login payload and url
+     * @returns A tuple containing the url and payload required for the legacy login method
+     */
+    getLegacyLogin(): [url: string, payload: any] {
+        Resources.logger(this).info(`Generating plain text login payload`);
+        return [
+            ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.SIGNIN.LEGACY,
+            {
+                accountName: Resources.manager().username,
+                password: Resources.manager().password,
+                trustTokens: [
+                    Resources.manager().trustToken,
+                ],
+            },
+        ];
+    }
+
+    /**
+     * Generates the SRP login payload and url from the iCloud server challenge
+     * @param authenticator - The authenticator crypto instance for generating the SRP proof - parameterized for testing purposes, will be initiated by default
+     * @returns A tuple containing the url and payload required for the SRP login method
+     */
+    async getSRPLogin(authenticator: iCloudCrypto = new iCloudCrypto()): Promise<[url: string, payload: any]> {
+        Resources.logger(this).info(`Generating SRP challenge`);
+        try {
+            const initResponse = await Resources.network().post(ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.SIGNIN.INIT, {
+                a: await authenticator.getClientEphemeral(),
+                accountName: Resources.manager().username,
+                protocols: [
+                    `s2k`,
+                    `s2k_fo`,
+                ],
+            });
+
+            const validatedInitResponse = Resources.validator().validateSigninInitResponse(initResponse);
+
+            const derivedPassword = await authenticator.derivePassword(validatedInitResponse.data.protocol, validatedInitResponse.data.salt, validatedInitResponse.data.iteration);
+            const [m1Proof, m2Proof] = await authenticator.getProofValues(derivedPassword, validatedInitResponse.data.b, validatedInitResponse.data.salt);
+
+            return [
+                ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.SIGNIN.COMPLETE,
+                {
+                    accountName: Resources.manager().username,
+                    trustTokens: [
+                        Resources.manager().trustToken,
+                    ],
+                    m1: m1Proof,
+                    m2: m2Proof,
+                    c: validatedInitResponse.data.c,
+                },
+            ];
+        } catch (err) {
+            throw new iCPSError(AUTH_ERR.SRP_INIT_FAILED).addCause(err);
         }
     }
 
@@ -225,6 +277,16 @@ export class iCloud {
             Resources.logger(this).info(`MFA code correct!`);
             Resources.emit(iCPSEventCloud.AUTHENTICATED);
         } catch (err) {
+            if (err.response?.status === 400) {
+                const augmentedErr = new iCPSError(MFA_ERR.CODE_REJECTED).addCause(err);
+                if (Array.isArray(err.response?.data?.service_errors)) {
+                    augmentedErr.addMessage(err.response.data.service_errors.map((serviceError: any) => serviceError?.message));
+                }
+
+                Resources.emit(iCPSEventCloud.ERROR, augmentedErr);
+                return;
+            }
+
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.SUBMIT_FAILED).addCause(err));
         }
     }
@@ -268,7 +330,6 @@ export class iCloud {
             const url = ENDPOINTS.SETUP.BASE() + ENDPOINTS.SETUP.PATH.ACCOUNT_LOGIN;
             const data = {
                 dsWebAuthToken: Resources.manager().sessionSecret,
-                trustToken: Resources.manager().trustToken,
             };
 
             const response = await Resources.network().post(url, data);

@@ -31,6 +31,10 @@ export const SUBMIT_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `SUBMIT_FAILED`, `Unable to submit MFA code`,
 );
 
+export const CODE_REJECTED: ErrorStruct = buildErrorStruct(
+    name, prefix, `CODE_REJECTED`, `MFA code rejected`,
+);
+
 export const RESEND_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `RESEND_FAILED`, `Unable to resend MFA code`,
 );

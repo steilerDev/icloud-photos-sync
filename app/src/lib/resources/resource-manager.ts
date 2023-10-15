@@ -4,7 +4,7 @@ import {iCPSAppOptions} from "../../app/factory.js";
 import * as PHOTOS_LIBRARY from '../photos-library/constants.js';
 import * as path from 'path';
 import {readFileSync, writeFileSync} from "fs";
-import {FILE_ENCODING, HAR_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resource-types.js";
+import {FILE_ENCODING, HAR_FILE_NAME, LIBRARY_LOCK_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resource-types.js";
 import {LogLevel} from "../../app/event/log.js";
 import {Resources} from "./main.js";
 import {iCPSEventRuntimeWarning} from "./events-types.js";
@@ -92,45 +92,43 @@ export class ResourceManager {
     }
 
     /**
-     * @returns The path to the log file, or undefined if logging to CLI is enabled
+     * @returns The path to the log file
      */
-    get logFilePath(): string | undefined {
-        if (!this._resources.logToCli) {
-            return path.format({
-                dir: this.dataDir,
-                base: LOG_FILE_NAME,
-            });
-        }
-
-        return undefined;
+    get logFilePath(): string {
+        return path.format({
+            dir: this.dataDir,
+            base: LOG_FILE_NAME,
+        });
     }
 
     /**
-     * @returns The path to the metrics file, or undefined if metrics are disabled
+     * @returns The path to the library lock file
      */
-    get metricsFilePath(): string | undefined {
-        if (this._resources.exportMetrics) {
-            return path.format({
-                dir: this.dataDir,
-                base: METRICS_FILE_NAME,
-            });
-        }
-
-        return undefined;
+    get lockFilePath(): string {
+        return path.format({
+            dir: this.dataDir,
+            base: LIBRARY_LOCK_FILE_NAME,
+        });
     }
 
     /**
-     * @returns The path to the metrics file, or undefined if network capture is disabled
+     * @returns The path to the metrics file
      */
-    get harFilePath(): string | undefined {
-        if (this._resources.enableNetworkCapture) {
-            return path.format({
-                dir: this.dataDir,
-                base: HAR_FILE_NAME,
-            });
-        }
+    get metricsFilePath(): string {
+        return path.format({
+            dir: this.dataDir,
+            base: METRICS_FILE_NAME,
+        });
+    }
 
-        return undefined;
+    /**
+     * @returns The path to the har file
+     */
+    get harFilePath(): string {
+        return path.format({
+            dir: this.dataDir,
+            base: HAR_FILE_NAME,
+        });
     }
 
     /**
@@ -352,5 +350,12 @@ export class ResourceManager {
      */
     get sharedZoneAvailable(): boolean {
         return Boolean(this._resources.sharedZone);
+    }
+
+    /**
+     * @returns True if legacy login should be used, false otherwise
+     */
+    get legacyLogin(): boolean {
+        return this._resources.legacyLogin;
     }
 }

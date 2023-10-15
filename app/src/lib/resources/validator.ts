@@ -2,6 +2,7 @@
 import {default as Ajv} from 'ajv';
 import ResourceFileSchema from "./schemas/resource-file.json" assert { type: "json" }; // eslint-disable-line
 import SigninResponseSchema from "./schemas/signin-response.json" assert { type: "json" }; // eslint-disable-line
+import SigninInitResponseSchema from "./schemas/signin-init-response.json" assert { type: "json" }; // eslint-disable-line
 import TrustResponseSchema from "./schemas/trust-response.json" assert { type: "json" }; // eslint-disable-line
 import SetupResponseSchema from "./schemas/setup-response.json" assert { type: "json" }; // eslint-disable-line
 import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" assert { type: "json" }; // eslint-disable-line
@@ -11,7 +12,7 @@ import PCSResponseSchema from "./schemas/pcs-response.json" assert { type: "json
 import {ResourceFile} from "./resource-types.js";
 import {iCPSError} from "../../app/error/error.js";
 import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
-import {COOKIE_KEYS, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninResponse, TrustResponse} from "./network-types.js";
+import {COOKIE_KEYS, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
 
 /**
  * Common configuration for the schema validator
@@ -29,6 +30,11 @@ export class Validator {
      * Validator for the resource file schema
      */
     _resourceFileValidator: Ajv.ValidateFunction<ResourceFile> = new Ajv.default(AJV_CONF).compile<ResourceFile>(ResourceFileSchema);
+
+    /**
+     * Validator for the signin init response schema
+     */
+    _signinInitResponseValidator: Ajv.ValidateFunction<SigninInitResponse> = new Ajv.default(AJV_CONF).compile<SigninInitResponse>(SigninInitResponseSchema);
 
     /**
      * Validator for the signin response schema
@@ -100,6 +106,20 @@ export class Validator {
         return this.validate(
             this._resourceFileValidator,
             VALIDATOR_ERR.RESOURCE_FILE,
+            data,
+        );
+    }
+
+    /**
+     * Validates the response from the signin init request
+     * @param data - The data to validate
+     * @returns A validated SigninInitResponse object
+     * @throws An error if the data cannot be validated
+     */
+    validateSigninInitResponse(data: unknown): SigninInitResponse {
+        return this.validate(
+            this._signinInitResponseValidator,
+            VALIDATOR_ERR.SIGNIN_INIT_RESPONSE,
             data,
         );
     }

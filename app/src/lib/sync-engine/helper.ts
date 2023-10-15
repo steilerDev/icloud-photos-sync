@@ -144,19 +144,19 @@ function getProcessingQueues<T>(remoteEntities: PEntity<T>[], _localEntities: PL
         const localEntity = localEntities[remoteEntity.getUUID()];
         if (!localEntity || !remoteEntity.equal(localEntity)) {
             // No local entity OR local entity does not match remote entity -> Remote asset will be added & local asset will not be removed from deletion queue
-            // this.logger.debug(`Adding new remote entity ${remoteEntity.getDisplayName()}`);
+            Resources.logger(`SyncHelper`).debug(`Adding new remote entity ${remoteEntity.getDisplayName()}`);
             // Making sure entities have all relevant properties
             toBeAdded.push(remoteEntity.apply(localEntity));
         } else {
             // Local asset matches remote asset, nothing to do, but preventing local asset to be deleted
-            // this.logger.debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
+            Resources.logger(`SyncHelper`).debug(`Keeping existing local entity ${remoteEntity.getDisplayName()}`);
             toBeKept.push(remoteEntity.apply(localEntity));
             delete localEntities[remoteEntity.getUUID()];
         }
     });
     // The original library should only hold those records, that have not been referenced by the remote state, removing them
     const toBeDeleted = Object.values(localEntities);
-    // This.logger.debug(`Adding ${toBeAdded.length} remote entities, removing ${toBeDeleted.length} local entities, keeping ${toBeKept.length} local entities`);
+    Resources.logger(`SyncHelper`).debug(`Got ${toBeDeleted.length} remaining local entities that need to be deleted: ${toBeDeleted.map(entity => (entity as any).getDisplayName()).join(`, `)}`);
     return [toBeDeleted, toBeAdded, toBeKept];
 }
 

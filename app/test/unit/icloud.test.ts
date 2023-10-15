@@ -8,6 +8,8 @@ import {MFA_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {iCPSError} from '../../src/app/error/error';
 import {iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
+import {iCloudCrypto} from '../../src/lib/icloud/icloud.crypto';
+import {SigninInitResponse} from '../../src/lib/resources/network-types';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;
@@ -153,7 +155,29 @@ describe.each([
         }
     });
 
-    describe(`Authenticate`, () => {
+    describe.each([
+        {
+            desc: `Legacy Login`,
+            legacy: true,
+        }, {
+            desc: `SRP Login`,
+            legacy: false,
+        },
+    ])(`Authenticate - $desc`, ({legacy}) => {
+        const authenticationUrl = `https://idmsa.apple.com/appleauth/`;
+        const authenticationPayload = {someData: `someValue`};
+
+        beforeEach(() => {
+            mockedResourceManager._resources.legacyLogin = legacy;
+            if (legacy) {
+                icloud.getLegacyLogin = jest.fn<typeof icloud.getLegacyLogin>()
+                    .mockReturnValue([authenticationUrl, authenticationPayload]);
+            } else {
+                icloud.getSRPLogin = jest.fn<typeof icloud.getSRPLogin>()
+                    .mockResolvedValue([authenticationUrl, authenticationPayload]);
+            }
+        });
+
         test(`Valid Trust Token`, async () => {
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
             icloud.getReady = jest.fn<typeof icloud.getReady>().mockResolvedValue(true);
@@ -166,14 +190,7 @@ describe.each([
             mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
             mockedNetworkManager.mock
-                .onPost(`https://idmsa.apple.com/appleauth/auth/signin`, {
-                    accountName: Config.defaultConfig.username,
-                    password: Config.defaultConfig.password,
-                    trustTokens: [
-                        Config.trustToken,
-                    ],
-                }, Config.REQUEST_HEADER.AUTH,
-                )
+                .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
                 .reply(200);
 
             await icloud.authenticate();
@@ -183,15 +200,10 @@ describe.each([
             expect(errorEvent).not.toHaveBeenCalled();
             expect(mockedValidator.validateSigninResponse).toHaveBeenCalled();
             expect(mockedNetworkManager.applySigninResponse).toHaveBeenCalled();
+            expect(legacy ? icloud.getLegacyLogin : icloud.getSRPLogin).toHaveBeenCalled();
         });
 
         test(`Invalid Trust Token - MFA Required`, async () => {
-            mockedResourceManager._readResourceFile
-                .mockReturnValue({
-                    libraryVersion: 1,
-                    trustToken: undefined,
-                });
-
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
             icloud.getReady = jest.fn<typeof icloud.getReady>().mockResolvedValue(true);
 
@@ -204,11 +216,7 @@ describe.each([
             mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
             mockedNetworkManager.mock
-                .onPost(`https://idmsa.apple.com/appleauth/auth/signin`, {
-                    accountName: Config.defaultConfig.username,
-                    password: Config.defaultConfig.password,
-                    trustTokens: [null],
-                }, Config.REQUEST_HEADER.AUTH)
+                .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
                 .reply(409);
 
             await icloud.authenticate();
@@ -219,6 +227,7 @@ describe.each([
             expect(errorEvent).not.toHaveBeenCalled();
             expect(mockedValidator.validateSigninResponse).toHaveBeenCalled();
             expect(mockedNetworkManager.applySigninResponse).toHaveBeenCalled();
+            expect(legacy ? icloud.getLegacyLogin : icloud.getSRPLogin).toHaveBeenCalled();
             jest.resetAllMocks();
         });
 
@@ -230,18 +239,12 @@ describe.each([
             });
 
             mockedNetworkManager.mock
-                .onPost(`https://idmsa.apple.com/appleauth/auth/signin`, {
-                    accountName: Config.defaultConfig.username,
-                    password: Config.defaultConfig.password,
-                    trustTokens: [
-                        Config.trustToken,
-                    ],
-                }, Config.REQUEST_HEADER.AUTH,
-                )
+                .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
                 .reply(200);
 
             await expect(icloud.authenticate()).rejects.toThrow(/^Unable to parse and validate signin response$/);
             expect(authenticationEvent).toHaveBeenCalled();
+            expect(legacy ? icloud.getLegacyLogin : icloud.getSRPLogin).toHaveBeenCalled();
         });
 
         describe(`Authentication backend error`, () => {
@@ -265,14 +268,7 @@ describe.each([
                 },
             ])(`$desc`, async ({status, expectedError}) => {
                 mockedNetworkManager.mock
-                    .onPost(`https://idmsa.apple.com/appleauth/auth/signin`, {
-                        accountName: Config.defaultConfig.username,
-                        password: Config.defaultConfig.password,
-                        trustTokens: [
-                            Config.trustToken,
-                        ],
-                    }, Config.REQUEST_HEADER.AUTH,
-                    )
+                    .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
                     .reply(status);
 
                 const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
@@ -285,6 +281,7 @@ describe.each([
                 expect(trustedEvent).not.toHaveBeenCalled();
                 expect(mfaEvent).not.toHaveBeenCalled();
                 expect(errorEvent).toHaveBeenCalledTimes(1);
+                expect(legacy ? icloud.getLegacyLogin : icloud.getSRPLogin).toHaveBeenCalled();
             });
         });
 
@@ -302,6 +299,114 @@ describe.each([
             expect(trustedEvent).not.toHaveBeenCalled();
             expect(mfaEvent).not.toHaveBeenCalled();
             expect(errorEvent).toHaveBeenCalledTimes(1);
+            expect(legacy ? icloud.getLegacyLogin : icloud.getSRPLogin).toHaveBeenCalled();
+        });
+    });
+
+    describe.each([{
+        desc: `with trust token`,
+        trustTokenResourceFile: Config.trustToken,
+        expectedTrustTokensArray: [Config.trustToken],
+    }, {
+        desc: `without trust token`,
+        trustTokenResourceFile: undefined,
+        expectedTrustTokensArray: [],
+    }])(`Authentication Payload - $desc`, ({trustTokenResourceFile, expectedTrustTokensArray}) => {
+        beforeEach(() => {
+            mockedResourceManager._readResourceFile
+                .mockReturnValue({
+                    libraryVersion: 1,
+                    trustToken: trustTokenResourceFile,
+                });
+        });
+
+        test(`Legacy`, () => {
+            expect(icloud.getLegacyLogin()).toEqual([
+                `https://idmsa.apple.com/appleauth/auth/signin`,
+                {
+                    accountName: Config.defaultConfig.username,
+                    password: Config.defaultConfig.password,
+                    trustTokens: expectedTrustTokensArray,
+                },
+            ]);
+        });
+
+        describe(`SRP`, () => {
+            test(`Success`, async () => {
+                const authenticator = new iCloudCrypto();
+                authenticator.getClientEphemeral = jest.fn<typeof authenticator.getClientEphemeral>()
+                    .mockResolvedValue(`clientEphemeral`);
+
+                authenticator.getProofValues = jest.fn<typeof authenticator.getProofValues>()
+                    .mockResolvedValue([`m1Proof`, `m2Proof`]);
+
+                mockedNetworkManager.mock
+                    .onPost(`https://idmsa.apple.com/appleauth/auth/signin/init`,
+                        {
+                            a: `clientEphemeral`,
+                            accountName: Config.defaultConfig.username,
+                            protocols: [`s2k`, `s2k_fo`],
+                        },
+                        Config.REQUEST_HEADER.AUTH,
+                    )
+                    .reply(200);
+
+                mockedValidator.validateSigninInitResponse = jest.fn<typeof mockedValidator.validateSigninInitResponse>()
+                    .mockReturnValue({
+                        data: {
+                            protocol: `s2k`,
+                            salt: `salt`,
+                            iteration: 1,
+                            b: `b`,
+                            c: `c`,
+                        },
+                    } as SigninInitResponse);
+
+                expect(await icloud.getSRPLogin(authenticator)).toEqual([
+                    `https://idmsa.apple.com/appleauth/auth/signin/complete`,
+                    {
+                        accountName: Config.defaultConfig.username,
+                        trustTokens: expectedTrustTokensArray,
+                        m1: `m1Proof`,
+                        m2: `m2Proof`,
+                        c: `c`,
+                    },
+                ]);
+            });
+
+            test(`Init request fails with server error`, async () => {
+                const authenticator = new iCloudCrypto();
+                authenticator.getClientEphemeral = jest.fn<typeof authenticator.getClientEphemeral>()
+                    .mockResolvedValue(`clientEphemeral`);
+
+                authenticator.getProofValues = jest.fn<typeof authenticator.getProofValues>()
+                    .mockResolvedValue([`m1Proof`, `m2Proof`]);
+
+                mockedNetworkManager.mock
+                    .onAny()
+                    .reply(500);
+
+                await expect(icloud.getSRPLogin()).rejects.toThrow(/^Unable to initialize SRP authentication protocol$/);
+            });
+
+            test(`Init response does not match validator`, async () => {
+                const authenticator = new iCloudCrypto();
+                authenticator.getClientEphemeral = jest.fn<typeof authenticator.getClientEphemeral>()
+                    .mockResolvedValue(`clientEphemeral`);
+
+                authenticator.getProofValues = jest.fn<typeof authenticator.getProofValues>()
+                    .mockResolvedValue([`m1Proof`, `m2Proof`]);
+
+                mockedNetworkManager.mock
+                    .onAny()
+                    .reply(200);
+
+                mockedValidator.validateSigninInitResponse = jest.fn<typeof mockedValidator.validateSigninInitResponse>(() => {
+                    throw new iCPSError(VALIDATOR_ERR.SIGNIN_INIT_RESPONSE);
+                });
+
+                await expect(icloud.getSRPLogin()).rejects.toThrow(/^Unable to initialize SRP authentication protocol$/);
+            });
         });
     });
 
@@ -486,7 +591,7 @@ describe.each([
                     },
                     codes: {
                         success: 204,
-                        failure: 403,
+                        failure: 500,
                     },
                 }, {
                     method: `sms`,
@@ -502,7 +607,7 @@ describe.each([
                     },
                     codes: {
                         success: 200,
-                        failure: 403,
+                        failure: 500,
                     },
                 }, {
                     method: `voice`,
@@ -518,7 +623,7 @@ describe.each([
                     },
                     codes: {
                         success: 200,
-                        failure: 403,
+                        failure: 500,
                     },
                 },
             ])(`Method: $method`, ({method, endpoint, payload, codes}) => {
@@ -568,6 +673,60 @@ describe.each([
                     await icloud.submitMFA(new MFAMethod(method as any), `123456`);
 
                     await expect(iCloudReady).rejects.toThrow(/^Unable to submit MFA code$/);
+                });
+
+                test.each([{
+                    replyPayload: {
+                        service_errors: [ // eslint-disable-line
+                            {
+                                code: `-21669`,
+                                message: `Incorrect verification code.`,
+                                title: `Incorrect Verification Code`,
+                            },
+                        ],
+                    },
+                    desc: `with service error`,
+                }, {
+                    replyPayload: {
+                        service_errors: [], // eslint-disable-line
+                    },
+                    desc: `without service error`,
+                }, {
+                    replyPayload: {
+                        service_errors: [ // eslint-disable-line
+                            {
+                                code: `-21669`,
+                                message: `Incorrect verification code.`,
+                                title: `Incorrect Verification Code`,
+                            }, {
+                                code: `-21669`,
+                                message: `Incorrect verification code.`,
+                                title: `Incorrect Verification Code`,
+                            },
+                        ],
+                    },
+                    desc: `with multiple service error`,
+                }])(`Incorrect code $desc`, async ({replyPayload}) => {
+                    const iCloudReady = icloud.getReady();
+                    mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+                    mockedNetworkManager.mock
+                        .onPost(endpoint,
+                            payload,
+                            {
+                                ...Config.REQUEST_HEADER.AUTH,
+                                scnt: Config.iCloudAuthSecrets.scnt,
+                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                            },
+                        )
+                        .reply(400, replyPayload);
+
+                    await icloud.submitMFA(new MFAMethod(method as any), `123456`);
+
+                    await expect(iCloudReady).rejects.toThrow(/^MFA code rejected$/);
                 });
             });
         });
@@ -678,7 +837,6 @@ describe.each([
             mockedNetworkManager.mock
                 .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
                     dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-                    trustToken: Config.trustToken,
                 }, Config.REQUEST_HEADER.DEFAULT,
                 )
                 .reply(200);
@@ -720,7 +878,6 @@ describe.each([
             mockedNetworkManager.mock
                 .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
                     dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-                    trustToken: Config.trustToken,
                 }, Config.REQUEST_HEADER.DEFAULT,
                 )
                 .reply(200);

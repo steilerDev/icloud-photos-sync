@@ -83,8 +83,8 @@ export class iCPSError extends Error {
      * @param msg - The message to be added
      * @returns This object for chaining convenience
      */
-    addMessage(msg: string): iCPSError {
-        this.messages.push(msg);
+    addMessage(...msg: string[]): iCPSError {
+        this.messages.push(...msg);
         return this;
     }
 

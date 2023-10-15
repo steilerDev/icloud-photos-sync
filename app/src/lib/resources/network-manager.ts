@@ -6,7 +6,6 @@ import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {AxiosHarTracker} from "axios-har-tracker";
-import {FILE_ENCODING} from "./resource-types.js";
 import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -73,6 +72,7 @@ export class HeaderJar {
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Client-Type`, `firstPartyAuth`));
 
         axios.interceptors.request.use(config => this._injectHeaders(config));
+        // If scnt is in header store it
     }
 
     /**
@@ -216,6 +216,12 @@ export class NetworkManager {
                 Origin: `https://www.${this.iCloudRegionUrl(resources.region)}`,
             },
         });
+
+        if (resources.enableNetworkCapture) {
+            this._harTracker = new AxiosHarTracker(this._axios as any);
+            this.resetHarTracker(this._harTracker);
+        }
+
         this._headerJar = new HeaderJar(this._axios);
 
         this._streamingCCYLimiter = new PQueue({
@@ -226,11 +232,6 @@ export class NetworkManager {
         this._streamingAxios = axios.create({
             responseType: `stream`,
         });
-
-        if (resources.enableNetworkCapture) {
-            this._harTracker = new AxiosHarTracker(this._axios as any);
-            this.resetHarTracker(this._harTracker);
-        }
     }
 
     /**
@@ -313,7 +314,7 @@ export class NetworkManager {
      * @returns - Returns a promise that resolves to false, if network capture was disabled or no entries were captured, true if a file was written
      */
     async writeHarFile(): Promise<boolean> {
-        if (!Resources.manager().harFilePath) {
+        if (!Resources.manager().enableNetworkCapture) {
             Resources.logger(this).debug(`Not writing HAR file because network capture is disabled`);
             return false;
         }
@@ -328,7 +329,7 @@ export class NetworkManager {
 
             Resources.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
-            await fs.writeFile(Resources.manager().harFilePath, jsonc.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
+            jsonc.write(Resources.manager().harFilePath, generatedObject, {autoPath: true});
             Resources.logger(this).info(`HAR file written`);
             return true;
         } catch (err) {
@@ -504,7 +505,7 @@ export class NetworkManager {
                 .catch(() => false);
 
             if (fileExists) {
-                Resources.logger(this).warn(`Skipping download of ${url} to ${location} as file already exists`);
+                Resources.logger(this).info(`File ${location} already exists - skipping download`);
                 return;
             }
 
