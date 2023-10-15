@@ -299,15 +299,10 @@ describe(`ResourceManager`, () => {
         });
 
         describe(`logFilePath`, () => {
-            test(`should return the path to the log file if logging to CLI is disabled`, () => {
+            test(`should return the path to the log file `, () => {
                 resourceManager._resources.logToCli = false;
                 const expectedPath = path.join(resources.dataDir, `.icloud-photos-sync.log`);
                 expect(resourceManager.logFilePath).toEqual(expectedPath);
-            });
-
-            test(`should return undefined if logging to CLI is enabled`, () => {
-                resourceManager._resources.logToCli = true;
-                expect(resourceManager.logFilePath).toBeUndefined();
             });
         });
 
@@ -480,6 +475,12 @@ describe(`ResourceManager`, () => {
         describe(`enableNetworkCapture`, () => {
             test(`should return the enable network capture flag from the resources`, () => {
                 expect(resourceManager.enableNetworkCapture).toEqual(resources.enableNetworkCapture);
+            });
+        });
+
+        describe(`legacyLogin`, () => {
+            test(`should return the legacy login flag from the resources`, () => {
+                expect(resourceManager.legacyLogin).toEqual(resources.legacyLogin);
             });
         });
 

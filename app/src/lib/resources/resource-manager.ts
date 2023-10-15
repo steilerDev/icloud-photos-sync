@@ -94,7 +94,7 @@ export class ResourceManager {
     /**
      * @returns The path to the log file
      */
-    get logFilePath(): string | undefined {
+    get logFilePath(): string {
         return path.format({
             dir: this.dataDir,
             base: LOG_FILE_NAME,
@@ -348,5 +348,12 @@ export class ResourceManager {
      */
     get sharedZoneAvailable(): boolean {
         return Boolean(this._resources.sharedZone);
+    }
+
+    /**
+     * @returns True if legacy login should be used, false otherwise
+     */
+    get legacyLogin(): boolean {
+        return this._resources.legacyLogin;
     }
 }

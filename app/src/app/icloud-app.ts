@@ -127,7 +127,11 @@ abstract class iCloudApp extends iCPSApp {
      */
     async acquireLibraryLock() {
         const lockFilePath = path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE);
-        if (fs.existsSync(lockFilePath)) {
+        const lockFileExists = await fs.promises.stat(lockFilePath)
+            .then(stat => stat.isFile())
+            .catch(() => false);
+
+        if (lockFileExists) {
             if (!Resources.manager().force) {
                 const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
                 throw new iCPSError(LIBRARY_ERR.LOCKED)
@@ -146,7 +150,11 @@ abstract class iCloudApp extends iCPSApp {
      */
     async releaseLibraryLock() {
         const lockFilePath = path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE);
-        if (!fs.existsSync(lockFilePath)) {
+        const lockFileExists = await fs.promises.stat(lockFilePath)
+            .then(stat => stat.isFile())
+            .catch(() => false);
+
+        if (!lockFileExists) {
             return;
         }
 

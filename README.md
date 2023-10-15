@@ -134,6 +134,10 @@ Please also check out [open and known issues](https://github.com/steilerDev/iclo
 
 Please check the [contributing guidelines](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md) to learn how to engage with this project.
 
+## Acknowledgments
+
+- Special thanks to [@foxt](https://foxt.dev/) for helping with reverse engineering some tricky parts of the iCloud API ([GSA](https://github.com/steilerDev/icloud-photos-sync/issues/363) & [ADP](https://github.com/steilerDev/icloud-photos-sync/issues/202)) - check out his [iCloud.js](https://github.com/foxt/icloud.js) project in case you need to access other aspects of iCloud
+
 ### Release Workflow
 
 <p align="center">

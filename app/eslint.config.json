@@ -20,7 +20,7 @@
         "quote-props": ["error", "as-needed"],
         "indent": ["error", 4],
         "eol-last": ["error", "never"],
-        "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudPhotos", "iCPSError", "default", "iCPSInfluxLineProtocolPoint"], "capIsNewExceptions": ["TTL", "BASE"] }],
+        "new-cap": ["error", { "newIsCapExceptions": ["iCloud", "iCloudCrypto", "iCloudPhotos", "iCPSError", "default", "iCPSInfluxLineProtocolPoint"], "capIsNewExceptions": ["TTL", "BASE"] }],
         "tsdoc/syntax": "warn",
         "no-negated-condition": "off",
         "no-unused-vars": "off",

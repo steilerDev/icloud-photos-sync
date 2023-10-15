@@ -13,7 +13,7 @@
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["sync"],
+            "args": ["token"],
             "outFiles": [
                 "${workspaceFolder}/app/build/out/**/*.js",
             ],
@@ -65,7 +65,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/resources.validator.test.ts"
+                "test/unit/icloud.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"

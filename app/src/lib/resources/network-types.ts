@@ -55,7 +55,11 @@ export const ENDPOINTS = {
     AUTH: {
         BASE: `https://idmsa.apple.com/appleauth/auth`,
         PATH: {
-            SIGNIN: `/signin`,
+            SIGNIN: {
+                LEGACY: `/signin`,
+                INIT: `/signin/init`,
+                COMPLETE: `/signin/complete`,
+            },
             MFA: {
                 DEVICE_RESEND: `/verify/trusteddevice`,
                 DEVICE_ENTER: `/verify/trusteddevice/securitycode`,
@@ -109,7 +113,8 @@ export const ENDPOINTS = {
 
 /**
  * The expected response format for the signin request
- * @see {@link ENDPOINTS.AUTH.PATH.SIGNIN}
+ * @see {@link ENDPOINTS.AUTH.PATH.SIGNIN.LEGACY}
+ * @see {@link ENDPOINTS.AUTH.PATH.SIGNIN.COMPLETE}
  */
 export type SigninResponse = {
     /**
@@ -134,6 +139,50 @@ export type SigninResponse = {
          * @minItems 1
          */
         'set-cookie': string[], // eslint-disable-line
+    }
+}
+
+/**
+ * Currently supported SRP password hashing protocols
+ */
+export type SRPProtocol = `s2k` | `s2k_fo`;
+
+/**
+ * The expected response format for the signin init request
+ * @see {@link ENDPOINTS.AUTH.PATH.SIGNIN.INIT}
+ */
+export type SigninInitResponse = {
+    data: {
+        /**
+         * Number of iterations for PBKDF2 key derivation function
+         */
+        iteration: number,
+        /**
+         * Salt for the PBKDF2 key derivation function and SRP protocol
+         * @minLength 1
+         */
+        salt: string,
+        /**
+         * How to encode the hashed password
+         */
+        protocol: SRPProtocol,
+        /**
+         * The servers's ephemeral public key
+         * @minLength 1
+         */
+        b: string,
+        /**
+         * Some kind of session ID
+         * @minLength 1
+         */
+        c: string
+    },
+    headers: {
+        /**
+         * Scnt token - required to keep track of auth request
+         * @minLength 1
+         */
+        scnt: string
     }
 }
 
