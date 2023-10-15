@@ -306,6 +306,13 @@ describe(`ResourceManager`, () => {
             });
         });
 
+        describe(`libraryLockFile`, () => {
+            test(`should return the path to the library lock file`, () => {
+                const expectedPath = path.join(resources.dataDir, `.library.lock`);
+                expect(resourceManager.lockFilePath).toEqual(expectedPath);
+            });
+        });
+
         describe(`metricsFilePath`, () => {
             test(`should return the path to the metrics file if exportMetrics is enabled`, () => {
                 resourceManager._resources.exportMetrics = true;
@@ -313,9 +320,10 @@ describe(`ResourceManager`, () => {
                 expect(resourceManager.metricsFilePath).toEqual(expectedPath);
             });
 
-            test(`should return undefined if exportMetrics is disabled`, () => {
-                resourceManager._resources.exportMetrics = false;
-                expect(resourceManager.metricsFilePath).toBeUndefined();
+            test(`should return the path to the metrics file if exportMetrics is disabled`, () => {
+                resourceManager._resources.exportMetrics = true;
+                const expectedPath = path.join(resources.dataDir, `.icloud-photos-sync.metrics`);
+                expect(resourceManager.metricsFilePath).toEqual(expectedPath);
             });
         });
 
@@ -326,10 +334,10 @@ describe(`ResourceManager`, () => {
                 expect(resourceManager.harFilePath).toEqual(expectedPath);
             });
 
-            test(`should return undefined if enableNetworkCapture is disabled`, () => {
+            test(`should return the path to the HAR file if enableNetworkCapture is disabled`, () => {
                 resourceManager._resources.enableNetworkCapture = false;
-
-                expect(resourceManager.harFilePath).toBeUndefined();
+                const expectedPath = path.join(resources.dataDir, `.icloud-photos-sync.har`);
+                expect(resourceManager.harFilePath).toEqual(expectedPath);
             });
         });
 

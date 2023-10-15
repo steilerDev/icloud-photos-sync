@@ -12,10 +12,7 @@ import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {Resources} from "../lib/resources/main.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError} from "../lib/resources/events-types.js";
 
-/**
- * Filename for library lock file located in DATA_DIR
- */
-export const LIBRARY_LOCK_FILE = `.library.lock`;
+
 
 /**
  * Abstract class returned by the factory function
@@ -126,7 +123,7 @@ abstract class iCloudApp extends iCPSApp {
      * @throws An iCPSError, if the lock could not be acquired
      */
     async acquireLibraryLock() {
-        const lockFilePath = path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE);
+        const lockFilePath = Resources.manager().lockFilePath;
         const lockFileExists = await fs.promises.stat(lockFilePath)
             .then(stat => stat.isFile())
             .catch(() => false);
@@ -149,7 +146,7 @@ abstract class iCloudApp extends iCPSApp {
      * @throws An iCPSError, if the lock could not be released
      */
     async releaseLibraryLock() {
-        const lockFilePath = path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE);
+        const lockFilePath = Resources.manager().lockFilePath;
         const lockFileExists = await fs.promises.stat(lockFilePath)
             .then(stat => stat.isFile())
             .catch(() => false);

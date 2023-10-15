@@ -420,8 +420,7 @@ export class ErrorHandler {
      * @returns A promise that resolves to a Buffer holding the prepared HAR file, or undefined if no file is available - compressed using the brotli algorithm
      */
     async prepareHarFile(): Promise<Buffer | undefined> {
-        const filePath = Resources.manager().harFilePath;
-        if (!filePath) {
+        if (!Resources.manager().enableNetworkCapture) {
             return undefined;
         }
 

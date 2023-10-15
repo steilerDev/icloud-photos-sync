@@ -314,7 +314,7 @@ export class NetworkManager {
      * @returns - Returns a promise that resolves to false, if network capture was disabled or no entries were captured, true if a file was written
      */
     async writeHarFile(): Promise<boolean> {
-        if (!Resources.manager().harFilePath) {
+        if (!Resources.manager().enableNetworkCapture) {
             Resources.logger(this).debug(`Not writing HAR file because network capture is disabled`);
             return false;
         }
