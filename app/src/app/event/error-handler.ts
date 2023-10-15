@@ -21,6 +21,7 @@ const reportDenyList = [
     MFA_ERR.ADDR_IN_USE_ERR.code, // Only happens if port/address is in use
     MFA_ERR.INSUFFICIENT_PRIVILEGES.code, // Only happens if user is lacking privileges to open port/address
     MFA_ERR.SERVER_TIMEOUT.code, // Only happens if user does not interact within 10 minutes
+    MFA_ERR.CODE_REJECTED.code, // Only happens if MFA code is rejected from backend, e.g. if code is invalid
     LIBRARY_ERR.LOCKED.code, // Only happens if library is locked
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
 ];

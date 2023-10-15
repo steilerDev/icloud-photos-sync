@@ -277,6 +277,16 @@ export class iCloud {
             Resources.logger(this).info(`MFA code correct!`);
             Resources.emit(iCPSEventCloud.AUTHENTICATED);
         } catch (err) {
+            if (err.response?.status === 400) {
+                const augmentedErr = new iCPSError(MFA_ERR.CODE_REJECTED).addCause(err);
+                if (Array.isArray(err.response?.data?.service_errors)) {
+                    augmentedErr.addMessage(err.response.data.service_errors.map((serviceError: any) => serviceError?.message));
+                }
+
+                Resources.emit(iCPSEventCloud.ERROR, augmentedErr);
+                return;
+            }
+
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.SUBMIT_FAILED).addCause(err));
         }
     }

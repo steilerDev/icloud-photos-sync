@@ -591,7 +591,7 @@ describe.each([
                     },
                     codes: {
                         success: 204,
-                        failure: 403,
+                        failure: 500,
                     },
                 }, {
                     method: `sms`,
@@ -607,7 +607,7 @@ describe.each([
                     },
                     codes: {
                         success: 200,
-                        failure: 403,
+                        failure: 500,
                     },
                 }, {
                     method: `voice`,
@@ -623,7 +623,7 @@ describe.each([
                     },
                     codes: {
                         success: 200,
-                        failure: 403,
+                        failure: 500,
                     },
                 },
             ])(`Method: $method`, ({method, endpoint, payload, codes}) => {
@@ -673,6 +673,60 @@ describe.each([
                     await icloud.submitMFA(new MFAMethod(method as any), `123456`);
 
                     await expect(iCloudReady).rejects.toThrow(/^Unable to submit MFA code$/);
+                });
+
+                test.each([{
+                    replyPayload: {
+                        service_errors: [ // eslint-disable-line
+                            {
+                                code: `-21669`,
+                                message: `Incorrect verification code.`,
+                                title: `Incorrect Verification Code`,
+                            },
+                        ],
+                    },
+                    desc: `with service error`,
+                }, {
+                    replyPayload: {
+                        service_errors: [], // eslint-disable-line
+                    },
+                    desc: `without service error`,
+                }, {
+                    replyPayload: {
+                        service_errors: [ // eslint-disable-line
+                            {
+                                code: `-21669`,
+                                message: `Incorrect verification code.`,
+                                title: `Incorrect Verification Code`,
+                            }, {
+                                code: `-21669`,
+                                message: `Incorrect verification code.`,
+                                title: `Incorrect Verification Code`,
+                            },
+                        ],
+                    },
+                    desc: `with multiple service error`,
+                }])(`Incorrect code $desc`, async ({replyPayload}) => {
+                    const iCloudReady = icloud.getReady();
+                    mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+                    mockedNetworkManager.mock
+                        .onPost(endpoint,
+                            payload,
+                            {
+                                ...Config.REQUEST_HEADER.AUTH,
+                                scnt: Config.iCloudAuthSecrets.scnt,
+                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                            },
+                        )
+                        .reply(400, replyPayload);
+
+                    await icloud.submitMFA(new MFAMethod(method as any), `123456`);
+
+                    await expect(iCloudReady).rejects.toThrow(/^MFA code rejected$/);
                 });
             });
         });
