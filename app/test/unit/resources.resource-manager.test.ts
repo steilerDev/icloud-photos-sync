@@ -299,15 +299,17 @@ describe(`ResourceManager`, () => {
         });
 
         describe(`logFilePath`, () => {
-            test(`should return the path to the log file if logging to CLI is disabled`, () => {
+            test(`should return the path to the log file `, () => {
                 resourceManager._resources.logToCli = false;
                 const expectedPath = path.join(resources.dataDir, `.icloud-photos-sync.log`);
                 expect(resourceManager.logFilePath).toEqual(expectedPath);
             });
+        });
 
-            test(`should return undefined if logging to CLI is enabled`, () => {
-                resourceManager._resources.logToCli = true;
-                expect(resourceManager.logFilePath).toBeUndefined();
+        describe(`libraryLockFile`, () => {
+            test(`should return the path to the library lock file`, () => {
+                const expectedPath = path.join(resources.dataDir, `.library.lock`);
+                expect(resourceManager.lockFilePath).toEqual(expectedPath);
             });
         });
 
@@ -318,9 +320,10 @@ describe(`ResourceManager`, () => {
                 expect(resourceManager.metricsFilePath).toEqual(expectedPath);
             });
 
-            test(`should return undefined if exportMetrics is disabled`, () => {
-                resourceManager._resources.exportMetrics = false;
-                expect(resourceManager.metricsFilePath).toBeUndefined();
+            test(`should return the path to the metrics file if exportMetrics is disabled`, () => {
+                resourceManager._resources.exportMetrics = true;
+                const expectedPath = path.join(resources.dataDir, `.icloud-photos-sync.metrics`);
+                expect(resourceManager.metricsFilePath).toEqual(expectedPath);
             });
         });
 
@@ -331,10 +334,10 @@ describe(`ResourceManager`, () => {
                 expect(resourceManager.harFilePath).toEqual(expectedPath);
             });
 
-            test(`should return undefined if enableNetworkCapture is disabled`, () => {
+            test(`should return the path to the HAR file if enableNetworkCapture is disabled`, () => {
                 resourceManager._resources.enableNetworkCapture = false;
-
-                expect(resourceManager.harFilePath).toBeUndefined();
+                const expectedPath = path.join(resources.dataDir, `.icloud-photos-sync.har`);
+                expect(resourceManager.harFilePath).toEqual(expectedPath);
             });
         });
 
@@ -480,6 +483,12 @@ describe(`ResourceManager`, () => {
         describe(`enableNetworkCapture`, () => {
             test(`should return the enable network capture flag from the resources`, () => {
                 expect(resourceManager.enableNetworkCapture).toEqual(resources.enableNetworkCapture);
+            });
+        });
+
+        describe(`legacyLogin`, () => {
+            test(`should return the legacy login flag from the resources`, () => {
+                expect(resourceManager.legacyLogin).toEqual(resources.legacyLogin);
             });
         });
 

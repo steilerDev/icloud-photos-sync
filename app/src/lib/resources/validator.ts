@@ -2,15 +2,17 @@
 import {default as Ajv} from 'ajv';
 import ResourceFileSchema from "./schemas/resource-file.json" assert { type: "json" }; // eslint-disable-line
 import SigninResponseSchema from "./schemas/signin-response.json" assert { type: "json" }; // eslint-disable-line
+import SigninInitResponseSchema from "./schemas/signin-init-response.json" assert { type: "json" }; // eslint-disable-line
 import TrustResponseSchema from "./schemas/trust-response.json" assert { type: "json" }; // eslint-disable-line
 import SetupResponseSchema from "./schemas/setup-response.json" assert { type: "json" }; // eslint-disable-line
 import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" assert { type: "json" }; // eslint-disable-line
 import ResendMFADeviceResponseSchema from "./schemas/resend-mfa-device-response.json" assert { type: "json" }; // eslint-disable-line
 import ResendMFAPhoneResponseSchema from "./schemas/resend-mfa-phone-response.json" assert { type: "json" }; // eslint-disable-line
+import PCSResponseSchema from "./schemas/pcs-response.json" assert { type: "json" }; // eslint-disable-line
 import {ResourceFile} from "./resource-types.js";
 import {iCPSError} from "../../app/error/error.js";
 import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
-import {COOKIE_KEYS, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninResponse, TrustResponse} from "./network-types.js";
+import {COOKIE_KEYS, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
 
 /**
  * Common configuration for the schema validator
@@ -28,6 +30,11 @@ export class Validator {
      * Validator for the resource file schema
      */
     _resourceFileValidator: Ajv.ValidateFunction<ResourceFile> = new Ajv.default(AJV_CONF).compile<ResourceFile>(ResourceFileSchema);
+
+    /**
+     * Validator for the signin init response schema
+     */
+    _signinInitResponseValidator: Ajv.ValidateFunction<SigninInitResponse> = new Ajv.default(AJV_CONF).compile<SigninInitResponse>(SigninInitResponseSchema);
 
     /**
      * Validator for the signin response schema
@@ -53,6 +60,11 @@ export class Validator {
      * Validator for the iCloud setup response schema
      */
     _setupResponseValidator: Ajv.ValidateFunction<SetupResponse> = new Ajv.default(AJV_CONF).compile<SetupResponse>(SetupResponseSchema);
+
+    /**
+     * Validator for the PCS response schema
+     */
+    _pcsResponseValidator: Ajv.ValidateFunction<PCSResponse> = new Ajv.default(AJV_CONF).compile<PCSResponse>(PCSResponseSchema);
 
     /**
      * Validator for the iCloud photos setup response schema
@@ -99,6 +111,20 @@ export class Validator {
     }
 
     /**
+     * Validates the response from the signin init request
+     * @param data - The data to validate
+     * @returns A validated SigninInitResponse object
+     * @throws An error if the data cannot be validated
+     */
+    validateSigninInitResponse(data: unknown): SigninInitResponse {
+        return this.validate(
+            this._signinInitResponseValidator,
+            VALIDATOR_ERR.SIGNIN_INIT_RESPONSE,
+            data,
+        );
+    }
+
+    /**
      * Validates the response from the signin request
      * @param data - The data to validate
      * @returns A validated SigninResponse object
@@ -113,6 +139,12 @@ export class Validator {
         );
     }
 
+    /**
+     * Validates the response from resending the MFA code via a device
+     * @param data - The data to validate
+     * @returns A validated ResendMFADeviceResponse object
+     * @throws An error if the data cannot be validated
+     */
     validateResendMFADeviceResponse(data: unknown): ResendMFADeviceResponse {
         return this.validate(
             this._resendMFADeviceResponseValidator,
@@ -121,6 +153,12 @@ export class Validator {
         );
     }
 
+    /**
+     * Validates the response from resending the MFA code via a phone
+     * @param data - The data to validate
+     * @returns A validated ResendMFAPhoneResponse object
+     * @throws An error if the data cannot be validated
+     */
     validateResendMFAPhoneResponse(data: unknown): ResendMFAPhoneResponse {
         return this.validate(
             this._resendMFAPhoneResponseValidator,
@@ -155,6 +193,21 @@ export class Validator {
             VALIDATOR_ERR.SETUP_RESPONSE,
             data,
             (data: SetupResponse) => data.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.X_APPLE)).length > 1, // Making sure there are authentication cookies
+        );
+    }
+
+    /**
+     * Validates the response from the PCS acquisition request
+     * @param data - The data to validate
+     * @returns A validated PCSResponse object
+     * @throws An error if the data cannot be validated
+     */
+    validatePCSResponse(data: unknown): PCSResponse {
+        return this.validate(
+            this._pcsResponseValidator,
+            VALIDATOR_ERR.PCS_RESPONSE,
+            data,
+            (data: PCSResponse) => data.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.PCS_PHOTOS) || cookieString.startsWith(COOKIE_KEYS.PCS_SHARING)).length === 2,
         );
     }
 

@@ -45,6 +45,157 @@ describe(`Validator`, () => {
         });
     });
 
+    describe(`validateSigninInitResponse`, () => {
+        test.each([
+            {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `with s2k protocol`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `with s2k_fo protocol`,
+            },
+        ])(`should validate a valid signin init response: $desc`, ({data}) => {
+            expect(() => validator.validateSigninInitResponse(data)).not.toThrow();
+        });
+
+        test.each([
+            {
+                data: {
+                    data: {
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing iteration`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        protocol: `s2k_fo`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing salt`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing protocol`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `fobar`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `invalid protocol`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing b`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing c`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                    headers: {},
+                },
+                desc: `missing scnt`,
+            }, {
+                data: {
+                    data: {
+                        iteration: 20403,
+                        salt: `someSalt`,
+                        protocol: `s2k_fo`,
+                        b: `someServerChallenge`,
+                        c: `someSessionIdentifier`,
+                    },
+                },
+                desc: `missing headers`,
+            }, {
+                data: {
+                    headers: {
+                        scnt: `scntString`,
+                    },
+                },
+                desc: `missing data`,
+            },
+        ])(`should throw an error for an invalid signin init response: $desc`, ({data}) => {
+            expect(() => validator.validateSigninInitResponse(data)).toThrowError(VALIDATOR_ERR.SIGNIN_INIT_RESPONSE);
+        });
+    });
+
     describe(`validateSigninResponse`, () => {
         test.each([
             {
@@ -413,7 +564,26 @@ describe(`Validator`, () => {
     });
 
     describe(`validateSetupResponse`, () => {
-        test(`should validate a valid setup response`, () => {
+        test(`should validate a valid setup response with PCS required`, () => {
+            const data = {
+                headers: getICloudCookieHeader(),
+                data: {
+                    dsInfo: {
+                        isWebAccessAllowed: true,
+                    },
+                    webservices: {
+                        ckdatabasews: {
+                            url: Config.photosDomain,
+                            pcsRequired: true,
+                            status: `active`,
+                        },
+                    },
+                },
+            };
+            expect(() => validator.validateSetupResponse(data)).not.toThrow();
+        });
+
+        test(`should validate a valid setup response without PCS required`, () => {
             const data = {
                 headers: getICloudCookieHeader(),
                 data: {
@@ -577,6 +747,180 @@ describe(`Validator`, () => {
             },
         ])(`should throw an error for an invalid setup response: $desc`, ({data}) => {
             expect(() => validator.validateSetupResponse(data)).toThrowError(VALIDATOR_ERR.SETUP_RESPONSE);
+        });
+    });
+
+    describe(`validatePCSResponse`, () => {
+        test.each([{
+            data: {
+                headers: getICloudCookieHeader(),
+                data: {
+                    isWebAccessAllowed: true,
+                    isDeviceConsentedForPCS: true,
+                    message: `Cookies attached.`,
+                    deviceConsentForPCSExpiry: 1234,
+                    status: `success`,
+                },
+            },
+            desc: `cookies attached`,
+        }, {
+            data: {
+                headers: getICloudCookieHeader(),
+                data: {
+                    isWebAccessAllowed: true,
+                    isDeviceConsentedForPCS: true,
+                    message: `Cookies already present.`,
+                    deviceConsentForPCSExpiry: 1234,
+                    status: `success`,
+                },
+            },
+            desc: `cookies already present`,
+        }])(`should validate a valid PCS response: $desc`, ({data}) => {
+            expect(() => validator.validatePCSResponse(data)).not.toThrow();
+        });
+
+        test.each([
+            {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        isWebAccessAllowed: false,
+                        isDeviceConsentedForPCS: true,
+                        message: `Cookies already present.`,
+                        deviceConsentForPCSExpiry: 1234,
+                        status: `success`,
+                    },
+                },
+                desc: `web access not allowed`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        isDeviceConsentedForPCS: true,
+                        message: `Cookies already present.`,
+                        deviceConsentForPCSExpiry: 1234,
+                        status: `success`,
+                    },
+                },
+                desc: `web access missing`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        isWebAccessAllowed: true,
+                        isDeviceConsentedForPCS: false,
+                        message: `Cookies already present.`,
+                        deviceConsentForPCSExpiry: 1234,
+                        status: `success`,
+                    },
+                },
+                desc: `not consented for PCS`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        isWebAccessAllowed: true,
+                        message: `Cookies already present.`,
+                        deviceConsentForPCSExpiry: 1234,
+                        status: `success`,
+                    },
+                },
+                desc: `consented for PCS missing`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        isWebAccessAllowed: true,
+                        isDeviceConsentedForPCS: true,
+                        message: `Unexpected message`,
+                        deviceConsentForPCSExpiry: 1234,
+                        status: `success`,
+                    },
+                },
+                desc: `unexpected message`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        isWebAccessAllowed: true,
+                        isDeviceConsentedForPCS: true,
+                        deviceConsentForPCSExpiry: 1234,
+                        status: `success`,
+                    },
+                },
+                desc: `message missing`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        isWebAccessAllowed: true,
+                        isDeviceConsentedForPCS: true,
+                        message: `Cookies attached.`,
+                        status: `success`,
+                    },
+                },
+                desc: `expiry missing`,
+            }, {
+                data: {
+                    headers: getICloudCookieHeader(),
+                    data: {
+                        isWebAccessAllowed: true,
+                        isDeviceConsentedForPCS: true,
+                        message: `Cookies attached.`,
+                        deviceConsentForPCSExpiry: 1234,
+                        status: `failure`,
+                    },
+                },
+                desc: `status failure`,
+            }, {
+                data: {
+                    headers: {
+                        'set-cookie': [
+                            `X-APPLE-WEBAUTH-PCS-Sharing="someOtherVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                        ],
+                    },
+                    data: {
+                        isWebAccessAllowed: true,
+                        isDeviceConsentedForPCS: true,
+                        message: `Cookies attached.`,
+                        deviceConsentForPCSExpiry: 1234,
+                        status: `success`,
+                    },
+                },
+                desc: `photos PCS missing`,
+            }, {
+                data: {
+                    headers: {
+                        'set-cookie': [
+                            `X-APPLE-WEBAUTH-PCS-Photos="someVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                        ],
+                    },
+                    data: {
+                        isWebAccessAllowed: true,
+                        isDeviceConsentedForPCS: true,
+                        message: `Cookies attached.`,
+                        deviceConsentForPCSExpiry: 1234,
+                        status: `success`,
+                    },
+                },
+                desc: `sharing PCS missing`,
+            }, {
+                data: {
+                    headers: {
+                        'set-cookie': [],
+                    },
+                    data: {
+                        isWebAccessAllowed: true,
+                        isDeviceConsentedForPCS: true,
+                        message: `Cookies attached.`,
+                        deviceConsentForPCSExpiry: 1234,
+                        status: `success`,
+                    },
+                },
+                desc: `no cookies`,
+            },
+        ])(`should throw an error for an invalid PCS response: $desc`, ({data}) => {
+            expect(() => validator.validatePCSResponse(data)).toThrowError(VALIDATOR_ERR.PCS_RESPONSE);
         });
     });
 

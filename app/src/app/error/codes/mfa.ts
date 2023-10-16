@@ -23,8 +23,16 @@ export const ADDR_IN_USE_ERR: ErrorStruct = buildErrorStruct(
     name, prefix, `ADDR_IN_USE`, `HTTP Server could not start, because address/port is in use`,
 );
 
+export const INSUFFICIENT_PRIVILEGES: ErrorStruct = buildErrorStruct(
+    name, prefix, `ADDR_IN_USE`, `HTTP Server could not start, because user has insufficient privileges to open address/port`,
+);
+
 export const SUBMIT_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `SUBMIT_FAILED`, `Unable to submit MFA code`,
+);
+
+export const CODE_REJECTED: ErrorStruct = buildErrorStruct(
+    name, prefix, `CODE_REJECTED`, `MFA code rejected`,
 );
 
 export const RESEND_FAILED: ErrorStruct = buildErrorStruct(

@@ -16,6 +16,10 @@ const schemaList = [
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
     }, {
+        typeName: `SigninInitResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
         typeName: `ResendMFADeviceResponse`,
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
@@ -29,6 +33,10 @@ const schemaList = [
         allowAdditionalProperties: true,
     }, {
         typeName: `SetupResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `PCSResponse`,
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
     }, {

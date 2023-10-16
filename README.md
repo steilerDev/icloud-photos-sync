@@ -110,10 +110,10 @@ As this application is using an undocumented public API, there are a couple of k
 
 - **iCloud Shared Photo Library**:
   While this app is syncing all assets from the *Shared Photo Library*, unfortunately the API does not provide the location of shared assets within the user's folder hierarchy (when navigating to a folder on the WebUI while having *Shared Photo Library* enabled will yield an error). Until this functionality is available, *Shared Photo Library* assets will only be present in the `_Shared-Photos` folder and therefore cannot be archived.
-- **Advanced Data Protection**:
-  In order to use this app with an account that is secured through *Advanced Data Protection*, please make sure [access through the iCloud WebUI](https://support.apple.com/de-de/HT212523) is enabled. This  is a minimum requirement since this tool is re-using those APIs - [I'm still waiting on confirmation that this will enable functionality, please report your experience!](https://github.com/steilerDev/icloud-photos-sync/issues/202)
 - **FileType Support**:
   The support of file types needs to be hardcoded by this application, since a full list is not available or retrievable. If you come across an `Unknown filetype descriptor` error, [please report it](https://github.com/steilerDev/icloud-photos-sync/issues/143), in order for the file type to be added to the application.
+
+Please also check out [open and known issues](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3Aclass%28bug%29%2Cclass%28improvement%29%2C%22class%28known+issue%29%22) and [existing feature requests](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3Aclass%28feature%29+label%3Astatus%28open%29%2Cstatus%28wontfix%29%2Cstatus%28backlog%29%2C%22status%28help+needed%29%22%2C%22status%28in+progress%29%22%2Cstatus%28investigating%29%2Cstatus%28previewed%29+) for more information.
 
 ## OS Support
 
@@ -133,6 +133,10 @@ As this application is using an undocumented public API, there are a couple of k
 ## Contributing & Feedback
 
 Please check the [contributing guidelines](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md) to learn how to engage with this project.
+
+## Acknowledgments
+
+- Special thanks to [@foxt](https://foxt.dev/) for helping with reverse engineering some tricky parts of the iCloud API ([GSA](https://github.com/steilerDev/icloud-photos-sync/issues/363) & [ADP](https://github.com/steilerDev/icloud-photos-sync/issues/202)) - check out his [iCloud.js](https://github.com/foxt/icloud.js) project in case you need to access other aspects of iCloud
 
 ### Release Workflow
 

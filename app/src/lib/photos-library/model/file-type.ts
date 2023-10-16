@@ -11,6 +11,7 @@ const EXT = {
     'public.jpeg': `jpeg`,
     'com.apple.quicktime-movie': `mov`,
     'public.heic': `heic`,
+    'public.image': `HEIC`,
     'com.sony.arw-raw-image': `arw`,
     'org.webmproject.webp': `webp`,
     'com.compuserve.gif': `gif`,
@@ -44,6 +45,9 @@ const EXT = {
     'public.mpo-image': `mpo`,
     'com.dji.mimo.pano.jpeg': `jpg`,
     'public.avif': `avif`,
+    'com.apple.m4a-audio': `m4a`,
+    'com.canon.crw-raw-image': `crw`,
+    'public.mp3': `mp3`,
 };
 
 /**

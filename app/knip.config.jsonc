@@ -1,5 +1,5 @@
 {
-    "entry": ["test/**/*.test.ts", "src/main.ts", "build/cli-reference.ts", "build/schema.ts"],
+    "entry": ["test/unit/*", "test/api/*", "src/main.ts", "build/cli-reference.ts", "build/schema.ts", "build/package.ts"],
     "project": ["**/*.ts"],
     "ignoreDependencies": [
         "@typescript-eslint/eslint-plugin", // Loaded by eslint.config.json

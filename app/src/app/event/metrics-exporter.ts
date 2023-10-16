@@ -79,6 +79,7 @@ const FIELDS = {
             MFA_NOT_PROVIDED: `MFA_NOT_PROVIDED`,
             DEVICE_TRUSTED: `DEVICE_TRUSTED`,
             ACCOUNT_READY: `ACCOUNT_READY`,
+            PCS_REQUIRED: `PCS_REQUIRED`,
             SESSION_EXPIRED: `SESSION_EXPIRED`,
             ICLOUD_READY: `ICLOUD_READY`,
             SYNC_START: `SYNC_START`,
@@ -379,6 +380,10 @@ export class MetricsExporter {
             .on(iCPSEventCloud.SESSION_EXPIRED, () => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.SESSION_EXPIRED));
+            })
+            .on(iCPSEventCloud.PCS_REQUIRED, () => {
+                this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                    .logStatus(FIELDS.STATUS.values.PCS_REQUIRED));
             });
 
         Resources.events(this)

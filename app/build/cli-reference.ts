@@ -59,7 +59,7 @@ for (const option of program.options) {
             environment: (option as any).envVar,
             required: option.mandatory,
             defaultValue: option.defaultValueDescription ?? option.defaultValue?.toString(),
-            type: (option.flags.match(/<(.*)>/) ?? [``, `boolean`])[1],
+            type: (option.flags.match(/[<[](.*)[>\]]/) ?? [``, `boolean`])[1],
             description: option.description,
             choices: ((option as any).argChoices as string[])?.map(choice => `\`${choice}\``).join(`, `),
         },

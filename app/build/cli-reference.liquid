@@ -17,6 +17,7 @@ Use `{{ commandName }} {{ helpCommandName }} [command]` for information on a spe
 
 ## Options
 {% for option in globalOptions %}
+
 ### {{ option.pretty }}
 
 {% if option.required -%}

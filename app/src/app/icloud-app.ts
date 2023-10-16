@@ -6,16 +6,10 @@ import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {iCPSError} from "./error/error.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {Album} from "../lib/photos-library/model/album.js";
-import path from "path";
 import {Cron} from "croner";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {Resources} from "../lib/resources/main.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError} from "../lib/resources/events-types.js";
-
-/**
- * Filename for library lock file located in DATA_DIR
- */
-export const LIBRARY_LOCK_FILE = `.library.lock`;
 
 /**
  * Abstract class returned by the factory function
@@ -126,8 +120,12 @@ abstract class iCloudApp extends iCPSApp {
      * @throws An iCPSError, if the lock could not be acquired
      */
     async acquireLibraryLock() {
-        const lockFilePath = path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE);
-        if (fs.existsSync(lockFilePath)) {
+        const {lockFilePath} = Resources.manager();
+        const lockFileExists = await fs.promises.stat(lockFilePath)
+            .then(stat => stat.isFile())
+            .catch(() => false);
+
+        if (lockFileExists) {
             if (!Resources.manager().force) {
                 const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
                 throw new iCPSError(LIBRARY_ERR.LOCKED)
@@ -145,8 +143,12 @@ abstract class iCloudApp extends iCPSApp {
      * @throws An iCPSError, if the lock could not be released
      */
     async releaseLibraryLock() {
-        const lockFilePath = path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE);
-        if (!fs.existsSync(lockFilePath)) {
+        const {lockFilePath} = Resources.manager();
+        const lockFileExists = await fs.promises.stat(lockFilePath)
+            .then(stat => stat.isFile())
+            .catch(() => false);
+
+        if (!lockFileExists) {
             return;
         }
 

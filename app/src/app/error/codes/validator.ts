@@ -8,6 +8,10 @@ export const RESOURCE_FILE: ErrorStruct = buildErrorStruct(
     name, prefix, `RESOURCE_FILE`, `Unable to parse and validate resource file`,
 );
 
+export const SIGNIN_INIT_RESPONSE: ErrorStruct = buildErrorStruct(
+    name, prefix, `SIGNIN_INIT_RESPONSE`, `Unable to parse and validate signin init response`,
+);
+
 export const SIGNIN_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `SIGNIN_RESPONSE`, `Unable to parse and validate signin response`,
 );
@@ -18,6 +22,10 @@ export const TRUST_RESPONSE: ErrorStruct = buildErrorStruct(
 
 export const SETUP_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `SETUP_RESPONSE`, `Unable to parse and validate setup response`,
+);
+
+export const PCS_RESPONSE: ErrorStruct = buildErrorStruct(
+    name, prefix, `PCS_RESPONSE`, `Unable to parse and validate PCS acquisition response`,
 );
 
 export const PHOTOS_SETUP_RESPONSE: ErrorStruct = buildErrorStruct(

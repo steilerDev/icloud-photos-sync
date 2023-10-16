@@ -39,6 +39,10 @@ The `latest` tag should always represent the latest stable release, whereas the 
               - <photos-dir>:/opt/icloud-photos-library
         ```
 
+        !!! tip "Plain text username/password"
+            If you don't want to store your plain text username and/or password in the docker environment, it is possible to omit the [username](https://icps.steiler.dev/user-guides/cli/#username) and/or [password](https://icps.steiler.dev/user-guides/cli/#password) option. In this scenarios, the username/password needs to be provided manually on each startup from the command line.
+            To input the data into the running Docker container [it needs to be started with `tty: true` and `stdin_open: true`](https://docs.docker.com/compose/compose-file/compose-file-v3/#domainname-hostname-ipc-mac_address-privileged-read_only-shm_size-stdin_open-tty-user-working_dir). Once the container was started, you can attach to the running `icloud-photos-sync` process using [`docker attach photos-sync`](https://docs.docker.com/engine/reference/commandline/attach/), and detach with the sequence `CTRL-p CTRL-q`.
+
         Get the latest image by running:
 
         ```
@@ -53,13 +57,14 @@ The `latest` tag should always represent the latest stable release, whereas the 
         docker pull steilerdev/icloud-photos-sync:latest
         ```
 
+    
 
 === "node"
 
     When setting up the environment, please keep the [currently recommended NodeJS version](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/node-version) in mind.
 
     !!! info "Experimental node modules"
-        This application uses experimental node modules, which are not yet available in the LTS version of NodeJS. This includes [import assertions](https://github.com/tc39/proposal-import-attributes) and importing JSON modules. To remove runtime warnings and ensuring proper execution, it is recommended to set the `NODE_NO_WARNINGS` environmental variable to `1``
+        This application uses experimental node modules, which are not yet available in the LTS version of NodeJS. This includes [import assertions](https://github.com/tc39/proposal-import-attributes) and importing JSON modules. To remove runtime warnings and ensuring proper execution, it is recommended to set the `NODE_NO_WARNINGS` environmental variable to `1`.
 
     === "NPM"
 
@@ -115,6 +120,10 @@ In order to only perform authentication (without syncing any assets) and validat
             --enable-crash-reporting \
             token
         ```
+
+        !!! tip "Plain text username/password"
+            If you don't want to store your plain text username and/or password in the docker environment, it is possible to omit the [username](https://icps.steiler.dev/user-guides/cli/#username) and/or [password](https://icps.steiler.dev/user-guides/cli/#password) option. In this scenarios, the username/password needs to be provided manually on each startup from the command line.
+            To input the data into the running Docker container it needs to be started with `docker run -it` [to open tty and stdin](https://docs.docker.com/engine/reference/run/#foreground). Once the container was started, you can attach to the running `icloud-photos-sync` process using [`docker attach photos-sync`](https://docs.docker.com/engine/reference/commandline/attach/), and detach with the sequence `CTRL-p CTRL-q`.
 
 === "node"
 

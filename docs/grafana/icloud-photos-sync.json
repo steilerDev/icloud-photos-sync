@@ -3,10 +3,17 @@
     {
       "name": "DS_MONITORING",
       "label": "Monitoring",
-      "description": "",
+      "description": "The InfluxDB data source supporting InfluxQL",
       "type": "datasource",
       "pluginId": "influxdb",
       "pluginName": "InfluxDB"
+    },
+    {
+      "name": "VAR_MEASUREMENT",
+      "type": "constant",
+      "label": "measurement",
+      "value": "icloud_photos_sync",
+      "description": "The name of the measurement, where icloud-photos-sync data points are stored"
     }
   ],
   "__elements": {},
@@ -76,7 +83,7 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
@@ -98,7 +105,7 @@
               "options": {
                 "ACCOUNT_READY": {
                   "color": "yellow",
-                  "index": 5,
+                  "index": 0,
                   "text": "Account Ready"
                 },
                 "AUTHENTICATED": {
@@ -108,32 +115,32 @@
                 },
                 "AUTHENTICATION_STARTED": {
                   "color": "yellow",
-                  "index": 0,
+                  "index": 2,
                   "text": "Authentication Started"
                 },
                 "DEVICE_TRUSTED": {
                   "color": "yellow",
-                  "index": 4,
+                  "index": 3,
                   "text": "Device Trusted"
                 },
                 "DIFF_COMPLETED": {
                   "color": "yellow",
-                  "index": 11,
+                  "index": 4,
                   "text": "Diff Completed"
                 },
                 "DIFF_STARTED": {
                   "color": "yellow",
-                  "index": 10,
+                  "index": 5,
                   "text": "Diff Started"
                 },
                 "ERROR": {
                   "color": "red",
-                  "index": 20,
+                  "index": 6,
                   "text": "Error"
                 },
                 "FETCH_N_LOAD_COMPLETED": {
                   "color": "yellow",
-                  "index": 9,
+                  "index": 7,
                   "text": "Fetch'n'Load Completed"
                 },
                 "FETCH_N_LOAD_STARTED": {
@@ -142,39 +149,49 @@
                   "text": "Fetch'n'Load Started"
                 },
                 "ICLOUD_READY": {
-                  "color": "yellow",
-                  "index": 6,
+                  "color": "super-light-green",
+                  "index": 9,
                   "text": "iCloud Ready"
+                },
+                "MFA_NOT_PROVIDED": {
+                  "color": "purple",
+                  "index": 10,
+                  "text": "MFA Not Provided"
                 },
                 "MFA_RECEIVED": {
                   "color": "yellow",
-                  "index": 3,
+                  "index": 11,
                   "text": "MFA Received"
                 },
                 "MFA_REQUIRED": {
                   "color": "purple",
-                  "index": 2,
+                  "index": 12,
                   "text": "MFA Required"
                 },
-                "MFA_TIMEOUT": {
-                  "color": "dark-purple",
-                  "index": 21,
-                  "text": "MFA Timeout"
+                "PCS_REQUIRED": {
+                  "color": "yellow",
+                  "index": 13,
+                  "text": "PCS Cookies Required"
                 },
                 "SCHEDULED": {
                   "color": "super-light-green",
-                  "index": 22,
+                  "index": 14,
                   "text": "Run scheduled"
                 },
                 "SCHEDULED_FAILURE": {
                   "color": "red",
-                  "index": 24,
+                  "index": 15,
                   "text": "Scheduled Run Failed"
                 },
                 "SCHEDULED_SUCCESS": {
                   "color": "semi-dark-green",
-                  "index": 23,
+                  "index": 16,
                   "text": "Scheduled Run Succeeded"
+                },
+                "SESSION_EXPIRED": {
+                  "color": "orange",
+                  "index": 17,
+                  "text": "Session Expired"
                 },
                 "SYNC_COMPLETED": {
                   "color": "green",
@@ -188,37 +205,37 @@
                 },
                 "SYNC_START": {
                   "color": "yellow",
-                  "index": 7,
+                  "index": 20,
                   "text": "Sync Started"
                 },
                 "WRITE_ALBUMS_COMPLETED": {
                   "color": "yellow",
-                  "index": 16,
+                  "index": 21,
                   "text": "Album Write Completed"
                 },
                 "WRITE_ALBUMS_STARTED": {
                   "color": "yellow",
-                  "index": 15,
+                  "index": 22,
                   "text": "Album Write Started"
                 },
                 "WRITE_ASSETS_COMPLETED": {
                   "color": "yellow",
-                  "index": 14,
+                  "index": 23,
                   "text": "Asset Write Completed"
                 },
                 "WRITE_ASSETS_STARTED": {
                   "color": "yellow",
-                  "index": 13,
+                  "index": 24,
                   "text": "Asset Write Started"
                 },
                 "WRITE_COMPLETED": {
                   "color": "yellow",
-                  "index": 17,
+                  "index": 25,
                   "text": "Write Completed"
                 },
                 "WRITE_STARTED": {
                   "color": "yellow",
-                  "index": 12,
+                  "index": 26,
                   "text": "Write Started"
                 }
               },
@@ -275,6 +292,49 @@
       "pluginVersion": "9.2.6",
       "targets": [
         {
+          "alias": "status",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_MONITORING}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "/^$measurement$/",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT last(\"status\") FROM \"icloud_photos_sync\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "status"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
           "alias": "status_time",
           "datasource": {
             "type": "influxdb",
@@ -295,7 +355,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -315,50 +375,8 @@
             ]
           ],
           "tags": []
-        },
-        {
-          "alias": "status",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_MONITORING}"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "icloud_photos_sync",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "status"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": []
         }
       ],
-      "title": "Status",
       "type": "stat"
     },
     {
@@ -380,43 +398,43 @@
             {
               "options": {
                 "ACCOUNT_READY": {
-                  "color": "dark-blue",
-                  "index": 5,
+                  "color": "yellow",
+                  "index": 0,
                   "text": "Account Ready"
                 },
                 "AUTHENTICATED": {
-                  "color": "dark-blue",
+                  "color": "yellow",
                   "index": 1,
                   "text": "Authenticated"
                 },
                 "AUTHENTICATION_STARTED": {
-                  "color": "light-blue",
-                  "index": 0,
+                  "color": "yellow",
+                  "index": 2,
                   "text": "Authentication Started"
                 },
                 "DEVICE_TRUSTED": {
-                  "color": "dark-blue",
-                  "index": 4,
+                  "color": "yellow",
+                  "index": 3,
                   "text": "Device Trusted"
                 },
                 "DIFF_COMPLETED": {
-                  "color": "super-light-green",
-                  "index": 11,
+                  "color": "yellow",
+                  "index": 4,
                   "text": "Diff Completed"
                 },
                 "DIFF_STARTED": {
                   "color": "yellow",
-                  "index": 10,
+                  "index": 5,
                   "text": "Diff Started"
                 },
                 "ERROR": {
                   "color": "red",
-                  "index": 19,
+                  "index": 6,
                   "text": "Error"
                 },
                 "FETCH_N_LOAD_COMPLETED": {
-                  "color": "super-light-green",
-                  "index": 9,
+                  "color": "yellow",
+                  "index": 7,
                   "text": "Fetch'n'Load Completed"
                 },
                 "FETCH_N_LOAD_STARTED": {
@@ -425,78 +443,93 @@
                   "text": "Fetch'n'Load Started"
                 },
                 "ICLOUD_READY": {
-                  "color": "dark-blue",
-                  "index": 6,
+                  "color": "super-light-green",
+                  "index": 9,
                   "text": "iCloud Ready"
                 },
+                "MFA_NOT_PROVIDED": {
+                  "color": "purple",
+                  "index": 10,
+                  "text": "MFA Not Provided"
+                },
                 "MFA_RECEIVED": {
-                  "color": "dark-blue",
-                  "index": 3,
+                  "color": "yellow",
+                  "index": 11,
                   "text": "MFA Received"
                 },
                 "MFA_REQUIRED": {
-                  "color": "dark-orange",
-                  "index": 2,
+                  "color": "purple",
+                  "index": 12,
                   "text": "MFA Required"
                 },
-                "MFA_TIMEOUT": {
-                  "color": "dark-blue",
-                  "index": 20,
-                  "text": "MFA Timeout"
+                "PCS_REQUIRED": {
+                  "color": "yellow",
+                  "index": 13,
+                  "text": "PCS Cookies Required"
                 },
                 "SCHEDULED": {
                   "color": "super-light-green",
-                  "index": 21,
+                  "index": 14,
                   "text": "Run scheduled"
                 },
                 "SCHEDULED_FAILURE": {
-                  "color": "semi-dark-red",
-                  "index": 23,
+                  "color": "red",
+                  "index": 15,
                   "text": "Scheduled Run Failed"
                 },
                 "SCHEDULED_SUCCESS": {
                   "color": "semi-dark-green",
-                  "index": 22,
+                  "index": 16,
                   "text": "Scheduled Run Succeeded"
+                },
+                "SESSION_EXPIRED": {
+                  "color": "orange",
+                  "index": 17,
+                  "text": "Session Expired"
                 },
                 "SYNC_COMPLETED": {
                   "color": "green",
-                  "index": 17,
+                  "index": 18,
                   "text": "Sync Completed"
                 },
                 "SYNC_RETRY": {
-                  "color": "purple",
-                  "index": 18,
-                  "text": "Retrying Sync"
+                  "color": "orange",
+                  "index": 19,
+                  "text": "Sync Retrying"
                 },
                 "SYNC_START": {
                   "color": "yellow",
-                  "index": 7,
-                  "text": "Sync Start"
+                  "index": 20,
+                  "text": "Sync Started"
                 },
                 "WRITE_ALBUMS_COMPLETED": {
-                  "color": "super-light-green",
-                  "index": 16,
+                  "color": "yellow",
+                  "index": 21,
                   "text": "Album Write Completed"
                 },
                 "WRITE_ALBUMS_STARTED": {
                   "color": "yellow",
-                  "index": 15,
+                  "index": 22,
                   "text": "Album Write Started"
                 },
                 "WRITE_ASSETS_COMPLETED": {
-                  "color": "super-light-green",
-                  "index": 14,
-                  "text": "Assets Write Completed"
+                  "color": "yellow",
+                  "index": 23,
+                  "text": "Asset Write Completed"
                 },
                 "WRITE_ASSETS_STARTED": {
                   "color": "yellow",
-                  "index": 13,
-                  "text": "Assets Write Started"
+                  "index": 24,
+                  "text": "Asset Write Started"
+                },
+                "WRITE_COMPLETED": {
+                  "color": "yellow",
+                  "index": 25,
+                  "text": "Write Completed"
                 },
                 "WRITE_STARTED": {
                   "color": "yellow",
-                  "index": 12,
+                  "index": 26,
                   "text": "Write Started"
                 }
               },
@@ -565,7 +598,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -658,7 +691,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -794,7 +827,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -836,7 +869,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -878,7 +911,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "C",
@@ -920,7 +953,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "D",
@@ -962,7 +995,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "E",
@@ -1004,7 +1037,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "F",
@@ -1046,7 +1079,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "G",
@@ -1088,7 +1121,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "H",
@@ -1130,7 +1163,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "I",
@@ -1172,7 +1205,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "J",
@@ -1214,7 +1247,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "K",
@@ -1256,7 +1289,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "L",
@@ -1313,7 +1346,8 @@
             },
             "lineWidth": 1,
             "scaleDistribution": {
-              "type": "linear"
+              "log": 2,
+              "type": "symlog"
             }
           },
           "decimals": 0,
@@ -1407,7 +1441,7 @@
           "showLegend": false
         },
         "orientation": "vertical",
-        "showValue": "auto",
+        "showValue": "always",
         "stacking": "none",
         "tooltip": {
           "mode": "multi",
@@ -1438,7 +1472,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -1480,7 +1514,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -1522,7 +1556,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "C",
@@ -1615,7 +1649,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -1657,7 +1691,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -1749,7 +1783,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -1791,7 +1825,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -1983,7 +2017,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -2025,7 +2059,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -2067,7 +2101,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "C",
@@ -2109,7 +2143,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "E",
@@ -2222,7 +2256,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -2264,7 +2298,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
@@ -2306,7 +2340,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "C",
@@ -2348,7 +2382,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "D",
@@ -2390,7 +2424,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "E",
@@ -2432,7 +2466,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "F",
@@ -2474,7 +2508,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "G",
@@ -2516,7 +2550,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "H",
@@ -2558,7 +2592,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "I",
@@ -2600,7 +2634,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "J",
@@ -2642,7 +2676,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "K",
@@ -2684,7 +2718,7 @@
             }
           ],
           "hide": false,
-          "measurement": "icloud_photos_sync",
+          "measurement": "/^$measurement$/",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "L",
@@ -2733,6 +2767,26 @@
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
+      },
+      {
+        "description": "Name of the Influx measurement that is holding the icloud-photos-sync data points",
+        "hide": 2,
+        "name": "measurement",
+        "query": "${VAR_MEASUREMENT}",
+        "skipUrlSync": false,
+        "type": "constant",
+        "current": {
+          "value": "${VAR_MEASUREMENT}",
+          "text": "${VAR_MEASUREMENT}",
+          "selected": false
+        },
+        "options": [
+          {
+            "value": "${VAR_MEASUREMENT}",
+            "text": "${VAR_MEASUREMENT}",
+            "selected": false
+          }
+        ]
       }
     ]
   },
@@ -2744,6 +2798,6 @@
   "timezone": "",
   "title": "icloud-photos-sync",
   "uid": "iwq-NHxVz",
-  "version": 32,
+  "version": 43,
   "weekStart": ""
 }

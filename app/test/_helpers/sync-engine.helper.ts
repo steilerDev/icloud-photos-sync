@@ -67,7 +67,6 @@ export const loadAlbumsReturnValue = {
     someUUID: new Album(`someUUID`, AlbumType.ALBUM, `someAlbumName`, ``),
 } as PLibraryEntities<Album>;
 
-export const getProcessingQueuesReturnValue = [[], [], []];
 export const resolveHierarchicalDependenciesReturnValue = [[], [], []] as PLibraryProcessingQueues<Album>;
 
 /**

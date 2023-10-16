@@ -3,6 +3,7 @@ import Cron from "croner";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 import {Resources} from "../lib/resources/main.js";
 import {LogLevel} from "./event/log.js";
+import inquirer from "inquirer";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -82,6 +83,27 @@ function commanderParseInterval(value: string, _dummyPrevious?: unknown): [numbe
 }
 
 /**
+ * Extracts the options from the parsed commander command - and asks for user input in case it is necessary
+ * @param parsedCommand - The parsed commander command returned from callback in Command.action((_, command any)
+ * @returns Validated iCPSAppOptions
+ */
+async function completeConfigurationOptionsFromCommand(parsedCommand: unknown): Promise<iCPSAppOptions> {
+    const opts = (parsedCommand as any).parent?.opts() as iCPSAppOptions;
+
+    if (!opts.username || opts.username.length === 0) {
+        const {username} = await inquirer.prompt({type: `input`, message: `Please enter your AppleID username`, name: `username`});
+        opts.username = username;
+    }
+
+    if (!opts.password || opts.password.length === 0) {
+        const {password} = await inquirer.prompt({type: `password`, message: `Please enter your AppleID password`, name: `password`, mask: `*`});
+        opts.password = password;
+    }
+
+    return opts;
+}
+
+/**
  * Typed available app options
  */
 export type iCPSAppOptions = {
@@ -105,12 +127,15 @@ export type iCPSAppOptions = {
     logToCli: boolean,
     suppressWarnings: boolean,
     exportMetrics: boolean,
+    region: Resources.Types.Region,
+    legacyLogin: boolean,
     metadataRate: [number, number]
 }
 
 /**
  * Creates the argument parser for the CLI and environment variables
  * @param callback - A callback function that will be called with the created app, based on the provided options.
+ * @param questionFct - The function to query for input from the CLI - parameterized for testing purposes
  * @returns The commander command object, awaiting .parse() to be called
  */
 export function argParser(callback: (res: iCPSApp) => void): Command {
@@ -123,12 +148,12 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
     program.name(Resources.PackageInfo.name)
         .description(Resources.PackageInfo.description)
         .version(Resources.PackageInfo.version)
-        .addOption(new Option(`-u, --username <string>`, `AppleID username.`)
+        .addOption(new Option(`-u, --username <string>`, `AppleID username. Omitting the option will result in the CLI to ask for user input before startup.`)
             .env(`APPLE_ID_USER`)
-            .makeOptionMandatory(true))
-        .addOption(new Option(`-p, --password <string>`, `AppleID password.`)
+            .makeOptionMandatory(false))
+        .addOption(new Option(`-p, --password <string>`, `AppleID password. Omitting the option will result in the CLI to ask for user input before startup.`)
             .env(`APPLE_ID_PWD`)
-            .makeOptionMandatory(true))
+            .makeOptionMandatory(false))
         .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, the trust token is read from the \`.icloud-photos-sync\` resource file in data dir. If no stored trust token could be loaded, a new trust token will be acquired (requiring the input of an MFA code).`)
             .env(`TRUST_TOKEN`))
         .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library.`)
@@ -191,32 +216,43 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`--metadata-rate <interval>`, `Limits the rate of metadata fetching in order to avoid getting throttled by the API. Expects the format \`<numberOfRequests|Infinity>/<timeInMs>\`, e.g. \`1/20\` to limit requests to one request in 20ms.`)
             .env(`METADATA_RATE`)
             .default([Infinity, 0], `Infinity/0`)
-            .argParser(commanderParseInterval));
+            .argParser(commanderParseInterval))
+        .addOption(new Option(`--region <string>`, `Changes the iCloud region.`)
+            .env(`REGION`)
+            .default(`world`)
+            .choices(Object.values(Resources.Types.Region)))
+        .addOption(new Option(`--legacy-login`, `Enables plain text legacy login method.`)
+            .env(`LEGACY_LOGIN`)
+            .default(false));
 
     program.command(`daemon`)
-        .action((_, command) => {
-            Resources.setup(command.parent.opts());
+        .action(async (_, command) => {
+            const opts = await completeConfigurationOptionsFromCommand(command);
+            Resources.setup(opts);
             callback(new DaemonApp());
         })
         .description(`Starts the synchronization in scheduled daemon mode - continuously running based on the provided cron schedule.`);
 
     program.command(`token`)
-        .action((_, command) => {
-            Resources.setup(command.parent.opts());
+        .action(async (_, command) => {
+            const opts = await completeConfigurationOptionsFromCommand(command);
+            Resources.setup(opts);
             callback(new TokenApp());
         })
         .description(`Validates the current trust token, fetches a new one (if necessary) and prints it to the CLI.`);
 
     program.command(`sync`)
-        .action((_, command) => {
-            Resources.setup(command.parent.opts());
+        .action(async (_, command) => {
+            const opts = await completeConfigurationOptionsFromCommand(command);
+            Resources.setup(opts);
             callback(new SyncApp());
         })
         .description(`Fetches the remote state and persist it to the local disk once.`);
 
     program.command(`archive`)
-        .action((archivePath, _, command) => {
-            Resources.setup(command.parent.opts());
+        .action(async (archivePath, _, command) => {
+            const opts = await completeConfigurationOptionsFromCommand(command);
+            Resources.setup(opts);
             callback(new ArchiveApp(archivePath));
         })
         .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)
@@ -228,6 +264,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
 /**
  * This function will parse the provided string array and environment variables and return the correct application object.
  * @param argv - The argument vector to be parsed
+ * @param questionFct - The function to query for input from the CLI - parameterized for testing purposes, readline-sync used per default
  * @returns - A promise that resolves to the correct application object. Once the promise resolves, the global resource singleton will also be available. If the program is not able to parse the options, or required options are missing, an error message is printed to stderr and the promise rejects with a CommanderError.
  */
 export async function appFactory(argv: string[]): Promise<iCPSApp> {

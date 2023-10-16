@@ -1,12 +1,11 @@
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import fs from "fs/promises";
 import {createWriteStream} from "fs";
-import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network-types.js";
+import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO, PCSResponse} from "./network-types.js";
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {AxiosHarTracker} from "axios-har-tracker";
-import {FILE_ENCODING} from "./resource-types.js";
 import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -73,6 +72,7 @@ export class HeaderJar {
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Client-Type`, `firstPartyAuth`));
 
         axios.interceptors.request.use(config => this._injectHeaders(config));
+        // If scnt is in header store it
     }
 
     /**
@@ -213,9 +213,15 @@ export class NetworkManager {
 
         this._axios = axios.create({
             headers: {
-                Origin: `https://www.icloud.com`,
+                Origin: `https://www.${this.iCloudRegionUrl(resources.region)}`,
             },
         });
+
+        if (resources.enableNetworkCapture) {
+            this._harTracker = new AxiosHarTracker(this._axios as any);
+            this.resetHarTracker(this._harTracker);
+        }
+
         this._headerJar = new HeaderJar(this._axios);
 
         this._streamingCCYLimiter = new PQueue({
@@ -226,11 +232,6 @@ export class NetworkManager {
         this._streamingAxios = axios.create({
             responseType: `stream`,
         });
-
-        if (resources.enableNetworkCapture) {
-            this._harTracker = new AxiosHarTracker(this._axios as any);
-            this.resetHarTracker(this._harTracker);
-        }
     }
 
     /**
@@ -313,7 +314,7 @@ export class NetworkManager {
      * @returns - Returns a promise that resolves to false, if network capture was disabled or no entries were captured, true if a file was written
      */
     async writeHarFile(): Promise<boolean> {
-        if (!Resources.manager().harFilePath) {
+        if (!Resources.manager().enableNetworkCapture) {
             Resources.logger(this).debug(`Not writing HAR file because network capture is disabled`);
             return false;
         }
@@ -328,7 +329,7 @@ export class NetworkManager {
 
             Resources.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
-            await fs.writeFile(Resources.manager().harFilePath, jsonc.stringify(generatedObject), {encoding: FILE_ENCODING, flag: `w`});
+            jsonc.write(Resources.manager().harFilePath, generatedObject, {autoPath: true});
             Resources.logger(this).info(`HAR file written`);
             return true;
         } catch (err) {
@@ -362,6 +363,16 @@ export class NetworkManager {
     set sessionToken(sessionToken: string) {
         Resources.logger(this).debug(`Setting session secret to ${sessionToken}`);
         Resources.manager().sessionSecret = sessionToken;
+    }
+
+    /**
+     * @param region - The region to use, currently set region in resource manager is set as default
+     * @returns 'icloud.com.cn' if region is set to 'china', 'icloud.com' otherwise
+     */
+    iCloudRegionUrl(region: Resources.Types.Region = Resources.manager().region) {
+        return region === Resources.Types.Region.CHINA
+            ? `icloud.com.cn`
+            : `icloud.com`;
     }
 
     /**
@@ -402,10 +413,25 @@ export class NetworkManager {
     /**
      * Applies configurations from the response received after the setup request. This includes setting the photos URL and persisting the iCloud authentication cookies.
      * @param setupResponse - The response received from the server
+     * @returns True if necessary PCS cookies were found, false otherwise
      */
     applySetupResponse(setupResponse: SetupResponse) {
         this.photosUrl = setupResponse.data.webservices.ckdatabasews.url;
         this._headerJar.setCookie(...setupResponse.headers[`set-cookie`]);
+        if (!setupResponse.data.webservices.ckdatabasews.pcsRequired) {
+            return true;
+        }
+
+        return [...this._headerJar.cookies.values()]
+            .filter(cookie => cookie.key === COOKIE_KEYS.PCS_PHOTOS || cookie.key === COOKIE_KEYS.PCS_SHARING).length === 2;
+    }
+
+    /**
+     * Applies the acquired PCS cookies received from the PCS request to the header jar.
+     * @param pcsResponse - The response received from the server
+     */
+    applyPCSResponse(pcsResponse: PCSResponse) {
+        this._headerJar.setCookie(...pcsResponse.headers[`set-cookie`]);
     }
 
     /**
@@ -474,6 +500,15 @@ export class NetworkManager {
      */
     async downloadData(url: string, location: string): Promise<void> {
         await this._streamingCCYLimiter.add(async () => {
+            const fileExists = await fs.stat(location)
+                .then(stat => stat.isFile())
+                .catch(() => false);
+
+            if (fileExists) {
+                Resources.logger(this).info(`File ${location} already exists - skipping download`);
+                return;
+            }
+
             Resources.logger(this).debug(`Starting download of ${url}`);
             const response = await this._streamingAxios.get(url);
             Resources.logger(this).debug(`Starting to write ${url} to ${location}`);
