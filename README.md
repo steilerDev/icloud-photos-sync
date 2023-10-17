@@ -45,9 +45,11 @@
 <hr>
 
 ## Overview
-This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to backup the full iCloud Photos Library to the native filesystem.
+This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way to backup the full iCloud Photos Library to the native filesystem.
 
 Currently, this can only be achieved, by having a Mac continuously run the *Photos.app* (with `Keep originals` enabled). With this method, the files cannot be easily viewed without the *Photos.app*.
+
+*icloud-photos-sync is an independent project, and is not affiliated, endorsed, recommended by or otherwise affiliated with Apple Inc.*
 
 This CLI Application offers the following high level functionality:
 
@@ -136,7 +138,7 @@ Please check the [contributing guidelines](https://github.com/steilerDev/icloud-
 
 ## Acknowledgments
 
-- Special thanks to [@foxt](https://foxt.dev/) for helping with reverse engineering some tricky parts of the iCloud API ([GSA](https://github.com/steilerDev/icloud-photos-sync/issues/363) & [ADP](https://github.com/steilerDev/icloud-photos-sync/issues/202)) - check out his [iCloud.js](https://github.com/foxt/icloud.js) project in case you need to access other aspects of iCloud
+- Special thanks to [@foxt](https://foxt.dev/) for helping with reverse engineering some tricky parts of the iCloud API ([GSA](https://github.com/steilerDev/icloud-photos-sync/issues/363) & [ADP](https://github.com/steilerDev/icloud-photos-sync/issues/202)). Check out [iCloud.js](https://github.com/foxt/icloud.js), in case you need to access other aspects of iCloud.
 
 ### Release Workflow
 
