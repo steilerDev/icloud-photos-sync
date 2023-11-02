@@ -52,9 +52,12 @@ updates:
         patterns:
         - "inquirer*"
         - "@types/inquirer*"
+      backtrace:
+        patterns:
+        - "@backtrace*"
     ignore:
       - dependency-name: "@types/node"
-        versions: ["19.x.x", "20.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
+        versions: ["19.x.x", "20.x.x", "21.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
   
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"
