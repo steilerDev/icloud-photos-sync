@@ -1,7 +1,8 @@
 FROM node:18.18.2-alpine
 
 # Setting node environment to not show experimental warnings
-ENV NODE_NO_WARNINGS=1 
+ENV NODE_NO_WARNINGS=1
+
 # Setting volume for default library path
 VOLUME /opt/icloud-photos-library
 
