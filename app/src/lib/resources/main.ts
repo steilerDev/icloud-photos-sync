@@ -175,6 +175,20 @@ export namespace Resources {
     }
 
     /**
+     * Can be used to check if a process is running
+     * @param pid - The process id to check
+     * @returns True if the process is running or the user does not have the necessary permissions to check this, false otherwise
+     */
+    export function pidIsRunning(pid: number): boolean {
+        try {
+            process.kill(pid, 0);
+            return true;
+        } catch (e) {
+            return e.code === `EPERM`;
+        }
+    }
+
+    /**
      * Typing namespace
      */
     export namespace Types {

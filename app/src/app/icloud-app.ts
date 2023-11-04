@@ -35,9 +35,17 @@ export class DaemonApp extends iCPSApp {
      * @returns Once the job has been scheduled
      */
     async run() {
-        this.job = new Cron(Resources.manager().schedule, async () => {
-            await this.performScheduledSync();
-        });
+        this.job = new Cron(
+            Resources.manager().schedule,
+            async () => {
+                await this.performScheduledSync();
+            },
+            {
+                protect: () => {
+                    Resources.emit(iCPSEventApp.SCHEDULED_OVERRUN, this.job?.nextRun());
+                },
+            },
+        );
         Resources.emit(iCPSEventApp.SCHEDULED, this.job?.nextRun());
     }
 
@@ -126,15 +134,23 @@ abstract class iCloudApp extends iCPSApp {
             .catch(() => false);
 
         if (lockFileExists) {
-            if (!Resources.manager().force) {
-                const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
+            const lockingProcess = parseInt(await fs.promises.readFile(lockFilePath, `utf-8`), 10);
+
+            if (process.pid === lockingProcess) {
+                Resources.logger(this).warn(`Lock file exists, but is owned by this process. Continuing.`);
+                return;
+            }
+
+            if (Resources.pidIsRunning(lockingProcess) && !Resources.manager().force) {
                 throw new iCPSError(LIBRARY_ERR.LOCKED)
                     .addMessage(`Locked by PID ${lockingProcess}`);
             }
 
+            // Clear stale lock file
             await fs.promises.rm(lockFilePath, {force: true});
         }
 
+        // Create lock file
         await fs.promises.writeFile(lockFilePath, process.pid.toString(), {encoding: `utf-8`});
     }
 
@@ -149,11 +165,13 @@ abstract class iCloudApp extends iCPSApp {
             .catch(() => false);
 
         if (!lockFileExists) {
+            Resources.logger(this).warn(`Cannot release lock: Lock file does not exist.`);
             return;
         }
 
-        const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
-        if (lockingProcess !== process.pid.toString() && !Resources.manager().force) {
+        const lockingProcess = parseInt(await fs.promises.readFile(lockFilePath, `utf-8`), 10);
+
+        if (process.pid !== lockingProcess && Resources.pidIsRunning(lockingProcess) && !Resources.manager().force) {
             throw new iCPSError(LIBRARY_ERR.LOCKED)
                 .addMessage(`Locked by PID ${lockingProcess}`);
         }

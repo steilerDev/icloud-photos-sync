@@ -8,7 +8,7 @@ import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 import * as zlib from 'zlib';
 import {Readable} from 'stream';
 import {pEvent} from 'p-event';
-import bt from '@backtrace-labs/node';
+import bt from '@backtrace/node';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {jsonc} from "jsonc";
 

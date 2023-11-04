@@ -121,6 +121,9 @@ export class CLIInterface {
                 this.print(chalk.green(this.getHorizontalLine()));
                 this.print(chalk.white(`Sync will retry execution at ${this.getDateTime(next)}`));
                 this.print(chalk.green(this.getHorizontalLine()));
+            })
+            .on(iCPSEventApp.SCHEDULED_OVERRUN, (next: Date) => {
+                this.print(chalk.redBright(`Sync execution skipped, because a job is still running. Next run scheduled for ${this.getDateTime(next)}`));
             });
 
         Resources.events(this)

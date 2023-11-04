@@ -422,21 +422,77 @@ describe(`App control flow`, () => {
     });
 
     describe(`Daemon App`, () => {
-        test(`Schedule job`, async () => {
-            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
-            daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
-                .mockResolvedValue();
-            Resources._instances.manager._resources.schedule = `*/1 * * * * *`; // Every second
-            const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
+        describe(`Scheduling`, () => {
+            // Fake timers don't work with croner, so we need to wait actual time
+            const executionPadding = 300; // Waiting for the croner execution to finish, in ms
 
-            await daemonApp.run();
+            test(`Run single scheduled job`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
+                    .mockResolvedValue();
+                Resources._instances.manager._resources.schedule = `*/1 * * * * *`; // Every second
+                const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
 
-            expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
-            // Waiting 2 seconds to make sure schedule ran at least once
-            await new Promise(r => setTimeout(r, 2000));
-            expect(daemonApp.performScheduledSync).toHaveBeenCalled();
+                await daemonApp.run();
 
-            daemonApp.job?.stop();
+                // Calculating time till next full second (when schedule will trigger)
+                const timePadding = 1000 - (Date.now() % 1000);
+                // Waiting for the first run to trigger and the second run to try and overrun
+                await new Promise(r => setTimeout(r, timePadding + executionPadding));
+
+                // Cleaning up
+                daemonApp.job?.stop();
+
+                expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
+                expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
+            });
+
+            test(`Run multiple scheduled job`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
+                    .mockResolvedValue();
+                Resources._instances.manager._resources.schedule = `*/1 * * * * *`; // Every second
+                const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
+                const eventScheduledOverrun = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_OVERRUN);
+
+                await daemonApp.run();
+
+                // Calculating time till next full second (when schedule will trigger)
+                const timePadding = 1000 - (Date.now() % 1000);
+                // Waiting for the first run to trigger and the second run to try and overrun
+                await new Promise(r => setTimeout(r, timePadding + 1000 + executionPadding));
+
+                // Cleaning up
+                daemonApp.job?.stop();
+
+                expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
+                expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(2);
+                expect(eventScheduledOverrun).not.toHaveBeenCalled();
+            });
+
+            test(`Schedule job overrun`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>(async () => {
+                    await new Promise(r => setTimeout(r, 2000));
+                });
+                Resources._instances.manager._resources.schedule = `*/1 * * * * *`; // Every second
+                const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
+                const eventScheduledOverrun = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_OVERRUN);
+
+                await daemonApp.run();
+
+                // Calculating time till next full second (when schedule will trigger)
+                const timePadding = 1000 - (Date.now() % 1000);
+                // Waiting for the first run to trigger and the second run to try and overrun
+                await new Promise(r => setTimeout(r, timePadding + 1000 + executionPadding));
+
+                // Cleaning up
+                daemonApp.job?.stop();
+
+                expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
+                expect(eventScheduledOverrun).toHaveBeenCalledTimes(1);
+                expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
+            });
         });
 
         test(`Scheduled sync succeeds`, async () => {
@@ -491,15 +547,17 @@ describe(`Library Lock`, () => {
         const tokenApp = await appFactory(validOptions.token) as TokenApp;
         const thisPID = process.pid.toString();
 
-        await tokenApp.acquireLibraryLock();
+        await expect(tokenApp.acquireLibraryLock()).resolves.toBeUndefined();
 
         const lockFile = (await fs.promises.readFile(path.join(Config.defaultConfig.dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
     });
 
-    test(`Acquire lock error - already locked`, async () => {
+    test(`Acquire lock error - already locked by running process`, async () => {
         const tokenApp = await appFactory(validOptions.token) as TokenApp;
         const notThisPID = (process.pid + 1).toString();
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(true);
 
         mockfs({
             [Config.defaultConfig.dataDir]: {
@@ -508,13 +566,51 @@ describe(`Library Lock`, () => {
         });
 
         await expect(tokenApp.acquireLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
+        expect(Resources.pidIsRunning).toHaveBeenCalled();
         expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeTruthy();
     });
 
-    test(`Acquire lock warning - already locked with --force`, async () => {
+    test(`Acquire lock warning - already locked by this process`, async () => {
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
+        const thisPID = process.pid.toString();
+
+        mockfs({
+            [Config.defaultConfig.dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: thisPID,
+            },
+        });
+
+        await expect(tokenApp.acquireLibraryLock()).resolves.toBeUndefined();
+
+        const lockFile = (await fs.promises.readFile(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
+        expect(lockFile).toEqual(thisPID);
+    });
+
+    test(`Acquire lock warning - already locked by non-running process`, async () => {
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
+        const thisPID = process.pid.toString();
+        const notThisPID = (process.pid + 1).toString();
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(false);
+
+        mockfs({
+            [Config.defaultConfig.dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: notThisPID,
+            },
+        });
+
+        await expect(tokenApp.acquireLibraryLock()).resolves.toBeUndefined();
+
+        const lockFile = (await fs.promises.readFile(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
+        expect(lockFile).toEqual(thisPID);
+    });
+
+    test(`Acquire lock warning - already locked by running process with --force`, async () => {
         const tokenApp = await appFactory(validOptions.tokenWithForce) as TokenApp;
         const thisPID = process.pid.toString();
         const notThisPID = (process.pid + 1).toString();
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(true);
 
         mockfs({
             [Resources.manager().dataDir]: {
@@ -522,8 +618,9 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await tokenApp.acquireLibraryLock();
+        await expect(tokenApp.acquireLibraryLock()).resolves.toBeUndefined();
 
+        expect(Resources.pidIsRunning).toHaveBeenCalled();
         const lockFile = (await fs.promises.readFile(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
     });
@@ -538,14 +635,17 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await tokenApp.releaseLibraryLock();
+        await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined();
 
         expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeFalsy();
     });
 
-    test(`Release lock error - not this process' lock`, async () => {
+    test(`Release lock error - other running process' lock`, async () => {
         const tokenApp = await appFactory(validOptions.token) as TokenApp;
         const notThisPID = (process.pid + 1).toString();
+
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(true);
 
         mockfs({
             [Resources.manager().dataDir]: {
@@ -555,12 +655,16 @@ describe(`Library Lock`, () => {
 
         await expect(tokenApp.releaseLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
 
+        expect(Resources.pidIsRunning).toHaveBeenCalled();
         expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeTruthy();
     });
 
-    test(`Release lock error - not this process' lock --force`, async () => {
-        const tokenApp = await appFactory(validOptions.tokenWithForce) as TokenApp;
+    test(`Release lock warning - other non-running process' lock`, async () => {
+        const tokenApp = await appFactory(validOptions.token) as TokenApp;
         const notThisPID = (process.pid + 1).toString();
+
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(false);
 
         mockfs({
             [Resources.manager().dataDir]: {
@@ -568,12 +672,31 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await tokenApp.releaseLibraryLock();
+        await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined();
 
+        expect(Resources.pidIsRunning).toHaveBeenCalled();
         expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeFalsy();
     });
 
-    test(`Release lock error - no lock`, async () => {
+    test(`Release lock warning - not this process' lock with --force`, async () => {
+        const tokenApp = await appFactory(validOptions.tokenWithForce) as TokenApp;
+        const notThisPID = (process.pid + 1).toString();
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(true);
+
+        mockfs({
+            [Resources.manager().dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: notThisPID,
+            },
+        });
+
+        await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined();
+
+        expect(Resources.pidIsRunning).toHaveBeenCalled();
+        expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeFalsy();
+    });
+
+    test(`Release lock warning - no lock`, async () => {
         const tokenApp = await appFactory(validOptions.token) as TokenApp;
 
         await expect(tokenApp.releaseLibraryLock()).resolves.toBeUndefined();

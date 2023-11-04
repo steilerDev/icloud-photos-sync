@@ -58,13 +58,13 @@
     "!win32"
   ],
   "devDependencies": {
-    "@backtrace-labs/javascript-cli": "^0.1.2",
+    "@backtrace/javascript-cli": "^0.2.0",
     "@jest/globals": "^29.6.2",
     "@types/cli-progress": "^3.11.0",
     "@types/inquirer": "^9.0.3",
     "@types/jest": "^29.5.2",
     "@types/mock-fs": "^4.13.1",
-    "@types/node": "^18.18.5",
+    "@types/node": "^18.18.8",
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^6.7.5",
     "@typescript-eslint/parser": "^6.7.5",
@@ -86,7 +86,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@backtrace-labs/node": "^0.0.2",
+    "@backtrace/node": "^0.1.0",
     "@foxt/js-srp": "^0.0.3-patch1",
     "ajv": "^8.12.0",
     "axios": "^1.2.2",

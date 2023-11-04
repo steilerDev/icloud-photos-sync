@@ -68,3 +68,4 @@ plugins:
   - redirects: 
      redirect_maps: 
         warnings.md: user-guides/common-warnings.md
+        error-reporting.md: user-guides/error-reporting.md
