@@ -15,6 +15,7 @@ jobs:
   ci:
     name: ci
     uses: ./.github/workflows/artifacts_build-release.yml
+    concurrency: release
     with:
       all-artifacts: ${{ github.ref_name == 'main' }} # Build and release all artifacts only on main branch
       release: true
