@@ -1,0 +1,58 @@
+
+source ./_helper.sh
+
+waitTillFullMinute
+
+MINUTE=$(expr $(date '+%M'))
+HOUR=$(expr $(date '+%H'))
+DATE=$(expr $(date '+%d'))
+MONTH=$(expr $(date '+%m'))
+
+if [ $MINUTE -eq 59 ] && [ $HOUR -eq 23 ]; then
+    echo "It's $HOUR:$MINUTE - This test will not properly carry over to the next day - please re-run it at a different time"
+    exit 1
+fi
+
+# Safely increment to next minute
+(( NEXT_MINUTE = MINUTE < 59 ? MINUTE + 1 : 0))
+(( NEXT_HOUR = NEXT_MINUTE == 0 ? HOUR + 1 : HOUR))
+
+###
+###
+###
+echo "Starting in daemon mode"
+###
+###
+###
+
+RUN_ID=$(docker run -e "TZ=$(cat /etc/timezone)" -v "$DIR:/opt/icloud-photos-library" -u $(id -u ${USER}):$(id -g ${USER}) -d $IMAGE_NAME \
+        -u "$TEST_APPLE_ID_USER" \
+        -p "$TEST_APPLE_ID_PWD" \
+        -T "$TEST_TRUST_TOKEN" \
+        -S "$NEXT_MINUTE $NEXT_HOUR $DATE $MONTH *" \
+        --export-metrics \
+        daemon
+)
+
+sleep 3 # Wait a couple of seconds for container to start
+
+assertContainerRunning $RUN_ID
+assertMetric "SCHEDULED"
+
+###
+###
+###
+echo "Waiting for sync execution to start at '$NEXT_MINUTE $NEXT_HOUR $DATE $MONTH *' (current time: $(date))"
+###
+###
+###
+
+waitTillFullMinute
+sleep 3 # Wait a couple of seconds for sync to start
+
+assertContainerRunning $RUN_ID
+assertMetric "AUTHENTICATION_STARTED"
+
+# Cleaning up
+rm -rf $DIR
+docker stop $RUN_ID > /dev/null 2>&1
