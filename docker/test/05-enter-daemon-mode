@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./_helper.sh
+source $(dirname $0)/_helper.sh
 
 waitTillFullMinute
 

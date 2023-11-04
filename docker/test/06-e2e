@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./_helper.sh
+source $(dirname $0)/_helper.sh
 
 EXPECTED_CHECKSUM="e6b69510e98120fd656bdb1702192a7fa0a5e4b9"
 
