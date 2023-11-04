@@ -424,7 +424,7 @@ describe(`App control flow`, () => {
     describe(`Daemon App`, () => {
         describe(`Scheduling`, () => {
             // Fake timers don't work with croner, so we need to wait actual time
-            const executionPadding = 100; // Waiting for the croner execution to finish, in ms
+            const executionPadding = 300; // Waiting for the croner execution to finish, in ms
 
             test(`Run single scheduled job`, async () => {
                 const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
