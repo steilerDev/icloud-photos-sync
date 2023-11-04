@@ -274,6 +274,10 @@ export enum iCPSEventApp {
      */
     SCHEDULED_RETRY = `scheduled-retry`,
     /**
+     * Emitted when a scheduled execution was skipped, because there is already an execution running - provides a date object for the next run as argument
+     */
+    SCHEDULED_OVERRUN = `scheduled-overrun`,
+    /**
      * Emitted when the app should display the latest acquired token - provides the token as argument
      */
     TOKEN = `token`

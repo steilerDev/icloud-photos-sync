@@ -422,21 +422,77 @@ describe(`App control flow`, () => {
     });
 
     describe(`Daemon App`, () => {
-        test(`Schedule job`, async () => {
-            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
-            daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
-                .mockResolvedValue();
-            Resources._instances.manager._resources.schedule = `*/1 * * * * *`; // Every second
-            const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
+        describe(`Scheduling`, () => {
+            // Fake timers don't work with croner, so we need to wait actual time
+            const executionPadding = 100; // Waiting for the croner execution to finish, in ms
 
-            await daemonApp.run();
+            test(`Run single scheduled job`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
+                    .mockResolvedValue();
+                Resources._instances.manager._resources.schedule = `*/1 * * * * *`; // Every second
+                const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
 
-            expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
-            // Waiting 2 seconds to make sure schedule ran at least once
-            await new Promise(r => setTimeout(r, 2000));
-            expect(daemonApp.performScheduledSync).toHaveBeenCalled();
+                await daemonApp.run();
 
-            daemonApp.job?.stop();
+                // Calculating time till next full second (when schedule will trigger)
+                const timePadding = 1000 - (Date.now() % 1000);
+                // Waiting for the first run to trigger and the second run to try and overrun
+                await new Promise(r => setTimeout(r, timePadding + executionPadding));
+
+                // Cleaning up
+                daemonApp.job?.stop();
+
+                expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
+                expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
+            });
+
+            test(`Run multiple scheduled job`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
+                    .mockResolvedValue();
+                Resources._instances.manager._resources.schedule = `*/1 * * * * *`; // Every second
+                const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
+                const eventScheduledOverrun = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_OVERRUN);
+
+                await daemonApp.run();
+
+                // Calculating time till next full second (when schedule will trigger)
+                const timePadding = 1000 - (Date.now() % 1000);
+                // Waiting for the first run to trigger and the second run to try and overrun
+                await new Promise(r => setTimeout(r, timePadding + 1000 + executionPadding));
+
+                // Cleaning up
+                daemonApp.job?.stop();
+
+                expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
+                expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(2);
+                expect(eventScheduledOverrun).not.toHaveBeenCalled();
+            });
+
+            test(`Schedule job overrun`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>(async () => {
+                    await new Promise(r => setTimeout(r, 2000));
+                });
+                Resources._instances.manager._resources.schedule = `*/1 * * * * *`; // Every second
+                const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
+                const eventScheduledOverrun = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_OVERRUN);
+
+                await daemonApp.run();
+
+                // Calculating time till next full second (when schedule will trigger)
+                const timePadding = 1000 - (Date.now() % 1000);
+                // Waiting for the first run to trigger and the second run to try and overrun
+                await new Promise(r => setTimeout(r, timePadding + 1000 + executionPadding));
+
+                // Cleaning up
+                daemonApp.job?.stop();
+
+                expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
+                expect(eventScheduledOverrun).toHaveBeenCalledTimes(1);
+                expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
+            });
         });
 
         test(`Scheduled sync succeeds`, async () => {

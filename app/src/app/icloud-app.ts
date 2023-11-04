@@ -35,9 +35,17 @@ export class DaemonApp extends iCPSApp {
      * @returns Once the job has been scheduled
      */
     async run() {
-        this.job = new Cron(Resources.manager().schedule, async () => {
-            await this.performScheduledSync();
-        });
+        this.job = new Cron(
+            Resources.manager().schedule,
+            async () => {
+                await this.performScheduledSync();
+            },
+            {
+                protect: () => {
+                    Resources.emit(iCPSEventApp.SCHEDULED_OVERRUN, this.job?.nextRun());
+                },
+            },
+        );
         Resources.emit(iCPSEventApp.SCHEDULED, this.job?.nextRun());
     }
 

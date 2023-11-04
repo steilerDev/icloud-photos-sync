@@ -99,6 +99,7 @@ const FIELDS = {
             SCHEDULED: `SCHEDULED`,
             SCHEDULED_SUCCESS: `SCHEDULED_SUCCESS`,
             SCHEDULED_FAILURE: `SCHEDULED_FAILURE`,
+            SCHEDULED_OVERRUN: `SCHEDULED_OVERRUN`,
         },
     },
 };
@@ -416,6 +417,11 @@ export class MetricsExporter {
             .on(iCPSEventApp.SCHEDULED_RETRY, (next: Date) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.SCHEDULED_FAILURE)
+                    .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+            })
+            .on(iCPSEventApp.SCHEDULED_OVERRUN, (next: Date) => {
+                this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                    .logStatus(FIELDS.STATUS.values.SCHEDULED_OVERRUN)
                     .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
             });
 
