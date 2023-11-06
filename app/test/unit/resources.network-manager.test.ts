@@ -6,6 +6,10 @@ import {Cookie} from 'tough-cookie';
 import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
 
 describe(`HeaderJar`, () => {
+    beforeAll(() => {
+        prepareResources(); // Only setting up for access to logger
+    });
+
     test(`Should initialize`, () => {
         const axiosInstance = axios.create();
         const headerJar = new HeaderJar(axiosInstance);
@@ -82,10 +86,6 @@ describe(`HeaderJar`, () => {
                 },
             },
         ])(`$desc`, ({headers, injectedHeaders}) => {
-            beforeAll(() => {
-                prepareResources(); // Only setting up for access to logger
-            });
-
             test.each([
                 {
                     desc: `No Cookies`,
@@ -171,6 +171,103 @@ describe(`HeaderJar`, () => {
                     ...injectedCookieHeader,
                 });
             });
+        });
+    });
+
+    describe(`Extract headers`, () => {
+        test.each([
+            {
+                desc: `No headers`,
+                url: 'icloud.com',
+                headers: [],
+                extractedCookies: [],
+                extractedHeaders: [],
+            },{
+                desc: `Single cookie`,
+                url: 'icloud.com',
+                headers: {
+                    'set-cookie': [
+                        'someKey=someValue; Domain=icloud.com',
+                    ]
+                },
+                extractedCookies: [
+                    {value: `someValue`, key: `someKey`, domain: `icloud.com`},
+                ],
+                extractedHeaders: [],
+            },{
+                desc: `Multiple cookies`,
+                url: 'icloud.com',
+                headers: {
+                    'set-cookie': [
+                        'someKey=someValue; Domain=icloud.com',
+                        'someOtherKey=someOtherValue; Domain=icloud.com',
+                    ]
+                },
+                extractedCookies: [
+                    {value: `someValue`, key: `someKey`, domain: `icloud.com`},
+                    {value: `someOtherValue`, key: `someOtherKey`, domain: `icloud.com`},
+                ],
+                extractedHeaders: [],
+            },{
+                desc: `scnt header from idmsa.apple.com`,
+                url: 'idmsa.apple.com',
+                headers: {
+                    'scnt': 'someValue',
+                },
+                extractedCookies: [],
+                extractedHeaders: [
+                    {key: 'scnt', value: 'someValue', domain: 'idmsa.apple.com'},
+                ],
+            },{
+                desc: `scnt header from non idmsa.apple.com`,
+                url: 'icloud.com',
+                headers: {
+                    'scnt': 'someValue',
+                },
+                extractedCookies: [],
+                extractedHeaders: [],
+            },{
+                desc: `ignoring random header`,
+                url: 'icloud.com',
+                headers: {
+                    'random': 'someValue',
+                },
+                extractedCookies: [],
+                extractedHeaders: [],
+            },{
+                desc: `scnt header & cookies`,
+                url: 'idmsa.apple.com',
+                headers: {
+                    'scnt': 'someValue',
+                    'set-cookie': [
+                        'someKey=someValue; Domain=icloud.com',
+                        'someOtherKey=someOtherValue; Domain=icloud.com',
+                    ]
+                },
+                extractedCookies: [
+                    {value: `someValue`, key: `someKey`, domain: `icloud.com`},
+                    {value: `someOtherValue`, key: `someOtherKey`, domain: `icloud.com`},
+                ],
+                extractedHeaders: [
+                    {key: 'scnt', value: 'someValue', domain: 'idmsa.apple.com'},
+                ],
+            }
+        ])('$desc', ({headers, extractedCookies, extractedHeaders, url}) => {
+            const axiosInstance = axios.create();
+            const headerJar = new HeaderJar(axiosInstance);
+
+            headerJar.headers.clear();
+            headerJar.cookies.clear();
+
+            headerJar._extractHeaders({
+                config: {
+                    baseURL: url,
+                },
+                headers,
+            } as any)
+
+            expect(Array.from(headerJar.cookies.values())).toMatchObject(extractedCookies);
+            expect(Array.from(headerJar.headers.values())).toMatchObject(extractedHeaders);
         });
     });
 
