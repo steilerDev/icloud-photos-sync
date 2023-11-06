@@ -10,7 +10,7 @@ import {iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRu
 import {Resources} from '../../src/lib/resources/main';
 import {iCloudCrypto} from '../../src/lib/icloud/icloud.crypto';
 import {SigninInitResponse} from '../../src/lib/resources/network-types';
-import { Header } from '../../src/lib/resources/network-manager';
+import {Header} from '../../src/lib/resources/network-manager';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;
@@ -467,7 +467,7 @@ describe.each([
             ])(`Method: $method`, ({method, endpoint, payload, codes, validatedResponse, successMessage}) => {
                 test(`Success`, async () => {
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, 'scnt', Config.iCloudAuthSecrets.scnt));
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     if (method === `device`) {
@@ -510,7 +510,7 @@ describe.each([
 
                 test(`Response not matching validator`, async () => {
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, 'scnt', Config.iCloudAuthSecrets.scnt));
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     if (method === `device`) {
@@ -555,7 +555,7 @@ describe.each([
 
                 test(`Resend unsuccessful`, async () => {
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, 'scnt', Config.iCloudAuthSecrets.scnt));
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     mockedNetworkManager.mock
@@ -630,7 +630,7 @@ describe.each([
             ])(`Method: $method`, ({method, endpoint, payload, codes}) => {
                 test(`Success`, async () => {
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, 'scnt', Config.iCloudAuthSecrets.scnt));
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     mockedNetworkManager.mock
@@ -656,7 +656,7 @@ describe.each([
                 test(`Failure`, async () => {
                     const iCloudReady = icloud.getReady();
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, 'scnt', Config.iCloudAuthSecrets.scnt));
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     mockedNetworkManager.mock
@@ -710,7 +710,7 @@ describe.each([
                 }])(`Incorrect code $desc`, async ({replyPayload}) => {
                     const iCloudReady = icloud.getReady();
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, 'scnt', Config.iCloudAuthSecrets.scnt));
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     mockedNetworkManager.mock
@@ -736,7 +736,7 @@ describe.each([
     describe(`Trust Token`, () => {
         test(`Success`, async () => {
             mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-            mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, 'scnt', Config.iCloudAuthSecrets.scnt));
+            mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedValidator.validateTrustResponse = jest.fn<typeof mockedValidator.validateTrustResponse>();
@@ -763,7 +763,7 @@ describe.each([
         test(`Error - Invalid Response`, async () => {
             const iCloudReady = icloud.getReady();
             mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-            mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, 'scnt', Config.iCloudAuthSecrets.scnt));
+            mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedValidator.validateTrustResponse = jest.fn<typeof mockedValidator.validateTrustResponse>(() => {
@@ -788,7 +788,7 @@ describe.each([
         test(`Error - Invalid Status Code`, async () => {
             const iCloudReady = icloud.getReady();
             mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-            mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, 'scnt', Config.iCloudAuthSecrets.scnt));
+            mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedNetworkManager.mock

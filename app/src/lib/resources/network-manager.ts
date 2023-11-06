@@ -105,22 +105,21 @@ export class HeaderJar {
      * @returns The unmodified response
      */
     _extractHeaders(response: AxiosResponse): AxiosResponse {
-        if(response.headers.scnt && this.isApplicable(response.config, new Header('idmsa.apple.com', '', ''))) {
-            Resources.logger(this).debug('Extracted scnt from response header with length ' + response.headers.scnt.length)
+        if (response.headers.scnt && this.isApplicable(response.config, new Header(`idmsa.apple.com`, ``, ``))) {
+            Resources.logger(this).debug(`Extracted scnt from response header with length ` + response.headers.scnt.length);
             this.setHeader(new Header(`idmsa.apple.com`, HEADER_KEYS.SCNT, response.headers.scnt));
         }
 
-        if(response.headers[`set-cookie`] && Array.isArray(response.headers[`set-cookie`])) {
+        if (response.headers[`set-cookie`] && Array.isArray(response.headers[`set-cookie`])) {
             response.headers[`set-cookie`].forEach(cookie => {
                 const parsedCookie = Cookie.parse(cookie);
-                Resources.logger(this).debug(`Extracted cookie from response header: ${parsedCookie.key} (domain ${parsedCookie.domain}) with length ${parsedCookie.value.length}`)
+                Resources.logger(this).debug(`Extracted cookie from response header: ${parsedCookie.key} (domain ${parsedCookie.domain}) with length ${parsedCookie.value.length}`);
                 this.setCookie(parsedCookie);
-            })
+            });
         }
 
         return response;
     }
-
 
     /**
      * Checks metadata of the provided cookie to check if it's still valid
