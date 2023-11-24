@@ -14,7 +14,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
     Docker images are available on [DockerHub](https://hub.docker.com/r/steilerdev/icloud-photos-sync). Alternatively the docker image tar archive is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be installed using `docker load --input <fileName>`
 
     !!! tip "ARM Support"
-            The Docker image is also build for the arm64 platform (however [publishing this version is not possible through the current CI setup](https://github.com/docker/buildx/issues/1152)). The tar archive of the arm64 build of this image is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be loaded using `docker load --input <fileName>`.
+        The Docker image is also build for the arm64 platform (however [publishing this version is not possible through the current CI setup](https://github.com/docker/buildx/issues/1152)). The tar archive of the arm64 build of this image is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be loaded using `docker load --input <fileName>`.
 
     === "docker compose"
         
@@ -425,6 +425,15 @@ In order to archive an album, the [`archive` command](../user-guides/cli/#archiv
             </path/to/your/local/library>/<path/to/album>
         ```
 
+## Additional resources
+
+- Monitor the tool through [sync metrics](../user-guides/sync-metrics/)
+- Consult the [common warnings](../user-guides/common-warnings) in case any pop up
+- Read about the requirements for supporting accounts with [Advanced Data Protection](../user-guides/adp/)
+- Access your photo library locally through a [web UI](../user-guides/web-ui/)
+
 ## Contributing & Feedback
 
 Please check the [contributing guidelines](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md) to learn how to engage with this project. The document outlines the bug reporting, feature and support request process for this tool.
+
+Consider supporting the development efforts by [sponsoring the author](https://github.com/sponsors/steilerDev).
