@@ -1,7 +1,7 @@
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import fs from "fs/promises";
 import {createWriteStream} from "fs";
-import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO, PCSResponse} from "./network-types.js";
+import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network-types.js";
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
@@ -182,7 +182,11 @@ export class HeaderJar {
     setCookie(...cookie: (Cookie | string)[]) {
         for (const c of cookie) {
             const _cookie = typeof c === `string` ? Cookie.parse(c) : c;
-            this.cookies.set(_cookie.key, _cookie);
+            if (_cookie.value.length > 0) {
+                this.cookies.set(_cookie.key, _cookie);
+            } else {
+                this.cookies.delete(_cookie.key);
+            }
         }
     }
 }
@@ -428,12 +432,6 @@ export class NetworkManager {
         return [...this._headerJar.cookies.values()]
             .filter(cookie => cookie.key === COOKIE_KEYS.PCS_PHOTOS || cookie.key === COOKIE_KEYS.PCS_SHARING).length === 2;
     }
-
-    /**
-     * Applies the acquired PCS cookies received from the PCS request to the header jar.
-     * @param pcsResponse - The response received from the server
-     */
-    applyPCSResponse(_pcsResponse: PCSResponse) {}
 
     /**
      * Applies configurations from the response received after the photos setup request. This includes information about the available zones.

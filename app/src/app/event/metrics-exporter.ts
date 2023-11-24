@@ -80,6 +80,7 @@ const FIELDS = {
             DEVICE_TRUSTED: `DEVICE_TRUSTED`,
             ACCOUNT_READY: `ACCOUNT_READY`,
             PCS_REQUIRED: `PCS_REQUIRED`,
+            PCS_NOT_READY: `PCS_NOT_READY`,
             SESSION_EXPIRED: `SESSION_EXPIRED`,
             ICLOUD_READY: `ICLOUD_READY`,
             SYNC_START: `SYNC_START`,
@@ -385,6 +386,10 @@ export class MetricsExporter {
             .on(iCPSEventCloud.PCS_REQUIRED, () => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.PCS_REQUIRED));
+            })
+            .on(iCPSEventCloud.PCS_NOT_READY, () => {
+                this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                    .logStatus(FIELDS.STATUS.values.PCS_NOT_READY));
             });
 
         Resources.events(this)

@@ -222,6 +222,9 @@ export class ErrorHandler {
             })
             .on(iCPSEventCloud.PCS_REQUIRED, () => {
                 this.btClient.breadcrumbs.info(`PCS_REQUIRED`);
+            })
+            .on(iCPSEventCloud.PCS_NOT_READY, () => {
+                this.btClient.breadcrumbs.info(`PCS_NOT_READY`);
             });
 
         Resources.events(this)

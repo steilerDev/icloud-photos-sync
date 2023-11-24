@@ -77,6 +77,9 @@ export class CLIInterface {
             })
             .on(iCPSEventCloud.PCS_REQUIRED, () => {
                 this.print(chalk.yellowBright(`Advanced Data Protection requires additional cookies, acquiring...`));
+            })
+            .on(iCPSEventCloud.PCS_NOT_READY, () => {
+                this.print(chalk.yellowBright(`Advanced Data Protection request not confirmed yet, retrying...`));
             });
 
         Resources.events(this)

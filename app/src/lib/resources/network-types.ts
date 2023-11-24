@@ -339,9 +339,8 @@ export type PCSResponse = {
     headers: {
         /**
          * Should hold the PCS cookies
-         * @minItems 2
          */
-        'set-cookie': string[],  // eslint-disable-line
+        'set-cookie'?: string[],  // eslint-disable-line
     }
     data: {
         /**
@@ -349,21 +348,13 @@ export type PCSResponse = {
          */
         isWebAccessAllowed: true,
         /**
-         * Consent needs to be previously provided, not yet supported by this tool
+         * @minLength 1
          */
-        isDeviceConsentedForPCS: true,
+        message: string,
         /**
-         * There is also the case of "Requested the device to upload cookies." - not sure though what to do in this case, as I'll be sending all available cookies
+         * Status of the PCS request
          */
-        message: `Cookies attached.` | `Cookies already present.`,
-        /**
-         * Gives a unix timestamp when the PCS consents expires
-         */
-        deviceConsentForPCSExpiry: number,
-        /**
-         * Can also be "failure" not sure how to handle this though
-         */
-        status: `success`
+        status: `success` | `failure`
     }
 }
 
