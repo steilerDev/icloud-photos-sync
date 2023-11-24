@@ -16,6 +16,7 @@ nav:
     - 'Sync Metrics': user-guides/sync-metrics.md
     - 'Error & Crash Reporting': user-guides/error-reporting.md
     - 'Security': user-guides/security.md
+    - 'WebUI': user-guides/web-ui.md
   - 'Development Resources':
     - 'Development Blog': https://github.com/steilerDev/icloud-photos-sync/discussions/305
     - 'Motivation': dev/motivation.md
