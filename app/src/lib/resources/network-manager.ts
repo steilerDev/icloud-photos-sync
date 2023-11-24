@@ -5,7 +5,7 @@ import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, 
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
-import {AxiosHarTracker} from "axios-har-tracker";
+import {AxiosHarTracker} from "@steilerdev/axios-har-tracker";
 import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -244,8 +244,7 @@ export class NetworkManager {
         });
 
         if (resources.enableNetworkCapture) {
-            this._harTracker = new AxiosHarTracker(this._axios as any);
-            this.resetHarTracker(this._harTracker);
+            this._harTracker = new AxiosHarTracker(this._axios as any, {name: Resources.PackageInfo.name, version: Resources.PackageInfo.version});
         }
 
         this._headerJar = new HeaderJar(this._axios);
@@ -274,28 +273,8 @@ export class NetworkManager {
 
         if (Resources.manager().enableNetworkCapture) {
             await this.writeHarFile();
-            this.resetHarTracker(this._harTracker);
+            this._harTracker.resetHar();
         }
-    }
-
-    /**
-     * Resets the generated HAR file to make sure it does not grow too much while reusing the same instance
-     * Unfortunately the relevant members are private, so we have to cast it to any
-     * @param tracker - The AxiosHarTracker instance to reset
-     */
-    resetHarTracker(tracker: AxiosHarTracker) {
-        (tracker as any).generatedHar = {
-            log: {
-                version: `1.2`,
-                creator: {
-                    name: Resources.PackageInfo.name,
-                    version: Resources.PackageInfo.version,
-                },
-                pages: [],
-                entries: [],
-            },
-        };
-        (tracker as any).newEntry = (this._harTracker as any).generateNewEntry();
     }
 
     /**
