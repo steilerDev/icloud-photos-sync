@@ -6,6 +6,8 @@ updates:
     labels: [ ]
     directory: "/"
     target-branch: "dev"
+    versioning-strategy: "increase"
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "chore: [ci] "
     schedule:
@@ -19,6 +21,8 @@ updates:
     labels: [ ]
     directory: "/app"
     target-branch: "dev"
+    versioning-strategy: "increase"
+    open-pull-requests-limit: 20
     commit-message:
       prefix: "chore: [app] "
     schedule:
@@ -64,6 +68,8 @@ updates:
     labels: [ ]
     directory: "/docker"
     target-branch: "dev"
+    versioning-strategy: "increase"
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "chore: [docker] "
     schedule:
@@ -79,6 +85,8 @@ updates:
     labels: [ ]
     directory: "/docs"
     target-branch: "dev"
+    versioning-strategy: "increase"
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "chore: [docs] "
     schedule:
@@ -96,6 +104,8 @@ updates:
     labels: [ ]
     directory: "/.github/actions/helper/prepare-semantic-release"
     target-branch: "dev"
+    versioning-strategy: "increase"
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "chore: [semantic-release] "
     schedule:
