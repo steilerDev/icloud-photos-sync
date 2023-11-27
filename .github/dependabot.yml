@@ -6,7 +6,6 @@ updates:
     labels: [ ]
     directory: "/"
     target-branch: "dev"
-    versioning-strategy: "increase"
     open-pull-requests-limit: 20
     commit-message:
       prefix: "chore: [ci] "
@@ -68,7 +67,6 @@ updates:
     labels: [ ]
     directory: "/docker"
     target-branch: "dev"
-    versioning-strategy: "increase"
     open-pull-requests-limit: 10
     commit-message:
       prefix: "chore: [docker] "
