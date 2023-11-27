@@ -300,8 +300,8 @@ export class NetworkManager {
      * Pending jobs will be cancelled and running jobs will be awaited
      * @param queue - The queue to settle
      */
-    async settleQueue(queue: PQueue, clearQueuedJobs: boolean = true) {
-        if (clearQueuedJobs && queue.size > 0) {
+    async settleQueue(queue: PQueue) {
+        if (queue.size > 0) {
             Resources.logger(this).info(`Clearing queue with ${queue.size} queued job(s)...`);
             queue.clear();
         }
@@ -334,7 +334,7 @@ export class NetworkManager {
 
             Resources.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
-            jsonc.write(Resources.manager().harFilePath, generatedObject, {autoPath: true});
+            await jsonc.write(Resources.manager().harFilePath, generatedObject, {autoPath: true});
             Resources.logger(this).info(`HAR file written`);
             return true;
         } catch (err) {
@@ -478,11 +478,11 @@ export class NetworkManager {
      */
     async downloadData(url: string, location: string): Promise<void> {
         await this._streamingCCYLimiter.add(async () => {
-            const fileExists = await fs.stat(location)
-                .then(stat => stat.isFile())
+            const locationExists = await fs.stat(location)
+                .then(() => true)
                 .catch(() => false);
 
-            if (fileExists) {
+            if (locationExists) {
                 Resources.logger(this).info(`File ${location} already exists - skipping download`);
                 return;
             }

@@ -65,7 +65,7 @@
                 "--runInBand",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/api/api.test.ts"
+                "test/unit/resources.network-manager.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"
