@@ -64,7 +64,7 @@
     "@types/inquirer": "^9.0.7",
     "@types/jest": "^29.5.8",
     "@types/mock-fs": "^4.13.4",
-    "@types/node": "^18.18.8",
+    "@types/node": "^18.18.13",
     "@types/tough-cookie": "^4.0.5",
     "@typescript-eslint/eslint-plugin": "^6.11.0",
     "@typescript-eslint/parser": "^6.11.0",
