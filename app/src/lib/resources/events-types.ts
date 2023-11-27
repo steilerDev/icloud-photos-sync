@@ -46,6 +46,10 @@ export enum iCPSEventCloud {
      */
     PCS_REQUIRED = `icloud-pcs_req`,
     /**
+     * Emitted when the access request has not been granted and the cookies are not ready yet
+     */
+    PCS_NOT_READY = `icloud-pcs_not_ready`,
+    /**
      * Emitted when the iCloud account information have been retrieved
      */
     ACCOUNT_READY = `icloud-account_ready`,

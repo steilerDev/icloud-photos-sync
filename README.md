@@ -77,10 +77,10 @@ This CLI Application offers the following high level functionality:
 </details>
 
 <details>
-  <summary><i>Archiving of folders</i></summary>
+  <summary><i>Archiving of folders (optional)</i></summary>
   <p>
     <ul>
-      <li>All assets currently in the album will be persisted in the respective folder on the machine running icloud-photos-sync</li>
+      <li>Archiving an album will persist all assets in the respective folder in the local filesystem</li>
       <li>Future syncs will ignore the folder (so those assets will not be changed/deleted)</li>
       <li>If the remote album is moved, the archived folder will be moved to the same location</li>
       <li>If the remote album is deleted, the archived folder will be put into a 'lost+found' type of folder</li>

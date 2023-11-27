@@ -1,11 +1,11 @@
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import fs from "fs/promises";
 import {createWriteStream} from "fs";
-import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO, PCSResponse} from "./network-types.js";
+import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network-types.js";
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
-import {AxiosHarTracker} from "axios-har-tracker";
+import {AxiosHarTracker} from "@steilerdev/axios-har-tracker";
 import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -72,7 +72,7 @@ export class HeaderJar {
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Client-Type`, `firstPartyAuth`));
 
         axios.interceptors.request.use(config => this._injectHeaders(config));
-        // If scnt is in header store it
+        axios.interceptors.response.use(response => this._extractHeaders(response));
     }
 
     /**
@@ -97,6 +97,28 @@ export class HeaderJar {
             });
 
         return config;
+    }
+
+    /**
+     * Extracts general applicable header (scnt) and set-cookies from the response
+     * @param response - The Axios response
+     * @returns The unmodified response
+     */
+    _extractHeaders(response: AxiosResponse): AxiosResponse {
+        if (response.headers.scnt && this.isApplicable(response.config, new Header(`idmsa.apple.com`, ``, ``))) {
+            Resources.logger(this).debug(`Extracted scnt from response header with length ` + response.headers.scnt.length);
+            this.setHeader(new Header(`idmsa.apple.com`, HEADER_KEYS.SCNT, response.headers.scnt));
+        }
+
+        if (response.headers[`set-cookie`] && Array.isArray(response.headers[`set-cookie`])) {
+            response.headers[`set-cookie`].forEach(cookie => {
+                const parsedCookie = Cookie.parse(cookie);
+                Resources.logger(this).debug(`Extracted cookie from response header: ${parsedCookie.key} (domain ${parsedCookie.domain}) with length ${parsedCookie.value.length}`);
+                this.setCookie(parsedCookie);
+            });
+        }
+
+        return response;
     }
 
     /**
@@ -160,7 +182,11 @@ export class HeaderJar {
     setCookie(...cookie: (Cookie | string)[]) {
         for (const c of cookie) {
             const _cookie = typeof c === `string` ? Cookie.parse(c) : c;
-            this.cookies.set(_cookie.key, _cookie);
+            if (_cookie.value.length > 0) {
+                this.cookies.set(_cookie.key, _cookie);
+            } else {
+                this.cookies.delete(_cookie.key);
+            }
         }
     }
 }
@@ -218,8 +244,7 @@ export class NetworkManager {
         });
 
         if (resources.enableNetworkCapture) {
-            this._harTracker = new AxiosHarTracker(this._axios as any);
-            this.resetHarTracker(this._harTracker);
+            this._harTracker = new AxiosHarTracker(this._axios as any, {name: Resources.PackageInfo.name, version: Resources.PackageInfo.version});
         }
 
         this._headerJar = new HeaderJar(this._axios);
@@ -248,28 +273,8 @@ export class NetworkManager {
 
         if (Resources.manager().enableNetworkCapture) {
             await this.writeHarFile();
-            this.resetHarTracker(this._harTracker);
+            this._harTracker.resetHar();
         }
-    }
-
-    /**
-     * Resets the generated HAR file to make sure it does not grow too much while reusing the same instance
-     * Unfortunately the relevant members are private, so we have to cast it to any
-     * @param tracker - The AxiosHarTracker instance to reset
-     */
-    resetHarTracker(tracker: AxiosHarTracker) {
-        (tracker as any).generatedHar = {
-            log: {
-                version: `1.2`,
-                creator: {
-                    name: Resources.PackageInfo.name,
-                    version: Resources.PackageInfo.version,
-                },
-                pages: [],
-                entries: [],
-            },
-        };
-        (tracker as any).newEntry = (this._harTracker as any).generateNewEntry();
     }
 
     /**
@@ -295,8 +300,8 @@ export class NetworkManager {
      * Pending jobs will be cancelled and running jobs will be awaited
      * @param queue - The queue to settle
      */
-    async settleQueue(queue: PQueue, clearQueuedJobs: boolean = true) {
-        if (clearQueuedJobs && queue.size > 0) {
+    async settleQueue(queue: PQueue) {
+        if (queue.size > 0) {
             Resources.logger(this).info(`Clearing queue with ${queue.size} queued job(s)...`);
             queue.clear();
         }
@@ -329,22 +334,13 @@ export class NetworkManager {
 
             Resources.logger(this).info(`Generated HAR archive with ${generatedObject.log.entries.length} entries`);
 
-            jsonc.write(Resources.manager().harFilePath, generatedObject, {autoPath: true});
+            await jsonc.write(Resources.manager().harFilePath, generatedObject, {autoPath: true});
             Resources.logger(this).info(`HAR file written`);
             return true;
         } catch (err) {
             Resources.logger(this).error(`Unable to write HAR file: ${err.message}`);
             return false;
         }
-    }
-
-    /**
-     * Persists the scnt header required for the MFA flow and adds the relevant header to the header jar
-     * @param scnt - The scnt value to use
-     */
-    set scnt(scnt: string) {
-        Resources.logger(this).debug(`Setting scnt header to ${scnt}`);
-        this._headerJar.setHeader(new Header(`idmsa.apple.com`, HEADER_KEYS.SCNT, scnt));
     }
 
     /**
@@ -389,16 +385,7 @@ export class NetworkManager {
      * @param mfaRequiredResponse - The response received from the server
      */
     applySigninResponse(signinResponse: SigninResponse) {
-        this.scnt = signinResponse.headers.scnt;
         this.sessionId = signinResponse.headers[`x-apple-session-token`];
-
-        const aaspCookie = signinResponse.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.AASP));
-        if (aaspCookie.length !== 1) {
-            Resources.logger(this).warn(`Expected exactly one AASP cookie, but found ${aaspCookie.length}`);
-            return;
-        }
-
-        this._headerJar.setCookie(...aaspCookie);
     }
 
     /**
@@ -417,21 +404,12 @@ export class NetworkManager {
      */
     applySetupResponse(setupResponse: SetupResponse) {
         this.photosUrl = setupResponse.data.webservices.ckdatabasews.url;
-        this._headerJar.setCookie(...setupResponse.headers[`set-cookie`]);
         if (!setupResponse.data.webservices.ckdatabasews.pcsRequired) {
             return true;
         }
 
         return [...this._headerJar.cookies.values()]
             .filter(cookie => cookie.key === COOKIE_KEYS.PCS_PHOTOS || cookie.key === COOKIE_KEYS.PCS_SHARING).length === 2;
-    }
-
-    /**
-     * Applies the acquired PCS cookies received from the PCS request to the header jar.
-     * @param pcsResponse - The response received from the server
-     */
-    applyPCSResponse(pcsResponse: PCSResponse) {
-        this._headerJar.setCookie(...pcsResponse.headers[`set-cookie`]);
     }
 
     /**
@@ -500,11 +478,11 @@ export class NetworkManager {
      */
     async downloadData(url: string, location: string): Promise<void> {
         await this._streamingCCYLimiter.add(async () => {
-            const fileExists = await fs.stat(location)
-                .then(stat => stat.isFile())
+            const locationExists = await fs.stat(location)
+                .then(() => true)
                 .catch(() => false);
 
-            if (fileExists) {
+            if (locationExists) {
                 Resources.logger(this).info(`File ${location} already exists - skipping download`);
                 return;
             }

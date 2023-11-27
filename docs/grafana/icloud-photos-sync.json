@@ -168,79 +168,84 @@
                   "index": 12,
                   "text": "MFA Required"
                 },
-                "PCS_REQUIRED": {
+                "PCS_NOT_READY": {
                   "color": "yellow",
                   "index": 13,
+                  "text": "PCS Cookies not available yet"
+                },
+                "PCS_REQUIRED": {
+                  "color": "yellow",
+                  "index": 14,
                   "text": "PCS Cookies Required"
                 },
                 "SCHEDULED": {
                   "color": "super-light-green",
-                  "index": 14,
+                  "index": 15,
                   "text": "Run scheduled"
                 },
                 "SCHEDULED_FAILURE": {
                   "color": "red",
-                  "index": 15,
+                  "index": 16,
                   "text": "Scheduled Run Failed"
                 },
                 "SCHEDULED_OVERRUN": {
                   "color": "yellow",
-                  "index": 17,
+                  "index": 18,
                   "text": "Scheduled Overrun"
                 },
                 "SCHEDULED_SUCCESS": {
                   "color": "semi-dark-green",
-                  "index": 16,
+                  "index": 17,
                   "text": "Scheduled Run Succeeded"
                 },
                 "SESSION_EXPIRED": {
                   "color": "orange",
-                  "index": 18,
+                  "index": 19,
                   "text": "Session Expired"
                 },
                 "SYNC_COMPLETED": {
                   "color": "green",
-                  "index": 19,
+                  "index": 20,
                   "text": "Sync Completed"
                 },
                 "SYNC_RETRY": {
                   "color": "orange",
-                  "index": 20,
+                  "index": 21,
                   "text": "Sync Retrying"
                 },
                 "SYNC_START": {
                   "color": "yellow",
-                  "index": 21,
+                  "index": 22,
                   "text": "Sync Started"
                 },
                 "WRITE_ALBUMS_COMPLETED": {
                   "color": "yellow",
-                  "index": 22,
+                  "index": 23,
                   "text": "Album Write Completed"
                 },
                 "WRITE_ALBUMS_STARTED": {
                   "color": "yellow",
-                  "index": 23,
+                  "index": 24,
                   "text": "Album Write Started"
                 },
                 "WRITE_ASSETS_COMPLETED": {
                   "color": "yellow",
-                  "index": 24,
+                  "index": 25,
                   "text": "Asset Write Completed"
                 },
                 "WRITE_ASSETS_STARTED": {
                   "color": "yellow",
-                  "index": 25,
+                  "index": 26,
                   "text": "Asset Write Started"
                 },
                 "WRITE_COMPLETED": {
                   "color": "yellow",
-                  "index": 26,
+                  "index": 27,
                   "text": "Write Completed"
                 },
                 "WRITE_STARTED": {
                   "color": "yellow",
-                  "index": 27,
+                  "index": 28,
                   "text": "Write Started"
                 }
               },
@@ -467,6 +472,11 @@
                   "index": 12,
                   "text": "MFA Required"
                 },
+                "PCS_NOT_READY": {
+                  "color": "yellow",
+                  "index": 14,
+                  "text": "PCS Cookies not available yet"
+                },
                 "PCS_REQUIRED": {
                   "color": "yellow",
                   "index": 13,
@@ -474,72 +484,72 @@
                 },
                 "SCHEDULED": {
                   "color": "super-light-green",
-                  "index": 14,
+                  "index": 15,
                   "text": "Run scheduled"
                 },
                 "SCHEDULED_FAILURE": {
                   "color": "red",
-                  "index": 15,
+                  "index": 16,
                   "text": "Scheduled Run Failed"
                 },
                 "SCHEDULED_OVERRUN": {
                   "color": "yellow",
-                  "index": 17,
+                  "index": 18,
                   "text": "Scheduled Overrun"
                 },
                 "SCHEDULED_SUCCESS": {
                   "color": "semi-dark-green",
-                  "index": 16,
+                  "index": 17,
                   "text": "Scheduled Run Succeeded"
                 },
                 "SESSION_EXPIRED": {
                   "color": "orange",
-                  "index": 18,
+                  "index": 19,
                   "text": "Session Expired"
                 },
                 "SYNC_COMPLETED": {
                   "color": "green",
-                  "index": 19,
+                  "index": 20,
                   "text": "Sync Completed"
                 },
                 "SYNC_RETRY": {
                   "color": "orange",
-                  "index": 20,
+                  "index": 21,
                   "text": "Sync Retrying"
                 },
                 "SYNC_START": {
                   "color": "yellow",
-                  "index": 21,
+                  "index": 22,
                   "text": "Sync Started"
                 },
                 "WRITE_ALBUMS_COMPLETED": {
                   "color": "yellow",
-                  "index": 22,
+                  "index": 23,
                   "text": "Album Write Completed"
                 },
                 "WRITE_ALBUMS_STARTED": {
                   "color": "yellow",
-                  "index": 23,
+                  "index": 24,
                   "text": "Album Write Started"
                 },
                 "WRITE_ASSETS_COMPLETED": {
                   "color": "yellow",
-                  "index": 24,
+                  "index": 25,
                   "text": "Asset Write Completed"
                 },
                 "WRITE_ASSETS_STARTED": {
                   "color": "yellow",
-                  "index": 25,
+                  "index": 26,
                   "text": "Asset Write Started"
                 },
                 "WRITE_COMPLETED": {
                   "color": "yellow",
-                  "index": 26,
+                  "index": 27,
                   "text": "Write Completed"
                 },
                 "WRITE_STARTED": {
                   "color": "yellow",
-                  "index": 27,
+                  "index": 28,
                   "text": "Write Started"
                 }
               },
