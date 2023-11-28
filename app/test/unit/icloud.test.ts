@@ -1015,7 +1015,7 @@ describe.each([
             expect(pcsNotReadyEvent).toHaveBeenCalledTimes(1);
             expect(pcsRequiredEvent).not.toHaveBeenCalled();
 
-            jest.advanceTimersByTime(5000);
+            jest.advanceTimersByTime(10000);
             expect(pcsRequiredEvent).toHaveBeenCalledTimes(1);
             expect(icloud.photos).toBeDefined();
         });

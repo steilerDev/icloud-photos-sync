@@ -376,7 +376,7 @@ export class iCloud {
             if (validatedResponse.data.status === `failure`) {
                 Resources.logger(this).info(`Failed to acquire PCS cookies: ${validatedResponse.data.message}`);
                 Resources.emit(iCPSEventCloud.PCS_NOT_READY);
-                setTimeout(() => Resources.emit(iCPSEventCloud.PCS_REQUIRED), 5000);
+                setTimeout(() => Resources.emit(iCPSEventCloud.PCS_REQUIRED), 10000);
                 return;
             }
 
