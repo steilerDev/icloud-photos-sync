@@ -58,7 +58,7 @@
     "!win32"
   ],
   "devDependencies": {
-    "@backtrace/javascript-cli": "^0.2.0",
+    "@backtrace/javascript-cli": "^0.3.0",
     "@jest/globals": "^29.6.2",
     "@types/cli-progress": "^3.11.0",
     "@types/inquirer": "^9.0.7",
