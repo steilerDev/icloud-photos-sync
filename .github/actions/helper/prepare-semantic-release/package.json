@@ -3,10 +3,10 @@
     "devDependencies": {
         "@backtrace-labs/javascript-cli": "^0.1.2",
         "@semantic-release-plus/docker": "^3.1.3",
-        "@semantic-release/github": "^9.2.3",
+        "@semantic-release/github": "^9.2.6",
         "@semantic-release/release-notes-generator": "^12.1.0",
         "conventional-changelog": "^5.1.0",
         "conventional-changelog-conventionalcommits": "^7.0.2",
-        "semantic-release": "^22.0.8"
+        "semantic-release": "^22.0.12"
     }
 }
