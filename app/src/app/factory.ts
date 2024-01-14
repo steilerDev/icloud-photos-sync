@@ -90,12 +90,12 @@ function commanderParseInterval(value: string, _dummyPrevious?: unknown): [numbe
 async function completeConfigurationOptionsFromCommand(parsedCommand: unknown): Promise<iCPSAppOptions> {
     const opts = (parsedCommand as any).parent?.opts() as iCPSAppOptions;
 
-    if (!opts.username || opts.username.length === 0) {
+    while (!opts.username || opts.username.length === 0) {
         const {username} = await inquirer.prompt({type: `input`, message: `Please enter your AppleID username`, name: `username`});
         opts.username = username;
     }
 
-    if (!opts.password || opts.password.length === 0) {
+    while (!opts.password || opts.password.length === 0) {
         const {password} = await inquirer.prompt({type: `password`, message: `Please enter your AppleID password`, name: `password`, mask: `*`});
         opts.password = password;
     }
