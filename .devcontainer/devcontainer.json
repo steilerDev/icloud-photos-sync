@@ -1,0 +1,66 @@
+// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/typescript-node-12
+{
+	"name": "icloud-photos-sync",
+    "image": "mcr.microsoft.com/devcontainers/base:bullseye",
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+			"username": "vscode",
+			"userUid": "1000",
+			"userGid": "1000",
+            "nonFreePackages": "true",
+			"upgradePackages": "true"
+		},
+        "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+            "packages": "tmux,vim,wget,jq,tree,whois,db-util,rsync,zip,unzip,ca-certificates,curl,gnupg"
+        },
+		"ghcr.io/devcontainers/features/git:1": {
+            "version": "latest",
+            "ppa": "false"
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "18.18.0"
+        },
+        "ghcr.io/devcontainers/features/python:1": {
+            "version": "3.9"
+        },
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+            "version": "latest"
+        }
+    },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "GitHub.copilot",
+                "streetsidesoftware.code-spell-checker",
+                "vivaxy.vscode-conventional-commits",
+                "github.vscode-github-actions",
+                "GitHub.vscode-pull-request-github",
+                "ritwickdey.LiveServer",
+                "vscodevim.vim"
+            ]
+        }
+    },
+
+    "containerEnv": {
+        "NODE_NO_WARNINGS": "1",
+        "DATA_DIR": "${containerWorkspaceFolder}/app-data-dir/"
+    },
+
+    "secrets": {
+        "APPLE_ID_USER": {
+            "description": "Your Apple ID username"
+        },
+        "APPLE_ID_PWD": {
+            "description": "Your Apple ID password"
+        },
+        "TRUST_TOKEN": {
+            "description": "Your trust token"
+        }
+    },
+
+	"postCreateCommand": "(cd app/ && npm install) && (cd docs/ && pip install -r requirements.txt)",
+
+	"remoteUser": "vscode"
+}
