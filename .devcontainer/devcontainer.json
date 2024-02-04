@@ -12,11 +12,7 @@
 			"upgradePackages": "true"
 		},
         "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-            "packages": "tmux,vim,wget,jq,tree,whois,db-util,rsync,zip,unzip,ca-certificates,curl,gnupg"
-        },
-		"ghcr.io/devcontainers/features/git:1": {
-            "version": "latest",
-            "ppa": "false"
+            "packages": "git,tmux,vim,wget,jq,tree,whois,db-util,rsync,zip,unzip,ca-certificates,curl,gnupg"
         },
         "ghcr.io/devcontainers/features/node:1": {
             "version": "18.18.0"
