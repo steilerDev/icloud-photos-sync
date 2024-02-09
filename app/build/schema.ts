@@ -43,6 +43,18 @@ const schemaList = [
         typeName: `PhotosSetupResponse`,
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
+    }, {
+        typeName: `CloudKitQueryResponse`,
+        srcPath: `src/lib/resources/cloud-kit-types.ts`,
+        allowAdditionalProperties: true,
+    },{
+        typeName: `CloudKitOperationResponse`,
+        srcPath: `src/lib/resources/cloud-kit-types.ts`,
+        allowAdditionalProperties: true,
+    },{
+        typeName: `IndexingStateRecordDictionary`,
+        srcPath: `src/lib/resources/cloud-kit-types.ts`,
+        allowAdditionalProperties: true,
     },
 ];
 

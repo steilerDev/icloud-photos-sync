@@ -105,6 +105,7 @@ export const ENDPOINTS = {
         BASE_PATH: `/database/1/com.apple.photos.cloud/production/private`,
         PATH: {
             QUERY: `/records/query`,
+            LOOKUP: `/records/lookup`,
             MODIFY: `/records/modify`,
             ZONES: `/changes/database`,
         },

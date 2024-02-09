@@ -23,8 +23,8 @@ export const INDEXING_STATE_UNKNOWN: ErrorStruct = buildErrorStruct(
     name, prefix, `INDEXING_STATE_UNKNOWN`, `Unknown indexing state`,
 );
 
-export const UNEXPECTED_QUERY_RESPONSE: ErrorStruct = buildErrorStruct(
-    name, prefix, `UNEXPECTED_QUERY_RESPONSE`, `Received unexpected query response format`,
+export const QUERY_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `QUERY_FAILED`, `Photos query failed`,
 );
 
 export const UNEXPECTED_OPERATIONS_RESPONSE: ErrorStruct = buildErrorStruct(

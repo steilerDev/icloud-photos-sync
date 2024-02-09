@@ -39,3 +39,11 @@ export const RESEND_MFA_PHONE_RESPONSE: ErrorStruct = buildErrorStruct(
 export const RESEND_MFA_DEVICE_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `RESEND_MFA_DEVICE_RESPONSE`, `Unable to parse and validate resend MFA device response`,
 );
+
+export const QUERY_RESPONSE: ErrorStruct = buildErrorStruct(
+    name, prefix, `QUERY_RESPONSE`, `Unable to parse and validate query response`,
+);
+
+export const INDEXING_STATE_RECORD_DICTIONARY: ErrorStruct = buildErrorStruct(
+    name, prefix, `INDEXING_STATE_RECORD_DICTIONARY`, `Unable to parse and validate indexing state record dictionary`,
+);

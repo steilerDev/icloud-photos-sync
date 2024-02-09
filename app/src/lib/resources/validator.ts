@@ -9,10 +9,13 @@ import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" ass
 import ResendMFADeviceResponseSchema from "./schemas/resend-mfa-device-response.json" assert { type: "json" }; // eslint-disable-line
 import ResendMFAPhoneResponseSchema from "./schemas/resend-mfa-phone-response.json" assert { type: "json" }; // eslint-disable-line
 import PCSResponseSchema from "./schemas/pcs-response.json" assert { type: "json" }; // eslint-disable-line
+import CloudKitQueryResponseSchema from "./schemas/cloud-kit-query-response.json" assert { type: "json" }; // eslint-disable-line
+import IndexingStateRecordDictionary from "./schemas/indexing-state-record-dictionary.json" assert { type: "json" }; // eslint-disable-line
 import {ResourceFile} from "./resource-types.js";
 import {iCPSError} from "../../app/error/error.js";
 import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
 import {COOKIE_KEYS, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
+import {CloudKitQueryResponse} from './cloud-kit-types.js';
 
 /**
  * Common configuration for the schema validator
@@ -70,6 +73,16 @@ export class Validator {
      * Validator for the iCloud photos setup response schema
      */
     _photosSetupResponseValidator: Ajv.ValidateFunction<PhotosSetupResponse> = new Ajv.default(AJV_CONF).compile<PhotosSetupResponse>(PhotosSetupResponseSchema);
+
+    /**
+     * Validator for the query response schema
+     */
+    _cloudKitQueryResponseValidator: Ajv.ValidateFunction<CloudKitQueryResponse> = new Ajv.default(AJV_CONF).compile<CloudKitQueryResponse>(CloudKitQueryResponseSchema);
+
+    /**
+     * Validator for the indexing state record dictionary schema
+     */
+    _indexingStateRecordDictionaryValidator: Ajv.ValidateFunction<IndexingStateRecordDictionary> = new Ajv.default(AJV_CONF).compile<IndexingStateRecordDictionary>(CloudKitQueryResponseSchema);
 
     /**
      * Generic validation function
@@ -220,6 +233,27 @@ export class Validator {
         return this.validate(
             this._photosSetupResponseValidator,
             VALIDATOR_ERR.PHOTOS_SETUP_RESPONSE,
+            data,
+        );
+    }
+
+    /**
+     * Validates the response from a photos query request
+     * @param data - The data to validate
+     * @returns A validated PhotosQueryResponse object
+     */
+    validateCloudKitQueryResponse(data: unknown): CloudKitQueryResponse {
+        return this.validate(
+            this._cloudKitQueryResponseValidator,
+            VALIDATOR_ERR.QUERY_RESPONSE,
+            data,
+        );
+    }
+
+    validateIndexingStateRecordDictionary(data: unknown): IndexingStateRecordDictionary {
+        return this.validate(
+            this._indexingStateRecordDictionaryValidator,
+            VALIDATOR_ERR.INDEXING_STATE_RECORD_DICTIONARY,
             data,
         );
     }

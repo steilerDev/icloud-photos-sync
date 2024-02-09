@@ -1,4 +1,5 @@
 {
+    "workbench.colorTheme": "Monokai Dimmed",
     "files.autoSave": "onFocusChange",
     "conventionalCommits.gitmoji": false,
     "conventionalCommits.promptBody": false,

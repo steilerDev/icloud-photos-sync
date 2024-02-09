@@ -14,7 +14,8 @@ type ErrorName =
     `ResourceError` |
     `ValidatorError` |
     `SyncError` |
-    `FileTypeReport`
+    `FileTypeReport` |
+    'CloudKitError'
 
 /**
  * Error structure for generating iCPSError objects
@@ -60,7 +61,8 @@ import * as QUERY_PARSER_ERR from './codes/icloud-query-parser.js';
 import * as SYNC_ERR from './codes/sync.js';
 import * as RESOURCES_ERR from './codes/resources.js';
 import * as VALIDATOR_ERR from './codes/validator.js';
-export {MFA_ERR, ARCHIVE_ERR, AUTH_ERR, ICLOUD_PHOTOS_ERR, LIBRARY_ERR, APP_ERR, QUERY_PARSER_ERR, SYNC_ERR, RESOURCES_ERR, VALIDATOR_ERR};
+import * as CLOUD_KIT_ERR from './codes/cloud-kit.js';
+export {MFA_ERR, ARCHIVE_ERR, AUTH_ERR, ICLOUD_PHOTOS_ERR, LIBRARY_ERR, APP_ERR, QUERY_PARSER_ERR, SYNC_ERR, RESOURCES_ERR, VALIDATOR_ERR, CLOUD_KIT_ERR};
 
 export const ERR_UNKNOWN: ErrorStruct = {
     name: `iCPSError`,
