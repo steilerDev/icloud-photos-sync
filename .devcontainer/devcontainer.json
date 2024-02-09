@@ -14,6 +14,9 @@
         "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
             "packages": "git,tmux,vim,wget,jq,tree,whois,db-util,rsync,zip,unzip,ca-certificates,curl,gnupg"
         },
+        "ghcr.io/devcontainers/features/github-cli:1": {
+            "version": "latest"
+        },
         "ghcr.io/devcontainers/features/node:1": {
             "version": "18.18.0"
         },
