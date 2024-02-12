@@ -15,8 +15,8 @@ jobs:
       - name: setup/checkout
         uses: actions/checkout@v4
       - name: setup/codeql
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: javascript
       - name: action/codeql
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
