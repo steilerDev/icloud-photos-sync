@@ -50,7 +50,7 @@ DOCKER_NAME=$(docker run -d \
   linuxserver/wireguard
 )
 
-SERVER_CONF="docker exec $DOCKER_NAME cat /config/wg0.conf"
+SERVER_CONF="docker exec $DOCKER_NAME cat /config/wg_confs/wg0.conf"
 CLIENT_CONF="docker exec $DOCKER_NAME cat /config/peer1/peer1.conf"
 until $CLIENT_CONF > /dev/null 2>&1 && $SERVER_CONF > /dev/null 2>&1; do
     echo -n '.'
