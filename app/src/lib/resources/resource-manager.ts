@@ -1,14 +1,14 @@
-import {iCPSError} from "../../app/error/error.js";
+import {readFileSync, writeFileSync} from "fs";
+import {jsonc} from "jsonc";
+import * as path from 'path';
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
+import {iCPSError} from "../../app/error/error.js";
+import {LogLevel} from "../../app/event/log.js";
 import {iCPSAppOptions} from "../../app/factory.js";
 import * as PHOTOS_LIBRARY from '../photos-library/constants.js';
-import * as path from 'path';
-import {readFileSync, writeFileSync} from "fs";
-import {FILE_ENCODING, HAR_FILE_NAME, LIBRARY_LOCK_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resource-types.js";
-import {LogLevel} from "../../app/event/log.js";
-import {Resources} from "./main.js";
 import {iCPSEventRuntimeWarning} from "./events-types.js";
-import {jsonc} from "jsonc";
+import {Resources} from "./main.js";
+import {FILE_ENCODING, HAR_FILE_NAME, LIBRARY_LOCK_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resource-types.js";
 
 /**
  * This class handles access to the .icloud-photos-sync resource file and handles currently applied configurations from the CLI and environment variables
@@ -357,5 +357,9 @@ export class ResourceManager {
      */
     get legacyLogin(): boolean {
         return this._resources.legacyLogin;
+    }
+
+    get healthCheckPingUrl(): string {
+        return this._resources.healthCheckPingUrl;
     }
 }
