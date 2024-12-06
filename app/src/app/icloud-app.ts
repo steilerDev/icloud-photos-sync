@@ -1,15 +1,15 @@
-import {iCloud} from "../lib/icloud/icloud.js";
-import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
+import {Cron} from "croner";
 import * as fs from 'fs';
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
-import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
-import {iCPSError} from "./error/error.js";
-import {Asset} from "../lib/photos-library/model/asset.js";
+import {iCloud} from "../lib/icloud/icloud.js";
 import {Album} from "../lib/photos-library/model/album.js";
-import {Cron} from "croner";
-import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
-import {Resources} from "../lib/resources/main.js";
+import {Asset} from "../lib/photos-library/model/asset.js";
+import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError} from "../lib/resources/events-types.js";
+import {Resources} from "../lib/resources/main.js";
+import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
+import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
+import {iCPSError} from "./error/error.js";
 
 /**
  * Abstract class returned by the factory function
@@ -56,10 +56,14 @@ export class DaemonApp extends iCPSApp {
     async performScheduledSync(syncApp: SyncApp = new SyncApp()) {
         try {
             Resources.emit(iCPSEventApp.SCHEDULED_START);
-            const [remoteAssets] = await syncApp.run() as [Asset[], Album[]];
+            const [remoteAssets, albums] = await syncApp.run() as [Asset[], Album[]];
 
             if (remoteAssets.length > 0) {
                 Resources.emit(iCPSEventApp.SCHEDULED_DONE, this.job?.nextRun());
+            }
+
+            if (Resources.manager().healthCheckPingUrl) {
+                Resources.network().post(Resources.manager().healthCheckPingUrl, `Successfully synced ${remoteAssets.length} assets and ${albums.length} albums`);
             }
         } catch (err) {
             Resources.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, new iCPSError(APP_ERR.DAEMON).addCause(err));
