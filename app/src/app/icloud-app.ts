@@ -56,14 +56,10 @@ export class DaemonApp extends iCPSApp {
     async performScheduledSync(syncApp: SyncApp = new SyncApp()) {
         try {
             Resources.emit(iCPSEventApp.SCHEDULED_START);
-            const [remoteAssets, albums] = await syncApp.run() as [Asset[], Album[]];
+            const [remoteAssets] = await syncApp.run() as [Asset[], Album[]];
 
             if (remoteAssets.length > 0) {
                 Resources.emit(iCPSEventApp.SCHEDULED_DONE, this.job?.nextRun());
-            }
-
-            if (Resources.manager().healthCheckPingUrl) {
-                Resources.network().post(Resources.manager().healthCheckPingUrl, `Successfully synced ${remoteAssets.length} assets and ${albums.length} albums`);
             }
         } catch (err) {
             Resources.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, new iCPSError(APP_ERR.DAEMON).addCause(err));
