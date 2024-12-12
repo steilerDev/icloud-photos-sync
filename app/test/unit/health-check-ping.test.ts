@@ -1,15 +1,14 @@
-import { beforeEach, describe, expect, test } from "@jest/globals";
-import { HealthCheckPingExecutor } from "../../src/app/event/health-check-ping-executor";
-import { LogInterface } from "../../src/app/event/log";
-import { iCPSEventRuntimeError, iCPSEventSyncEngine } from "../../src/lib/resources/events-types";
+import {beforeEach, describe, expect, test} from "@jest/globals";
+import {HealthCheckPingExecutor} from "../../src/app/event/health-check-ping-executor";
+import {LogInterface} from "../../src/app/event/log";
+import {iCPSEventRuntimeError, iCPSEventSyncEngine} from "../../src/lib/resources/events-types";
 import * as Config from '../_helpers/_config';
-import { MockedEventManager, MockedNetworkManager, MockedResourceManager, prepareResources } from "../_helpers/_general";
+import {MockedEventManager, MockedNetworkManager, MockedResourceManager, prepareResources} from "../_helpers/_general";
 
 const exampleHealthCheckUrl = `https://hc-ping.com/example-healthcheck-slug`;
 let mockedResourceManager: MockedResourceManager;
 let mockedNetworkManager: MockedNetworkManager;
 let mockedEventManager: MockedEventManager;
-let healthCheckPingExecutor: HealthCheckPingExecutor;
 
 beforeEach(() => {
     const instances = prepareResources()!;
@@ -21,14 +20,14 @@ beforeEach(() => {
     mockedResourceManager._resources.sharedZone = Config.sharedZone;
     mockedResourceManager._resources.healthCheckPingUrl = exampleHealthCheckUrl;
 
-    healthCheckPingExecutor = new HealthCheckPingExecutor({
+    const _executor = new HealthCheckPingExecutor({
         getLog: () => `Example log message`,
     } as LogInterface);
 
     mockedNetworkManager
-            .mock
-            .onPost(new RegExp(`${exampleHealthCheckUrl}/.*`))
-            .reply(200);
+        .mock
+        .onPost(new RegExp(`${exampleHealthCheckUrl}/.*`))
+        .reply(200);
 });
 
 describe(`Health Check Pings`, () => {
