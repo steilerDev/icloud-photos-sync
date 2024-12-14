@@ -1,9 +1,9 @@
-import {Command, Option, InvalidArgumentError, CommanderError} from "commander";
+import { Command, CommanderError, InvalidArgumentError, Option } from "commander";
 import Cron from "croner";
-import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
-import {Resources} from "../lib/resources/main.js";
-import {LogLevel} from "./event/log.js";
 import inquirer from "inquirer";
+import { Resources } from "../lib/resources/main.js";
+import { LogLevel } from "./event/log.js";
+import { ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp } from "./icloud-app.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -110,6 +110,7 @@ export type iCPSAppOptions = {
     username: string,
     password: string,
     trustToken?: string,
+    library: Resources.Types.ZoneOptions,
     dataDir: string,
     port: number,
     maxRetries: number,
@@ -156,6 +157,10 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
             .makeOptionMandatory(false))
         .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, the trust token is read from the \`.icloud-photos-sync\` resource file in data dir. If no stored trust token could be loaded, a new trust token will be acquired (requiring the input of an MFA code).`)
             .env(`TRUST_TOKEN`))
+        .addOption(new Option(`-z, --z <string>`, `Zone to sync.`)
+            .env(`ZONE`)
+            .choices(Object.values(Resources.Types.ZoneOptions))
+            .default(Resources.Types.ZoneOptions))
         .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library.`)
             .env(`DATA_DIR`)
             .default(`/opt/icloud-photos-library`))

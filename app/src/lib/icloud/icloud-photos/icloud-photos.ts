@@ -1,16 +1,16 @@
-import {AxiosRequestConfig} from 'axios';
-import * as QueryBuilder from './query-builder.js';
-import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
-import {Asset} from '../../photos-library/model/asset.js';
-import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
-import {iCPSError} from '../../../app/error/error.js';
-import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
-import {Resources} from '../../resources/main.js';
-import {ENDPOINTS} from '../../resources/network-types.js';
-import {SyncEngineHelper} from '../../sync-engine/helper.js';
-import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
+import { AxiosRequestConfig } from 'axios';
 import fs from 'fs/promises';
-import {jsonc} from 'jsonc';
+import { jsonc } from 'jsonc';
+import { ICLOUD_PHOTOS_ERR } from '../../../app/error/error-codes.js';
+import { iCPSError } from '../../../app/error/error.js';
+import { AlbumAssets, AlbumType } from '../../photos-library/model/album.js';
+import { Asset } from '../../photos-library/model/asset.js';
+import { iCPSEventPhotos, iCPSEventRuntimeWarning } from '../../resources/events-types.js';
+import { Resources } from '../../resources/main.js';
+import { ENDPOINTS } from '../../resources/network-types.js';
+import { SyncEngineHelper } from '../../sync-engine/helper.js';
+import * as QueryBuilder from './query-builder.js';
+import { CPLAlbum, CPLAsset, CPLMaster } from './query-parser.js';
 
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now
@@ -491,25 +491,9 @@ export class iCloudPhotos {
     async fetchAllCPLAssetsMasters(parentId?: string): Promise<[CPLAsset[], CPLMaster[]]> {
         Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
 
-        let expectedNumberOfRecords = -1;
-        let allRecords: any[] = [];
         const cplMasters: CPLMaster[] = [];
         const cplAssets: CPLAsset[] = [];
-        try {
-            [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, parentId);
-
-            // Merging assets of shared library, if available
-            if (Resources.manager().sharedZoneAvailable && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
-                Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
-                const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared);
-                allRecords = [...allRecords, ...sharedRecords];
-                expectedNumberOfRecords += sharedExpectedCount;
-            }
-        } catch (err) {
-            throw new iCPSError(ICLOUD_PHOTOS_ERR.FETCH_RECORDS)
-                .addMessage(`album ${parentId === undefined ? `'All photos'` : parentId}`)
-                .addCause(err);
-        }
+        const { allRecords, expectedNumberOfRecords } = await this.fetchPictureRecords(parentId);
 
         // Post-processing response
         const seen = new Set<string>();
@@ -555,6 +539,50 @@ export class iCloudPhotos {
         }
 
         return [cplAssets, cplMasters];
+    }
+
+    private async fetchPictureRecords(parentId: string) {
+        let allRecords = [];
+        let expectedNumberOfRecords = 0;
+
+        try {
+            if (this.shouldSync(QueryBuilder.Zones.Primary)) {
+                [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, parentId);
+            }
+
+            // Merging assets of shared library, if configured and available
+            if (this.shouldSync(QueryBuilder.Zones.Shared)
+                && Resources.manager().sharedZoneAvailable
+                && typeof parentId === `undefined` // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
+            ) {
+                Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
+                const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared);
+                allRecords = [...allRecords, ...sharedRecords];
+                expectedNumberOfRecords += sharedExpectedCount;
+            }
+        } catch (err) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.FETCH_RECORDS)
+                .addMessage(`album ${parentId === undefined ? `'All photos'` : parentId}`)
+                .addCause(err);
+        }
+
+        return { allRecords, expectedNumberOfRecords };
+    }
+
+    shouldSync(zone: QueryBuilder.Zones): Boolean {
+        const configuredZone = Resources.manager().zone;
+
+        if (configuredZone === Resources.Types.ZoneOptions.Both) {
+            return true;
+        }
+
+        if (zone === QueryBuilder.Zones.Primary) {
+            return configuredZone === Resources.Types.ZoneOptions.Primary;
+        }
+
+        if (zone === QueryBuilder.Zones.Shared) {
+            return configuredZone === Resources.Types.ZoneOptions.Shared;
+        }
     }
 
     /**

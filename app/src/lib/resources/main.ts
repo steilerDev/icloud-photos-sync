@@ -1,12 +1,12 @@
 import PackageData from '../../../package.json' assert { type: 'json' }; // eslint-disable-line
-import {RESOURCES_ERR} from "../../app/error/error-codes.js";
-import {iCPSError} from "../../app/error/error.js";
-import {iCPSAppOptions} from "../../app/factory.js";
-import {EventManager, ListenerFunction} from "./event-manager.js";
-import {iCPSEvent, iCPSEventLog} from "./events-types.js";
-import {NetworkManager} from "./network-manager.js";
-import {ResourceManager} from "./resource-manager.js";
-import {Validator} from "./validator.js";
+import { RESOURCES_ERR } from "../../app/error/error-codes.js";
+import { iCPSError } from "../../app/error/error.js";
+import { iCPSAppOptions } from "../../app/factory.js";
+import { EventManager, ListenerFunction } from "./event-manager.js";
+import { iCPSEvent, iCPSEventLog } from "./events-types.js";
+import { NetworkManager } from "./network-manager.js";
+import { ResourceManager } from "./resource-manager.js";
+import { Validator } from "./validator.js";
 
 /**
  * This namespace handles the static access to the singleton functions of the ResourceManager, NetworkManager, Validator and EventManager
@@ -299,6 +299,24 @@ export namespace Resources {
          * Will use icloud.com.cn
          */
         CHINA = `china`,
+       }
+
+       /**
+        * Possible libraries to sync
+        */
+       export enum ZoneOptions {
+         /**
+          * Only sync the personal library
+          */
+         Primary = `personal`,
+         /**
+          * Only sync the shared library
+          */
+         Shared = `shared`,
+         /**
+          * Sync both libraries
+          */
+         Both = `both`
        }
    }
 }
