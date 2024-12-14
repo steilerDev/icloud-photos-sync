@@ -86,4 +86,5 @@
     "githubIssues.useBranchForIssues": "off",
     "githubIssues.workingIssueFormatScm": "fix: ${issueTitle} \n\nFixes ${issueNumberLabel}",
     "liveServer.settings.donotShowInfoMsg": true,
+    "eslint.options": { "overrideConfigFile": "./app/eslint.config.json" }
 }
