@@ -1,16 +1,17 @@
 import {AxiosRequestConfig} from 'axios';
-import * as QueryBuilder from './query-builder.js';
+import fs from 'fs/promises';
+import {jsonc} from 'jsonc';
+import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
+import {iCPSError} from '../../../app/error/error.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
-import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
-import {iCPSError} from '../../../app/error/error.js';
-import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
+import {ZoneReference} from '../../photos-library/model/zoneReference.js';
+import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
 import {Resources} from '../../resources/main.js';
 import {ENDPOINTS} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
-import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
-import fs from 'fs/promises';
-import {jsonc} from 'jsonc';
+import * as QueryBuilder from './query-builder.js';
+import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now
@@ -66,9 +67,10 @@ export class iCloudPhotos {
         try {
             Resources.logger(this).debug(`Getting iCloud Photos account information`);
 
-            const response = await Resources.network().post(ENDPOINTS.PHOTOS.PATH.ZONES, {});
-            const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
-            Resources.network().applyPhotosSetupResponse(validatedResponse);
+            const privateZones = await this.getPrivateZones();
+            const sharedZones = await this.getSharedZones();
+
+            Resources.network().applyZones(privateZones.concat(sharedZones));
 
             Resources.logger(this).debug(`Successfully gathered iCloud Photos account information`);
             Resources.emit(iCPSEventPhotos.SETUP_COMPLETED);
@@ -76,6 +78,24 @@ export class iCloudPhotos {
             Resources.emit(iCPSEventPhotos.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.SETUP_ERROR).addCause(err));
         } 
         return this.ready;
+    }
+
+    private async getPrivateZones() {
+        Resources.logger(this).debug(`Getting zones in private area`);
+        const response = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS.PRIVATE + ENDPOINTS.PHOTOS.PATH.ZONES, {});
+        const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
+        return validatedResponse.data.zones.map(
+            zone => ({...zone, area: `private`} as ZoneReference),
+        );
+    }
+
+    private async getSharedZones() {
+        Resources.logger(this).debug(`Getting zones in shared area`);
+        const response = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS.SHARED + ENDPOINTS.PHOTOS.PATH.ZONES, {});
+        const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
+        return validatedResponse.data.zones.map(
+            zone => ({...zone, area: `shared`} as ZoneReference),
+        );
     }
 
     /**
@@ -87,9 +107,13 @@ export class iCloudPhotos {
     async checkingIndexingStatus() {
         Resources.logger(this).debug(`Checking Indexing Status of iCloud Photos Account`);
         try {
-            await this.checkIndexingStatusForZone(QueryBuilder.Zones.Primary);
+            await this.checkIndexingStatusForZone(QueryBuilder.Areas.Private, QueryBuilder.Zones.Primary);
             if (Resources.manager().sharedZoneAvailable) {
-                await this.checkIndexingStatusForZone(QueryBuilder.Zones.Shared);
+                const {sharedZone} = Resources.manager();
+                await this.checkIndexingStatusForZone(
+                    sharedZone.area === `private` ? QueryBuilder.Areas.Private : QueryBuilder.Areas.Shared,
+                    QueryBuilder.Zones.Shared,
+                );
             }
 
             Resources.emit(iCPSEventPhotos.READY);
@@ -104,8 +128,8 @@ export class iCloudPhotos {
      * @returns If indexing is successful
      * @throws If non-completed indexing state is found
      */
-    async checkIndexingStatusForZone(zone: QueryBuilder.Zones) {
-        const result = await this.performQuery(zone, `CheckIndexingState`);
+    async checkIndexingStatusForZone(area: QueryBuilder.Areas, zone: QueryBuilder.Zones) {
+        const result = await this.performQuery(area, zone, `CheckIndexingState`);
 
         const indexingState = result[0]?.fields?.state?.value as string;
 
@@ -149,7 +173,7 @@ export class iCloudPhotos {
      * @returns An array of records as returned by the backend
      * @throws An iCPSError if the query fails
      */
-    async performQuery(zone: QueryBuilder.Zones, recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
+    async performQuery(area: QueryBuilder.Areas, zone: QueryBuilder.Zones, recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
         const config: AxiosRequestConfig = {
             params: {
                 remapEnums: `True`,
@@ -175,7 +199,8 @@ export class iCloudPhotos {
             data.resultsLimit = resultsLimit;
         }
 
-        const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config);
+        const areaPath = this.getAreaPathForArea(area);
+        const queryResponse = await Resources.network().post(areaPath + ENDPOINTS.PHOTOS.PATH.QUERY, data, config);
 
         const fetchedRecords = queryResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
@@ -186,6 +211,10 @@ export class iCloudPhotos {
         return fetchedRecords;
     }
 
+    private getAreaPathForArea(area: QueryBuilder.Areas) {
+        return ENDPOINTS.PHOTOS.AREAS[area === QueryBuilder.Areas.Private ? `PRIVATE` : `SHARED`];
+    }
+
     /**
      * Performs a single operation with the iCloud Backend
      * @param zone - Defines the zone to be used
@@ -194,7 +223,7 @@ export class iCloudPhotos {
      * @param fields - The fields to be altered
      * @returns An array of records that have been altered
      */
-    async performOperation(zone: QueryBuilder.Zones, operationType: string, fields: any, recordNames: string[]): Promise<any[]> {
+    async performOperation(area: QueryBuilder.Areas, zone: QueryBuilder.Zones, operationType: string, fields: any, recordNames: string[]): Promise<any[]> {
         const config: AxiosRequestConfig = {
             params: {
                 remapEnums: `True`,
@@ -217,7 +246,8 @@ export class iCloudPhotos {
             },
         }));
 
-        const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config);
+        const areaPath = this.getAreaPathForArea(area);
+        const operationResponse = await Resources.network().post(areaPath + ENDPOINTS.PHOTOS.PATH.MODIFY, data, config);
         const fetchedRecords = operationResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)
@@ -273,8 +303,13 @@ export class iCloudPhotos {
      */
     buildAlbumRecordsRequest(folderId?: string): Promise<any[]> {
         return folderId === undefined
-            ? this.performQuery(QueryBuilder.Zones.Primary, QueryBuilder.RECORD_TYPES.ALBUM_RECORDS)
+            ? this.performQuery(
+                QueryBuilder.Areas.Private,
+                QueryBuilder.Zones.Primary,
+                QueryBuilder.RECORD_TYPES.ALBUM_RECORDS,
+            )
             : this.performQuery(
+                QueryBuilder.Areas.Private,
                 QueryBuilder.Zones.Primary,
                 QueryBuilder.RECORD_TYPES.ALBUM_RECORDS,
                 [QueryBuilder.getParentFilterForParentId(folderId)],
@@ -354,10 +389,11 @@ export class iCloudPhotos {
      * @returns The number of assets within the given album
      * @throws An iCPSError in case the count cannot be obtained
      */
-    async getPictureRecordsCountForZone(zone: QueryBuilder.Zones, albumId?: string): Promise<number> {
+    async getPictureRecordsCountForZone(area: QueryBuilder.Areas, zone: QueryBuilder.Zones, albumId?: string): Promise<number> {
         try {
             const indexCountFilter = QueryBuilder.getIndexCountFilter(albumId);
             const countData = await this.performQuery(
+                area,
                 zone,
                 QueryBuilder.RECORD_TYPES.INDEX_COUNT,
                 [indexCountFilter],
@@ -378,7 +414,7 @@ export class iCloudPhotos {
      * @param albumId - The record name of the album, if undefined all pictures will be returned
      * @returns An array of Promises, that will resolve to arrays of picture records and the amount of pictures expected from the requests.
      */
-    buildPictureRecordsRequestsForZone(zone: QueryBuilder.Zones, expectedNumberOfRecords: number, albumId?: string): Promise<any[]>[] {
+    buildPictureRecordsRequestsForZone(area: QueryBuilder.Areas, zone: QueryBuilder.Zones, expectedNumberOfRecords: number, albumId?: string): Promise<any[]>[] {
         // Calculating number of concurrent requests, in order to execute in parallel
         const numberOfRequests = albumId === undefined
             ? Math.ceil((expectedNumberOfRecords * 2) / MAX_RECORDS_LIMIT) // On all pictures two records per photo are returned (CPLMaster & CPLAsset) which are counted against max
@@ -399,6 +435,7 @@ export class iCloudPhotos {
             // Different queries for 'all pictures' than album pictures
             if (albumId === undefined) {
                 pictureRecordsRequests.push(this.performQuery(
+                    area,
                     zone,
                     QueryBuilder.RECORD_TYPES.ALL_PHOTOS,
                     [startRankFilter, directionFilter],
@@ -408,6 +445,7 @@ export class iCloudPhotos {
             } else {
                 const parentFilter = QueryBuilder.getParentFilterForParentId(albumId);
                 pictureRecordsRequests.push(this.performQuery(
+                    area,
                     zone,
                     QueryBuilder.RECORD_TYPES.PHOTO_RECORDS,
                     [startRankFilter, directionFilter, parentFilter],
@@ -463,12 +501,12 @@ export class iCloudPhotos {
      * @param parentId - The record name of the album, if undefined all pictures will be returned
      * @returns A tuple containing the plain records as returned by the backend and the expected number of assets within the album
      */
-    async fetchAllPictureRecordsForZone(zone: QueryBuilder.Zones, parentId?: string): Promise<[any[], number]> {
+    async fetchAllPictureRecordsForZone(area: QueryBuilder.Areas, zone: QueryBuilder.Zones, parentId?: string): Promise<[any[], number]> {
         // Getting number of items in folder
-        const expectedNumberOfRecords = await this.getPictureRecordsCountForZone(zone, parentId);
+        const expectedNumberOfRecords = await this.getPictureRecordsCountForZone(area, zone, parentId);
 
         // Creating requests, based on number of expected items
-        const pictureRecordsRequests = this.buildPictureRecordsRequestsForZone(zone, expectedNumberOfRecords, parentId);
+        const pictureRecordsRequests = this.buildPictureRecordsRequestsForZone(area, zone, expectedNumberOfRecords, parentId);
 
         // Merging arrays of arrays and waiting for all promises to settle
         const allRecords: any[] = [];
@@ -495,12 +533,13 @@ export class iCloudPhotos {
         const cplMasters: CPLMaster[] = [];
         const cplAssets: CPLAsset[] = [];
         try {
-            [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, parentId);
+            [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Areas.Private, QueryBuilder.Zones.Primary, parentId);
 
             // Merging assets of shared library, if available
             if (Resources.manager().sharedZoneAvailable && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
                 Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
-                const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared);
+                const area = Resources.manager().sharedZone.area === `private` ? QueryBuilder.Areas.Private : QueryBuilder.Areas.Shared;
+                const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(area, QueryBuilder.Zones.Shared);
                 allRecords = [...allRecords, ...sharedRecords];
                 expectedNumberOfRecords += sharedExpectedCount;
             }
@@ -577,6 +616,6 @@ export class iCloudPhotos {
      */
     async deleteAssets(recordNames: string[]) {
         Resources.logger(this).debug(`Deleting ${recordNames.length} assets: ${jsonc.stringify(recordNames)}`);
-        await this.performOperation(QueryBuilder.Zones.Primary, `update`, QueryBuilder.getIsDeletedField(), recordNames);
+        await this.performOperation(QueryBuilder.Areas.Private, QueryBuilder.Zones.Primary, `update`, QueryBuilder.getIsDeletedField(), recordNames);
     }
 }

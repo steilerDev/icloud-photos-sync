@@ -103,7 +103,11 @@ export const ENDPOINTS = {
         /**
          * Base URL for photos requests is dynamic - the path is static
          */
-        BASE_PATH: `/database/1/com.apple.photos.cloud/production/private`,
+        BASE_PATH: `/database/1/com.apple.photos.cloud/production`,
+        AREAS: {
+            PRIVATE: `/private`,
+            SHARED: `/shared`,
+        },
         PATH: {
             QUERY: `/records/query`,
             MODIFY: `/records/modify`,
@@ -384,7 +388,7 @@ export type PhotosSetupResponse = {
 /**
  * Response zone object from photos setup response
  */
-type PhotosSetupResponseZone = {
+export type PhotosSetupResponseZone = {
     zoneID: {
         /**
          * @minLength 1

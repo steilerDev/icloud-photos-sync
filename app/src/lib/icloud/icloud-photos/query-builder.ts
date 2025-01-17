@@ -56,6 +56,11 @@ export const QUERY_KEYS = [
     DESIRED_KEYS.ADJUSTMENT_TYPE,
 ];
 
+export enum Areas {
+    Private = `private`,
+    Shared = `shared`
+}
+
 /**
  * Aliases for the different available libraries
  */

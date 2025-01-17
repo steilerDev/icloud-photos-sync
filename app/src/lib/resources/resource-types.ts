@@ -98,4 +98,8 @@ export type PhotosAccountZone = {
      * The owner name, usually _<UUID>
      */
     ownerRecordName: string,
+    /**
+     * The zone area, either private or shared
+     */
+    area: `private` | `shared`
 }

@@ -1,16 +1,16 @@
-import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
+import { AxiosHarTracker } from "@steilerdev/axios-har-tracker";
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { createWriteStream } from "fs";
 import fs from "fs/promises";
-import {createWriteStream} from "fs";
-import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, ENDPOINTS, PhotosSetupResponse, USER_AGENT, CLIENT_ID, CLIENT_INFO} from "./network-types.js";
-import {Cookie} from "tough-cookie";
-import {iCPSError} from "../../app/error/error.js";
-import {RESOURCES_ERR} from "../../app/error/error-codes.js";
-import {AxiosHarTracker} from "axios-har-tracker";
+import { jsonc } from "jsonc";
+import { pEvent } from "p-event";
 import PQueue from "p-queue";
-import {Resources} from "./main.js";
-import {iCPSAppOptions} from "../../app/factory.js";
-import {pEvent} from "p-event";
-import {jsonc} from "jsonc";
+import { Cookie } from "tough-cookie";
+import { RESOURCES_ERR } from "../../app/error/error-codes.js";
+import { iCPSAppOptions } from "../../app/factory.js";
+import { ZoneReference } from "../photos-library/model/zoneReference.js";
+import { Resources } from "./main.js";
+import { CLIENT_ID, CLIENT_INFO, COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, SetupResponse, SigninResponse, TrustResponse, USER_AGENT } from "./network-types.js";
 
 /**
  * Object holding all necessary information for a specific header value, that needs to be reused across multiple requests
@@ -414,23 +414,29 @@ export class NetworkManager {
 
     /**
      * Applies configurations from the response received after the photos setup request. This includes information about the available zones.
-     * @param photosSetupResponse - The response received from the server
+     * @param zones - The zones received from the server
      */
-    applyPhotosSetupResponse(photosSetupResponse: PhotosSetupResponse) {
-        Resources.logger(this).info(`Found ${photosSetupResponse.data.zones.length} available zones: ${photosSetupResponse.data.zones.map(zone => zone.zoneID.zoneName).join(`, `)}`);
+    applyZones(zones: ZoneReference[]) {
+        Resources.logger(this).info(`Found ${zones.length} available zones: ${zones.map(zone => zone.zoneID.zoneName).join(`, `)}`);
 
-        const primaryZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName === `PrimarySync`);
+        const primaryZoneData = zones.find(zone => zone.zoneID.zoneName === `PrimarySync`);
         if (!primaryZoneData || (primaryZoneData.deleted !== undefined && primaryZoneData.deleted === true)) {
             throw new iCPSError(RESOURCES_ERR.NO_PRIMARY_ZONE)
-                .addContext(`zones`, photosSetupResponse.data.zones);
+                .addContext(`zones`, zones);
         }
 
-        Resources.manager().primaryZone = primaryZoneData.zoneID;
+        Resources.manager().primaryZone = {
+            ...primaryZoneData.zoneID,
+            area: `private`,
+        };
 
-        const sharedZoneData = photosSetupResponse.data.zones.find(zone => zone.zoneID.zoneName.startsWith(`SharedSync-`));
+        const sharedZoneData = zones.find(zone => zone.zoneID.zoneName.startsWith(`SharedSync-`));
         if (sharedZoneData && (sharedZoneData.deleted === undefined || sharedZoneData.deleted === false)) {
             Resources.logger(this).debug(`Found shared zone ${sharedZoneData.zoneID.zoneName}`);
-            Resources.manager().sharedZone = sharedZoneData.zoneID;
+            Resources.manager().sharedZone = {
+                ...sharedZoneData.zoneID,
+                area: sharedZoneData.area,
+            };
         }
     }
 
