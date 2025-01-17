@@ -1,5 +1,7 @@
-import {PhotosSetupResponseZone} from "../../resources/network-types.js";
+import { PhotosSetupResponseZone } from "../../resources/network-types.js";
 
 export type ZoneReference = PhotosSetupResponseZone & {
-    area: `private` | `shared`;
+    zoneID: {
+        area: 'private' | 'shared',
+    }
 }

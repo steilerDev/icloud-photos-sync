@@ -85,7 +85,11 @@ export class iCloudPhotos {
         const response = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS.PRIVATE + ENDPOINTS.PHOTOS.PATH.ZONES, {});
         const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
         return validatedResponse.data.zones.map(
-            zone => ({...zone, area: `private`} as ZoneReference),
+            zone => {
+                const zoneRef = zone as ZoneReference
+                zoneRef.zoneID.area =`private`
+                return zoneRef
+            },
         );
     }
 
@@ -94,7 +98,11 @@ export class iCloudPhotos {
         const response = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS.SHARED + ENDPOINTS.PHOTOS.PATH.ZONES, {});
         const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
         return validatedResponse.data.zones.map(
-            zone => ({...zone, area: `shared`} as ZoneReference),
+            zone => {
+                const zoneRef = zone as ZoneReference
+                zoneRef.zoneID.area =`shared`
+                return zoneRef
+            }
         );
     }
 
