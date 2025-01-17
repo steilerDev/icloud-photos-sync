@@ -1,13 +1,13 @@
-import {describe, test, expect, jest, beforeEach} from '@jest/globals';
-import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
-import * as Config from '../_helpers/_config';
-import {MockedEventManager, MockedNetworkManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
-import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
+import {beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {iCPSError} from '../../src/app/error/error';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
+import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 import {iCPSEventPhotos} from '../../src/lib/resources/events-types';
 import {Validator} from '../../src/lib/resources/validator';
+import * as Config from '../_helpers/_config';
+import {MockedEventManager, MockedNetworkManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
+import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedNetworkManager: MockedNetworkManager;
@@ -40,7 +40,7 @@ describe(`Setup iCloud Photos`, () => {
         const setupCompletedEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.SETUP_COMPLETED);
 
         mockedValidator.validatePhotosSetupResponse = jest.fn<typeof mockedValidator.validatePhotosSetupResponse>();
-        mockedNetworkManager.applyPhotosSetupResponse = jest.fn<typeof mockedNetworkManager.applyPhotosSetupResponse>();
+        mockedNetworkManager.applyZones = jest.fn<typeof mockedNetworkManager.applyZones>();
 
         mockedNetworkManager.mock
             .onPost(setupURL, {})
@@ -49,7 +49,7 @@ describe(`Setup iCloud Photos`, () => {
         await photos.setup();
 
         expect(mockedValidator.validatePhotosSetupResponse).toHaveBeenCalledTimes(1);
-        expect(mockedNetworkManager.applyPhotosSetupResponse).toHaveBeenCalledTimes(1);
+        expect(mockedNetworkManager.applyZones).toHaveBeenCalledTimes(1);
         expect((mockedNetworkManager.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
 
         expect(setupCompletedEvent).toHaveBeenCalledTimes(1);

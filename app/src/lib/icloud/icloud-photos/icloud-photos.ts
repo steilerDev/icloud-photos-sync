@@ -1,17 +1,17 @@
-import { AxiosRequestConfig } from 'axios';
+import {AxiosRequestConfig} from 'axios';
 import fs from 'fs/promises';
-import { jsonc } from 'jsonc';
-import { ICLOUD_PHOTOS_ERR } from '../../../app/error/error-codes.js';
-import { iCPSError } from '../../../app/error/error.js';
-import { AlbumAssets, AlbumType } from '../../photos-library/model/album.js';
-import { Asset } from '../../photos-library/model/asset.js';
-import { ZoneReference } from '../../photos-library/model/zoneReference.js';
-import { iCPSEventPhotos, iCPSEventRuntimeWarning } from '../../resources/events-types.js';
-import { Resources } from '../../resources/main.js';
-import { ENDPOINTS } from '../../resources/network-types.js';
-import { SyncEngineHelper } from '../../sync-engine/helper.js';
+import {jsonc} from 'jsonc';
+import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
+import {iCPSError} from '../../../app/error/error.js';
+import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
+import {Asset} from '../../photos-library/model/asset.js';
+import {ZoneReference} from '../../photos-library/model/zoneReference.js';
+import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
+import {Resources} from '../../resources/main.js';
+import {ENDPOINTS} from '../../resources/network-types.js';
+import {SyncEngineHelper} from '../../sync-engine/helper.js';
 import * as QueryBuilder from './query-builder.js';
-import { CPLAlbum, CPLAsset, CPLMaster } from './query-parser.js';
+import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now
@@ -86,9 +86,9 @@ export class iCloudPhotos {
         const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
         return validatedResponse.data.zones.map(
             zone => {
-                const zoneRef = zone as ZoneReference
-                zoneRef.zoneID.area =`private`
-                return zoneRef
+                const zoneRef = zone as ZoneReference;
+                zoneRef.zoneID.area = `private`;
+                return zoneRef;
             },
         );
     }
@@ -99,10 +99,10 @@ export class iCloudPhotos {
         const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
         return validatedResponse.data.zones.map(
             zone => {
-                const zoneRef = zone as ZoneReference
-                zoneRef.zoneID.area =`shared`
-                return zoneRef
-            }
+                const zoneRef = zone as ZoneReference;
+                zoneRef.zoneID.area = `shared`;
+                return zoneRef;
+            },
         );
     }
 
