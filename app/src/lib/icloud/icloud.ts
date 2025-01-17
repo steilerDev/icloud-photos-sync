@@ -1,15 +1,15 @@
 import {AxiosError, AxiosRequestConfig} from 'axios';
-import {jsonc} from 'jsonc';
-import pTimeout from 'p-timeout';
-import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.js';
+import {MFAServer, MFA_TIMEOUT_VALUE} from './mfa/mfa-server.js';
+import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
+import {MFAMethod} from './mfa/mfa-method.js';
 import {iCPSError} from '../../app/error/error.js';
-import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
+import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
 import {Resources} from '../resources/main.js';
 import {COOKIE_KEYS, ENDPOINTS} from '../resources/network-types.js';
-import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
+import pTimeout from 'p-timeout';
+import {jsonc} from 'jsonc';
 import {iCloudCrypto} from './icloud.crypto.js';
-import {MFAMethod} from './mfa/mfa-method.js';
-import {MFAServer, MFA_TIMEOUT_VALUE} from './mfa/mfa-server.js';
 
 /**
  * This class holds the iCloud connection
