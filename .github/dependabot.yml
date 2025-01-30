@@ -45,7 +45,7 @@ updates:
         - "@types/typescript*"
         - 'eslint*'
         - "typescript*"
-        - "ts-node*"
+        - "tsx*"
         - "typedoc*"
       tough-cookie:
         patterns:

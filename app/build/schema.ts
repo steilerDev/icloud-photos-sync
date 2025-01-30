@@ -1,8 +1,8 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env tsx
 // This script generates the json schema used for validation of externally provided date
-import * as tsj from "ts-json-schema-generator";
-import path from "path";
 import fs from "fs/promises";
+import path from "path";
+import * as tsj from "ts-json-schema-generator";
 
 const tsConfigPath = `tsconfig.json`;
 const targetDir = `src/lib/resources/schemas/`;

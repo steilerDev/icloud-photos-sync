@@ -1,11 +1,11 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env tsx
 // This script generates the CLI reference documentation from the CLI options - if doc root path is provided, it will write the output to the provided path, otherwise it will print to stdout
 
 import {Argument, Help} from 'commander';
-import {argParser} from '../src/app/factory.js';
-import {Liquid} from 'liquidjs';
 import fs from 'fs/promises';
+import {Liquid} from 'liquidjs';
 import path from 'path';
+import {argParser} from '../src/app/factory.js';
 
 const outputPath = process.argv.pop() + `/user-guides/cli.md`;
 
