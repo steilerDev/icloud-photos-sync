@@ -231,7 +231,7 @@ export class iCloudPhotos {
     /**
      * Fetches all album records, traversing the directory tree
      * @remarks Since the shared library currently does not support it's own directory tree / WebUI does not show pictures in folders we only do this for the primary zone
-     * @remarks Since we are requesting them based on parent folder and are starting from the root folder the results array should yield: If folder A is closer to the root than folder B, the index of A is smaller than the index of B
+     *          Since we are requesting them based on parent folder and are starting from the root folder the results array should yield: If folder A is closer to the root than folder B, the index of A is smaller than the index of B
      * @returns An array of all album records in the account
      * @throws An iCPSError if fetching fails
      */
@@ -269,7 +269,7 @@ export class iCloudPhotos {
     /**
      * Builds the request to receive all albums and folders for the given folder from the iCloud backend
      * @remarks Since the shared library currently does not support it's own directory tree / WebUI does not show pictures in folders we only do this for the primary zone
-     * @param albumId - The record name of the folder. If parent is undefined, all albums without parent will be returned.
+     * @param folderId- The record name of the folder. If parent is undefined, all albums without parent will be returned.
      * @returns A promise, that once resolved, contains all subfolders for the provided folder
      */
     buildAlbumRecordsRequest(folderId?: string): Promise<any[]> {

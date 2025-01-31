@@ -29,7 +29,6 @@
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
     "test:unit": "npm run test test/unit/",
     "test:api": "npm run test test/api/",
-    "doc:typedoc": "npx typedoc --plugin typedoc-plugin-markdown --plugin typedoc-github-wiki-theme",
     "doc:cli": "NODE_NO_WARNINGS=1 npx tsx build/cli-reference.ts",
     "execute": "NODE_NO_WARNINGS=1 node build/out/src/main.js",
     "execute:debug": "NODE_NO_WARNINGS=1 node --inspect=0.0.0.0:9229 build/out/src/main.js daemon"
@@ -81,9 +80,6 @@
     "ts-jest": "^29.1.1",
     "ts-json-schema-generator": "^1.2.0",
     "tsx": "^4.19.2",
-    "typedoc": "^0.27.6",
-    "typedoc-github-wiki-theme": "^1.1.0",
-    "typedoc-plugin-markdown": "^3.17.1",
     "typescript": "^5.7.3"
   },
   "dependencies": {

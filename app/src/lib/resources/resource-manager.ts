@@ -339,7 +339,7 @@ export class ResourceManager {
 
     /**
      * Sets the shared zone of the account
-     * @param primaryZone - The shared zone to set
+     * @param sharedZone - The shared zone to set
      */
     set sharedZone(sharedZone: PhotosAccountZone) {
         this._resources.sharedZone = sharedZone;

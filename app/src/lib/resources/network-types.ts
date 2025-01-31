@@ -290,7 +290,7 @@ export type TrustResponse = {
 
 /**
  * The expected response format for the account setup request
- * @see {@link ENDPOINTS.SETUP.PATH.ACCOUNT}
+ * @see {@link ENDPOINTS.SETUP.PATH.ACCOUNT_LOGIN}
  */
 export type SetupResponse = {
     headers: {
