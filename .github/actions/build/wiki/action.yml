@@ -21,7 +21,7 @@ runs:
         outDir=$(cat ${{ inputs.app-path }}/typedoc.json | jq -r .out)
         echo "artifact-path=${{ inputs.app-path }}/$outDir" >> $GITHUB_OUTPUT
     - name: upload-artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ steps.package-artifact.outputs.artifact-path }}

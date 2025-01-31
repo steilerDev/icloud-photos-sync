@@ -18,7 +18,7 @@ runs:
         release-config-dir: ${{ github.action_path }}
         release-dir: ${{ inputs.release-dir }}
     - id: download-app-artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ inputs.release-dir }}/app

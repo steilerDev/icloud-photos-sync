@@ -29,7 +29,7 @@ runs:
           jq '.plugins[0][1].name.tag = "${{ steps.get-docker-metadata.outputs.image-tag }}"' |\
           sponge ${{ inputs.release-dir }}/.releaserc.json
     - id: download-docker-artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: docker-artifact
