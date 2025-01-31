@@ -151,7 +151,7 @@ abstract class iCloudApp extends iCPSApp {
         }
 
         // Create lock file
-        await fs.promises.writeFile(lockFilePath, process.pid.toString(), {encoding: `utf-8`});
+        await fs.promises.writeFile(lockFilePath, process.pid.toString(), {encoding: `utf-8`, flush: true});
     }
 
     /**

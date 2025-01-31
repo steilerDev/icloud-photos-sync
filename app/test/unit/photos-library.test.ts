@@ -278,7 +278,7 @@ describe(`Load state`, () => {
 
             expect(Object.keys(albums).length).toEqual(0);
 
-            expect(() => fs.lstatSync(path.join(Config.defaultConfig.dataDir, orphanedAlbumName))).toThrow(/^ENOENT: no such file or directory, lstat '\/opt\/icloud-photos-library\/Orphan'$/);
+            expect(() => fs.lstatSync(path.join(Config.defaultConfig.dataDir, orphanedAlbumName))).toThrow(/^ENOENT, no such file or directory '\/opt\/icloud-photos-library\/Orphan'$/);
         });
 
         test(`Unexpected loading error`, async () => {
@@ -295,7 +295,7 @@ describe(`Load state`, () => {
             });
 
             const library = new PhotosLibrary();
-            library.readFolderFromDisk = jest.fn(() => Promise.resolve([{}, ``] as [Album, string]))
+            library.readFolderFromDisk = jest.fn<() => Promise<never>>()
                 .mockRejectedValue(new Error(`Nondescriptive Error`));
             await expect(library.loadAlbums()).rejects.toThrow(/^Unknown error while processing symlink$/);
         });
