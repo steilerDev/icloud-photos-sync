@@ -67,7 +67,7 @@ export class ResourceManager {
             const resourceFileData = jsonc.stringify(formattedResourceFile, null, 4);
             Resources.logger(this).debug(`Writing resource file to ${this.resourceFilePath}`);
 
-            writeFileSync(this.resourceFilePath, resourceFileData, {encoding: FILE_ENCODING});
+            writeFileSync(this.resourceFilePath, resourceFileData, {encoding: FILE_ENCODING, flush: true});
         } catch (err) {
             Resources.emit(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR,
                 new iCPSError(RESOURCES_ERR.UNABLE_TO_WRITE_FILE).addCause(err));
@@ -339,7 +339,7 @@ export class ResourceManager {
 
     /**
      * Sets the shared zone of the account
-     * @param primaryZone - The shared zone to set
+     * @param sharedZone - The shared zone to set
      */
     set sharedZone(sharedZone: PhotosAccountZone) {
         this._resources.sharedZone = sharedZone;

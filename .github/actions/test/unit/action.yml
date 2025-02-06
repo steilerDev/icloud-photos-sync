@@ -16,7 +16,7 @@ runs:
       shell: bash
       run: (cd ${{ inputs.app-path }}; npm run test:unit)
     - id: upload-artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ inputs.app-path }}/coverage/

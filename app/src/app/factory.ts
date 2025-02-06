@@ -135,7 +135,6 @@ export type iCPSAppOptions = {
 /**
  * Creates the argument parser for the CLI and environment variables
  * @param callback - A callback function that will be called with the created app, based on the provided options.
- * @param questionFct - The function to query for input from the CLI - parameterized for testing purposes
  * @returns The commander command object, awaiting .parse() to be called
  */
 export function argParser(callback: (res: iCPSApp) => void): Command {
@@ -264,7 +263,6 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
 /**
  * This function will parse the provided string array and environment variables and return the correct application object.
  * @param argv - The argument vector to be parsed
- * @param questionFct - The function to query for input from the CLI - parameterized for testing purposes, readline-sync used per default
  * @returns - A promise that resolves to the correct application object. Once the promise resolves, the global resource singleton will also be available. If the program is not able to parse the options, or required options are missing, an error message is printed to stderr and the promise rejects with a CommanderError.
  */
 export async function appFactory(argv: string[]): Promise<iCPSApp> {

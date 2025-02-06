@@ -1,4 +1,4 @@
-import PackageData from '../../../package.json' assert { type: 'json' }; // eslint-disable-line
+import PackageData from '../../../package.json' with { type: 'json' }; // eslint-disable-line
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
 import {iCPSAppOptions} from "../../app/factory.js";

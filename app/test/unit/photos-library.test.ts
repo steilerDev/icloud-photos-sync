@@ -1,16 +1,16 @@
-import mockfs from 'mock-fs';
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import fs from 'fs';
-import {expect, describe, test, afterEach, jest, beforeEach} from '@jest/globals';
-import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
-import {PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, ARCHIVE_DIR, STASH_DIR} from '../../src/lib/photos-library/constants';
+import mockfs from 'mock-fs';
 import path from 'path';
-import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
-import {Asset} from '../../src/lib/photos-library/model/asset';
-import {FileType} from '../../src/lib/photos-library/model/file-type';
+import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder';
+import { ARCHIVE_DIR, PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, STASH_DIR } from '../../src/lib/photos-library/constants';
+import { Album, AlbumType } from '../../src/lib/photos-library/model/album';
+import { Asset } from '../../src/lib/photos-library/model/asset';
+import { FileType } from '../../src/lib/photos-library/model/file-type';
+import { PhotosLibrary } from '../../src/lib/photos-library/photos-library';
+import { iCPSEventRuntimeWarning } from '../../src/lib/resources/events-types';
 import * as Config from '../_helpers/_config';
-import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
-import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
-import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
+import { MockedEventManager, MockedResourceManager, prepareResources } from '../_helpers/_general';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
 const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR);
@@ -278,7 +278,7 @@ describe(`Load state`, () => {
 
             expect(Object.keys(albums).length).toEqual(0);
 
-            expect(() => fs.lstatSync(path.join(Config.defaultConfig.dataDir, orphanedAlbumName))).toThrow(/^ENOENT: no such file or directory, lstat '\/opt\/icloud-photos-library\/Orphan'$/);
+            expect(() => fs.lstatSync(path.join(Config.defaultConfig.dataDir, orphanedAlbumName))).toThrow(/^ENOENT, no such file or directory '\/opt\/icloud-photos-library\/Orphan'$/);
         });
 
         test(`Unexpected loading error`, async () => {
@@ -289,13 +289,13 @@ describe(`Load state`, () => {
                 [Config.defaultConfig.dataDir]: {
                     [`.${orphanedAlbumUUID}`]: {},
                     [orphanedAlbumName]: mockfs.symlink({
-                        path: `.${orphanedAlbumUUID}`,
+                        path: `${Config.defaultConfig.dataDir}/.${orphanedAlbumUUID}`,
                     }),
                 },
             });
 
             const library = new PhotosLibrary();
-            library.readFolderFromDisk = jest.fn(() => Promise.resolve([{}, ``] as [Album, string]))
+            library.readFolderFromDisk = jest.fn<() => Promise<never>>()
                 .mockRejectedValue(new Error(`Nondescriptive Error`));
             await expect(library.loadAlbums()).rejects.toThrow(/^Unknown error while processing symlink$/);
         });

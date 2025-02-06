@@ -86,4 +86,5 @@
     "githubIssues.useBranchForIssues": "off",
     "githubIssues.workingIssueFormatScm": "fix: ${issueTitle} \n\nFixes ${issueNumberLabel}",
     "liveServer.settings.donotShowInfoMsg": true,
+    "typescript.tsdk": "app/node_modules/typescript/lib",
 }
