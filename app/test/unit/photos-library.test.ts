@@ -289,7 +289,7 @@ describe(`Load state`, () => {
                 [Config.defaultConfig.dataDir]: {
                     [`.${orphanedAlbumUUID}`]: {},
                     [orphanedAlbumName]: mockfs.symlink({
-                        path: `${Config.defaultConfig.dataDir}/.${orphanedAlbumUUID}`,
+                        path: `.${orphanedAlbumUUID}`,
                     }),
                 },
             });
