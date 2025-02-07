@@ -8,7 +8,7 @@ inputs:
   artifact-name:
     description: The name of the uploaded app artifact
     required: false
-    default: app-artifact
+    default: app-artifact-build
 runs:
   using: composite
   steps:

@@ -5,10 +5,10 @@ inputs:
     description: The path to the docker directory
     required: false
     default: docker
-  app-artifact-name:
-    description: The name of the uploaded app artifact
+  app-artifact-pattern:
+    description: The glob pattern of the name of the uploaded app artifact (could be 'app-artifact-build' or 'app-artifact-release')
     required: false
-    default: app-artifact
+    default: app-artifact*
 runs:
   using: composite
   steps:
@@ -19,8 +19,9 @@ runs:
     - id: setup-app-artifact
       uses: actions/download-artifact@v4
       with:
-        name: ${{ inputs.app-artifact-name }}
+        pattern: ${{ inputs.app-artifact-pattern }}
         path: ${{ inputs.docker-path }}/rootfs/opt/
+        merge-multiple: true
     - id: debug
       shell: bash
       run: ls -al ${{ inputs.docker-path }}/rootfs/opt/

@@ -10,7 +10,7 @@ inputs:
   artifact-name:
     description: The name of the uploaded app artifact
     required: false
-    default: app-artifact
+    default: app-artifact-release
   release-dir:
     description: Directory, where the semantic release binary and configuration is located
     required: false
