@@ -37,4 +37,7 @@ runs:
           exit 1
         fi
 
-        mv $ARTIFACT "${{ inputs.docker-path }}/rootfs/opt/"
+        ARTIFACT_TARGET_PATH="${{ inputs.docker-path }}/rootfs/opt/"
+        mkdir -p "$ARTIFACT_TARGET_PATH"
+
+        mv "$ARTIFACT" "ARTIFACT_TARGET_PATH"
