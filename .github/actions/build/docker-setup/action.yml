@@ -25,7 +25,6 @@ runs:
       shell: bash
       run: |
         tree -a "${{ inputs.docker-path }}/"
-        $ARTIFACT" "ARTIFACT_TARGET_PATH"
         if [ -d "${{ inputs.docker-path }}/app-artifact-release" ]; then
           ARTIFACT_DIR="${{ inputs.docker-path }}/app-artifact-release"
         elif  [ -d "${{ inputs.docker-path }}/app-artifact-build" ]; then
