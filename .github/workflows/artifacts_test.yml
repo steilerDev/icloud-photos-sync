@@ -45,7 +45,7 @@ jobs:
         uses: ./.github/actions/test/unit
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     if: contains(fromJSON(inputs.methods), 'e2e')
     steps:
       - name: setup/checkout
@@ -60,7 +60,7 @@ jobs:
           test-trust-token: ${{ secrets.test-trust-token }}
   
   api:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     if: contains(fromJSON(inputs.methods), 'api')
     steps:
       - name: setup/checkout
