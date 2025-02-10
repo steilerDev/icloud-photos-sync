@@ -46,6 +46,6 @@ runs:
         ARTIFACT_TARGET_PATH="${{ inputs.docker-path }}/rootfs/opt/"
         mkdir -p "$ARTIFACT_TARGET_PATH"
 
-        echo "Moving $ARTIFACT to ARTIFACT_TARGET_PATH"
-        mv "$ARTIFACT" "ARTIFACT_TARGET_PATH"
+        echo "Moving $ARTIFACT to $ARTIFACT_TARGET_PATH"
+        mv "$ARTIFACT" "$ARTIFACT_TARGET_PATH"
         tree -a "${{ inputs.docker-path }}/"
