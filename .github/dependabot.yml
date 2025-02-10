@@ -51,10 +51,6 @@ updates:
         patterns:
         - "tough-cookie*"
         - "@types/tough-cookie*"
-      inquirer:
-        patterns:
-        - "inquirer*"
-        - "@types/inquirer*"
       backtrace:
         patterns:
         - "@backtrace*"

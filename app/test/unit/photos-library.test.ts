@@ -1,16 +1,16 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import fs from 'fs';
 import mockfs from 'mock-fs';
 import path from 'path';
-import { Zones } from '../../src/lib/icloud/icloud-photos/query-builder';
-import { ARCHIVE_DIR, PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, STASH_DIR } from '../../src/lib/photos-library/constants';
-import { Album, AlbumType } from '../../src/lib/photos-library/model/album';
-import { Asset } from '../../src/lib/photos-library/model/asset';
-import { FileType } from '../../src/lib/photos-library/model/file-type';
-import { PhotosLibrary } from '../../src/lib/photos-library/photos-library';
-import { iCPSEventRuntimeWarning } from '../../src/lib/resources/events-types';
+import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
+import {ARCHIVE_DIR, PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, STASH_DIR} from '../../src/lib/photos-library/constants';
+import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
+import {Asset} from '../../src/lib/photos-library/model/asset';
+import {FileType} from '../../src/lib/photos-library/model/file-type';
+import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
+import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import * as Config from '../_helpers/_config';
-import { MockedEventManager, MockedResourceManager, prepareResources } from '../_helpers/_general';
+import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
 const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR);

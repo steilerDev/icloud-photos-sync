@@ -3,7 +3,7 @@ import Cron from "croner";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 import {Resources} from "../lib/resources/main.js";
 import {LogLevel} from "./event/log.js";
-import inquirer from "inquirer";
+import {input, password} from "@inquirer/prompts";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -91,13 +91,11 @@ async function completeConfigurationOptionsFromCommand(parsedCommand: unknown): 
     const opts = (parsedCommand as any).parent?.opts() as iCPSAppOptions;
 
     while (!opts.username || opts.username.length === 0) {
-        const {username} = await inquirer.prompt({type: `input`, message: `Please enter your AppleID username`, name: `username`});
-        opts.username = username;
+        opts.username = await input({message: `Please enter your AppleID username`});
     }
 
     while (!opts.password || opts.password.length === 0) {
-        const {password} = await inquirer.prompt({type: `password`, message: `Please enter your AppleID password`, name: `password`, mask: `*`});
-        opts.password = password;
+        opts.password = await password({message: `Please enter your AppleID password`, mask: `*`});
     }
 
     return opts;

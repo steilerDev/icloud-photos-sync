@@ -86,7 +86,7 @@ describe(`App Factory`, () => {
         mockStdin.send(`${stdinValue}\n`);
 
         expect(await app).toBeInstanceOf(TokenApp);
-        expect(mockStdout).toHaveBeenNthCalledWith(2, expect.stringMatching(new RegExp(`${stdOutValue}`)));
+        expect(mockStdout).toHaveBeenNthCalledWith(1, expect.stringMatching(new RegExp(`${stdOutValue}`)));
         expect(setupSpy).toHaveBeenCalledWith(Config.defaultConfig);
     });
 
