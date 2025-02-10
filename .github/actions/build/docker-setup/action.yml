@@ -42,5 +42,5 @@ runs:
         mv "$ARTIFACT" "ARTIFACT_TARGET_PATH"
     - id: debug
       shell: bash
-      run: "
+      run: |
         tree -a "${{ inputs.docker-path }}/"
