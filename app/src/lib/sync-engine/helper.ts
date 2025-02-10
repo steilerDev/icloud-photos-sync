@@ -124,7 +124,7 @@ function compareQueueElements(fullQueue: Album[], a: Album, b: Album): number {
         const distanceToRootA = Album.distanceToRoot(a, fullQueue);
         const distanceToRootB = Album.distanceToRoot(b, fullQueue);
         return distanceToRootA - distanceToRootB; // Provide distance based on depth
-    } catch (err) {
+    } catch (_err) {
         return 0; // If there is a broke in the link, return them as equal
     }
 }

@@ -65,7 +65,7 @@ await Promise.all(schemaList.map(async schemaConfig => {
             return;
         }
     } catch (err) {
-        console.log(`No existing schema for ${schemaConfig.typeName} found at ${outputPath}`);
+        console.log(`No existing schema for ${schemaConfig.typeName} found at ${outputPath}: ${err.message}`);
     }
 
     const config: tsj.Config = {
