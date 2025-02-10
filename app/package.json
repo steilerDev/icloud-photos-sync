@@ -91,7 +91,7 @@
     "cli-progress": "^3.11.2",
     "commander": "^13.1.0",
     "croner": "^7.0.5",
-    "inquirer": "^9.2.12",
+    "inquirer": "^12.4.1",
     "jsonc": "^2.0.0",
     "p-event": "^6.0.0",
     "p-queue": "^7.4.1",
