@@ -20,7 +20,7 @@ RUN chmod 755 /root/enter_mfa.sh && \
     ln -s /root/resend_mfa.sh /usr/local/bin/resend_mfa
 
 # Installing application binary
-RUN npm install -g /opt/*.tgz
+RUN npm install -g /opt/npm-pack.tgz
 
 ENTRYPOINT ["icloud-photos-sync"]
 CMD ["daemon"]

@@ -33,11 +33,10 @@ runs:
         ARTIFACT="$ARTIFACT_DIR/npm-pack.tgz"
 
         if [ ! -f "$ARTIFACT" ]; then
-          tree -a .
           exit 1
         fi
 
-        ARTIFACT_TARGET_PATH="${{ inputs.docker-path }}/rootfs/opt/"
+        ARTIFACT_TARGET_PATH="${{ inputs.docker-path }}/rootfs/opt/npm-pack.tgz"
         mkdir -p "$ARTIFACT_TARGET_PATH"
 
         mv "$ARTIFACT" "ARTIFACT_TARGET_PATH"
