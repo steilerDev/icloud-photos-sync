@@ -20,8 +20,21 @@ runs:
       uses: actions/download-artifact@v4
       with:
         pattern: ${{ inputs.app-artifact-pattern }}
-        path: ${{ inputs.docker-path }}/rootfs/opt/
-        merge-multiple: true
-    - id: debug
+        path: ${{ inputs.docker-path }}
+    - id: select-app-artifact
       shell: bash
-      run: ls -al ${{ inputs.docker-path }}/rootfs/opt/
+      run: |
+        if [ -d "${{ inputs.docker-path }}/app-artifact-build" ]; then
+          ARTIFACT_DIR="${{ inputs.docker-path }}/app-artifact-build"
+        elif  [ -d "${{ inputs.docker-path }}/app-artifact-build" ]; then
+          ARTIFACT_DIR="${{ inputs.docker-path }}/app-artifact-build"
+        fi
+
+        ARTIFACT="$ARTIFACT_DIR/npm-pack.tgz"
+
+        if [ ! -f "$ARTIFACT" ]; then
+          tree -a .
+          exit 1
+        fi
+
+        mv $ARTIFACT "${{ inputs.docker-path }}/rootfs/opt/"
