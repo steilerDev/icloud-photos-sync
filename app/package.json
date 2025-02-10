@@ -89,7 +89,7 @@
     "axios": "^1.6.2",
     "chalk": "^5.0.0",
     "cli-progress": "^3.11.2",
-    "commander": "^11.0.0",
+    "commander": "^13.1.0",
     "croner": "^7.0.5",
     "inquirer": "^9.2.12",
     "jsonc": "^2.0.0",
