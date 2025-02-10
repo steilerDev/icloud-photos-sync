@@ -24,8 +24,8 @@ runs:
     - id: select-app-artifact
       shell: bash
       run: |
-        if [ -d "${{ inputs.docker-path }}/app-artifact-build" ]; then
-          ARTIFACT_DIR="${{ inputs.docker-path }}/app-artifact-build"
+        if [ -d "${{ inputs.docker-path }}/app-artifact-release" ]; then
+          ARTIFACT_DIR="${{ inputs.docker-path }}/app-artifact-release"
         elif  [ -d "${{ inputs.docker-path }}/app-artifact-build" ]; then
           ARTIFACT_DIR="${{ inputs.docker-path }}/app-artifact-build"
         fi
@@ -36,7 +36,11 @@ runs:
           exit 1
         fi
 
-        ARTIFACT_TARGET_PATH="${{ inputs.docker-path }}/rootfs/opt/npm-pack.tgz"
+        ARTIFACT_TARGET_PATH="${{ inputs.docker-path }}/rootfs/opt/"
         mkdir -p "$ARTIFACT_TARGET_PATH"
 
         mv "$ARTIFACT" "ARTIFACT_TARGET_PATH"
+    - id: debug
+      shell: bash
+      run: "
+        tree -a "${{ inputs.docker-path }}/"
