@@ -93,7 +93,7 @@
     "commander": "13.1.0",
     "croner": "9.0.0",
     "jsonc": "2.0.0",
-    "p-event": "6.0.0",
+    "p-event": "6.0.1",
     "p-queue": "7.4.1",
     "p-timeout": "6.1.2",
     "tough-cookie": "5.1.1"
