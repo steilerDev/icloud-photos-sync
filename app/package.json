@@ -82,20 +82,20 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
-    "@backtrace/node": "^0.7.0",
-    "@foxt/js-srp": "^0.0.3-patch2",
-    "@inquirer/prompts": "^7.3.1",
-    "ajv": "^8.17.1",
-    "axios": "^1.7.8",
-    "axios-har-tracker": "^0.7.2",
-    "chalk": "^5.4.1",
-    "cli-progress": "^3.11.2",
-    "commander": "^13.1.0",
-    "croner": "^7.0.5",
-    "jsonc": "^2.0.0",
-    "p-event": "^6.0.0",
-    "p-queue": "^7.4.1",
-    "p-timeout": "^6.1.2",
-    "tough-cookie": "^5.1.1"
+    "@backtrace/node": "0.7.0",
+    "@foxt/js-srp": "0.0.3-patch2",
+    "@inquirer/prompts": "7.3.1",
+    "ajv": "8.17.1",
+    "axios": "1.7.8",
+    "axios-har-tracker": "0.7.2",
+    "chalk": "5.4.1",
+    "cli-progress": "3.11.2",
+    "commander": "13.1.0",
+    "croner": "7.0.5",
+    "jsonc": "2.0.0",
+    "p-event": "6.0.0",
+    "p-queue": "7.4.1",
+    "p-timeout": "6.1.2",
+    "tough-cookie": "5.1.1"
   }
 }
