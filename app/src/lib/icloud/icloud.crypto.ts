@@ -45,7 +45,7 @@ export class iCloudCrypto {
      * @returns A Promise that will resolve to the derived password key
      */
     async derivePassword(protocol: SRPProtocol, salt: string, iterations: number): Promise<Uint8Array> {
-        const encodedPassword = new TextEncoder().encode(Resources.manager().password)
+        const encodedPassword = new TextEncoder().encode(Resources.manager().password);
         let passHash = new Uint8Array(await util.hash(this.srp.h, encodedPassword.buffer as ArrayBuffer));
         if (protocol === `s2k_fo`) {
             passHash = Buffer.from(util.toHex(passHash));

@@ -31,6 +31,7 @@
     "test:api": "npm run test test/api/",
     "doc:cli": "NODE_NO_WARNINGS=1 npx tsx build/cli-reference.ts",
     "execute": "NODE_NO_WARNINGS=1 node build/out/src/main.js",
+    "execute:test-account": "NODE_NO_WARNINGS=1 node build/out/src/main.js -u $TEST_APPLE_ID_USER -p $TEST_APPLE_ID_PWD",
     "execute:debug": "NODE_NO_WARNINGS=1 node --inspect=0.0.0.0:9229 build/out/src/main.js daemon"
   },
   "repository": {
@@ -66,7 +67,7 @@
     "@types/tough-cookie": "^4.0.5",
     "@typescript-eslint/eslint-plugin": "^8.22.0",
     "@typescript-eslint/parser": "^8.22.0",
-    "axios-mock-adapter": "^1.21.5",
+    "axios-mock-adapter": "^2.1.0",
     "eslint": "^8.54.0",
     "eslint-config-xo": "^0.43.1",
     "eslint-plugin-tsdoc": "^0.2.17",
@@ -86,7 +87,7 @@
     "@inquirer/prompts": "^7.3.1",
     "@steilerdev/axios-har-tracker": "^0.6.0",
     "ajv": "^8.17.1",
-    "axios": "^1.6.2",
+    "axios": "^1.7.8",
     "chalk": "^5.0.0",
     "cli-progress": "^3.11.2",
     "commander": "^13.1.0",

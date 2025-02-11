@@ -191,7 +191,7 @@ describe.each([
             mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
             mockedNetworkManager.mock
-                .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
+                .onPost(authenticationUrl, authenticationPayload, {headers: Config.REQUEST_HEADER.AUTH})
                 .reply(200);
 
             await icloud.authenticate();
@@ -217,7 +217,7 @@ describe.each([
             mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
             mockedNetworkManager.mock
-                .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
+                .onPost(authenticationUrl, authenticationPayload, {headers: Config.REQUEST_HEADER.AUTH})
                 .reply(409);
 
             await icloud.authenticate();
@@ -240,7 +240,7 @@ describe.each([
             });
 
             mockedNetworkManager.mock
-                .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
+                .onPost(authenticationUrl, authenticationPayload, {headers: Config.REQUEST_HEADER.AUTH})
                 .reply(200);
 
             await expect(icloud.authenticate()).rejects.toThrow(/^Unable to parse and validate signin response$/);
@@ -269,7 +269,7 @@ describe.each([
                 },
             ])(`$desc`, async ({status, expectedError}) => {
                 mockedNetworkManager.mock
-                    .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
+                    .onPost(authenticationUrl, authenticationPayload, {headers: Config.REQUEST_HEADER.AUTH})
                     .reply(status);
 
                 const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
@@ -348,7 +348,9 @@ describe.each([
                             accountName: Config.defaultConfig.username,
                             protocols: [`s2k`, `s2k_fo`],
                         },
-                        Config.REQUEST_HEADER.AUTH,
+                        {
+                            headers: Config.REQUEST_HEADER.AUTH,
+                        },
                     )
                     .reply(200);
 
@@ -484,10 +486,12 @@ describe.each([
                         .onPut(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(codes.success);
@@ -529,10 +533,12 @@ describe.each([
                         .onPut(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(codes.success);
@@ -562,10 +568,12 @@ describe.each([
                         .onPut(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(codes.invalid);
@@ -637,10 +645,12 @@ describe.each([
                         .onPost(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(codes.success);
@@ -663,10 +673,12 @@ describe.each([
                         .onPost(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(codes.failure);
@@ -717,10 +729,12 @@ describe.each([
                         .onPost(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(400, replyPayload);
@@ -745,11 +759,13 @@ describe.each([
             const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
 
             mockedNetworkManager.mock
-                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {}, {
-                    ...Config.REQUEST_HEADER.AUTH,
-                    scnt: Config.iCloudAuthSecrets.scnt,
-                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {
+                    headers: {
+                        ...Config.REQUEST_HEADER.AUTH,
+                        scnt: Config.iCloudAuthSecrets.scnt,
+                        Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                        'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                    },
                 })
                 .reply(204);
 
@@ -771,11 +787,13 @@ describe.each([
             });
 
             mockedNetworkManager.mock
-                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {}, {
-                    ...Config.REQUEST_HEADER.AUTH,
-                    scnt: Config.iCloudAuthSecrets.scnt,
-                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {
+                    headers: {
+                        ...Config.REQUEST_HEADER.AUTH,
+                        scnt: Config.iCloudAuthSecrets.scnt,
+                        Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                        'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                    },
                 })
                 .reply(204);
 
@@ -792,11 +810,13 @@ describe.each([
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedNetworkManager.mock
-                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {}, {
-                    ...Config.REQUEST_HEADER.AUTH,
-                    scnt: Config.iCloudAuthSecrets.scnt,
-                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {
+                    headers: {
+                        ...Config.REQUEST_HEADER.AUTH,
+                        scnt: Config.iCloudAuthSecrets.scnt,
+                        Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                        'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                    },
                 })
                 .reply(500);
 
@@ -838,8 +858,9 @@ describe.each([
             mockedNetworkManager.mock
                 .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
                     dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
                 .reply(200);
 
             await icloud.setupAccount();
@@ -879,8 +900,9 @@ describe.each([
             mockedNetworkManager.mock
                 .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
                     dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
                 .reply(200);
 
             await icloud.setupAccount();
@@ -974,8 +996,9 @@ describe.each([
                 .onPost(`https://setup.icloud.com/setup/ws/1/requestPCS`, {
                     appName: `photos`,
                     derivedFromUserAction: true,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
                 .reply(200);
 
             await icloud.acquirePCSCookies();
@@ -1005,8 +1028,9 @@ describe.each([
                 .onPost(`https://setup.icloud.com/setup/ws/1/requestPCS`, {
                     appName: `photos`,
                     derivedFromUserAction: true,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
                 .reply(200);
 
             await icloud.acquirePCSCookies();
@@ -1038,8 +1062,9 @@ describe.each([
                 .onPost(`https://setup.icloud.com/setup/ws/1/requestPCS`, {
                     appName: `photos`,
                     derivedFromUserAction: true,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
                 .reply(200);
 
             await icloud.acquirePCSCookies();
@@ -1068,8 +1093,9 @@ describe.each([
                 .onPost(`https://setup.icloud.com/setup/ws/1/requestPCS`, {
                     appName: `photos`,
                     derivedFromUserAction: true,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
                 .reply(200);
 
             await icloud.acquirePCSCookies();

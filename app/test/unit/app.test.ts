@@ -1,6 +1,6 @@
 import mockfs from 'mock-fs';
 import fs from 'fs';
-import {describe, test, expect, jest, beforeEach, afterEach} from '@jest/globals';
+import {describe, test, expect, jest, beforeEach, afterEach, beforeAll} from '@jest/globals';
 import * as Config from '../_helpers/_config';
 import {nonRejectOptions, rejectOptions, validOptions} from '../_helpers/app-factory.helper';
 import {ArchiveApp, DaemonApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
@@ -12,6 +12,11 @@ import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError} from '../../src/lib
 import {Resources} from '../../src/lib/resources/main';
 import {stdin} from 'mock-stdin';
 import {LIBRARY_LOCK_FILE_NAME} from '../../src/lib/resources/resource-types';
+
+beforeAll(() => {
+    // DATA_DIR is set in devcontainer and can lead to conflicts in this test suite
+    delete process.env.DATA_DIR;
+});
 
 beforeEach(() => {
     mockfs();
