@@ -1,5 +1,5 @@
 import {Command, Option, InvalidArgumentError, CommanderError} from "commander";
-import Cron from "croner";
+import {Cron} from "croner";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 import {Resources} from "../lib/resources/main.js";
 import {LogLevel} from "./event/log.js";
