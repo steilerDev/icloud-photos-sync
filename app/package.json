@@ -73,7 +73,7 @@
     "eslint-plugin-tsdoc": "^0.2.17",
     "jest": "^29.7.0",
     "knip": "^3.0.1",
-    "liquidjs": "^10.9.2",
+    "liquidjs": "^10.20.3",
     "mock-fs": "^5.5.0",
     "mock-stdin": "^1.0.0",
     "ts-jest": "^29.2.5",
