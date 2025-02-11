@@ -13,7 +13,7 @@ export const CLIENT_ID = `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde
 /**
  * User Agent this CLI is using. Emulating a Firefox Browser
  */
-export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`;
+export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36`;
 
 /**
  * Client information shared with the iCloud backend based on the user agent
@@ -387,7 +387,7 @@ type PhotosSetupResponseZone = {
     zoneID: {
         /**
          * @minLength 1
-         * @pattern ^(PrimarySync|SharedSync(-[0-9A-F?]+)+|CMM(-[0-9A-F]+)+)$
+         * @pattern ^(PrimarySync|SharedSync(-[0-9A-F?]+)+|CMM(-[0-9A-F]+)+|AppLibrarySync-com.apple.GenerativePlayground(-[0-9]+)+)$
          */
         zoneName: string,
         /**
