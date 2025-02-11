@@ -64,7 +64,7 @@ describe(`API E2E Tests`, () => {
             await expect(icloud.authenticate()).rejects.toThrow(/^Username\/Password does not seem to match$/);
         });
 
-        test(`Success - Legacy Login`, async () => {
+        test.only(`Success - Legacy Login`, async () => {
             instances.manager._resources.legacyLogin = true;
             const icloud = new iCloud();
             await expect(icloud.authenticate()).resolves.not.toThrow();

@@ -15,6 +15,20 @@ updates:
       time: "09:00"
       timezone: "Europe/Berlin"
 
+  # Maintain dependencies for devcontainer
+  - package-ecosystem: "devcontainers" # See documentation for possible values
+    labels: [ ]
+    directory: "/"
+    target-branch: "dev"
+    open-pull-requests-limit: 20
+    commit-message:
+      prefix: "chore: [dev] "
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+      timezone: "Europe/Berlin"
+
   # Maintain dependencies for npm
   - package-ecosystem: "npm"
     labels: [ ]

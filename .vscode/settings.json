@@ -33,19 +33,19 @@
     "githubPullRequests.queries": [
         {
             "label": "Dependabot",
-            "query": "is:open is:pr author:app/dependabot"
+            "query": "repo:${owner}/${repository} is:open is:pr author:app/dependabot"
         },
         {
             "label": "Created By Me",
-            "query": "is:open author:${user}"
+            "query": "repo:${owner}/${repository} is:open author:${user}"
         },
         {
             "label": "Released",
-            "query": "is:open is:pr label:status(released)"
+            "query": "repo:${owner}/${repository} is:open is:pr label:status(released)"
         },
         {
             "label": "Truly Open",
-            "query": "is:open is:pr -label:status(released) -label:status(previewed)"
+            "query": "repo:${owner}/${repository} is:open is:pr -label:status(released) -label:status(previewed)"
         }
     ],
     "githubPullRequests.notifications": "pullRequests",

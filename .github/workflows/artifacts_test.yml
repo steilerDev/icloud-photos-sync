@@ -1,5 +1,6 @@
 name: 'Artifacts: Test'
 # This workflow will test the requested artifacts
+# In order to run E2E and API tests, an Apple ID test user is required. The self-hosted runner is expected to have those set in the `.env` file located in the runner's directory.
 
 on:
   workflow_call:
