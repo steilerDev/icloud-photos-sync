@@ -8,7 +8,7 @@ import axios from "axios";
 import {Cookie} from 'tough-cookie';
 import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
 import {defaultConfig} from '../_helpers/_config';
-import {AxiosHarTracker} from '@steilerdev/axios-har-tracker';
+import {AxiosHarTracker} from 'axios-har-tracker';
 import {Resources} from '../../src/lib/resources/main';
 import * as Config from '../_helpers/_config';
 import path from 'path';

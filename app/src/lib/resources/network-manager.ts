@@ -5,7 +5,7 @@ import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, 
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
-import {AxiosHarTracker} from "@steilerdev/axios-har-tracker";
+import {AxiosHarTracker} from "axios-har-tracker";
 import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
