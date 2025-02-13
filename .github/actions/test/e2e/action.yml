@@ -22,8 +22,5 @@ runs:
     - id: test-docker
       shell: bash
       run: |
-        export TEST_APPLE_ID_USER=${{ inputs.test-apple-id-user }}
-        export TEST_APPLE_ID_PWD=${{ inputs.test-apple-id-pwd }}
-        export TEST_TRUST_TOKEN=${{ inputs.test-trust-token }}
         export IMAGE_NAME=${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
         run-parts -v --exit-on-error ${{ inputs.docker-path }}/test

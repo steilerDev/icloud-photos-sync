@@ -6,7 +6,7 @@ import {iCPSError} from '../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
 import {Resources} from '../resources/main.js';
 import {COOKIE_KEYS, ENDPOINTS} from '../resources/network-types.js';
-import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 import pTimeout from 'p-timeout';
 import {jsonc} from 'jsonc';
 import {iCloudCrypto} from './icloud.crypto.js';
