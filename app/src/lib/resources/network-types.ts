@@ -92,6 +92,7 @@ export const ENDPOINTS = {
         },
         PATH: {
             ACCOUNT_LOGIN: `/setup/ws/1/accountLogin`,
+            LOGOUT: `/setup/ws/1/logout`,
             REQUEST_PCS: `/setup/ws/1/requestPCS`,
         },
     },

@@ -1139,6 +1139,42 @@ describe.each([
         });
     });
 
+    describe(`Logout`, () => {
+        test(`Success`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://setup.icloud.com/setup/ws/1/logout`, {
+                    trustBrowser: true,
+                    allBrowsers: false,
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
+                .reply(200);
+
+            await expect(icloud.logout()).resolves.not.toThrow();
+        });
+
+        test(`Success - not logged in`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://setup.icloud.com/setup/ws/1/logout`, {
+                    trustBrowser: true,
+                    allBrowsers: false,
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
+                .reply(421);
+
+            await expect(icloud.logout()).resolves.not.toThrow();
+        });
+
+        test(`Error - Invalid Status Code`, async () => {
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(500);
+
+            await expect(icloud.logout()).rejects.toThrow(/^Failed to logout from iCloud$/);
+        });
+    })
+
     describe(`Get iCloud Photos Ready`, () => {
         beforeEach(() => {
             icloud.photos = new iCloudPhotos();

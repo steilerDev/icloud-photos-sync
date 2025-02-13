@@ -120,7 +120,16 @@ abstract class iCloudApp extends iCPSApp {
         await Resources.network().resetSession();
         Resources.events(this.icloud.photos).removeListeners();
         Resources.events(this.icloud).removeListeners();
-        await this.releaseLibraryLock();
+        try {
+            await this.releaseLibraryLock();
+        } catch (err) {
+            Resources.logger(this).warn(`Failed to release library lock: ${err}`);
+        }
+        try {
+            await this.icloud.logout();
+        } catch (err) {
+            Resources.logger(this).warn(`Failed to logout from iCloud: ${err}`);
+        }
     }
 
     /**

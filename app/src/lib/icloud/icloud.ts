@@ -6,7 +6,7 @@ import {iCPSError} from '../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
 import {Resources} from '../resources/main.js';
 import {COOKIE_KEYS, ENDPOINTS} from '../resources/network-types.js';
-import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
+import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 import pTimeout from 'p-timeout';
 import {jsonc} from 'jsonc';
 import {iCloudCrypto} from './icloud.crypto.js';
@@ -389,6 +389,30 @@ export class iCloud {
             Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.PCS_REQUEST_FAILED).addCause(err));
+        }
+    }
+
+    /**
+     * Performs a logout, while retaining the trust token
+     */
+    async logout() {
+        try {
+            const url = ENDPOINTS.SETUP.BASE() + ENDPOINTS.SETUP.PATH.LOGOUT;
+            const data = {
+                trustBrowser: true,
+                allBrowsers: false,
+            };
+
+            const config: AxiosRequestConfig = {
+                // 421 is expected, if user was not logged in - 200 is expected, if logout was successful
+                validateStatus: status => status === 421 || status === 200,
+            };
+
+            Resources.logger(this).info(`Logging current account out`);
+
+            await Resources.network().post(url, data, config);
+        } catch (err) {
+            throw new iCPSError(AUTH_ERR.LOGOUT_FAILED).addCause(err);
         }
     }
 
