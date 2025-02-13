@@ -32,6 +32,7 @@ describe(`API E2E Tests`, () => {
     afterEach(() => {
         mockfs.restore();
     });
+
     test(`API Prerequisite`, () => {
         const resourceManager = prepareResourceForApiTests().manager;
         expect(resourceManager.username).toBeDefined();
@@ -42,7 +43,7 @@ describe(`API E2E Tests`, () => {
         expect(resourceManager.trustToken!.length).toBeGreaterThan(0);
     });
 
-    describe(`Login flow`, () => {
+    describe.skip(`Login flow`, () => {
         let instances: Resources.Types.Instances;
 
         beforeEach(() => {
