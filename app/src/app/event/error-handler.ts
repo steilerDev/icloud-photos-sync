@@ -1,3 +1,4 @@
+import { BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceData, BacktraceReport, BreadcrumbType } from "@backtrace/node";
 import { randomUUID } from "crypto";
 import fs from 'fs/promises';
 import { jsonc } from "jsonc";
@@ -8,6 +9,8 @@ import { MFAMethod } from '../../lib/icloud/mfa/mfa-method.js';
 import { iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine } from '../../lib/resources/events-types.js';
 import { Resources } from '../../lib/resources/main.js';
 import { FILE_ENCODING } from '../../lib/resources/resource-types.js';
+import { AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR } from "../error/error-codes.js";
+import { iCPSError } from "../error/error.js";
 
 /**
  * List of errors that will never get reported

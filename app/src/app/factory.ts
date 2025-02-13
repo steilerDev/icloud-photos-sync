@@ -1,5 +1,6 @@
+import { input, password } from "@inquirer/prompts";
 import { Command, CommanderError, InvalidArgumentError, Option } from "commander";
-import Cron from "croner";
+import { Cron } from "croner";
 import { Resources } from "../lib/resources/main.js";
 import { LogLevel } from "./event/log.js";
 import { ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp } from "./icloud-app.js";
