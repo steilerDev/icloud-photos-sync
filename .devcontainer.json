@@ -12,7 +12,7 @@
 			"upgradePackages": "true"
 		},
         "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-            "packages": "git,tmux,vim,wget,jq,tree,whois,db-util,rsync,zip,unzip,ca-certificates,curl,gnupg"
+            "packages": "git,tmux,vim,wget,jq,tree,whois,db-util,rsync,zip,unzip,ca-certificates,curl,gnupg,netcat-traditional"
         },
         "ghcr.io/devcontainers/features/github-cli:1": {
             "version": "latest"

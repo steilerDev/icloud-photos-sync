@@ -5,15 +5,15 @@ inputs:
     description: The path to the app directory
     required: false
     default: app
-  test-apple-id-user:
-    description: The test user's Apple ID
-    required: true
-  test-apple-id-pwd:
-    description: The test user's Apple ID password
-    required: true
-  test-trust-token:
-    description: The test user's trust token
-    required: true
+  # test-apple-id-user:
+  #   description: The test user's Apple ID
+  #   required: true
+  # test-apple-id-pwd:
+  #   description: The test user's Apple ID password
+  #   required: true
+  # test-trust-token:
+  #   description: The test user's trust token
+  #   required: true
 runs:
   using: composite
   steps:
