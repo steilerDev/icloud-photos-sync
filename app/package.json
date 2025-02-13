@@ -50,7 +50,7 @@
   },
   "homepage": "https://icps.steiler.dev/",
   "engines": {
-    "node": ">=18.8.0"
+    "node": ">=22"
   },
   "os": [
     "linux",
