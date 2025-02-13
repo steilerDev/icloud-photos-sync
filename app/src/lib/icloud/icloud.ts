@@ -158,6 +158,8 @@ export class iCloud {
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNKNOWN).addCause(err));
             return;
         } finally {
+            // Return in finally is required because control flow of try/catch block is complicated
+            // eslint-disable-next-line no-unsafe-finally
             return ready;
         }
     }

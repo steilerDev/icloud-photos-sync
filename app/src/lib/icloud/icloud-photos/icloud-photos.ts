@@ -74,9 +74,8 @@ export class iCloudPhotos {
             Resources.emit(iCPSEventPhotos.SETUP_COMPLETED);
         } catch (err) {
             Resources.emit(iCPSEventPhotos.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.SETUP_ERROR).addCause(err));
-        } finally {
-            return this.ready;
-        }
+        } 
+        return this.ready;
     }
 
     /**

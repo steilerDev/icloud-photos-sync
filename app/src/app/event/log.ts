@@ -1,3 +1,5 @@
+/* eslint-disable no-fallthrough */
+
 import * as fs from 'fs';
 import {Resources} from "../../lib/resources/main.js";
 import {iCPSEventLog, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from "../../lib/resources/events-types.js";
