@@ -237,7 +237,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`--legacy-login`, `Enables plain text legacy login method.`)
             .env(`LEGACY_LOGIN`)
             .default(false))
-        .addOption(new Option(`--health-check-url <url>`, `URL to ping to monitor the health of icloud photos sync. The URL is pinged with varying suffixes and body content on start, success, or failure of the sync process. Can be set to a URL from https://healthchecks.io or any other compatible service.`)
+        .addOption(new Option(`--health-check-url <url>`, `URL to ping to monitor the health of icloud photos sync, see https://icps.steiler.dev/health-checks/ for more information.`)
             .env(`HEALTH_CHECK_URL`)
             .default(undefined)
             .argParser(commanderParseUrl));
