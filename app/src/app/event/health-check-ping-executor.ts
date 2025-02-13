@@ -45,7 +45,7 @@ export class HealthCheckPingExecutor {
         }
     }
 
-    private getLog(): String {
+    private getLog(): string {
         // Get roughly the 100KB by getting the last 100 characters
         // may be too large due to some characters taking up more than one byte
         const last100Chars = this
