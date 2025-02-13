@@ -143,7 +143,7 @@ export type iCPSAppOptions = {
     region: Resources.Types.Region,
     legacyLogin: boolean,
     metadataRate: [number, number],
-    healthCheckPingUrl?: string,
+    healthCheckUrl?: string,
 }
 
 /**
@@ -237,8 +237,8 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`--legacy-login`, `Enables plain text legacy login method.`)
             .env(`LEGACY_LOGIN`)
             .default(false))
-        .addOption(new Option(`--healthCheck-ping-url <url>`, `URL to ping to monitor the health of icloud photos sync. The URL is pinged with varying suffixes and body content on start, success, or failure of the sync process. Can be set to a URL from https://healthchecks.io or any other compatible service.`)
-            .env(`HEALTHCHECK_PING_URL`)
+        .addOption(new Option(`--health-check-url <url>`, `URL to ping to monitor the health of icloud photos sync. The URL is pinged with varying suffixes and body content on start, success, or failure of the sync process. Can be set to a URL from https://healthchecks.io or any other compatible service.`)
+            .env(`HEALTH_CHECK_URL`)
             .default(undefined)
             .argParser(commanderParseUrl));
 
