@@ -23,6 +23,8 @@ do
 done
 assertChecksum
 
+sleep 60s
+
 ###
 ###
 echo "Delete 5 assets and perform re-sync"
@@ -70,3 +72,5 @@ assertChecksum
 
 # Cleaning up
 rm -rf $DIR
+
+sleep 60s
