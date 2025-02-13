@@ -1,4 +1,4 @@
-import PackageData from '../../../package.json' assert { type: 'json' }; // eslint-disable-line
+import PackageData from '../../../package.json' with { type: 'json' }; // eslint-disable-line
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -7,6 +7,8 @@ import {iCPSEvent, iCPSEventLog} from "./events-types.js";
 import {NetworkManager} from "./network-manager.js";
 import {ResourceManager} from "./resource-manager.js";
 import {Validator} from "./validator.js";
+
+/* eslint-disable @typescript-eslint/no-namespace */
 
 /**
  * This namespace handles the static access to the singleton functions of the ResourceManager, NetworkManager, Validator and EventManager

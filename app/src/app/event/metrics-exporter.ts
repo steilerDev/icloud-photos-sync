@@ -297,7 +297,6 @@ export class MetricsExporter {
 
     /**
      * Creates the exporter and checks for the file
-     * @param options - The CLI options
      */
     constructor() {
         if (!Resources.manager().exportMetrics) {

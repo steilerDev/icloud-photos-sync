@@ -14,7 +14,7 @@ jobs:
     uses: ./.github/workflows/artifacts_test.yml
     with:
       methods: '["api"]'
-    secrets:
-      test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
-      test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
-      test-trust-token: ${{ secrets.TEST_TRUST_TOKEN }}
+    # secrets:
+    #   test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
+    #   test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
+    #   test-trust-token: ${{ secrets.TEST_TRUST_TOKEN }}

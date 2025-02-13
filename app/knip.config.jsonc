@@ -1,15 +1,4 @@
 {
     "entry": ["test/unit/*", "test/api/*", "src/main.ts", "build/cli-reference.ts", "build/schema.ts", "build/package.ts"],
-    "project": ["**/*.ts"],
-    "ignoreDependencies": [
-        "@typescript-eslint/eslint-plugin", // Loaded by eslint.config.json
-        "@typescript-eslint/parser", // Needed by @typescript-eslint/eslint-plugin
-        "eslint-config-xo", // Loaded by eslint.config.json
-        "eslint-plugin-tsdoc", // Loaded by eslint.config.json
-        "typedoc-plugin-markdown", // Loaded by 'typedoc' script
-        "typedoc-github-wiki-theme" // Loaded by 'typedoc' script
-    ],
-    "ignoreBinaries": [ // Not sure why they are reported as unused
-        "eslint.config.json"
-    ]
+    "project": ["**/*.ts"]
 }

@@ -1,9 +1,9 @@
 import {Command, Option, InvalidArgumentError, CommanderError} from "commander";
-import Cron from "croner";
+import {Cron} from "croner";
 import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
 import {Resources} from "../lib/resources/main.js";
 import {LogLevel} from "./event/log.js";
-import inquirer from "inquirer";
+import {input, password} from "@inquirer/prompts";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -52,7 +52,7 @@ function commanderParseCron(value: string, _dummyPrevious?: unknown): string {
         const job = new Cron(value);
         job.stop();
         return value;
-    } catch (err) {
+    } catch (_err) {
         throw new InvalidArgumentError(`Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern).`);
     }
 }
@@ -90,14 +90,12 @@ function commanderParseInterval(value: string, _dummyPrevious?: unknown): [numbe
 async function completeConfigurationOptionsFromCommand(parsedCommand: unknown): Promise<iCPSAppOptions> {
     const opts = (parsedCommand as any).parent?.opts() as iCPSAppOptions;
 
-    if (!opts.username || opts.username.length === 0) {
-        const {username} = await inquirer.prompt({type: `input`, message: `Please enter your AppleID username`, name: `username`});
-        opts.username = username;
+    while (!opts.username || opts.username.length === 0) {
+        opts.username = await input({message: `Please enter your AppleID username`});
     }
 
-    if (!opts.password || opts.password.length === 0) {
-        const {password} = await inquirer.prompt({type: `password`, message: `Please enter your AppleID password`, name: `password`, mask: `*`});
-        opts.password = password;
+    while (!opts.password || opts.password.length === 0) {
+        opts.password = await password({message: `Please enter your AppleID password`, mask: `*`});
     }
 
     return opts;
@@ -135,7 +133,6 @@ export type iCPSAppOptions = {
 /**
  * Creates the argument parser for the CLI and environment variables
  * @param callback - A callback function that will be called with the created app, based on the provided options.
- * @param questionFct - The function to query for input from the CLI - parameterized for testing purposes
  * @returns The commander command object, awaiting .parse() to be called
  */
 export function argParser(callback: (res: iCPSApp) => void): Command {
@@ -264,7 +261,6 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
 /**
  * This function will parse the provided string array and environment variables and return the correct application object.
  * @param argv - The argument vector to be parsed
- * @param questionFct - The function to query for input from the CLI - parameterized for testing purposes, readline-sync used per default
  * @returns - A promise that resolves to the correct application object. Once the promise resolves, the global resource singleton will also be available. If the program is not able to parse the options, or required options are missing, an error message is printed to stderr and the promise rejects with a CommanderError.
  */
 export async function appFactory(argv: string[]): Promise<iCPSApp> {

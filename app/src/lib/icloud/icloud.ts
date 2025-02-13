@@ -158,6 +158,8 @@ export class iCloud {
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNKNOWN).addCause(err));
             return;
         } finally {
+            // Return in finally is required because control flow of try/catch block is complicated
+            // eslint-disable-next-line no-unsafe-finally
             return ready;
         }
     }
@@ -376,7 +378,7 @@ export class iCloud {
             if (validatedResponse.data.status === `failure`) {
                 Resources.logger(this).info(`Failed to acquire PCS cookies: ${validatedResponse.data.message}`);
                 Resources.emit(iCPSEventCloud.PCS_NOT_READY);
-                setTimeout(() => Resources.emit(iCPSEventCloud.PCS_REQUIRED), 5000);
+                setTimeout(() => Resources.emit(iCPSEventCloud.PCS_REQUIRED), 10000);
                 return;
             }
 
@@ -389,6 +391,30 @@ export class iCloud {
             Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.PCS_REQUEST_FAILED).addCause(err));
+        }
+    }
+
+    /**
+     * Performs a logout, while retaining the trust token
+     */
+    async logout() {
+        try {
+            const url = ENDPOINTS.SETUP.BASE() + ENDPOINTS.SETUP.PATH.LOGOUT;
+            const data = {
+                trustBrowser: true,
+                allBrowsers: false,
+            };
+
+            const config: AxiosRequestConfig = {
+                // 421 is expected, if user was not logged in - 200 is expected, if logout was successful
+                validateStatus: status => status === 421 || status === 200,
+            };
+
+            Resources.logger(this).info(`Logging current account out`);
+
+            await Resources.network().post(url, data, config);
+        } catch (err) {
+            throw new iCPSError(AUTH_ERR.LOGOUT_FAILED).addCause(err);
         }
     }
 

@@ -15,6 +15,20 @@ updates:
       time: "09:00"
       timezone: "Europe/Berlin"
 
+  # Maintain dependencies for devcontainer
+  - package-ecosystem: "devcontainers" # See documentation for possible values
+    labels: [ ]
+    directory: "/"
+    target-branch: "dev"
+    open-pull-requests-limit: 20
+    commit-message:
+      prefix: "chore: [dev] "
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+      timezone: "Europe/Berlin"
+
   # Maintain dependencies for npm
   - package-ecosystem: "npm"
     labels: [ ]
@@ -45,22 +59,18 @@ updates:
         - "@types/typescript*"
         - 'eslint*'
         - "typescript*"
-        - "ts-node*"
+        - "tsx*"
         - "typedoc*"
       tough-cookie:
         patterns:
         - "tough-cookie*"
         - "@types/tough-cookie*"
-      inquirer:
-        patterns:
-        - "inquirer*"
-        - "@types/inquirer*"
       backtrace:
         patterns:
         - "@backtrace*"
-    ignore:
-      - dependency-name: "@types/node"
-        versions: ["19.x.x", "20.x.x", "21.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
+    # ignore:
+    #   - dependency-name: "@types/node"
+    #     versions: ["22.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
   
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"
@@ -74,9 +84,9 @@ updates:
       interval: "weekly"
       day: "saturday"
       timezone: "Europe/Berlin"
-    ignore:
-      - dependency-name: "node"
-        versions: ["19.x.x", "20.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
+    # ignore:
+    #   - dependency-name: "node"
+    #     versions: ["22.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
 
   # Maintain dependencies for pip (docs site)
   - package-ecosystem: "pip"

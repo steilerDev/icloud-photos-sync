@@ -22,7 +22,7 @@ export class iCPSError extends Error {
     /**
      * Additional 'free form' context - to be uploaded to error reporting solution
      */
-    context: any = {};
+    context: unknown = {};
 
     /**
      * Additional message, to be presented to the user
@@ -73,7 +73,7 @@ export class iCPSError extends Error {
      * @param ctx - The context
      * @returns This object for chaining convenience
      */
-    addContext(key: string, ctx: any): iCPSError {
+    addContext(key: string, ctx: unknown): iCPSError {
         this.context[key] = ctx;
         return this;
     }
@@ -147,7 +147,7 @@ export class iCPSError extends Error {
         }
 
         if (Object.hasOwn(this.cause, `code`)) {
-            errorCodeStack.push(`EXT#${(this.cause as any).code}`);
+            errorCodeStack.push(`EXT#${(this.cause as iCPSError).code}`);
             return errorCodeStack;
         }
 

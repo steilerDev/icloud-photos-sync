@@ -5,7 +5,7 @@ import {HEADER_KEYS, SigninResponse, COOKIE_KEYS, TrustResponse, SetupResponse, 
 import {Cookie} from "tough-cookie";
 import {iCPSError} from "../../app/error/error.js";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
-import {AxiosHarTracker} from "@steilerdev/axios-har-tracker";
+import {AxiosHarTracker} from "axios-har-tracker";
 import PQueue from "p-queue";
 import {Resources} from "./main.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -382,7 +382,7 @@ export class NetworkManager {
 
     /**
      * Applies configurations from the response received if the MFA code is required. This includes setting the AASP cookie, the scnt header and session token.
-     * @param mfaRequiredResponse - The response received from the server
+     * @param signinResponse- The response received from the server
      */
     applySigninResponse(signinResponse: SigninResponse) {
         this.sessionId = signinResponse.headers[`x-apple-session-token`];
