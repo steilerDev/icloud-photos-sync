@@ -567,7 +567,7 @@ export const nonRejectOptions = [
         ],
         _desc: `Healthcheck ping URL set`,
         expectedOptions: {
-            healthCheckPingUrl: `https://some.url/healthcheck-slug`,
+            healthCheckUrl: `https://some.url/healthcheck-slug`,
         },
     },
 ];

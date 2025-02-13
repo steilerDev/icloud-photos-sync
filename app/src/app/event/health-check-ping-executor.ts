@@ -1,15 +1,15 @@
-import {iCPSEventRuntimeError, iCPSEventSyncEngine} from "../../lib/resources/events-types.js";
-import {Resources} from "../../lib/resources/main.js";
-import {LogInterface} from "./log.js";
+import { iCPSEventRuntimeError, iCPSEventSyncEngine } from "../../lib/resources/events-types.js";
+import { Resources } from "../../lib/resources/main.js";
+import { LogInterface } from "./log.js";
 
 export class HealthCheckPingExecutor {
-    private healthCheckPingUrl: string;
+    private healthCheckUrl: string;
     public constructor(
         private logInterface: LogInterface,
     ) {
-        this.healthCheckPingUrl = Resources.manager().healthCheckPingUrl;
+        this.healthCheckUrl = Resources.manager().healthCheckUrl;
 
-        if (!this.healthCheckPingUrl) {
+        if (!this.healthCheckUrl) {
             return;
         }
 
@@ -20,7 +20,7 @@ export class HealthCheckPingExecutor {
 
     private async pingStart(): Promise<void> {
         try {
-            await Resources.network().post(this.healthCheckPingUrl + `/start`);
+            await Resources.network().post(this.healthCheckUrl + `/start`);
             Resources.logger(this).info(`Successfully sent start health check ping.`);
         } catch (e) {
             Resources.logger(this).error(`Failed to send start health check ping: ${e}`);
@@ -29,7 +29,7 @@ export class HealthCheckPingExecutor {
 
     private async pingSuccess(): Promise<void> {
         try {
-            await Resources.network().post(this.healthCheckPingUrl, this.getLog());
+            await Resources.network().post(this.healthCheckUrl, this.getLog());
             Resources.logger(this).info(`Successfully sent success health check ping.`);
         } catch (e) {
             Resources.logger(this).error(`Failed to send success health check ping: ${e}`);
@@ -38,7 +38,7 @@ export class HealthCheckPingExecutor {
 
     private async pingError(_err: Error): Promise<void> {
         try {
-            await Resources.network().post(this.healthCheckPingUrl + `/fail`, this.getLog());
+            await Resources.network().post(this.healthCheckUrl + `/fail`, this.getLog());
             Resources.logger(this).info(`Successfully sent error health check ping.`);
         } catch (e) {
             Resources.logger(this).error(`Failed to send error health check ping: ${e}`);
