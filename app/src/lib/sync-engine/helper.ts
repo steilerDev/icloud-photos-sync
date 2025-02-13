@@ -67,7 +67,7 @@ function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Asset
             }
         } catch (err) {
             if (err instanceof iCPSError && err.code === LIBRARY_ERR.UNKNOWN_FILETYPE_DESCRIPTOR.code) {
-                Resources.emit(iCPSEventRuntimeWarning.FILETYPE_ERROR, err.context.extension, err.context.descriptor);
+                Resources.emit(iCPSEventRuntimeWarning.FILETYPE_ERROR, (err.context as any).extension, (err.context as any).descriptor);
             }
 
             Resources.emit(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR, err, asset, master);

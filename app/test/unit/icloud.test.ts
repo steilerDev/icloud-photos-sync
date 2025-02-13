@@ -690,7 +690,7 @@ describe.each([
 
                 test.each([{
                     replyPayload: {
-                        service_errors: [ // eslint-disable-line
+                        service_errors: [  
                             {
                                 code: `-21669`,
                                 message: `Incorrect verification code.`,
@@ -701,12 +701,12 @@ describe.each([
                     desc: `with service error`,
                 }, {
                     replyPayload: {
-                        service_errors: [], // eslint-disable-line
+                        service_errors: [],  
                     },
                     desc: `without service error`,
                 }, {
                     replyPayload: {
-                        service_errors: [ // eslint-disable-line
+                        service_errors: [  
                             {
                                 code: `-21669`,
                                 message: `Incorrect verification code.`,
@@ -878,7 +878,7 @@ describe.each([
             mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>()
                 .mockReturnValue({
                     headers: {
-                        'set-cookie': [],  // eslint-disable-line
+                        'set-cookie': [],   
                     },
                     data: {
                         dsInfo: {

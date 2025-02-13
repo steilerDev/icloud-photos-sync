@@ -8,6 +8,8 @@ import {NetworkManager} from "./network-manager.js";
 import {ResourceManager} from "./resource-manager.js";
 import {Validator} from "./validator.js";
 
+/* eslint-disable @typescript-eslint/no-namespace */
+
 /**
  * This namespace handles the static access to the singleton functions of the ResourceManager, NetworkManager, Validator and EventManager
  */

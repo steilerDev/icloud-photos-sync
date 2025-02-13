@@ -103,7 +103,7 @@ export class PhotosLibrary {
                     Resources.logger(this).debug(`Loaded asset ${asset.getDisplayName()}`);
                 } catch (err) {
                     if (err instanceof iCPSError && err.code === LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION.code) {
-                        Resources.emit(iCPSEventRuntimeWarning.FILETYPE_ERROR, err.context.extension);
+                        Resources.emit(iCPSEventRuntimeWarning.FILETYPE_ERROR, (err.context as any).extension);
                     }
 
                     Resources.emit(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, err, filePath);

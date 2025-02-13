@@ -488,7 +488,7 @@ describe(`App control flow`, () => {
             archiveApp.icloud.authenticate = jest.fn<typeof archiveApp.icloud.authenticate>()
                 .mockResolvedValue(true);
             archiveApp.icloud.logout = jest.fn<typeof archiveApp.icloud.logout>()
-                    .mockResolvedValue();
+                .mockResolvedValue();
 
             archiveApp.syncEngine.sync = jest.fn<typeof archiveApp.syncEngine.sync>()
                 .mockResolvedValue([[], []]);
