@@ -27,7 +27,7 @@ export class HealthCheckPingExecutor {
 
     private async pingSuccess(): Promise<void> {
         try {
-            await Resources.network().post(this.healthCheckUrl, this.getLog());
+            await this.getLog().then(log => this.networkInterface.post(`/success`, log));
             Resources.logger(this).info(`Successfully sent success health check ping.`);
         } catch (e) {
             Resources.logger(this).error(`Failed to send success health check ping: ${e}`);
@@ -36,23 +36,20 @@ export class HealthCheckPingExecutor {
 
     private async pingError(_err: Error): Promise<void> {
         try {
-            await Resources.network().post(this.healthCheckUrl + `/fail`, this.getLog());
+            await this.getLog().then(log => this.networkInterface.post(`/fail`, log));
             Resources.logger(this).info(`Successfully sent error health check ping.`);
         } catch (e) {
             Resources.logger(this).error(`Failed to send error health check ping: ${e}`);
         }
     }
 
-    private getLog(): string {
-        // Get roughly the 100KB by getting the last 100 characters
-        // may be too large due to some characters taking up more than one byte
-        const last100Chars = this
-            .logInterface
-            .getLog()
-            .slice(-100000);
+    private async getLog(): Promise<string> {
+        const filePath = Resources.manager().logFilePath;
+        if (!filePath) {
+            return `no log available`;
+        }
 
-        // Actually get the last 100KB by encoding the last 100 characters
-        const bytes = new TextEncoder().encode(last100Chars);
-        return new TextDecoder().decode(bytes.slice(-100000));
+        return fs.readFile(filePath)
+            .then(data => data.subarray(-1000000).toString(FILE_ENCODING))
     }
 }
