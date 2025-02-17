@@ -3,15 +3,13 @@ import { Resources } from "../../lib/resources/main.js";
 import { LogInterface } from "./log.js";
 
 export class HealthCheckPingExecutor {
-    private healthCheckUrl: string;
-    public constructor(
-        private logInterface: LogInterface,
-    ) {
-        this.healthCheckUrl = Resources.manager().healthCheckUrl;
-
-        if (!this.healthCheckUrl) {
+    private networkInterface: AxiosInstance;
+    public constructor() {
+        if (!Resources.manager().healthCheckUrl) {
             return;
         }
+
+        this.networkInterface = axios.create({baseURL: Resources.manager().healthCheckUrl});
 
         Resources.events(this).on(iCPSEventSyncEngine.START, this.pingStart.bind(this));
         Resources.events(this).on(iCPSEventSyncEngine.DONE, this.pingSuccess.bind(this));
@@ -20,7 +18,7 @@ export class HealthCheckPingExecutor {
 
     private async pingStart(): Promise<void> {
         try {
-            await Resources.network().post(this.healthCheckUrl + `/start`);
+            await this.networkInterface.post(`/start`);
             Resources.logger(this).info(`Successfully sent start health check ping.`);
         } catch (e) {
             Resources.logger(this).error(`Failed to send start health check ping: ${e}`);
