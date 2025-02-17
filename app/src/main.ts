@@ -10,10 +10,10 @@ const app = await appFactory(process.argv)
     .catch(() => process.exit(3)); // Error message is printed by factory
 
 const _errorHandler = new ErrorHandler();
-const logInterface = new LogInterface();
+const _logInterface = new LogInterface();
 const _cliInterface = new CLIInterface();
 const _metricsExporter = new MetricsExporter();
-const _healthCheckPingExecutor = new HealthCheckPingExecutor(logInterface);
+const _healthCheckPingExecutor = new HealthCheckPingExecutor();
 
 try {
     await app.run();
