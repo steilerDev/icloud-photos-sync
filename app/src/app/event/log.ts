@@ -100,8 +100,4 @@ export class LogInterface {
 
         fs.appendFileSync(this.logFileDescriptor, prefixedMessage, {encoding: FILE_ENCODING});
     }
-
-    public getLog(): string {
-        return fs.readFileSync(this.logFileDescriptor, FILE_ENCODING);
-    }
 }
