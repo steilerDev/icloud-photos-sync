@@ -1,13 +1,13 @@
-import axios, { Axios, AxiosInstance } from "axios";
+import axios, { AxiosInstance } from "axios";
 import { iCPSEventRuntimeError, iCPSEventSyncEngine } from "../../lib/resources/events-types.js";
 import { Resources } from "../../lib/resources/main.js";
 import { FILE_ENCODING } from "../../lib/resources/resource-types.js";
-import { LogInterface } from "./log.js";
 import { promises as fs } from 'fs';
-import { hasSubscribers } from "diagnostics_channel";
 
 export class HealthCheckPingExecutor {
-    private networkInterface: AxiosInstance;
+
+    networkInterface: AxiosInstance;
+
     public constructor() {
         if (!Resources.manager().healthCheckUrl) {
             return;
@@ -47,13 +47,9 @@ export class HealthCheckPingExecutor {
         }
     }
 
-    private async getLog(): Promise<string> {
-        const filePath = Resources.manager().logFilePath;
-        if (!filePath) {
-            return `no log available`;
-        }
-
-        return fs.readFile(filePath)
-            .then(data => data.subarray(-1000000).toString(FILE_ENCODING))
+    async getLog(): Promise<string> {
+        return fs.readFile(Resources.manager().logFilePath)
+            .then(data => data.subarray(-102400).toString(FILE_ENCODING))
+            .catch(() => `failed to read log file`);
     }
 }
