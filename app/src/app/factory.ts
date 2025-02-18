@@ -1,9 +1,9 @@
-import {Command, Option, InvalidArgumentError, CommanderError} from "commander";
-import {Cron} from "croner";
-import {TokenApp, SyncApp, ArchiveApp, iCPSApp, DaemonApp} from "./icloud-app.js";
-import {Resources} from "../lib/resources/main.js";
-import {LogLevel} from "./event/log.js";
-import {input, password} from "@inquirer/prompts";
+import { input, password } from "@inquirer/prompts";
+import { Command, CommanderError, InvalidArgumentError, Option } from "commander";
+import { Cron } from "croner";
+import { Resources } from "../lib/resources/main.js";
+import { LogLevel } from "./event/log.js";
+import { ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp } from "./icloud-app.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -83,6 +83,22 @@ function commanderParseInterval(value: string, _dummyPrevious?: unknown): [numbe
 }
 
 /**
+ * This function can be used as a commander argParser. It will try to parse the value as an URL and throw an invalid argument error in case it fails
+ * @param value - The string literal, read from the CLI
+ * @param _dummyPrevious - Conforming to the interface - unused
+ * @returns the original value
+ * @throws An InvalidArgumentError in case parsing failed
+ */
+function commanderParseUrl(value: string, _dummyPrevious?: unknown): string {
+    try {
+        const _url = new URL(value);
+        return value;
+    } catch (err) {
+        throw new InvalidArgumentError(`Not a valid URL: ${err}`);
+    }
+}
+
+/**
  * Extracts the options from the parsed commander command - and asks for user input in case it is necessary
  * @param parsedCommand - The parsed commander command returned from callback in Command.action((_, command any)
  * @returns Validated iCPSAppOptions
@@ -127,7 +143,8 @@ export type iCPSAppOptions = {
     exportMetrics: boolean,
     region: Resources.Types.Region,
     legacyLogin: boolean,
-    metadataRate: [number, number]
+    metadataRate: [number, number],
+    healthCheckUrl?: string,
 }
 
 /**
@@ -220,7 +237,11 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
             .choices(Object.values(Resources.Types.Region)))
         .addOption(new Option(`--legacy-login`, `Enables plain text legacy login method.`)
             .env(`LEGACY_LOGIN`)
-            .default(false));
+            .default(false))
+        .addOption(new Option(`--health-check-url <url>`, `URL to ping to monitor the health of icloud photos sync, see https://icps.steiler.dev/health-checks/ for more information.`)
+            .env(`HEALTH_CHECK_URL`)
+            .default(undefined)
+            .argParser(commanderParseUrl));
 
     program.command(`daemon`)
         .action(async (_, command) => {

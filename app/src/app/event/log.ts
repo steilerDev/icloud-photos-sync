@@ -1,13 +1,13 @@
 /* eslint-disable no-fallthrough */
 
 import * as fs from 'fs';
-import {Resources} from "../../lib/resources/main.js";
-import {iCPSEventLog, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from "../../lib/resources/events-types.js";
-import {iCPSError} from "../error/error.js";
-import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
-import {Asset} from '../../lib/photos-library/model/asset.js';
 import {CPLAsset} from '../../lib/icloud/icloud-photos/query-parser.js';
 import {Album} from '../../lib/photos-library/model/album.js';
+import {Asset} from '../../lib/photos-library/model/asset.js';
+import {iCPSEventLog, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from "../../lib/resources/events-types.js";
+import {Resources} from "../../lib/resources/main.js";
+import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
+import {iCPSError} from "../error/error.js";
 
 export enum LogLevel {
     DEBUG = `debug`,
