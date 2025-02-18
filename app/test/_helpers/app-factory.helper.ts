@@ -199,11 +199,11 @@ export const rejectOptions = [
             `test@icloud.com`,
             `-p`,
             `testPass`,
-            `--healthcheck-ping-url`,
+            `--health-check-url`,
             `asdf`,
         ],
         _desc: `Mis-formatted healthcheck ping URL`,
-        expected: `error: option '--healthcheck-ping-url <url>' argument 'asdf' is invalid. Not a valid URL: TypeError [ERR_INVALID_URL]: Invalid URL`,
+        expected: `error: option '--health-check-url <url>' argument 'asdf' is invalid. Not a valid URL: TypeError: Invalid URL`,
     },
 ];
 
@@ -562,7 +562,7 @@ export const nonRejectOptions = [
             `test@icloud.com`,
             `-p`,
             `testPass`,
-            `--healthcheck-ping-url`,
+            `--health-check-url`,
             `https://some.url/healthcheck-slug`,
         ],
         _desc: `Healthcheck ping URL set`,
