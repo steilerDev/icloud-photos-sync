@@ -750,6 +750,7 @@ describe(`NetworkManager`, () => {
                                     zoneName: `PrimarySync`,
                                     ownerRecordName: `someOwnerRecordName`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
+                                    area: `private`,
                                 },
                             }],
                         },
@@ -758,6 +759,7 @@ describe(`NetworkManager`, () => {
                         zoneName: `PrimarySync`,
                         ownerRecordName: `someOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `private`,
                     },
                 }, {
                     desc: `Non-deleted Primary Zone`,
@@ -770,6 +772,7 @@ describe(`NetworkManager`, () => {
                                     zoneName: `PrimarySync`,
                                     ownerRecordName: `someOwnerRecordName`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
+                                    area: `private`,
                                 },
                                 deleted: false,
                             }],
@@ -779,6 +782,7 @@ describe(`NetworkManager`, () => {
                         zoneName: `PrimarySync`,
                         ownerRecordName: `someOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `private`,
                     },
                 }, {
                     desc: `Valid Primary and Shared Zone`,
@@ -791,12 +795,14 @@ describe(`NetworkManager`, () => {
                                     zoneName: `PrimarySync`,
                                     ownerRecordName: `someOwnerRecordName`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
+                                    area: `private`,
                                 },
                             }, {
                                 zoneID: {
                                     zoneName: `SharedSync-1234`,
                                     ownerRecordName: `someOtherOwnerRecordName`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
+                                    area: `private`,
                                 },
                             }],
                         },
@@ -805,11 +811,13 @@ describe(`NetworkManager`, () => {
                         zoneName: `PrimarySync`,
                         ownerRecordName: `someOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `private`,
                     },
                     expectedSharedZone: {
                         zoneName: `SharedSync-1234`,
                         ownerRecordName: `someOtherOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `private`,
                     },
                 }, {
                     desc: `Valid Primary & Non-deleted Shared Zone`,
@@ -822,12 +830,14 @@ describe(`NetworkManager`, () => {
                                     zoneName: `PrimarySync`,
                                     ownerRecordName: `someOwnerRecordName`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
+                                    area: `private`,
                                 },
                             }, {
                                 zoneID: {
                                     zoneName: `SharedSync-1234`,
                                     ownerRecordName: `someOtherOwnerRecordName`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
+                                    area: `private`,
                                 },
                                 deleted: false,
                             }],
@@ -837,11 +847,13 @@ describe(`NetworkManager`, () => {
                         zoneName: `PrimarySync`,
                         ownerRecordName: `someOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `private`,
                     },
                     expectedSharedZone: {
                         zoneName: `SharedSync-1234`,
                         ownerRecordName: `someOtherOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `private`,
                     },
                 }, {
                     desc: `Valid Primary & Deleted Shared Zone`,
@@ -854,12 +866,14 @@ describe(`NetworkManager`, () => {
                                     zoneName: `PrimarySync`,
                                     ownerRecordName: `someOwnerRecordName`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
+                                    area: `private`,
                                 },
                             }, {
                                 zoneID: {
                                     zoneName: `SharedSync-1234`,
                                     ownerRecordName: `someOtherOwnerRecordName`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
+                                    area: `private`,
                                 },
                                 deleted: true,
                             }],
@@ -869,6 +883,43 @@ describe(`NetworkManager`, () => {
                         zoneName: `PrimarySync`,
                         ownerRecordName: `someOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `private`,
+                    },
+                }, {
+                    desc: `Valid Primary & Non-owned Shared Zone`,
+                    setupResponse: {
+                        data: {
+                            moreComing: false,
+                            syncToken: `someSyncToken`,
+                            zones: [{
+                                zoneID: {
+                                    zoneName: `PrimarySync`,
+                                    ownerRecordName: `someOwnerRecordName`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                    area: `private`,
+                                },
+                            }, {
+                                zoneID: {
+                                    zoneName: `SharedSync-1234`,
+                                    ownerRecordName: `someOtherOwnerRecordName`,
+                                    zoneType: `REGULAR_CUSTOM_ZONE`,
+                                    area: `shared`,
+                                },
+                                deleted: false,
+                            }],
+                        },
+                    },
+                    expectedPrimaryZone: {
+                        zoneName: `PrimarySync`,
+                        ownerRecordName: `someOwnerRecordName`,
+                        zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `private`,
+                    },
+                    expectedSharedZone: {
+                        zoneName: `SharedSync-1234`,
+                        ownerRecordName: `someOtherOwnerRecordName`,
+                        zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `shared`,
                     },
                 },
             ])(`Apply PhotosSetupResponse - $desc`, ({setupResponse, expectedPrimaryZone, expectedSharedZone}) => {
