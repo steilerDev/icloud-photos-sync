@@ -27,7 +27,7 @@ beforeEach(() => {
     mockedNetworkManager._headerJar.setCookie(...getICloudCookieHeader()[`set-cookie`]);
 
     mockedResourceManager._resources.primaryZone = Config.primaryZone;
-    mockedResourceManager._resources.sharedZone = Config.sharedZone;
+    mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
 
     photos = new iCloudPhotos();
 });
@@ -195,12 +195,23 @@ describe(`Setup iCloud Photos`, () => {
 describe.each([
     {
         zone: Zones.Primary,
+        area: `private`,
         expectedZoneObject: Config.primaryZone,
     }, {
         zone: Zones.Shared,
-        expectedZoneObject: Config.sharedZone,
-    },
-])(`$zone`, ({zone, expectedZoneObject}) => {
+        area: `private`,
+        expectedZoneObject: Config.sharedZoneInPrivateArea,
+    }, {
+        zone: Zones.Shared,
+        area: `shared`,
+        expectedZoneObject: Config.sharedZoneInSharedArea
+    }
+])(`$zone ($area)`, ({zone, area, expectedZoneObject}) => {
+    beforeEach(() => {
+        if(zone === Zones.Shared) {
+            mockedResourceManager._resources.sharedZone = expectedZoneObject;
+        }
+    })
     describe.each([
         {
             desc: `recordType + filterBy + resultsLimit + desiredKeys`,
@@ -289,7 +300,7 @@ describe.each([
             const responseRecords = [`recordA`, `recordB`];
 
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${area}/records/query`, expectedQuery)
                 .reply(200, {
                     records: responseRecords,
                 });
@@ -304,7 +315,7 @@ describe.each([
 
         test(`No data returned`, async () => {
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${area}/records/query`, expectedQuery)
                 .reply(200, {});
 
             await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Received unexpected query response format$/);
@@ -312,7 +323,7 @@ describe.each([
 
         test(`Server Error`, async () => {
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${area}/records/query`, expectedQuery)
                 .reply(500, {});
 
             await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Request failed with status code 500$/);
@@ -362,7 +373,7 @@ describe.each([
     }])(`Perform Operation $desc`, ({operation, fields, records, expectedOperation}) => {
         test(`Success`, async () => {
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/modify`, expectedOperation)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${area}/records/modify`, expectedOperation)
                 .reply(200, {
                     records,
                 });
