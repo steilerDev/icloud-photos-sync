@@ -1,5 +1,5 @@
-import {AxiosHarTracker} from "@steilerdev/axios-har-tracker";
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
+import {AxiosHarTracker} from "axios-har-tracker";
 import {createWriteStream} from "fs";
 import fs from "fs/promises";
 import {jsonc} from "jsonc";
