@@ -1,19 +1,20 @@
 
-import mockfs from 'mock-fs';
-import fs from 'fs';
-import {test, expect, describe, beforeAll, jest, afterAll, beforeEach, afterEach} from '@jest/globals';
-import {Header, HeaderJar, NetworkManager} from "../../src/lib/resources/network-manager";
-import PQueue from 'p-queue';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import axios from "axios";
-import {Cookie} from 'tough-cookie';
-import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
-import {defaultConfig} from '../_helpers/_config';
 import {AxiosHarTracker} from 'axios-har-tracker';
-import {Resources} from '../../src/lib/resources/main';
-import * as Config from '../_helpers/_config';
+import fs from 'fs';
+import mockfs from 'mock-fs';
+import PQueue from 'p-queue';
 import path from 'path';
-import {PhotosSetupResponse, SetupResponse, SigninResponse, TrustResponse} from '../../src/lib/resources/network-types';
 import {Stream} from 'stream';
+import {Cookie} from 'tough-cookie';
+import {ZoneReference} from '../../src/lib/photos-library/model/zoneReference';
+import {Resources} from '../../src/lib/resources/main';
+import {Header, HeaderJar, NetworkManager} from "../../src/lib/resources/network-manager";
+import {SetupResponse, SigninResponse, TrustResponse} from '../../src/lib/resources/network-types';
+import * as Config from '../_helpers/_config';
+import {defaultConfig} from '../_helpers/_config';
+import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
 
 describe(`HeaderJar`, () => {
     beforeAll(() => {
@@ -649,7 +650,7 @@ describe(`NetworkManager`, () => {
 
             test(`set photos url`, () => {
                 networkManager.photosUrl = `www.someUrl.com`;
-                expect(networkManager._axios.defaults.baseURL).toEqual(`www.someUrl.com/database/1/com.apple.photos.cloud/production/private`);
+                expect(networkManager._axios.defaults.baseURL).toEqual(`www.someUrl.com/database/1/com.apple.photos.cloud/production`);
             });
         });
 
@@ -690,7 +691,7 @@ describe(`NetworkManager`, () => {
             test.each([{
                 desc: `PCS not required`,
                 pcsRequired: false,
-                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production/private`,
+                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production`,
                 expectedReturnVal: true,
             }, {
                 desc: `PCS required and cookies available`,
@@ -703,14 +704,14 @@ describe(`NetworkManager`, () => {
                     },
                 },
                 pcsRequired: true,
-                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production/private`,
+                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production`,
                 expectedReturnVal: true,
             }, {
                 desc: `PCS required and cookies not available`,
                 pcsRequired: true,
-                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production/private`,
+                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production`,
                 expectedReturnVal: false,
-            }])(`Apply SetupResponse - $desc`, ({cookies, pcsRequired, expectedReturnVal}) => {
+            }])(`Apply SetupResponse - $desc`, ({cookies, pcsRequired, expectedReturnVal, expectedPhotosUrl}) => {
                 if (cookies) {
                     networkManager._headerJar.cookies = new Map(Object.entries(cookies)) as any as Map<string, Cookie>;
                 }
@@ -734,7 +735,7 @@ describe(`NetworkManager`, () => {
                 } as SetupResponse;
                 expect(networkManager.applySetupResponse(setupResponse)).toBe(expectedReturnVal);
 
-                expect(networkManager._axios.defaults.baseURL).toEqual(`somePhotosUrl/database/1/com.apple.photos.cloud/production/private`);
+                expect(networkManager._axios.defaults.baseURL).toEqual(expectedPhotosUrl);
             });
 
             test.each([
@@ -871,7 +872,7 @@ describe(`NetworkManager`, () => {
                     },
                 },
             ])(`Apply PhotosSetupResponse - $desc`, ({setupResponse, expectedPrimaryZone, expectedSharedZone}) => {
-                networkManager.applyPhotosSetupResponse(setupResponse as PhotosSetupResponse);
+                networkManager.applyZones(setupResponse.data.zones as ZoneReference[]);
 
                 expect(Resources.manager()._resources.primaryZone).toEqual(expectedPrimaryZone);
                 expect(Resources.manager()._resources.sharedZone).toEqual(expectedSharedZone);
@@ -911,7 +912,7 @@ describe(`NetworkManager`, () => {
                     },
                 },
             ])(`Apply PhotosSetupResponse throws exception - $desc`, ({setupResponse}) => {
-                expect(() => networkManager.applyPhotosSetupResponse(setupResponse as PhotosSetupResponse)).toThrow(/^No primary photos zone present$/);
+                expect(() => networkManager.applyZones(setupResponse.data.zones as ZoneReference[])).toThrow(/^No primary photos zone present$/);
             });
         });
 
