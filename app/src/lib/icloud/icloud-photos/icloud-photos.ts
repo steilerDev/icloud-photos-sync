@@ -81,10 +81,8 @@ export class iCloudPhotos {
     }
 
     private async getPrivateZones() {
-        Resources.logger(this).debug(`Getting zones in private area`);
-        const response = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS.PRIVATE + ENDPOINTS.PHOTOS.PATH.ZONES, {});
-        const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
-        return validatedResponse.data.zones.map(
+        const zones = await this.getZonesInArea(`private`);
+        return zones.map(
             zone => {
                 const zoneRef = zone as ZoneReference;
                 zoneRef.zoneID.area = `private`;
@@ -94,16 +92,21 @@ export class iCloudPhotos {
     }
 
     private async getSharedZones() {
-        Resources.logger(this).debug(`Getting zones in shared area`);
-        const response = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS.SHARED + ENDPOINTS.PHOTOS.PATH.ZONES, {});
-        const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
-        return validatedResponse.data.zones.map(
+        const zones = await this.getZonesInArea(`shared`);
+        return zones.map(
             zone => {
                 const zoneRef = zone as ZoneReference;
                 zoneRef.zoneID.area = `shared`;
                 return zoneRef;
-            },
+            }
         );
+    }
+
+    private async getZonesInArea(area: `private` | `shared`) {
+        Resources.logger(this).debug(`Getting zones in ${area} area`);
+        const response = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[area] + ENDPOINTS.PHOTOS.PATH.ZONES, {});
+        const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
+        return validatedResponse.data.zones;
     }
 
     /**
