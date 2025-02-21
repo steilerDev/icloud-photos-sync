@@ -67,10 +67,12 @@ export class iCloudPhotos {
         try {
             Resources.logger(this).debug(`Getting iCloud Photos account information`);
 
-            const privateZones = await this.getPrivateZones();
-            const sharedZones = await this.getSharedZones();
+            const zones = (await Promise.all([
+                this.getZonesInArea(`private`),
+                this.getZonesInArea(`shared`),
+            ])).flat();
 
-            Resources.network().applyZones(privateZones.concat(sharedZones));
+            Resources.network().applyZones(zones);
 
             Resources.logger(this).debug(`Successfully gathered iCloud Photos account information`);
             Resources.emit(iCPSEventPhotos.SETUP_COMPLETED);
@@ -78,14 +80,6 @@ export class iCloudPhotos {
             Resources.emit(iCPSEventPhotos.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.SETUP_ERROR).addCause(err));
         } 
         return this.ready;
-    }
-
-    private async getPrivateZones() {
-        return this.getZonesInArea(`private`);
-    }
-
-    private getSharedZones() {
-        return this.getZonesInArea(`shared`);
     }
 
     private async getZonesInArea(area: `private` | `shared`) {
