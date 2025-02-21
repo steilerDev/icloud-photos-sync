@@ -81,32 +81,25 @@ export class iCloudPhotos {
     }
 
     private async getPrivateZones() {
-        const zones = await this.getZonesInArea(`private`);
-        return zones.map(
-            zone => {
-                const zoneRef = zone as ZoneReference;
-                zoneRef.zoneID.area = `private`;
-                return zoneRef;
-            },
-        );
+        return this.getZonesInArea(`private`);
     }
 
-    private async getSharedZones() {
-        const zones = await this.getZonesInArea(`shared`);
-        return zones.map(
-            zone => {
-                const zoneRef = zone as ZoneReference;
-                zoneRef.zoneID.area = `shared`;
-                return zoneRef;
-            }
-        );
+    private getSharedZones() {
+        return this.getZonesInArea(`shared`);
     }
 
     private async getZonesInArea(area: `private` | `shared`) {
         Resources.logger(this).debug(`Getting zones in ${area} area`);
-        const response = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[area] + ENDPOINTS.PHOTOS.PATH.ZONES, {});
+        const areaPath = ENDPOINTS.PHOTOS.AREAS[area === `private` ? `PRIVATE` : `SHARED`];
+        const response = await Resources.network().post(areaPath + ENDPOINTS.PHOTOS.PATH.ZONES, {});
         const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
-        return validatedResponse.data.zones;
+        return validatedResponse.data.zones.map(
+            zone => {
+                const zoneRef = zone as ZoneReference;
+                zoneRef.zoneID.area = area;
+                return zoneRef;
+            }
+        );
     }
 
     /**
