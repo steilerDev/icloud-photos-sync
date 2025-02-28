@@ -12,18 +12,19 @@ export const webUi = `
             margin: 0;
             padding: 0;
             background-color: #f0f0f0;
+            font-size: large;
         }
         .container {
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            overflow-x: scroll;
+            overflow-y: scroll;
         }
         .content {
             background-color: #fff;
-            width: 16rem;
-            margin: 3rem;
+            width: 32rem;
+            margin: 1rem;
             overflow: hidden;
             border-radius: 1rem;
             box-shadow: 0 0 1rem rgba(0, 0, 0, 0.1);
@@ -49,17 +50,16 @@ export const webUi = `
             text-align: right;
         }
         .state-symbol {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            width: 40%;
+            margin-bottom: 1rem;
         }
         .state-symbol svg {
-            width: 75%;
+            width: 100%;
+            height: 100%;
         }
         .state-text {
             text-align: center;
             width: 75%;
-            font-size: 0.75rem;
             margin: auto;
         }
         button {
@@ -71,6 +71,7 @@ export const webUi = `
             border-radius: 0.5rem;
             cursor: pointer;
             margin-top: 1rem;
+            font-size: large;
         }
     </style>
 </head>
