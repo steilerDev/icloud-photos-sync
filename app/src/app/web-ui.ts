@@ -20,6 +20,7 @@ export const webUi = `
             align-items: center;
             height: 100vh;
             overflow-y: scroll;
+            flex-wrap: wrap;
         }
         .content {
             background-color: #fff;
@@ -65,7 +66,7 @@ export const webUi = `
         button {
             width: 100%;
             padding: 0.5rem;
-            background-color:rgb(255, 110, 66);
+            background-color:rgb(66, 129, 255);
             color: #fff;
             border: none;
             border-radius: 0.5rem;
