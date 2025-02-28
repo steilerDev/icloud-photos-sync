@@ -1,5 +1,6 @@
 import {Cron} from "croner";
 import * as fs from 'fs';
+import * as http from "http";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {iCloud} from "../lib/icloud/icloud.js";
 import {Album} from "../lib/photos-library/model/album.js";
@@ -10,6 +11,7 @@ import {Resources} from "../lib/resources/main.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {iCPSError} from "./error/error.js";
+import {webUi} from "./web-ui.js";
 
 /**
  * Abstract class returned by the factory function
@@ -30,11 +32,25 @@ export class DaemonApp extends iCPSApp {
      */
     job: Cron;
 
+    private webServer: http.Server;
+
+    constructor() {
+        super();
+        this.webServer = http.createServer(this.handleRequest.bind(this));
+    }
+
+    private handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        res.writeHead(200, {'Content-Type': `text/html`});
+        res.end(webUi)
+    }
+
     /**
      * Schedule the synchronization based on the provided cron string
      * @returns Once the job has been scheduled
      */
     async run() {
+        this.webServer.listen(8080);
+
         this.job = new Cron(
             Resources.manager().schedule,
             async () => {
