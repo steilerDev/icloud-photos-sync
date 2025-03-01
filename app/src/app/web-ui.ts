@@ -24,7 +24,7 @@ export const webUi = `
         }
         .content {
             background-color: #fff;
-            width: 32rem;
+            width: 26rem;
             margin: 1rem;
             overflow: hidden;
             border-radius: 1rem;
@@ -35,7 +35,7 @@ export const webUi = `
             margin: 0 auto;
         }
         .innerContent {
-            padding: 0 1rem 1rem 1rem;
+            padding: 1rem;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -51,8 +51,8 @@ export const webUi = `
             text-align: right;
         }
         .state-symbol {
-            width: 40%;
-            margin-bottom: 1rem;
+            margin: 1rem;
+            width: 35%;
         }
         .state-symbol svg {
             width: 100%;
@@ -62,6 +62,7 @@ export const webUi = `
             text-align: center;
             width: 75%;
             margin: auto;
+            margin-bottom: 1rem;
         }
         button {
             width: 100%;
