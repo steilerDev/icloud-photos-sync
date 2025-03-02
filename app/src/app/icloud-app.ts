@@ -1,6 +1,5 @@
 import {Cron} from "croner";
 import * as fs from 'fs';
-import * as http from "http";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {iCloud} from "../lib/icloud/icloud.js";
 import {Album} from "../lib/photos-library/model/album.js";
@@ -11,7 +10,7 @@ import {Resources} from "../lib/resources/main.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {iCPSError} from "./error/error.js";
-import {enterMfaUi, requestMfaUi, stateUi} from "./web-ui.js";
+import {WebUiServer} from "./web-ui/server.js";
 
 /**
  * Abstract class returned by the factory function
@@ -32,37 +31,13 @@ export class DaemonApp extends iCPSApp {
      */
     job: Cron;
 
-    private webServer: http.Server;
+    /**
+     * Holds the web ui server
+     */
+    webUiServer: WebUiServer = new WebUiServer();
 
     constructor() {
         super();
-        this.webServer = http.createServer(this.handleRequest.bind(this));
-    }
-
-    private handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        const cleanPath = req.url?.split(`?`)[0];
-        const content = this.getUiHtml(cleanPath);
-        if(content === null) {
-            // redirect to base url
-            res.writeHead(302, {Location: `/`});
-            res.end();
-            return
-        }
-
-        res.writeHead(200, {'Content-Type': `text/html`});
-        res.write(content);
-        res.end();
-    }
-    
-    private getUiHtml(path: string): string | null {
-        if(path === `/`) {
-            return stateUi;
-        } else if(path === `/enter-mfa`) {
-            return enterMfaUi;
-        } else if(path === `/request-mfa`) {
-            return requestMfaUi;
-        }
-        return null;
     }
 
     /**
@@ -70,8 +45,6 @@ export class DaemonApp extends iCPSApp {
      * @returns Once the job has been scheduled
      */
     async run() {
-        this.webServer.listen(8080);
-
         this.job = new Cron(
             Resources.manager().schedule,
             async () => {
