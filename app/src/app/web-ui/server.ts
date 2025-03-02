@@ -1,8 +1,8 @@
 import * as http from 'http';
 import {Resources} from '../../lib/resources/main.js';
-import {requestMfaView} from './view/request-mfa-view.js';
-import {stateView} from './view/state-view.js';
-import {enterMfaView} from './view/submit-mfa-view.js';
+import {RequestMfaView} from './view/request-mfa-view.js';
+import {StateView} from './view/state-view.js';
+import {SubmitMfaView} from './view/submit-mfa-view.js';
 
 export class WebUiServer {
     private webServer = http.createServer(this.handleRequest.bind(this));
@@ -11,7 +11,7 @@ export class WebUiServer {
         // const port = Resources.manager().webUiPort;
         const port = 8080;
         this.webServer.listen(port, () => {
-            Resources.logger(this).info(`Web UI server started on port 8080`);
+            Resources.logger(this).info(`Web UI server started on port ${port}`);
         });
     }
 
@@ -32,11 +32,11 @@ export class WebUiServer {
 
     private getUiHtml(path: string): string | null {
         if (path === `/`) {
-            return stateView;
+            return new StateView().asHtml();
         } else if (path === `/submit-mfa`) {
-            return enterMfaView;
+            return new SubmitMfaView().asHtml();
         } else if (path === `/request-mfa`) {
-            return requestMfaView;
+            return new RequestMfaView().asHtml();
         }
         return null;
     }
