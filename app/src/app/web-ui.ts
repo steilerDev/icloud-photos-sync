@@ -123,6 +123,15 @@ export const stateUi = baseUiWithContent(`
     <button>Sync Now</button>
 `);
 
+export const requestMfaUi = baseUiWithContent(`
+    <!-- Options are sms, voice, device -->
+    <h2>Choose MFA Method</h2>
+    <button>SMS</button>
+    <button>Voice</button>
+    <button>Device</button>
+    <button class="inverted">Cancel</button>
+`);
+
 export const enterMfaUi = baseUiWithContent(`
     <h2>Enter MFA Code</h2>
     <div id="mfaInput">

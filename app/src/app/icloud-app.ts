@@ -11,7 +11,7 @@ import {Resources} from "../lib/resources/main.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {iCPSError} from "./error/error.js";
-import {enterMfaUi, stateUi} from "./web-ui.js";
+import {enterMfaUi, requestMfaUi, stateUi} from "./web-ui.js";
 
 /**
  * Abstract class returned by the factory function
@@ -59,6 +59,8 @@ export class DaemonApp extends iCPSApp {
             return stateUi;
         } else if(path === `/enter-mfa`) {
             return enterMfaUi;
+        } else if(path === `/request-mfa`) {
+            return requestMfaUi;
         }
         return null;
     }
