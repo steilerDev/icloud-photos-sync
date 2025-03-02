@@ -35,7 +35,7 @@ export const webUi = `
             margin: 0 auto;
         }
         .innerContent {
-            padding: 1rem;
+            padding: 2rem 1rem;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -65,7 +65,7 @@ export const webUi = `
             margin-bottom: 1rem;
         }
         button {
-            width: 100%;
+            width: 80%;
             padding: 0.5rem;
             background-color:rgb(66, 129, 255);
             color: #fff;
@@ -74,6 +74,28 @@ export const webUi = `
             cursor: pointer;
             margin-top: 1rem;
             font-size: large;
+            box-sizing: border-box;
+        }
+        button.inverted {
+            background-color: #fff;
+            color: rgb(66, 129, 255);
+            border: 1px solid rgb(66, 129, 255);
+        }
+        div#mfaInput {
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+            margin: 1rem 0;
+        }
+        div#mfaInput input {
+            box-sizing: border-box;
+            font-size: xxx-large;
+            width: 15%; 
+            padding: 0.5rem; 
+            margin-top: 1rem; 
+            border-radius: 0.5rem; 
+            border: 1px solid #ccc; 
+            text-align: center;
         }
     </style>
 </head>
@@ -81,7 +103,7 @@ export const webUi = `
     <div class="container">
         <div class="content">
             <img src="https://icps.steiler.dev/assets/icloud-photos-sync-open-graph.png" class="logo" alt="ICPS Logo">
-            <div class="innerContent">
+            <div class="innerContent" style="display: none">
                 <br/>
                 <div class="state-symbol">${checkSymbol}</div>
                 <p class="state-text">
@@ -91,7 +113,36 @@ export const webUi = `
                 </p>
                 <br/>
                 <button>Sync Now</button>
-                <button>Update MFA</button>
+            </div>
+            <div class="innerContent">
+                <label for="mfaCode">Enter MFA Code</label>
+                <div id="mfaInput">
+                <input type="text" id="firstDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                <input type="text" id="secondDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                <input type="text" id="thirdDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                <input type="text" id="fourthDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                <input type="text" id="fifthDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                <input type="text" id="sixthDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                </div>
+                <button>Submit</button>
+                <button class="inverted">Resend Code</button>
+                <button class="inverted">Cancel</button>
+                <script type="text/javascript">
+                    console.log("Setting up event listeners.")
+                    const mfaInputs = document.querySelectorAll("#mfaInput input");
+                    mfaInputs.forEach((input, index) => {
+                        input.addEventListener("keyup", (e) => {
+                            console.log("Key pressed: ", e.key);
+                            if (e.target.value.length == 0) {
+                                return;
+                            }
+                            if (index === mfaInputs.length - 1) {
+                                return
+                            }
+                            mfaInputs[index + 1].focus();
+                        });
+                    });
+                </script>
             </div>
         </div>
     </div>
