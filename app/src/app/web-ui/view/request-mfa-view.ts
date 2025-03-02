@@ -6,5 +6,5 @@ export const requestMfaView = baseUiWithContent(`
     <button>SMS</button>
     <button>Voice</button>
     <button>Device</button>
-    <button class="inverted">Cancel</button>
+    <button class="inverted" onclick="window.location.href=window.location.href + '/..'">Cancel</button>
 `);

@@ -29,8 +29,8 @@ export const enterMfaView = baseUiWithContent(`
     <input type="text" id="sixthDigit" maxlength="1" size="1" pattern="[0-9]" required>
     </div>
     <button>Submit</button>
-    <button class="inverted">Resend Code</button>
-    <button class="inverted">Cancel</button>
+    <button class="inverted" onclick="window.location.href=window.location.href + '/../request-mfa'">Resend Code</button>
+    <button class="inverted" onclick="window.location.href=window.location.href + '/..'">Cancel</button>
     <script type="text/javascript">
         const mfaInputs = document.querySelectorAll("#mfaInput input");
         mfaInputs.forEach((input, index) => {

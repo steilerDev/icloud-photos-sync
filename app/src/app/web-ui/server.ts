@@ -33,7 +33,7 @@ export class WebUiServer {
     private getUiHtml(path: string): string | null {
         if (path === `/`) {
             return stateView;
-        } else if (path === `/enter-mfa`) {
+        } else if (path === `/submit-mfa`) {
             return enterMfaView;
         } else if (path === `/request-mfa`) {
             return requestMfaView;
