@@ -19,8 +19,8 @@ export class WebUiServer {
         const cleanPath = req.url?.split(`?`)[0];
         const content = this.getUiHtml(cleanPath);
         if (content === null) {
-            // redirect to base url
-            res.writeHead(302, {Location: `/`});
+            res.writeHead(404, {'Content-Type': `text/plain`});
+            res.write(`Not Found`);
             res.end();
             return
         }
