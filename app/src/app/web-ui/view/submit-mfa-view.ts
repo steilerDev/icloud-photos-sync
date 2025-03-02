@@ -30,9 +30,22 @@ export class SubmitMfaView extends View {
             <input type="text" id="fifthDigit" maxlength="1" size="1" pattern="[0-9]" required>
             <input type="text" id="sixthDigit" maxlength="1" size="1" pattern="[0-9]" required>
             </div>
-            <button>Submit</button>
-            <button class="inverted" onclick="window.location.href=window.location.href + '/../request-mfa'">Resend Code</button>
-            <button class="inverted" onclick="window.location.href=window.location.href + '/..'">Cancel</button>
+            <button onclick="submitMfa()">Submit</button>
+            <script>
+                async function submitMfa() {
+                    const mfaCode = document
+                        .querySelectorAll("#mfaInput input")
+                        .reduce((acc, input) => acc + input.value, "");
+                    const response = await fetch("../mfa?code=" + mfaCode, {method: "POST"});
+                    if (!response.ok) {
+                        alert("MFA submission failed: " + response.statusText);
+                        return;
+                    }
+                    navigate("../state");
+                }
+            </script>
+            <button class="inverted" onclick="navigate('../request-mfa')">Resend Code</button>
+            <button class="inverted" onclick="navigate('..')">Cancel</button>
             <script type="text/javascript">
                 const mfaInputs = document.querySelectorAll("#mfaInput input");
                 mfaInputs.forEach((input, index) => {

@@ -6,6 +6,15 @@ export abstract class View {
         <head>
             <meta charset="UTF-8">
             <title>ICPS Web UI</title>
+            <script>
+                function navigate(path) {
+                    if(window.location.pathname.endsWith("/")) {
+                        window.location.href = window.location.pathname + path;
+                        return;
+                    }
+                    window.location.href = window.location.pathname + "/" + path;
+                }
+            </script>
             <style>
                 body {
                     font-family: Arial, sans-serif;

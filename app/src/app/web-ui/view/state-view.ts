@@ -29,6 +29,17 @@ export class StateView extends View {
             </p>
             <br/>
             <button>Sync Now</button>
+            <button onclick="reauthenticate()">Reauthenticate</button>
+            <script type="text/javascript">
+                async function reauthenticate() {
+                    const response = await fetch("reauthenticate", { method: "POST" });
+                    if (!response.ok) {
+                        alert("Reauthentication failed: " + response.statusText);
+                        return;
+                    }
+                    navigate("submit-mfa");
+                }
+            </script>
         `;
     }
 }
