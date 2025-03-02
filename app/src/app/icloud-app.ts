@@ -11,7 +11,7 @@ import {Resources} from "../lib/resources/main.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {iCPSError} from "./error/error.js";
-import {webUi} from "./web-ui.js";
+import {enterMfaUi, stateUi} from "./web-ui.js";
 
 /**
  * Abstract class returned by the factory function
@@ -40,8 +40,27 @@ export class DaemonApp extends iCPSApp {
     }
 
     private handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        const cleanPath = req.url?.split(`?`)[0];
+        const content = this.getUiHtml(cleanPath);
+        if(content === null) {
+            // redirect to base url
+            res.writeHead(302, {Location: `/`});
+            res.end();
+            return
+        }
+
         res.writeHead(200, {'Content-Type': `text/html`});
-        res.end(webUi)
+        res.write(content);
+        res.end();
+    }
+    
+    private getUiHtml(path: string): string | null {
+        if(path === `/`) {
+            return stateUi;
+        } else if(path === `/enter-mfa`) {
+            return enterMfaUi;
+        }
+        return null;
     }
 
     /**
