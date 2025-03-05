@@ -33,15 +33,15 @@ export class SubmitMfaView extends View {
             <button onclick="submitMfa()">Submit</button>
             <script>
                 async function submitMfa() {
-                    const mfaCode = document
-                        .querySelectorAll("#mfaInput input")
+                    const mfaCode = Array.from(document
+                        .querySelectorAll("#mfaInput input"))
                         .reduce((acc, input) => acc + input.value, "");
                     const response = await fetch("../mfa?code=" + mfaCode, {method: "POST"});
                     if (!response.ok) {
                         alert("MFA submission failed: " + response.statusText);
                         return;
                     }
-                    navigate("../state");
+                    navigate("../");
                 }
             </script>
             <button class="inverted" onclick="navigate('../request-mfa')">Resend Code</button>
