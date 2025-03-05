@@ -30,7 +30,7 @@ export class SubmitMfaView extends View {
             <input type="text" id="fifthDigit" maxlength="1" size="1" pattern="[0-9]" required>
             <input type="text" id="sixthDigit" maxlength="1" size="1" pattern="[0-9]" required>
             </div>
-            <button onclick="submitMfa()">Submit</button>
+            <button id="submitButton" onclick="submitMfa()">Submit</button>
             <script>
                 async function submitMfa() {
                     const mfaCode = Array.from(document
@@ -50,13 +50,23 @@ export class SubmitMfaView extends View {
                 const mfaInputs = document.querySelectorAll("#mfaInput input");
                 mfaInputs.forEach((input, index) => {
                     input.addEventListener("input", (e) => {
-                        if (e.target.value.length == 0) {
-                            return;
+                        if (e.target.value.length == 1) {
+                            if(index < mfaInputs.length - 1) {
+                                mfaInputs[index + 1].focus();
+                            } else {
+                                document.querySelector("#submitButton").focus();
+                            }
                         }
-                        if (index === mfaInputs.length - 1) {
-                            return
+                    });
+
+                    input.addEventListener("keydown", (e) => {
+                        if (e.key === "Backspace" && index > 0) {
+                            mfaInputs[index - 1].focus();
                         }
-                        mfaInputs[index + 1].focus();
+                    });
+
+                    input.addEventListener("focus", (e) => {
+                        input.value = "";
                     });
                 });
             </script>
