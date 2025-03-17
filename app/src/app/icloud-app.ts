@@ -19,7 +19,7 @@ export abstract class iCPSApp {
     /**
      * Holds the web ui server
      */
-    webServer: WebServer = new WebServer();
+    webServer: WebServer = WebServer.spawn();
 
     /**
      * Executes this app

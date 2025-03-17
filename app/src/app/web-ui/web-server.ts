@@ -37,16 +37,17 @@ export class WebServer {
      */
     mfaMethod: MFAMethod;
 
-    /**
-     * Timer object to track timeout of MFA request
-     */
-    mfaTimeout: NodeJS.Timeout;
+    static spawn() {
+        const webServer = new WebServer()
+        webServer.startServer();
+        return webServer;
+    }
 
     /**
      * Creates the server object
      * @emits iCPSEventMFA.ERROR - When an error associated to the server occurs - Provides iCPSError as argument
      */
-    constructor() {
+    private constructor() {
         Resources.logger(this).debug(`Preparing web server on port ${Resources.manager().mfaServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
         this.server.on(`error`, err => {
@@ -69,8 +70,6 @@ export class WebServer {
 
         // allow the process to exit, if this server is the only thing left running
         this.server.unref();
-
-        this.startServer();
 
         // Default MFA request always goes to device
         this.mfaMethod = new MFAMethod();

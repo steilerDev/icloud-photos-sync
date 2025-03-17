@@ -1,19 +1,19 @@
 
-import {expect, describe, test, jest, beforeEach} from '@jest/globals';
-import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
-import {MockedEventManager, prepareResources} from '../_helpers/_general';
-import {MFAServer, MFA_SERVER_ENDPOINTS} from '../../src/lib/icloud/mfa/mfa-server';
-import {iCPSEventMFA, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
-import {MFA_ERR} from '../../src/app/error/error-codes';
+import {beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {iCPSError} from '../../src/app/error/error';
+import {MFA_ERR} from '../../src/app/error/error-codes';
+import {MFA_SERVER_ENDPOINTS, WebServer} from '../../src/app/web-ui/web-server';
+import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
+import {iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../src/lib/resources/events-types';
+import {MockedEventManager, prepareResources} from '../_helpers/_general';
+import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 
-let server: MFAServer;
+let server: WebServer;
 let mockedEventManager: MockedEventManager;
 
 beforeEach(() => {
     mockedEventManager = prepareResources()!.event;
-    server = new MFAServer();
+    server = new WebServer();
 });
 
 describe(`MFA Code`, () => {
@@ -138,17 +138,6 @@ describe(`Request routing`, () => {
         server.handleMFACode = jest.fn<typeof server.handleMFACode>();
     });
 
-    test(`GET /`, () => {
-        const req = requestFactory(`/`, `GET`);
-        const res = responseFactory();
-
-        server.handleRequest(req, res);
-
-        expect(server.sendResponse).toHaveBeenCalledWith(res, 200, `MFA Server up & running - icloud-photos-sync@v0.0.0-development`);
-        expect(server.handleMFACode).not.toHaveBeenCalled();
-        expect(server.handleMFAResend).not.toHaveBeenCalled();
-    });
-
     test(`POST /ENDPOINT.CODE_INPUT`, () => {
         const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?testparam=abc`, `POST`);
         const res = responseFactory();
@@ -171,8 +160,8 @@ describe(`Request routing`, () => {
         expect(server.handleMFACode).not.toHaveBeenCalled();
     });
 
-    test(`GET /invalid`, () => {
-        const method = `GET`;
+    test(`PUT /invalid`, () => {
+        const method = `PUT`;
         const req = requestFactory(`/invalid`, method);
         const res = responseFactory();
 
@@ -210,8 +199,6 @@ describe(`Server lifecycle`, () => {
 
         server.startServer();
         expect((server.server.listen as any).mock.lastCall[0]).toEqual(80);
-        expect(server.mfaTimeout).toBeDefined();
-        clearTimeout(server.mfaTimeout);
     });
 
     test(`Startup Error`, () => {
@@ -219,29 +206,11 @@ describe(`Server lifecycle`, () => {
             throw new Error(`some server error`);
         }) as any;
 
-        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
 
         server.startServer();
 
         expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.STARTUP_FAILED));
-
-        expect(server.mfaTimeout).toBeUndefined();
-    });
-
-    test(`Shutdown`, () => {
-        const closeFunction = jest.fn<typeof server.server.close>();
-        server.server.close = closeFunction;
-
-        const timeoutFunction = jest.fn();
-        server.mfaTimeout = setTimeout(() => timeoutFunction, 1000);
-
-        server.stopServer();
-        jest.advanceTimersByTime(1001);
-
-        expect(closeFunction).toHaveBeenCalled();
-        expect(server.server).toBeUndefined();
-        expect(server.mfaTimeout).toBeUndefined();
-        expect(timeoutFunction).not.toHaveBeenCalled();
     });
 
     test(`Send response`, () => {
@@ -252,14 +221,14 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Handle unknown server error`, () => {
-        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
         server.server.emit(`error`, new Error(`some server error`));
 
         expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.SERVER_ERR));
     });
 
     test(`Handle address in use error`, () => {
-        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
         const error = new Error(`Address in use`);
         (error as any).code = `EADDRINUSE`;
         server.server.emit(`error`, error);
@@ -268,35 +237,11 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Handle EACCES error`, () => {
-        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.ERROR);
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
         const error = new Error(`No privileges`);
         (error as any).code = `EACCES`;
         server.server.emit(`error`, error);
 
         expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.INSUFFICIENT_PRIVILEGES));
-    });
-
-    test(`Handle MFA timeout`, () => {
-        server.server.listen = jest.fn<typeof server.server.listen>() as any;
-        server.stopServer = jest.fn<typeof server.stopServer>();
-
-        const timeoutEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_NOT_PROVIDED);
-
-        server.startServer();
-
-        // Not called on start server
-        expect(timeoutEvent).not.toHaveBeenCalled();
-        expect(server.stopServer).not.toHaveBeenCalled();
-
-        // Advancing time slightly before timeout occurs
-        const timeoutValue = 1000 * 60 * 10;
-        jest.advanceTimersByTime(timeoutValue - 1);
-        expect(timeoutEvent).not.toHaveBeenCalled();
-        expect(server.stopServer).not.toHaveBeenCalled();
-
-        // Timers should have been called now
-        jest.advanceTimersByTime(2);
-        expect(timeoutEvent).toHaveBeenCalledWith(new MFAMethod(), new Error(`MFA server timeout (code needs to be provided within 10 minutes)`));
-        expect(server.stopServer).toHaveBeenCalled();
     });
 });

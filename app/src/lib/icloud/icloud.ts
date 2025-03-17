@@ -4,7 +4,7 @@ import pTimeout from 'p-timeout';
 import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.js';
 import {iCPSError} from '../../app/error/error.js';
 import {MFA_TIMEOUT_VALUE} from '../../app/web-ui/web-server.js';
-import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../resources/events-types.js';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 import {Resources} from '../resources/main.js';
 import {COOKIE_KEYS, ENDPOINTS} from '../resources/network-types.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
@@ -76,8 +76,7 @@ export class iCloud {
                 Resources.events(this)
                     .once(iCPSEventPhotos.READY, () => resolve(true))
                     .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => resolve(false))
-                    .once(iCPSEventCloud.ERROR, err => reject(err))
-                    .once(iCPSEventWebServer.ERROR, err => reject(err));
+                    .once(iCPSEventCloud.ERROR, err => reject(err));
             }), {
                 milliseconds: MFA_TIMEOUT_VALUE + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
                 message: new iCPSError(AUTH_ERR.SETUP_TIMEOUT),

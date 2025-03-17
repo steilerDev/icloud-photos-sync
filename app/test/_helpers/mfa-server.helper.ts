@@ -11,6 +11,7 @@ export function requestFactory(url: string, method: string = `POST`): IncomingMe
 
 export function responseFactory(): ServerResponse<IncomingMessage> {
     return {
+        write: jest.fn<UnknownFunction>(),
         writeHead: jest.fn<UnknownFunction>(),
         end: jest.fn<UnknownFunction>(),
     } as unknown as ServerResponse<IncomingMessage>;
