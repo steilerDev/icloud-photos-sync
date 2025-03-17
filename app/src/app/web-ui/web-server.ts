@@ -1,10 +1,14 @@
 import http from 'http';
 import {jsonc} from 'jsonc';
-import {MFA_ERR} from '../../../app/error/error-codes.js';
-import {iCPSError} from '../../../app/error/error.js';
-import {iCPSEventMFA, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
-import {Resources} from '../../resources/main.js';
-import {MFAMethod} from './mfa-method.js';
+import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
+import {iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {Resources} from '../../lib/resources/main.js';
+import {MFA_ERR} from '../error/error-codes.js';
+import {iCPSError} from '../error/error.js';
+import {TokenApp} from '../icloud-app.js';
+import {RequestMfaView} from './view/request-mfa-view.js';
+import {StateView} from './view/state-view.js';
+import {SubmitMfaView} from './view/submit-mfa-view.js';
 
 /**
  * The MFA timeout value in milliseconds
@@ -22,7 +26,7 @@ export const MFA_SERVER_ENDPOINTS = {
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
  */
-export class MFAServer {
+export class WebServer {
     /**
      * The server object
      */
@@ -43,7 +47,7 @@ export class MFAServer {
      * @emits iCPSEventMFA.ERROR - When an error associated to the server occurs - Provides iCPSError as argument
      */
     constructor() {
-        Resources.logger(this).debug(`Preparing MFA server on port ${Resources.manager().mfaServerPort}`);
+        Resources.logger(this).debug(`Preparing web server on port ${Resources.manager().mfaServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
         this.server.on(`error`, err => {
             let icpsErr = new iCPSError(MFA_ERR.SERVER_ERR);
@@ -60,8 +64,13 @@ export class MFAServer {
 
             icpsErr.addCause(err);
 
-            Resources.emit(iCPSEventMFA.ERROR, icpsErr);
+            Resources.emit(iCPSEventWebServer.ERROR, icpsErr);
         });
+
+        // allow the process to exit, if this server is the only thing left running
+        this.server.unref();
+
+        this.startServer();
 
         // Default MFA request always goes to device
         this.mfaMethod = new MFAMethod();
@@ -78,18 +87,12 @@ export class MFAServer {
             this.server.listen(Resources.manager().mfaServerPort, () => {
                 /* c8 ignore start */
                 // Never starting the server just to see logger message
-                Resources.emit(iCPSEventMFA.STARTED, Resources.manager().mfaServerPort);
+                Resources.emit(iCPSEventWebServer.STARTED, Resources.manager().mfaServerPort);
                 Resources.logger(this).info(`Exposing endpoints: ${jsonc.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
                 /* c8 ignore stop */
             });
-
-            // MFA code needs to be provided within timeout period
-            this.mfaTimeout = setTimeout(() => {
-                Resources.emit(iCPSEventMFA.MFA_NOT_PROVIDED, this.mfaMethod, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
-                this.stopServer();
-            }, MFA_TIMEOUT_VALUE);
         } catch (err) {
-            Resources.emit(iCPSEventMFA.ERROR, new iCPSError(MFA_ERR.STARTUP_FAILED).addCause(err));
+            Resources.emit(iCPSEventWebServer.ERROR, new iCPSError(MFA_ERR.STARTUP_FAILED).addCause(err));
         }
     }
 
@@ -100,19 +103,70 @@ export class MFAServer {
      * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the request method or endpoint of server could not be found - Provides iCPSError as argument
      */
     handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        if (req.method === `GET` && req.url === `/`) {
-            this.sendResponse(res, 200, `MFA Server up & running - ${Resources.PackageInfo.name}@v${Resources.PackageInfo.version}`);
+        if (req.method === `GET`) {
+            this.handleGetRequest(req, res);
             return;
         }
 
-        if (req.method !== `POST`) {
-            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.METHOD_NOT_FOUND)
-                .addMessage(`endpoint ${req.url}, method ${req.method}`)
-                .addContext(`request`, req));
-            this.sendResponse(res, 400, `Method not supported: ${req.method}`);
+        if (req.method === `POST`) {
+            this.handlePostRequest(req, res);
             return;
         }
 
+        this.handleInvalidMethodRequest(req, res);
+    }
+
+    /**
+     * Handle incoming GET requests
+     * @param req - The HTTP request object
+     * @param res - The HTTP response object
+     */
+    handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        const cleanPath = req.url?.split(`?`)[0];
+        const content = this.getUiHtml(cleanPath);
+        if (content === null) {
+            res.writeHead(404, {'Content-Type': `text/plain`});
+            res.write(`Not Found`);
+            res.end();
+            return
+        }
+
+        res.writeHead(200, {'Content-Type': `text/html`});
+        res.write(content);
+        res.end();
+    }
+
+    /**
+     * Returns the HTML content for the given path
+     * @param path - The path to get the HTML content for
+     * @returns The HTML content for the given path
+     */
+    getUiHtml(path: string): string | null {
+        if (path === `/`) {
+            return new StateView().asHtml();
+        } else if (path.startsWith(`/submit-mfa`)) {
+            return new SubmitMfaView().asHtml();
+        } else if (path.startsWith(`/request-mfa`)) {
+            return new RequestMfaView().asHtml();
+        }
+        return null;
+    }
+
+    /**
+     * Handle incoming POST requests
+     * @param req - The HTTP request object
+     * @param res - The HTTP response object
+     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the MFA code format is not as expected - Provides iCPSError as argument
+     * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
+     */
+    handlePostRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        if (req.url.startsWith(`/reauthenticate`)) {
+            const app = new TokenApp();
+            app.run();
+            res.writeHead(200, {'Content-Type': `text/plain`});
+            res.write(`Reauthentication started`);
+            res.end();
+        }
         if (req.url.startsWith(MFA_SERVER_ENDPOINTS.CODE_INPUT)) {
             this.handleMFACode(req, res);
         } else if (req.url.startsWith(MFA_SERVER_ENDPOINTS.RESEND_CODE)) {
@@ -123,6 +177,19 @@ export class MFAServer {
                 .addContext(`request`, req));
             this.sendResponse(res, 404, `Route not found, available endpoints: ${jsonc.stringify(Object.values(MFA_SERVER_ENDPOINTS))}`);
         }
+    }
+
+    /**
+     * Handle requests with invalid methods
+     * @param req - The HTTP request object
+     * @param res - The HTTP response object
+     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the request method is not as expected - Provides iCPSError as argument
+     */
+    handleInvalidMethodRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.METHOD_NOT_FOUND)
+            .addMessage(`endpoint ${req.url}, method ${req.method}`)
+            .addContext(`request`, req));
+        this.sendResponse(res, 400, `Method not supported: ${req.method}`);
     }
 
     /**
@@ -187,21 +254,5 @@ export class MFAServer {
     sendResponse(res: http.ServerResponse, code: number, msg: string) {
         res.writeHead(code, {"Content-Type": `application/json`});
         res.end(jsonc.stringify({message: msg}));
-    }
-
-    /**
-     * Stops the server and clears any outstanding timeout
-     */
-    stopServer() {
-        Resources.logger(this).debug(`Stopping server`);
-        if (this.server) {
-            this.server.close();
-            this.server = undefined;
-        }
-
-        if (this.mfaTimeout) {
-            clearTimeout(this.mfaTimeout);
-            this.mfaTimeout = undefined;
-        }
     }
 }

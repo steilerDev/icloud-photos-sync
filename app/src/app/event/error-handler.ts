@@ -1,16 +1,16 @@
-import { BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceData, BacktraceReport, BreadcrumbType } from "@backtrace/node";
-import { randomUUID } from "crypto";
+import {BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceData, BacktraceReport, BreadcrumbType} from "@backtrace/node";
+import {randomUUID} from "crypto";
 import fs from 'fs/promises';
-import { jsonc } from "jsonc";
-import { pEvent } from 'p-event';
-import { Readable } from 'stream';
+import {jsonc} from "jsonc";
+import {pEvent} from 'p-event';
+import {Readable} from 'stream';
 import * as zlib from 'zlib';
-import { MFAMethod } from '../../lib/icloud/mfa/mfa-method.js';
-import { iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine } from '../../lib/resources/events-types.js';
-import { Resources } from '../../lib/resources/main.js';
-import { FILE_ENCODING } from '../../lib/resources/resource-types.js';
-import { AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR } from "../error/error-codes.js";
-import { iCPSError } from "../error/error.js";
+import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
+import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {Resources} from '../../lib/resources/main.js';
+import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
+import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR} from "../error/error-codes.js";
+import {iCPSError} from "../error/error.js";
 
 /**
  * List of errors that will never get reported
@@ -228,9 +228,14 @@ export class ErrorHandler {
             });
 
         Resources.events(this)
-            .on(iCPSEventMFA.STARTED, () => {
-                this.btClient.breadcrumbs.info(`MFA_STARTED`);
+            .on(iCPSEventWebServer.STARTED, () => {
+                this.btClient.breadcrumbs.info(`WEB_SERVER_STARTED`);
             })
+            .on(iCPSEventWebServer.ERROR, () => {
+                this.btClient.breadcrumbs.info(`WEB_SERVER_ERROR`);
+            });
+
+        Resources.events(this)
             .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {
                 this.btClient.breadcrumbs.info(`MFA_RESEND`, {method: method.toString()});
             })
