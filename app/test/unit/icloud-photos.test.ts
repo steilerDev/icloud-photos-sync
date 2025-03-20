@@ -9,6 +9,7 @@ import {Validator} from '../../src/lib/resources/validator';
 import * as Config from '../_helpers/_config';
 import {MockedEventManager, MockedNetworkManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
+import {ZoneArea} from '../../src/lib/resources/resource-types';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedNetworkManager: MockedNetworkManager;
@@ -26,8 +27,14 @@ beforeEach(() => {
     mockedNetworkManager.photosUrl = Config.photosDomain;
     mockedNetworkManager._headerJar.setCookie(...getICloudCookieHeader()[`set-cookie`]);
 
-    mockedResourceManager._resources.primaryZone = Config.primaryZone;
-    mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
+    // mockedResourceManager._resources.primaryZone = {
+    //     ...Config.primaryZone,
+    //     area: `PRIVATE`
+    // }
+    // mockedResourceManager._resources.sharedZone = {
+    //     ...Config.sharedZone,
+    //     area: `SHARED`
+    // }
 
     photos = new iCloudPhotos();
 });
@@ -195,23 +202,37 @@ describe(`Setup iCloud Photos`, () => {
 describe.each([
     {
         zone: Zones.Primary,
-        area: `private`,
+        area: `PRIVATE`,
+        areaURL: `private`,
         expectedZoneObject: Config.primaryZone,
     }, {
         zone: Zones.Shared,
-        area: `private`,
-        expectedZoneObject: Config.sharedZoneInPrivateArea,
+        area: `PRIVATE`,
+        areaURL: `private`,
+        expectedZoneObject: Config.sharedZone,
     }, {
         zone: Zones.Shared,
-        area: `shared`,
-        expectedZoneObject: Config.sharedZoneInSharedArea
+        area: `SHARED`,
+        areaURL: `shared`,
+        expectedZoneObject: Config.sharedZone
     }
-])(`$zone ($area)`, ({zone, area, expectedZoneObject}) => {
+])(`$zone ($area)`, ({zone, area, areaURL, expectedZoneObject}) => {
     beforeEach(() => {
-        if(zone === Zones.Shared) {
-            mockedResourceManager._resources.sharedZone = expectedZoneObject;
+        if(zone == Zones.Primary) {
+            mockedResourceManager._resources.primaryZone = {
+                ...Config.primaryZone,
+                area: area as ZoneArea
+            }
+        }
+
+        if(zone == Zones.Shared) {
+            mockedResourceManager._resources.sharedZone = {
+                ...Config.sharedZone,
+                area: area as ZoneArea
+            }
         }
     })
+
     describe.each([
         {
             desc: `recordType + filterBy + resultsLimit + desiredKeys`,
@@ -300,7 +321,7 @@ describe.each([
             const responseRecords = [`recordA`, `recordB`];
 
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${area}/records/query`, expectedQuery)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
                 .reply(200, {
                     records: responseRecords,
                 });
@@ -315,7 +336,7 @@ describe.each([
 
         test(`No data returned`, async () => {
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${area}/records/query`, expectedQuery)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
                 .reply(200, {});
 
             await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Received unexpected query response format$/);
@@ -323,7 +344,7 @@ describe.each([
 
         test(`Server Error`, async () => {
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${area}/records/query`, expectedQuery)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
                 .reply(500, {});
 
             await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Request failed with status code 500$/);
@@ -373,7 +394,7 @@ describe.each([
     }])(`Perform Operation $desc`, ({operation, fields, records, expectedOperation}) => {
         test(`Success`, async () => {
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${area}/records/modify`, expectedOperation)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
                 .reply(200, {
                     records,
                 });

@@ -379,7 +379,7 @@ export type PhotosSetupResponse = {
         syncToken: string,
         /**
          * The list of photos account zones - either primary or primary and shared
-         * @minItems 1
+         * @minItems 0
          */
         zones: PhotosSetupResponseZone[]
     }

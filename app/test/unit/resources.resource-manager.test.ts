@@ -277,7 +277,7 @@ describe(`ResourceManager`, () => {
             ...Config.defaultConfig,
             sessionSecret: Config.iCloudAuthSecrets.sessionSecret,
             libraryVersion: 1,
-            primaryZone: Config.primaryZone,
+            primaryZone: Config.primaryZoneInPrivateArea,
             sharedZone: Config.sharedZoneInPrivateArea,
         };
 
@@ -524,8 +524,8 @@ describe(`ResourceManager`, () => {
         describe(`primaryZone setter`, () => {
             test(`should set the primary zone in the resources`, () => {
                 resourceManager._resources.primaryZone = undefined!;
-                resourceManager.primaryZone = Config.primaryZone;
-                expect(resourceManager._resources.primaryZone).toEqual(Config.primaryZone);
+                resourceManager.primaryZone = Config.primaryZoneInPrivateArea;
+                expect(resourceManager._resources.primaryZone).toEqual(Config.primaryZoneInPrivateArea);
             });
         });
 

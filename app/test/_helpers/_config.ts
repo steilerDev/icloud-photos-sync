@@ -1,6 +1,6 @@
 /* CSpell:disable */
 import {iCPSAppOptions} from "../../src/app/factory";
-import {PhotosAccountZone} from "../../src/lib/resources/resource-types";
+import {ZoneArea} from "../../src/lib/resources/resource-types";
 
 export const defaultConfig = {
     username: `test@icloud.com`,
@@ -41,25 +41,28 @@ export const aaspCookieString = `aasp=${iCloudAuthSecrets.aasp}; Domain=idmsa.ap
 
 export const photosDomain = `https://p123-ckdatabasews.icloud.com:443`;
 
-export const primaryZone: PhotosAccountZone = {
+export const primaryZone = {
     ownerRecordName: `_11a1a1a1a11111111a111aa1a1111a11`,
     zoneName: `PrimarySync`,
     zoneType: `REGULAR_CUSTOM_ZONE`,
-    area: `private`,
 };
 
-export const sharedZoneInPrivateArea: PhotosAccountZone = {
+export const primaryZoneInPrivateArea = {
+    ...primaryZone,
+    area: `PRIVATE` as ZoneArea
+}
+
+export const sharedZone = {
     ownerRecordName: `_11a1a1a1a11111111a111aa1a1111a11`,
     zoneName: `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
-    zoneType: `REGULAR_CUSTOM_ZONE`,
-    area: `private`,
+    zoneType: `REGULAR_CUSTOM_ZONE`
 };
 
-export const sharedZoneInSharedArea: PhotosAccountZone = Object.assign(
-    {}, 
-    sharedZoneInPrivateArea, 
-    {area: `shared`}
-);
+export const sharedZoneInPrivateArea = {
+    ...sharedZone,
+    area: `PRIVATE` as ZoneArea
+}
+
 
 export const REQUEST_HEADER = {
     DEFAULT: {

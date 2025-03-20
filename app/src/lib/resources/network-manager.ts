@@ -9,9 +9,9 @@ import {Cookie} from "tough-cookie";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
 import {iCPSAppOptions} from "../../app/factory.js";
-import {ZoneReference} from "../photos-library/model/zoneReference.js";
 import {Resources} from "./main.js";
-import {CLIENT_ID, CLIENT_INFO, COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, SetupResponse, SigninResponse, TrustResponse, USER_AGENT} from "./network-types.js";
+import {CLIENT_ID, CLIENT_INFO, COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse, USER_AGENT} from "./network-types.js";
+import {PhotosAccountZone, ZoneArea} from "./resource-types.js";
 
 /**
  * Object holding all necessary information for a specific header value, that needs to be reused across multiple requests
@@ -417,22 +417,43 @@ export class NetworkManager {
      * Applies configurations from the response received after the photos setup request. This includes information about the available zones.
      * @param zones - The zones received from the server
      */
-    applyZones(zones: ZoneReference[]) {
-        Resources.logger(this).info(`Found ${zones.length} available zones: ${zones.map(zone => zone.zoneID.zoneName).join(`, `)}`);
+    applyZones(privateZones: PhotosSetupResponseZone[], sharedZones: PhotosSetupResponseZone[]) {
+        Resources.logger(this).info(`Found ${privateZones.length} available private zones (${privateZones.map(zone => zone.zoneID.zoneName).join(`, `)}) and ${sharedZones.length} available shared zones (${sharedZones.map(zone => zone.zoneID.zoneName).join(`, `)})`);
 
-        const primaryZoneData = zones.find(zone => zone.zoneID.zoneName === `PrimarySync`);
-        if (!primaryZoneData || (primaryZoneData.deleted !== undefined && primaryZoneData.deleted === true)) {
+        // Primary zone is always private
+        const primaryZoneData = this.extractZone(privateZones, `PRIVATE`, /^PrimarySync$/);
+        if (primaryZoneData === undefined) {
             throw new iCPSError(RESOURCES_ERR.NO_PRIMARY_ZONE)
-                .addContext(`zones`, zones);
+                .addContext(`privateZones`, privateZones)
+                .addContext(`sharedZones`, sharedZones)
         }
 
-        Resources.manager().primaryZone = primaryZoneData.zoneID;
+        Resources.manager().primaryZone = primaryZoneData
 
-        const sharedZoneData = zones.find(zone => zone.zoneID.zoneName.startsWith(`SharedSync-`));
-        if (sharedZoneData && (sharedZoneData.deleted === undefined || sharedZoneData.deleted === false)) {
-            Resources.logger(this).debug(`Found shared zone ${sharedZoneData.zoneID.zoneName}`);
-            Resources.manager().sharedZone = sharedZoneData.zoneID;
+        // if shared sync is owned by user it is in private zone, otherwise check if shared sync is available from other user
+        const sharedZoneData = this.extractZone(privateZones, `PRIVATE`, /^SharedSync-/) ?? this.extractZone(sharedZones, `SHARED`, /^SharedSync-/)
+        if(sharedZoneData !== undefined) {
+            Resources.logger(this).debug(`Found shared zone ${sharedZoneData.zoneName}`);
+            Resources.manager().sharedZone = sharedZoneData
         }
+    }
+
+    /**
+     * Extract available zones matching the provided regular expression
+     * @param zone The list of zones to check
+     * @param area Indicates if the zones are owned by this user or another one
+     * @param zoneName A regular expression matched against the zones
+     * @returns A converted zone if a non-deleted zone matching the reg ex was found otherwise undefined
+     */
+    extractZone(zones: PhotosSetupResponseZone[], area: ZoneArea, zoneNameMatch: RegExp): PhotosAccountZone | undefined {
+        const match = zones.find(zone => zone.zoneID.zoneName.match(zoneNameMatch));
+        if(match && (match.deleted === undefined || match.deleted === false)) {
+            return {
+                ...match.zoneID,
+                area
+            }
+        }
+        return undefined
     }
 
     /**

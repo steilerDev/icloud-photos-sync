@@ -101,5 +101,10 @@ export type PhotosAccountZone = {
     /**
      * The zone area, either private or shared
      */
-    area: `private` | `shared`
+    area: ZoneArea
 }
+
+/**
+ * Indicates if a photos account zone is owned by the current user or shared
+ */
+export type ZoneArea = `PRIVATE` | `SHARED`
