@@ -18,5 +18,5 @@ runs:
     - id: upload-artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.artifact-name }}
+        name: ${{ inputs.artifact-name }}-${{ runner.os }}
         path: ${{ inputs.app-path }}/coverage/
