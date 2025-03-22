@@ -87,7 +87,7 @@
     "axios": "1.7.9",
     "axios-har-tracker": "0.7.2",
     "chalk": "5.4.1",
-    "cli-progress": "3.11.2",
+    "cli-progress": "3.12.0",
     "commander": "13.1.0",
     "croner": "9.0.0",
     "jsonc": "2.0.0",
