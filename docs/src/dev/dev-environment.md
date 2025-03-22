@@ -1,6 +1,6 @@
 # Development Environment
 
-A reproducible development environment is available through [DevContainers](https://containers.dev/). Please make sure to populate the environment files in the `secrets/` to use all features.
+A reproducible development environment is available through [DevContainers](https://containers.dev/). Please make sure to populate the environment files in the `secrets/` folder to use all features.
 
 ## IDE
 
@@ -38,6 +38,3 @@ The following extensions are used during development and are configured as part 
     - *Description*: Your AI pair programmer
     - *Publisher*: GitHub
     - [VS Marketplace](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot)
-
-## Running in a development environment
-
