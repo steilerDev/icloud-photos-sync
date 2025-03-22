@@ -1,5 +1,7 @@
 # Development Environment
 
+A reproducible development environment is available through [DevContainers](https://containers.dev/). Please make sure to populate the environment files in the `secrets/` folder to use all features.
+
 ## IDE
 
 This tool is developed using [coder's code server](https://github.com/coder/code-server) and a local installation of VSCode.
@@ -36,16 +38,3 @@ The following extensions are used during development and are configured as part 
     - *Description*: Your AI pair programmer
     - *Publisher*: GitHub
     - [VS Marketplace](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot)
-
-## Running in a development environment
-
-This repository defines VSCode tasks and debug configurations. The latter references the `test.env` file from the `.vscode` directory in order to access secrets while executing. Alternatively the basic authentication credentials (username, password and trust token) could be exported.
-
-```
-APPLE_ID_USER=<test-user>
-APPLE_ID_PWD=<test-password>
-TRUST_TOKEN=<test-trust-token>
-ENABLE_CRASH_REPORTING=true
-FORCE=true
-DATA_DIR=<projectFolder>/app-data-dir/
-```

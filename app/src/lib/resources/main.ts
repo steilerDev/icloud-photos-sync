@@ -1,4 +1,4 @@
-import PackageData from '../../../package.json' assert { type: 'json' }; // eslint-disable-line
+import PackageData from '../../../package.json' with { type: 'json' }; // eslint-disable-line
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -7,6 +7,8 @@ import {iCPSEvent, iCPSEventLog} from "./events-types.js";
 import {NetworkManager} from "./network-manager.js";
 import {ResourceManager} from "./resource-manager.js";
 import {Validator} from "./validator.js";
+
+/* eslint-disable @typescript-eslint/no-namespace */
 
 /**
  * This namespace handles the static access to the singleton functions of the ResourceManager, NetworkManager, Validator and EventManager
@@ -172,6 +174,20 @@ export namespace Resources {
      */
     export function emit(event: iCPSEvent, ...args: any[]): boolean {
         return Resources.event().emit(event, ...args);
+    }
+
+    /**
+     * Can be used to check if a process is running
+     * @param pid - The process id to check
+     * @returns True if the process is running or the user does not have the necessary permissions to check this, false otherwise
+     */
+    export function pidIsRunning(pid: number): boolean {
+        try {
+            process.kill(pid, 0);
+            return true;
+        } catch (e) {
+            return e.code === `EPERM`;
+        }
     }
 
     /**

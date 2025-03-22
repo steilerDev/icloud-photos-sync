@@ -23,6 +23,7 @@ runs:
         {
           echo 'RELEASE_RULES<<EOF'
           echo '[
+              { "breaking": true,       "release": "major" },
               { "type": "majorfeat",    "release": "major" },
               { "type": "feat",         "release": "minor" },
               { "type": "fix",          "release": "patch" },

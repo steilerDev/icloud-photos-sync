@@ -1,15 +1,15 @@
-import {iCloud} from "../lib/icloud/icloud.js";
-import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
+import {Cron} from "croner";
 import * as fs from 'fs';
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
-import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
-import {iCPSError} from "./error/error.js";
-import {Asset} from "../lib/photos-library/model/asset.js";
+import {iCloud} from "../lib/icloud/icloud.js";
 import {Album} from "../lib/photos-library/model/album.js";
-import {Cron} from "croner";
-import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
-import {Resources} from "../lib/resources/main.js";
+import {Asset} from "../lib/photos-library/model/asset.js";
+import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError} from "../lib/resources/events-types.js";
+import {Resources} from "../lib/resources/main.js";
+import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
+import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
+import {iCPSError} from "./error/error.js";
 
 /**
  * Abstract class returned by the factory function
@@ -35,9 +35,17 @@ export class DaemonApp extends iCPSApp {
      * @returns Once the job has been scheduled
      */
     async run() {
-        this.job = new Cron(Resources.manager().schedule, async () => {
-            await this.performScheduledSync();
-        });
+        this.job = new Cron(
+            Resources.manager().schedule,
+            async () => {
+                await this.performScheduledSync();
+            },
+            {
+                protect: () => {
+                    Resources.emit(iCPSEventApp.SCHEDULED_OVERRUN, this.job?.nextRun());
+                },
+            },
+        );
         Resources.emit(iCPSEventApp.SCHEDULED, this.job?.nextRun());
     }
 
@@ -112,7 +120,16 @@ abstract class iCloudApp extends iCPSApp {
         await Resources.network().resetSession();
         Resources.events(this.icloud.photos).removeListeners();
         Resources.events(this.icloud).removeListeners();
-        await this.releaseLibraryLock();
+        try {
+            await this.releaseLibraryLock();
+        } catch (err) {
+            Resources.logger(this).warn(`Failed to release library lock: ${err}`);
+        }
+        try {
+            await this.icloud.logout();
+        } catch (err) {
+            Resources.logger(this).warn(`Failed to logout from iCloud: ${err}`);
+        }
     }
 
     /**
@@ -126,16 +143,24 @@ abstract class iCloudApp extends iCPSApp {
             .catch(() => false);
 
         if (lockFileExists) {
-            if (!Resources.manager().force) {
-                const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
+            const lockingProcess = parseInt(await fs.promises.readFile(lockFilePath, `utf-8`), 10);
+
+            if (process.pid === lockingProcess) {
+                Resources.logger(this).warn(`Lock file exists, but is owned by this process. Continuing.`);
+                return;
+            }
+
+            if (Resources.pidIsRunning(lockingProcess) && !Resources.manager().force) {
                 throw new iCPSError(LIBRARY_ERR.LOCKED)
                     .addMessage(`Locked by PID ${lockingProcess}`);
             }
 
+            // Clear stale lock file
             await fs.promises.rm(lockFilePath, {force: true});
         }
 
-        await fs.promises.writeFile(lockFilePath, process.pid.toString(), {encoding: `utf-8`});
+        // Create lock file
+        await fs.promises.writeFile(lockFilePath, process.pid.toString(), {encoding: `utf-8`, flush: true});
     }
 
     /**
@@ -149,11 +174,13 @@ abstract class iCloudApp extends iCPSApp {
             .catch(() => false);
 
         if (!lockFileExists) {
+            Resources.logger(this).warn(`Cannot release lock: Lock file does not exist.`);
             return;
         }
 
-        const lockingProcess = (await fs.promises.readFile(lockFilePath, `utf-8`)).toString();
-        if (lockingProcess !== process.pid.toString() && !Resources.manager().force) {
+        const lockingProcess = parseInt(await fs.promises.readFile(lockFilePath, `utf-8`), 10);
+
+        if (process.pid !== lockingProcess && Resources.pidIsRunning(lockingProcess) && !Resources.manager().force) {
             throw new iCPSError(LIBRARY_ERR.LOCKED)
                 .addMessage(`Locked by PID ${lockingProcess}`);
         }

@@ -77,6 +77,9 @@ export class CLIInterface {
             })
             .on(iCPSEventCloud.PCS_REQUIRED, () => {
                 this.print(chalk.yellowBright(`Advanced Data Protection requires additional cookies, acquiring...`));
+            })
+            .on(iCPSEventCloud.PCS_NOT_READY, () => {
+                this.print(chalk.yellowBright(`Advanced Data Protection request not confirmed yet, retrying...`));
             });
 
         Resources.events(this)
@@ -121,6 +124,9 @@ export class CLIInterface {
                 this.print(chalk.green(this.getHorizontalLine()));
                 this.print(chalk.white(`Sync will retry execution at ${this.getDateTime(next)}`));
                 this.print(chalk.green(this.getHorizontalLine()));
+            })
+            .on(iCPSEventApp.SCHEDULED_OVERRUN, (next: Date) => {
+                this.print(chalk.redBright(`Sync execution skipped, because a job is still running. Next run scheduled for ${this.getDateTime(next)}`));
             });
 
         Resources.events(this)

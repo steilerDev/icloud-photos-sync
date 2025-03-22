@@ -222,8 +222,7 @@ export class Asset implements PEntity<Asset> {
 
     /**
      * Verifies that the object representation matches the given file
-     * @param filePath - The path, where the file is expected
-     * @returns True if the provided file matches this object representation
+     * @returns True if this file exists and matches this object representation
      * @throws An error, if verification fails
      */
     async verify(): Promise<boolean> {

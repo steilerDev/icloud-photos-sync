@@ -8,7 +8,7 @@ inputs:
   artifact-name:
     description: The name of the uploaded app artifact
     required: false
-    default: app-artifact
+    default: app-artifact-build
 runs:
   using: composite
   steps:
@@ -21,7 +21,7 @@ runs:
         fileName=$(cd ${{ inputs.app-path }}; npm pack)
         mv ${{ inputs.app-path }}/$fileName npm-pack.tgz
     - id: upload-artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: npm-pack.tgz

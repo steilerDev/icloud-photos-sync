@@ -46,6 +46,10 @@ export enum iCPSEventCloud {
      */
     PCS_REQUIRED = `icloud-pcs_req`,
     /**
+     * Emitted when the access request has not been granted and the cookies are not ready yet
+     */
+    PCS_NOT_READY = `icloud-pcs_not_ready`,
+    /**
      * Emitted when the iCloud account information have been retrieved
      */
     ACCOUNT_READY = `icloud-account_ready`,
@@ -273,6 +277,10 @@ export enum iCPSEventApp {
      * Emitted when the app has experienced an error and will retry - provides a date object for the next run as argument
      */
     SCHEDULED_RETRY = `scheduled-retry`,
+    /**
+     * Emitted when a scheduled execution was skipped, because there is already an execution running - provides a date object for the next run as argument
+     */
+    SCHEDULED_OVERRUN = `scheduled-overrun`,
     /**
      * Emitted when the app should display the latest acquired token - provides the token as argument
      */

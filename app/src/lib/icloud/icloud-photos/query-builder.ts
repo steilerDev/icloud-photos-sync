@@ -154,7 +154,7 @@ export function getIndexCountFilter(parentId?: string): any {
 
 /**
  * Creates the operations field for isDeleted
- * @param _value - The value to set the field to - 1 by default
+ * @param value - The value to set the field to - 1 by default
  * @returns The formatted field
  */
 export function getIsDeletedField(value: number = 1): any {

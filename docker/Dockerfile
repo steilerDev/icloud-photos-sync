@@ -1,7 +1,8 @@
-FROM node:18.18.1-alpine
+FROM node:22.14.0-alpine
 
 # Setting node environment to not show experimental warnings
-ENV NODE_NO_WARNINGS=1 
+ENV NODE_NO_WARNINGS=1
+
 # Setting volume for default library path
 VOLUME /opt/icloud-photos-library
 
@@ -19,7 +20,7 @@ RUN chmod 755 /root/enter_mfa.sh && \
     ln -s /root/resend_mfa.sh /usr/local/bin/resend_mfa
 
 # Installing application binary
-RUN npm install -g /opt/*.tgz
+RUN npm install -g /opt/npm-pack.tgz
 
 ENTRYPOINT ["icloud-photos-sync"]
 CMD ["daemon"]

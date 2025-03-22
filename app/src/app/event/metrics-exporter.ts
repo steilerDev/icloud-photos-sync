@@ -80,6 +80,7 @@ const FIELDS = {
             DEVICE_TRUSTED: `DEVICE_TRUSTED`,
             ACCOUNT_READY: `ACCOUNT_READY`,
             PCS_REQUIRED: `PCS_REQUIRED`,
+            PCS_NOT_READY: `PCS_NOT_READY`,
             SESSION_EXPIRED: `SESSION_EXPIRED`,
             ICLOUD_READY: `ICLOUD_READY`,
             SYNC_START: `SYNC_START`,
@@ -99,6 +100,7 @@ const FIELDS = {
             SCHEDULED: `SCHEDULED`,
             SCHEDULED_SUCCESS: `SCHEDULED_SUCCESS`,
             SCHEDULED_FAILURE: `SCHEDULED_FAILURE`,
+            SCHEDULED_OVERRUN: `SCHEDULED_OVERRUN`,
         },
     },
 };
@@ -295,7 +297,6 @@ export class MetricsExporter {
 
     /**
      * Creates the exporter and checks for the file
-     * @param options - The CLI options
      */
     constructor() {
         if (!Resources.manager().exportMetrics) {
@@ -384,6 +385,10 @@ export class MetricsExporter {
             .on(iCPSEventCloud.PCS_REQUIRED, () => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.PCS_REQUIRED));
+            })
+            .on(iCPSEventCloud.PCS_NOT_READY, () => {
+                this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                    .logStatus(FIELDS.STATUS.values.PCS_NOT_READY));
             });
 
         Resources.events(this)
@@ -416,6 +421,11 @@ export class MetricsExporter {
             .on(iCPSEventApp.SCHEDULED_RETRY, (next: Date) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.SCHEDULED_FAILURE)
+                    .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+            })
+            .on(iCPSEventApp.SCHEDULED_OVERRUN, (next: Date) => {
+                this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                    .logStatus(FIELDS.STATUS.values.SCHEDULED_OVERRUN)
                     .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
             });
 

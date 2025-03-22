@@ -191,6 +191,19 @@ export const rejectOptions = [
         ],
         _desc: `Mis-formatted schedule`,
         expected: `error: option '-S, --schedule <cron-string>' argument 'asdf' is invalid. Not a valid cron pattern. See https://crontab.guru (or for more information on the underlying implementation https://github.com/hexagon/croner#pattern).`,
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
+            `--health-check-url`,
+            `asdf`,
+        ],
+        _desc: `Mis-formatted healthcheck ping URL`,
+        expected: `error: option '--health-check-url <url>' argument 'asdf' is invalid. Not a valid URL: TypeError: Invalid URL`,
     },
 ];
 
@@ -540,6 +553,21 @@ export const nonRejectOptions = [
         _desc: `Legacy login enabled`,
         expectedOptions: {
             legacyLogin: true,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
+            `--health-check-url`,
+            `https://some.url/healthcheck-slug`,
+        ],
+        _desc: `Healthcheck ping URL set`,
+        expectedOptions: {
+            healthCheckUrl: `https://some.url/healthcheck-slug`,
         },
     },
 ];

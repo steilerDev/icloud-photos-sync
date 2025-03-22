@@ -1,6 +1,6 @@
 /* CSpell:disable */
 import {iCPSAppOptions} from "../../src/app/factory";
-import {PhotosAccountZone} from "../../src/lib/resources/resource-types";
+import {ZoneArea} from "../../src/lib/resources/resource-types";
 
 export const defaultConfig = {
     username: `test@icloud.com`,
@@ -41,21 +41,32 @@ export const aaspCookieString = `aasp=${iCloudAuthSecrets.aasp}; Domain=idmsa.ap
 
 export const photosDomain = `https://p123-ckdatabasews.icloud.com:443`;
 
-export const primaryZone: PhotosAccountZone = {
+export const primaryZone = {
     ownerRecordName: `_11a1a1a1a11111111a111aa1a1111a11`,
     zoneName: `PrimarySync`,
     zoneType: `REGULAR_CUSTOM_ZONE`,
 };
 
-export const sharedZone: PhotosAccountZone = {
+export const primaryZoneInPrivateArea = {
+    ...primaryZone,
+    area: `PRIVATE` as ZoneArea
+}
+
+export const sharedZone = {
     ownerRecordName: `_11a1a1a1a11111111a111aa1a1111a11`,
     zoneName: `SharedSync-AABBCCDD-EEFF-0011-2233-445566778899`,
-    zoneType: `REGULAR_CUSTOM_ZONE`,
+    zoneType: `REGULAR_CUSTOM_ZONE`
 };
+
+export const sharedZoneInPrivateArea = {
+    ...sharedZone,
+    area: `PRIVATE` as ZoneArea
+}
+
 
 export const REQUEST_HEADER = {
     DEFAULT: {
-        'User-Agent': `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`,
+        'User-Agent': `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36`,
         Accept: `application/json`,
         'Content-Type': `application/json`,
         Origin: `https://www.icloud.com`,
@@ -63,7 +74,7 @@ export const REQUEST_HEADER = {
         'Accept-Encoding': `gzip, deflate, br`,
     },
     AUTH: {
-        'User-Agent': `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`,
+        'User-Agent': `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36`,
         Accept: `application/json`,
         'Content-Type': `application/json`,
         Connection: `keep-alive`,
@@ -72,7 +83,7 @@ export const REQUEST_HEADER = {
         Referer: `https://idmsa.apple.com/`,
         'X-Apple-Widget-Key': `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d`,
         'X-Apple-OAuth-Client-Id': `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d`,
-        'X-Apple-I-FD-Client-Info': `{"U":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0","L":"en-US","Z":"GMT+01:00","V":"1.1","F":""}`,
+        'X-Apple-I-FD-Client-Info': `{"U":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36","L":"en-US","Z":"GMT+01:00","V":"1.1","F":""}`,
         'X-Apple-OAuth-Response-Type': `code`,
         'X-Apple-OAuth-Response-Mode': `web_message`,
         'X-Apple-OAuth-Client-Type': `firstPartyAuth`,

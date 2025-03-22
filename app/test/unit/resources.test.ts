@@ -188,3 +188,14 @@ describe(`package.json metadata`, () => {
         expect(Resources.PackageInfo.description).toEqual(`One-way sync engine for the iCloud Photos Library into the native file system with archiving capabilities`);
     });
 });
+
+describe(`PID helper`, () => {
+    test(`should return true if PID is running`, () => {
+        // This process' pid is running
+        expect(Resources.pidIsRunning(process.pid)).toBeTruthy();
+    });
+    test(`should return true if PID is not running`, () => {
+        // Default Linux max PID is 32768 (adjustable), Mac max PID is 99998 (non-adjustable)
+        expect(Resources.pidIsRunning(100000)).toBeFalsy();
+    });
+});

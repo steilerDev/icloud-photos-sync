@@ -10,7 +10,7 @@ inputs:
   artifact-name:
     description: The name of the uploaded app artifact
     required: false
-    default: app-artifact
+    default: app-artifact-release
   release-dir:
     description: Directory, where the semantic release binary and configuration is located
     required: false
@@ -43,7 +43,7 @@ runs:
       run: mv ${{ inputs.release-dir }}/*.tgz npm-pack.tgz
     - id: upload-artifact
       if: steps.get-git-metadata.outputs.current-tag != ''
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: npm-pack.tgz

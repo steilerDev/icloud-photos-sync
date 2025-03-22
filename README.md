@@ -45,9 +45,11 @@
 <hr>
 
 ## Overview
-This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way, to backup the full iCloud Photos Library to the native filesystem.
+This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way to backup the full iCloud Photos Library to the native filesystem.
 
 Currently, this can only be achieved, by having a Mac continuously run the *Photos.app* (with `Keep originals` enabled). With this method, the files cannot be easily viewed without the *Photos.app*.
+
+*icloud-photos-sync is an independent project, and is not affiliated, endorsed, recommended by or otherwise affiliated with Apple Inc.*
 
 This CLI Application offers the following high level functionality:
 
@@ -75,10 +77,10 @@ This CLI Application offers the following high level functionality:
 </details>
 
 <details>
-  <summary><i>Archiving of folders</i></summary>
+  <summary><i>Archiving of folders (optional)</i></summary>
   <p>
     <ul>
-      <li>All assets currently in the album will be persisted in the respective folder on the machine running icloud-photos-sync</li>
+      <li>Archiving an album will persist all assets in the respective folder in the local filesystem</li>
       <li>Future syncs will ignore the folder (so those assets will not be changed/deleted)</li>
       <li>If the remote album is moved, the archived folder will be moved to the same location</li>
       <li>If the remote album is deleted, the archived folder will be put into a 'lost+found' type of folder</li>
@@ -136,7 +138,10 @@ Please check the [contributing guidelines](https://github.com/steilerDev/icloud-
 
 ## Acknowledgments
 
-- Special thanks to [@foxt](https://foxt.dev/) for helping with reverse engineering some tricky parts of the iCloud API ([GSA](https://github.com/steilerDev/icloud-photos-sync/issues/363) & [ADP](https://github.com/steilerDev/icloud-photos-sync/issues/202)) - check out his [iCloud.js](https://github.com/foxt/icloud.js) project in case you need to access other aspects of iCloud
+Special thanks to:
+ - [@foxt](https://foxt.dev/) for helping with reverse engineering the iCloud API ([GSA](https://github.com/steilerDev/icloud-photos-sync/issues/363) & [ADP](https://github.com/steilerDev/icloud-photos-sync/issues/202)). Check out [iCloud.js](https://github.com/foxt/icloud.js), in case you need to access other aspects of iCloud.
+ - [@konraddysput](https://github.com/konraddysput) for help on the Backtrace integration.
+ - [@timvahlbrock](https://github.com/timvahlbrock) for their interest in this project and contributions in getting it updated.
 
 ### Release Workflow
 

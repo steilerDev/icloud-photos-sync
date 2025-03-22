@@ -1,16 +1,16 @@
-import {iCPSError} from "../error/error.js";
-import {randomUUID} from "crypto";
-import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR} from '../error/error-codes.js';
+import { BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceData, BacktraceReport, BreadcrumbType } from "@backtrace/node";
+import { randomUUID } from "crypto";
 import fs from 'fs/promises';
-import {Resources} from '../../lib/resources/main.js';
-import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
-import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
+import { jsonc } from "jsonc";
+import { pEvent } from 'p-event';
+import { Readable } from 'stream';
 import * as zlib from 'zlib';
-import {Readable} from 'stream';
-import {pEvent} from 'p-event';
-import bt from '@backtrace-labs/node';
-import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import {jsonc} from "jsonc";
+import { MFAMethod } from '../../lib/icloud/mfa/mfa-method.js';
+import { iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine } from '../../lib/resources/events-types.js';
+import { Resources } from '../../lib/resources/main.js';
+import { FILE_ENCODING } from '../../lib/resources/resource-types.js';
+import { AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR } from "../error/error-codes.js";
+import { iCPSError } from "../error/error.js";
 
 /**
  * List of errors that will never get reported
@@ -43,7 +43,7 @@ export class ErrorHandler {
     /**
      * The error reporting client - if activated
      */
-    btClient?: bt.BacktraceClient;
+    btClient?: BacktraceClient;
 
     constructor() {
         // Register handlers for interrupts
@@ -65,7 +65,7 @@ export class ErrorHandler {
                                 + `${Resources.PackageInfo.version === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
                                 + BACKTRACE_SUBMISSION.TYPE;
 
-            this.btClient = bt.BacktraceClient.initialize({
+            this.btClient = BacktraceClient.initialize({
                 userAttributes: {
                     application: Resources.PackageInfo.name,
                     'application.version': Resources.PackageInfo.version,
@@ -80,14 +80,14 @@ export class ErrorHandler {
                 // },
                 breadcrumbs: {
                     enable: true,
-                    eventType: bt.BreadcrumbType.Manual,
+                    eventType: BreadcrumbType.Manual,
                     maximumBreadcrumbs: 200,
                 },
                 metrics: {
                     enable: true,
                     autoSendInterval: 0,
                 },
-                beforeSend(data: bt.BacktraceData) {
+                beforeSend(data: BacktraceData) {
                     return Object.assign(
                         data,
                         jsonc.parse(ErrorHandler.maskConfidentialData(jsonc.stringify(data))),
@@ -141,7 +141,7 @@ export class ErrorHandler {
             return;
         }
 
-        const report = new bt.BacktraceReport(new iCPSError(FILETYPE_REPORT),
+        const report = new BacktraceReport(new iCPSError(FILETYPE_REPORT),
             {
                 'icps.filetype.extension': _ext,
                 'icps.filetype.descriptor': _descriptor,
@@ -222,6 +222,9 @@ export class ErrorHandler {
             })
             .on(iCPSEventCloud.PCS_REQUIRED, () => {
                 this.btClient.breadcrumbs.info(`PCS_REQUIRED`);
+            })
+            .on(iCPSEventCloud.PCS_NOT_READY, () => {
+                this.btClient.breadcrumbs.info(`PCS_NOT_READY`);
             });
 
         Resources.events(this)
@@ -330,7 +333,7 @@ export class ErrorHandler {
 
         const attachments = await this.prepareAttachments();
 
-        const report = new bt.BacktraceReport(err, {
+        const report = new BacktraceReport(err, {
             'icps.description': err.getDescription(),
             'icps.uuid': errorUUID,
             'icps.rootErrorCode': err.getRootErrorCode(),
@@ -345,19 +348,19 @@ export class ErrorHandler {
      * Prepares and compresses the error attachments
      * @returns A promise that resolves to an array of buffer attachments
      */
-    async prepareAttachments(): Promise<bt.BacktraceAttachment[]> {
-        const attachments: bt.BacktraceAttachment[] = [];
+    async prepareAttachments(): Promise<BacktraceAttachment[]> {
+        const attachments: BacktraceAttachment[] = [];
 
         // Adding log file
         const logFile = await this.prepareLogFile();
         if (logFile) {
-            attachments.push(new bt.BacktraceBufferAttachment(`icps.log.br`, logFile));
+            attachments.push(new BacktraceBufferAttachment(`icps.log.br`, logFile));
         }
 
         // Adding HAR file
         const harFile = await this.prepareHarFile();
         if (harFile) {
-            attachments.push(new bt.BacktraceBufferAttachment(`icps.har.br`, harFile));
+            attachments.push(new BacktraceBufferAttachment(`icps.har.br`, harFile));
         }
 
         if (attachments.length === 0) {

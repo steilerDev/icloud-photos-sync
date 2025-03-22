@@ -14,7 +14,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
     Docker images are available on [DockerHub](https://hub.docker.com/r/steilerdev/icloud-photos-sync). Alternatively the docker image tar archive is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be installed using `docker load --input <fileName>`
 
     !!! tip "ARM Support"
-            The Docker image is also build for the arm64 platform (however [publishing this version is not possible through the current CI setup](https://github.com/docker/buildx/issues/1152)). The tar archive of the arm64 build of this image is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be loaded using `docker load --input <fileName>`.
+        The Docker image is also build for the arm64 platform (however [publishing this version is not possible through the current CI setup](https://github.com/docker/buildx/issues/1152)). The tar archive of the arm64 build of this image is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be loaded using `docker load --input <fileName>`.
 
     === "docker compose"
         
@@ -42,6 +42,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
         !!! tip "Plain text username/password"
             If you don't want to store your plain text username and/or password in the docker environment, it is possible to omit the [username](https://icps.steiler.dev/user-guides/cli/#username) and/or [password](https://icps.steiler.dev/user-guides/cli/#password) option. In this scenarios, the username/password needs to be provided manually on each startup from the command line.
             To input the data into the running Docker container [it needs to be started with `tty: true` and `stdin_open: true`](https://docs.docker.com/compose/compose-file/compose-file-v3/#domainname-hostname-ipc-mac_address-privileged-read_only-shm_size-stdin_open-tty-user-working_dir). Once the container was started, you can attach to the running `icloud-photos-sync` process using [`docker attach photos-sync`](https://docs.docker.com/engine/reference/commandline/attach/), and detach with the sequence `CTRL-p CTRL-q`.
+            To execute a command within the running container (that needs access to the credentials), use `docker exec -it` [to open tty and stdin](https://docs.docker.com/engine/reference/run/#foreground), e.g. `docker exec -it photos-sync token`.
 
         Get the latest image by running:
 
@@ -56,7 +57,6 @@ The `latest` tag should always represent the latest stable release, whereas the 
         ```
         docker pull steilerdev/icloud-photos-sync:latest
         ```
-
     
 
 === "node"
@@ -425,6 +425,15 @@ In order to archive an album, the [`archive` command](../user-guides/cli/#archiv
             </path/to/your/local/library>/<path/to/album>
         ```
 
+## Additional resources
+
+- Monitor the tool through [sync metrics](../user-guides/sync-metrics/)
+- Consult the [common warnings](../user-guides/common-warnings) in case any pop up
+- Read about the requirements for supporting accounts with [Advanced Data Protection](../user-guides/adp/)
+- Access your photo library locally through a [web UI](../user-guides/web-ui/)
+
 ## Contributing & Feedback
 
 Please check the [contributing guidelines](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md) to learn how to engage with this project. The document outlines the bug reporting, feature and support request process for this tool.
+
+Consider supporting the development efforts by [sponsoring the author](https://github.com/sponsors/steilerDev).

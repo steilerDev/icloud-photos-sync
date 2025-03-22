@@ -1,5 +1,5 @@
 import {MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources} from '../_helpers/_general';
-import {describe, test, beforeEach, expect, jest} from '@jest/globals';
+import {describe, test, beforeEach, expect, jest, beforeAll, afterAll} from '@jest/globals';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import * as Config from '../_helpers/_config';
 import {iCloud} from '../../src/lib/icloud/icloud';
@@ -10,6 +10,7 @@ import {iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRu
 import {Resources} from '../../src/lib/resources/main';
 import {iCloudCrypto} from '../../src/lib/icloud/icloud.crypto';
 import {SigninInitResponse} from '../../src/lib/resources/network-types';
+import {Header} from '../../src/lib/resources/network-manager';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;
@@ -190,7 +191,7 @@ describe.each([
             mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
             mockedNetworkManager.mock
-                .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
+                .onPost(authenticationUrl, authenticationPayload, {headers: Config.REQUEST_HEADER.AUTH})
                 .reply(200);
 
             await icloud.authenticate();
@@ -216,7 +217,7 @@ describe.each([
             mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
             mockedNetworkManager.mock
-                .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
+                .onPost(authenticationUrl, authenticationPayload, {headers: Config.REQUEST_HEADER.AUTH})
                 .reply(409);
 
             await icloud.authenticate();
@@ -239,7 +240,7 @@ describe.each([
             });
 
             mockedNetworkManager.mock
-                .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
+                .onPost(authenticationUrl, authenticationPayload, {headers: Config.REQUEST_HEADER.AUTH})
                 .reply(200);
 
             await expect(icloud.authenticate()).rejects.toThrow(/^Unable to parse and validate signin response$/);
@@ -268,7 +269,7 @@ describe.each([
                 },
             ])(`$desc`, async ({status, expectedError}) => {
                 mockedNetworkManager.mock
-                    .onPost(authenticationUrl, authenticationPayload, Config.REQUEST_HEADER.AUTH)
+                    .onPost(authenticationUrl, authenticationPayload, {headers: Config.REQUEST_HEADER.AUTH})
                     .reply(status);
 
                 const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
@@ -347,7 +348,9 @@ describe.each([
                             accountName: Config.defaultConfig.username,
                             protocols: [`s2k`, `s2k_fo`],
                         },
-                        Config.REQUEST_HEADER.AUTH,
+                        {
+                            headers: Config.REQUEST_HEADER.AUTH,
+                        },
                     )
                     .reply(200);
 
@@ -466,7 +469,7 @@ describe.each([
             ])(`Method: $method`, ({method, endpoint, payload, codes, validatedResponse, successMessage}) => {
                 test(`Success`, async () => {
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     if (method === `device`) {
@@ -483,10 +486,12 @@ describe.each([
                         .onPut(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(codes.success);
@@ -509,7 +514,7 @@ describe.each([
 
                 test(`Response not matching validator`, async () => {
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     if (method === `device`) {
@@ -528,10 +533,12 @@ describe.each([
                         .onPut(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(codes.success);
@@ -554,17 +561,19 @@ describe.each([
 
                 test(`Resend unsuccessful`, async () => {
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     mockedNetworkManager.mock
                         .onPut(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(codes.invalid);
@@ -629,17 +638,19 @@ describe.each([
             ])(`Method: $method`, ({method, endpoint, payload, codes}) => {
                 test(`Success`, async () => {
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     mockedNetworkManager.mock
                         .onPost(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(codes.success);
@@ -655,17 +666,19 @@ describe.each([
                 test(`Failure`, async () => {
                     const iCloudReady = icloud.getReady();
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     mockedNetworkManager.mock
                         .onPost(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(codes.failure);
@@ -677,7 +690,7 @@ describe.each([
 
                 test.each([{
                     replyPayload: {
-                        service_errors: [ // eslint-disable-line
+                        service_errors: [  
                             {
                                 code: `-21669`,
                                 message: `Incorrect verification code.`,
@@ -688,12 +701,12 @@ describe.each([
                     desc: `with service error`,
                 }, {
                     replyPayload: {
-                        service_errors: [], // eslint-disable-line
+                        service_errors: [],  
                     },
                     desc: `without service error`,
                 }, {
                     replyPayload: {
-                        service_errors: [ // eslint-disable-line
+                        service_errors: [  
                             {
                                 code: `-21669`,
                                 message: `Incorrect verification code.`,
@@ -709,17 +722,19 @@ describe.each([
                 }])(`Incorrect code $desc`, async ({replyPayload}) => {
                     const iCloudReady = icloud.getReady();
                     mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-                    mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+                    mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
                     mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
                     mockedNetworkManager.mock
                         .onPost(endpoint,
                             payload,
                             {
-                                ...Config.REQUEST_HEADER.AUTH,
-                                scnt: Config.iCloudAuthSecrets.scnt,
-                                Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                                'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                headers: {
+                                    ...Config.REQUEST_HEADER.AUTH,
+                                    scnt: Config.iCloudAuthSecrets.scnt,
+                                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                                },
                             },
                         )
                         .reply(400, replyPayload);
@@ -735,7 +750,7 @@ describe.each([
     describe(`Trust Token`, () => {
         test(`Success`, async () => {
             mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-            mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+            mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedValidator.validateTrustResponse = jest.fn<typeof mockedValidator.validateTrustResponse>();
@@ -744,11 +759,13 @@ describe.each([
             const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
 
             mockedNetworkManager.mock
-                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {}, {
-                    ...Config.REQUEST_HEADER.AUTH,
-                    scnt: Config.iCloudAuthSecrets.scnt,
-                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {
+                    headers: {
+                        ...Config.REQUEST_HEADER.AUTH,
+                        scnt: Config.iCloudAuthSecrets.scnt,
+                        Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                        'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                    },
                 })
                 .reply(204);
 
@@ -762,7 +779,7 @@ describe.each([
         test(`Error - Invalid Response`, async () => {
             const iCloudReady = icloud.getReady();
             mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-            mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+            mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedValidator.validateTrustResponse = jest.fn<typeof mockedValidator.validateTrustResponse>(() => {
@@ -770,11 +787,13 @@ describe.each([
             });
 
             mockedNetworkManager.mock
-                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {}, {
-                    ...Config.REQUEST_HEADER.AUTH,
-                    scnt: Config.iCloudAuthSecrets.scnt,
-                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {
+                    headers: {
+                        ...Config.REQUEST_HEADER.AUTH,
+                        scnt: Config.iCloudAuthSecrets.scnt,
+                        Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                        'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                    },
                 })
                 .reply(204);
 
@@ -787,15 +806,17 @@ describe.each([
         test(`Error - Invalid Status Code`, async () => {
             const iCloudReady = icloud.getReady();
             mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
-            mockedNetworkManager.scnt = Config.iCloudAuthSecrets.scnt;
+            mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedNetworkManager.mock
-                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {}, {
-                    ...Config.REQUEST_HEADER.AUTH,
-                    scnt: Config.iCloudAuthSecrets.scnt,
-                    Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
-                    'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                .onGet(`https://idmsa.apple.com/appleauth/auth/2sv/trust`, {
+                    headers: {
+                        ...Config.REQUEST_HEADER.AUTH,
+                        scnt: Config.iCloudAuthSecrets.scnt,
+                        Cookie: `aasp=${Config.iCloudAuthSecrets.aasp}`,
+                        'X-Apple-ID-Session-Id': Config.iCloudAuthSecrets.sessionSecret,
+                    },
                 })
                 .reply(500);
 
@@ -837,8 +858,9 @@ describe.each([
             mockedNetworkManager.mock
                 .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
                     dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
                 .reply(200);
 
             await icloud.setupAccount();
@@ -856,7 +878,7 @@ describe.each([
             mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>()
                 .mockReturnValue({
                     headers: {
-                        'set-cookie': [],  // eslint-disable-line
+                        'set-cookie': [],   
                     },
                     data: {
                         dsInfo: {
@@ -878,8 +900,9 @@ describe.each([
             mockedNetworkManager.mock
                 .onPost(`https://setup.icloud.com/setup/ws/1/accountLogin`, {
                     dsWebAuthToken: Config.iCloudAuthSecrets.sessionSecret,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
                 .reply(200);
 
             await icloud.setupAccount();
@@ -941,29 +964,144 @@ describe.each([
     });
 
     describe(`Acquire PCS Cookie`, () => {
+        beforeAll(() => {
+            jest.useFakeTimers();
+        });
+
+        afterAll(() => {
+            jest.useRealTimers();
+        });
+
         test(`Success`, async () => {
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
-            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>();
-
-            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>();
+            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>()
+                .mockReturnValue({
+                    headers: {
+                        'set-cookie': [
+                            `X-APPLE-WEBAUTH-PCS-Photos="someVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                            `X-APPLE-WEBAUTH-PCS-Sharing="someOtherVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                        ],
+                    },
+                    data: {
+                        isWebAccessAllowed: true,
+                        message: `Cookies attached.`,
+                        status: `success`,
+                    },
+                });
 
             const accountReadyEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ACCOUNT_READY);
 
             mockedNetworkManager.mock
                 .onPost(`https://setup.icloud.com/setup/ws/1/requestPCS`, {
                     appName: `photos`,
-                    derivedFromUserAction: false,
-                }, Config.REQUEST_HEADER.DEFAULT,
-                )
+                    derivedFromUserAction: true,
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
+                .reply(200);
+
+            await icloud.acquirePCSCookies();
+
+            // Expect(mockedValidator.validatePCSResponse).toHaveBeenCalled();
+            expect(accountReadyEvent).toHaveBeenCalledTimes(1);
+            expect(icloud.photos).toBeDefined();
+        });
+
+        test(`Retry when request has not yet been authorized`, async () => {
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>()
+                .mockReturnValue({
+                    headers: {},
+                    data: {
+                        isWebAccessAllowed: true,
+                        message: `Requested a new device arming to upload cookies.`,
+                        status: `failure`,
+                    },
+                });
+
+            const pcsNotReadyEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.PCS_NOT_READY);
+            const pcsRequiredEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.PCS_REQUIRED);
+
+            mockedNetworkManager.mock
+                .onPost(`https://setup.icloud.com/setup/ws/1/requestPCS`, {
+                    appName: `photos`,
+                    derivedFromUserAction: true,
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
                 .reply(200);
 
             await icloud.acquirePCSCookies();
 
             expect(mockedValidator.validatePCSResponse).toHaveBeenCalled();
-            expect(mockedNetworkManager.applyPCSResponse).toHaveBeenCalled();
-            expect(accountReadyEvent).toHaveBeenCalledTimes(1);
+            expect(pcsNotReadyEvent).toHaveBeenCalledTimes(1);
+            expect(pcsRequiredEvent).not.toHaveBeenCalled();
+
+            jest.advanceTimersByTime(10000);
+            expect(pcsRequiredEvent).toHaveBeenCalledTimes(1);
             expect(icloud.photos).toBeDefined();
+        });
+
+        test(`Successful response, but missing set-cookies header`, async () => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>()
+                .mockReturnValue({
+                    headers: {},
+                    data: {
+                        isWebAccessAllowed: true,
+                        message: `Cookies attached.`,
+                        status: `success`,
+                    },
+                });
+
+            mockedNetworkManager.mock
+                .onPost(`https://setup.icloud.com/setup/ws/1/requestPCS`, {
+                    appName: `photos`,
+                    derivedFromUserAction: true,
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
+                .reply(200);
+
+            await icloud.acquirePCSCookies();
+            await expect(iCloudReady).rejects.toThrow(/^Unable to acquire PCS cookies$/);
+
+            expect(mockedValidator.validatePCSResponse).toHaveBeenCalled();
+        });
+
+        test(`Successful response, but missing PCS cookies`, async () => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>()
+                .mockReturnValue({
+                    headers: {
+                        "set-cookie": [],
+                    },
+                    data: {
+                        isWebAccessAllowed: true,
+                        message: `Cookies attached.`,
+                        status: `success`,
+                    },
+                });
+
+            mockedNetworkManager.mock
+                .onPost(`https://setup.icloud.com/setup/ws/1/requestPCS`, {
+                    appName: `photos`,
+                    derivedFromUserAction: true,
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
+                .reply(200);
+
+            await icloud.acquirePCSCookies();
+            await expect(iCloudReady).rejects.toThrow(/^Unable to acquire PCS cookies$/);
+
+            expect(mockedValidator.validatePCSResponse).toHaveBeenCalled();
         });
 
         test(`Error - Invalid Response`, async () => {
@@ -974,8 +1112,6 @@ describe.each([
                 throw new iCPSError(VALIDATOR_ERR.PCS_RESPONSE);
             });
 
-            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>();
-
             mockedNetworkManager.mock
                 .onAny()
                 .reply(200);
@@ -984,7 +1120,6 @@ describe.each([
             await expect(iCloudReady).rejects.toThrow(/^Unable to acquire PCS cookies$/);
 
             expect(mockedValidator.validatePCSResponse).toHaveBeenCalled();
-            expect(mockedNetworkManager.applyPCSResponse).not.toHaveBeenCalled();
         });
 
         test(`Error - Invalid Status Code`, async () => {
@@ -992,8 +1127,6 @@ describe.each([
             mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
 
             mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>();
-
-            mockedNetworkManager.applyPCSResponse = jest.fn<typeof mockedNetworkManager.applyPCSResponse>();
 
             mockedNetworkManager.mock
                 .onAny()
@@ -1003,9 +1136,44 @@ describe.each([
             await expect(iCloudReady).rejects.toThrow(/^Unable to acquire PCS cookies$/);
 
             expect(mockedValidator.validatePCSResponse).not.toHaveBeenCalled();
-            expect(mockedNetworkManager.applyPCSResponse).not.toHaveBeenCalled();
         });
     });
+
+    describe(`Logout`, () => {
+        test(`Success`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://setup.icloud.com/setup/ws/1/logout`, {
+                    trustBrowser: true,
+                    allBrowsers: false,
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
+                .reply(200);
+
+            await expect(icloud.logout()).resolves.not.toThrow();
+        });
+
+        test(`Success - not logged in`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://setup.icloud.com/setup/ws/1/logout`, {
+                    trustBrowser: true,
+                    allBrowsers: false,
+                }, {
+                    headers: Config.REQUEST_HEADER.DEFAULT,
+                })
+                .reply(421);
+
+            await expect(icloud.logout()).resolves.not.toThrow();
+        });
+
+        test(`Error - Invalid Status Code`, async () => {
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(500);
+
+            await expect(icloud.logout()).rejects.toThrow(/^Failed to logout from iCloud$/);
+        });
+    })
 
     describe(`Get iCloud Photos Ready`, () => {
         beforeEach(() => {

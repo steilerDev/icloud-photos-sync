@@ -140,7 +140,7 @@ export class MFAMethod {
      * @param status - The status code for the response received from the backend
      * @returns True, if the response was successful, based on the currently selected MFA Method
      */
-    resendSuccessful(status: number) {
+    resendSuccessful(status: number): boolean {
         switch (this.type) {
         case MFAMethodType.VOICE:
         case MFAMethodType.SMS:

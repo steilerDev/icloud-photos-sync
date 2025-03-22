@@ -20,7 +20,7 @@
             "env": {
                 "NODE_NO_WARNINGS": "1"
             },
-            "envFile": "${workspaceFolder}/.vscode/test.env"
+            "envFile": "${workspaceFolder}/secrets/adp.env"
         }, {
             "name": "Run API Tests",
             "type": "node",
@@ -37,7 +37,7 @@
             "env": {
                 "NODE_NO_WARNINGS": "1"
             },
-            "envFile": "${workspaceFolder}/.vscode/api-test.env"
+            "envFile": "${workspaceFolder}/secrets/test.env"
         }, {
             "name": "Run All Tests",
             "type": "node",
@@ -50,7 +50,7 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "envFile": "${workspaceFolder}/.vscode/api-test.env",
+            "envFile": "${workspaceFolder}/secrets/test.env",
             "env": {
                 "NODE_NO_WARNINGS": "1"
             },
@@ -63,9 +63,10 @@
                 "--inspect-brk",
                 "node_modules/.bin/jest",
                 "--runInBand",
+                "--detectOpenHandles",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/icloud.test.ts"
+                "test/unit/resources.network-manager.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"
@@ -73,6 +74,7 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
+            "envFile": "${workspaceFolder}/.vscode/test.env"
         },
     ]
 }

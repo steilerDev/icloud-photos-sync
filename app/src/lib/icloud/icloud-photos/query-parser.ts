@@ -230,7 +230,7 @@ export class CPLMaster {
     /**
      * Base64 encoded filename
      */
-    filenameEnc: String;
+    filenameEnc: string;
     /**
      * Timestamp in nanoseconds since epoch
      */

@@ -13,7 +13,7 @@ export const CLIENT_ID = `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde
 /**
  * User Agent this CLI is using. Emulating a Firefox Browser
  */
-export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0`;
+export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36`;
 
 /**
  * Client information shared with the iCloud backend based on the user agent
@@ -92,6 +92,7 @@ export const ENDPOINTS = {
         },
         PATH: {
             ACCOUNT_LOGIN: `/setup/ws/1/accountLogin`,
+            LOGOUT: `/setup/ws/1/logout`,
             REQUEST_PCS: `/setup/ws/1/requestPCS`,
         },
     },
@@ -102,7 +103,11 @@ export const ENDPOINTS = {
         /**
          * Base URL for photos requests is dynamic - the path is static
          */
-        BASE_PATH: `/database/1/com.apple.photos.cloud/production/private`,
+        BASE_PATH: `/database/1/com.apple.photos.cloud/production`,
+        AREAS: {
+            PRIVATE: `/private`,
+            SHARED: `/shared`,
+        },
         PATH: {
             QUERY: `/records/query`,
             MODIFY: `/records/modify`,
@@ -290,7 +295,7 @@ export type TrustResponse = {
 
 /**
  * The expected response format for the account setup request
- * @see {@link ENDPOINTS.SETUP.PATH.ACCOUNT}
+ * @see {@link ENDPOINTS.SETUP.PATH.ACCOUNT_LOGIN}
  */
 export type SetupResponse = {
     headers: {
@@ -339,9 +344,8 @@ export type PCSResponse = {
     headers: {
         /**
          * Should hold the PCS cookies
-         * @minItems 2
          */
-        'set-cookie': string[],  // eslint-disable-line
+        'set-cookie'?: string[],  // eslint-disable-line
     }
     data: {
         /**
@@ -349,21 +353,13 @@ export type PCSResponse = {
          */
         isWebAccessAllowed: true,
         /**
-         * Consent needs to be previously provided, not yet supported by this tool
+         * @minLength 1
          */
-        isDeviceConsentedForPCS: true,
+        message: string,
         /**
-         * There is also the case of "Requested the device to upload cookies." - not sure though what to do in this case, as I'll be sending all available cookies
+         * Status of the PCS request
          */
-        message: `Cookies attached.` | `Cookies already present.`,
-        /**
-         * Gives a unix timestamp when the PCS consents expires
-         */
-        deviceConsentForPCSExpiry: number,
-        /**
-         * Can also be "failure" not sure how to handle this though
-         */
-        status: `success`
+        status: `success` | `failure`
     }
 }
 
@@ -383,7 +379,7 @@ export type PhotosSetupResponse = {
         syncToken: string,
         /**
          * The list of photos account zones - either primary or primary and shared
-         * @minItems 1
+         * @minItems 0
          */
         zones: PhotosSetupResponseZone[]
     }
@@ -392,11 +388,11 @@ export type PhotosSetupResponse = {
 /**
  * Response zone object from photos setup response
  */
-type PhotosSetupResponseZone = {
+export type PhotosSetupResponseZone = {
     zoneID: {
         /**
          * @minLength 1
-         * @pattern ^(PrimarySync|SharedSync(-[0-9A-F?]+)+|CMM(-[0-9A-F]+)+)$
+         * @pattern ^(PrimarySync|SharedSync(-[0-9A-F?]+)+|CMM(-[0-9A-F]+)+|AppLibrarySync-com.apple.GenerativePlayground(-[0-9]+)+)$
          */
         zoneName: string,
         /**

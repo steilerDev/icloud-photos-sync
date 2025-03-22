@@ -43,6 +43,14 @@ export const PCS_REQUEST_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `PCS_REQUEST_FAILED`, `Unable to acquire PCS cookies`,
 );
 
+export const PCS_COOKIE_MISSING: ErrorStruct = buildErrorStruct(
+    name, prefix, `PCS_COOKIE_MISSING`, `Required PCS cookies not in response`,
+);
+
 export const SRP_INIT_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `SRP_INIT_FAILED`, `Unable to initialize SRP authentication protocol`,
+);
+
+export const LOGOUT_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `LOGOUT_FAILED`, `Failed to logout from iCloud`,
 );

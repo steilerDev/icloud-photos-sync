@@ -5,7 +5,7 @@ import {MFAMethod} from './mfa/mfa-method.js';
 import {iCPSError} from '../../app/error/error.js';
 import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
 import {Resources} from '../resources/main.js';
-import {ENDPOINTS} from '../resources/network-types.js';
+import {COOKIE_KEYS, ENDPOINTS} from '../resources/network-types.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 import pTimeout from 'p-timeout';
 import {jsonc} from 'jsonc';
@@ -158,6 +158,8 @@ export class iCloud {
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNKNOWN).addCause(err));
             return;
         } finally {
+            // Return in finally is required because control flow of try/catch block is complicated
+            // eslint-disable-next-line no-unsafe-finally
             return ready;
         }
     }
@@ -334,13 +336,14 @@ export class iCloud {
 
             const response = await Resources.network().post(url, data);
             const validatedResponse = Resources.validator().validateSetupResponse(response);
-            if (Resources.network().applySetupResponse(validatedResponse)) {
-                Resources.logger(this).debug(`Account ready`);
-                Resources.emit(iCPSEventCloud.ACCOUNT_READY);
-            } else {
+            if (!Resources.network().applySetupResponse(validatedResponse)) {
                 Resources.logger(this).debug(`PCS required, acquiring...`);
                 Resources.emit(iCPSEventCloud.PCS_REQUIRED);
+                return;
             }
+
+            Resources.logger(this).debug(`Account ready`);
+            Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
             if ((err as any).isAxiosError && err.response.status === 421) {
                 Resources.logger(this).debug(`Session token expired, re-acquiring...`);
@@ -355,6 +358,8 @@ export class iCloud {
     /**
      * Acquires PCS cookies for ADP accounts
      * @emits iCPSEventCloud.ACCOUNT_READY - When account is ready to be used
+     * @emits iCPSEventCloud.PCS_NOT_READY - When PCS cookies are not ready yet
+     * @emits iCPSEventCloud.PCS_REQUIRED - When the account is setup using ADP and PCS cookies are still required
      * @emits iCPSEventCloud.ERROR - When an error occurs - provides iCPSError as argument
      */
     async acquirePCSCookies() {
@@ -364,17 +369,52 @@ export class iCloud {
             const url = ENDPOINTS.SETUP.BASE() + ENDPOINTS.SETUP.PATH.REQUEST_PCS;
             const data = {
                 appName: `photos`,
-                derivedFromUserAction: false,
+                derivedFromUserAction: true,
             };
 
             const response = await Resources.network().post(url, data);
             const validatedResponse = Resources.validator().validatePCSResponse(response);
-            Resources.network().applyPCSResponse(validatedResponse);
+
+            if (validatedResponse.data.status === `failure`) {
+                Resources.logger(this).info(`Failed to acquire PCS cookies: ${validatedResponse.data.message}`);
+                Resources.emit(iCPSEventCloud.PCS_NOT_READY);
+                setTimeout(() => Resources.emit(iCPSEventCloud.PCS_REQUIRED), 10000);
+                return;
+            }
+
+            if (!validatedResponse.headers[`set-cookie`]
+                || validatedResponse.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.PCS_PHOTOS) || cookieString.startsWith(COOKIE_KEYS.PCS_SHARING)).length !== 2) {
+                throw new iCPSError(AUTH_ERR.PCS_COOKIE_MISSING).addContext(`response`, validatedResponse);
+            }
 
             Resources.logger(this).debug(`Account ready with PCS cookies`);
             Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.PCS_REQUEST_FAILED).addCause(err));
+        }
+    }
+
+    /**
+     * Performs a logout, while retaining the trust token
+     */
+    async logout() {
+        try {
+            const url = ENDPOINTS.SETUP.BASE() + ENDPOINTS.SETUP.PATH.LOGOUT;
+            const data = {
+                trustBrowser: true,
+                allBrowsers: false,
+            };
+
+            const config: AxiosRequestConfig = {
+                // 421 is expected, if user was not logged in - 200 is expected, if logout was successful
+                validateStatus: status => status === 421 || status === 200,
+            };
+
+            Resources.logger(this).info(`Logging current account out`);
+
+            await Resources.network().post(url, data, config);
+        } catch (err) {
+            throw new iCPSError(AUTH_ERR.LOGOUT_FAILED).addCause(err);
         }
     }
 

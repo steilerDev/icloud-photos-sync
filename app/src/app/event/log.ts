@@ -1,11 +1,13 @@
+/* eslint-disable no-fallthrough */
+
 import * as fs from 'fs';
-import {Resources} from "../../lib/resources/main.js";
-import {iCPSEventLog, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from "../../lib/resources/events-types.js";
-import {iCPSError} from "../error/error.js";
-import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
-import {Asset} from '../../lib/photos-library/model/asset.js';
 import {CPLAsset} from '../../lib/icloud/icloud-photos/query-parser.js';
 import {Album} from '../../lib/photos-library/model/album.js';
+import {Asset} from '../../lib/photos-library/model/asset.js';
+import {iCPSEventLog, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from "../../lib/resources/events-types.js";
+import {Resources} from "../../lib/resources/main.js";
+import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
+import {iCPSError} from "../error/error.js";
 
 export enum LogLevel {
     DEBUG = `debug`,
@@ -29,13 +31,13 @@ export class LogInterface {
 
         switch (Resources.manager().logLevel) {
         case `debug`:
-            Resources.events(this).on(iCPSEventLog.DEBUG, (source: any, msg: string) => this.logMessage(LogLevel.DEBUG, source, msg));
+            Resources.events(this).on(iCPSEventLog.DEBUG, (source: unknown, msg: string) => this.logMessage(LogLevel.DEBUG, source, msg));
         default:
         case `info`:
-            Resources.events(this).on(iCPSEventLog.INFO, (source: any, msg: string) => this.logMessage(LogLevel.INFO, source, msg));
+            Resources.events(this).on(iCPSEventLog.INFO, (source: unknown, msg: string) => this.logMessage(LogLevel.INFO, source, msg));
         case `warn`:
             Resources.events(this)
-                .on(iCPSEventLog.WARN, (source: any, msg: string) => this.logMessage(LogLevel.WARN, source, msg))
+                .on(iCPSEventLog.WARN, (source: unknown, msg: string) => this.logMessage(LogLevel.WARN, source, msg))
                 .on(iCPSEventRuntimeWarning.COUNT_MISMATCH, (album: string, expectedCount: number, actualCPLAssets: number, actualCPLMasters: number) => {
                     this.logMessage(LogLevel.WARN, `RuntimeWarning`, `Expected ${expectedCount} CPLAssets & CPLMasters, but got ${actualCPLAssets} CPLAssets and ${actualCPLMasters} CPLMasters for album ${album}`);
                 })
@@ -75,7 +77,7 @@ export class LogInterface {
                 });
         case `error`:
             Resources.events(this)
-                .on(iCPSEventLog.ERROR, (source: any, msg: string) => this.logMessage(LogLevel.ERROR, source, msg))
+                .on(iCPSEventLog.ERROR, (source: unknown, msg: string) => this.logMessage(LogLevel.ERROR, source, msg))
                 .on(iCPSEventRuntimeError.HANDLED_ERROR, (err: iCPSError) => this.logMessage(LogLevel.ERROR, `RuntimeError`, err.getDescription()));
         }
     }
@@ -86,7 +88,7 @@ export class LogInterface {
      * @param source - The source of the message, either a string of an object instance
      * @param msg - The message to log
      */
-    private logMessage(level: LogLevel, source: any, msg: string) {
+    private logMessage(level: LogLevel, source: unknown, msg: string) {
         const _source = typeof source === `string` ? source : String(source.constructor.name);
 
         const prefixedMessage = `[${new Date().toISOString()}] ${level.toUpperCase()} ${_source}: ${msg}\n`;

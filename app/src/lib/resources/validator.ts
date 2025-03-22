@@ -1,18 +1,18 @@
 
-import {default as Ajv} from 'ajv';
-import ResourceFileSchema from "./schemas/resource-file.json" assert { type: "json" }; // eslint-disable-line
-import SigninResponseSchema from "./schemas/signin-response.json" assert { type: "json" }; // eslint-disable-line
-import SigninInitResponseSchema from "./schemas/signin-init-response.json" assert { type: "json" }; // eslint-disable-line
-import TrustResponseSchema from "./schemas/trust-response.json" assert { type: "json" }; // eslint-disable-line
-import SetupResponseSchema from "./schemas/setup-response.json" assert { type: "json" }; // eslint-disable-line
-import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" assert { type: "json" }; // eslint-disable-line
-import ResendMFADeviceResponseSchema from "./schemas/resend-mfa-device-response.json" assert { type: "json" }; // eslint-disable-line
-import ResendMFAPhoneResponseSchema from "./schemas/resend-mfa-phone-response.json" assert { type: "json" }; // eslint-disable-line
-import PCSResponseSchema from "./schemas/pcs-response.json" assert { type: "json" }; // eslint-disable-line
-import {ResourceFile} from "./resource-types.js";
-import {iCPSError} from "../../app/error/error.js";
+import * as Ajv from 'ajv';
 import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
+import {iCPSError} from "../../app/error/error.js";
 import {COOKIE_KEYS, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
+import {ResourceFile} from "./resource-types.js";
+import PCSResponseSchema from "./schemas/pcs-response.json" with { type: "json" }; // eslint-disable-line
+import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" with { type: "json" }; // eslint-disable-line
+import ResendMFADeviceResponseSchema from "./schemas/resend-mfa-device-response.json" with { type: "json" }; // eslint-disable-line
+import ResendMFAPhoneResponseSchema from "./schemas/resend-mfa-phone-response.json" with { type: "json" }; // eslint-disable-line
+import ResourceFileSchema from "./schemas/resource-file.json" with { type: "json" }; // eslint-disable-line
+import SetupResponseSchema from "./schemas/setup-response.json" with { type: "json" }; // eslint-disable-line
+import SigninInitResponseSchema from "./schemas/signin-init-response.json" with { type: "json" }; // eslint-disable-line
+import SigninResponseSchema from "./schemas/signin-response.json" with { type: "json" }; // eslint-disable-line
+import TrustResponseSchema from "./schemas/trust-response.json" with { type: "json" }; // eslint-disable-line
 
 /**
  * Common configuration for the schema validator
@@ -29,47 +29,47 @@ export class Validator {
     /**
      * Validator for the resource file schema
      */
-    _resourceFileValidator: Ajv.ValidateFunction<ResourceFile> = new Ajv.default(AJV_CONF).compile<ResourceFile>(ResourceFileSchema);
+    _resourceFileValidator: Ajv.ValidateFunction<ResourceFile> = new Ajv.Ajv(AJV_CONF).compile<ResourceFile>(ResourceFileSchema);
 
     /**
      * Validator for the signin init response schema
      */
-    _signinInitResponseValidator: Ajv.ValidateFunction<SigninInitResponse> = new Ajv.default(AJV_CONF).compile<SigninInitResponse>(SigninInitResponseSchema);
+    _signinInitResponseValidator: Ajv.ValidateFunction<SigninInitResponse> = new Ajv.Ajv(AJV_CONF).compile<SigninInitResponse>(SigninInitResponseSchema);
 
     /**
      * Validator for the signin response schema
      */
-    _signinResponseValidator: Ajv.ValidateFunction<SigninResponse> = new Ajv.default(AJV_CONF).compile<SigninResponse>(SigninResponseSchema);
+    _signinResponseValidator: Ajv.ValidateFunction<SigninResponse> = new Ajv.Ajv(AJV_CONF).compile<SigninResponse>(SigninResponseSchema);
 
     /**
      * Validator for MFA Device Response schema
      */
-    _resendMFADeviceResponseValidator: Ajv.ValidateFunction<ResendMFADeviceResponse> = new Ajv.default(AJV_CONF).compile<ResendMFADeviceResponse>(ResendMFADeviceResponseSchema);
+    _resendMFADeviceResponseValidator: Ajv.ValidateFunction<ResendMFADeviceResponse> = new Ajv.Ajv(AJV_CONF).compile<ResendMFADeviceResponse>(ResendMFADeviceResponseSchema);
 
     /**
      * Validator for MFA Phone Response schema
      */
-    _resendMFAPhoneResponseValidator: Ajv.ValidateFunction<ResendMFAPhoneResponse> = new Ajv.default(AJV_CONF).compile<ResendMFAPhoneResponse>(ResendMFAPhoneResponseSchema);
+    _resendMFAPhoneResponseValidator: Ajv.ValidateFunction<ResendMFAPhoneResponse> = new Ajv.Ajv(AJV_CONF).compile<ResendMFAPhoneResponse>(ResendMFAPhoneResponseSchema);
 
     /**
      * Validator for the trust response schema
      */
-    _trustResponseValidator: Ajv.ValidateFunction<TrustResponse> = new Ajv.default(AJV_CONF).compile<TrustResponse>(TrustResponseSchema);
+    _trustResponseValidator: Ajv.ValidateFunction<TrustResponse> = new Ajv.Ajv(AJV_CONF).compile<TrustResponse>(TrustResponseSchema);
 
     /**
      * Validator for the iCloud setup response schema
      */
-    _setupResponseValidator: Ajv.ValidateFunction<SetupResponse> = new Ajv.default(AJV_CONF).compile<SetupResponse>(SetupResponseSchema);
+    _setupResponseValidator: Ajv.ValidateFunction<SetupResponse> = new Ajv.Ajv(AJV_CONF).compile<SetupResponse>(SetupResponseSchema);
 
     /**
      * Validator for the PCS response schema
      */
-    _pcsResponseValidator: Ajv.ValidateFunction<PCSResponse> = new Ajv.default(AJV_CONF).compile<PCSResponse>(PCSResponseSchema);
+    _pcsResponseValidator: Ajv.ValidateFunction<PCSResponse> = new Ajv.Ajv(AJV_CONF).compile<PCSResponse>(PCSResponseSchema);
 
     /**
      * Validator for the iCloud photos setup response schema
      */
-    _photosSetupResponseValidator: Ajv.ValidateFunction<PhotosSetupResponse> = new Ajv.default(AJV_CONF).compile<PhotosSetupResponse>(PhotosSetupResponseSchema);
+    _photosSetupResponseValidator: Ajv.ValidateFunction<PhotosSetupResponse> = new Ajv.Ajv(AJV_CONF).compile<PhotosSetupResponse>(PhotosSetupResponseSchema);
 
     /**
      * Generic validation function
@@ -207,7 +207,6 @@ export class Validator {
             this._pcsResponseValidator,
             VALIDATOR_ERR.PCS_RESPONSE,
             data,
-            (data: PCSResponse) => data.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.PCS_PHOTOS) || cookieString.startsWith(COOKIE_KEYS.PCS_SHARING)).length === 2,
         );
     }
 

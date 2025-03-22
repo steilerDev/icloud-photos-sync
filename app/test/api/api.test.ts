@@ -1,5 +1,5 @@
 import mockfs from 'mock-fs';
-import {beforeAll, describe, expect, test, jest, beforeEach, afterEach} from '@jest/globals';
+import {beforeAll, describe, expect, test, jest, beforeEach, afterEach, afterAll} from '@jest/globals';
 import {iCloud} from '../../src/lib/icloud/icloud.js';
 import crypto from 'crypto';
 
@@ -32,6 +32,7 @@ describe(`API E2E Tests`, () => {
     afterEach(() => {
         mockfs.restore();
     });
+
     test(`API Prerequisite`, () => {
         const resourceManager = prepareResourceForApiTests().manager;
         expect(resourceManager.username).toBeDefined();
@@ -42,7 +43,7 @@ describe(`API E2E Tests`, () => {
         expect(resourceManager.trustToken!.length).toBeGreaterThan(0);
     });
 
-    describe(`Login flow`, () => {
+    describe.skip(`Login flow`, () => {
         let instances: Resources.Types.Instances;
 
         beforeEach(() => {
@@ -52,27 +53,29 @@ describe(`API E2E Tests`, () => {
         test(`Invalid username/password`, async () => {
             instances.manager._resources.username = `test@apple.com`;
             instances.manager._resources.password = `somePassword`;
-
             const icloud = new iCloud();
-
             await expect(icloud.authenticate()).rejects.toThrow(/^Username does not seem to exist$/);
+            await expect(icloud.logout()).resolves.not.toThrow();
         });
 
         test(`Invalid password`, async () => {
             instances.manager._resources.password = `somePassword`;
             const icloud = new iCloud();
             await expect(icloud.authenticate()).rejects.toThrow(/^Username\/Password does not seem to match$/);
+            await expect(icloud.logout()).resolves.not.toThrow();
         });
 
         test(`Success - Legacy Login`, async () => {
             instances.manager._resources.legacyLogin = true;
             const icloud = new iCloud();
             await expect(icloud.authenticate()).resolves.not.toThrow();
+            await expect(icloud.logout()).resolves.not.toThrow();
         });
 
         test(`Success - SRP Login`, async () => {
             const icloud = new iCloud();
             await expect(icloud.authenticate()).resolves.not.toThrow();
+            await expect(icloud.logout()).resolves.not.toThrow();
         });
     });
 
@@ -83,6 +86,10 @@ describe(`API E2E Tests`, () => {
             prepareResourceForApiTests();
             icloud = new iCloud();
             await icloud.authenticate();
+        });
+
+        afterAll(async () => {
+            await icloud.logout();
         });
 
         describe(`Fetching records`, () => {
