@@ -924,7 +924,16 @@ describe(`Validator`, () => {
                     },
                 },
                 desc: `zone marked as deleted`,
-            },
+            },{
+                data: {
+                    data: {
+                        moreComing: false,
+                        syncToken: `someToken`,
+                        zones: [],
+                    },
+                },
+                desc: `no zones`,
+            }
         ])(`should validate a valid photos setup response: $desc`, ({data}) => {
             expect(() => validator.validatePhotosSetupResponse(data)).not.toThrow();
         });
@@ -1147,16 +1156,7 @@ describe(`Validator`, () => {
                     },
                 },
                 desc: `ownerRecordName is missing`,
-            }, {
-                data: {
-                    data: {
-                        moreComing: false,
-                        syncToken: `someToken`,
-                        zones: [],
-                    },
-                },
-                desc: `no zones`,
-            },
+            } 
         ])(`should throw an error for an invalid photos setup response: $desc`, ({data}) => {
             expect(() => validator.validatePhotosSetupResponse(data)).toThrow(VALIDATOR_ERR.PHOTOS_SETUP_RESPONSE);
         });
