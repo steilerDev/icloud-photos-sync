@@ -140,7 +140,8 @@ Please check the [contributing guidelines](https://github.com/steilerDev/icloud-
 
 Special thanks to:
  - [@foxt](https://foxt.dev/) for helping with reverse engineering the iCloud API ([GSA](https://github.com/steilerDev/icloud-photos-sync/issues/363) & [ADP](https://github.com/steilerDev/icloud-photos-sync/issues/202)). Check out [iCloud.js](https://github.com/foxt/icloud.js), in case you need to access other aspects of iCloud.
- - [@konraddysput](https://github.com/konraddysput) for help on the Backtrace integration
+ - [@konraddysput](https://github.com/konraddysput) for help on the Backtrace integration.
+ - [@timvahlbrock](https://github.com/timvahlbrock) for their interest in this project and contributions in getting it updated.
 
 ### Release Workflow
 
