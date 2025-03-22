@@ -29,7 +29,7 @@ runs:
     - id: bundle-coverage
       uses: dawidd6/action-download-artifact@v2
       with:
-        name: coverage-artifact
+        name: coverage-artifact-Linux
         path: ${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.site-dir }}/dev/coverage
         workflow: event_pr.yml
         workflow_conclusion: ""
