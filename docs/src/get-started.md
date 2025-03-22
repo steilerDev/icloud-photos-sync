@@ -57,7 +57,6 @@ The `latest` tag should always represent the latest stable release, whereas the 
         ```
         docker pull steilerdev/icloud-photos-sync:latest
         ```
-
     
 
 === "node"
