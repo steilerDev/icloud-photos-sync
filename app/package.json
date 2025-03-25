@@ -72,7 +72,7 @@
     "liquidjs": "10.21.0",
     "mock-fs": "5.5.0",
     "mock-stdin": "1.0.0",
-    "ts-jest": "29.2.5",
+    "ts-jest": "29.3.0",
     "ts-json-schema-generator": "2.3.0",
     "tsx": "4.19.3",
     "typescript": "5.8.2",
