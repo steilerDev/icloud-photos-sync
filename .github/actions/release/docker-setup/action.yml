@@ -23,7 +23,7 @@ runs:
       shell: bash
       run: |
         cat ${{ inputs.release-dir }}/.releaserc.json |\
-          jq '.plugins[0][1].dockerContext = "'$(readlink -f {{ inputs.docker-path }})'"' |\
+          jq '.plugins[0][1].dockerContext = "'$(readlink -f ${{ inputs.docker-path }})'"' |\
           jq '.plugins[0][1].dockerImage = "${{ steps.get-docker-metadata.outputs.image-repository }}"' |\
           jq '.plugins[0][1].dockerProject= "${{ steps.get-docker-metadata.outputs.image-namespace }}"' |\
           sponge ${{ inputs.release-dir }}/.releaserc.json
