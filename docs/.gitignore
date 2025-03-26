@@ -1,5 +1,6 @@
 site/
 src/LICENSE
 src/README.md
+src/dev/coverage/
 src/user-guides/cli.md
 *.rar

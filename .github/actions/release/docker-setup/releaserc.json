@@ -1,9 +1,17 @@
 {
     "plugins": [
         [
-            "@semantic-release-plus/docker",
+            "@codedependant/semantic-release-docker",
             {
-                "name": "<updated within CI>"
+                "dockerTags": [
+                    "{{version}}",
+                    "{{#if prerelease.[0]}}{{prerelease.[0]}}{{else}}latest{{/if}}"
+                ],
+                "dockerPlatform": ["linux/amd64", "linux/arm64"],
+                "dockerContext": "<updated within CI>",
+                "dockerFile": "<updated within CI>",
+                "dockerImage": "<updated within CI>",
+                "dockerProject": "<updated within CI>"
             }
         ]
     ]

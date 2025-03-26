@@ -4,7 +4,7 @@ This application can export various sync related metrics, which can be used to m
 
 ## Usage
 
-Set the [export metrics flag](../cli/#export-metrics), in order to activate the exporter. The file will be written to the root of the data directory and is named `.icloud-photos-sync.metrics`. This file can be consumed using [telegraf's](https://www.influxdata.com/time-series-platform/telegraf/) [tail input plugin](https://github.com/influxdata/telegraf/blob/release-1.25/plugins/inputs/tail/README.md). The following is a sample configuration:
+Set the [export metrics flag](cli.md#export-metrics), in order to activate the exporter. The file will be written to the root of the data directory and is named `.icloud-photos-sync.metrics`. This file can be consumed using [telegraf's](https://www.influxdata.com/time-series-platform/telegraf/) [tail input plugin](https://github.com/influxdata/telegraf/blob/release-1.25/plugins/inputs/tail/README.md). The following is a sample configuration:
 
 ```
 [[inputs.tail]]                                                                 
@@ -75,7 +75,7 @@ The following fields will be written:
     - `assets_archived`: Gives the amount of assets archived during an archive operation
     - `remote_assets_deleted`: Gives the amount of remote assets deleted during an archive operation
   - `errors`: Gives an error message for each recorded error
-  - Warnings (see [common warnings for context](../common-warnings/)), gives an error message for each recorded warning
+  - Warnings (see [common warnings for context](common-warnings.md)), gives an error message for each recorded warning
     - `warn-count_mismatch`
     - `warn-library_load_error`
     - `warn-extraneous_file`

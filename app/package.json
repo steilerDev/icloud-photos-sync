@@ -29,10 +29,10 @@
     "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
     "test:unit": "npm run test test/unit/",
     "test:api": "npm run test test/api/",
-    "doc:cli": "NODE_NO_WARNINGS=1 npx tsx build/cli-reference.ts",
-    "execute": "NODE_NO_WARNINGS=1 node build/out/src/main.js",
-    "execute:test-account": "NODE_NO_WARNINGS=1 node build/out/src/main.js -u $TEST_APPLE_ID_USER -p $TEST_APPLE_ID_PWD",
-    "execute:debug": "NODE_NO_WARNINGS=1 node --inspect=0.0.0.0:9229 build/out/src/main.js daemon"
+    "doc:cli": "npx tsx build/cli-reference.ts",
+    "execute": "node build/out/src/main.js",
+    "execute:test-account": "node build/out/src/main.js -u $TEST_APPLE_ID_USER -p $TEST_APPLE_ID_PWD",
+    "execute:debug": "node --inspect=0.0.0.0:9229 build/out/src/main.js daemon"
   },
   "repository": {
     "type": "git",
@@ -59,7 +59,7 @@
   ],
   "devDependencies": {
     "@backtrace/javascript-cli": "0.3.2",
-    "@eslint/js": "9.20.0",
+    "@eslint/js": "9.23.0",
     "@jest/globals": "29.7.0",
     "@types/cli-progress": "3.11.6",
     "@types/jest": "29.5.14",
@@ -69,10 +69,10 @@
     "eslint": "9.23.0",
     "jest": "29.7.0",
     "knip": "5.46.0",
-    "liquidjs": "10.20.3",
+    "liquidjs": "10.21.0",
     "mock-fs": "5.5.0",
     "mock-stdin": "1.0.0",
-    "ts-jest": "29.2.5",
+    "ts-jest": "29.3.0",
     "ts-json-schema-generator": "2.3.0",
     "tsx": "4.19.3",
     "typescript": "5.8.2",
@@ -93,6 +93,6 @@
     "p-event": "6.0.1",
     "p-queue": "8.1.0",
     "p-timeout": "6.1.4",
-    "tough-cookie": "5.1.1"
+    "tough-cookie": "5.1.2"
   }
 }
