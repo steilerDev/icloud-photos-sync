@@ -48,4 +48,6 @@ runs:
 
         echo "Moving $ARTIFACT to $ARTIFACT_TARGET_PATH"
         mv "$ARTIFACT" "$ARTIFACT_TARGET_PATH"
-        tree -a "${{ inputs.docker-path }}/"
+    - id: build-rootfs
+      shell: bash
+      run: tar -C ${{ inputs.docker-path }}/rootfs -czf ${{ inputs.docker-path }}/rootfs.tar.gz ./

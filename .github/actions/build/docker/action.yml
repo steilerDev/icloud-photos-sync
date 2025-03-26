@@ -14,9 +14,6 @@ runs:
   steps:
     - id: get-docker-metadata
       uses: ./.github/actions/helper/docker-metadata
-    - id: build-rootfs
-      shell: bash
-      run: tar -C ${{ inputs.docker-path }}/rootfs -czf ${{ inputs.docker-path }}/rootfs.tar.gz ./
     - id: build-docker-amd64
       uses: docker/build-push-action@v4
       with:
