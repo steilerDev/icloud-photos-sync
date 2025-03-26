@@ -1,6 +1,6 @@
 # Get Started - A Complete User Guide
 
-This guide outlines the lifecycle of this application. Since it is written in Typescript it can be executed directly on various platforms through NodeJS. Please check this application's [OS support matrix](../#os-support) for compatibility. Additionally a Docker Image is provided.
+This guide outlines the lifecycle of this application. Since it is written in Typescript it can be executed directly on various platforms through NodeJS. Please check this application's [OS support matrix](README.md#os-support) for compatibility. Additionally a Docker Image is provided.
 
 The recommended installation path is using `docker compose`, since this nicely manages configuration and dependencies.
 
@@ -20,7 +20,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
         
         Create a `docker-compose.yml` file, similar to the one below. Please add your Apple ID credentials and desired location of the library on disk. Optionally, add the timezone and your local users' `UID` and `GID`. 
         
-        The [CLI Reference](../user-guides/cli/) contains all available configuration options. Add them as environment variables to the `environment` key.
+        The [CLI Reference](user-guides/cli.md) contains all available configuration options. Add them as environment variables to the `environment` key.
 
         ```
         version: '2'
@@ -40,9 +40,9 @@ The `latest` tag should always represent the latest stable release, whereas the 
         ```
 
         !!! tip "Plain text username/password"
-            If you don't want to store your plain text username and/or password in the docker environment, it is possible to omit the [username](https://icps.steiler.dev/user-guides/cli/#username) and/or [password](https://icps.steiler.dev/user-guides/cli/#password) option. In this scenarios, the username/password needs to be provided manually on each startup from the command line.
-            To input the data into the running Docker container [it needs to be started with `tty: true` and `stdin_open: true`](https://docs.docker.com/compose/compose-file/compose-file-v3/#domainname-hostname-ipc-mac_address-privileged-read_only-shm_size-stdin_open-tty-user-working_dir). Once the container was started, you can attach to the running `icloud-photos-sync` process using [`docker attach photos-sync`](https://docs.docker.com/engine/reference/commandline/attach/), and detach with the sequence `CTRL-p CTRL-q`.
-            To execute a command within the running container (that needs access to the credentials), use `docker exec -it` [to open tty and stdin](https://docs.docker.com/engine/reference/run/#foreground), e.g. `docker exec -it photos-sync token`.
+            If you don't want to store your plain text username and/or password in the docker environment, it is possible to omit the [username](user-guides/cli.md#username) and/or [password](user-guides/cli.md#password) option. In this scenarios, the username/password needs to be provided manually on each startup from the command line.
+            To input the data into the running Docker container it needs to be started with [`tty: true`](https://docs.docker.com/reference/compose-file/services/#tty) and [`stdin_open: true`](https://docs.docker.com/reference/compose-file/services/#stdin_open). Once the container was started, you can attach to the running `icloud-photos-sync` process using [`docker attach photos-sync`](https://docs.docker.com/engine/reference/commandline/attach/), and detach with the sequence `CTRL-p CTRL-q`.
+            To execute a command within the running container (that needs access to the credentials), use `docker exec -it` [to open tty and stdin](https://docs.docker.com/reference/cli/docker/container/exec/#run-docker-exec-on-a-running-container), e.g. `docker exec -it photos-sync token`.
 
         Get the latest image by running:
 
@@ -94,7 +94,7 @@ Since this application needs full access to a user's iCloud Photos Library, a fu
 
 Upon initial authentication, this application will register as a 'trusted device'. This includes the acquisition of a trust token. As long as this token is valid, no MFA code is required to authenticate. It seems that this token currently expires after 30 days.
 
-In order to only perform authentication (without syncing any assets) and validate or acquire the trust token, the [`token` command](../user-guides/cli/#token) can be used.
+In order to only perform authentication (without syncing any assets) and validate or acquire the trust token, the [`token` command](user-guides/cli.md#token) can be used.
 
 !!! tip "Concurrency"
     Depending on the defined schedule, the container service might already perform a sync. In order to avoid sync collisions two instances of this application cannot access the same library concurrently, which might lead to `LibraryError (FATAL): Locked by PID 1, cannot release.` errors.
@@ -156,7 +156,7 @@ In order to only perform authentication (without syncing any assets) and validat
 
 In case no valid trust token is available, a MFA code is required in order to successfully authenticate. 
 
-The CLI application will pause execution, in case it detects that a MFA code is necessary, [open a web server](../user-guides/cli/#port) and wait for user input. At this point, a MFA code should have already been sent to the primary device. 
+The CLI application will pause execution, in case it detects that a MFA code is necessary, [open a web server](user-guides/cli.md#port) and wait for user input. At this point, a MFA code should have already been sent to the primary device. 
 
 The MFA code needs to be submitted within 10 minutes. If this was not done, the execution will exit and needs to be restarted.
 
@@ -250,18 +250,18 @@ The `sync` command will perform authentication, proceed to load the local and re
 The synchronization will also create the folder structure present in the iCloud Photos Library, to achieve a user friendly navigation. If iCloud Shared Photo Library is enabled, the shared assets will be stored in the `_Shared-Photos` folder.
 
 !!! warning "File Structure"
-    Since this application does not use any local database, it is imperative, that the [file structure](../dev/local-file-structure/) is not changed by any other application or user.
+    Since this application does not use any local database, it is imperative, that the [file structure](dev/local-file-structure.md) is not changed by any other application or user.
 
-During the sync process various warning could be produced. The list of [common warnings](../user-guides/common-warnings/) contains more details on them.
+During the sync process various warning could be produced. The list of [common warnings](user-guides/common-warnings.md) contains more details on them.
 
 !!! tip "Syncing large libraries"
-    Initial sync of large libraries can take some time. After one hour the initially fetched metadata expires, after 8 hours the session expires, which will lead to a failure of the ongoing sync. The tool will refresh the metadata and/or session, unless the maximum number of retries is reached. Make sure to [set the retry option](../user-guides/cli/#max-retries) to a high number or `Infinity`, otherwise the process might prematurely fail. Restarting a previously failed sync will keep all previously successfully downloaded assets.
+    Initial sync of large libraries can take some time. After one hour the initially fetched metadata expires, after 8 hours the session expires, which will lead to a failure of the ongoing sync. The tool will refresh the metadata and/or session, unless the maximum number of retries is reached. Make sure to [set the retry option](user-guides/cli.md#max-retries) to a high number or `Infinity`, otherwise the process might prematurely fail. Restarting a previously failed sync will keep all previously successfully downloaded assets.
 
-    Additionally you might need to limit the rate of metadata fetching, because the iCloud API has been observed to enforce rate limits, causing `SOCKET HANGUP` errors. This appears to be applicable for libraries holding more than 10.000 assets. Do this by [setting the metadata rate option](../user-guides/cli/#metadata-rate) - it seems `1/20` ensures sufficient throttling.
+    Additionally you might need to limit the rate of metadata fetching, because the iCloud API has been observed to enforce rate limits, causing `SOCKET HANGUP` errors. This appears to be applicable for libraries holding more than 10.000 assets. Do this by [setting the metadata rate option](user-guides/cli.md#metadata-rate) - it seems `1/20` ensures sufficient throttling.
 
 ### Ad-hoc
 
-In order to perform a single synchronization execution, the [`sync` command](../user-guides/cli/#sync) will be used.
+In order to perform a single synchronization execution, the [`sync` command](user-guides/cli.md#sync) will be used.
 
 === "Docker"
 
@@ -318,7 +318,7 @@ In order to perform a single synchronization execution, the [`sync` command](../
 
 ### Scheduled
 
-When using the [`daemon` command](../user-guides/cli/#daemon), the application will start scheduled synchronization executions based on a [cron schedule](../user-guides/cli/#daemon).
+When using the [`daemon` command](user-guides/cli.md#daemon), the application will start scheduled synchronization executions based on a [cron schedule](user-guides/cli.md#daemon).
 
 This schedule is expected to be in [cron](https://crontab.guru) format. For more details on the specific implementation, see [Croner's pattern documentation](https://github.com/hexagon/croner#pattern).
 
@@ -376,7 +376,7 @@ Optionally, this tool can remove non-favorite photos from iCloud upon archiving.
 
 In case the album is renamed in the backend, the archived local copy will be renamed as well, but its content will not change. If the album is removed from the backend, the archived copy will be moved into `_Archive`. Files and folders in that path (except `_Archive/.stash`) can be freely modified. After a folder has been put into `_Archive`, it can be moved back into the folder structure of the library and will be ignored moving forward.
 
-In order to archive an album, the [`archive` command](../user-guides/cli/#archive) will be used. To automatically delete non-favorite pictures in the album from iCloud, add the [`remote-delete`](../user-guides/cli/#remote-delete) flag
+In order to archive an album, the [`archive` command](user-guides/cli.md#archive) will be used. To automatically delete non-favorite pictures in the album from iCloud, add the [`remote-delete`](user-guides/cli.md#remote-delete) flag
 
 === "Docker"
 
@@ -427,10 +427,10 @@ In order to archive an album, the [`archive` command](../user-guides/cli/#archiv
 
 ## Additional resources
 
-- Monitor the tool through [sync metrics](../user-guides/sync-metrics/)
-- Consult the [common warnings](../user-guides/common-warnings) in case any pop up
-- Read about the requirements for supporting accounts with [Advanced Data Protection](../user-guides/adp/)
-- Access your photo library locally through a [web UI](../user-guides/web-ui/)
+- Monitor the tool through [sync metrics](user-guides/sync-metrics.md)
+- Consult the [common warnings](user-guides/common-warnings.md) in case any pop up
+- Read about the requirements for supporting accounts with [Advanced Data Protection](user-guides/adp.md)
+- Access your photo library locally through a [web UI](user-guides/web-ui.md)
 
 ## Contributing & Feedback
 
