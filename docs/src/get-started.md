@@ -63,9 +63,6 @@ The `latest` tag should always represent the latest stable release, whereas the 
 
     When setting up the environment, please keep the [currently recommended NodeJS version](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/node-version) in mind.
 
-    !!! info "Experimental node modules"
-        This application uses experimental node modules, which are not yet available in the LTS version of NodeJS. This includes [import assertions](https://github.com/tc39/proposal-import-attributes) and importing JSON modules. To remove runtime warnings and ensuring proper execution, it is recommended to set the `NODE_NO_WARNINGS` environmental variable to `1`.
-
     === "NPM"
 
         The application can be installed (globally) from [npm](https://www.npmjs.com/package/icloud-photos-sync) using:
