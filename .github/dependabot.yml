@@ -4,7 +4,9 @@ updates:
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     labels: [ ]
-    directory: "/"
+    directories:
+      - "/"                     # to match /.github/workflows
+      - "/.github/actions/**/*" # to match repository actions
     target-branch: "dev"
     open-pull-requests-limit: 20
     commit-message:
