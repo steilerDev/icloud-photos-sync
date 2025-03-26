@@ -9,6 +9,7 @@
                 ],
                 "dockerPlatform": ["linux/amd64", "linux/arm64"],
                 "dockerContext": "<updated within CI>",
+                "dockerFile": "<updated within CI>",
                 "dockerImage": "<updated within CI>",
                 "dockerProject": "<updated within CI>"
             }
