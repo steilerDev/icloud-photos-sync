@@ -37,7 +37,7 @@ Use `{{ commandName }} {{ helpCommandName }} [command]` for information on a spe
   * *Short Option*: `{{ option.short }}`
 {%- endif -%}
 {% if option.environment %}
-  * *Environment Variable*: `{{ option.environment }}`
+  * *Environment Variable*: `{{ option.environment }}` {% if option.isBoolean %} (empty environment variable for `false`) {% endif %}
 {%- endif -%}
 {% if option.defaultValue %}
   * *Default*: `{{ option.defaultValue }}`
