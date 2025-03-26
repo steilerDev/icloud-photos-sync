@@ -104,8 +104,6 @@ This CLI Application offers the following high level functionality:
 
 A [*Get Started Guide* can be found on GH Pages](https://icps.steiler.dev/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://icps.steiler.dev/dev/motivation/) - are published there as well. 
 
-I am also trying to publish regular updates on the progress of this project in a [development blog](https://github.com/steilerDev/icloud-photos-sync/discussions/305).
-
 ## Limitations
 
 As this application is using an undocumented public API, there are a couple of known limitations:
@@ -142,6 +140,7 @@ Special thanks to:
  - [@foxt](https://foxt.dev/) for helping with reverse engineering the iCloud API ([GSA](https://github.com/steilerDev/icloud-photos-sync/issues/363) & [ADP](https://github.com/steilerDev/icloud-photos-sync/issues/202)). Check out [iCloud.js](https://github.com/foxt/icloud.js), in case you need to access other aspects of iCloud.
  - [@konraddysput](https://github.com/konraddysput) for help on the Backtrace integration.
  - [@timvahlbrock](https://github.com/timvahlbrock) for their interest in this project and contributions in getting it updated.
+ - All current and past sponsors of this project.
 
 ### Release Workflow
 
