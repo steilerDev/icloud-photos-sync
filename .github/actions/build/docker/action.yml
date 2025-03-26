@@ -9,6 +9,12 @@ inputs:
     description: The name of the uploaded docker artifact
     required: false
     default: docker-artifact
+  docker-token:
+    description: The Docker token used for releasing the image
+    required: true
+  gh-token:
+    description: The GH token used for performing the release
+    required: true
 runs:
   using: composite
   steps:
@@ -18,6 +24,8 @@ runs:
       uses: docker/build-push-action@v6
       with:
         context: ${{ inputs.docker-path }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         platforms: linux/amd64
         tags: ${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
         outputs: type=docker,dest=docker-amd64.tar
@@ -25,9 +33,21 @@ runs:
       uses: docker/build-push-action@v6
       with:
         context: ${{ inputs.docker-path }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         platforms: linux/arm64
         tags: ${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
         outputs: type=docker,dest=docker-arm64.tar
+    - id: docker-scout
+      uses: docker/scout-action@v1
+      with:
+        dockerhub-user: ${{ inputs.github-token }}
+        dockerhub-password: ${{ inputs.docker-token }}
+        command: quickview,cves,recommendations
+        image: archive://docker-amd64.tar
+        only-severities: critical,high
+        write-comment: true
+        github-token: ${{ secrets.GITHUB_TOKEN }} 
     - id: package-artifact
       shell: bash
       run: |
