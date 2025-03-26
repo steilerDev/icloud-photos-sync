@@ -21,6 +21,7 @@ CPLALBUM
 CPLASSET
 CPLMASTER
 croner
+cves
 datasource
 dawidd6
 DBRP
@@ -88,6 +89,7 @@ preshared
 pymdownx
 Qtpvztd
 quicktime
+quickview
 readlink
 releaserc
 rgba
