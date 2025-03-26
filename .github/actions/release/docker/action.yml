@@ -20,8 +20,8 @@ runs:
     - id: release-docker
       shell: bash
       run: |
-        export DOCKER_USERNAME=${{ steps.get-docker-metadata.outputs.image-namespace }}
-        export DOCKER_PASSWORD=${{ inputs.docker-token }}
+        export DOCKER_REGISTRY_USER=${{ steps.get-docker-metadata.outputs.image-namespace }}
+        export DOCKER_REGISTRY_PASSWORD=${{ inputs.docker-token }}
         (cd ${{ inputs.release-dir }}; npx semantic-release)
     - id: get-git-metadata
       uses: ./.github/actions/helper/git-metadata
