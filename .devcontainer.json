@@ -64,9 +64,22 @@
             "target": "/opt/adp-data-dir",
             "type": "volume" 
         },
+        {
+            // This volume will hold the GPG keystore for code signing
+            // To import a key into a fresh devcontainer:
+            //  gpg --import-options restore --import private.gpg
+            //  gpg --edit-key <key-id>
+            //  > gpg trust
+            //  > gpg 5
+            // git config --global user.signingkey <key-id>
+            // git config --global commit.gpgsign true
+            "source": "gpg-trust",
+            "target": "/home/vscode/.gnupg/",
+            "type": "volume"
+        }
     ],
 
-	"postCreateCommand": "(cd app/ && npm install) && (cd docs/ && pip install -r requirements.txt) && sudo chown -R 1000:1000 /opt",
+	"postCreateCommand": "(cd app/ && npm install) && (cd docs/ && pip install -r requirements.txt) && sudo chown -R 1000:1000 /opt /home/vscode/.gnupg/ && sudo chmod 700 /home/vscode/.gnupg/",
 
 	"remoteUser": "vscode"
 }

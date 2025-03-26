@@ -88,4 +88,5 @@
     "liveServer.settings.donotShowInfoMsg": true,
     "typescript.tsdk": "app/node_modules/typescript/lib",
     "typescript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces": false,
+    "git.enableCommitSigning": true,
 }
