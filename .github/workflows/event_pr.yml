@@ -13,6 +13,7 @@ jobs:
   build:
     name: build
     uses: ./.github/workflows/artifacts_build-release.yml
+    permissions: {}
     with:
       all-artifacts: true
       release: false
@@ -24,7 +25,3 @@ jobs:
     permissions: {}
     with:
       methods: ${{github.base_ref == 'main' && '["unit-ubuntu", "unit-macos", "e2e", "api"]' || (github.base_ref == 'beta' && '["unit-ubuntu", "e2e", "api"]' || '["unit-ubuntu"]' ) }} # Only running full suite when targeting beta or main
-    # secrets:
-    #   test-apple-id-user: ${{ secrets.TEST_APPLE_ID_USER }}
-    #   test-apple-id-pwd: ${{ secrets.TEST_APPLE_ID_PWD }}
-    #   test-trust-token: ${{ secrets.TEST_TRUST_TOKEN }}
