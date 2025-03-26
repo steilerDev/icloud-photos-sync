@@ -11,10 +11,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
 
 === "Docker"
 
-    Docker images are available on [DockerHub](https://hub.docker.com/r/steilerdev/icloud-photos-sync). Alternatively the docker image tar archive is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be installed using `docker load --input <fileName>`
-
-    !!! tip "ARM Support"
-        The Docker image is also build for the arm64 platform (however [publishing this version is not possible through the current CI setup](https://github.com/docker/buildx/issues/1152)). The tar archive of the arm64 build of this image is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be loaded using `docker load --input <fileName>`.
+    Docker images are available on [DockerHub](https://hub.docker.com/r/steilerdev/icloud-photos-sync) for `linux/amd64` and `linux/arm64` platform. Alternatively the docker image tar archive is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be installed using `docker load --input <fileName>`
 
     === "docker compose"
         
