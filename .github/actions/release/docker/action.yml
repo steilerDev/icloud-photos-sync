@@ -39,7 +39,7 @@ runs:
           echo "url=https://hub.docker.com/r/${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}" >> $GITHUB_OUTPUT
         fi
     - id: update-readme
-      uses: peter-evans/dockerhub-description@v3
+      uses: peter-evans/dockerhub-description@v4
       if: github.ref_name == 'main' && steps.get-git-metadata.outputs.current-tag != ''
       with:
         username: ${{ steps.get-docker-metadata.outputs.image-namespace }}
