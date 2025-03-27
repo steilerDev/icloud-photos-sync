@@ -9,9 +9,10 @@
                 ],
                 "dockerPlatform": ["linux/amd64", "linux/arm64"],
                 "dockerBuildFlags": {
-                    "attest": "type=sbom,generator=docker/scout-sbom-indexer:latest"
+                    "attest": "type=sbom,generator=docker/scout-sbom-indexer:latest",
+                    "provenance=mode=max": null
                 },
-                "dockerBuildCacheFrom": "gha",
+                "dockerBuildCacheFrom": "type=gha",
                 "dockerContext": "<updated within CI>",
                 "dockerFile": "<updated within CI>",
                 "dockerImage": "<updated within CI>",
