@@ -65,7 +65,8 @@ jobs:
     runs-on: ubuntu-latest
     if: always() && needs.app-build.result == 'success' && (needs.app-release.result == 'skipped' || needs.app-release.result == 'success')
     needs: [app-build, app-release] # needs app-release, because this will provide a properly versioned app
-    permissions: {}
+    permissions:
+      pull-requests: write
     steps:
       - name: setup/checkout
         uses: actions/checkout@v4
