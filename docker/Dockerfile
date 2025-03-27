@@ -22,5 +22,8 @@ RUN chmod 755 /root/enter_mfa.sh && \
 # Installing application binary
 RUN npm install -g /opt/npm-pack.tgz
 
+RUN adduser icps
+USER icps
+
 ENTRYPOINT ["icloud-photos-sync"]
 CMD ["daemon"]

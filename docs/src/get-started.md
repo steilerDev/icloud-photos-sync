@@ -108,7 +108,7 @@ In order to only perform authentication (without syncing any assets) and validat
     === "docker run"
 
         ```
-        docker run -v "</path/to/your/local/library>:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
+        docker run -v "</path/to/your/local/library>:/opt/icloud-photos-library" --name photos-sync --user <uid>:<gid> steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
@@ -273,7 +273,7 @@ In order to perform a single synchronization execution, the [`sync` command](use
     === "docker run"
 
         ```
-        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
+        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync  --user <uid>:<gid> steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
@@ -325,7 +325,7 @@ This schedule is expected to be in [cron](https://crontab.guru) format. For more
     === "docker run"
 
         ```
-        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
+        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync  --user <uid>:<gid> steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
@@ -385,7 +385,7 @@ In order to archive an album, the [`archive` command](user-guides/cli.md#archive
     === "docker run"
 
         ```
-        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync steilerdev/icloud-photos-sync:latest \
+        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync  --user <uid>:<gid> steilerdev/icloud-photos-sync:latest \
             -u "<iCloud Username>" \
             -p "<iCloud Password>" \
             --enable-crash-reporting \
@@ -422,6 +422,7 @@ In order to archive an album, the [`archive` command](user-guides/cli.md#archive
 ## Additional resources
 
 - Monitor the tool through [sync metrics](user-guides/sync-metrics.md)
+- Integrate with [health check service](user-guides/health-checks.md)
 - Consult the [common warnings](user-guides/common-warnings.md) in case any pop up
 - Read about the requirements for supporting accounts with [Advanced Data Protection](user-guides/adp.md)
 - Access your photo library locally through a [web UI](user-guides/web-ui.md)
