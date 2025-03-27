@@ -43,8 +43,9 @@ runs:
       with:
         dockerhub-user: ${{ steps.get-docker-metadata.outputs.image-namespace }}
         dockerhub-password: ${{ inputs.docker-token }}
-        command: quickview,cves,recommendations
+        command: compare,cves,recommendations
         image: archive://docker-amd64.tar
+        to-latest: true
         only-severities: critical,high
         write-comment: true
         github-token: ${{ inputs.github-token }}
