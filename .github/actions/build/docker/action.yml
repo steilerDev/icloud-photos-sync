@@ -43,7 +43,8 @@ runs:
       with:
         dockerhub-user: ${{ steps.get-docker-metadata.outputs.image-namespace }}
         dockerhub-password: ${{ inputs.docker-token }}
-        command: compare,cves,recommendations
+        organization: ${{ steps.get-docker-metadata.outputs.image-namespace }}
+        command: compare,cves,recommendations,policy
         image: archive://docker-amd64.tar
         to-latest: true
         only-severities: critical,high
