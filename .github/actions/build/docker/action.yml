@@ -9,25 +9,42 @@ inputs:
     description: The name of the uploaded docker artifact
     required: false
     default: docker-artifact
+  docker-token:
+    description: The Docker token used for releasing the image
+    required: true
 runs:
   using: composite
   steps:
     - id: get-docker-metadata
       uses: ./.github/actions/helper/docker-metadata
     - id: build-docker-amd64
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v6
       with:
         context: ${{ inputs.docker-path }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         platforms: linux/amd64
         tags: ${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
         outputs: type=docker,dest=docker-amd64.tar
     - id: build-docker-arm64
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v6
       with:
         context: ${{ inputs.docker-path }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         platforms: linux/arm64
         tags: ${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
         outputs: type=docker,dest=docker-arm64.tar
+    - id: docker-scout
+      uses: docker/scout-action@v1
+      with:
+        dockerhub-user: ${{ steps.get-docker-metadata.outputs.image-namespace }}
+        dockerhub-password: ${{ inputs.docker-token }}
+        organization: ${{ steps.get-docker-metadata.outputs.image-namespace }}
+        command: compare,cves,recommendations #policy
+        image: archive://docker-amd64.tar
+        to: registry://${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:latest
+        only-severities: critical,high
     - id: package-artifact
       shell: bash
       run: |

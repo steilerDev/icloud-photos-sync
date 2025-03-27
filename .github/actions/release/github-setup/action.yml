@@ -48,4 +48,5 @@ runs:
     - id: download-artifacts
       uses: actions/download-artifact@v4
       with:
+        pattern: "!*.dockerbuild"
         path: ${{ inputs.release-dir }}/artifacts

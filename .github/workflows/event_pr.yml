@@ -19,10 +19,13 @@ jobs:
       id-token: write
       pages: write
       issues: write
-      pull-requests: write 
+      pull-requests: write # This one is required for Docker Scout feedback on PR during build step
     with:
       all-artifacts: true
       release: false
+    secrets:
+      docker-token: ${{ secrets.DOCKER_TOKEN }}
+      gh-token: ${{ secrets.GITHUB_TOKEN }}
 
   test:
     name: test
