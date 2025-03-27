@@ -23,6 +23,9 @@ jobs:
     with:
       all-artifacts: true
       release: false
+    secrets:
+      docker-token: ${{ secrets.DOCKER_TOKEN }}
+      gh-token: ${{ secrets.GITHUB_TOKEN }}
 
   test:
     name: test

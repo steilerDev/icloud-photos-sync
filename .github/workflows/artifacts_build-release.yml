@@ -15,16 +15,16 @@ on:
     secrets:
         docker-token:
           description: The Docker token used for releasing the image
-          required: false
-        npm-token:
-          description: The npm token used for releasing the package
-          required: false
+          required: true # Scout action will always run
         gh-token:
           description: The Github Token, in order to deploy assets to Github
-          required: false
+          required: false # Only required for release
+        npm-token:
+          description: The npm token used for releasing the package
+          required: false # Only required for release
         bt-token:
           description: The Backtrace symbol access token, in order to deploy the source maps
-          required: false
+          required: false # Only required for release
 
 jobs:
   app-build:
@@ -75,7 +75,6 @@ jobs:
         uses: ./.github/actions/build/docker
         with:
           docker-token: ${{ secrets.docker-token }}
-          gh-token: ${{ secrets.gh-token }}
           
 
   docker-release:
