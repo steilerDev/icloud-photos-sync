@@ -1,3 +1,5 @@
+import {logoBase64} from "../logo.js";
+
 export abstract class View {
     public asHtml(): string {
         return `
@@ -71,7 +73,7 @@ export abstract class View {
         <body>
             <div class="container">
                 <div class="content">
-                    <img src="https://icps.steiler.dev/assets/icloud-photos-sync-open-graph.png" class="logo" alt="ICPS Logo">
+                    <img src="data:image/png;base64,${logoBase64}" class="logo" alt="ICPS Logo">
                     <div class="innerContent">
                         ${this.content}
                     </div>
