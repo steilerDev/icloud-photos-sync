@@ -1,7 +1,7 @@
 import http from 'http';
 import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import {iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {iCPSEventApp, iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {MFA_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
@@ -39,6 +39,10 @@ export class WebServer {
      */
     mfaMethod: MFAMethod;
 
+    state: `ok` | `syncing` | `error` = `ok`;
+
+    lastSync: Date | null = null;
+
     static spawn() {
         const webServer = new WebServer()
         webServer.startServer();
@@ -68,6 +72,21 @@ export class WebServer {
             icpsErr.addCause(err);
 
             Resources.emit(iCPSEventWebServer.ERROR, icpsErr);
+        });
+
+        Resources.events(this).on(iCPSEventApp.SCHEDULED_START, () => {
+            this.state = `syncing`;
+            this.lastSync = new Date();
+        });
+
+        Resources.events(this).on(iCPSEventApp.SCHEDULED_DONE, () => {
+            this.state = `ok`;
+            this.lastSync = new Date();
+        });
+
+        Resources.events(this).on(iCPSEventApp.SCHEDULED_RETRY, () => {
+            this.state = `error`;
+            this.lastSync = new Date();
         });
 
         // allow the process to exit, if this server is the only thing left running
@@ -124,6 +143,20 @@ export class WebServer {
      */
     handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         const cleanPath = req.url?.split(`?`)[0];
+
+        if(req.headers[`content-type`] === `application/json`) {
+            if(req.url.startsWith(`/state`)) {
+                res.writeHead(200, {'Content-Type': `application/json`});
+                res.write(JSON.stringify({state: this.state, lastSync: this.lastSync?.toLocaleString() ?? `Never`}));
+                res.end();
+            } else {
+                res.writeHead(404, {'Content-Type': `text/plain`});
+                res.write(`Not Found`);
+                res.end();
+            }
+            return;
+        }
+
         const content = this.getUiHtml(cleanPath);
         if (content === null) {
             res.writeHead(404, {'Content-Type': `text/plain`});
@@ -169,6 +202,9 @@ export class WebServer {
             res.end();
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.TRIGGER_SYNC)) {
             Resources.emit(iCPSEventWebServer.SYNC_REQUESTED);
+            res.writeHead(200, {'Content-Type': `text/plain`});
+            res.write(`Sync started`);
+            res.end();
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.CODE_INPUT)) {
             this.handleMFACode(req, res);
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.RESEND_CODE)) {
