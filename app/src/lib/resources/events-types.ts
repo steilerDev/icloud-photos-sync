@@ -92,6 +92,11 @@ export enum iCPSEventWebServer {
      * Emitted when the Web server has experienced an error - provides an iCPSError as argument
      */
     ERROR = `mfa-error`,
+
+    /**
+     * Emitted when a sync is requested via the web server
+     */
+    SYNC_REQUESTED = `mfa-sync-requested`,
 }
 
 /**

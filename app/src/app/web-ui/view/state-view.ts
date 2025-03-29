@@ -28,9 +28,16 @@ export class StateView extends View {
                 Synced 12 photos
             </p>
             <br/>
-            <button>Sync Now</button>
+            <button onclick="sync()">Sync Now</button>
             <button onclick="reauthenticate()">Reauthenticate</button>
             <script type="text/javascript">
+                async function sync() {
+                    const response = await fetch("sync", { method: "POST" });
+                    if (!response.ok) {
+                        alert("Sync failed: " + response.statusText);
+                        return;
+                    }
+                }
                 async function reauthenticate() {
                     const response = await fetch("reauthenticate", { method: "POST" });
                     if (!response.ok) {

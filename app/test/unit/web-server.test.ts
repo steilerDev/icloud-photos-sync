@@ -1,12 +1,12 @@
 
-import {beforeEach, describe, expect, jest, test} from '@jest/globals';
-import {iCPSError} from '../../src/app/error/error';
-import {MFA_ERR} from '../../src/app/error/error-codes';
-import {MFA_SERVER_ENDPOINTS, WebServer} from '../../src/app/web-ui/web-server';
-import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import {iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../src/lib/resources/events-types';
-import {MockedEventManager, prepareResources} from '../_helpers/_general';
-import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
+import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { iCPSError } from '../../src/app/error/error';
+import { MFA_ERR } from '../../src/app/error/error-codes';
+import { WEB_SERVER_API_ENDPOINTS, WebServer } from '../../src/app/web-ui/web-server';
+import { MFAMethod } from '../../src/lib/icloud/mfa/mfa-method';
+import { iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer } from '../../src/lib/resources/events-types';
+import { MockedEventManager, prepareResources } from '../_helpers/_general';
+import { requestFactory, responseFactory } from '../_helpers/mfa-server.helper';
 
 let server: WebServer;
 let mockedEventManager: MockedEventManager;
@@ -24,7 +24,7 @@ describe(`MFA Code`, () => {
         server.sendResponse = jest.fn<typeof server.sendResponse>();
         const mfaReceivedEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RECEIVED);
 
-        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?code=${code}`);
+        const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.CODE_INPUT}?code=${code}`);
         const res = responseFactory();
 
         server.handleMFACode(req, res);
@@ -39,7 +39,7 @@ describe(`MFA Code`, () => {
         server.sendResponse = jest.fn<typeof server.sendResponse>();
         const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
-        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?code=${code}`);
+        const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.CODE_INPUT}?code=${code}`);
         const res = responseFactory();
 
         server.handleMFACode(req, res);
@@ -60,7 +60,7 @@ describe(`MFA Resend`, () => {
 
         const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
+        const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.RESEND_CODE}?method=${method}`);
         const res = responseFactory();
 
         server.handleMFAResend(req, res);
@@ -75,7 +75,7 @@ describe(`MFA Resend`, () => {
 
             const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-            const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
+            const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.RESEND_CODE}?method=${method}`);
             const res = responseFactory();
 
             server.handleMFAResend(req, res);
@@ -91,7 +91,7 @@ describe(`MFA Resend`, () => {
             server.sendResponse = jest.fn<typeof server.sendResponse>();
             const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-            const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
+            const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
             const res = responseFactory();
 
             server.handleMFAResend(req, res);
@@ -106,7 +106,7 @@ describe(`MFA Resend`, () => {
 
             const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-            const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
+            const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.RESEND_CODE}?method=${method}&phoneNumberId=${phoneNumberId}`);
             const res = responseFactory();
 
             server.handleMFAResend(req, res);
@@ -121,7 +121,7 @@ describe(`MFA Resend`, () => {
 
         const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
 
-        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?method=${method}`);
+        const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.RESEND_CODE}?method=${method}`);
         const res = responseFactory();
 
         server.handleMFAResend(req, res);
@@ -139,7 +139,7 @@ describe(`Request routing`, () => {
     });
 
     test(`POST /ENDPOINT.CODE_INPUT`, () => {
-        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.CODE_INPUT}?testparam=abc`, `POST`);
+        const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.CODE_INPUT}?testparam=abc`, `POST`);
         const res = responseFactory();
 
         server.handleRequest(req, res);
@@ -150,7 +150,7 @@ describe(`Request routing`, () => {
     });
 
     test(`POST /ENDPOINT.RESEND_CODE`, () => {
-        const req = requestFactory(`${MFA_SERVER_ENDPOINTS.RESEND_CODE}?testparam=abc`, `POST`);
+        const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.RESEND_CODE}?testparam=abc`, `POST`);
         const res = responseFactory();
 
         server.handleRequest(req, res);

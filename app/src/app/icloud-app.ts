@@ -5,7 +5,7 @@ import {iCloud} from "../lib/icloud/icloud.js";
 import {Album} from "../lib/photos-library/model/album.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
-import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError} from "../lib/resources/events-types.js";
+import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventWebServer} from "../lib/resources/events-types.js";
 import {Resources} from "../lib/resources/main.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
@@ -56,6 +56,9 @@ export class DaemonApp extends iCPSApp {
                 },
             },
         );
+        Resources.events(this).on(iCPSEventWebServer.SYNC_REQUESTED, async () => {
+            this.job?.trigger();
+        });
         Resources.emit(iCPSEventApp.SCHEDULED, this.job?.nextRun());
     }
 
