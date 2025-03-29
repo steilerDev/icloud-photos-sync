@@ -15,6 +15,12 @@ jobs:
   ci:
     name: ci
     uses: ./.github/workflows/artifacts_build-release.yml
+    permissions: 
+      contents: write       # for semantic release
+      id-token: write       # for sematic release with provenance and GH pages
+      pages: write          # for GH pages
+      issues: write         # for semantic release comments on GH release
+      pull-requests: write  # for semantic release comments on GH release
     concurrency: release
     with:
       all-artifacts: ${{ github.ref_name == 'main' }} # Build and release all artifacts only on main branch

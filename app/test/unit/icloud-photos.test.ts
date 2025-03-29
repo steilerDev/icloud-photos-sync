@@ -1,13 +1,15 @@
-import {describe, test, expect, jest, beforeEach} from '@jest/globals';
-import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
-import * as Config from '../_helpers/_config';
-import {MockedEventManager, MockedNetworkManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
-import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
+import {beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {iCPSError} from '../../src/app/error/error';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
+import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 import {iCPSEventPhotos} from '../../src/lib/resources/events-types';
+import {PhotosSetupResponse} from '../../src/lib/resources/network-types';
 import {Validator} from '../../src/lib/resources/validator';
+import * as Config from '../_helpers/_config';
+import {MockedEventManager, MockedNetworkManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
+import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
+import {ZoneArea} from '../../src/lib/resources/resource-types';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedNetworkManager: MockedNetworkManager;
@@ -25,31 +27,46 @@ beforeEach(() => {
     mockedNetworkManager.photosUrl = Config.photosDomain;
     mockedNetworkManager._headerJar.setCookie(...getICloudCookieHeader()[`set-cookie`]);
 
-    mockedResourceManager._resources.primaryZone = Config.primaryZone;
-    mockedResourceManager._resources.sharedZone = Config.sharedZone;
+    // mockedResourceManager._resources.primaryZone = {
+    //     ...Config.primaryZone,
+    //     area: `PRIVATE`
+    // }
+    // mockedResourceManager._resources.sharedZone = {
+    //     ...Config.sharedZone,
+    //     area: `SHARED`
+    // }
 
     photos = new iCloudPhotos();
 });
 
 describe(`Setup iCloud Photos`, () => {
-    const setupURL = `${Config.photosDomain}/database/1/com.apple.photos.cloud/production/private/changes/database`;
+    const setupPrivateURL = `${Config.photosDomain}/database/1/com.apple.photos.cloud/production/private/changes/database`;
+    const setupSharedURL = `${Config.photosDomain}/database/1/com.apple.photos.cloud/production/shared/changes/database`;
 
     test(`Success`, async () => {
         photos.ready = Promise.resolve();
 
         const setupCompletedEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.SETUP_COMPLETED);
 
-        mockedValidator.validatePhotosSetupResponse = jest.fn<typeof mockedValidator.validatePhotosSetupResponse>();
-        mockedNetworkManager.applyPhotosSetupResponse = jest.fn<typeof mockedNetworkManager.applyPhotosSetupResponse>();
+        mockedValidator.validatePhotosSetupResponse = jest.fn<typeof mockedValidator.validatePhotosSetupResponse>()
+            .mockReturnValue({
+                data: {
+                    zones: []
+                } as Partial<PhotosSetupResponse[`data`]> as PhotosSetupResponse[`data`],
+            } as Partial<PhotosSetupResponse> as PhotosSetupResponse);
+        mockedNetworkManager.applyZones = jest.fn<typeof mockedNetworkManager.applyZones>();
 
         mockedNetworkManager.mock
-            .onPost(setupURL, {})
+            .onPost(setupPrivateURL, {})
+            .reply(200);
+        mockedNetworkManager.mock
+            .onPost(setupSharedURL, {})
             .reply(200);
 
         await photos.setup();
 
-        expect(mockedValidator.validatePhotosSetupResponse).toHaveBeenCalledTimes(1);
-        expect(mockedNetworkManager.applyPhotosSetupResponse).toHaveBeenCalledTimes(1);
+        expect(mockedValidator.validatePhotosSetupResponse).toHaveBeenCalledTimes(2);
+        expect(mockedNetworkManager.applyZones).toHaveBeenCalledTimes(1);
         expect((mockedNetworkManager.mock.history.post[0].headers as any).Cookie).toBe(iCloudCookieRequestHeader);
 
         expect(setupCompletedEvent).toHaveBeenCalledTimes(1);
@@ -63,7 +80,10 @@ describe(`Setup iCloud Photos`, () => {
         });
 
         mockedNetworkManager.mock
-            .onPost(setupURL, {})
+            .onPost(setupPrivateURL, {})
+            .reply(200);
+        mockedNetworkManager.mock
+            .onPost(setupSharedURL, {})
             .reply(200);
 
         await expect(photos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
@@ -74,7 +94,7 @@ describe(`Setup iCloud Photos`, () => {
         const errorEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.ERROR, false);
 
         mockedNetworkManager.mock
-            .onPost(setupURL, {})
+            .onPost(setupPrivateURL, {})
             .reply(500);
 
         await expect(photos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
@@ -182,12 +202,37 @@ describe(`Setup iCloud Photos`, () => {
 describe.each([
     {
         zone: Zones.Primary,
+        area: `PRIVATE`,
+        areaURL: `private`,
         expectedZoneObject: Config.primaryZone,
     }, {
         zone: Zones.Shared,
+        area: `PRIVATE`,
+        areaURL: `private`,
         expectedZoneObject: Config.sharedZone,
-    },
-])(`$zone`, ({zone, expectedZoneObject}) => {
+    }, {
+        zone: Zones.Shared,
+        area: `SHARED`,
+        areaURL: `shared`,
+        expectedZoneObject: Config.sharedZone
+    }
+])(`$zone ($area)`, ({zone, area, areaURL, expectedZoneObject}) => {
+    beforeEach(() => {
+        if(zone == Zones.Primary) {
+            mockedResourceManager._resources.primaryZone = {
+                ...Config.primaryZone,
+                area: area as ZoneArea
+            }
+        }
+
+        if(zone == Zones.Shared) {
+            mockedResourceManager._resources.sharedZone = {
+                ...Config.sharedZone,
+                area: area as ZoneArea
+            }
+        }
+    })
+
     describe.each([
         {
             desc: `recordType + filterBy + resultsLimit + desiredKeys`,
@@ -276,7 +321,7 @@ describe.each([
             const responseRecords = [`recordA`, `recordB`];
 
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
                 .reply(200, {
                     records: responseRecords,
                 });
@@ -291,7 +336,7 @@ describe.each([
 
         test(`No data returned`, async () => {
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
                 .reply(200, {});
 
             await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Received unexpected query response format$/);
@@ -299,7 +344,7 @@ describe.each([
 
         test(`Server Error`, async () => {
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/query`, expectedQuery)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
                 .reply(500, {});
 
             await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Request failed with status code 500$/);
@@ -349,7 +394,7 @@ describe.each([
     }])(`Perform Operation $desc`, ({operation, fields, records, expectedOperation}) => {
         test(`Success`, async () => {
             mockedNetworkManager.mock
-                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/private/records/modify`, expectedOperation)
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
                 .reply(200, {
                     records,
                 });

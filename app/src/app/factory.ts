@@ -162,6 +162,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
     program.name(Resources.PackageInfo.name)
         .description(Resources.PackageInfo.description)
         .version(Resources.PackageInfo.version)
+        .addHelpText(`after`, `\nFind the full documentation at https://icps.steiler.dev/`)
         .addOption(new Option(`-u, --username <string>`, `AppleID username. Omitting the option will result in the CLI to ask for user input before startup.`)
             .env(`APPLE_ID_USER`)
             .makeOptionMandatory(false))

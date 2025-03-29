@@ -5,10 +5,10 @@ inputs:
     description: Directory, where the semantic release binary and configuration is located
     required: false
     default: release
-  artifact-name:
-    description: The name of the uploaded docker artifact
+  docker-path:
+    description: The path to the docker directory
     required: false
-    default: docker-artifact
+    default: docker
 runs:
   using: composite
   steps:
@@ -23,16 +23,12 @@ runs:
       shell: bash
       run: |
         cat ${{ inputs.release-dir }}/.releaserc.json |\
-          jq 'del(.plugins[0][1].name)' |\
-          jq '.plugins[0][1].name.namespace = "${{ steps.get-docker-metadata.outputs.image-namespace }}"' |\
-          jq '.plugins[0][1].name.repository = "${{ steps.get-docker-metadata.outputs.image-repository }}"' |\
-          jq '.plugins[0][1].name.tag = "${{ steps.get-docker-metadata.outputs.image-tag }}"' |\
+          jq '.plugins[0][1].dockerContext = "'$(readlink -f ${{ inputs.docker-path }})'"' |\
+          jq '.plugins[0][1].dockerFile = "'$(readlink -f ${{ inputs.docker-path }}/Dockerfile)'"' |\
+          jq '.plugins[0][1].dockerImage = "${{ steps.get-docker-metadata.outputs.image-repository }}"' |\
+          jq '.plugins[0][1].dockerProject= "${{ steps.get-docker-metadata.outputs.image-namespace }}"' |\
           sponge ${{ inputs.release-dir }}/.releaserc.json
-    - id: download-docker-artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ inputs.artifact-name }}
-        path: docker-artifact
-    - id: setup-docker-artifact
-      shell: bash
-      run: docker load --input docker-artifact/docker-amd64.tar.gz
+
+        cat ${{ inputs.release-dir }}/.releaserc.json
+    - id: prepare-docker-build
+      uses: ./.github/actions/build/docker-setup

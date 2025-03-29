@@ -20,11 +20,9 @@ nav:
     - 'Security': user-guides/security.md
     - 'WebUI': user-guides/web-ui.md
   - 'Development Resources':
-    - 'Development Blog': https://github.com/steilerDev/icloud-photos-sync/discussions/305
     - 'Motivation': dev/motivation.md
     - 'iCloud API': dev/api.md
     - 'Local File Structure': dev/local-file-structure.md
-    - 'TypeDoc Code Documentation': https://github.com/steilerDev/icloud-photos-sync/wiki/Exports
     - 'Development Environment': dev/dev-environment.md
     - 'Test & Deployment':
       - 'Test Environment': dev/test-environment.md
@@ -60,8 +58,8 @@ markdown_extensions:
   - attr_list
   - md_in_html
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji 
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true 

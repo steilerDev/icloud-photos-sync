@@ -1,4 +1,4 @@
-FROM node:22.13.1-alpine
+FROM node:22.14.0-alpine
 
 # Setting node environment to not show experimental warnings
 ENV NODE_NO_WARNINGS=1
@@ -21,6 +21,9 @@ RUN chmod 755 /root/enter_mfa.sh && \
 
 # Installing application binary
 RUN npm install -g /opt/npm-pack.tgz
+
+RUN addgroup -S icps && adduser -S icps -G icps
+USER icps
 
 ENTRYPOINT ["icloud-photos-sync"]
 CMD ["daemon"]

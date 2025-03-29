@@ -1,15 +1,15 @@
 
-import mockfs from 'mock-fs';
+import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import * as fs from 'fs';
-import {test, beforeEach, expect, jest, describe, afterEach} from '@jest/globals';
-import * as Config from '../_helpers/_config';
-import {ResourceManager} from '../../src/lib/resources/resource-manager';
-import {MockedResourceManager, prepareResources, spyOnEvent} from '../_helpers/_general';
-import {Resources} from '../../src/lib/resources/main';
-import {EventManager} from '../../src/lib/resources/event-manager';
-import {Validator} from '../../src/lib/resources/validator';
+import mockfs from 'mock-fs';
 import path from 'path';
+import {EventManager} from '../../src/lib/resources/event-manager';
 import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
+import {Resources} from '../../src/lib/resources/main';
+import {ResourceManager} from '../../src/lib/resources/resource-manager';
+import {Validator} from '../../src/lib/resources/validator';
+import * as Config from '../_helpers/_config';
+import {MockedResourceManager, prepareResources, spyOnEvent} from '../_helpers/_general';
 
 describe(`ResourceManager`, () => {
     describe(`constructor`, () => {
@@ -277,8 +277,8 @@ describe(`ResourceManager`, () => {
             ...Config.defaultConfig,
             sessionSecret: Config.iCloudAuthSecrets.sessionSecret,
             libraryVersion: 1,
-            primaryZone: Config.primaryZone,
-            sharedZone: Config.sharedZone,
+            primaryZone: Config.primaryZoneInPrivateArea,
+            sharedZone: Config.sharedZoneInPrivateArea,
         };
 
         beforeEach(() => {
@@ -524,8 +524,8 @@ describe(`ResourceManager`, () => {
         describe(`primaryZone setter`, () => {
             test(`should set the primary zone in the resources`, () => {
                 resourceManager._resources.primaryZone = undefined!;
-                resourceManager.primaryZone = Config.primaryZone;
-                expect(resourceManager._resources.primaryZone).toEqual(Config.primaryZone);
+                resourceManager.primaryZone = Config.primaryZoneInPrivateArea;
+                expect(resourceManager._resources.primaryZone).toEqual(Config.primaryZoneInPrivateArea);
             });
         });
 
@@ -543,8 +543,8 @@ describe(`ResourceManager`, () => {
         describe(`sharedZone setter`, () => {
             test(`should set the shared zone in the resources`, () => {
                 resourceManager._resources.sharedZone = undefined!;
-                resourceManager.sharedZone = Config.sharedZone;
-                expect(resourceManager._resources.sharedZone).toEqual(Config.sharedZone);
+                resourceManager.sharedZone = Config.sharedZoneInPrivateArea;
+                expect(resourceManager._resources.sharedZone).toEqual(Config.sharedZoneInPrivateArea);
             });
         });
 

@@ -2,7 +2,7 @@
 
 While using this application, warnings might appear. This is either due to the fact that the API is not completely understood and/or inconsistent. The overall goals of the application can still be achieved, however a small percentage of assets might be miss-represented. The impact can be gauged by observing the below messages.
 
-Warnings can be suppressed with the [suppress warnings flag](../cli/#suppress-warnings).
+Warnings can be suppressed with the [suppress warnings flag](cli.md#suppress-warnings).
 
 ## Syncing
 

@@ -1,19 +1,19 @@
 
-import mockfs from 'mock-fs';
-import fs from 'fs';
-import {test, expect, describe, beforeAll, jest, afterAll, beforeEach, afterEach} from '@jest/globals';
-import {Header, HeaderJar, NetworkManager} from "../../src/lib/resources/network-manager";
-import PQueue from 'p-queue';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import axios from "axios";
-import {Cookie} from 'tough-cookie';
-import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
-import {defaultConfig} from '../_helpers/_config';
 import {AxiosHarTracker} from 'axios-har-tracker';
-import {Resources} from '../../src/lib/resources/main';
-import * as Config from '../_helpers/_config';
+import fs from 'fs';
+import mockfs from 'mock-fs';
+import PQueue from 'p-queue';
 import path from 'path';
-import {PhotosSetupResponse, SetupResponse, SigninResponse, TrustResponse} from '../../src/lib/resources/network-types';
 import {Stream} from 'stream';
+import {Cookie} from 'tough-cookie';
+import {Resources} from '../../src/lib/resources/main';
+import {Header, HeaderJar, NetworkManager} from "../../src/lib/resources/network-manager";
+import {PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse} from '../../src/lib/resources/network-types';
+import * as Config from '../_helpers/_config';
+import {defaultConfig} from '../_helpers/_config';
+import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
 
 describe(`HeaderJar`, () => {
     beforeAll(() => {
@@ -649,7 +649,7 @@ describe(`NetworkManager`, () => {
 
             test(`set photos url`, () => {
                 networkManager.photosUrl = `www.someUrl.com`;
-                expect(networkManager._axios.defaults.baseURL).toEqual(`www.someUrl.com/database/1/com.apple.photos.cloud/production/private`);
+                expect(networkManager._axios.defaults.baseURL).toEqual(`www.someUrl.com/database/1/com.apple.photos.cloud/production`);
             });
         });
 
@@ -690,7 +690,7 @@ describe(`NetworkManager`, () => {
             test.each([{
                 desc: `PCS not required`,
                 pcsRequired: false,
-                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production/private`,
+                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production`,
                 expectedReturnVal: true,
             }, {
                 desc: `PCS required and cookies available`,
@@ -703,14 +703,14 @@ describe(`NetworkManager`, () => {
                     },
                 },
                 pcsRequired: true,
-                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production/private`,
+                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production`,
                 expectedReturnVal: true,
             }, {
                 desc: `PCS required and cookies not available`,
                 pcsRequired: true,
-                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production/private`,
+                expectedPhotosUrl: `somePhotosUrl/database/1/com.apple.photos.cloud/production`,
                 expectedReturnVal: false,
-            }])(`Apply SetupResponse - $desc`, ({cookies, pcsRequired, expectedReturnVal}) => {
+            }])(`Apply SetupResponse - $desc`, ({cookies, pcsRequired, expectedReturnVal, expectedPhotosUrl}) => {
                 if (cookies) {
                     networkManager._headerJar.cookies = new Map(Object.entries(cookies)) as any as Map<string, Cookie>;
                 }
@@ -734,184 +734,201 @@ describe(`NetworkManager`, () => {
                 } as SetupResponse;
                 expect(networkManager.applySetupResponse(setupResponse)).toBe(expectedReturnVal);
 
-                expect(networkManager._axios.defaults.baseURL).toEqual(`somePhotosUrl/database/1/com.apple.photos.cloud/production/private`);
+                expect(networkManager._axios.defaults.baseURL).toEqual(expectedPhotosUrl);
             });
+
 
             test.each([
                 {
                     desc: `Valid Primary Zone`,
-                    setupResponse: {
-                        data: {
-                            moreComing: false,
-                            syncToken: `someSyncToken`,
-                            zones: [{
-                                zoneID: {
-                                    zoneName: `PrimarySync`,
-                                    ownerRecordName: `someOwnerRecordName`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            }],
+                    privateZones: [{
+                        zoneID: {
+                            zoneName: `PrimarySync`,
+                            ownerRecordName: `someOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
                         },
-                    },
+                    }],
+                    sharedZones: [],
                     expectedPrimaryZone: {
                         zoneName: `PrimarySync`,
                         ownerRecordName: `someOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `PRIVATE`
                     },
                 }, {
                     desc: `Non-deleted Primary Zone`,
-                    setupResponse: {
-                        data: {
-                            moreComing: false,
-                            syncToken: `someSyncToken`,
-                            zones: [{
-                                zoneID: {
-                                    zoneName: `PrimarySync`,
-                                    ownerRecordName: `someOwnerRecordName`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                                deleted: false,
-                            }],
+                    privateZones: [{
+                        zoneID: {
+                            zoneName: `PrimarySync`,
+                            ownerRecordName: `someOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
                         },
-                    },
+                        deleted: false,
+                    }],
+                    sharedZones: [],
                     expectedPrimaryZone: {
                         zoneName: `PrimarySync`,
                         ownerRecordName: `someOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `PRIVATE`
                     },
                 }, {
                     desc: `Valid Primary and Shared Zone`,
-                    setupResponse: {
-                        data: {
-                            moreComing: false,
-                            syncToken: `someSyncToken`,
-                            zones: [{
-                                zoneID: {
-                                    zoneName: `PrimarySync`,
-                                    ownerRecordName: `someOwnerRecordName`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            }, {
-                                zoneID: {
-                                    zoneName: `SharedSync-1234`,
-                                    ownerRecordName: `someOtherOwnerRecordName`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            }],
+                    privateZones: [{
+                        zoneID: {
+                            zoneName: `PrimarySync`,
+                            ownerRecordName: `someOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
                         },
-                    },
+                    }, {
+                        zoneID: {
+                            zoneName: `SharedSync-1234`,
+                            ownerRecordName: `someOtherOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
+                        },
+                    }],
+                    sharedZones: [],
                     expectedPrimaryZone: {
                         zoneName: `PrimarySync`,
                         ownerRecordName: `someOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `PRIVATE`
                     },
                     expectedSharedZone: {
                         zoneName: `SharedSync-1234`,
                         ownerRecordName: `someOtherOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `PRIVATE`
                     },
                 }, {
                     desc: `Valid Primary & Non-deleted Shared Zone`,
-                    setupResponse: {
-                        data: {
-                            moreComing: false,
-                            syncToken: `someSyncToken`,
-                            zones: [{
-                                zoneID: {
-                                    zoneName: `PrimarySync`,
-                                    ownerRecordName: `someOwnerRecordName`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            }, {
-                                zoneID: {
-                                    zoneName: `SharedSync-1234`,
-                                    ownerRecordName: `someOtherOwnerRecordName`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                                deleted: false,
-                            }],
+                    privateZones: [{
+                        zoneID: {
+                            zoneName: `PrimarySync`,
+                            ownerRecordName: `someOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
                         },
-                    },
+                    }, {
+                        zoneID: {
+                            zoneName: `SharedSync-1234`,
+                            ownerRecordName: `someOtherOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
+                        },
+                        deleted: false,
+                    }],
+                    sharedZones: [],
                     expectedPrimaryZone: {
                         zoneName: `PrimarySync`,
                         ownerRecordName: `someOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `PRIVATE`
                     },
                     expectedSharedZone: {
                         zoneName: `SharedSync-1234`,
                         ownerRecordName: `someOtherOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `PRIVATE`
                     },
                 }, {
                     desc: `Valid Primary & Deleted Shared Zone`,
-                    setupResponse: {
-                        data: {
-                            moreComing: false,
-                            syncToken: `someSyncToken`,
-                            zones: [{
-                                zoneID: {
-                                    zoneName: `PrimarySync`,
-                                    ownerRecordName: `someOwnerRecordName`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            }, {
-                                zoneID: {
-                                    zoneName: `SharedSync-1234`,
-                                    ownerRecordName: `someOtherOwnerRecordName`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                                deleted: true,
-                            }],
+                    privateZones: [{
+                        zoneID: {
+                            zoneName: `PrimarySync`,
+                            ownerRecordName: `someOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
                         },
-                    },
+                    }, {
+                        zoneID: {
+                            zoneName: `SharedSync-1234`,
+                            ownerRecordName: `someOtherOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
+                        },
+                        deleted: true,
+                    }],
+                    sharedZones: [],
                     expectedPrimaryZone: {
                         zoneName: `PrimarySync`,
                         ownerRecordName: `someOwnerRecordName`,
                         zoneType: `REGULAR_CUSTOM_ZONE`,
-                    },
-                },
-            ])(`Apply PhotosSetupResponse - $desc`, ({setupResponse, expectedPrimaryZone, expectedSharedZone}) => {
-                networkManager.applyPhotosSetupResponse(setupResponse as PhotosSetupResponse);
+                        area: `PRIVATE`
+                    }
+                }, {
+                    desc: `Valid Primary & Non-owned, deleted Shared Zone`,
+                    privateZones: [{
+                        zoneID: {
+                            zoneName: `PrimarySync`,
+                            ownerRecordName: `someOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
+                        },
+                    }],
+                    sharedZones: [{
+                        zoneID: {
+                            zoneName: `SharedSync-1234`,
+                            ownerRecordName: `someOtherOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
+                        },
+                        deleted: true
+                    }],
+                    expectedPrimaryZone: {
+                        zoneName: `PrimarySync`,
+                        ownerRecordName: `someOwnerRecordName`,
+                        zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `PRIVATE`
+                    }
+                }, {
+                    desc: `Valid Primary & Non-owned, invalid Shared Zone`,
+                    privateZones: [{
+                        zoneID: {
+                            zoneName: `PrimarySync`,
+                            ownerRecordName: `someOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
+                        },
+                    }],
+                    sharedZones: [{
+                        zoneID: {
+                            zoneName: `SomeSync`,
+                            ownerRecordName: `someOtherOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
+                        }
+                    }],
+                    expectedPrimaryZone: {
+                        zoneName: `PrimarySync`,
+                        ownerRecordName: `someOwnerRecordName`,
+                        zoneType: `REGULAR_CUSTOM_ZONE`,
+                        area: `PRIVATE`
+                    }
+                }
+            ])(`Apply Zones - $desc`, ({privateZones, sharedZones, expectedPrimaryZone, expectedSharedZone}) => {
+                networkManager.applyZones(privateZones as PhotosSetupResponseZone[], sharedZones as PhotosSetupResponseZone[]);
 
                 expect(Resources.manager()._resources.primaryZone).toEqual(expectedPrimaryZone);
                 expect(Resources.manager()._resources.sharedZone).toEqual(expectedSharedZone);
+
             });
 
             test.each([
                 {
                     desc: `Invalid Primary Zone`,
-                    setupResponse: {
-                        data: {
-                            moreComing: false,
-                            syncToken: `someSyncToken`,
-                            zones: [{
-                                zoneID: {
-                                    zoneName: `Sync`,
-                                    ownerRecordName: `someOwnerRecordName`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            }],
+                    privateZones: [{
+                        zoneID: {
+                            zoneName: `Sync`,
+                            ownerRecordName: `someOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
                         },
-                    },
+                    }],
                 }, {
                     desc: `Deleted Primary Zone`,
-                    setupResponse: {
-                        data: {
-                            moreComing: false,
-                            syncToken: `someSyncToken`,
-                            zones: [{
-                                zoneID: {
-                                    zoneName: `PrimarySync`,
-                                    ownerRecordName: `someOwnerRecordName`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                                deleted: true,
-                            }],
+                    privateZones: [{
+                        zoneID: {
+                            zoneName: `PrimarySync`,
+                            ownerRecordName: `someOwnerRecordName`,
+                            zoneType: `REGULAR_CUSTOM_ZONE`,
                         },
-                    },
+                        deleted: true,
+                    }],
                 },
-            ])(`Apply PhotosSetupResponse throws exception - $desc`, ({setupResponse}) => {
-                expect(() => networkManager.applyPhotosSetupResponse(setupResponse as PhotosSetupResponse)).toThrow(/^No primary photos zone present$/);
+            ])(`Apply Zones throws exception - $desc`, ({privateZones}) => {
+                expect(() => networkManager.applyZones(privateZones as PhotosSetupResponseZone[], [])).toThrow(/^No primary photos zone present$/);
             });
         });
 
@@ -986,7 +1003,7 @@ describe(`NetworkManager`, () => {
                     networkManager._streamingAxios.get = jest.fn<typeof networkManager._streamingAxios.get>()
                         .mockImplementation((() => {
                             const readableStream = new Stream.Readable();
-                            readableStream._read = () => {};
+                            readableStream._read = () => { };
                             readableStream.push(data);
                             readableStream.push(null);
                             return {

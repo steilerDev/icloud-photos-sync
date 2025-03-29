@@ -23,6 +23,7 @@ runs:
         {
           echo 'RELEASE_RULES<<EOF'
           echo '[
+              { "breaking": true,       "release": "major" },
               { "type": "majorfeat",    "release": "major" },
               { "type": "feat",         "release": "minor" },
               { "type": "fix",          "release": "patch" },
@@ -77,7 +78,7 @@ runs:
         echo "Wrote:"
         cat ${{ inputs.release-dir }}/.releaserc.json
     - id: setup-node
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version-file: ${{ inputs.node-version-file }}
         cache: npm

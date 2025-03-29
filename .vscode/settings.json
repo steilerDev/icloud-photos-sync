@@ -87,5 +87,7 @@
     "githubIssues.workingIssueFormatScm": "fix: ${issueTitle} \n\nFixes ${issueNumberLabel}",
     "liveServer.settings.donotShowInfoMsg": true,
     "typescript.tsdk": "app/node_modules/typescript/lib",
-    "typescript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces": false
+    "typescript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces": false,
+    "git.enableCommitSigning": true,
+    "gpgIndicator.enablePassphraseCache": true,
 }

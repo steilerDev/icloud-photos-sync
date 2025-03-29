@@ -13,14 +13,14 @@ This approach is trading off performance with data integrity and should ensure s
 ## Root folder
 The root folder is specified through environment variable `DATA_DIR`. All assets and information are stored here:
 
-  * [`_All-Photos` folder](#primary-asset-dir) (aka. `PRIMARY_ASSET_DIR`, [see src](https://github.com/steilerDev/icloud-photos-sync/wiki/lib.photos-library.constants#primary_asset_dir))
-  * [`_Shared-Photos` folder](#shared-asset-dir) (aka. `SHARED_ASSET_DIR`, [see src](https://github.com/steilerDev/icloud-photos-sync/wiki/lib.photos-library.constants#shared_asset_dir))
-  * [`_Archive` folder](#archive-dir) (aka. `ARCHIVE_DIR`, [see src](https://github.com/steilerDev/icloud-photos-sync/wiki/lib.photos-library.constants#archive_dir))
+  * [`_All-Photos` folder](#primary-asset-dir) (aka. `PRIMARY_ASSET_DIR`)
+  * [`_Shared-Photos` folder](#shared-asset-dir) (aka. `SHARED_ASSET_DIR`)
+  * [`_Archive` folder](#archive-dir) (aka. `ARCHIVE_DIR`)
   * `.icloud-photos-sync` file holding resource information about the current photos library (including authentication secrets for re-authentication without MFA)
   * `.icloud-photos-sync.log` log file (overwritten upon application restart)
-  * `icloud-photos-sync.metrics` file, that [export metrics using the Influx Line Protocol](https://steilerdev.github.io/icloud-photos-sync/user-guides/sync-metrics/) (overwritten upon application restart), if [metrics export is enabled](../../user-guides/cli/#export-metrics)
-  * `icloud-photos-sync.har` file, that contains a HAR file capture of the last execution, if [network capture is enabled](../../user-guides/cli/#enable-network-capture)
-  * `.crash-reporter` folder, that contains unsent error reports, in case the reporter was not able to send it before the application exited. Only present if [crash reporting is enabled](../../user-guides/cli/#enable-crash-reporting)
+  * `icloud-photos-sync.metrics` file, that [export metrics using the Influx Line Protocol](../user-guides/sync-metrics.md) (overwritten upon application restart), if [metrics export is enabled](../user-guides/cli.md#export-metrics)
+  * `icloud-photos-sync.har` file, that contains a HAR file capture of the last execution, if [network capture is enabled](../user-guides/cli.md#enable-network-capture)
+  * `.crash-reporter` folder, that contains unsent error reports, in case the reporter was not able to send it before the application exited. Only present if [crash reporting is enabled](../user-guides/cli.md#enable-crash-reporting)
   * [User created folders](#user-folders) from the iCloud Library
   * lock file .library.lock
   * crash reporting db
@@ -51,8 +51,8 @@ Every user folder has two components:
 
 This is done to keep sync relevant UUIDs within the file system, while presenting the user with readable strings that resemble their photos library.
 
-For each asset within an album, a link to the (~~shared or~~ primary) asset dir is created. Naming is based on the filename, provided by iCloud. Original files don't have a suffix, edits are suffixed with `-edited`, live photos are suffixed with `-live` ([see src](https://github.com/steilerDev/icloud-photos-sync/wiki/lib.photos-library.model.asset.Asset#getprettyfilename)).
+For each asset within an album, a link to the (~~shared or~~ primary) asset dir is created. Naming is based on the filename, provided by iCloud. Original files don't have a suffix, edits are suffixed with `-edited`, live photos are suffixed with `-live`.
 
 Due to current limitations of the iCloud Web API, user folders only contain assets from the primary library, assets from the shared library cannot be linked to user folders.
 
-If a user folder contains any file that is not defined as *safe* (see [Safe Files](https://github.com/steilerDev/icloud-photos-sync/wiki/lib.photos-library.constants#safe_files)), it is marked as archived, and its content is ignored upon future syncs.
+If a user folder contains any file that is not defined as *safe*, it is marked as archived, and its content is ignored upon future syncs.

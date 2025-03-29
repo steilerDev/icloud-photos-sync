@@ -1,16 +1,17 @@
 import {AxiosRequestConfig} from 'axios';
-import * as QueryBuilder from './query-builder.js';
-import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
-import {Asset} from '../../photos-library/model/asset.js';
-import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
-import {iCPSError} from '../../../app/error/error.js';
-import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
-import {Resources} from '../../resources/main.js';
-import {ENDPOINTS} from '../../resources/network-types.js';
-import {SyncEngineHelper} from '../../sync-engine/helper.js';
-import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
 import fs from 'fs/promises';
 import {jsonc} from 'jsonc';
+import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
+import {iCPSError} from '../../../app/error/error.js';
+import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
+import {Asset} from '../../photos-library/model/asset.js';
+import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
+import {Resources} from '../../resources/main.js';
+import {ENDPOINTS, PhotosSetupResponseZone} from '../../resources/network-types.js';
+import {SyncEngineHelper} from '../../sync-engine/helper.js';
+import * as QueryBuilder from './query-builder.js';
+import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
+import {ZoneArea} from '../../resources/resource-types.js';
 
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now
@@ -66,9 +67,10 @@ export class iCloudPhotos {
         try {
             Resources.logger(this).debug(`Getting iCloud Photos account information`);
 
-            const response = await Resources.network().post(ENDPOINTS.PHOTOS.PATH.ZONES, {});
-            const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
-            Resources.network().applyPhotosSetupResponse(validatedResponse);
+            Resources.network().applyZones(
+                await this.getZonesInArea(`PRIVATE`),
+                await this.getZonesInArea(`SHARED`)
+            )
 
             Resources.logger(this).debug(`Successfully gathered iCloud Photos account information`);
             Resources.emit(iCPSEventPhotos.SETUP_COMPLETED);
@@ -76,6 +78,18 @@ export class iCloudPhotos {
             Resources.emit(iCPSEventPhotos.ERROR, new iCPSError(ICLOUD_PHOTOS_ERR.SETUP_ERROR).addCause(err));
         } 
         return this.ready;
+    }
+
+    /**
+     * Checks for everyone zone available in the respective area
+     * @param area Either private or shared - depending on the ownership of the area
+     * @returns An array of zone references
+     */
+    private async getZonesInArea(area: ZoneArea): Promise<PhotosSetupResponseZone[]> {
+        Resources.logger(this).debug(`Getting zones in ${area} area`);
+        const response = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[area] + ENDPOINTS.PHOTOS.PATH.ZONES, {});
+        const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
+        return validatedResponse.data.zones;
     }
 
     /**
@@ -156,11 +170,17 @@ export class iCloudPhotos {
             },
         };
 
+        const zoneId = QueryBuilder.getZoneID(zone)
+
         const data: any = {
             query: {
                 recordType: `${recordType}`,
             },
-            zoneID: QueryBuilder.getZoneID(zone),
+            zoneID: {
+                zoneName: zoneId.zoneName,
+                zoneType: zoneId.zoneType,
+                ownerRecordName: zoneId.ownerRecordName,
+            }
         };
 
         if (filterBy) {
@@ -175,7 +195,7 @@ export class iCloudPhotos {
             data.resultsLimit = resultsLimit;
         }
 
-        const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.PATH.QUERY, data, config);
+        const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, config);
 
         const fetchedRecords = queryResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
@@ -201,9 +221,15 @@ export class iCloudPhotos {
             },
         };
 
+        const zoneId = QueryBuilder.getZoneID(zone)
+
         const data: any = {
             operations: [],
-            zoneID: QueryBuilder.getZoneID(zone),
+            zoneID: {
+                zoneName: zoneId.zoneName,
+                zoneType: zoneId.zoneType,
+                ownerRecordName: zoneId.ownerRecordName,
+            },
             atomic: true,
         };
 
@@ -217,7 +243,7 @@ export class iCloudPhotos {
             },
         }));
 
-        const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.PATH.MODIFY, data, config);
+        const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, config);
         const fetchedRecords = operationResponse?.data?.records;
         if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)
