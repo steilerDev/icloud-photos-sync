@@ -69,6 +69,21 @@ export class SubmitMfaView extends View {
                         input.value = "";
                     });
                 });
+
+                document.querySelector("#mfaInput").addEventListener("paste", (e) => {
+                    e.preventDefault();
+                    const pasteData = e.clipboardData.getData("text/plain").slice(0, 6);
+                    if (pasteData.length === 6 && /^[0-9]+$/.test(pasteData)) {
+                        pasteData.split("").forEach((digit, index) => {
+                            if (index < mfaInputs.length) {
+                                mfaInputs[index].value = digit;
+                            }
+                        });
+                        submitMfa();
+                    } else {
+                        alert("Please paste a 6-digit numeric code.");
+                    }
+                });
             </script>
         `;
     }
