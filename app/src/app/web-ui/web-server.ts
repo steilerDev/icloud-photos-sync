@@ -165,8 +165,7 @@ export class WebServer {
             res.writeHead(200, {'Content-Type': `text/plain`});
             res.write(`Reauthentication started`);
             res.end();
-        }
-        if (req.url.startsWith(MFA_SERVER_ENDPOINTS.CODE_INPUT)) {
+        } else if (req.url.startsWith(MFA_SERVER_ENDPOINTS.CODE_INPUT)) {
             this.handleMFACode(req, res);
         } else if (req.url.startsWith(MFA_SERVER_ENDPOINTS.RESEND_CODE)) {
             this.handleMFAResend(req, res);
