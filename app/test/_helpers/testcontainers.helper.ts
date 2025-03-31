@@ -1,4 +1,4 @@
-import { GenericContainer, TestContainer, StartedTestContainer, AbstractStartedContainer, Wait } from "testcontainers";
+import { GenericContainer, StartedTestContainer, AbstractStartedContainer, Wait } from "testcontainers";
   
 export class ICPSContainer extends GenericContainer {
     constructor() {
@@ -23,6 +23,12 @@ export class ICPSContainer extends GenericContainer {
         return this.withEnvironment({
             APPLE_ID_USER: username,
             APPLE_ID_PWD: password
+        })
+    }
+
+    withUTCTimezone(): this {
+        return this.withEnvironment({
+            TZ: `Etc/UTC`
         })
     }
   

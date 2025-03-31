@@ -1,14 +1,17 @@
-import {beforeEach, describe, expect, test} from "@jest/globals";
-import {ICPSContainer, StartedICPSContainer} from "../_helpers/testcontainer.helper";
+import {beforeEach, describe, expect, jest, test} from "@jest/globals";
+import {ICPSContainer, StartedICPSContainer} from "../_helpers/testcontainers.helper";
 
 describe(`Docker Runtime`, () => {
     let container: StartedICPSContainer
+
+    // Setting timeout to 30sec, in order for Docker environment to spin up
+    jest.setTimeout(30 * 1000);
+
     beforeEach(async () => {
         container = await new ICPSContainer()
             .asDummy()
             .start()
     })
-
 
     test.each([{
         bin: `enter_mfa`
