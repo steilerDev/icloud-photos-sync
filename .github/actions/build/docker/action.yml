@@ -45,7 +45,7 @@ runs:
         dockerhub-password: ${{ inputs.docker-token }}
         github-token: ${{ inputs.gh-token }}
         organization: ${{ steps.get-docker-metadata.outputs.image-namespace }}
-        command: compare,cves,recommendations #policy
+        command: compare,recommendations #policy,cves
         image: archive://docker-amd64.tar
         to: registry://${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:latest
         only-severities: critical,high
