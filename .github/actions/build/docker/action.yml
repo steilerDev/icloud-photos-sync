@@ -10,7 +10,10 @@ inputs:
     required: false
     default: docker-artifact
   docker-token:
-    description: The Docker token used for releasing the image
+    description: The Docker token used for authenticating Docker Scout
+    required: true
+  gh-token:
+    description: The GH token used for commenting on PR requests
     required: true
 runs:
   using: composite
@@ -40,6 +43,7 @@ runs:
       with:
         dockerhub-user: ${{ steps.get-docker-metadata.outputs.image-namespace }}
         dockerhub-password: ${{ inputs.docker-token }}
+        github-token: ${{ inputs.gh-token }}
         organization: ${{ steps.get-docker-metadata.outputs.image-namespace }}
         command: compare,cves,recommendations #policy
         image: archive://docker-amd64.tar

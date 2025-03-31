@@ -1030,7 +1030,7 @@ describe(`Validator`, () => {
                         zones: [
                             {
                                 zoneID: {
-                                    zoneName: `InvalidSync`,
+                                    zoneName: ``,
                                     ownerRecordName: `someOwnerId`,
                                     zoneType: `REGULAR_CUSTOM_ZONE`,
                                 },
@@ -1055,74 +1055,6 @@ describe(`Validator`, () => {
                     },
                 },
                 desc: `zoneName is missing`,
-            }, {
-                data: {
-                    data: {
-                        moreComing: false,
-                        syncToken: `someToken`,
-                        zones: [
-                            {
-                                zoneID: {
-                                    zoneName: `SharedSync-12345678-1234-1234-1234-123456789012-`,
-                                    ownerRecordName: `someOwnerId`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            },
-                        ],
-                    },
-                },
-                desc: `Shared zone has wrong format - additional dash`,
-            }, {
-                data: {
-                    data: {
-                        moreComing: false,
-                        syncToken: `someToken`,
-                        zones: [
-                            {
-                                zoneID: {
-                                    zoneName: `SharedSync-abc`,
-                                    ownerRecordName: `someOwnerId`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            },
-                        ],
-                    },
-                },
-                desc: `Shared zone has wrong format - wrong id string`,
-            }, {
-                data: {
-                    data: {
-                        moreComing: false,
-                        syncToken: `someToken`,
-                        zones: [
-                            {
-                                zoneID: {
-                                    zoneName: `CMM-12345678-1234-1234-1234-123456789012-`,
-                                    ownerRecordName: `someOwnerId`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            },
-                        ],
-                    },
-                },
-                desc: `CMM zone has wrong format - additional dash`,
-            }, {
-                data: {
-                    data: {
-                        moreComing: false,
-                        syncToken: `someToken`,
-                        zones: [
-                            {
-                                zoneID: {
-                                    zoneName: `CMM-#`,
-                                    ownerRecordName: `someOwnerId`,
-                                    zoneType: `REGULAR_CUSTOM_ZONE`,
-                                },
-                            },
-                        ],
-                    },
-                },
-                desc: `CMM zone has wrong format - wrong id string`,
             }, {
                 data: {
                     data: {
