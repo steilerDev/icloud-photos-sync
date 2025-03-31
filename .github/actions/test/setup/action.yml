@@ -26,16 +26,16 @@ runs:
       shell: bash
       run: (cd ${{ inputs.app-path }}; npm ci)
     - id: setup-schema
-      if: inputs.prepare-app
+      if: ${{ inputs.prepare-app }}
       shell: bash
       run: (cd ${{ inputs.app-path }}; npm run build:schema)
     - id: download-docker-artifact 
-      if: inputs.prepare-docker
+      if: ${{ inputs.prepare-docker }}
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: docker-artifact
     - id: setup-docker-artifact
-      if: inputs.prepare-docker
+      if: ${{ inputs.prepare-docker }}
       shell: bash
       run: docker load --input docker-artifact/docker-amd64.tar.gz
