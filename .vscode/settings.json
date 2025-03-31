@@ -90,4 +90,5 @@
     "typescript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces": false,
     "git.enableCommitSigning": true,
     "gpgIndicator.enablePassphraseCache": true,
+    "gpgIndicator.statusStyle": "userId",
 }

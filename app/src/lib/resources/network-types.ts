@@ -392,7 +392,6 @@ export type PhotosSetupResponseZone = {
     zoneID: {
         /**
          * @minLength 1
-         * @pattern ^(PrimarySync|SharedSync(-[0-9A-F?]+)+|CMM(-[0-9A-F]+)+|AppLibrarySync-com.apple.GenerativePlayground(-[0-9]+)+)$
          */
         zoneName: string,
         /**
