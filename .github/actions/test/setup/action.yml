@@ -9,6 +9,10 @@ inputs:
     description: If the app needs to be prepared (for unit & api tests)
     required: false
     default: false
+  docker-artifact:
+    description: The name of the uploaded docker artifact
+    required: false
+    default: docker-artifact
   prepare-docker:
     description: If Docker needs to be prepared (for docker tests)
     required: false
@@ -33,7 +37,7 @@ runs:
       if: ${{ inputs.prepare-docker }}
       uses: actions/download-artifact@v4
       with:
-        name: ${{ inputs.artifact-name }}
+        name: ${{ inputs.docker-artifact }}
         path: docker-artifact
     - id: setup-docker-artifact
       if: ${{ inputs.prepare-docker }}
