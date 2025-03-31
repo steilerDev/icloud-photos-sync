@@ -1,0 +1,17 @@
+name: test-docker
+description: Runs the testcontainer Docker E2E tests
+inputs:
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+runs:
+  using: composite
+  steps:
+    - id: get-docker-metadata
+      uses: ./.github/actions/helper/docker-metadata
+    - id: test-api
+      shell: bash
+      run: |
+        export IMAGE_NAME=${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
+        (cd ${{ inputs.app-path }}; npm run test:docker)
