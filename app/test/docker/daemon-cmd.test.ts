@@ -1,0 +1,41 @@
+import {describe, expect, jest, test} from "@jest/globals";
+
+import {delay, ICPSContainer} from "../_helpers/testcontainers.helper";
+
+describe(`Docker Help Command`, () => {
+
+    // Setting timeout to 30sec, in order for Docker environment to spin up
+    jest.setTimeout(30 * 1000);
+
+    test(`Container should enter daemon mode`, async () => {
+        const container = await new ICPSContainer()
+            .withDaemonCommand()
+            .withDummyCredentials()
+            .start();
+
+        // wait a second to make sure status file was written
+        await delay(1000)
+
+        expect(await container.readFile(`/opt/icloud-photos-library/.icloud-photos-sync.metrics`)).toMatch(/status="SCHEDULED"/)
+    })
+
+    test(`Should trigger run`, async () => {
+
+        // schedule next run in 15 seconds
+        const nextRun = new Date(Date.now() + 2000)
+        const cron = `${nextRun.getUTCSeconds()} ${nextRun.getUTCMinutes()} * * * *`
+
+        const container = await new ICPSContainer()
+            .withDaemonCommand(cron)
+            .withDummyCredentials()
+            .start();
+        //await container.getFullLogs()
+
+        await delay(2000)
+
+        expect(await container.readFile(`/opt/icloud-photos-library/.icloud-photos-sync.metrics`)).toMatch(/status="AUTHENTICATION_STARTED"/)
+    })
+    
+
+
+})
