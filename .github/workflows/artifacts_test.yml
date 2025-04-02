@@ -49,21 +49,6 @@ jobs:
       - name: action/test-unit
         uses: ./.github/actions/test/unit
 
-  e2e:
-    runs-on: [self-hosted, linux, x64, residential] # This workflow needs to be run from a residential IP address and needs to have the necessary secrets set in it's environment
-    if: contains(fromJSON(inputs.methods), 'e2e')
-    steps:
-      - name: setup/checkout
-        uses: actions/checkout@v4
-      - name: setup/test-e2e
-        uses: ./.github/actions/test/e2e-setup
-      - name: action/test-e2e
-        uses: ./.github/actions/test/e2e
-        # with:
-        #   test-apple-id-user: ${{ secrets.test-apple-id-user }}
-        #   test-apple-id-pwd: ${{ secrets.test-apple-id-pwd }}
-        #   test-trust-token: ${{ secrets.test-trust-token }}
-  
   docker:
     runs-on: [self-hosted, linux, x64, residential] # This workflow needs to be run from a residential IP address and needs to have the necessary secrets set in it's environment
     if: contains(fromJSON(inputs.methods), 'e2e')

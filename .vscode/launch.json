@@ -66,7 +66,7 @@
                 "--detectOpenHandles",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/docker/daemon-cmd.test.ts"
+                "test/docker/sync-cmd.test.ts"
             ],
             // "env": {
             //     "DEBUG": "testcontainers*",
