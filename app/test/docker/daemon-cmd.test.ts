@@ -1,8 +1,11 @@
-import {describe, expect, test} from "@jest/globals";
+import {describe, expect, test, jest} from "@jest/globals";
 
 import {delay, ICPSContainer} from "../_helpers/testcontainers.helper";
 
 describe(`Docker Daemon Command`, () => {
+
+    // Setting timeout to 30sec, in order for Docker environment to spin up
+    jest.setTimeout(30 * 1000);
 
     test(`Container should enter daemon mode`, async () => {
         const container = await new ICPSContainer()
