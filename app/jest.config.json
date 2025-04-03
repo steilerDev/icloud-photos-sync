@@ -4,7 +4,9 @@
     "slowTestThreshold": 30,
     "reporters": [
       "default",
-      "github-actions"
+      ["jest-ctrf-json-reporter", {
+        "outputDir": "coverage/"
+      }]
     ],
     "collectCoverage": true,
     "collectCoverageFrom": [

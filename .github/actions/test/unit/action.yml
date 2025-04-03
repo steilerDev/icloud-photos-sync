@@ -9,6 +9,9 @@ inputs:
     description: The name of the uploaded coverage artifact
     required: false
     default: coverage-artifact
+  gh-token:
+    description: The GH token used for commenting on PR requests
+    required: true
 runs:
   using: composite
   steps:
@@ -20,3 +23,17 @@ runs:
       with:
         name: ${{ inputs.artifact-name }}-${{ runner.os }}
         path: ${{ inputs.app-path }}/coverage/
+    - id: publish-test
+      uses: ctrf-io/github-test-reporter@v1
+      if: always()
+      with:
+        report-path: '${{ inputs.app-path }}/coverage/ctrf-report.json'
+        artifact-name: 'ctrf-report-unit-${{ runner.os }}'
+        comment-tag: 'ctrf-report-unit-${{ runner.os }}'
+        title: 'Unit Test Suite (${{ runner.os }})'
+        summary: true
+        pull-request: true
+        summary-report: true
+        update-comment: true
+      env:
+        GITHUB_TOKEN: ${{ inputs.gh-token }}

@@ -15,16 +15,16 @@ on:
     secrets:
         docker-token:
           description: The Docker token used for releasing the image
-          required: false
-        npm-token:
-          description: The npm token used for releasing the package
-          required: false
+          required: true # Scout action will always run
         gh-token:
           description: The Github Token, in order to deploy assets to Github
-          required: false
+          required: false # Only required for release
+        npm-token:
+          description: The npm token used for releasing the package
+          required: false # Only required for release
         bt-token:
           description: The Backtrace symbol access token, in order to deploy the source maps
-          required: false
+          required: false # Only required for release
 
 jobs:
   app-build:
@@ -65,7 +65,8 @@ jobs:
     runs-on: ubuntu-latest
     if: always() && needs.app-build.result == 'success' && (needs.app-release.result == 'skipped' || needs.app-release.result == 'success')
     needs: [app-build, app-release] # needs app-release, because this will provide a properly versioned app
-    permissions: {}
+    permissions:
+      pull-requests: write
     steps:
       - name: setup/checkout
         uses: actions/checkout@v4
@@ -73,6 +74,9 @@ jobs:
         uses: ./.github/actions/build/docker-setup
       - name: action/build-docker
         uses: ./.github/actions/build/docker
+        with:
+          docker-token: ${{ secrets.docker-token }}
+          gh-token: ${{ secrets.gh-token }}
 
   docker-release:
     runs-on: ubuntu-latest

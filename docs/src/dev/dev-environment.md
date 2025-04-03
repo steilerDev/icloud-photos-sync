@@ -38,3 +38,9 @@ The following extensions are used during development and are configured as part 
     - *Description*: Your AI pair programmer
     - *Publisher*: GitHub
     - [VS Marketplace](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot)
+- **GPG Indicator**
+    - *Id*: `wdhongtw.gpg-indicator`
+    - *Description*: Show the status of the GPG signing key for your project!
+    - *Publisher*: Weida Hong
+    - [VS Marketplace](https://marketplace.visualstudio.com/items?itemName=wdhongtw.gpg-indicator)
+ 

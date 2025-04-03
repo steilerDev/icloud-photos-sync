@@ -1,0 +1,44 @@
+name: test-setup
+description: Sets up the environment for the test actions
+inputs:
+  app-path:
+    description: The path to the app directory
+    required: false
+    default: app
+  prepare:
+    description: If the app needs to be prepared (for unit & api tests) or docker - Accepts either 'app' and/or 'docker'
+    required: true
+  docker-artifact:
+    description: The name of the uploaded docker artifact
+    required: false
+    default: docker-artifact
+  prepare-docker:
+    description: If Docker needs to be prepared (for docker tests)
+    required: false
+    default: false
+runs:
+  using: composite
+  steps:
+    - id: setup-node
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: ${{ inputs.app-path }}/node-version
+        cache: npm
+        cache-dependency-path: ${{ inputs.app-path }}
+    - id: setup-npm
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm ci)
+    - id: setup-schema
+      if: ${{ contains(inputs.prepare, 'app') }}
+      shell: bash
+      run: (cd ${{ inputs.app-path }}; npm run build:schema)
+    - id: download-docker-artifact 
+      if: ${{ contains(inputs.prepare, 'docker') }}
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.docker-artifact }}
+        path: docker-artifact
+    - id: setup-docker-artifact
+      if: ${{ contains(inputs.prepare, 'docker') }}
+      shell: bash
+      run: docker load --input docker-artifact/docker-amd64.tar.gz
