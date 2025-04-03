@@ -21,6 +21,7 @@ runs:
       with:
         report-path: '${{ inputs.app-path }}/coverage/ctrf-report.json'
         artifact-name: 'ctrf-report-api'
+        comment-tag: 'ctrf-report-api'
         title: 'API Test Suite'
         summary: true
         pull-request: true
