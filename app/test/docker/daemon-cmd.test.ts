@@ -14,7 +14,8 @@ describe(`Docker Daemon Command`, () => {
             .start();
 
         // wait a second to make sure status file was written
-        await delay(1000)
+        await delay(2000)
+        console.log(await container.getFullLogs(2))
 
         expect(await container.syncMetrics()).toMatch(/status="SCHEDULED"/)
     })

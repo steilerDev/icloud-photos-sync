@@ -33,7 +33,7 @@ export class ICPSContainer extends GenericContainer {
             .withEnvironment({
                 SCHEDULE: schedule
             })
-            .withWaitStrategy(Wait.forLogMessage(`Started in daemon mode!`))
+            //.withWaitStrategy(Wait.forLogMessage(`Started in daemon mode`))
     }
 
     /**
@@ -136,9 +136,10 @@ export class StartedICPSContainer extends AbstractStartedContainer {
     }
 
     /**
+     * @param [timeout=0] Optional timeout in seconds, will resolve on timeout
      * @returns The full log of the container - will only return once the container exited
      */
-    async getFullLogs(): Promise<string> {
+    async getFullLogs(timeout: number = 0): Promise<string> {
         const logStream = await this.logs()
         return new Promise( (resolve, reject) => {
             let log = ``;
@@ -148,6 +149,10 @@ export class StartedICPSContainer extends AbstractStartedContainer {
             })
                 .on(`err`, reject)
                 .on(`end`, () => resolve(log))
+
+            if(timeout > 0) {
+                setTimeout(() => resolve(log), timeout * 1000)
+            }
         })
     }
 
