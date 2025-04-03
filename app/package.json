@@ -30,6 +30,7 @@
     "test:unit": "npm run test test/unit/",
     "test:api": "npm run test test/api/",
     "test:docker": "npm run test -- --coverage false test/docker/",
+    "test:docker:unit": "npm run test -- --coverage false test/docker/daemon-cmd.test.ts test/docker/helper-cmd.test.ts test/docker/runtime.test.ts",
     "doc:cli": "npx tsx build/cli-reference.ts",
     "execute": "node build/out/src/main.js",
     "execute:test-account": "node build/out/src/main.js -u $TEST_APPLE_ID_USER -p $TEST_APPLE_ID_PWD",
