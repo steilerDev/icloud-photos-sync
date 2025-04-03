@@ -7,12 +7,17 @@ RUN apk update && \
 # Applying fs patch for assets
 ADD rootfs.tar.gz /
 
+# Setting volume for default library path
+VOLUME /opt/icloud-photos-library
+
+RUN mkdir -p /opt/icloud-photos-library && \
+    chmod -R 777 /opt
+
 # Installing helper scripts
 RUN chmod 755 /root/enter_mfa.sh && \
     ln -s /root/enter_mfa.sh /usr/local/bin/enter_mfa && \
     chmod 755 /root/resend_mfa.sh && \
-    ln -s /root/resend_mfa.sh /usr/local/bin/resend_mfa && \
-    chmod -R 777 /opt
+    ln -s /root/resend_mfa.sh /usr/local/bin/resend_mfa
 
 # Installing application binary
 RUN npm install -g /opt/npm-pack.tgz && \
@@ -20,9 +25,6 @@ RUN npm install -g /opt/npm-pack.tgz && \
 
 RUN addgroup -S icps && adduser -S icps -G icps
 USER icps
-
-# Setting volume for default library path
-VOLUME /opt/icloud-photos-library
 
 ENTRYPOINT ["icloud-photos-sync"]
 CMD ["daemon"]

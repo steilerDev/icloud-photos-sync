@@ -42,8 +42,11 @@ describe(`Docker Daemon Command`, () => {
             .withDummyCredentials()
             .withSyncMetrics()
             .withUTCTimezone()
+            //.withUser(`root`)
             .start()
 
+        const res = await container.exec([`chmod`, `-R`, `777`, `/opt`])
+        console.log(res)
         const result = await container.exec([`ls`, `-al`, `/opt`])
         console.log(result.stdout)
         const result1 = await container.exec([`tree`, `-a`, `/opt/`])
