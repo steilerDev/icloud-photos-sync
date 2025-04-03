@@ -11,7 +11,7 @@ export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, 
 
 export class ICPSContainer extends GenericContainer {
     constructor() {
-        super(process.env[`IMAGE_NAME`] ?? `steilerdev/icloud-photos-sync:latest`)
+        super(process.env[`IMAGE_NAME`] ?? `steilerdev/icloud-photos-sync:nightly`)
     }
 
     /**

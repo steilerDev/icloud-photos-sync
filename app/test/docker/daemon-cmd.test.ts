@@ -39,17 +39,19 @@ describe(`Docker Daemon Command`, () => {
     test.only(`Container should enter daemon mode`, async () => {
         const container =  await new ICPSContainer()
             .asDummy()
+            .withDummyCredentials()
             .withSyncMetrics()
             .withUTCTimezone()
             .start()
-
-        const syncResult = await container.startSync()
-        console.log(syncResult)
 
         const result = await container.exec([`ls`, `-al`, `/opt`])
         console.log(result.stdout)
         const result1 = await container.exec([`tree`, `-a`, `/opt/`])
         console.log(result1.stdout)
+
+        const syncResult = await container.startSync()
+        console.log(syncResult)
+
 
         expect(await container.syncMetrics()).toMatch(/status="SCHEDULED"/)
     })
