@@ -10,7 +10,8 @@ on:
         required: true
         type: string
 
-permissions: {}
+permissions:
+  pull-requests: write
 
 jobs:
   unit-ubuntu:

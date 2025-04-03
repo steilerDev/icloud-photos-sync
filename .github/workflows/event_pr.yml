@@ -31,7 +31,8 @@ jobs:
     name: test
     needs: build
     uses: ./.github/workflows/artifacts_test.yml
-    permissions: {}
+    permissions: 
+      pull-requests: write # This one is required for Docker Scout feedback on PR during build step
     with:
       methods: ${{github.base_ref == 'main' && '["unit-ubuntu", "unit-macos", "e2e", "api"]' || (github.base_ref == 'beta' && '["unit-ubuntu", "e2e", "api"]' || '["unit-ubuntu"]' ) }} # Only running full suite when targeting beta or main
 
