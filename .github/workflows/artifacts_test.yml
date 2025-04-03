@@ -23,7 +23,7 @@ jobs:
       - name: setup/test-unit
         uses: ./.github/actions/test/setup
         with:
-          prepare-app: true
+          prepare: app
       - name: action/test-unit
         uses: ./.github/actions/test/unit
 
@@ -36,7 +36,7 @@ jobs:
       - name: setup/test-unit
         uses: ./.github/actions/test/setup
         with:
-          prepare-app: true
+          prepare: app
       - name: action/test-unit
         uses: ./.github/actions/test/unit
 
@@ -49,7 +49,7 @@ jobs:
       - name: setup/test-docker
         uses: ./.github/actions/test/setup
         with:
-          prepare-docker: true
+          prepare: docker
       - name: action/test-docker
         uses: ./.github/actions/test/docker
   
@@ -62,6 +62,6 @@ jobs:
       - name: setup/test-api
         uses: ./.github/actions/test/setup
         with:
-          prepare-app: true
+          prepare: app
       - name: action/test-api
         uses: ./.github/actions/test/api

@@ -16,6 +16,7 @@ runs:
         export IMAGE_NAME=${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
         (cd ${{ inputs.app-path }}; npm run test:docker)
     - id: publish-test
+      if: always()
       uses: ctrf-io/github-test-reporter@v1
       with:
         report-path: '${{ inputs.app-path }}/coverage/ctrf-report.json'

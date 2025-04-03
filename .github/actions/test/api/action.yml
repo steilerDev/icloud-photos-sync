@@ -22,6 +22,7 @@ runs:
       run: |
         (cd ${{ inputs.app-path }}; npm run test:api)
     - id: publish-test
+      if: always()
       uses: ctrf-io/github-test-reporter@v1
       with:
         report-path: '${{ inputs.app-path }}/coverage/ctrf-report.json'

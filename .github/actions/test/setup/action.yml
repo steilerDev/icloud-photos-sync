@@ -5,10 +5,9 @@ inputs:
     description: The path to the app directory
     required: false
     default: app
-  prepare-app:
-    description: If the app needs to be prepared (for unit & api tests)
-    required: false
-    default: false
+  prepare:
+    description: If the app needs to be prepared (for unit & api tests) or docker - Accepts either 'app' and/or 'docker'
+    required: true
   docker-artifact:
     description: The name of the uploaded docker artifact
     required: false
@@ -30,16 +29,16 @@ runs:
       shell: bash
       run: (cd ${{ inputs.app-path }}; npm ci)
     - id: setup-schema
-      if: ${{ inputs.prepare-app }}
+      if: ${{ contains(inputs.prepare, "app" }}
       shell: bash
       run: (cd ${{ inputs.app-path }}; npm run build:schema)
     - id: download-docker-artifact 
-      if: ${{ inputs.prepare-docker }}
+      if: ${{ contains(inputs.prepare, "docker" }}
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.docker-artifact }}
         path: docker-artifact
     - id: setup-docker-artifact
-      if: ${{ inputs.prepare-docker }}
+      if: ${{ contains(inputs.prepare, "docker" }}
       shell: bash
       run: docker load --input docker-artifact/docker-amd64.tar.gz
