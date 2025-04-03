@@ -10,6 +10,7 @@ ADD rootfs.tar.gz /
 # Setting volume for default library path
 VOLUME /opt/icloud-photos-library
 
+# Making sure volume inherits correct read/write
 RUN mkdir -p /opt/icloud-photos-library && \
     chmod -R 777 /opt
 

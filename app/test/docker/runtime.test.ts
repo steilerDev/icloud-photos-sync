@@ -4,8 +4,8 @@ import {ICPSContainer, StartedICPSContainer} from "../_helpers/testcontainers.he
 describe(`Docker Runtime`, () => {
     let container: StartedICPSContainer
 
-    // Setting timeout to 30sec, in order for Docker environment to spin up
-    jest.setTimeout(30 * 1000);
+    // Setting timeout to 10sec, in order for Docker environment to spin up
+    jest.setTimeout(10 * 1000);
 
     beforeEach(async () => {
         container = await new ICPSContainer()

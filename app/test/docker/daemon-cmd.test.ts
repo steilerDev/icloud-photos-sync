@@ -5,7 +5,7 @@ import {delay, ICPSContainer} from "../_helpers/testcontainers.helper";
 describe(`Docker Daemon Command`, () => {
 
     // Setting timeout to 30sec, in order for Docker environment to spin up
-    jest.setTimeout(30 * 1000);
+    jest.setTimeout(20 * 1000);
 
     test(`Container should enter daemon mode`, async () => {
         const container = await new ICPSContainer()
@@ -29,33 +29,9 @@ describe(`Docker Daemon Command`, () => {
             .withDaemonCommand(cron)
             .withDummyCredentials()
             .start();
-        //await container.getFullLogs()
 
         await delay(2000)
 
         expect(await container.syncMetrics()).toMatch(/status="AUTHENTICATION_STARTED"/)
-    })
-
-    test.only(`Container should enter daemon mode`, async () => {
-        const container =  await new ICPSContainer()
-            .asDummy()
-            .withDummyCredentials()
-            .withSyncMetrics()
-            .withUTCTimezone()
-            //.withUser(`root`)
-            .start()
-
-        const res = await container.exec([`chmod`, `-R`, `777`, `/opt`])
-        console.log(res)
-        const result = await container.exec([`ls`, `-al`, `/opt`])
-        console.log(result.stdout)
-        const result1 = await container.exec([`tree`, `-a`, `/opt/`])
-        console.log(result1.stdout)
-
-        const syncResult = await container.startSync()
-        console.log(syncResult)
-
-
-        expect(await container.syncMetrics()).toMatch(/status="SCHEDULED"/)
     })
 })

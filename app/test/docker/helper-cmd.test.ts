@@ -4,8 +4,8 @@ import {ICPSContainer} from "../_helpers/testcontainers.helper";
 
 describe(`Docker Help Command`, () => {
 
-    // Setting timeout to 30sec, in order for Docker environment to spin up
-    jest.setTimeout(30 * 1000);
+    // Setting timeout to 10sec, in order for Docker environment to spin up
+    jest.setTimeout(10 * 1000);
 
     test(`Container should run help`, async () => {
         const container = await new ICPSContainer()

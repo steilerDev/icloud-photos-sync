@@ -5,7 +5,7 @@ import {afterEach} from "node:test";
 
 describe(`Docker Daemon Command`, () => {
     // Increased timeout due to time consuming tasks
-    const timeoutSeconds = 200
+    const timeoutSeconds = 90
     let container: StartedICPSContainer
 
     // Implementing simple lock with timeout to ensure serial execution of tests

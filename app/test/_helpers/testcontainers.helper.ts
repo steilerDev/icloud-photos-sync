@@ -1,4 +1,4 @@
-import { GenericContainer, StartedTestContainer, AbstractStartedContainer, Wait, ExecResult } from "testcontainers";
+import { GenericContainer, StartedTestContainer, AbstractStartedContainer, Wait, ExecResult, PullPolicy} from "testcontainers";
 import  {extract} from 'tar-stream'
 import {createHash} from 'crypto'
 
