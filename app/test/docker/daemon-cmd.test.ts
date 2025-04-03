@@ -4,7 +4,7 @@ import {delay, ICPSContainer} from "../_helpers/testcontainers.helper";
 
 describe(`Docker Daemon Command`, () => {
 
-    // Setting timeout to 30sec, in order for Docker environment to spin up
+    // Setting timeout to 20sec, in order for Docker environment to spin up
     jest.setTimeout(20 * 1000);
 
     test(`Container should enter daemon mode`, async () => {
@@ -22,7 +22,7 @@ describe(`Docker Daemon Command`, () => {
     test(`Should trigger run`, async () => {
 
         // schedule next run in 15 seconds
-        const nextRun = new Date(Date.now() + 2000)
+        const nextRun = new Date(Date.now() + 3000)
         const cron = `${nextRun.getUTCSeconds()} ${nextRun.getUTCMinutes()} * * * *`
 
         const container = await new ICPSContainer()
@@ -30,7 +30,7 @@ describe(`Docker Daemon Command`, () => {
             .withDummyCredentials()
             .start();
 
-        await delay(2000)
+        await delay(4000)
 
         expect(await container.syncMetrics()).toMatch(/status="AUTHENTICATION_STARTED"/)
     })
