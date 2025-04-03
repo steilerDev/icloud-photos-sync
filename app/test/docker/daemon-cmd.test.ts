@@ -7,7 +7,7 @@ describe(`Docker Daemon Command`, () => {
     // Setting timeout to 30sec, in order for Docker environment to spin up
     jest.setTimeout(30 * 1000);
 
-    test.only(`Container should enter daemon mode`, async () => {
+    test(`Container should enter daemon mode`, async () => {
         const container = await new ICPSContainer()
             .withDaemonCommand()
             .withDummyCredentials()
@@ -15,8 +15,6 @@ describe(`Docker Daemon Command`, () => {
 
         // wait a second to make sure status file was written
         await delay(2000)
-        console.log(await container.getFullLogs(2))
-    
 
         expect(await container.syncMetrics()).toMatch(/status="SCHEDULED"/)
     })
@@ -36,5 +34,18 @@ describe(`Docker Daemon Command`, () => {
         await delay(2000)
 
         expect(await container.syncMetrics()).toMatch(/status="AUTHENTICATION_STARTED"/)
+    })
+
+    test.only(`Container should enter daemon mode`, async () => {
+        const container =  await new ICPSContainer()
+            .asDummy()
+            .withSyncMetrics()
+            .withUTCTimezone()
+            .start()
+
+        const result = await container.exec([`tree`, `-a`, `/opt/icloud-photos-library`])
+        console.log(result.stdout)
+
+        expect(await container.syncMetrics()).toMatch(/status="SCHEDULED"/)
     })
 })

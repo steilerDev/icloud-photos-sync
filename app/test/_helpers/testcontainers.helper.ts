@@ -33,7 +33,7 @@ export class ICPSContainer extends GenericContainer {
             .withEnvironment({
                 SCHEDULE: schedule
             })
-            //.withWaitStrategy(Wait.forLogMessage(`Started in daemon mode`))
+            .withWaitStrategy(Wait.forLogMessage(`Started in daemon mode`))
     }
 
     /**
