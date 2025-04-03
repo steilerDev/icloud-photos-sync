@@ -21,7 +21,8 @@ runs:
       with:
         report-path: '${{ inputs.app-path }}/coverage/ctrf-report.json'
         artifact-name: 'ctrf-report-api'
+        summary: true
+        pull-request: true
         summary-report: true
-        pull-request-report: true
       env:
         GITHUB_TOKEN: ${{ inputs.gh-token }}
