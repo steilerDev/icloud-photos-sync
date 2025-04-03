@@ -14,7 +14,8 @@ ADD rootfs.tar.gz /
 RUN chmod 755 /root/enter_mfa.sh && \
     ln -s /root/enter_mfa.sh /usr/local/bin/enter_mfa && \
     chmod 755 /root/resend_mfa.sh && \
-    ln -s /root/resend_mfa.sh /usr/local/bin/resend_mfa
+    ln -s /root/resend_mfa.sh /usr/local/bin/resend_mfa && \
+    chmod 555 /opt
 
 # Installing application binary
 RUN npm install -g /opt/npm-pack.tgz
