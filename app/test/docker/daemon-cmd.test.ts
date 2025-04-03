@@ -43,8 +43,13 @@ describe(`Docker Daemon Command`, () => {
             .withUTCTimezone()
             .start()
 
-        const result = await container.exec([`ls`, `-al`, `/opt/icloud-photos-library`])
+        const syncResult = container.startSync()
+        console.log(syncResult)
+
+        const result = await container.exec([`ls`, `-al`, `/opt`])
         console.log(result.stdout)
+        const result1 = await container.exec([`tree`, `-a`, `/opt/icloud-photos-library`])
+        console.log(result1.stdout)
 
         expect(await container.syncMetrics()).toMatch(/status="SCHEDULED"/)
     })

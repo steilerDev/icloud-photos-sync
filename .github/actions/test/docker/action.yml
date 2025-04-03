@@ -10,7 +10,7 @@ runs:
   steps:
     - id: get-docker-metadata
       uses: ./.github/actions/helper/docker-metadata
-    - id: test-api
+    - id: test-docker
       shell: bash
       run: |
         export IMAGE_NAME=${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
