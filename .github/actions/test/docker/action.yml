@@ -1,5 +1,5 @@
 name: test-docker
-description: Runs the testcontainer Docker E2E tests
+description: Runs the Testcontainers Docker E2E tests
 inputs:
   app-path:
     description: The path to the app directory
