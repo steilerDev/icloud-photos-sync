@@ -1,11 +1,11 @@
 import {beforeAll, describe, expect, jest, test} from "@jest/globals";
 
-import {ICPSContainer, StartedICPSContainer} from "../_helpers/testcontainers.helper";
+import {ICPSContainer, LIBRARY_HASH, StartedICPSContainer} from "../_helpers/testcontainers.helper";
 import {afterEach} from "node:test";
 
 describe(`Docker Daemon Command`, () => {
     // Increased timeout due to time consuming tasks
-    const timeoutSeconds = 90
+    const timeoutSeconds = 120
     let container: StartedICPSContainer
 
     // Implementing simple lock with timeout to ensure serial execution of tests
@@ -37,11 +37,12 @@ describe(`Docker Daemon Command`, () => {
         expect(metrics).toMatch(/status="SYNC_COMPLETED"/)
 
         const hash = await container.libraryHash()
-        expect(hash).toEqual(`cpd/t1tEIihK8nylqHqgbYDQ3bs=`)
+        expect(hash).toEqual(LIBRARY_HASH)
         releaseLock(`released`)
     })
 
     test(`Should trigger incremental sync`, async () => {
+        // Waiting for lock to be released by other test
         await executionLock
         await container.deleteLibraryAsset(
             `AXyF0KdwxynEGmKsbMffdRel1mzR.jpeg`,
@@ -58,6 +59,10 @@ describe(`Docker Daemon Command`, () => {
             `.b971e88c-ca73-4712-9f70-202879ea8b26/2h-media-Q_x3Equ11Jk-unsplash.jpeg`
         )
 
+        // Making sure we are actually changing the library - testing the test helper code
+        const preHash = await container.libraryHash()
+        expect(preHash).not.toEqual(LIBRARY_HASH)
+
         await container.startSync()
 
         const metrics = await container.syncMetrics()
@@ -68,7 +73,6 @@ describe(`Docker Daemon Command`, () => {
         expect(metrics).toMatch(/status="SYNC_COMPLETED"/)
 
         const hash = await container.libraryHash()
-        expect(hash).toEqual(`cpd/t1tEIihK8nylqHqgbYDQ3bs=`)
-
+        expect(hash).toEqual(LIBRARY_HASH)
     })
 })

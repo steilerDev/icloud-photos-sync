@@ -1,4 +1,4 @@
-import { GenericContainer, StartedTestContainer, AbstractStartedContainer, Wait, ExecResult, PullPolicy} from "testcontainers";
+import { GenericContainer, StartedTestContainer, AbstractStartedContainer, Wait, ExecResult } from "testcontainers";
 import  {extract} from 'tar-stream'
 import {createHash} from 'crypto'
 
@@ -8,6 +8,11 @@ import {createHash} from 'crypto'
  * @returns Resolves after the timer has ended
  */
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+/**
+ * This is the expected sha256 base64 encoded hash for the test account's library
+ */
+export const LIBRARY_HASH = `5oLbwth8xOC8j25lNdtijFz90xZ+3vllPpO63UEEGts=`
 
 export class ICPSContainer extends GenericContainer {
     constructor() {
@@ -230,11 +235,10 @@ export class StartedICPSContainer extends AbstractStartedContainer {
     async libraryHash(): Promise<string> {
 
         const tarArchiveStream = await this.copyArchiveFromContainer(`/opt/icloud-photos-library`)
-
         const extractStream = extract()
         tarArchiveStream.pipe(extractStream)
 
-        const hash = createHash(`sha1`)
+        const hash = createHash(`sha256`)
 
         for await (const entry of extractStream) {
             const header = entry.header
