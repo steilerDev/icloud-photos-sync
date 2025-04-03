@@ -29,8 +29,10 @@ runs:
       with:
         report-path: '${{ inputs.app-path }}/coverage/ctrf-report.json'
         artifact-name: 'ctrf-report-unit-${{ runner.os }}'
+        title: 'Unit Test Suite (${{ runner.os }})'
         summary: true
         pull-request: true
         summary-report: true
+        update-comment: true
       env:
         GITHUB_TOKEN: ${{ inputs.gh-token }}

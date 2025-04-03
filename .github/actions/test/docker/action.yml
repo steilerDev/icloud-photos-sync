@@ -24,8 +24,10 @@ runs:
       with:
         report-path: '${{ inputs.app-path }}/coverage/ctrf-report.json'
         artifact-name: 'ctrf-report-docker'
+        title: 'Docker Test Suite'
         summary: true
         pull-request: true
         summary-report: true
+        update-comment: true
       env:
         GITHUB_TOKEN: ${{ inputs.gh-token }}
