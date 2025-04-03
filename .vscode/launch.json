@@ -17,9 +17,9 @@
             "outFiles": [
                 "${workspaceFolder}/app/build/out/**/*.js",
             ],
-            "env": {
-                "NODE_NO_WARNINGS": "1"
-            },
+            // "env": {
+            //     "NODE_NO_WARNINGS": "1"
+            // },
             "envFile": "${workspaceFolder}/secrets/adp.env"
         }, {
             "name": "Run API Tests",
@@ -34,9 +34,9 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
-            "env": {
-                "NODE_NO_WARNINGS": "1"
-            },
+            // "env": {
+            //     "NODE_NO_WARNINGS": "1"
+            // },
             "envFile": "${workspaceFolder}/secrets/test.env"
         }, {
             "name": "Run All Tests",
@@ -51,9 +51,9 @@
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",
             "envFile": "${workspaceFolder}/secrets/test.env",
-            "env": {
-                "NODE_NO_WARNINGS": "1"
-            },
+            // "env": {
+            //     "NODE_NO_WARNINGS": "1"
+            // },
         }, {
             "name": "Debug Test",
             "type": "node",
@@ -66,11 +66,11 @@
                 "--detectOpenHandles",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/resources.network-manager.test.ts"
+                "test/docker/sync-cmd.test.ts"
             ],
-            "env": {
-                "NODE_NO_WARNINGS": "1"
-            },
+            // "env": {
+            //     "DEBUG": "testcontainers*",
+            // },
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",

@@ -55,6 +55,9 @@ updates:
         patterns:
         - "mock-fs*"
         - "@types/mock-fs*"
+      tar-stream:
+        patterns:
+        - "*tar-stream*"
       typescript:
         patterns:
         - "@typescript-eslint*"
