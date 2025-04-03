@@ -1,8 +1,5 @@
 FROM node:22.14.0-alpine
 
-# Setting volume for default library path
-VOLUME /opt/icloud-photos-library
-
 RUN apk update && \
     apk add curl bash jq && \
     rm -rf /var/cache/apk/*
@@ -18,10 +15,14 @@ RUN chmod 755 /root/enter_mfa.sh && \
     chmod 777 /opt
 
 # Installing application binary
-RUN npm install -g /opt/npm-pack.tgz
+RUN npm install -g /opt/npm-pack.tgz && \
+    rm /opt/npm-pack.tgz
 
 RUN addgroup -S icps && adduser -S icps -G icps
 USER icps
+
+# Setting volume for default library path
+VOLUME /opt/icloud-photos-library
 
 ENTRYPOINT ["icloud-photos-sync"]
 CMD ["daemon"]
