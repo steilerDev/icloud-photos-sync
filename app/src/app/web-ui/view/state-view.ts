@@ -17,6 +17,9 @@ export class StateView extends View {
                     margin: 1rem;
                     width: 35%;
                     display: none;
+                    text-align: center;
+                    font-size: 7rem;
+                    color: orange;
                 }
                 .state-symbol svg {
                     width: 100%;
@@ -24,10 +27,6 @@ export class StateView extends View {
                 }
                 #syncing-symbol {
                     animation: rotate 10s linear infinite;
-                }
-                #unknown-symbol {
-                    font-size: 5rem;
-                    color: #999;
                 }
                 @keyframes rotate {
                     0% {
@@ -59,6 +58,7 @@ export class StateView extends View {
                     width: 100%;
                 }
             </style>
+            <div class="state-symbol" id="unknown-symbol">?</div>
             <div class="state-symbol" id="ok-symbol" style="display: block">${checkSymbol}</div>
             <div class="state-symbol" id="syncing-symbol">${syncSymbol}</div>
             <div class="state-symbol" id="error-symbol">${failedSymbol}</div>
@@ -91,18 +91,19 @@ export class StateView extends View {
 
                 function formatDateOrUndefined(date) {
                     if (!date) {
-                        return "Unknown";
+                        return "Unknown ";
                     }
                     return new Date(date).toLocaleString()
                 }
 
                 const textForState = {
+                    unknown: "Unknown",
                     syncing: "Syncing...",
-                    ok: "Last Sync Successful",
-                    error: "Last Sync Failed",
+                    ok: "Last Sync Successful at<br/>{stateTimestamp}",
+                    error: "Last Sync Failed at<br/>{stateTimestamp}<br/><br/><span style=\\"color: red; font-weight: bold\\">{errorMessage}</span>",
                     authenticating: "Authenticating...",
-                    reauthSuccess: "Reauthentication Successful",
-                    reauthError: "Reauthentication Failed",
+                    reauthSuccess: "Reauthentication Successful at <br/>{stateTimestamp}",
+                    reauthError: "Reauthentication Failed at<br/>{stateTimestamp}<br/><br/><span style=\\"color: red; font-weight: bold\\">{errorMessage}</span>",
                 };
 
                 const busyStates = ["syncing", "authenticating"];
@@ -120,16 +121,16 @@ export class StateView extends View {
                         });
                         document.querySelector("#" + stateJson.state + "-symbol").style.display = "block";
 
+                        document.querySelector("#state-text").innerHTML = 
+                            textForState[stateJson.state]
+                                .replace("{stateTimestamp}", formatDateOrUndefined(stateJson.stateTimestamp))
+                                .replace("{errorMessage}", stateJson.errorMessage);
+
                         if(busyStates.includes(stateJson.state)) {
-                            document.querySelector("#state-text").innerHTML = textForState[stateJson.state] ?? "Unknown";
                             document.querySelectorAll(".hidden-when-busy").forEach((el) => {
                                 el.style.display = "none";
                             });
                         } else {
-                            document.querySelector("#state-text").innerHTML = textForState[stateJson.state] 
-                                + "<br/>"
-                                + formatDateOrUndefined(stateJson.stateTimestamp)
-                                + (stateJson.errorMessage ? ("<br/><br/><span style=\\"color: red; font-weight: bold\\">" + stateJson.errorMessage + "</span>") : "");
                             document.querySelectorAll(".hidden-when-busy").forEach((el) => {
                                 el.style.display = "block";
                             });

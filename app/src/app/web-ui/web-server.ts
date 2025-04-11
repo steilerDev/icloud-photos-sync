@@ -39,7 +39,7 @@ export class WebServer {
      */
     mfaMethod: MFAMethod;
 
-    state: `ok` | `authenticating` | `syncing` | `error` | `reauthSuccess` | `reauthError` = `ok`;
+    state: `unknown` | `ok` | `authenticating` | `syncing` | `error` | `reauthSuccess` | `reauthError` = `unknown`;
 
     stateTimestamp: Date = null;
 
