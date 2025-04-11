@@ -5,9 +5,9 @@ export class RequestMfaView extends View {
         return `
             <!-- Options are sms, voice, device -->
             <h2>Choose MFA Method</h2>
-            <button onclick="requestMfaWithMethod('sms')">SMS</button>
-            <button onclick="requestMfaWithMethod('voice')">Voice</button>
-            <button onclick="requestMfaWithMethod('device')">Device</button>
+            <button onclick="requestMfaWithMethod('device')">Send to My Devices</button>
+            <button onclick="requestMfaWithMethod('sms')">Send SMS</button>
+            <button onclick="requestMfaWithMethod('voice')">Receive a Call</button>
             <script>
                 async function requestMfaWithMethod(method) {
                     try {
