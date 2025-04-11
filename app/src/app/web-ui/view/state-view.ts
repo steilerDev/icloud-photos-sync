@@ -108,13 +108,29 @@ export class StateView extends View {
 
                 const busyStates = ["syncing", "authenticating"];
 
+                let connectionLost = false;
+
                 async function updateState() {
                     try {
-                        const state = await fetch("state", { headers: {
-                            "Accept": "application/json",
-                            "Content-Type": "application/json"
-                        } });
-                        const stateJson = await state.json();
+                        let stateJson;
+                        try{
+                            const state = await fetch("state", { headers: {
+                                "Accept": "application/json",
+                                "Content-Type": "application/json"
+                            } });
+                            stateJson = await state.json();
+                        } catch (error) {
+                            connectionLost = true;
+                            throw error;
+                        }
+
+                        // if we temporarily lost connection, reload the page
+                        // as the server might have restarted on a new version
+                        // that has an incompatible API
+                        if(connectionLost) {
+                            window.location.reload();
+                            return;
+                        }
 
                         document.querySelectorAll(".state-symbol").forEach((el) => {
                             el.style.display = "none";
