@@ -50,7 +50,7 @@ export class StateView extends View {
             <div class="state-symbol" id="failed-symbol">${failedSymbol}</div>
             <p class="state-text">...</p>
             <button class="during-sync-hidden" onclick="sync()">Sync Now</button>
-            <button class="during-sync-hidden" onclick="reauthenticate()">Reauthenticate</button>
+            <button class="during-sync-hidden" onclick="reauthenticate()">Renew Authentication</button>
 
             <div class="hidden-outside-sync" id="enter-mfa-button" >
                 Sync is waiting for MFA. Please enter your MFA code.
