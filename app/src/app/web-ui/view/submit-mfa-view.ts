@@ -44,7 +44,7 @@ export class SubmitMfaView extends View {
                     navigate("../");
                 }
             </script>
-            <button class="inverted" onclick="navigate('../request-mfa')">Resend Code</button>
+            <button class="inverted" onclick="navigate('../request-mfa')">Resend Code/Change Method</button>
             <button class="inverted" onclick="navigate('..')">Cancel</button>
             <script type="text/javascript">
                 const mfaInputs = document.querySelectorAll("#mfaInput input");
