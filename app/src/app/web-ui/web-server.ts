@@ -1,7 +1,7 @@
 import http from 'http';
 import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import {iCPSEventApp, iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {MFA_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
@@ -25,6 +25,23 @@ export const WEB_SERVER_API_ENDPOINTS = {
     TRIGGER_SYNC: `/sync`
 };
 
+interface SuccessState {
+    state: `ok`;
+    lastSyncEndTimestamp?: Date;
+}
+
+interface SyncingState {
+    state: `syncing`;
+    waitingForMfa?: boolean;
+}
+
+interface ErrorState {
+    state: `error`;
+    lastSyncEndTimestamp?: Date;
+}
+
+type State = SuccessState | SyncingState | ErrorState;
+
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
  */
@@ -39,9 +56,10 @@ export class WebServer {
      */
     mfaMethod: MFAMethod;
 
-    state: `ok` | `syncing` | `error` = `ok`;
-
-    lastSync: Date | null = null;
+    state: State = {
+        state: `ok`,
+        lastSyncEndTimestamp: null
+    };
 
     static spawn() {
         const webServer = new WebServer()
@@ -75,18 +93,35 @@ export class WebServer {
         });
 
         Resources.events(this).on(iCPSEventApp.SCHEDULED_START, () => {
-            this.state = `syncing`;
-            this.lastSync = new Date();
+            this.state = {
+                state: `syncing`
+            }
         });
 
         Resources.events(this).on(iCPSEventApp.SCHEDULED_DONE, () => {
-            this.state = `ok`;
-            this.lastSync = new Date();
+            this.state = {
+                state: `ok`,
+                lastSyncEndTimestamp: new Date()
+            };
         });
 
         Resources.events(this).on(iCPSEventApp.SCHEDULED_RETRY, () => {
-            this.state = `error`;
-            this.lastSync = new Date();
+            this.state = {
+                state: `error`,
+                lastSyncEndTimestamp: new Date()
+            };
+        });
+
+        Resources.events(this).on(iCPSEventCloud.MFA_REQUIRED, () => {
+            (this.state as SyncingState).waitingForMfa = true;
+        });
+
+        Resources.events(this).on(iCPSEventMFA.MFA_RECEIVED, () => {
+            (this.state as SyncingState).waitingForMfa = false;
+        });
+
+        Resources.events(this).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
+            (this.state as SyncingState).waitingForMfa = false;
         });
 
         // allow the process to exit, if this server is the only thing left running
@@ -147,7 +182,7 @@ export class WebServer {
         if(req.headers[`content-type`] === `application/json`) {
             if(req.url.startsWith(`/state`)) {
                 res.writeHead(200, {'Content-Type': `application/json`});
-                res.write(JSON.stringify({state: this.state, lastSync: this.lastSync?.toLocaleString() ?? `Never`}));
+                res.write(JSON.stringify(this.state));
                 res.end();
             } else {
                 res.writeHead(404, {'Content-Type': `text/plain`});

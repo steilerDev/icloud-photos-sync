@@ -38,15 +38,24 @@ export class StateView extends View {
                     text-align: center;
                     width: 75%;
                     margin: auto;
+                    margin-top: 1rem;
                     margin-bottom: 1rem;
+                }
+                .hidden-outside-sync {
+                    display: none;
                 }
             </style>
             <div class="state-symbol" id="ok-symbol" style="display: block">${checkSymbol}</div>
             <div class="state-symbol" id="sync-symbol">${syncSymbol}</div>
             <div class="state-symbol" id="failed-symbol">${failedSymbol}</div>
             <p class="state-text">...</p>
-            <button onclick="sync()">Sync Now</button>
-            <button onclick="reauthenticate()">Reauthenticate</button>
+            <button class="during-sync-hidden" onclick="sync()">Sync Now</button>
+            <button class="during-sync-hidden" onclick="reauthenticate()">Reauthenticate</button>
+
+            <div class="hidden-outside-sync" id="enter-mfa-button" >
+                Sync is waiting for MFA. Please enter your MFA code.
+                <button onclick="navigate('submit-mfa')">Enter MFA Code</button>
+            </div>
             <script type="text/javascript">
                 async function sync() {
                     const response = await fetch("sync", { method: "POST" });
@@ -64,6 +73,13 @@ export class StateView extends View {
                     navigate("submit-mfa");
                 }
 
+                function formatDateOrUndefined(date) {
+                    if (!date) {
+                        return "Unknown";
+                    }
+                    return new Date(date).toLocaleString()
+                }
+
                 setInterval(async () => {
                     try {
                         const state = await fetch("state", { headers: {
@@ -77,16 +93,34 @@ export class StateView extends View {
                             document.getElementById("sync-symbol").style.display = "block";
                             document.getElementById("failed-symbol").style.display = "none";
                             document.querySelector(".state-text").innerHTML = "Syncing...";
+                            document.querySelectorAll(".during-sync-hidden").forEach((el) => {
+                                el.style.display = "none";
+                            });
+                            if(stateJson.waitingForMfa) {
+                                document.getElementById("enter-mfa-button").style.display = "block";
+                            }
                         } else if(stateJson.state === "ok") {
                             document.getElementById("ok-symbol").style.display = "block";
                             document.getElementById("sync-symbol").style.display = "none";
                             document.getElementById("failed-symbol").style.display = "none";
-                            document.querySelector(".state-text").innerHTML = "Last Sync Successful<br>" + stateJson.lastSync;
+                            document.querySelector(".state-text").innerHTML = "Last Sync Successful<br>" + formatDateOrUndefined(stateJson.lastSyncEndTimestamp);
+                            document.querySelectorAll(".during-sync-hidden").forEach((el) => {
+                                el.style.display = "block";
+                            });
+                            document.querySelectorAll(".hidden-outside-sync").forEach((el) => {
+                                el.style.display = "none";
+                            });
                         } else {
                             document.getElementById("ok-symbol").style.display = "none";
                             document.getElementById("sync-symbol").style.display = "none";
                             document.getElementById("failed-symbol").style.display = "block";
-                            document.querySelector(".state-text").innerHTML = "Last Sync Failed<br>" + stateJson.lastSync;
+                            document.querySelector(".state-text").innerHTML = "Last Sync Failed<br>" + formatDateOrUndefined(stateJson.lastSyncEndTimestamp);
+                            document.querySelectorAll(".during-sync-hidden").forEach((el) => {
+                                el.style.display = "block";
+                            });
+                            document.querySelectorAll(".hidden-outside-sync").forEach((el) => {
+                                el.style.display = "none";
+                            });
                         }
                     } catch (error) {
                         console.error("Error fetching state:", error);
