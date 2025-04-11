@@ -317,6 +317,12 @@ export class WebServer {
      * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
      */
     handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
+        if (!this.waitingForMfa) {
+            this.sendResponse(res, 400, `MFA code not expected at this time. Taking you back home.`, `/`);
+            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.NO_CODE_EXPECTED));
+            return;
+        }
+
         if (!req.url.match(/\?code=\d{6}$/)) {
             Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.CODE_FORMAT)
                 .addMessage(req.url)
@@ -367,9 +373,10 @@ export class WebServer {
      * @param res - The response object, to send the response to
      * @param code - The status code for the response
      * @param msg - The message included in the response
+     * @param newLocation - The new location to redirect to, if any
      */
-    sendResponse(res: http.ServerResponse, code: number, msg: string) {
+    sendResponse(res: http.ServerResponse, code: number, msg: string, newLocation?: string) {
         res.writeHead(code, {"Content-Type": `application/json`});
-        res.end(jsonc.stringify({message: msg}));
+        res.end(jsonc.stringify({message: msg, newLocation: newLocation}));
     }
 }

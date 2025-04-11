@@ -38,7 +38,14 @@ export class SubmitMfaView extends View {
                         .reduce((acc, input) => acc + input.value, "");
                     const response = await fetch("../mfa?code=" + mfaCode, {method: "POST"});
                     if (!response.ok) {
-                        alert("MFA submission failed: " + response.statusText);
+                        let body;
+                        try { body = await response.json(); } catch (e) { }
+                        alert("MFA submission failed: " + body?.message ?? response.statusText);
+                        const newLocation = body?.newLocation;
+                        if (newLocation) {
+                            const newUrl = new URL(newLocation, window.location.origin);
+                            window.location.href = newUrl;
+                        }
                         return;
                     }
                     navigate("../");

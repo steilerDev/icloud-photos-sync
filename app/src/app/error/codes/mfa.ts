@@ -35,6 +35,10 @@ export const CODE_REJECTED: ErrorStruct = buildErrorStruct(
     name, prefix, `CODE_REJECTED`, `MFA code rejected`,
 );
 
+export const NO_CODE_EXPECTED: ErrorStruct = buildErrorStruct(
+    name, prefix, `NO_CODE_EXPECTED`, `NO_CODE_EXPECTED`,
+);
+
 export const RESEND_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `RESEND_FAILED`, `Unable to resend MFA code`,
 );
