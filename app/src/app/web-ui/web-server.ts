@@ -3,7 +3,7 @@ import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
-import {MFA_ERR} from '../error/error-codes.js';
+import {AUTH_ERR, MFA_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
 import {TokenApp} from '../icloud-app.js';
 import {RequestMfaView} from './view/request-mfa-view.js';
@@ -45,6 +45,8 @@ export class WebServer {
 
     waitingForMfa: boolean = false;
 
+    errorMessage: string = null;
+
     static spawn() {
         const webServer = new WebServer()
         webServer.startServer();
@@ -85,8 +87,10 @@ export class WebServer {
             this.stateTimestamp = new Date();
         });
 
-        Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, () => {
+        Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, (error: iCPSError) => {
             this.state = `error`;
+            this.setErrorMessageFromError(error);
+            this.waitingForMfa = false;
             this.stateTimestamp = new Date();
         });
 
@@ -100,6 +104,7 @@ export class WebServer {
 
         Resources.events(this).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
             this.waitingForMfa = false;
+            this.errorMessage = `Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`;
         });
 
         Resources.events(this).on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
@@ -111,6 +116,24 @@ export class WebServer {
 
         // Default MFA request always goes to device
         this.mfaMethod = new MFAMethod();
+    }
+
+    private setErrorMessageFromError(error: iCPSError) {
+        let cause = error.cause as iCPSError;
+        while (cause.cause && cause.cause instanceof iCPSError) {
+            cause = cause.cause;
+        }
+        switch (cause.code) {
+        case MFA_ERR.FAIL_ON_MFA.code:
+            this.errorMessage = `Multifactor authentication code required. Use the 'Renew Authentication' button to request and enter a new code.`;
+            break;
+        case AUTH_ERR.UNAUTHORIZED.code:
+            this.errorMessage = `Your credentials seem to be invalid. Please check your iCloud credentials and try again.`;
+            break;
+        default:
+            this.errorMessage = cause.message;
+            break;
+        }
     }
 
     /**
@@ -166,6 +189,7 @@ export class WebServer {
                     state: this.state,
                     stateTimestamp: this.stateTimestamp,
                     waitingForMfa: this.waitingForMfa,
+                    errorMessage: this.state == `error` || this.state == `reauthError` ? this.errorMessage : null,
                 }));
                 res.end();
             } else {
@@ -249,6 +273,8 @@ export class WebServer {
             }).catch(err => {
                 this.state = `reauthError`;
                 this.stateTimestamp = new Date();
+                this.waitingForMfa = false;
+                this.setErrorMessageFromError(err); 
             });
             res.writeHead(200, {'Content-Type': `text/plain`});
             res.write(`Reauthentication started`);

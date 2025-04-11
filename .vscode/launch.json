@@ -13,7 +13,7 @@
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["daemon", "--schedule", "0 3 * * *"],
+            "args": ["daemon", "--schedule", "0 3 * * *", "--fail-on-mfa"],
             "outputCapture": "std",
             "outFiles": [
                 "${workspaceFolder}/app/build/out/**/*.js",
@@ -22,11 +22,6 @@
                 "NODE_NO_WARNINGS": "1"
             },
             "envFile": "${workspaceFolder}/secrets/adp.env"
-        }, {
-            "type": "chrome",
-            "request": "launch",
-            "name": "Launch WebApp",
-            "url": "http://localhost:80",
         }, {
             "name": "Run API Tests",
             "type": "node",

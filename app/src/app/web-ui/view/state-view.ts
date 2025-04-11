@@ -126,7 +126,10 @@ export class StateView extends View {
                                 el.style.display = "none";
                             });
                         } else {
-                            document.querySelector("#state-text").innerHTML = (textForState[stateJson.state] + "<br/>" + formatDateOrUndefined(stateJson.stateTimestamp)) ?? "Unknown";
+                            document.querySelector("#state-text").innerHTML = textForState[stateJson.state] 
+                                + "<br/>"
+                                + formatDateOrUndefined(stateJson.stateTimestamp)
+                                + (stateJson.errorMessage ? ("<br/><br/><span style=\\"color: red; font-weight: bold\\">" + stateJson.errorMessage + "</span>") : "");
                             document.querySelectorAll(".hidden-when-busy").forEach((el) => {
                                 el.style.display = "block";
                             });
