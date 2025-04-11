@@ -25,23 +25,6 @@ export const WEB_SERVER_API_ENDPOINTS = {
     TRIGGER_SYNC: `/sync`
 };
 
-interface SuccessState {
-    state: `ok`;
-    lastSyncEndTimestamp?: Date;
-}
-
-interface SyncingState {
-    state: `syncing`;
-    waitingForMfa?: boolean;
-}
-
-interface ErrorState {
-    state: `error`;
-    lastSyncEndTimestamp?: Date;
-}
-
-type State = SuccessState | SyncingState | ErrorState;
-
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
  */
@@ -56,10 +39,11 @@ export class WebServer {
      */
     mfaMethod: MFAMethod;
 
-    state: State = {
-        state: `ok`,
-        lastSyncEndTimestamp: null
-    };
+    state: `ok` | `syncing` | `error` = `ok`;
+
+    lastSyncEndTimestamp: Date = null;
+
+    waitingForMfa: boolean = false;
 
     static spawn() {
         const webServer = new WebServer()
@@ -93,35 +77,29 @@ export class WebServer {
         });
 
         Resources.events(this).on(iCPSEventApp.SCHEDULED_START, () => {
-            this.state = {
-                state: `syncing`
-            }
+            this.state = `syncing`;
         });
 
         Resources.events(this).on(iCPSEventApp.SCHEDULED_DONE, () => {
-            this.state = {
-                state: `ok`,
-                lastSyncEndTimestamp: new Date()
-            };
+            this.state = `ok`;
+            this.lastSyncEndTimestamp = new Date();
         });
 
         Resources.events(this).on(iCPSEventApp.SCHEDULED_RETRY, () => {
-            this.state = {
-                state: `error`,
-                lastSyncEndTimestamp: new Date()
-            };
+            this.state = `error`;
+            this.lastSyncEndTimestamp = new Date();
         });
 
         Resources.events(this).on(iCPSEventCloud.MFA_REQUIRED, () => {
-            (this.state as SyncingState).waitingForMfa = true;
+            this.waitingForMfa = true;
         });
 
         Resources.events(this).on(iCPSEventMFA.MFA_RECEIVED, () => {
-            (this.state as SyncingState).waitingForMfa = false;
+            this.waitingForMfa = false;
         });
 
         Resources.events(this).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
-            (this.state as SyncingState).waitingForMfa = false;
+            this.waitingForMfa = false;
         });
 
         // allow the process to exit, if this server is the only thing left running
@@ -177,12 +155,15 @@ export class WebServer {
      * @param res - The HTTP response object
      */
     handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        const cleanPath = req.url?.split(`?`)[0];
-
+        
         if(req.headers[`content-type`] === `application/json`) {
             if(req.url.startsWith(`/state`)) {
                 res.writeHead(200, {'Content-Type': `application/json`});
-                res.write(JSON.stringify(this.state));
+                res.write(JSON.stringify({
+                    state: this.state,
+                    lastSyncEndTimestamp: this.lastSyncEndTimestamp,
+                    waitingForMfa: this.waitingForMfa,
+                }));
                 res.end();
             } else {
                 res.writeHead(404, {'Content-Type': `text/plain`});
@@ -192,33 +173,49 @@ export class WebServer {
             return;
         }
 
-        const content = this.getUiHtml(cleanPath);
-        if (content === null) {
-            res.writeHead(404, {'Content-Type': `text/plain`});
-            res.write(`Not Found`);
-            res.end();
-            return
-        }
-
-        res.writeHead(200, {'Content-Type': `text/html`});
-        res.write(content);
-        res.end();
+        this.handleUiRequest(req, res);
     }
 
     /**
-     * Returns the HTML content for the given path
-     * @param path - The path to get the HTML content for
-     * @returns The HTML content for the given path
+     * This function will return the HTML content for the UI
+     * @param req - The HTTP request object
+     * @param res - The HTTP response object
+     * @returns HTML content as a string or null if no matching path is found
      */
-    getUiHtml(path: string): string | null {
-        if (path === `/`) {
-            return new StateView().asHtml();
-        } else if (path.startsWith(`/submit-mfa`)) {
-            return new SubmitMfaView().asHtml();
-        } else if (path.startsWith(`/request-mfa`)) {
-            return new RequestMfaView().asHtml();
+    handleUiRequest(req: http.IncomingMessage, res: http.ServerResponse): string | null {
+        const cleanPath = req.url?.split(`?`)[0];
+
+        if (cleanPath === `/`) {
+            res.writeHead(200, {'Content-Type': `text/html`});
+            res.write(new StateView().asHtml());
+            res.end();
+            return ;
+        } else if (cleanPath.startsWith(`/submit-mfa`)) {
+            if(!this.waitingForMfa) {
+                res.writeHead(302, {Location: `/`});
+                res.end();
+                return ;
+            }
+            res.writeHead(200, {'Content-Type': `text/html`});
+            res.write(new SubmitMfaView().asHtml());
+            res.end();
+            return ;
+        } else if (cleanPath.startsWith(`/request-mfa`)) {
+            if(!this.waitingForMfa) {
+                res.writeHead(302, {Location: `/`});
+                res.end();
+                return ;
+            }
+            res.writeHead(200, {'Content-Type': `text/html`});
+            res.write(new RequestMfaView().asHtml());
+            res.end();
+            return ;
         }
-        return null;
+        
+        res.writeHead(404, {'Content-Type': `text/plain`});
+        res.write(`Not Found`);
+        res.end();
+        return
     }
 
     /**
