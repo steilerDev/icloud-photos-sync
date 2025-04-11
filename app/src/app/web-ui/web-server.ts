@@ -155,7 +155,6 @@ export class WebServer {
      * @param res - The HTTP response object
      */
     handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        
         if(req.headers[`content-type`] === `application/json`) {
             if(req.url.startsWith(`/state`)) {
                 res.writeHead(200, {'Content-Type': `application/json`});
