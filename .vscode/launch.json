@@ -23,6 +23,11 @@
             },
             "envFile": "${workspaceFolder}/secrets/adp.env"
         }, {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch WebApp",
+            "url": "http://localhost:80",
+        }, {
             "name": "Run API Tests",
             "type": "node",
             "request": "launch",
