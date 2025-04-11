@@ -39,9 +39,9 @@ export class WebServer {
      */
     mfaMethod: MFAMethod;
 
-    state: `ok` | `authenticating` | `syncing` | `error` = `ok`;
+    state: `ok` | `authenticating` | `syncing` | `error` | `reauthSuccess` | `reauthError` = `ok`;
 
-    lastSyncEndTimestamp: Date = null;
+    stateTimestamp: Date = null;
 
     waitingForMfa: boolean = false;
 
@@ -82,12 +82,12 @@ export class WebServer {
 
         Resources.events(this).on(iCPSEventSyncEngine.DONE, () => {
             this.state = `ok`;
-            this.lastSyncEndTimestamp = new Date();
+            this.stateTimestamp = new Date();
         });
 
         Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, () => {
             this.state = `error`;
-            this.lastSyncEndTimestamp = new Date();
+            this.stateTimestamp = new Date();
         });
 
         Resources.events(this).on(iCPSEventCloud.MFA_REQUIRED, () => {
@@ -104,10 +104,6 @@ export class WebServer {
 
         Resources.events(this).on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
             this.state = `authenticating`;
-        });
-
-        Resources.events(this).on(iCPSEventCloud.AUTHENTICATED, () => {
-            this.state = `ok`;
         });
 
         // allow the process to exit, if this server is the only thing left running
@@ -168,7 +164,7 @@ export class WebServer {
                 res.writeHead(200, {'Content-Type': `application/json`});
                 res.write(JSON.stringify({
                     state: this.state,
-                    lastSyncEndTimestamp: this.lastSyncEndTimestamp,
+                    stateTimestamp: this.stateTimestamp,
                     waitingForMfa: this.waitingForMfa,
                 }));
                 res.end();
@@ -247,7 +243,13 @@ export class WebServer {
     handlePostRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH)) {
             const app = new TokenApp();
-            app.run();
+            app.run().then(() => {
+                this.state = `reauthSuccess`;
+                this.stateTimestamp = new Date();
+            }).catch(err => {
+                this.state = `reauthError`;
+                this.stateTimestamp = new Date();
+            });
             res.writeHead(200, {'Content-Type': `text/plain`});
             res.write(`Reauthentication started`);
             res.end();
