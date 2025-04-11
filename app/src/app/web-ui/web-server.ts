@@ -186,36 +186,48 @@ export class WebServer {
         const cleanPath = req.url?.split(`?`)[0];
 
         if (cleanPath === `/`) {
-            res.writeHead(200, {'Content-Type': `text/html`});
-            res.write(new StateView().asHtml());
-            res.end();
-            return ;
+            this.sendHtmlResponse(res, new StateView().asHtml());
+            return;
         } else if (cleanPath.startsWith(`/submit-mfa`)) {
             if(!this.waitingForMfa) {
-                res.writeHead(302, {Location: `/`});
-                res.end();
-                return ;
+                this.sendStateRedirect(res);
+                return;
             }
-            res.writeHead(200, {'Content-Type': `text/html`});
-            res.write(new SubmitMfaView().asHtml());
-            res.end();
+            this.sendHtmlResponse(res, new SubmitMfaView().asHtml());
             return ;
         } else if (cleanPath.startsWith(`/request-mfa`)) {
             if(!this.waitingForMfa) {
-                res.writeHead(302, {Location: `/`});
-                res.end();
-                return ;
+                this.sendStateRedirect(res);
+                return;
             }
-            res.writeHead(200, {'Content-Type': `text/html`});
-            res.write(new RequestMfaView().asHtml());
-            res.end();
-            return ;
+            this.sendHtmlResponse(res, new RequestMfaView().asHtml());
+            return;
         }
         
         res.writeHead(404, {'Content-Type': `text/plain`});
         res.write(`Not Found`);
         res.end();
-        return
+        return;
+    }
+
+    /**
+     * This function will send the HTML response to the client
+     * @param res - The HTTP response object
+     * @param html - The HTML content to be sent
+     */
+    private sendHtmlResponse(res: http.ServerResponse, html: string) {
+        res.writeHead(200, {'Content-Type': `text/html`});
+        res.write(html);
+        res.end();
+    }
+
+    /**
+     * Redirects to the state view
+     * @param res - The HTTP response object
+     */
+    private sendStateRedirect(res: http.ServerResponse) {
+        res.writeHead(302, {Location: `/`});
+        res.end();
     }
 
     /**
