@@ -3,7 +3,7 @@ import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
-import {AUTH_ERR, MFA_ERR} from '../error/error-codes.js';
+import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
 import {TokenApp} from '../icloud-app.js';
 import {RequestMfaView} from './view/request-mfa-view.js';
@@ -61,15 +61,15 @@ export class WebServer {
         Resources.logger(this).debug(`Preparing web server on port ${Resources.manager().mfaServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
         this.server.on(`error`, err => {
-            let icpsErr = new iCPSError(MFA_ERR.SERVER_ERR);
+            let icpsErr = new iCPSError(WEB_SERVER_ERR.SERVER_ERR);
 
             if (Object.hasOwn(err, `code`)) {
                 if ((err as any).code === `EADDRINUSE`) {
-                    icpsErr = new iCPSError(MFA_ERR.ADDR_IN_USE_ERR).addContext(`port`, Resources.manager().mfaServerPort);
+                    icpsErr = new iCPSError(WEB_SERVER_ERR.ADDR_IN_USE_ERR).addContext(`port`, Resources.manager().mfaServerPort);
                 }
 
                 if ((err as any).code === `EACCES`) {
-                    icpsErr = new iCPSError(MFA_ERR.INSUFFICIENT_PRIVILEGES).addContext(`port`, Resources.manager().mfaServerPort);
+                    icpsErr = new iCPSError(WEB_SERVER_ERR.INSUFFICIENT_PRIVILEGES).addContext(`port`, Resources.manager().mfaServerPort);
                 }
             }
 
@@ -152,7 +152,7 @@ export class WebServer {
                 /* c8 ignore stop */
             });
         } catch (err) {
-            Resources.emit(iCPSEventWebServer.ERROR, new iCPSError(MFA_ERR.STARTUP_FAILED).addCause(err));
+            Resources.emit(iCPSEventWebServer.ERROR, new iCPSError(WEB_SERVER_ERR.STARTUP_FAILED).addCause(err));
         }
     }
 
@@ -160,7 +160,7 @@ export class WebServer {
      * Handles incoming http requests
      * @param req - The HTTP request object
      * @param res - The HTTP response object
-     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the request method or endpoint of server could not be found - Provides iCPSError as argument
+     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the request method or endpoint of server could not be found - Provides iCPSError as argument
      */
     handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if (req.method === `GET`) {
@@ -261,7 +261,7 @@ export class WebServer {
      * Handle incoming POST requests
      * @param req - The HTTP request object
      * @param res - The HTTP response object
-     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the MFA code format is not as expected - Provides iCPSError as argument
+     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the MFA code format is not as expected - Provides iCPSError as argument
      * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
      */
     handlePostRequest(req: http.IncomingMessage, res: http.ServerResponse) {
@@ -289,7 +289,7 @@ export class WebServer {
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.RESEND_CODE)) {
             this.handleMFAResend(req, res);
         } else {
-            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.ROUTE_NOT_FOUND)
+            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.ROUTE_NOT_FOUND)
                 .addMessage(req.url)
                 .addContext(`request`, req));
             this.sendResponse(res, 404, `Route not found, available endpoints: ${jsonc.stringify(Object.values(WEB_SERVER_API_ENDPOINTS))}`);
@@ -300,10 +300,10 @@ export class WebServer {
      * Handle requests with invalid methods
      * @param req - The HTTP request object
      * @param res - The HTTP response object
-     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the request method is not as expected - Provides iCPSError as argument
+     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERROR - When the request method is not as expected - Provides iCPSError as argument
      */
     handleInvalidMethodRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.METHOD_NOT_FOUND)
+        Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.METHOD_NOT_FOUND)
             .addMessage(`endpoint ${req.url}, method ${req.method}`)
             .addContext(`request`, req));
         this.sendResponse(res, 400, `Method not supported: ${req.method}`);
@@ -313,18 +313,18 @@ export class WebServer {
      * This function will handle requests send to the MFA code input endpoint
      * @param req - The HTTP request object
      * @param res - The HTTP response object
-     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the MFA code format is not as expected - Provides iCPSError as argument
+     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the MFA code format is not as expected - Provides iCPSError as argument
      * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
      */
     handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!this.waitingForMfa) {
             this.sendResponse(res, 400, `MFA code not expected at this time. Taking you back home.`, `/`);
-            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.NO_CODE_EXPECTED));
+            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.NO_CODE_EXPECTED));
             return;
         }
 
         if (!req.url.match(/\?code=\d{6}$/)) {
-            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.CODE_FORMAT)
+            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.CODE_FORMAT)
                 .addMessage(req.url)
                 .addContext(`request`, req));
             this.sendResponse(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
@@ -342,14 +342,14 @@ export class WebServer {
      * This function will handle the request send to the MFA code resend endpoint
      * @param req - The HTTP request object
      * @param res - The HTTP response object
-     * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the MFA resend method is not as expected - Provides iCPSError as argument
+     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the MFA resend method is not as expected - Provides iCPSError as argument
      * @emits iCPSEventMFA.MFA_RESEND - When the MFA code resend was requested - Provides MFA method as argument
      */
     handleMFAResend(req: http.IncomingMessage, res: http.ServerResponse) {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
         if (!methodMatch) {
             this.sendResponse(res, 400, `Resend method does not match expected format`);
-            Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.RESEND_METHOD_FORMAT)
+            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.RESEND_METHOD_FORMAT)
                 .addContext(`requestURL`, req.url));
             return;
         }

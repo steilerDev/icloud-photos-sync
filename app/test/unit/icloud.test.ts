@@ -1,16 +1,16 @@
-import {afterAll, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
-import {iCPSError} from '../../src/app/error/error';
-import {MFA_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
-import {iCloud} from '../../src/lib/icloud/icloud';
-import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
-import {iCloudCrypto} from '../../src/lib/icloud/icloud.crypto';
-import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import {iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
-import {Resources} from '../../src/lib/resources/main';
-import {Header} from '../../src/lib/resources/network-manager';
-import {SigninInitResponse} from '../../src/lib/resources/network-types';
+import { afterAll, beforeAll, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { iCPSError } from '../../src/app/error/error';
+import { MFA_ERR, VALIDATOR_ERR } from '../../src/app/error/error-codes';
+import { iCloud } from '../../src/lib/icloud/icloud';
+import { iCloudPhotos } from '../../src/lib/icloud/icloud-photos/icloud-photos';
+import { iCloudCrypto } from '../../src/lib/icloud/icloud.crypto';
+import { MFAMethod } from '../../src/lib/icloud/mfa/mfa-method';
+import { iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning } from '../../src/lib/resources/events-types';
+import { Resources } from '../../src/lib/resources/main';
+import { Header } from '../../src/lib/resources/network-manager';
+import { SigninInitResponse } from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
-import {MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources} from '../_helpers/_general';
+import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;
@@ -77,7 +77,7 @@ describe(`Control structure`, () => {
 
     test(`MFA_NOT_PROVIDED event triggered`, async () => {
         const iCloudReady = icloud.getReady();
-        mockedEventManager.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
+        mockedEventManager.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.MFA_TIMEOUT));
         await expect(iCloudReady).resolves.toBeFalsy();
     });
 

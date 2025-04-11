@@ -49,7 +49,7 @@ export class iCloud {
 
                 // MFA code needs to be provided within timeout period
                 this.mfaTimeout = setTimeout(() => {
-                    Resources.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
+                    Resources.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.MFA_TIMEOUT));
                 }, MFA_TIMEOUT_VALUE);
             })
             .on(iCPSEventCloud.TRUSTED, async () => {

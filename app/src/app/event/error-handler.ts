@@ -9,7 +9,7 @@ import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
-import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR} from "../error/error-codes.js";
+import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR, WEB_SERVER_ERR} from "../error/error-codes.js";
 import {iCPSError} from "../error/error.js";
 
 /**
@@ -18,9 +18,9 @@ import {iCPSError} from "../error/error.js";
 const reportDenyList = [
     ERR_SIGINT.code,
     ERR_SIGTERM.code,
-    MFA_ERR.ADDR_IN_USE_ERR.code, // Only happens if port/address is in use
-    MFA_ERR.INSUFFICIENT_PRIVILEGES.code, // Only happens if user is lacking privileges to open port/address
-    MFA_ERR.SERVER_TIMEOUT.code, // Only happens if user does not interact within 10 minutes
+    WEB_SERVER_ERR.ADDR_IN_USE_ERR.code, // Only happens if port/address is in use
+    WEB_SERVER_ERR.INSUFFICIENT_PRIVILEGES.code, // Only happens if user is lacking privileges to open port/address
+    MFA_ERR.MFA_TIMEOUT.code, // Only happens if user does not interact within 10 minutes
     MFA_ERR.CODE_REJECTED.code, // Only happens if MFA code is rejected from backend, e.g. if code is invalid
     LIBRARY_ERR.LOCKED.code, // Only happens if library is locked
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
@@ -164,6 +164,9 @@ export class ErrorHandler {
 
         Resources.events(this)
             .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
+                this.btClient.breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
+            })
+            .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
                 this.btClient.breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
             })
             .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {

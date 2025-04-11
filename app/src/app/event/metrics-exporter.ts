@@ -1,11 +1,11 @@
 import * as fs from "fs";
-import {Resources} from "../../lib/resources/main.js";
-import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
-import {iCPSError} from '../error/error.js';
-import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 import {CPLAsset} from "../../lib/icloud/icloud-photos/query-parser.js";
-import {Asset} from "../../lib/photos-library/model/asset.js";
 import {Album} from "../../lib/photos-library/model/album.js";
+import {Asset} from "../../lib/photos-library/model/asset.js";
+import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
+import {Resources} from "../../lib/resources/main.js";
+import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
+import {iCPSError} from '../error/error.js';
 
 /**
  * The InfluxLineProtocol field set type
@@ -42,6 +42,7 @@ const FIELDS = {
     LINK_ERROR: `warn-link_error`,
     FILETYPE_ERROR: `warn-filetype_error`,
     MFA_RESEND_ERROR: `warn-mfa_resend_error`,
+    WEB_SERVER_ERROR: `warn-web_server_error`,
     RESOURCE_FILE_ERROR: `warn-resource_file_error`,
     ARCHIVE_ASSET_ERROR: `warn-archive_asset_error`,
     ERROR: `errors`,
@@ -347,6 +348,10 @@ export class MetricsExporter {
             .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.MFA_RESEND_ERROR, err.getDescription()));
+            })
+            .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
+                this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                    .addField(FIELDS.WEB_SERVER_ERROR, err.getDescription()));
             })
             .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: Error) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
