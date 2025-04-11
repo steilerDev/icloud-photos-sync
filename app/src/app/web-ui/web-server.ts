@@ -1,7 +1,7 @@
 import http from 'http';
 import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {MFA_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
@@ -39,7 +39,7 @@ export class WebServer {
      */
     mfaMethod: MFAMethod;
 
-    state: `ok` | `syncing` | `error` = `ok`;
+    state: `ok` | `authenticating` | `syncing` | `error` = `ok`;
 
     lastSyncEndTimestamp: Date = null;
 
@@ -76,16 +76,16 @@ export class WebServer {
             Resources.emit(iCPSEventWebServer.ERROR, icpsErr);
         });
 
-        Resources.events(this).on(iCPSEventApp.SCHEDULED_START, () => {
+        Resources.events(this).on(iCPSEventSyncEngine.START, () => {
             this.state = `syncing`;
         });
 
-        Resources.events(this).on(iCPSEventApp.SCHEDULED_DONE, () => {
+        Resources.events(this).on(iCPSEventSyncEngine.DONE, () => {
             this.state = `ok`;
             this.lastSyncEndTimestamp = new Date();
         });
 
-        Resources.events(this).on(iCPSEventApp.SCHEDULED_RETRY, () => {
+        Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, () => {
             this.state = `error`;
             this.lastSyncEndTimestamp = new Date();
         });
@@ -100,6 +100,14 @@ export class WebServer {
 
         Resources.events(this).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
             this.waitingForMfa = false;
+        });
+
+        Resources.events(this).on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
+            this.state = `authenticating`;
+        });
+
+        Resources.events(this).on(iCPSEventCloud.AUTHENTICATED, () => {
+            this.state = `ok`;
         });
 
         // allow the process to exit, if this server is the only thing left running

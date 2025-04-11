@@ -1,14 +1,14 @@
-import {iCloud} from '../icloud/icloud.js';
-import {PhotosLibrary} from '../photos-library/photos-library.js';
-import {Asset} from '../photos-library/model/asset.js';
-import {Album, AlbumType} from '../photos-library/model/album.js';
-import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
-import {iCPSError} from '../../app/error/error.js';
+import {AxiosError} from 'axios';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
+import {iCPSError} from '../../app/error/error.js';
+import {iCloud} from '../icloud/icloud.js';
+import {Album, AlbumType} from '../photos-library/model/album.js';
+import {Asset} from '../photos-library/model/asset.js';
+import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
+import {PhotosLibrary} from '../photos-library/photos-library.js';
+import {iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../resources/events-types.js';
 import {Resources} from '../resources/main.js';
 import {SyncEngineHelper} from './helper.js';
-import {iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../resources/events-types.js';
-import {AxiosError} from 'axios';
 
 /**
  * This class handles the photos sync

@@ -6,6 +6,9 @@ export const syncSymbol = `<svg id="Layer_1" data-name="Layer 1" xmlns="http://w
 
 export const failedSymbol = `<?xml version="1.0" encoding="utf-8"?><svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" style="enable-background:new 0 0 122.88 122.88" xml:space="preserve"><style type="text/css">.st0{fill-rule:evenodd;clip-rule:evenodd;}</style><g><path fill="#f00" class="st0" d="M1.63,97.99l36.55-36.55L1.63,24.89c-2.17-2.17-2.17-5.73,0-7.9L16.99,1.63c2.17-2.17,5.73-2.17,7.9,0 l36.55,36.55L97.99,1.63c2.17-2.17,5.73-2.17,7.9,0l15.36,15.36c2.17,2.17,2.17,5.73,0,7.9L84.7,61.44l36.55,36.55 c2.17,2.17,2.17,5.73,0,7.9l-15.36,15.36c-2.17,2.17-5.73,2.17-7.9,0L61.44,84.7l-36.55,36.55c-2.17,2.17-5.73,2.17-7.9,0 L1.63,105.89C-0.54,103.72-0.54,100.16,1.63,97.99L1.63,97.99z"/></g></svg>`;
 
+export const authenticatingSymbol = `
+<?xml version="1.0" encoding="utf-8"?><svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="122.88px" height="121.203px" viewBox="0 0 122.88 121.203" enable-background="new 0 0 122.88 121.203" xml:space="preserve"><g><path fill="#4281ff" fill-rule="evenodd" clip-rule="evenodd" d="M82.299,60.756l40.581,41.111v19.336h-19.2v-14.535H87.771v-15.91H72.546 L68.145,76.42c-7.01,4.674-15.514,7.412-24.678,7.412C19.466,83.832,0,65.063,0,41.916S19.466,0,43.467,0 c24.002,0,43.465,18.77,43.465,41.916C86.932,48.692,85.261,55.091,82.299,60.756L82.299,60.756z M37.22,28.487 c4.283,0,7.76,3.474,7.76,7.76c0,4.286-3.477,7.76-7.76,7.76c-4.286,0-7.76-3.474-7.76-7.76 C29.459,31.961,32.934,28.487,37.22,28.487L37.22,28.487z"/></g></svg>`;
+
 export class StateView extends View {
     protected override get content(): string {
         return `
@@ -59,6 +62,7 @@ export class StateView extends View {
             <div class="state-symbol" id="ok-symbol" style="display: block">${checkSymbol}</div>
             <div class="state-symbol" id="sync-symbol">${syncSymbol}</div>
             <div class="state-symbol" id="failed-symbol">${failedSymbol}</div>
+            <div class="state-symbol" id="authenticating-symbol">${authenticatingSymbol}</div>
             <p class="state-text">...</p>
             <div id="enter-mfa-section" style="display: none;">
                 Sync is waiting for MFA. Please enter your MFA code.<br/>
@@ -90,7 +94,7 @@ export class StateView extends View {
                     return new Date(date).toLocaleString()
                 }
 
-                setInterval(async () => {
+                async function updateState() {
                     try {
                         const state = await fetch("state", { headers: {
                             "Accept": "application/json",
@@ -102,6 +106,7 @@ export class StateView extends View {
                             document.getElementById("ok-symbol").style.display = "none";
                             document.getElementById("sync-symbol").style.display = "block";
                             document.getElementById("failed-symbol").style.display = "none";
+                            document.getElementById("authenticating-symbol").style.display = "none";
                             document.querySelector(".state-text").innerHTML = "Syncing...";
                             document.querySelectorAll(".during-sync-hidden").forEach((el) => {
                                 el.style.display = "none";
@@ -110,14 +115,25 @@ export class StateView extends View {
                             document.getElementById("ok-symbol").style.display = "block";
                             document.getElementById("sync-symbol").style.display = "none";
                             document.getElementById("failed-symbol").style.display = "none";
+                            document.getElementById("authenticating-symbol").style.display = "none";
                             document.querySelector(".state-text").innerHTML = "Last Sync Successful<br>" + formatDateOrUndefined(stateJson.lastSyncEndTimestamp);
                             document.querySelectorAll(".during-sync-hidden").forEach((el) => {
                                 el.style.display = "block";
+                            });
+                        } else if(stateJson.state === "authenticating") {
+                            document.getElementById("ok-symbol").style.display = "none";
+                            document.getElementById("sync-symbol").style.display = "none";
+                            document.getElementById("failed-symbol").style.display = "none";
+                            document.getElementById("authenticating-symbol").style.display = "block";
+                            document.querySelector(".state-text").innerHTML = "Authenticating...";
+                            document.querySelectorAll(".during-sync-hidden").forEach((el) => {
+                                el.style.display = "none";
                             });
                         } else {
                             document.getElementById("ok-symbol").style.display = "none";
                             document.getElementById("sync-symbol").style.display = "none";
                             document.getElementById("failed-symbol").style.display = "block";
+                            document.getElementById("authenticating-symbol").style.display = "none";
                             document.querySelector(".state-text").innerHTML = "Last Sync Failed<br>" + formatDateOrUndefined(stateJson.lastSyncEndTimestamp);
                             document.querySelectorAll(".during-sync-hidden").forEach((el) => {
                                 el.style.display = "block";
@@ -132,7 +148,9 @@ export class StateView extends View {
                         document.getElementById("failed-symbol").style.display = "block";
                         document.querySelector(".state-text").innerHTML = "Error fetching state";
                     }
-                }, 1000);
+                }
+                updateState();
+                setInterval(updateState, 1000);
             </script>
         `;
     }
