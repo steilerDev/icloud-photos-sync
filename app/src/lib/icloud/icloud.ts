@@ -27,9 +27,12 @@ export class iCloud {
 
     /**
      * Creates a new iCloud Object
+     * @param ignoreFailOnMfa - If set to true, the authentication will still continue even if MFA is required and the failOnMfa flag is set
      * @emits iCPSEventCloud.ERROR - If the MFA code is required and the failOnMfa flag is set - the iCPSError is provided as argument
      */
-    constructor() {
+    constructor(
+        private readonly ignoreFailOnMfa: boolean = false
+    ) {
         Resources.events(this)
             .on(iCPSEventMFA.MFA_RECEIVED, this.submitMFA.bind(this))
             .on(iCPSEventMFA.MFA_RESEND, this.resendMFA.bind(this));
@@ -39,7 +42,7 @@ export class iCloud {
         // ICloud lifecycle management
         Resources.events(this)
             .on(iCPSEventCloud.MFA_REQUIRED, () => {
-                if (Resources.manager().failOnMfa) {
+                if (Resources.manager().failOnMfa && !this.ignoreFailOnMfa) {
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.FAIL_ON_MFA));
                     return;
                 }

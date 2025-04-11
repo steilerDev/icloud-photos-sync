@@ -266,7 +266,7 @@ export class WebServer {
      */
     handlePostRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH)) {
-            const app = new TokenApp();
+            const app = new TokenApp(true);
             app.run().then(() => {
                 this.state = `reauthSuccess`;
                 this.stateTimestamp = new Date();
