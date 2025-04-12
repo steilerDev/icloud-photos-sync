@@ -78,7 +78,6 @@ describe(`MFA Code`, () => {
 describe(`MFA Resend`, () => {
     beforeEach(() => {
         mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
-        server.sendResponse = jest.fn<typeof server.sendResponse>();
     });
 
     test(`In app resend`, async () => {

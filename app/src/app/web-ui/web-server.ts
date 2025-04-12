@@ -142,7 +142,7 @@ export class WebServer {
      * @emits iCPSEventMFA.MFA_NOT_PROVIDED - When the MFA code was not provided within timeout period - Provides MFA method and iCPSError as arguments
      * @emits iCPSEventMFA.ERROR - When an error associated to the server startup occurs - Provides iCPSError as argument
      */
-    startServer() {
+    private startServer() {
         try {
             this.server.listen(Resources.manager().mfaServerPort, () => {
                 /* c8 ignore start */
@@ -164,7 +164,7 @@ export class WebServer {
      * @param res - The HTTP response object
      * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the request method or endpoint of server could not be found - Provides iCPSError as argument
      */
-    handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+    private handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if (req.method === `GET`) {
             this.handleGetRequest(req, res);
             return;
@@ -318,7 +318,7 @@ export class WebServer {
      * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the MFA code format is not as expected - Provides iCPSError as argument
      * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
      */
-    handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
+    private handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!this.waitingForMfa) {
             this.sendResponse(res, 400, `MFA code not expected at this time. Taking you back home.`, `/`);
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.NO_CODE_EXPECTED));
@@ -347,7 +347,7 @@ export class WebServer {
      * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the MFA resend method is not as expected - Provides iCPSError as argument
      * @emits iCPSEventMFA.MFA_RESEND - When the MFA code resend was requested - Provides MFA method as argument
      */
-    handleMFAResend(req: http.IncomingMessage, res: http.ServerResponse) {
+    private handleMFAResend(req: http.IncomingMessage, res: http.ServerResponse) {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
         if (!methodMatch) {
             this.sendResponse(res, 400, `Resend method does not match expected format`);
@@ -377,7 +377,7 @@ export class WebServer {
      * @param msg - The message included in the response
      * @param newLocation - The new location to redirect to, if any
      */
-    sendResponse(res: http.ServerResponse, code: number, msg: string, newLocation?: string) {
+    private sendResponse(res: http.ServerResponse, code: number, msg: string, newLocation?: string) {
         res.writeHead(code, {"Content-Type": `application/json`});
         res.end(jsonc.stringify({message: msg, newLocation: newLocation}));
     }
