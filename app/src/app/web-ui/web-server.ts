@@ -152,7 +152,9 @@ export class WebServer {
                 /* c8 ignore stop */
             });
         } catch (err) {
-            Resources.emit(iCPSEventWebServer.ERROR, new iCPSError(WEB_SERVER_ERR.STARTUP_FAILED).addCause(err));
+            const icpsErr = new iCPSError(WEB_SERVER_ERR.STARTUP_FAILED).addCause(err);
+            Resources.emit(iCPSEventWebServer.ERROR, icpsErr);
+            throw icpsErr;
         }
     }
 
