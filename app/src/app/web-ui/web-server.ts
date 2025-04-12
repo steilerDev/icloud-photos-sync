@@ -183,7 +183,7 @@ export class WebServer {
      * @param req - The HTTP request object
      * @param res - The HTTP response object
      */
-    handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+    private handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if(req.headers[`content-type`] === `application/json`) {
             if(req.url.startsWith(`/state`)) {
                 res.writeHead(200, {'Content-Type': `application/json`});
@@ -211,7 +211,7 @@ export class WebServer {
      * @param res - The HTTP response object
      * @returns HTML content as a string or null if no matching path is found
      */
-    handleUiRequest(req: http.IncomingMessage, res: http.ServerResponse): string | null {
+    private handleUiRequest(req: http.IncomingMessage, res: http.ServerResponse): string | null {
         const cleanPath = req.url?.split(`?`)[0];
 
         if (cleanPath === `/`) {
@@ -266,7 +266,7 @@ export class WebServer {
      * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the MFA code format is not as expected - Provides iCPSError as argument
      * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
      */
-    handlePostRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+    private handlePostRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH)) {
             const app = new TokenApp(true);
             app.run().then(() => {
@@ -304,11 +304,11 @@ export class WebServer {
      * @param res - The HTTP response object
      * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERROR - When the request method is not as expected - Provides iCPSError as argument
      */
-    handleInvalidMethodRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+    private handleInvalidMethodRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.METHOD_NOT_FOUND)
             .addMessage(`endpoint ${req.url}, method ${req.method}`)
             .addContext(`request`, req));
-        this.sendResponse(res, 400, `Method not supported: ${req.method}`);
+        this.sendResponse(res, 405, `Method not supported: ${req.method}`);
     }
 
     /**
