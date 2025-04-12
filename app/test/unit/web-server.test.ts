@@ -1,22 +1,27 @@
 
-import { beforeEach, describe, expect, jest, test } from '@jest/globals';
-import { iCPSError } from '../../src/app/error/error';
-import { MFA_ERR } from '../../src/app/error/error-codes';
-import { WEB_SERVER_API_ENDPOINTS, WebServer } from '../../src/app/web-ui/web-server';
-import { MFAMethod } from '../../src/lib/icloud/mfa/mfa-method';
-import { iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer } from '../../src/lib/resources/events-types';
-import { MockedEventManager, prepareResources } from '../_helpers/_general';
-import { requestFactory, responseFactory } from '../_helpers/mfa-server.helper';
+import {beforeEach, describe, expect, jest, test} from '@jest/globals';
+import http from 'http';
+import {iCPSError} from '../../src/app/error/error';
+import {WEB_SERVER_ERR} from '../../src/app/error/error-codes';
+import {WEB_SERVER_API_ENDPOINTS, WebServer} from '../../src/app/web-ui/web-server';
+import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../src/lib/resources/events-types';
+import {MockedEventManager, prepareResources} from '../_helpers/_general';
+import {requestFactory, responseFactory} from '../_helpers/mfa-server.helper';
 
 let server: WebServer;
 let mockedEventManager: MockedEventManager;
 
 beforeEach(() => {
     mockedEventManager = prepareResources()!.event;
-    server = new WebServer();
+    server = WebServer.spawn();
 });
 
 describe(`MFA Code`, () => {
+    beforeEach(() => {
+        mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
+    }); 
+
     test(`Valid Code format`, () => {
         const code = `123456`;
         const mfaMethod = new MFAMethod(`device`);
@@ -37,7 +42,7 @@ describe(`MFA Code`, () => {
         const code = `123 456`;
 
         server.sendResponse = jest.fn<typeof server.sendResponse>();
-        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
         const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.CODE_INPUT}?code=${code}`);
         const res = responseFactory();
@@ -51,6 +56,7 @@ describe(`MFA Code`, () => {
 
 describe(`MFA Resend`, () => {
     beforeEach(() => {
+        mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
         server.sendResponse = jest.fn<typeof server.sendResponse>();
     });
 
@@ -119,7 +125,7 @@ describe(`MFA Resend`, () => {
     test(`Invalid resend method`, () => {
         const method = `invalid`;
 
-        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
         const req = requestFactory(`${WEB_SERVER_API_ENDPOINTS.RESEND_CODE}?method=${method}`);
         const res = responseFactory();
@@ -165,7 +171,7 @@ describe(`Request routing`, () => {
         const req = requestFactory(`/invalid`, method);
         const res = responseFactory();
 
-        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
         server.handleRequest(req, res);
 
@@ -180,11 +186,11 @@ describe(`Request routing`, () => {
         const req = requestFactory(method, `POST`);
         const res = responseFactory();
 
-        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
+        const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
         server.handleRequest(req, res);
 
-        expect(server.sendResponse).toHaveBeenCalledWith(res, 404, `Route not found, available endpoints: ["/mfa","/resend_mfa"]`);
+        expect(server.sendResponse).toHaveBeenCalledWith(res, 404, `Route not found, available endpoints: ["/mfa","/resend_mfa","/reauthenticate","/sync"]`);
         expect(warnEvent).toHaveBeenCalledWith(new Error(`Received request to unknown endpoint`));
         expect(server.handleMFAResend).not.toHaveBeenCalled();
         expect(server.handleMFACode).not.toHaveBeenCalled();
@@ -202,15 +208,18 @@ describe(`Server lifecycle`, () => {
     });
 
     test(`Startup Error`, () => {
-        server.server.listen = jest.fn<typeof server.server.listen>(() => {
-            throw new Error(`some server error`);
-        }) as any;
-
+        const spy = jest.spyOn(http, `createServer`).mockReturnValue({
+            on: jest.fn(),
+            listen: () => { throw new Error(`some server error`) },
+            unref: jest.fn(),
+        } as any);
         const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
 
-        server.startServer();
+        const expectedError = new iCPSError(WEB_SERVER_ERR.STARTUP_FAILED).addCause(new Error(`some server error`))
+        expect(() => WebServer.spawn()).toThrowError(expectedError);
 
-        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.STARTUP_FAILED));
+        expect(errorEvent).toHaveBeenCalledWith(expectedError);
+        spy.mockRestore();
     });
 
     test(`Send response`, () => {
@@ -224,7 +233,7 @@ describe(`Server lifecycle`, () => {
         const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
         server.server.emit(`error`, new Error(`some server error`));
 
-        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.SERVER_ERR));
+        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(WEB_SERVER_ERR.SERVER_ERR));
     });
 
     test(`Handle address in use error`, () => {
@@ -233,7 +242,7 @@ describe(`Server lifecycle`, () => {
         (error as any).code = `EADDRINUSE`;
         server.server.emit(`error`, error);
 
-        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.ADDR_IN_USE_ERR));
+        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(WEB_SERVER_ERR.ADDR_IN_USE_ERR));
     });
 
     test(`Handle EACCES error`, () => {
@@ -242,6 +251,6 @@ describe(`Server lifecycle`, () => {
         (error as any).code = `EACCES`;
         server.server.emit(`error`, error);
 
-        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(MFA_ERR.INSUFFICIENT_PRIVILEGES));
+        expect(errorEvent).toHaveBeenCalledWith(new iCPSError(WEB_SERVER_ERR.INSUFFICIENT_PRIVILEGES));
     });
 });

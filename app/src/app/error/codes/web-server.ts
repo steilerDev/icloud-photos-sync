@@ -8,7 +8,7 @@ export const SERVER_ERR: ErrorStruct = buildErrorStruct(
 );
 
 export const STARTUP_FAILED: ErrorStruct = buildErrorStruct(
-    name, prefix, `STARTUP_FAILED`, `Unable to start MFA server`,
+    name, prefix, `STARTUP_FAILED`, `Unable to start Web server`,
 );
 
 export const NO_CODE_EXPECTED: ErrorStruct = buildErrorStruct(
