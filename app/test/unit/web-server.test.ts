@@ -323,6 +323,16 @@ describe(`State`, () => {
         const body = await response.json() as Record<string, unknown>;
         expect(body.waitingForMfa).toBe(false);
     });
+
+    test(`State is 'authenticating' when authentication was started`, async () => {
+        mockedEventManager.emit(iCPSEventCloud.AUTHENTICATION_STARTED);
+
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`authenticating`);
+    });
 })
 
 describe(`Invalid requests`, () => {
