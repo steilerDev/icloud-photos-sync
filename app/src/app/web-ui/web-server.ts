@@ -317,9 +317,7 @@ export class WebServer {
             this.waitingForMfa = false;
             this.setErrorMessageFromError(err);
         });
-        res.writeHead(200, {'Content-Type': `text/plain`});
-        res.write(`Reauthentication started`);
-        res.end();
+        this.sendResponse(res, 200, `Reauthentication requested`);
     }
 
     /**
@@ -338,9 +336,7 @@ export class WebServer {
      */
     private handleSyncRequest(res: http.ServerResponse<http.IncomingMessage>) {
         Resources.emit(iCPSEventWebServer.SYNC_REQUESTED);
-        res.writeHead(200, {'Content-Type': `text/plain`});
-        res.write(`Sync started`);
-        res.end();
+        this.sendResponse(res, 200, `Sync requested`);
     }
 
     /**

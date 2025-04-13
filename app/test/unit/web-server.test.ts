@@ -185,8 +185,10 @@ describe(`Reauthenticate`, () => {
         const response = await post(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH);
 
         expect(response.status).toBe(200);
-        const body = await response.text();
-        expect(body).toEqual(`Reauthentication started`);
+        const body = await response.json();
+        expect(body).toEqual({
+            message: `Reauthentication requested`
+        });
     });
 });
 
@@ -197,8 +199,10 @@ describe(`Sync`, () => {
         const response = await post(WEB_SERVER_API_ENDPOINTS.TRIGGER_SYNC);
 
         expect(response.status).toBe(200);
-        const body = await response.text();
-        expect(body).toEqual(`Sync started`);
+        const body = await response.json();
+        expect(body).toEqual({
+            message: `Sync requested`
+        });
         expect(syncEvent).toHaveBeenCalled();
     });
 });
