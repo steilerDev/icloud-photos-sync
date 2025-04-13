@@ -191,7 +191,7 @@ export class WebServer {
                 .addContext(`responseWritten`, !res.writable));
 
             if(res.writable) {
-                this.sendResponse(res, 500, `Unknown error occurred.`);
+                this.sendApiResponse(res, 500, `Unknown error occurred.`);
             }
             throw err
         }
@@ -298,7 +298,7 @@ export class WebServer {
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.ROUTE_NOT_FOUND)
                 .addMessage(req.url)
                 .addContext(`request`, req));
-            this.sendResponse(res, 404, `Route not found, available endpoints: ${jsonc.stringify(Object.values(WEB_SERVER_API_ENDPOINTS))}`);
+            this.sendApiResponse(res, 404, `Route not found, available endpoints: ${jsonc.stringify(Object.values(WEB_SERVER_API_ENDPOINTS))}`);
         }
     }
 
@@ -317,7 +317,7 @@ export class WebServer {
             this.waitingForMfa = false;
             this.setErrorMessageFromError(err);
         });
-        this.sendResponse(res, 200, `Reauthentication requested`);
+        this.sendApiResponse(res, 200, `Reauthentication requested`);
     }
 
     /**
@@ -336,7 +336,7 @@ export class WebServer {
      */
     private handleSyncRequest(res: http.ServerResponse<http.IncomingMessage>) {
         Resources.emit(iCPSEventWebServer.SYNC_REQUESTED);
-        this.sendResponse(res, 200, `Sync requested`);
+        this.sendApiResponse(res, 200, `Sync requested`);
     }
 
     /**
@@ -349,7 +349,7 @@ export class WebServer {
         Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.METHOD_NOT_FOUND)
             .addMessage(`endpoint ${req.url}, method ${req.method}`)
             .addContext(`request`, req));
-        this.sendResponse(res, 405, `Method not supported: ${req.method}`);
+        this.sendApiResponse(res, 405, `Method not supported: ${req.method}`);
     }
 
     /**
@@ -361,7 +361,7 @@ export class WebServer {
      */
     private handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!this.waitingForMfa) {
-            this.sendResponse(res, 400, `MFA code not expected at this time. Taking you back home.`, `/`);
+            this.sendApiResponse(res, 400, `MFA code not expected at this time. Taking you back home.`, `/`);
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.NO_CODE_EXPECTED));
             return;
         }
@@ -370,14 +370,14 @@ export class WebServer {
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.CODE_FORMAT)
                 .addMessage(req.url)
                 .addContext(`request`, req));
-            this.sendResponse(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
+            this.sendApiResponse(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
             return;
         }
 
         const mfa: string = req.url.slice(-6);
 
         Resources.logger(this).debug(`Received MFA: ${mfa}`);
-        this.sendResponse(res, 200, `Read MFA code: ${mfa}`);
+        this.sendApiResponse(res, 200, `Read MFA code: ${mfa}`);
         Resources.emit(iCPSEventMFA.MFA_RECEIVED, this.mfaMethod, mfa);
     }
 
@@ -391,7 +391,7 @@ export class WebServer {
     private handleMFAResend(req: http.IncomingMessage, res: http.ServerResponse) {
         const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
         if (!methodMatch) {
-            this.sendResponse(res, 400, `Resend method does not match expected format`);
+            this.sendApiResponse(res, 400, `Resend method does not match expected format`);
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.RESEND_METHOD_FORMAT)
                 .addContext(`requestURL`, req.url));
             return;
@@ -407,7 +407,7 @@ export class WebServer {
             this.mfaMethod.update(methodString);
         }
 
-        this.sendResponse(res, 200, `Requesting MFA resend with method ${this.mfaMethod}`);
+        this.sendApiResponse(res, 200, `Requesting MFA resend with method ${this.mfaMethod}`);
         Resources.emit(iCPSEventMFA.MFA_RESEND, this.mfaMethod);
     }
 
@@ -418,7 +418,7 @@ export class WebServer {
      * @param msg - The message included in the response
      * @param newLocation - The new location to redirect to, if any
      */
-    private sendResponse(res: http.ServerResponse, code: number, msg: string, newLocation?: string) {
+    private sendApiResponse(res: http.ServerResponse, code: number, msg: string, newLocation?: string) {
         res.writeHead(code, {"Content-Type": `application/json`});
         res.end(jsonc.stringify({message: msg, newLocation: newLocation}));
     }
