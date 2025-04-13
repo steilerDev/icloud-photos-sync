@@ -11,11 +11,6 @@ import {StateView} from './view/state-view.js';
 import {SubmitMfaView} from './view/submit-mfa-view.js';
 
 /**
- * The MFA timeout value in milliseconds
- */
-export const MFA_TIMEOUT_VALUE = 1000 * 60 * 10; // 10 minutes
-
-/**
  * Endpoint URI of Web Server, all expect POST requests
  */
 export const WEB_SERVER_API_ENDPOINTS = {
@@ -123,11 +118,12 @@ export class WebServer {
      * Closes this server
      */
     public close(): void {
+        Resources.events(this).removeListeners();
         this.server.close();
     }
 
     private setErrorMessageFromError(error: iCPSError) {
-        let cause = error.cause as iCPSError;
+        let cause = error
         while (cause.cause && cause.cause instanceof iCPSError) {
             cause = cause.cause;
         }

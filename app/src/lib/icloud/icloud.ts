@@ -3,13 +3,17 @@ import {jsonc} from 'jsonc';
 import pTimeout from 'p-timeout';
 import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.js';
 import {iCPSError} from '../../app/error/error.js';
-import {MFA_TIMEOUT_VALUE} from '../../app/web-ui/web-server.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 import {Resources} from '../resources/main.js';
 import {COOKIE_KEYS, ENDPOINTS} from '../resources/network-types.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {iCloudCrypto} from './icloud.crypto.js';
 import {MFAMethod} from './mfa/mfa-method.js';
+
+/**
+ * The MFA timeout value in milliseconds
+ */
+export const MFA_TIMEOUT_VALUE = 1000 * 60 * 10; // 10 minutes
 
 /**
  * This class holds the iCloud connection
