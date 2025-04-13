@@ -1,5 +1,5 @@
 
-import {beforeEach, describe, expect, jest, test} from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import http from 'http';
 import {iCPSError} from '../../src/app/error/error';
 import {WEB_SERVER_ERR} from '../../src/app/error/error-codes';
@@ -26,6 +26,10 @@ function post(path: string, body?: any) {
 beforeEach(() => {
     mockedEventManager = prepareResources()!.event;
     server = WebServer.spawn();
+});
+
+afterEach(() => {
+    server.close();
 });
 
 describe(`MFA Code`, () => {
@@ -166,6 +170,36 @@ describe(`MFA Resend`, () => {
             message: `Resend method does not match expected format`,
         });
         expect(warnEvent).toHaveBeenCalledWith(new Error(`Resend method does not match expected format`));
+    });
+});
+
+describe(`Reauthenticate`, () => {
+    const reauthFactory = jest.fn<() => Promise<unknown>>()
+
+    beforeEach(() => {
+        reauthFactory.mockReturnValue(new Promise(() => {}));
+        server[`triggerReauth`] = reauthFactory;
+    });
+
+    test(`Valid Reauthenticate`, async () => {
+        const response = await post(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH);
+
+        expect(response.status).toBe(200);
+        const body = await response.text();
+        expect(body).toEqual(`Reauthentication started`);
+    });
+});
+
+describe(`Sync`, () => {
+    test(`Valid Sync`, async () => {
+        const syncEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.SYNC_REQUESTED);
+
+        const response = await post(WEB_SERVER_API_ENDPOINTS.TRIGGER_SYNC);
+
+        expect(response.status).toBe(200);
+        const body = await response.text();
+        expect(body).toEqual(`Sync started`);
+        expect(syncEvent).toHaveBeenCalled();
     });
 });
 

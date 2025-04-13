@@ -118,6 +118,13 @@ export class WebServer {
         this.mfaMethod = new MFAMethod();
     }
 
+    /**
+     * Closes this server
+     */
+    public close(): void {
+        this.server.close();
+    }
+
     private setErrorMessageFromError(error: iCPSError) {
         let cause = error.cause as iCPSError;
         while (cause.cause && cause.cause instanceof iCPSError) {
@@ -165,17 +172,29 @@ export class WebServer {
      * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the request method or endpoint of server could not be found - Provides iCPSError as argument
      */
     private handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        if (req.method === `GET`) {
-            this.handleGetRequest(req, res);
-            return;
-        }
+        try {
+            if (req.method === `GET`) {
+                this.handleGetRequest(req, res);
+                return;
+            }
 
-        if (req.method === `POST`) {
-            this.handlePostRequest(req, res);
-            return;
-        }
+            if (req.method === `POST`) {
+                this.handlePostRequest(req, res);
+                return;
+            }
 
-        this.handleInvalidMethodRequest(req, res);
+            this.handleInvalidMethodRequest(req, res);
+        } catch(err) {
+            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.UNKNOWN_ERR)
+                .addMessage(err.message)
+                .addContext(`request`, req)
+                .addContext(`responseWritten`, !res.writable));
+
+            if(res.writable) {
+                this.sendResponse(res, 500, `Unknown error occurred.`);
+            }
+            throw err
+        }
     }
 
     /**
@@ -268,24 +287,9 @@ export class WebServer {
      */
     private handlePostRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH)) {
-            const app = new TokenApp(true);
-            app.run().then(() => {
-                this.state = `reauthSuccess`;
-                this.stateTimestamp = new Date();
-            }).catch(err => {
-                this.state = `reauthError`;
-                this.stateTimestamp = new Date();
-                this.waitingForMfa = false;
-                this.setErrorMessageFromError(err); 
-            });
-            res.writeHead(200, {'Content-Type': `text/plain`});
-            res.write(`Reauthentication started`);
-            res.end();
+            this.handleReauthRequest(res);
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.TRIGGER_SYNC)) {
-            Resources.emit(iCPSEventWebServer.SYNC_REQUESTED);
-            res.writeHead(200, {'Content-Type': `text/plain`});
-            res.write(`Sync started`);
-            res.end();
+            this.handleSyncRequest(res);
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.CODE_INPUT)) {
             this.handleMFACode(req, res);
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.RESEND_CODE)) {
@@ -296,6 +300,47 @@ export class WebServer {
                 .addContext(`request`, req));
             this.sendResponse(res, 404, `Route not found, available endpoints: ${jsonc.stringify(Object.values(WEB_SERVER_API_ENDPOINTS))}`);
         }
+    }
+
+    /**
+     * This function will handle the request send to the reauthentication endpoint
+     * @param res - The HTTP response object
+     */
+    private handleReauthRequest(res: http.ServerResponse<http.IncomingMessage>) {
+        const reauthProcess = this.triggerReauth()
+        reauthProcess.then(() => {
+            this.state = `reauthSuccess`;
+            this.stateTimestamp = new Date();
+        }).catch(err => {
+            this.state = `reauthError`;
+            this.stateTimestamp = new Date();
+            this.waitingForMfa = false;
+            this.setErrorMessageFromError(err);
+        });
+        res.writeHead(200, {'Content-Type': `text/plain`});
+        res.write(`Reauthentication started`);
+        res.end();
+    }
+
+    /**
+     * This function will trigger the reauthentication process
+     * @returns A promise that resolves when the reauthentication process is complete
+     */
+    private triggerReauth(): Promise<unknown> {
+        const app = new TokenApp(true);
+        return app.run()
+    }
+
+    /**
+     * This function will handle the request send to the sync endpoint
+     * @param res - The HTTP response object
+     * @emits iCPSEventWebServer.SYNC_REQUESTED - When the sync was requested
+     */
+    private handleSyncRequest(res: http.ServerResponse<http.IncomingMessage>) {
+        Resources.emit(iCPSEventWebServer.SYNC_REQUESTED);
+        res.writeHead(200, {'Content-Type': `text/plain`});
+        res.write(`Sync started`);
+        res.end();
     }
 
     /**

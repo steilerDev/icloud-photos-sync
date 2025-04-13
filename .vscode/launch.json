@@ -67,7 +67,7 @@
                 "--detectOpenHandles",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/app.test.ts"
+                "test/unit/web-server.test.ts"
             ],
             "env": {
                 "NODE_NO_WARNINGS": "1"

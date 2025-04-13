@@ -38,3 +38,7 @@ export const CODE_FORMAT: ErrorStruct = buildErrorStruct(
 export const RESEND_METHOD_FORMAT: ErrorStruct = buildErrorStruct(
     name, prefix, `RESEND_METHOD_FORMAT`, `Resend method does not match expected format`,
 );
+
+export const UNKNOWN_ERR: ErrorStruct = buildErrorStruct(
+    name, prefix, `UNKNOWN_ERR`, `Unknown error`,
+);
