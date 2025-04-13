@@ -333,6 +333,48 @@ describe(`State`, () => {
         const body = await response.json() as Record<string, unknown>;
         expect(body.state).toBe(`authenticating`);
     });
+
+    test(`State is 'reauthSuccess' when completed successfully`, async () => {
+        server[`triggerReauth`] = jest.fn(() => Promise.resolve(true));
+    
+        await postJson(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH);
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`reauthSuccess`);
+        const diff = Math.abs(Date.now() - new Date(body.stateTimestamp as string).getTime());
+        expect(diff).toBeLessThan(1000);
+    });
+
+    test(`State is 'reauthError' with corresponding error message if mfa timed out`, async () => {
+        server[`triggerReauth`] = jest.fn(() => Promise.resolve(false));
+    
+        await postJson(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH);
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`reauthError`);
+        expect(body.errorMessage).toBe(`Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`);
+        const diff = Math.abs(Date.now() - new Date(body.stateTimestamp as string).getTime());
+        expect(diff).toBeLessThan(1000);
+    });
+
+    test(`State is 'reauthError' with corresponding error message if reauth failed`, async () => {
+        const error = new iCPSError(AUTH_ERR.UNAUTHORIZED);
+        server[`triggerReauth`] = jest.fn(() => Promise.reject(error));
+    
+        await postJson(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH);
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`reauthError`);
+        expect(body.errorMessage).toBe(`Your credentials seem to be invalid. Please check your iCloud credentials and try again.`);
+        const diff = Math.abs(Date.now() - new Date(body.stateTimestamp as string).getTime());
+        expect(diff).toBeLessThan(1000);
+    });
 })
 
 describe(`Invalid requests`, () => {
