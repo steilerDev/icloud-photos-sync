@@ -235,7 +235,7 @@ describe(`Invalid requests`, () => {
         expect(response.status).toBe(404);
         const body = await response.json();
         expect(body).toEqual({
-            message: `Route not found, available endpoints: ["/mfa","/resend_mfa","/reauthenticate","/sync"]`,
+            message: `Route not found, available endpoints: ["/mfa","/reauthenticate","/resend_mfa","/state","/sync"]`,
         });
         expect(warnEvent).toHaveBeenCalledWith(new Error(`Received request to unknown endpoint`));
     });

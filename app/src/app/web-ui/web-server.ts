@@ -20,9 +20,10 @@ export const MFA_TIMEOUT_VALUE = 1000 * 60 * 10; // 10 minutes
  */
 export const WEB_SERVER_API_ENDPOINTS = {
     CODE_INPUT: `/mfa`, // Expecting URL parameter 'code' with 6 digits
+    TRIGGER_REAUTH: `/reauthenticate`, // Expecting no URL parameters
     RESEND_CODE: `/resend_mfa`, // Expecting URL parameter 'method' (either 'device', 'sms', 'voice') and optionally 'phoneNumberId' (any number > 0)
-    TRIGGER_REAUTH: `/reauthenticate`,
-    TRIGGER_SYNC: `/sync`
+    STATE: `/state`, // Expecting no URL parameters
+    TRIGGER_SYNC: `/sync` // Expecting no URL parameters
 };
 
 /**
@@ -204,15 +205,8 @@ export class WebServer {
      */
     private handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if(req.headers[`content-type`] === `application/json`) {
-            if(req.url.startsWith(`/state`)) {
-                res.writeHead(200, {'Content-Type': `application/json`});
-                res.write(JSON.stringify({
-                    state: this.state,
-                    stateTimestamp: this.stateTimestamp,
-                    waitingForMfa: this.waitingForMfa,
-                    errorMessage: this.state == `error` || this.state == `reauthError` ? this.errorMessage : null,
-                }));
-                res.end();
+            if(req.url.startsWith(WEB_SERVER_API_ENDPOINTS.STATE)) {
+                this.handleStateRequest(res);
             } else {
                 res.writeHead(404, {'Content-Type': `text/plain`});
                 res.write(`Not Found`);
@@ -222,6 +216,22 @@ export class WebServer {
         }
 
         this.handleUiRequest(req, res);
+    }
+
+    /**
+     * This function will handle the request send to the state endpoint
+     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the request method or endpoint of server could not be found - Provides iCPSError as argument
+     * @param res - The HTTP response object
+     */
+    private handleStateRequest(res: http.ServerResponse<http.IncomingMessage>) {
+        res.writeHead(200, {'Content-Type': `application/json`});
+        res.write(JSON.stringify({
+            state: this.state,
+            stateTimestamp: this.stateTimestamp,
+            waitingForMfa: this.waitingForMfa,
+            errorMessage: this.state == `error` || this.state == `reauthError` ? this.errorMessage : null,
+        }));
+        res.end();
     }
 
     /**
