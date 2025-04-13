@@ -10,17 +10,11 @@ import {Resources} from "../lib/resources/main.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
 import {iCPSError} from "./error/error.js";
-import {WebServer} from "./web-ui/web-server.js";
 
 /**
  * Abstract class returned by the factory function
  */
 export abstract class iCPSApp {
-    /**
-     * Holds the web ui server
-     */
-    webServer: WebServer = WebServer.spawn();
-
     /**
      * Executes this app
      */

@@ -2,10 +2,10 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import http from 'http';
 import {iCPSError} from '../../src/app/error/error';
-import {WEB_SERVER_ERR} from '../../src/app/error/error-codes';
+import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from '../../src/app/error/error-codes';
 import {WEB_SERVER_API_ENDPOINTS, WebServer} from '../../src/app/web-ui/web-server';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
-import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../src/lib/resources/events-types';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../src/lib/resources/events-types';
 import {MockedEventManager, prepareResources} from '../_helpers/_general';
 
 let server: WebServer;
@@ -13,7 +13,16 @@ let mockedEventManager: MockedEventManager;
 
 const webserverURL = `http://localhost:80`;
 
-function post(path: string, body?: any) {
+function getJson(path: string) {
+    return fetch(`${webserverURL}${path}`, {
+        method: `GET`,
+        headers: {
+            'Content-Type': `application/json`,
+        },
+    });
+}
+
+function postJson(path: string, body?: any) {
     return fetch(`${webserverURL}${path}`, {
         method: `POST`,
         headers: {
@@ -42,7 +51,7 @@ describe(`MFA Code`, () => {
         const mfaMethod = new MFAMethod(`device`);
         const mfaReceivedEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RECEIVED);
 
-        const response = await post(WEB_SERVER_API_ENDPOINTS.CODE_INPUT + `?code=${code}`);
+        const response = await postJson(WEB_SERVER_API_ENDPOINTS.CODE_INPUT + `?code=${code}`);
 
         expect(response.status).toBe(200);
         const body = await response.json();
@@ -57,7 +66,7 @@ describe(`MFA Code`, () => {
         const code = `123 456`;
         const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
-        const response = await post(WEB_SERVER_API_ENDPOINTS.CODE_INPUT + `?code=${code}`);
+        const response = await postJson(WEB_SERVER_API_ENDPOINTS.CODE_INPUT + `?code=${code}`);
 
         expect(response.status).toBe(400);
         const body = await response.json();
@@ -70,7 +79,7 @@ describe(`MFA Code`, () => {
     test(`Missing code`, async () => {
         const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
-        const response = await post(WEB_SERVER_API_ENDPOINTS.CODE_INPUT);
+        const response = await postJson(WEB_SERVER_API_ENDPOINTS.CODE_INPUT);
 
         expect(response.status).toBe(400);
         const body = await response.json();
@@ -91,7 +100,7 @@ describe(`MFA Resend`, () => {
         const mfaMethod = new MFAMethod(method);
         const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-        const response = await post(WEB_SERVER_API_ENDPOINTS.RESEND_CODE + `?method=${method}`);
+        const response = await postJson(WEB_SERVER_API_ENDPOINTS.RESEND_CODE + `?method=${method}`);
 
         expect(response.status).toBe(200);
         const body = await response.json();
@@ -106,7 +115,7 @@ describe(`MFA Resend`, () => {
             const mfaMethod = new MFAMethod(method as `sms` | `voice`);
             const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-            const response = await post(WEB_SERVER_API_ENDPOINTS.RESEND_CODE + `?method=${method}`);
+            const response = await postJson(WEB_SERVER_API_ENDPOINTS.RESEND_CODE + `?method=${method}`);
 
             expect(response.status).toBe(200);
             const body = await response.json();
@@ -121,7 +130,7 @@ describe(`MFA Resend`, () => {
             const mfaMethod = new MFAMethod(method as `sms` | `voice`, phoneNumberId);
             const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-            const response = await post(WEB_SERVER_API_ENDPOINTS.RESEND_CODE + `?method=${method}&phoneNumberId=${phoneNumberId}`);
+            const response = await postJson(WEB_SERVER_API_ENDPOINTS.RESEND_CODE + `?method=${method}&phoneNumberId=${phoneNumberId}`);
             expect(response.status).toBe(200);
             const body = await response.json();
             expect(body).toEqual({
@@ -135,7 +144,7 @@ describe(`MFA Resend`, () => {
             const mfaMethod = new MFAMethod(method as `sms` | `voice`);
             const mfaResendEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
 
-            const response = await post(WEB_SERVER_API_ENDPOINTS.RESEND_CODE + `?method=${method}&phoneNumberId=${phoneNumberId}`);
+            const response = await postJson(WEB_SERVER_API_ENDPOINTS.RESEND_CODE + `?method=${method}&phoneNumberId=${phoneNumberId}`);
             expect(response.status).toBe(200);
             const body = await response.json();
             expect(body).toEqual({
@@ -149,7 +158,7 @@ describe(`MFA Resend`, () => {
         const method = `invalid`;
         const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
-        const response = await post(WEB_SERVER_API_ENDPOINTS.RESEND_CODE + `?method=${method}`);
+        const response = await postJson(WEB_SERVER_API_ENDPOINTS.RESEND_CODE + `?method=${method}`);
 
         expect(response.status).toBe(400);
         const body = await response.json();
@@ -162,7 +171,7 @@ describe(`MFA Resend`, () => {
     test(`Missing resend method`, async () => {
         const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
-        const response = await post(WEB_SERVER_API_ENDPOINTS.RESEND_CODE);
+        const response = await postJson(WEB_SERVER_API_ENDPOINTS.RESEND_CODE);
 
         expect(response.status).toBe(400);
         const body = await response.json();
@@ -182,7 +191,7 @@ describe(`Reauthenticate`, () => {
     });
 
     test(`Valid Reauthenticate`, async () => {
-        const response = await post(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH);
+        const response = await postJson(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH);
 
         expect(response.status).toBe(200);
         const body = await response.json();
@@ -196,7 +205,7 @@ describe(`Sync`, () => {
     test(`Valid Sync`, async () => {
         const syncEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.SYNC_REQUESTED);
 
-        const response = await post(WEB_SERVER_API_ENDPOINTS.TRIGGER_SYNC);
+        const response = await postJson(WEB_SERVER_API_ENDPOINTS.TRIGGER_SYNC);
 
         expect(response.status).toBe(200);
         const body = await response.json();
@@ -206,6 +215,115 @@ describe(`Sync`, () => {
         expect(syncEvent).toHaveBeenCalled();
     });
 });
+
+describe(`State`, () => {
+    test(`State is initially unknown`, async () => {
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`unknown`);
+    });
+
+    test(`is 'syncing' when sync was started`, async () => {
+        mockedEventManager.emit(iCPSEventSyncEngine.START);
+
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`syncing`);
+    });
+
+    test(`State is 'ok' when sync was finished`, async () => {
+        mockedEventManager.emit(iCPSEventSyncEngine.DONE);
+
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`ok`);
+        const diff = Math.abs(Date.now() - new Date(body.stateTimestamp as string).getTime());
+        expect(diff).toBeLessThan(1000);
+    });
+
+    test(`State is 'error' with corresponding error message when sync failed due to wrong credentials`, async () => {
+        const error = new iCPSError(AUTH_ERR.UNAUTHORIZED);
+        mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, error);
+
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`error`);
+        expect(body.errorMessage).toBe(`Your credentials seem to be invalid. Please check your iCloud credentials and try again.`);
+        const diff = Math.abs(Date.now() - new Date(body.stateTimestamp as string).getTime());
+        expect(diff).toBeLessThan(1000);
+    });
+
+    test(`State is 'error' with corresponding error message when sync failed due to MFA`, async () => {
+        const error = new iCPSError(MFA_ERR.FAIL_ON_MFA);
+        mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, error);
+
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`error`);
+        expect(body.errorMessage).toBe(`Multifactor authentication code required. Use the 'Renew Authentication' button to request and enter a new code.`);
+        const diff = Math.abs(Date.now() - new Date(body.stateTimestamp as string).getTime());
+        expect(diff).toBeLessThan(1000);
+    });
+
+    test(`State is 'error' with corresponding error message when sync failed due to other error`, async () => {
+        const error = new iCPSError(WEB_SERVER_ERR.UNKNOWN_ERR);
+        mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, error);
+
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`error`);
+        expect(body.errorMessage).toBe(`Unknown error`);
+        const diff = Math.abs(Date.now() - new Date(body.stateTimestamp as string).getTime());
+        expect(diff).toBeLessThan(1000);
+    });
+
+    test(`State is 'error' with error message from root cause when sync failed due to a nested error`, async () => {
+        const error = new iCPSError(WEB_SERVER_ERR.UNKNOWN_ERR).addCause(new iCPSError(AUTH_ERR.UNAUTHORIZED));
+        mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, error);
+
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.state).toBe(`error`);
+        expect(body.errorMessage).toBe(`Your credentials seem to be invalid. Please check your iCloud credentials and try again.`);
+        const diff = Math.abs(Date.now() - new Date(body.stateTimestamp as string).getTime());
+        expect(diff).toBeLessThan(1000);
+    });
+
+    test(`'waitingForMfa' is set when MFA is required`, async () => {
+        mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
+
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.waitingForMfa).toBe(true);
+    });
+
+    test(`'waitingForMfa' is not set when MFA was received`, async () => {
+        mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
+        mockedEventManager.emit(iCPSEventMFA.MFA_RECEIVED);
+
+        const response = await getJson(WEB_SERVER_API_ENDPOINTS.STATE);
+
+        expect(response.status).toBe(200);
+        const body = await response.json() as Record<string, unknown>;
+        expect(body.waitingForMfa).toBe(false);
+    });
+})
 
 describe(`Invalid requests`, () => {
     test(`PUT /invalid-route`, async () => {

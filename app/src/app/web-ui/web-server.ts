@@ -98,11 +98,6 @@ export class WebServer {
             this.waitingForMfa = false;
         });
 
-        Resources.events(this).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
-            this.waitingForMfa = false;
-            this.errorMessage = `Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`;
-        });
-
         Resources.events(this).on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
             this.state = `authenticating`;
         });
@@ -313,16 +308,24 @@ export class WebServer {
      * @param res - The HTTP response object
      */
     private handleReauthRequest(res: http.ServerResponse<http.IncomingMessage>) {
-        const reauthProcess = this.triggerReauth()
-        reauthProcess.then(() => {
-            this.state = `reauthSuccess`;
-            this.stateTimestamp = new Date();
-        }).catch(err => {
-            this.state = `reauthError`;
-            this.stateTimestamp = new Date();
-            this.waitingForMfa = false;
-            this.setErrorMessageFromError(err);
-        });
+        this.triggerReauth()
+            // this unchecked cast is a bit nasty, maybe we can listen to a success event so we don't need to set any state based on the promise result
+            .then((mfaOk: boolean) => {
+                if(mfaOk) {
+                    this.state = `reauthSuccess`;
+                    this.stateTimestamp = new Date();
+                } else {
+                    this.state = `reauthError`;
+                    this.stateTimestamp = new Date();
+                    this.waitingForMfa = false;
+                    this.errorMessage = `Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`;
+                }
+            }).catch(err => {
+                this.state = `reauthError`;
+                this.stateTimestamp = new Date();
+                this.waitingForMfa = false;
+                this.setErrorMessageFromError(err);
+            });
         this.sendApiResponse(res, 200, `Reauthentication requested`);
     }
 

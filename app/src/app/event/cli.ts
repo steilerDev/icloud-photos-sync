@@ -89,7 +89,8 @@ export class CLIInterface {
             .on(iCPSEventWebServer.STARTED, port => {
                 this.print(chalk.white(`Web server is listening on port ${port}`));
             })
-            .on(iCPSEventWebServer.ERROR, () => {
+            .on(iCPSEventWebServer.ERROR, (error) => {
+                this.print(chalk.red(`Web server error: ${error}`));
                 this.print(chalk.red(`Failed to start web server. Exiting.`));
                 process.exit(1);
             });
