@@ -11,8 +11,10 @@ import {MockedEventManager, prepareResources} from '../_helpers/_general';
 let server: WebServer;
 let mockedEventManager: MockedEventManager;
 
+const webserverURL = `http://localhost:80`;
+
 function post(path: string, body?: any) {
-    return fetch(`http://localhost:80${path}`, {
+    return fetch(`${webserverURL}${path}`, {
         method: `POST`,
         headers: {
             'Content-Type': `application/json`,
@@ -167,12 +169,12 @@ describe(`MFA Resend`, () => {
     });
 });
 
-describe(`Request routing`, () => {
+describe(`Invalid requests`, () => {
     test(`PUT /invalid-route`, async () => {
         const method = `PUT`;
         const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
-        const response = await fetch(`http://localhost:80/invalid-route`, {
+        const response = await fetch(`${webserverURL}/invalid-route`, {
             method
         })
 
@@ -188,7 +190,7 @@ describe(`Request routing`, () => {
         const method = `/invalid`;
         const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
-        const response = await fetch(`http://localhost:80${method}`, {
+        const response = await fetch(`${webserverURL}${method}`, {
             method: `POST`
         })
 
