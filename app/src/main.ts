@@ -15,7 +15,7 @@ const _logInterface = new LogInterface();
 const _cliInterface = new CLIInterface();
 const _metricsExporter = new MetricsExporter();
 const _healthCheckPingExecutor = new HealthCheckPingExecutor();
-const _webServer = WebServer.spawn();
+const _webServer = await WebServer.spawn();
 
 try {
     await app.run();

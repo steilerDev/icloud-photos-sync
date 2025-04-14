@@ -43,9 +43,9 @@ export class WebServer {
 
     errorMessage: string = null;
 
-    static spawn() {
+    static async spawn(): Promise<WebServer> {
         const webServer = new WebServer()
-        webServer.startServer();
+        await webServer.startServer();
         return webServer;
     }
 
@@ -112,9 +112,11 @@ export class WebServer {
     /**
      * Closes this server
      */
-    public close(): void {
+    public close(): Promise<void> {
         Resources.events(this).removeListeners();
-        this.server.close();
+        return new Promise<void>(resolve => {
+            this.server.close(() => resolve());
+        });
     }
 
     private setErrorMessageFromError(error: iCPSError) {
@@ -142,19 +144,22 @@ export class WebServer {
      * @emits iCPSEventMFA.ERROR - When an error associated to the server startup occurs - Provides iCPSError as argument
      */
     private startServer() {
-        try {
-            this.server.listen(Resources.manager().mfaServerPort, () => {
-                /* c8 ignore start */
-                // Never starting the server just to see logger message
-                Resources.emit(iCPSEventWebServer.STARTED, Resources.manager().mfaServerPort);
-                Resources.logger(this).info(`Exposing endpoints: ${jsonc.stringify(Object.values(WEB_SERVER_API_ENDPOINTS))}`);
-                /* c8 ignore stop */
-            });
-        } catch (err) {
-            const icpsErr = new iCPSError(WEB_SERVER_ERR.STARTUP_FAILED).addCause(err);
-            Resources.emit(iCPSEventWebServer.ERROR, icpsErr);
-            throw icpsErr;
-        }
+        return new Promise<WebServer>((resolve, reject) => {
+            try {
+                this.server.listen(Resources.manager().mfaServerPort, () => {
+                    /* c8 ignore start */
+                    // Never starting the server just to see logger message
+                    Resources.emit(iCPSEventWebServer.STARTED, Resources.manager().mfaServerPort);
+                    Resources.logger(this).info(`Exposing endpoints: ${jsonc.stringify(Object.values(WEB_SERVER_API_ENDPOINTS))}`);
+                    /* c8 ignore stop */
+                    resolve(this);
+                });
+            } catch (err) {
+                const icpsErr = new iCPSError(WEB_SERVER_ERR.STARTUP_FAILED).addCause(err);
+                Resources.emit(iCPSEventWebServer.ERROR, icpsErr);
+                reject(icpsErr);
+            }
+        });
     }
 
     /**
