@@ -22,7 +22,7 @@ beforeAll(() => {
 beforeEach(() => {
     mockfs();
     prepareResources(false);
-    jest.spyOn(WebServer, `spawn`).mockImplementation(() => { return {} as WebServer; });
+    jest.spyOn(WebServer, `spawn`).mockImplementation(() => { return Promise.resolve({} as WebServer); });
 });
 
 afterEach(() => {
