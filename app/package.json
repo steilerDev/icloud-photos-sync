@@ -61,7 +61,7 @@
   ],
   "devDependencies": {
     "@backtrace/javascript-cli": "0.3.2",
-    "@eslint/js": "9.25.1",
+    "@eslint/js": "9.26.0",
     "@jest/globals": "29.7.0",
     "@types/cli-progress": "3.11.6",
     "@types/jest": "29.5.14",
