@@ -1,37 +1,42 @@
 import {AxiosError, AxiosRequestConfig} from 'axios';
-import {MFAServer, MFA_TIMEOUT_VALUE} from './mfa/mfa-server.js';
-import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
-import {MFAMethod} from './mfa/mfa-method.js';
+import {jsonc} from 'jsonc';
+import pTimeout from 'p-timeout';
+import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.js';
 import {iCPSError} from '../../app/error/error.js';
-import {ICLOUD_PHOTOS_ERR, MFA_ERR, AUTH_ERR} from '../../app/error/error-codes.js';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 import {Resources} from '../resources/main.js';
 import {COOKIE_KEYS, ENDPOINTS} from '../resources/network-types.js';
-import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
-import pTimeout from 'p-timeout';
-import {jsonc} from 'jsonc';
+import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {iCloudCrypto} from './icloud.crypto.js';
+import {MFAMethod} from './mfa/mfa-method.js';
+
+/**
+ * The MFA timeout value in milliseconds
+ */
+export const MFA_TIMEOUT_VALUE = 1000 * 60 * 10; // 10 minutes
 
 /**
  * This class holds the iCloud connection
  */
 export class iCloud {
     /**
-     * Server object to input MFA code
-     */
-    mfaServer: MFAServer;
-
-    /**
      * Access to the iCloud Photos service
      */
     photos: iCloudPhotos;
 
     /**
+     * Timeout for MFA code submission
+     */
+    mfaTimeout: NodeJS.Timeout;
+
+    /**
      * Creates a new iCloud Object
+     * @param ignoreFailOnMfa - If set to true, the authentication will still continue even if MFA is required and the failOnMfa flag is set
      * @emits iCPSEventCloud.ERROR - If the MFA code is required and the failOnMfa flag is set - the iCPSError is provided as argument
      */
-    constructor() {
-        // MFA Server & lifecycle management
-        this.mfaServer = new MFAServer();
+    constructor(
+        private readonly ignoreFailOnMfa: boolean = false
+    ) {
         Resources.events(this)
             .on(iCPSEventMFA.MFA_RECEIVED, this.submitMFA.bind(this))
             .on(iCPSEventMFA.MFA_RESEND, this.resendMFA.bind(this));
@@ -41,12 +46,15 @@ export class iCloud {
         // ICloud lifecycle management
         Resources.events(this)
             .on(iCPSEventCloud.MFA_REQUIRED, () => {
-                if (Resources.manager().failOnMfa) {
+                if (Resources.manager().failOnMfa && !this.ignoreFailOnMfa) {
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.FAIL_ON_MFA));
                     return;
                 }
 
-                this.mfaServer.startServer();
+                // MFA code needs to be provided within timeout period
+                this.mfaTimeout = setTimeout(() => {
+                    Resources.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.MFA_TIMEOUT));
+                }, MFA_TIMEOUT_VALUE);
             })
             .on(iCPSEventCloud.TRUSTED, async () => {
                 await this.setupAccount();
@@ -75,8 +83,7 @@ export class iCloud {
                 Resources.events(this)
                     .once(iCPSEventPhotos.READY, () => resolve(true))
                     .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => resolve(false))
-                    .once(iCPSEventCloud.ERROR, err => reject(err))
-                    .once(iCPSEventMFA.ERROR, err => reject(err));
+                    .once(iCPSEventCloud.ERROR, err => reject(err));
             }), {
                 milliseconds: MFA_TIMEOUT_VALUE + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
                 message: new iCPSError(AUTH_ERR.SETUP_TIMEOUT),
@@ -264,8 +271,10 @@ export class iCloud {
      */
     async submitMFA(method: MFAMethod, mfa: string) {
         try {
-            this.mfaServer.stopServer();
             Resources.logger(this).info(`Authenticating MFA with code ${mfa}`);
+            if (this.mfaTimeout) {
+                clearTimeout(this.mfaTimeout);
+            }
 
             const url = method.getEnterURL();
             const config: AxiosRequestConfig = {

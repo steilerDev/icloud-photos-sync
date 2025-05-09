@@ -1,9 +1,9 @@
-import { input, password } from "@inquirer/prompts";
-import { Command, CommanderError, InvalidArgumentError, Option } from "commander";
-import { Cron } from "croner";
-import { Resources } from "../lib/resources/main.js";
-import { LogLevel } from "./event/log.js";
-import { ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp } from "./icloud-app.js";
+import {input, password} from "@inquirer/prompts";
+import {Command, CommanderError, InvalidArgumentError, Option} from "commander";
+import {Cron} from "croner";
+import {Resources} from "../lib/resources/main.js";
+import {LogLevel} from "./event/log.js";
+import {ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp} from "./icloud-app.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -174,7 +174,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library.`)
             .env(`DATA_DIR`)
             .default(`/opt/icloud-photos-library`))
-        .addOption(new Option(`-P, --port <number>`, `Port to listen on when awaiting MFA input.`)
+        .addOption(new Option(`-P, --port <number>`, `Port to serve the web ui on and to receive MFA input on.`)
             .env(`PORT`)
             .default(80)
             .argParser(commanderParsePositiveInt))
@@ -197,7 +197,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://icps.steiler.dev/error-reporting/ for more information.`)
             .env(`ENABLE_CRASH_REPORTING`)
             .default(false))
-        .addOption(new Option(`--fail-on-mfa`, `If a MFA is necessary, exit the program.`)
+        .addOption(new Option(`--fail-on-mfa`, `If a MFA is necessary, exit the program. Ignored if re-authentication was requested from the web UI.`)
             .env(`FAIL_ON_MFA`)
             .default(false))
         .addOption(new Option(`--force`, `Forcefully remove an existing library lock. USE WITH CAUTION!`)

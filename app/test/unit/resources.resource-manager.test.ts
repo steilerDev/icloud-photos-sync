@@ -396,9 +396,9 @@ describe(`ResourceManager`, () => {
             });
         });
 
-        describe(`mfaServerPort`, () => {
+        describe(`webServerPort`, () => {
             test(`should return the port from the resources`, () => {
-                expect(resourceManager.mfaServerPort).toEqual(resources.port);
+                expect(resourceManager.webServerPort).toEqual(resources.port);
             });
         });
 

@@ -9,7 +9,8 @@ export type iCPSEvent = iCPSEventArchiveEngine
     | iCPSEventSyncEngine
     | iCPSEventApp
     | iCPSEventRuntimeWarning
-    | iCPSEventRuntimeError;
+    | iCPSEventRuntimeError
+    | iCPSEventWebServer;
 
 /**
  * Possible log events
@@ -68,25 +69,50 @@ export enum iCPSEventCloud {
  */
 export enum iCPSEventMFA {
     /**
-     * Emitted when the MFA server has started - provides the port as argument
-     */
-    STARTED = `mfa-started`,
-    /**
-     * Emitted when the MFA server has received a valid MFA code - provides the method and code as arguments
+     * Emitted when the app received a valid MFA code - provides the method and code as arguments
      */
     MFA_RECEIVED = `mfa-received`,
     /**
-     * Emitted when the MFA server has received a request to resend the MFA code - provides the method as argument
+     * Emitted when the app received a request to resend the MFA code - provides the method as argument
      */
     MFA_RESEND = `mfa-resend`,
     /**
-     * Emitted when the MFA server has not received a valid MFA code within the timeout period
+     * Emitted when the app did not received a valid MFA code within the timeout period
      */
     MFA_NOT_PROVIDED = `mfa-not_provided`,
+}
+
+export enum iCPSEventWebServer {
     /**
-     * Emitted when the MFA server has experienced an error - provides an iCPSError as argument
+     * Emitted when the Web server has started - provides the port as argument
+     */
+    STARTED = `mfa-started`,
+
+    /**
+     * Emitted when the Web server has experienced an error - provides an iCPSError as argument
      */
     ERROR = `mfa-error`,
+
+    /**
+     * Emitted when a sync is requested via the web server
+     */
+    SYNC_REQUESTED = `mfa-sync-requested`,
+
+    /**
+     * Emitted when a reauthentication is requested
+     */
+    REAUTH_REQUESTED = `reauth-requested`,
+
+    /**
+     * Emitted when reauth succeeded
+     */
+    REAUTH_SUCCESS = `reauth-success`,
+
+    /**
+     * Emitted when reauth failed
+     * provides the error as argument
+     */
+    REAUTH_ERROR = `reauth-failed`,
 }
 
 /**
@@ -147,6 +173,10 @@ export enum iCPSEventRuntimeWarning {
      * Emitted when there is an error related to the MFA flow - provides an iCPS error as argument
      */
     MFA_ERROR = `warn-mfa_error`,
+    /**
+     * Emitted when there is an error related to the web server - provides an iCPS error as argument
+     */
+    WEB_SERVER_ERROR = `warn-web_server_error`,
     /**
      * Emitted when an asset could not be archived - provides the error and errored asset file path as argument
      */
