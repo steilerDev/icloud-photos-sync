@@ -9,7 +9,7 @@ import type {WebServer as WebServerType} from '../../src/app/web-ui/web-server';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../src/lib/resources/events-types';
 import {MockedEventManager, prepareResources} from '../_helpers/_general';
-import {MockedHttpServer} from './MockedHttpServer';
+import {MockedHttpServer} from '../_helpers/MockedHttpServer';
 
 let mockedHttpServer: MockedHttpServer
 
