@@ -1,7 +1,7 @@
 
 import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
-import http, {ServerResponse} from 'http';
-import {createRequest, createResponse, MockRequest, MockResponse} from 'node-mocks-http';
+import {ServerResponse} from 'http';
+import {MockRequest, MockResponse} from 'node-mocks-http';
 import {iCPSError} from '../../src/app/error/error';
 import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from '../../src/app/error/error-codes';
 import {StateView} from '../../src/app/web-ui/view/state-view';
@@ -9,113 +9,54 @@ import type {WebServer as WebServerType} from '../../src/app/web-ui/web-server';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../src/lib/resources/events-types';
 import {MockedEventManager, prepareResources} from '../_helpers/_general';
+import {MockedHttpServer} from './MockedHttpServer';
 
-let listeners = new Map<string, Array<(...args: any[]) => void>>();
-let send: (request: Request) => Promise<MockResponse<ServerResponse>>;
-let mockedHttpServer: Partial<http.Server> = {} as http.Server;
+let mockedHttpServer: MockedHttpServer
+
+const createServerMock = jest.fn((requestHandler: (request: MockRequest<any>, response: MockResponse<ServerResponse>) => void | Promise<void>) => {
+    mockedHttpServer = new MockedHttpServer(requestHandler);
+    return mockedHttpServer;
+});
 
 jest.unstable_mockModule(`http`, () => ({
-    createServer: jest.fn((requestHandler: (request: MockRequest<any>, response: MockResponse<ServerResponse>) => void | Promise<void>) => {
-        listeners = new Map<string, Array<(...args: any[]) => void>>();
-        const addListener = (event: string, callback: (...args: any[]) => void) => {
-            listeners.set(event, (listeners.get(event) || []).concat(callback));
-        };
-
-        const server = {} as Partial<http.Server> as http.Server;
-        server.on  = (event: string, callback: (...args: any[]) => void) => {
-            addListener(event, callback);
-            return server;
-        };
-        server.off = (event: string, callback: (...args: any[]) => void) => {
-            const eventListeners = listeners.get(event);
-            if (eventListeners) {
-                listeners.set(event, eventListeners.filter(listener => listener !== callback));
-            }
-            return server;
-        };
-        server.listen = jest.fn().mockImplementation((...args: any[]) => {
-            const callback = args[args.length - 1];
-            if (callback) {
-                addListener(`listening`, callback);
-            }
-            listeners.get(`listening`)?.forEach(listener => listener());
-            return server
-        }) as http.Server[`listen`];
-        server.unref = () => { return server };
-        server.close = (callback) => {
-            if(callback) {
-                addListener(`close`, callback);
-            }
-            listeners.get(`close`)?.forEach(listener => listener());
-            return server;
-        };
-
-        send = async (request) => {
-            const response = createResponse<ServerResponse>();
-            return new Promise<MockResponse<ServerResponse>>((resolve, reject) => {
-                try {
-                    const actualEnd = response.end;
-                    jest.spyOn(response, `end`).mockImplementation((...args) => {
-                        const returnValue = actualEnd.call(response, ...args);
-                        resolve(response);
-                        return returnValue; 
-                    });
-                    requestHandler(request, response);
-                } catch(error) {
-                    reject(error);
-                }
-            });
-        };
-
-        mockedHttpServer = server;
-
-        return server as http.Server;
-    }),
+    createServer: createServerMock
 }));
 
 // we can only do the import here, because we need to mock the http server creation above
 const {WebServer, WEB_SERVER_API_ENDPOINTS}  = (await import(`../../src/app/web-ui/web-server`));
 
-let server: WebServerType;
+export let server: WebServerType;
 let mockedEventManager: MockedEventManager;
 
 async function getHtml(path: string): Promise<MockResponse<ServerResponse>> {
-    return send(createRequest({
+    return mockedHttpServer.handle({
         method: `GET`,
         url: path,
         headers: {
             'Content-Type': `text/html`,
         },
-    }));
+    });
 }
 
 function getJson(path: string) {
-    return send(createRequest({
+    return mockedHttpServer.handle({
         method: `GET`,
         url: path,
         headers: {
             'Content-Type': `application/json`,
         },
-    }));
+    });
 }
 
-async function postJsonWithoutRetry(path: string, body?: any) {
-    return send(createRequest({
+async function postJson(path: string, body?: any) {
+    return mockedHttpServer.handle({
         method: `POST`,
         url: path,
         headers: {
             'Content-Type': `application/json`,
         },
         body: body,
-    }));
-}
-
-async function postJson(path: string, body?: any) {
-    try{
-        return await postJsonWithoutRetry(path, body);
-    } catch (_error) {
-        return await postJsonWithoutRetry(path, body);
-    }
+    });
 }
 
 beforeEach(async () => {
@@ -523,10 +464,10 @@ describe(`Invalid requests`, () => {
         const method = `PUT`;
         const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
-        const response = await send(createRequest({
+        const response = await mockedHttpServer.handle({
             url: `/invalid-route`,
             method
-        }))
+        })
 
         expect(response.statusCode).toBe(405);
         const body = await response._getJSONData();
@@ -540,10 +481,10 @@ describe(`Invalid requests`, () => {
         const endpoint = `/invalid`;
         const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR);
 
-        const response = await send(createRequest({
+        const response = await mockedHttpServer.handle({
             url: endpoint,
             method: `POST`
-        }));
+        });
 
         expect(response.statusCode).toBe(404);
         const body = await response._getJSONData();
@@ -555,8 +496,14 @@ describe(`Invalid requests`, () => {
 });
 
 describe(`Server lifecycle`, () => {
-    test.skip(`Startup Error`, async () => {
-        jest.mocked(mockedHttpServer.listen!).mockImplementation(() => { throw new Error(`some server error`) });
+    test(`Startup Error`, async () => {
+        createServerMock.mockImplementationOnce(() => {
+            const server = new MockedHttpServer(() => {});
+            server.listen = jest.fn(() => {
+                throw new Error(`some server error`);
+            });
+            return server;
+        })
         const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
 
         const expectedError = new iCPSError(WEB_SERVER_ERR.STARTUP_FAILED).addCause(new Error(`some server error`))
@@ -567,7 +514,8 @@ describe(`Server lifecycle`, () => {
 
     test(`Handle unknown server error`, () => {
         const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
-        listeners.get(`error`)?.forEach(listener => listener(new Error(`some server error`)));
+
+        mockedHttpServer.emit(`error`, new Error(`some server error`));
 
         expect(errorEvent).toHaveBeenCalledWith(new iCPSError(WEB_SERVER_ERR.SERVER_ERR));
     });
@@ -576,7 +524,8 @@ describe(`Server lifecycle`, () => {
         const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
         const error = new Error(`Address in use`);
         (error as any).code = `EADDRINUSE`;
-        listeners.get(`error`)?.forEach(listener => listener(error));
+
+        mockedHttpServer.emit(`error`, error);
 
         expect(errorEvent).toHaveBeenCalledWith(new iCPSError(WEB_SERVER_ERR.ADDR_IN_USE_ERR));
     });
@@ -585,7 +534,8 @@ describe(`Server lifecycle`, () => {
         const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
         const error = new Error(`No privileges`);
         (error as any).code = `EACCES`;
-        listeners.get(`error`)?.forEach(listener => listener(error));
+        
+        mockedHttpServer.emit(`error`, error);
 
         expect(errorEvent).toHaveBeenCalledWith(new iCPSError(WEB_SERVER_ERR.INSUFFICIENT_PRIVILEGES));
     });
