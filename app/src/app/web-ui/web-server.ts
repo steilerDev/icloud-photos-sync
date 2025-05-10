@@ -271,7 +271,7 @@ export class WebServer {
     private handleUiRequest(req: http.IncomingMessage, res: http.ServerResponse): string | null {
         const cleanPath = req.url?.split(`?`)[0];
 
-        if (cleanPath === `/`) {
+        if (cleanPath === `/` || cleanPath === ``) {
             this.sendHtmlResponse(res, new StateView().asHtml());
             return;
         } else if (cleanPath.startsWith(`/submit-mfa`)) {

@@ -1,24 +1,57 @@
 import {afterEach, beforeEach, describe, expect, it, jest} from "@jest/globals";
 import {configure, getByTestId, waitFor} from "@testing-library/dom";
 import '@testing-library/jest-dom/jest-globals';
+import {ServerResponse} from "http";
 import {DOMWindow, JSDOM} from "jsdom";
+import {MockRequest, MockResponse} from "node-mocks-http";
+import {normalize} from "path";
 import {iCPSError} from "../../src/app/error/error";
 import {AUTH_ERR, WEB_SERVER_ERR} from "../../src/app/error/error-codes";
-import {WebServer} from "../../src/app/web-ui/web-server";
+import type {WebServer as WebServerType} from "../../src/app/web-ui/web-server";
 import {MFAMethodType} from "../../src/lib/icloud/mfa/mfa-method";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventSyncEngine, iCPSEventWebServer} from "../../src/lib/resources/events-types";
 import {MockedEventManager, prepareResources} from "../_helpers/_general";
+import {MockedHttpServer} from "../_helpers/MockedHttpServer";
+
+let mockedHttpServer: MockedHttpServer
+let currentViewPath = ``;
+let window: DOMWindow;
+let view: HTMLElement;
+let dom: JSDOM;
+
+const createServerMock = jest.fn((requestHandler: (request: MockRequest<any>, response: MockResponse<ServerResponse>) => void | Promise<void>) => {
+    mockedHttpServer = new MockedHttpServer(requestHandler);
+    return mockedHttpServer;
+});
+
+jest.unstable_mockModule(`http`, () => ({
+    createServer: createServerMock
+}));
+
+// we can only do the import here, because we need to mock the http server creation above
+const {WebServer}  = (await import(`../../src/app/web-ui/web-server`));
 
 let mockedEventManager: MockedEventManager;
 
-const originalFetch = fetch;
-const fetchReplacement = (url: string | URL | Request, options: any) => {
+const fetchReplacement = async (url: string | URL | Request, options?: any) => {
     if(typeof url !== `string`) throw new Error(`fetchReplacement only supports string urls at the moment`);
 
-    if (!url.startsWith(`http`)) {
-        return originalFetch(`http://localhost/` + url, options);
-    }
-    return originalFetch(url, options);
+    url = normalize(`${currentViewPath}/${url}`);
+
+    const mockServerResponse = await mockedHttpServer.handle({
+        url: url.startsWith(`/`) ? url : `/${url}`,
+        ...options
+    });
+    return {
+        text: () => {
+            return Promise.resolve(mockServerResponse._getData());
+        },
+        json: () => {
+            return Promise.resolve(JSON.parse(mockServerResponse._getData()));
+        },
+        status: mockServerResponse.statusCode,
+        ok: mockServerResponse.statusCode >= 200 && mockServerResponse.statusCode < 300,
+    } as Response;
 }
 const fetchSpy = jest.spyOn(global, `fetch`).mockImplementation(fetchReplacement);
 const alertSpy = jest.fn<typeof window.alert>().mockImplementation((text) => {
@@ -28,12 +61,13 @@ const alertSpy = jest.fn<typeof window.alert>().mockImplementation((text) => {
 // the ui is probably not going to change often enough to justify introducing test id's everywhere, so we use the id attribute as test id
 configure({testIdAttribute: `id`})
 
-let window: DOMWindow;
-let view: HTMLElement;
-let dom: JSDOM;
 const load = async (path: string = ``) => {
-    dom = await JSDOM.fromURL(`http://localhost/${path}`, {
+    currentViewPath = ``;
+    const html = await (await fetchReplacement(path)).text()
+    currentViewPath = path;
+    dom = new JSDOM(html, {
         runScripts: `dangerously`,
+        url: `http://localhost:8080/${path}`
     });
     dom.window.fetch = fetchSpy as unknown as typeof fetch;
     dom.window.Headers = Headers;
@@ -44,7 +78,7 @@ const load = async (path: string = ``) => {
     view = dom.window.document.body;
 }
 
-let webServer: WebServer;
+let webServer: WebServerType;
 beforeEach(async () => {
     mockedEventManager = prepareResources()!.event;
     webServer = await WebServer.spawn();
