@@ -1,4 +1,4 @@
-import http from 'http';
+import * as http from 'http';
 import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
@@ -271,7 +271,7 @@ export class WebServer {
     private handleUiRequest(req: http.IncomingMessage, res: http.ServerResponse): string | null {
         const cleanPath = req.url?.split(`?`)[0];
 
-        if (cleanPath === `/`) {
+        if (cleanPath === `/` || cleanPath === ``) {
             this.sendHtmlResponse(res, new StateView().asHtml());
             return;
         } else if (cleanPath.startsWith(`/submit-mfa`)) {
