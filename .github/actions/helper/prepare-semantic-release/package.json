@@ -2,11 +2,11 @@
     "description": "dependencies for releasing semantic release",
     "devDependencies": {
         "@backtrace/javascript-cli": "0.3.2",
-        "@codedependant/semantic-release-docker": "^5.1.0",
-        "@semantic-release/github": "11.0.1",
+        "@codedependant/semantic-release-docker": "^5.1.1",
+        "@semantic-release/github": "11.0.2",
         "@semantic-release/release-notes-generator": "14.0.3",
         "conventional-changelog": "6.0.0",
         "conventional-changelog-conventionalcommits": "8.0.0",
-        "semantic-release": "24.2.3"
+        "semantic-release": "24.2.4"
     }
 }

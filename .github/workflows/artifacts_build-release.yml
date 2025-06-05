@@ -75,8 +75,8 @@ jobs:
       - name: action/build-docker
         uses: ./.github/actions/build/docker
         with:
-          docker-token: ${{ secrets.docker-token }}
           gh-token: ${{ secrets.gh-token }}
+          docker-token: ${{ secrets.docker-token }}
 
   docker-release:
     runs-on: ubuntu-latest
