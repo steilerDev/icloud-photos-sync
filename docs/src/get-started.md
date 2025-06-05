@@ -81,6 +81,9 @@ The `latest` tag should always represent the latest stable release, whereas the 
         npm run build
         ```
 
+## Usage
+
+## Advanced
 
 ## Authentication
 
@@ -88,7 +91,7 @@ Since this application needs full access to a user's iCloud Photos Library, a fu
 
 Upon initial authentication, this application will register as a 'trusted device'. This includes the acquisition of a trust token. As long as this token is valid, no MFA code is required to authenticate. It seems that this token currently expires after 30 days.
 
-In order to only perform authentication (without syncing any assets) and validate or acquire the trust token, the [`token` command](user-guides/cli.md#token) can be used.
+In order to only perform authentication (without syncing any assets) and validate or acquire the trust token, the [`token` command](user-guides/cli.md#token) can be used. 
 
 !!! tip "Concurrency"
     Depending on the defined schedule, the container service might already perform a sync. In order to avoid sync collisions two instances of this application cannot access the same library concurrently, which might lead to `LibraryError (FATAL): Locked by PID 1, cannot release.` errors.
@@ -155,6 +158,10 @@ The CLI application will pause execution, in case it detects that a MFA code is 
 The MFA code needs to be submitted within 10 minutes. If this was not done, the execution will exit and needs to be restarted.
 
 #### Submit MFA Code
+
+The MFA code can be submitted through an API or a Web UI
+
+=== "Web UI"
 
 The MFA code can be entered through the exposed API:
 
