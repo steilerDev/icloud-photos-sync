@@ -32,6 +32,8 @@ The `latest` tag should always represent the latest stable release, whereas the 
               TZ: "Europe/Berlin"                                                       
               SCHEDULE: "* 2 * * *"
               ENABLE_CRASH_REPORTING: true
+            ports:
+              - 80:80
             volumes:
               - <photos-dir>:/opt/icloud-photos-library
         ```
@@ -83,9 +85,55 @@ The `latest` tag should always represent the latest stable release, whereas the 
 
 ## Usage
 
+When launching this application, it will start in daemon mode - executing the synchronization based on the provided cron schedule:
+
+=== "Docker"
+
+    === "docker compose"
+        
+        Running `docker compose up -d` on the [previously defined `docker-compose.yml`](#installation) launches the app in daemon mode.
+    
+    === "docker run"
+
+        ```
+        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync  --user <uid>:<gid> steilerdev/icloud-photos-sync:latest \
+            -u "<iCloud Username>" \
+            -p "<iCloud Password>" \
+            --enable-crash-reporting \
+            --schedule "* 2 * * *" 
+        ```
+
+=== "node"
+
+    === "NPM"
+
+        ```
+        icloud-photos-sync \
+            -u "<iCloud Username>" \
+            -p "<iCloud Password>" \
+            -d "</path/to/your/local/library>" \
+            --enable-crash-reporting \
+            --schedule "* 2 * * *" 
+        ```
+
+    === "From Source"
+        
+        ```
+        npm run execute -- \
+            -u "<iCloud Username>" \
+            -p "<iCloud Password>" \
+            -d "</path/to/your/local/library>" \
+            --enable-crash-reporting \
+            --schedule "* 2 * * *" 
+        ```
+
+The application will provide a Web UI, where the current state can be checked, a synchronization can be triggered ad-hoc and the MFA authentication token can be refreshed. If an MFA code is required to perform the sync, this WebUI will also provide the interface to input your code.
+
 ## Advanced
 
-## Authentication
+This can also been done through the CLI.
+
+### Authentication
 
 Since this application needs full access to a user's iCloud Photos Library, a full authentication with Apple (including Multi-Factor-Authentication) is required. Unfortunately iCloud's application specific passwords don't support access to the iCloud Photos Library.
 
@@ -149,7 +197,7 @@ In order to only perform authentication (without syncing any assets) and validat
 !!! warning "Password containing dollar sign (`$`)"
     In case your password contains a dollar sign, this might be mis-handled by your shell. You should [wrap the password string in single quotes](https://stackoverflow.com/a/33353687/3763870) in order to preserve the string literal. E.g. `[...] -p pas$word [...]` would become `[...] -p 'pas$word' [...]`.
 
-### Multi-Factor-Authentication
+#### Multi-Factor-Authentication
 
 In case no valid trust token is available, a MFA code is required in order to successfully authenticate. 
 
@@ -157,7 +205,7 @@ The CLI application will pause execution, in case it detects that a MFA code is 
 
 The MFA code needs to be submitted within 10 minutes. If this was not done, the execution will exit and needs to be restarted.
 
-#### Submit MFA Code
+##### Submit MFA Code
 
 The MFA code can be submitted through an API or a Web UI
 
@@ -199,7 +247,7 @@ The MFA code can be entered through the exposed API:
         docker/rootfs/root/enter_mfa 123456
         ```
 
-#### Re-send MFA Code
+##### Re-send MFA Code
 
 In case the primary MFA device is not available, or the initial push is no longer available, you can request a new MFA code. 
 
@@ -241,7 +289,7 @@ This can be requested using the exposed API:
         ```
 
 
-## Syncing
+### Syncing
 
 The `sync` command will perform authentication, proceed to load the local and remote library and compare the two states. The remote state will always be applied:
 
@@ -260,7 +308,7 @@ During the sync process various warning could be produced. The list of [common w
 
     Additionally you might need to limit the rate of metadata fetching, because the iCloud API has been observed to enforce rate limits, causing `SOCKET HANGUP` errors. This appears to be applicable for libraries holding more than 10.000 assets. Do this by [setting the metadata rate option](user-guides/cli.md#metadata-rate) - it seems `1/20` ensures sufficient throttling.
 
-### Ad-hoc
+#### Ad-hoc
 
 In order to perform a single synchronization execution, the [`sync` command](user-guides/cli.md#sync) will be used.
 
@@ -317,7 +365,7 @@ In order to perform a single synchronization execution, the [`sync` command](use
     !!! tip "File limits"
         Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be [increased temporarily or permanently](https://linuxhint.com/permanently_set_ulimit_value/).
 
-### Scheduled
+#### Scheduled
 
 When using the [`daemon` command](user-guides/cli.md#daemon), the application will start scheduled synchronization executions based on a [cron schedule](user-guides/cli.md#daemon).
 
@@ -369,7 +417,7 @@ This schedule is expected to be in [cron](https://crontab.guru) format. For more
 !!! tip "MFA Code during scheduled executions"
     The trust token (used to circumvent the MFA code) is expiring after 30 days. Each authentication will read the trust token from file and exit execution if a trust token has expired and no MFA code was supplied in time (this usually happens during scheduled runs in the night). In this scenario, running the `token` command to update the trust token is possible, without having to restart the scheduled execution.
 
-## Archiving
+### Archiving
 
 In order to reduce complexity and storage needs in the iCloud Photos Library, archiving allows you to take a snapshot of a provided album and ignore changes to the album moving forward. This allows you to remove some or all of the photos within the album in iCloud after it was archived, while retaining a copy of all pictures locally.
 
