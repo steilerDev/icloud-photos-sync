@@ -9,9 +9,6 @@ inputs:
     description: The name of the uploaded docker artifact
     required: false
     default: docker-artifact
-  docker-token:
-    description: The Docker token used for authenticating Docker Scout
-    required: true
   gh-token:
     description: The GH token used for commenting on PR requests
     required: true
@@ -42,8 +39,6 @@ runs:
       uses: docker/scout-action@v1
       if: github.event.pull_request.user.login != 'dependabot[bot]'
       with:
-        dockerhub-user: ${{ steps.get-docker-metadata.outputs.image-namespace }}
-        dockerhub-password: ${{ inputs.docker-token }}
         github-token: ${{ inputs.gh-token }}
         organization: ${{ steps.get-docker-metadata.outputs.image-namespace }}
         command: compare,recommendations #policy,cves

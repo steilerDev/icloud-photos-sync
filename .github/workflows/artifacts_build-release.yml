@@ -72,10 +72,11 @@ jobs:
         uses: actions/checkout@v4
       - name: setup/build-docker
         uses: ./.github/actions/build/docker-setup
+        with:
+          docker-token: ${{ secrets.docker-token }}
       - name: action/build-docker
         uses: ./.github/actions/build/docker
         with:
-          docker-token: ${{ secrets.docker-token }}
           gh-token: ${{ secrets.gh-token }}
 
   docker-release:
