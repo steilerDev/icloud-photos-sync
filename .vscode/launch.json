@@ -13,7 +13,8 @@
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["token"],
+            "args": ["daemon", "--schedule", "0 3 * * *", "--fail-on-mfa"],
+            "outputCapture": "std",
             "outFiles": [
                 "${workspaceFolder}/app/build/out/**/*.js",
             ],
@@ -66,7 +67,7 @@
                 "--detectOpenHandles",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/docker/sync-cmd.test.ts"
+                "test/unit/web-(ui|server).test.ts"
             ],
             // "env": {
             //     "DEBUG": "testcontainers*",

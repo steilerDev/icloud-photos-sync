@@ -1,16 +1,16 @@
-import {MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources} from '../_helpers/_general';
-import {describe, test, beforeEach, expect, jest, beforeAll, afterAll} from '@jest/globals';
-import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
+import { afterAll, beforeAll, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { iCPSError } from '../../src/app/error/error';
+import { MFA_ERR, VALIDATOR_ERR } from '../../src/app/error/error-codes';
+import { iCloud } from '../../src/lib/icloud/icloud';
+import { iCloudPhotos } from '../../src/lib/icloud/icloud-photos/icloud-photos';
+import { iCloudCrypto } from '../../src/lib/icloud/icloud.crypto';
+import { MFAMethod } from '../../src/lib/icloud/mfa/mfa-method';
+import { iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning } from '../../src/lib/resources/events-types';
+import { Resources } from '../../src/lib/resources/main';
+import { Header } from '../../src/lib/resources/network-manager';
+import { SigninInitResponse } from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
-import {iCloud} from '../../src/lib/icloud/icloud';
-import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
-import {MFA_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
-import {iCPSError} from '../../src/app/error/error';
-import {iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
-import {Resources} from '../../src/lib/resources/main';
-import {iCloudCrypto} from '../../src/lib/icloud/icloud.crypto';
-import {SigninInitResponse} from '../../src/lib/resources/network-types';
-import {Header} from '../../src/lib/resources/network-manager';
+import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;
@@ -75,39 +75,9 @@ describe(`Control structure`, () => {
         expect(icloud.acquirePCSCookies).toHaveBeenCalled();
     });
 
-    describe(`MFA_REQUIRED event triggered`, () => {
-        test(`Start MFA Server`, () => {
-            icloud.mfaServer.startServer = jest.fn<typeof icloud.mfaServer.startServer>();
-
-            mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
-
-            expect(icloud.mfaServer.startServer).toHaveBeenCalled();
-        });
-
-        test(`MFA Server Startup error`, async () => {
-            const iCloudReady = icloud.getReady();
-            mockedEventManager.emit(iCPSEventMFA.ERROR, new iCPSError(MFA_ERR.STARTUP_FAILED));
-
-            await expect(iCloudReady).rejects.toThrow(/^Unable to start MFA server$/);
-        });
-
-        test(`Fail on MFA`, async () => {
-            mockedResourceManager._resources.failOnMfa = true;
-            const iCloudReady = icloud.getReady();
-
-            icloud.mfaServer.startServer = jest.fn<typeof icloud.mfaServer.startServer>();
-
-            mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
-
-            await expect(iCloudReady).rejects.toThrow(/^MFA code required, failing due to failOnMfa flag$/);
-
-            expect(icloud.mfaServer.startServer).not.toHaveBeenCalled();
-        });
-    });
-
     test(`MFA_NOT_PROVIDED event triggered`, async () => {
         const iCloudReady = icloud.getReady();
-        mockedEventManager.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.SERVER_TIMEOUT));
+        mockedEventManager.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.MFA_TIMEOUT));
         await expect(iCloudReady).resolves.toBeFalsy();
     });
 
@@ -115,10 +85,7 @@ describe(`Control structure`, () => {
         {
             desc: `iCloud`,
             event: iCPSEventCloud.ERROR,
-        }, {
-            desc: `MFA`,
-            event: iCPSEventMFA.ERROR,
-        },
+        }
     ])(`$desc error event triggered`, async ({event}) => {
         mockedEventManager._eventBus.removeAllListeners(event); // Not sure why this is necessary
         const iCloudReady = icloud.getReady();

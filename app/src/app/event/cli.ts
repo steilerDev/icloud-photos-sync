@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import {SingleBar} from 'cli-progress';
-import {Resources} from '../../lib/resources/main.js';
-import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
+import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {Resources} from '../../lib/resources/main.js';
 import {iCPSError} from '../error/error.js';
 
 /**
@@ -39,6 +39,9 @@ export class CLIInterface {
         if (!Resources.manager().suppressWarnings) {
             Resources.events(this)
                 .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
+                    this.printWarning(err.getDescription());
+                })
+                .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
                     this.printWarning(err.getDescription());
                 })
                 .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
@@ -83,9 +86,16 @@ export class CLIInterface {
             });
 
         Resources.events(this)
-            .on(iCPSEventMFA.STARTED, port => {
-                this.print(chalk.white(`Listening for input on port ${port}`));
+            .on(iCPSEventWebServer.STARTED, port => {
+                this.print(chalk.white(`Web server is listening on port ${port}`));
             })
+            .on(iCPSEventWebServer.ERROR, (error) => {
+                this.print(chalk.red(`Web server error: ${error}`));
+                this.print(chalk.red(`Failed to start web server. Exiting.`));
+                process.exit(1);
+            });
+
+        Resources.events(this)
             .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {
                 this.print(chalk.white(`Resending MFA code via ${method.toString()}...`));
             })
