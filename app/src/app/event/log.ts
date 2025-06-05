@@ -65,6 +65,9 @@ export class LogInterface {
                 .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
                     this.logMessage(LogLevel.WARN, `RuntimeWarning`, `Error within MFA flow: ${err.getDescription()}`);
                 })
+                .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
+                    this.logMessage(LogLevel.WARN, `RuntimeWarning`, `Error within web server: ${err.getDescription()}`);
+                })
                 .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: Error) => {
                     this.logMessage(LogLevel.WARN, `RuntimeWarning`, `Error while accessing resource file: ${iCPSError.toiCPSError(err).getDescription()}`);
                 })
