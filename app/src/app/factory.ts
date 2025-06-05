@@ -244,7 +244,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
             .default(undefined)
             .argParser(commanderParseUrl));
 
-    program.command(`daemon`)
+    program.command(`daemon`, {isDefault: true})
         .action(async (_, command) => {
             const opts = await completeConfigurationOptionsFromCommand(command);
             Resources.setup(opts);
