@@ -53,18 +53,27 @@ const load = async (path: string = ``) => {
     view = dom.window.document.body;
 }
 
+// Mocking console.error to suppress expected error logs
+let consoleSpy: jest.Spied<typeof console.error>;
+
 let webServer: WebServerType;
 beforeEach(async () => {
     mockedEventManager = prepareResources()!.event;
     webServer = await WebServer.spawn();
     fetchSpy.mockImplementation(fetchReplacement);
     jest.useFakeTimers();
+
+    // Creating console log
+    consoleSpy = jest.spyOn(console, `error`).mockImplementation(() => null);
 });
 afterEach(async () => {
     // normally one would call jest.runOnlyPendingTimers() here, to clear any pending timers, but we know that not updating the state will not cause any issues in future tests
     jest.clearAllTimers();
     jest.useRealTimers();
     await webServer.close();
+
+    // Restoring console log
+    consoleSpy.mockRestore();
 });
 
 describe(`Web UI`, () => {
@@ -259,7 +268,8 @@ describe(`Web UI`, () => {
         });
 
         it(`shows the next scheduled sync when sync is scheduled`, async () => {
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED, new Date(1234567890));
+            //mockedEventManager.emit(iCPSEventApp.SCHEDULED, new Date(1234567890));
+            mockedEventManager.emit(iCPSEventApp.SCHEDULED, new Date(1970, 0, 15, 7, 56, 7));
             await load();
 
             await stateUpdate();
