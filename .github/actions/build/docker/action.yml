@@ -40,7 +40,7 @@ runs:
         outputs: type=docker,dest=docker-arm64.tar
     - id: docker-scout
       uses: docker/scout-action@v1
-      if: github.event.pull_request.user.login != 'dependabot[bot]'
+      if: github.event.pull_request.user.login == 'steilerdev'
       with:
         dockerhub-user: ${{ steps.get-docker-metadata.outputs.image-namespace }}
         dockerhub-password: ${{ inputs.docker-token }}

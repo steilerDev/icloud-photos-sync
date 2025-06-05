@@ -5,7 +5,7 @@ import {iCloud} from "../lib/icloud/icloud.js";
 import {Album} from "../lib/photos-library/model/album.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
-import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError} from "../lib/resources/events-types.js";
+import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventWebServer} from "../lib/resources/events-types.js";
 import {Resources} from "../lib/resources/main.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
@@ -18,7 +18,7 @@ export abstract class iCPSApp {
     /**
      * Executes this app
      */
-    abstract run(): Promise<unknown>
+    abstract run(): Promise<unknown>;
 }
 
 /**
@@ -46,6 +46,9 @@ export class DaemonApp extends iCPSApp {
                 },
             },
         );
+        Resources.events(this).on(iCPSEventWebServer.SYNC_REQUESTED, async () => {
+            this.job?.trigger();
+        });
         Resources.emit(iCPSEventApp.SCHEDULED, this.job?.nextRun());
     }
 
@@ -79,8 +82,11 @@ abstract class iCloudApp extends iCPSApp {
 
     /**
      * Creates and sets up the necessary infrastructure
+     * @param ignoreFailOnMfa - If set to true, the authentication will still continue even if MFA is required and the failOnMfa flag is set
      */
-    constructor() {
+    constructor(
+        protected readonly ignoreFailOnMfa: boolean = false,
+    ) {
         super();
 
         // It's crucial for the data dir to exist, create if it doesn't
@@ -89,7 +95,7 @@ abstract class iCloudApp extends iCPSApp {
         }
 
         // Creating necessary object for this scope
-        this.icloud = new iCloud();
+        this.icloud = new iCloud(ignoreFailOnMfa);
     }
 
     /**
@@ -193,6 +199,16 @@ abstract class iCloudApp extends iCPSApp {
  * This application will print the locally stored token, acquire a new one (if necessary) and print it to the CLI
  */
 export class TokenApp extends iCloudApp {
+    /**
+     * Creates a new TokenApp instance
+     * @param ignoreFailOnMfa - If set to true, the authentication will still continue even if MFA is required and the failOnMfa flag is set
+     */
+    public constructor(
+        ignoreFailOnMfa: boolean = false,
+    ) {
+        super(ignoreFailOnMfa);
+    }
+
     /**
      * This function will validate the currently stored account token and print it afterwards
      * @returns A promise that resolves once the operation has been completed

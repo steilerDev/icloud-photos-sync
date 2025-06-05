@@ -1,14 +1,14 @@
-import { readFileSync, writeFileSync } from "fs";
-import { jsonc } from "jsonc";
+import {readFileSync, writeFileSync} from "fs";
+import {jsonc} from "jsonc";
 import * as path from 'path';
-import { RESOURCES_ERR } from "../../app/error/error-codes.js";
-import { iCPSError } from "../../app/error/error.js";
-import { LogLevel } from "../../app/event/log.js";
-import { iCPSAppOptions } from "../../app/factory.js";
+import {RESOURCES_ERR} from "../../app/error/error-codes.js";
+import {iCPSError} from "../../app/error/error.js";
+import {LogLevel} from "../../app/event/log.js";
+import {iCPSAppOptions} from "../../app/factory.js";
 import * as PHOTOS_LIBRARY from '../photos-library/constants.js';
-import { iCPSEventRuntimeWarning } from "./events-types.js";
-import { Resources } from "./main.js";
-import { FILE_ENCODING, HAR_FILE_NAME, LIBRARY_LOCK_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources } from "./resource-types.js";
+import {iCPSEventRuntimeWarning} from "./events-types.js";
+import {Resources} from "./main.js";
+import {FILE_ENCODING, HAR_FILE_NAME, LIBRARY_LOCK_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resource-types.js";
 
 /**
  * This class handles access to the .icloud-photos-sync resource file and handles currently applied configurations from the CLI and environment variables
@@ -176,8 +176,12 @@ export class ResourceManager {
     /**
      * @returns The port to use for the MFA server
      */
-    get mfaServerPort(): number {
+    get webServerPort(): number {
         return this._resources.port;
+    }
+
+    set webServerPort(port: number) {
+        this._resources.port = port;
     }
 
     /**
