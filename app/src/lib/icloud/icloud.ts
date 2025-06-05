@@ -13,7 +13,7 @@ import {MFAMethod} from './mfa/mfa-method.js';
 /**
  * The MFA timeout value in milliseconds
  */
-export const MFA_TIMEOUT_VALUE = 1000 * 60 * 10; // 10 minutes
+const MFA_TIMEOUT_VALUE = 1000 * 60 * 10; // 10 minutes
 
 /**
  * This class holds the iCloud connection
