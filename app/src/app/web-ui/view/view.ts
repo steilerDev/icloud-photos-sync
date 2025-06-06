@@ -9,12 +9,9 @@ export abstract class View {
             <meta charset="UTF-8">
             <title>ICPS Web UI</title>
             <script>
+                const baseUrl = (window.location.origin + window.location.pathname).replace(/\\/$/, "");
                 function navigate(path) {
-                    if(window.location.pathname.endsWith("/")) {
-                        window.location.href = window.location.pathname + path;
-                        return;
-                    }
-                    window.location.href = window.location.pathname + "/" + path;
+                    window.location.href = baseUrl + "/" + path;
                 }
             </script>
             <style>

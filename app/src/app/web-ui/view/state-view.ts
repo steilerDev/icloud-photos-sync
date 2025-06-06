@@ -74,8 +74,6 @@ export class StateView extends View {
             <button id="sync-button" class="hidden-when-busy" onclick="sync()">Sync Now</button>
             <button id="reauth-button" class="hidden-when-busy" onclick="reauthenticate()">Renew Authentication</button>
             <script type="text/javascript">
-                const baseUrl = (window.location.origin + window.location.pathname).replace(/\\/$/, "");
-
                 async function sync() {
                     const response = await fetch(baseUrl + "/sync", { method: "POST" });
                     if (!response.ok) {
@@ -89,7 +87,6 @@ export class StateView extends View {
                         alert("Reauthentication failed: " + response.statusText);
                         return;
                     }
-                    navigate("submit-mfa");
                 }
 
                 function formatDateOrUndefined(date) {
