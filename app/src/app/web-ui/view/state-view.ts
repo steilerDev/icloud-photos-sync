@@ -74,15 +74,17 @@ export class StateView extends View {
             <button id="sync-button" class="hidden-when-busy" onclick="sync()">Sync Now</button>
             <button id="reauth-button" class="hidden-when-busy" onclick="reauthenticate()">Renew Authentication</button>
             <script type="text/javascript">
+                const baseUrl = (window.location.origin + window.location.pathname).replace(/\\/$/, "");
+
                 async function sync() {
-                    const response = await fetch("sync", { method: "POST" });
+                    const response = await fetch(baseUrl + "/sync", { method: "POST" });
                     if (!response.ok) {
                         alert("Sync failed: " + response.statusText);
                         return;
                     }
                 }
                 async function reauthenticate() {
-                    const response = await fetch("reauthenticate", { method: "POST" });
+                    const response = await fetch(baseUrl + "/reauthenticate", { method: "POST" });
                     if (!response.ok) {
                         alert("Reauthentication failed: " + response.statusText);
                         return;
@@ -115,9 +117,8 @@ export class StateView extends View {
                     try {
                         let stateJson;
                         try{
-                            const state = await fetch("state", { headers: {
-                                "Accept": "application/json",
-                                "Content-Type": "application/json"
+                            const state = await fetch(baseUrl + "/state", { headers: {
+                                "Accept": "application/json"
                             } });
                             stateJson = await state.json();
                         } catch (error) {

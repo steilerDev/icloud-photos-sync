@@ -232,7 +232,7 @@ export class WebServer {
      * @param res - The HTTP response object
      */
     private handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        if(req.headers[`content-type`] === `application/json`) {
+        if(req.headers[`accept`] === `application/json`) {
             Resources.logger(this).debug(`Received JSON request: GET ${req.url}`);
             if(req.url.startsWith(WEB_SERVER_API_ENDPOINTS.STATE)) {
                 Resources.logger(this).debug(`Received state request`);
