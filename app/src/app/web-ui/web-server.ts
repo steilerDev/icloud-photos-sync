@@ -283,7 +283,7 @@ export class WebServer {
             Resources.logger(this).debug(`Submit MFA view requested`);
             if(!this.waitingForMfa) {
                 Resources.logger(this).warn(`Submit MFA view requested, but not waiting for it. Redirecting to state view.`);
-                this.sendStateRedirect(req, res);
+                this.sendStateRedirect(cleanPath, res);
                 return;
             }
             this.sendHtmlResponse(res, new SubmitMfaView().asHtml());
@@ -292,7 +292,7 @@ export class WebServer {
             Resources.logger(this).debug(`Request MFA view requested`);
             if(!this.waitingForMfa) {
                 Resources.logger(this).warn(`Request MFA view requested, but not waiting for it. Redirecting to state view.`);
-                this.sendStateRedirect(req, res);
+                this.sendStateRedirect(cleanPath, res);
                 return;
             }
             this.sendHtmlResponse(res, new RequestMfaView().asHtml());
@@ -319,10 +319,11 @@ export class WebServer {
 
     /**
      * Redirects to the state view
+     * @param cleanPath - The cleaned path of the request URL
      * @param res - The HTTP response object
      */
-    private sendStateRedirect(req: http.IncomingMessage, res: http.ServerResponse) {
-        res.writeHead(302, {Location: req.url.endsWith(`/`) ? `..` : `.`});
+    private sendStateRedirect(cleanPath: string, res: http.ServerResponse) {
+        res.writeHead(302, {Location: cleanPath.endsWith(`/`) ? `..` : `.`});
         res.end();
     }
 
