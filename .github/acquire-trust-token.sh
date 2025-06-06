@@ -42,7 +42,7 @@ echo "container $DOCKER_NAME is running!"
 
 echo -n "Waiting for MFA server to become available.."
 
-until docker logs $DOCKER_NAME | grep -q "Listening for input on port"; do
+until docker logs $DOCKER_NAME | grep -q "MFA code required"; do
     echo -n '.'
     sleep 1
     if docker logs $DOCKER_NAME | grep -q "Error"; then
