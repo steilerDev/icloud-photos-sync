@@ -98,6 +98,13 @@ export class WebServer {
             this.waitingForMfa = false;
         });
 
+        Resources.events(this).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
+            this.waitingForMfa = false;
+            this.state = `error`;
+            this.stateTimestamp = new Date();
+            this.errorMessage = `Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`;
+        });
+
         Resources.events(this).on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
             this.state = `authenticating`;
         });
