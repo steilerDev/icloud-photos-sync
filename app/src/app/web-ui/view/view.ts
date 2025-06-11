@@ -15,9 +15,6 @@ export abstract class View {
                 }
             </script>
             <style>
-                html {
-                    /* overflow:hidden; */
-                }
                 body {
                     font-family: Arial, sans-serif;
                     margin: 0;
@@ -73,7 +70,7 @@ export abstract class View {
                         font-size: 250%;
                     }
                     .container {
-                        align-items: flex-start;
+                        height: auto;
                     }
                 }
             </style>
