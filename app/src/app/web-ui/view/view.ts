@@ -78,9 +78,6 @@ export abstract class View {
                     html {
                         font-size: 250%;
                     }
-                    .container {
-                        height: auto;
-                    }
                 }
             </style>
         </head>
