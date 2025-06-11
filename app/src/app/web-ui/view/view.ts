@@ -73,8 +73,7 @@ export abstract class View {
                         font-size: 250%;
                     }
                     .container {
-                        /* display: block;
-                        align-items: normal; */
+                        align-items: flex-start;
                     }
                 }
             </style>
