@@ -12,7 +12,7 @@ export class SubmitMfaView extends View {
                 }
                 div#mfaInput input {
                     box-sizing: border-box;
-                    font-size: xxx-large;
+                    font-size: 4rem;
                     width: 15%;
                     padding: 0.5rem;
                     margin-top: 1rem;

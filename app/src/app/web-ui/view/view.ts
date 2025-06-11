@@ -15,12 +15,14 @@ export abstract class View {
                 }
             </script>
             <style>
+                html {
+                    /* overflow:hidden; */
+                }
                 body {
                     font-family: Arial, sans-serif;
                     margin: 0;
                     padding: 0;
                     background-color: #f0f0f0;
-                    font-size: large;
                 }
                 .container {
                     display: flex;
@@ -28,6 +30,7 @@ export abstract class View {
                     align-items: center;
                     height: 100vh;
                     overflow-y: scroll;
+                    overflow-x: hidden;
                     flex-wrap: wrap;
                 }
                 .content {
@@ -57,13 +60,22 @@ export abstract class View {
                     border-radius: 0.5rem;
                     cursor: pointer;
                     margin-top: 1rem;
-                    font-size: large;
+                    font-size: 1rem;
                     box-sizing: border-box;
                 }
                 button.inverted {
                     background-color: #fff;
                     color: rgb(66, 129, 255);
                     border: 1px solid rgb(66, 129, 255);
+                }
+                @media only screen and (orientation: portrait) {
+                    html {
+                        font-size: 250%;
+                    }
+                    .container {
+                        /* display: block;
+                        align-items: normal; */
+                    }
                 }
             </style>
         </head>
