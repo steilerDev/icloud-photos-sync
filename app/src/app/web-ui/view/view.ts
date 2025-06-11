@@ -65,6 +65,15 @@ export abstract class View {
                     color: rgb(66, 129, 255);
                     border: 1px solid rgb(66, 129, 255);
                 }
+                input::-webkit-outer-spin-button,
+                input::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                input[type="number"] {
+                    -moz-appearance: textfield;
+                }
+
                 @media only screen and (orientation: portrait) {
                     html {
                         font-size: 250%;
