@@ -9,12 +9,9 @@ export abstract class View {
             <meta charset="UTF-8">
             <title>ICPS Web UI</title>
             <script>
+                const baseUrl = (window.location.origin + window.location.pathname).replace(/\\/$/, "");
                 function navigate(path) {
-                    if(window.location.pathname.endsWith("/")) {
-                        window.location.href = window.location.pathname + path;
-                        return;
-                    }
-                    window.location.href = window.location.pathname + "/" + path;
+                    window.location.href = baseUrl + "/" + path;
                 }
             </script>
             <style>
@@ -23,7 +20,6 @@ export abstract class View {
                     margin: 0;
                     padding: 0;
                     background-color: #f0f0f0;
-                    font-size: large;
                 }
                 .container {
                     display: flex;
@@ -31,6 +27,7 @@ export abstract class View {
                     align-items: center;
                     height: 100vh;
                     overflow-y: scroll;
+                    overflow-x: hidden;
                     flex-wrap: wrap;
                 }
                 .content {
@@ -60,13 +57,27 @@ export abstract class View {
                     border-radius: 0.5rem;
                     cursor: pointer;
                     margin-top: 1rem;
-                    font-size: large;
+                    font-size: 1rem;
                     box-sizing: border-box;
                 }
                 button.inverted {
                     background-color: #fff;
                     color: rgb(66, 129, 255);
                     border: 1px solid rgb(66, 129, 255);
+                }
+                input::-webkit-outer-spin-button,
+                input::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                input[type="number"] {
+                    -moz-appearance: textfield;
+                }
+
+                @media only screen and (orientation: portrait) {
+                    html {
+                        font-size: 250%;
+                    }
                 }
             </style>
         </head>

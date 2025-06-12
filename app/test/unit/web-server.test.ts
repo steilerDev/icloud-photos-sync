@@ -387,22 +387,40 @@ describe(`UI`, () => {
         expect(body).toContain(`Enter MFA Code`);
     });
 
-    test(`redirects /submit-mfa to state view when no MFA is required`, async () => {
+    test(`redirects /request-mfa to state view when no MFA is required`, async () => {
         mockedEventManager.emit(iCPSEventMFA.MFA_RECEIVED);
 
         const response = await mockedHttpServer().getHtml(`/request-mfa?asdf`);
 
         expect(response.statusCode).toBe(302);
-        expect(response.getHeader(`location`)).toBe(`/`);
+        expect(response.getHeader(`location`)).toBe(`.`);
     });
 
-    test(`redirects /request-mfa to state view when no MFA is required`, async () => {
+    test(`redirects /request-mfa/ to state view when no MFA is required`, async () => {
+        mockedEventManager.emit(iCPSEventMFA.MFA_RECEIVED);
+
+        const response = await mockedHttpServer().getHtml(`/request-mfa/?asdf`);
+
+        expect(response.statusCode).toBe(302);
+        expect(response.getHeader(`location`)).toBe(`..`);
+    });
+
+    test(`redirects /submit-mfa to state view when no MFA is required`, async () => {
         mockedEventManager.emit(iCPSEventMFA.MFA_RECEIVED);
 
         const response = await mockedHttpServer().getHtml(`/submit-mfa`);
 
         expect(response.statusCode).toBe(302);
-        expect(response.getHeader(`location`)).toBe(`/`);
+        expect(response.getHeader(`location`)).toBe(`.`);
+    });
+
+    test(`redirects /submit-mfa/ to state view when no MFA is required`, async () => {
+        mockedEventManager.emit(iCPSEventMFA.MFA_RECEIVED);
+
+        const response = await mockedHttpServer().getHtml(`/submit-mfa/`);
+
+        expect(response.statusCode).toBe(302);
+        expect(response.getHeader(`location`)).toBe(`..`);
     });
 });
 
