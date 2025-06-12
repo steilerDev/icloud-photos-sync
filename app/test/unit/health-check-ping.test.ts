@@ -58,7 +58,7 @@ describe(`Health Check Pings`, () => {
         await new Promise(resolve => setTimeout(resolve, 0));
 
         expect(mockAdapter.history.post[0].baseURL).toBe(exampleHealthCheckUrl);
-        expect(mockAdapter.history.post[0].url).toBe(`/`);
+        expect(mockAdapter.history.post[0].url).toBe(``);
         expect(mockAdapter.history.post[0].data).toBe(`Example log message`);
         expect(healthCheckPingExecutor.getLog).toHaveBeenCalledTimes(1)
     });
