@@ -1,6 +1,7 @@
 import {jest} from '@jest/globals';
 import http, {ServerResponse} from 'http';
 import {MockRequest, MockResponse, RequestOptions, createMocks} from 'node-mocks-http';
+import {relative} from 'path';
 
 export async function mockHttpServer() {
     let mockedHttpServer: MockedHttpServer
@@ -93,8 +94,14 @@ export class MockedHttpServer implements Partial<http.Server> {
     }
 
     public async fetch(url: string, options?: any) {
+        if (url.startsWith(`http`)) {
+            url = relative(`http://localhost:8080`, url);
+        }
+        if (!url.startsWith(`/`)) {
+            url = `/${url}`;
+        }
         const mockServerResponse = await this.handle({
-            url: url.startsWith(`/`) ? url : `/${url}`,
+            url,
             ...options
         });
         return {
@@ -114,7 +121,7 @@ export class MockedHttpServer implements Partial<http.Server> {
             method: `GET`,
             url: path,
             headers: {
-                'Content-Type': `text/html`,
+                Accept: `text/html`,
             },
         });
     }
@@ -124,7 +131,7 @@ export class MockedHttpServer implements Partial<http.Server> {
             method: `GET`,
             url: path,
             headers: {
-                'Content-Type': `application/json`,
+                Accept: `application/json`,
             },
         });
     }

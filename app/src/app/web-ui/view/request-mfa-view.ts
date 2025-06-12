@@ -11,7 +11,7 @@ export class RequestMfaView extends View {
             <script>
                 async function requestMfaWithMethod(method) {
                     try {
-                        const response = await fetch("../resend_mfa?method=" + method, {method: "POST"});
+                        const response = await fetch(baseUrl + "/../resend_mfa?method=" + method, {method: "POST"});
                         if (!response.ok) {
                             throw new Error("MFA trigger request failed: " + response.statusText);
                         }

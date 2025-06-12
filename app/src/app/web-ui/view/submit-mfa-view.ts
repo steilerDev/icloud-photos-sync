@@ -12,23 +12,27 @@ export class SubmitMfaView extends View {
                 }
                 div#mfaInput input {
                     box-sizing: border-box;
-                    font-size: xxx-large;
+                    font-size: 2.5rem;
                     width: 15%;
                     padding: 0.5rem;
                     margin-top: 1rem;
                     border-radius: 0.5rem;
                     border: 1px solid #ccc;
                     text-align: center;
+
+                    // no up/down arrows in number inputs
+                    -webkit-appearance: none;
+                    -moz-appearance: textfield;
                 }
             </style>
             <h2>Enter MFA Code</h2>
             <div id="mfaInput">
-                <input type="text" id="firstDigit" maxlength="1" size="1" pattern="[0-9]" required autofocus>
-                <input type="text" id="secondDigit" maxlength="1" size="1" pattern="[0-9]" required>
-                <input type="text" id="thirdDigit" maxlength="1" size="1" pattern="[0-9]" required>
-                <input type="text" id="fourthDigit" maxlength="1" size="1" pattern="[0-9]" required>
-                <input type="text" id="fifthDigit" maxlength="1" size="1" pattern="[0-9]" required>
-                <input type="text" id="sixthDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                <input type="number" id="firstDigit" maxlength="1" size="1" pattern="[0-9]" required autofocus>
+                <input type="number" id="secondDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                <input type="number" id="thirdDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                <input type="number" id="fourthDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                <input type="number" id="fifthDigit" maxlength="1" size="1" pattern="[0-9]" required>
+                <input type="number" id="sixthDigit" maxlength="1" size="1" pattern="[0-9]" required>
             </div>
             <button id="submitButton" onclick="submitMfa()">Submit</button>
             <script>
@@ -36,7 +40,7 @@ export class SubmitMfaView extends View {
                     const mfaCode = Array.from(document
                         .querySelectorAll("#mfaInput input"))
                         .reduce((acc, input) => acc + input.value, "");
-                    const response = await fetch("../mfa?code=" + mfaCode, {method: "POST"});
+                    const response = await fetch(baseUrl + "/../mfa?code=" + mfaCode, {method: "POST"});
                     if (!response.ok) {
                         let body;
                         try { body = await response.json(); } catch (e) { }
@@ -48,7 +52,7 @@ export class SubmitMfaView extends View {
                         }
                         return;
                     }
-                    navigate("../");
+                    navigate("..");
                 }
             </script>
             <button class="inverted" onclick="navigate('../request-mfa')">Resend Code/Change Method</button>
