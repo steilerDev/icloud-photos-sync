@@ -98,6 +98,13 @@ export class WebServer {
             this.waitingForMfa = false;
         });
 
+        Resources.events(this).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
+            this.waitingForMfa = false;
+            this.state = `error`;
+            this.stateTimestamp = new Date();
+            this.errorMessage = `Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`;
+        });
+
         Resources.events(this).on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
             this.state = `authenticating`;
         });
@@ -211,6 +218,7 @@ export class WebServer {
                 return;
             }
 
+            Resources.logger(this).warn(`Unknown request method: ${req.method} for ${req.url}`);
             this.handleInvalidMethodRequest(req, res);
         } catch(err) {
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.UNKNOWN_ERR)
@@ -231,10 +239,13 @@ export class WebServer {
      * @param res - The HTTP response object
      */
     private handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        if(req.headers[`content-type`] === `application/json`) {
+        if(req.headers[`accept`] === `application/json`) {
+            Resources.logger(this).debug(`Received JSON request: GET ${req.url}`);
             if(req.url.startsWith(WEB_SERVER_API_ENDPOINTS.STATE)) {
+                Resources.logger(this).debug(`Received state request`);
                 this.handleStateRequest(res);
             } else {
+                Resources.logger(this).warn(`Unknown API endpoint requested: GET ${req.url}`);
                 res.writeHead(404, {'Content-Type': `text/plain`});
                 res.write(`Not Found`);
                 res.end();
@@ -272,24 +283,30 @@ export class WebServer {
         const cleanPath = req.url?.split(`?`)[0];
 
         if (cleanPath === `/` || cleanPath === ``) {
+            Resources.logger(this).debug(`State view requested`);
             this.sendHtmlResponse(res, new StateView().asHtml());
             return;
         } else if (cleanPath.startsWith(`/submit-mfa`)) {
+            Resources.logger(this).debug(`Submit MFA view requested`);
             if(!this.waitingForMfa) {
-                this.sendStateRedirect(res);
+                Resources.logger(this).warn(`Submit MFA view requested, but not waiting for it. Redirecting to state view.`);
+                this.sendStateRedirect(cleanPath, res);
                 return;
             }
             this.sendHtmlResponse(res, new SubmitMfaView().asHtml());
             return ;
         } else if (cleanPath.startsWith(`/request-mfa`)) {
+            Resources.logger(this).debug(`Request MFA view requested`);
             if(!this.waitingForMfa) {
-                this.sendStateRedirect(res);
+                Resources.logger(this).warn(`Request MFA view requested, but not waiting for it. Redirecting to state view.`);
+                this.sendStateRedirect(cleanPath, res);
                 return;
             }
             this.sendHtmlResponse(res, new RequestMfaView().asHtml());
             return;
         }
         
+        Resources.logger(this).warn(`Unknown path requested: ${cleanPath}`);
         res.writeHead(404, {'Content-Type': `text/plain`});
         res.write(`Not Found`);
         res.end();
@@ -309,10 +326,11 @@ export class WebServer {
 
     /**
      * Redirects to the state view
+     * @param cleanPath - The cleaned path of the request URL
      * @param res - The HTTP response object
      */
-    private sendStateRedirect(res: http.ServerResponse) {
-        res.writeHead(302, {Location: `/`});
+    private sendStateRedirect(cleanPath: string, res: http.ServerResponse) {
+        res.writeHead(302, {Location: cleanPath.endsWith(`/`) ? `..` : `.`});
         res.end();
     }
 
@@ -324,15 +342,21 @@ export class WebServer {
      * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
      */
     private handlePostRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        Resources.logger(this).debug(`Received POST request: ${req.url}`);
         if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH)) {
+            Resources.logger(this).debug(`Reauthentication requested`);
             this.handleReauthRequest(res);
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.TRIGGER_SYNC)) {
+            Resources.logger(this).debug(`Sync requested`);
             this.handleSyncRequest(res);
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.CODE_INPUT)) {
+            Resources.logger(this).debug(`MFA code input requested`);
             this.handleMFACode(req, res);
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.RESEND_CODE)) {
+            Resources.logger(this).debug(`MFA code resend requested`);
             this.handleMFAResend(req, res);
         } else {
+            Resources.logger(this).warn(`Unknown endpoint requested: POST ${req.url}`);
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.ROUTE_NOT_FOUND)
                 .addMessage(req.url)
                 .addContext(`request`, req));

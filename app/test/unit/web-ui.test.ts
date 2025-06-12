@@ -11,7 +11,6 @@ import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSE
 import {MockedEventManager, prepareResources} from "../_helpers/_general";
 import {mockHttpServer} from "../_helpers/MockedHttpServer";
 
-let currentViewPath = ``;
 let window: DOMWindow;
 let view: HTMLElement;
 let dom: JSDOM;
@@ -20,13 +19,8 @@ const {mockedHttpServer, WebServer} = await mockHttpServer();
 
 let mockedEventManager: MockedEventManager;
 
-const fetchReplacement = async (url: string | URL | Request, options?: any) => {
-    if(typeof url !== `string`) throw new Error(`fetchReplacement only supports string urls at the moment`);
-
-    // the browser fetch API is able to handle relative urls, so we need to resolve them to absolute urls before passing them to the mocked http server
-    url = normalize(`${currentViewPath}/${url}`);
-
-    return mockedHttpServer().fetch(url, options);
+const fetchReplacement = (url, options) => {
+    return mockedHttpServer().fetch(normalize(url), options);
 }
 
 const fetchSpy = jest.spyOn(global, `fetch`).mockImplementation(fetchReplacement);
@@ -38,8 +32,7 @@ const alertSpy = jest.fn<typeof window.alert>().mockImplementation((text) => {
 configure({testIdAttribute: `id`})
 
 const load = async (path: string = ``) => {
-    const html = await (await mockedHttpServer().fetch(path)).text()
-    currentViewPath = path;
+    const html = await (await mockedHttpServer().fetch(path)).text();
     dom = new JSDOM(html, {
         runScripts: `dangerously`,
         url: `http://localhost:8080/${path}`
