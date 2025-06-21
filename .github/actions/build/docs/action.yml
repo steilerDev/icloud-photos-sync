@@ -27,7 +27,7 @@ runs:
       shell: bash
       run: (cd ${{ inputs.docs-path }}; mkdocs build)
     - id: bundle-coverage
-      uses: dawidd6/action-download-artifact@v10
+      uses: dawidd6/action-download-artifact@v11
       with:
         name: coverage-artifact-Linux
         path: ${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.site-dir }}/dev/coverage
