@@ -40,7 +40,7 @@ export class SubmitMfaView extends View {
                     const mfaCode = Array.from(document
                         .querySelectorAll("#mfaInput input"))
                         .reduce((acc, input) => acc + input.value, "");
-                    const response = await fetch(baseUrl + "/../mfa?code=" + mfaCode, {method: "POST"});
+                    const response = await fetch("mfa?code=" + mfaCode, {method: "POST"});
                     if (!response.ok) {
                         let body;
                         try { body = await response.json(); } catch (e) { }
@@ -52,11 +52,11 @@ export class SubmitMfaView extends View {
                         }
                         return;
                     }
-                    navigate("..");
+                    navigate("state");
                 }
             </script>
-            <button class="inverted" onclick="navigate('../request-mfa')">Resend Code/Change Method</button>
-            <button class="inverted" onclick="navigate('..')">Cancel</button>
+            <button class="inverted" onclick="navigate('request-mfa')">Resend Code/Change Method</button>
+            <button class="inverted" onclick="navigate('state')">Cancel</button>
             <script type="text/javascript">
                 const mfaInputs = document.querySelectorAll("#mfaInput input");
                 mfaInputs.forEach((input, index) => {

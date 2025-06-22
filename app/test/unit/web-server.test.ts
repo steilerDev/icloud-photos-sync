@@ -2,6 +2,7 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {iCPSError} from '../../src/app/error/error';
 import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from '../../src/app/error/error-codes';
+import {manifest} from '../../src/app/web-ui/manifest';
 import {StateView} from '../../src/app/web-ui/view/state-view';
 import type {WebServer as WebServerType} from '../../src/app/web-ui/web-server';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
@@ -361,8 +362,20 @@ describe(`State`, () => {
 });
 
 describe(`UI`, () => {
-    test(`State view`, async () => {
+    test(`Redirects root to state view`, async () => {
         const response = await mockedHttpServer().getHtml(`/`);
+        expect(response.statusCode).toBe(302);
+        expect(response.getHeader(`location`)).toBe(`./state`);
+    });
+
+    test(`Redirects path with trailing slash to no trailing slash path`, async () => {
+        const response = await mockedHttpServer().getHtml(`/state/`);
+        expect(response.statusCode).toBe(301);
+        expect(response.getHeader(`location`)).toBe(`./state`);
+    });
+
+    test(`State view`, async () => {
+        const response = await mockedHttpServer().getHtml(`/state`);
 
         expect(response.statusCode).toBe(200);
         const body = await response._getData();
@@ -393,16 +406,16 @@ describe(`UI`, () => {
         const response = await mockedHttpServer().getHtml(`/request-mfa?asdf`);
 
         expect(response.statusCode).toBe(302);
-        expect(response.getHeader(`location`)).toBe(`.`);
+        expect(response.getHeader(`location`)).toBe(`./state`);
     });
 
     test(`redirects /request-mfa/ to state view when no MFA is required`, async () => {
         mockedEventManager.emit(iCPSEventMFA.MFA_RECEIVED);
 
-        const response = await mockedHttpServer().getHtml(`/request-mfa/?asdf`);
+        const response = await mockedHttpServer().getHtml(`/request-mfa?asdf`);
 
         expect(response.statusCode).toBe(302);
-        expect(response.getHeader(`location`)).toBe(`..`);
+        expect(response.getHeader(`location`)).toBe(`./state`);
     });
 
     test(`redirects /submit-mfa to state view when no MFA is required`, async () => {
@@ -411,16 +424,32 @@ describe(`UI`, () => {
         const response = await mockedHttpServer().getHtml(`/submit-mfa`);
 
         expect(response.statusCode).toBe(302);
-        expect(response.getHeader(`location`)).toBe(`.`);
+        expect(response.getHeader(`location`)).toBe(`./state`);
     });
 
-    test(`redirects /submit-mfa/ to state view when no MFA is required`, async () => {
+    test(`redirects /submit-mfa to state view when no MFA is required`, async () => {
         mockedEventManager.emit(iCPSEventMFA.MFA_RECEIVED);
 
-        const response = await mockedHttpServer().getHtml(`/submit-mfa/`);
+        const response = await mockedHttpServer().getHtml(`/submit-mfa`);
 
         expect(response.statusCode).toBe(302);
-        expect(response.getHeader(`location`)).toBe(`..`);
+        expect(response.getHeader(`location`)).toBe(`./state`);
+    });
+
+    describe(`PWA Resources`, () => {
+        test(`Serves manifest`, async () => {
+            const response = await mockedHttpServer().getHtml(`/manifest.json`);
+            expect(response.statusCode).toBe(200);
+            const body = await response._getData();
+            expect(body).toBe(JSON.stringify(manifest));
+        });
+
+        test(`Serves Icon`, async () => {
+            const response = await mockedHttpServer().getHtml(`/icon.png`);
+            expect(response.statusCode).toBe(200);
+            const body = await response._getData();
+            expect(body).toContain(`PNG`);
+        });
     });
 });
 

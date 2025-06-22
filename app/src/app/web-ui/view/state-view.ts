@@ -75,14 +75,14 @@ export class StateView extends View {
             <button id="reauth-button" class="hidden-when-busy" onclick="reauthenticate()">Renew Authentication</button>
             <script type="text/javascript">
                 async function sync() {
-                    const response = await fetch(baseUrl + "/sync", { method: "POST" });
+                    const response = await fetch("sync", { method: "POST" });
                     if (!response.ok) {
                         alert("Sync failed: " + response.statusText);
                         return;
                     }
                 }
                 async function reauthenticate() {
-                    const response = await fetch(baseUrl + "/reauthenticate", { method: "POST" });
+                    const response = await fetch("reauthenticate", { method: "POST" });
                     if (!response.ok) {
                         alert("Reauthentication failed: " + response.statusText);
                         return;
@@ -114,7 +114,7 @@ export class StateView extends View {
                     try {
                         let stateJson;
                         try{
-                            const state = await fetch(baseUrl + "/state", { headers: {
+                            const state = await fetch("state", { headers: {
                                 "Accept": "application/json"
                             } });
                             stateJson = await state.json();

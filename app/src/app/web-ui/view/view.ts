@@ -8,10 +8,20 @@ export abstract class View {
         <head>
             <meta charset="UTF-8">
             <title>ICPS Web UI</title>
+            <link rel="manifest" href="./manifest.json" />
             <script>
-                const baseUrl = (window.location.origin + window.location.pathname).replace(/\\/$/, "");
+                if(navigator.serviceWorker) {
+                    navigator.serviceWorker
+                        .register("./service-worker.js", { scope: "./" })
+                        .then(function () {
+                            console.log("Service Worker Registered");
+                        });
+                } else {
+                    console.warn("Service Worker not supported in this browser.");
+                }
+
                 function navigate(path) {
-                    window.location.href = baseUrl + "/" + path;
+                    window.location.href = window.location.href + "/../" + path;
                 }
             </script>
             <style>

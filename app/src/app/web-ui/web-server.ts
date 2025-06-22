@@ -6,6 +6,9 @@ import {Resources} from '../../lib/resources/main.js';
 import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
 import {TokenApp} from '../icloud-app.js';
+import {icon} from './icons.js';
+import {manifest} from './manifest.js';
+import {serviceWorker} from './service-worker.js';
 import {RequestMfaView} from './view/request-mfa-view.js';
 import {StateView} from './view/state-view.js';
 import {SubmitMfaView} from './view/submit-mfa-view.js';
@@ -208,6 +211,31 @@ export class WebServer {
      */
     private handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         try {
+            const cleanPath = req.url?.split(`?`)[0] || ``;
+
+            if(cleanPath == `/`) {
+                Resources.logger(this).debug(`Redirecting root path to state view.`);
+                res.writeHead(302, {Location: `./state`});
+                res.end();
+                return;
+            }
+
+            if(cleanPath.endsWith(`/`)) {
+                Resources.logger(this).debug(`Redirecting ${req.url} to same path without trailing slash.`);
+                const redirectUrl = cleanPath.slice(0, -1);
+                res.writeHead(301, {Location: redirectUrl});
+                res.end();
+                return;
+            }
+
+            if(cleanPath.startsWith(`/service-worker.js`)) {
+                Resources.logger(this).debug(`Serving service worker script.`);
+                res.writeHead(200, {'Content-Type': `application/javascript`});
+                res.write(serviceWorker);
+                res.end();
+                return;
+            }
+
             if (req.method === `GET`) {
                 this.handleGetRequest(req, res);
                 return;
@@ -253,6 +281,19 @@ export class WebServer {
             return;
         }
 
+        if(req.url.startsWith(`/manifest.json`)) {
+            Resources.logger(this).debug(`Serving manifest.json`);
+            res.writeHead(200, {'Content-Type': `application/json`});
+            res.write(JSON.stringify(manifest));
+            res.end();
+            return;
+        }
+
+        if(req.url.startsWith(`/icon.png`)) {
+            this.handleIconRequest(req, res);
+            return;
+        }
+
         this.handleUiRequest(req, res);
     }
 
@@ -273,6 +314,18 @@ export class WebServer {
         res.end();
     }
 
+    private handleIconRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        Resources.logger(this).debug(`Serving icon request: ${req.url}`);
+
+        const buffer = Buffer.from(icon, `base64`);
+        res.writeHead(200, {
+            'Content-Type': `image/png`,
+            'Content-Length': buffer.length,
+        });
+        res.write(buffer);
+        res.end();
+    }
+
     /**
      * This function will return the HTML content for the UI
      * @param req - The HTTP request object
@@ -282,7 +335,7 @@ export class WebServer {
     private handleUiRequest(req: http.IncomingMessage, res: http.ServerResponse): string | null {
         const cleanPath = req.url?.split(`?`)[0];
 
-        if (cleanPath === `/` || cleanPath === ``) {
+        if (cleanPath.startsWith(`/state`)) {
             Resources.logger(this).debug(`State view requested`);
             this.sendHtmlResponse(res, new StateView().asHtml());
             return;
@@ -290,7 +343,7 @@ export class WebServer {
             Resources.logger(this).debug(`Submit MFA view requested`);
             if(!this.waitingForMfa) {
                 Resources.logger(this).warn(`Submit MFA view requested, but not waiting for it. Redirecting to state view.`);
-                this.sendStateRedirect(cleanPath, res);
+                this.sendStateRedirect(res);
                 return;
             }
             this.sendHtmlResponse(res, new SubmitMfaView().asHtml());
@@ -299,7 +352,7 @@ export class WebServer {
             Resources.logger(this).debug(`Request MFA view requested`);
             if(!this.waitingForMfa) {
                 Resources.logger(this).warn(`Request MFA view requested, but not waiting for it. Redirecting to state view.`);
-                this.sendStateRedirect(cleanPath, res);
+                this.sendStateRedirect(res);
                 return;
             }
             this.sendHtmlResponse(res, new RequestMfaView().asHtml());
@@ -326,11 +379,10 @@ export class WebServer {
 
     /**
      * Redirects to the state view
-     * @param cleanPath - The cleaned path of the request URL
      * @param res - The HTTP response object
      */
-    private sendStateRedirect(cleanPath: string, res: http.ServerResponse) {
-        res.writeHead(302, {Location: cleanPath.endsWith(`/`) ? `..` : `.`});
+    private sendStateRedirect(res: http.ServerResponse) {
+        res.writeHead(302, {Location: `./state`});
         res.end();
     }
 
