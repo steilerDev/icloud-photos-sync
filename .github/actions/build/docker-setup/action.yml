@@ -17,7 +17,7 @@ runs:
     - id: setup-buildx
       uses: docker/setup-buildx-action@v3
     - id: setup-app-artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         pattern: ${{ inputs.app-artifact-pattern }}
         path: ${{ inputs.docker-path }}
