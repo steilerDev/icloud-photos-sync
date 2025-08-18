@@ -12,6 +12,10 @@ A basic UI is available on the port that is passed via the `port` parameter or 8
 
 The UI is only available in Englisch, although the sync timestamps use the formatting of the system locale.
 
+## PWA & Notification Capabilities
+
+The Web UI is implemented as a PWA. This way, the app can cleanly be added to the home screen. The Service Worker of the PWA will only cache the static resources, which means that while you are offline or your ICPS Server is unreachable you can open the PWA, but it will only show you that it can't fetch the state. The PWA can also publish push notifications when the sync failed because of an error or when the sync is back to normal. To enable notifications, add the PWA to your home screen, tap on the notification and grant notification permissions. Note that notifications or other PWA capabilities might not work, if you do not use a TLS encrypted connection with a certificate trusted by the device. PWA capabilities have only been tested with Safari on MacOS and iOS.
+
 ## Watching the synced Photos
 
 Since this tool is syncing all assets to the native file system, pretty much any tool can be used to present the pictures. I've been testing some tools recommended by [awesome-selfhosted](https://github.com/awesome-selfhosted/awesome-selfhosted#photo-and-video-galleries) and settled on [Photoview](https://photoview.github.io/). The following `docker-compose.yml` will run `icloud-photos-sync` together with `Photoview`:

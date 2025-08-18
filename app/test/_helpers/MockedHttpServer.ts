@@ -38,9 +38,21 @@ export class MockedHttpServer implements Partial<http.Server> {
         const {req, res} = createMocks(options);
         return new Promise<MockResponse<ServerResponse>>((resolve, reject) => {
             try {
-                const actualEnd = res.end;
+                jest.spyOn(req, `on`).mockImplementation((event, handler) => {
+                    if(event === `data`) {
+                        setTimeout(() => {
+                            handler(Buffer.from(JSON.stringify(options.body)));
+                        });
+                    } else if(event === `end`) {
+                        setTimeout(() => {
+                            handler();
+                        });
+                    }
+                })
+
+                const actualResEnd = res.end;
                 jest.spyOn(res, `end`).mockImplementation((...args) => {
-                    const returnValue = actualEnd.call(res, ...args);
+                    const returnValue = actualResEnd.call(res, ...args);
                     resolve(res);
                     return returnValue;
                 });

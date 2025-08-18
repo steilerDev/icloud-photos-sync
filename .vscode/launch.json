@@ -67,7 +67,7 @@
                 "--detectOpenHandles",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/web-ui.test.ts"
+                "test/unit/(web-ui|web-server).test.ts"
             ],
             // "env": {
             //     "DEBUG": "testcontainers*",
