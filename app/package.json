@@ -105,7 +105,7 @@
     "p-event": "6.0.1",
     "p-queue": "8.1.0",
     "p-timeout": "6.1.4",
-    "tough-cookie": "5.1.2",
+    "tough-cookie": "6.0.0",
     "web-push": "^3.6.7"
   }
 }
