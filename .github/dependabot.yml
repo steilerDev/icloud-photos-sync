@@ -50,6 +50,7 @@ updates:
         patterns:
         - "jest*"
         - "@types/jest*"
+        - "@jest/globals*"
         - "ts-jest*"
       mockfs:
         patterns:
