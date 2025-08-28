@@ -66,10 +66,6 @@ updates:
         - "typescript*"
         - "tsx*"
         - "typedoc*"
-      tough-cookie:
-        patterns:
-        - "tough-cookie*"
-        - "@types/tough-cookie*"
       backtrace:
         patterns:
         - "@backtrace*"
