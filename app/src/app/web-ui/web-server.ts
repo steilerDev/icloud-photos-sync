@@ -3,22 +3,28 @@ import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
-import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from '../error/error-codes.js';
+import {WEB_SERVER_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
 import {TokenApp} from '../icloud-app.js';
+import {icon} from './icons.js';
+import {manifest} from './manifest.js';
+import {serviceWorker} from './service-worker.js';
 import {RequestMfaView} from './view/request-mfa-view.js';
 import {StateView} from './view/state-view.js';
 import {SubmitMfaView} from './view/submit-mfa-view.js';
+import {ActiveState, ErrorState, SettledState, State} from './state.js';
+import {NotificationPusher} from './notification-pusher.js';
 
 /**
  * Endpoint URI of Web Server, all expect POST requests
  */
 export const WEB_SERVER_API_ENDPOINTS = {
-    CODE_INPUT: `/mfa`, // Expecting URL parameter 'code' with 6 digits
-    TRIGGER_REAUTH: `/reauthenticate`, // Expecting no URL parameters
-    RESEND_CODE: `/resend_mfa`, // Expecting URL parameter 'method' (either 'device', 'sms', 'voice') and optionally 'phoneNumberId' (any number > 0)
-    STATE: `/state`, // Expecting no URL parameters
-    TRIGGER_SYNC: `/sync` // Expecting no URL parameters
+    CODE_INPUT: `/api/mfa`, // Expecting URL parameter 'code' with 6 digits
+    TRIGGER_REAUTH: `/api/reauthenticate`, // Expecting no URL parameters
+    RESEND_CODE: `/api/resend_mfa`, // Expecting URL parameter 'method' (either 'device', 'sms', 'voice') and optionally 'phoneNumberId' (any number > 0)
+    STATE: `/api/state`, // Expecting no URL parameters
+    TRIGGER_SYNC: `/api/sync`, // Expecting no URL parameters
+    SUBSCRIBE: `/api/subscribe`
 };
 
 /**
@@ -35,15 +41,20 @@ export class WebServer {
      */
     mfaMethod: MFAMethod;
 
-    state: `unknown` | `ok` | `authenticating` | `syncing` | `error` | `reauthSuccess` | `reauthError` = `unknown`;
+    notificationPusher: NotificationPusher = new NotificationPusher();
 
-    stateTimestamp: Date = null;
+    _state: State = State.unknown();
+
+    get state(): State {
+        return this._state;
+    }
+
+    set state(newState: State) {
+        this._state = newState;
+        this.notificationPusher.onStateChange(newState);
+    }
 
     nextSyncTimestamp: Date = null;
-
-    waitingForMfa: boolean = false;
-
-    errorMessage: string = null;
 
     static async spawn(): Promise<WebServer> {
         return new WebServer().startServer();
@@ -75,50 +86,39 @@ export class WebServer {
         });
 
         Resources.events(this).on(iCPSEventSyncEngine.START, () => {
-            this.state = `syncing`;
+            this.state = ActiveState.syncing();
         });
 
         Resources.events(this).on(iCPSEventSyncEngine.DONE, () => {
-            this.state = `ok`;
-            this.stateTimestamp = new Date();
+            this.state = SettledState.ok();
         });
 
         Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, (error: iCPSError) => {
-            this.state = `error`;
-            this.setErrorMessageFromError(error);
-            this.waitingForMfa = false;
-            this.stateTimestamp = new Date();
+            this.state = ErrorState.error(error);
         });
 
         Resources.events(this).on(iCPSEventCloud.MFA_REQUIRED, () => {
-            this.waitingForMfa = true;
+            this.state.setWaitingForMfa(true);
         });
 
         Resources.events(this).on(iCPSEventMFA.MFA_RECEIVED, () => {
-            this.waitingForMfa = false;
+            this.state.setWaitingForMfa(false);
         });
 
         Resources.events(this).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
-            this.waitingForMfa = false;
-            this.state = `error`;
-            this.stateTimestamp = new Date();
-            this.errorMessage = `Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`;
+            this.state = ErrorState.error(`Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`);
         });
 
         Resources.events(this).on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
-            this.state = `authenticating`;
+            this.state = ActiveState.authenticating();
         });
 
         Resources.events(this).on(iCPSEventWebServer.REAUTH_SUCCESS, () => {
-            this.state = `reauthSuccess`;
-            this.stateTimestamp = new Date();
+            this.state = SettledState.reauthSuccess();
         });
 
         Resources.events(this).on(iCPSEventWebServer.REAUTH_ERROR, (error: iCPSError) => {
-            this.state = `reauthError`;
-            this.stateTimestamp = new Date();
-            this.waitingForMfa = false;
-            this.setErrorMessageFromError(error);
+            this.state = ErrorState.reauthError(error);
         });
 
         Resources.events(this).on(iCPSEventApp.SCHEDULED, (timestamp: Date) => {
@@ -129,13 +129,14 @@ export class WebServer {
             this.nextSyncTimestamp = timestamp;
         });
 
-        Resources.events(this).on(iCPSEventApp.SCHEDULED_DONE, (timestamp: Date) => {
+        Resources.events(this).on(iCPSEventApp.SCHEDULED_RETRY, (timestamp: Date) => {
             this.nextSyncTimestamp = timestamp;
         });
 
         Resources.events(this).on(iCPSEventApp.SCHEDULED_OVERRUN, (timestamp: Date) => {
             this.nextSyncTimestamp = timestamp;
         });
+
 
         // allow the process to exit, if this server is the only thing left running
         this.server.unref();
@@ -152,27 +153,6 @@ export class WebServer {
         return new Promise<void>(resolve => {
             this.server.close(() => resolve());
         });
-    }
-
-    private setErrorMessageFromError(error: iCPSError) {
-        let cause = error
-        while (cause.cause && cause.cause instanceof iCPSError) {
-            cause = cause.cause;
-        }
-        switch (cause.code) {
-        case MFA_ERR.FAIL_ON_MFA.code:
-            this.errorMessage = `Multifactor authentication code required. Use the 'Renew Authentication' button to request and enter a new code.`;
-            break;
-        case AUTH_ERR.UNAUTHORIZED.code:
-            this.errorMessage = `Your credentials seem to be invalid. Please check your iCloud credentials and try again.`;
-            break;
-        case WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED.code:
-            this.errorMessage = `Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`;
-            break;
-        default:
-            this.errorMessage = cause.message;
-            break;
-        }
     }
 
     /**
@@ -208,6 +188,39 @@ export class WebServer {
      */
     private handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         try {
+            const cleanPath = req.url?.split(`?`)[0] || ``;
+
+            if (cleanPath == `/`) {
+                Resources.logger(this).debug(`Redirecting root path to state view.`);
+                res.writeHead(302, {Location: `./state`});
+                res.end();
+                return;
+            }
+
+            if (cleanPath.endsWith(`/`)) {
+                Resources.logger(this).debug(`Redirecting ${req.url} to same path without trailing slash.`);
+                const redirectUrl = cleanPath.slice(0, -1);
+                res.writeHead(301, {Location: redirectUrl});
+                res.end();
+                return;
+            }
+
+            if (cleanPath.startsWith(`/service-worker.js`)) {
+                Resources.logger(this).debug(`Serving service worker script.`);
+                res.writeHead(200, {'Content-Type': `application/javascript`});
+                res.write(serviceWorker);
+                res.end();
+                return;
+            }
+
+            if (cleanPath.startsWith(`/vapid-public-key`)) {
+                Resources.logger(this).debug(`Serving VAPID public key.`);
+                res.writeHead(200, {'Content-Type': `application/json`});
+                res.write(JSON.stringify({publicKey: Resources.manager().notificationVapidCredentials.publicKey}));
+                res.end();
+                return;
+            }
+
             if (req.method === `GET`) {
                 this.handleGetRequest(req, res);
                 return;
@@ -220,17 +233,40 @@ export class WebServer {
 
             Resources.logger(this).warn(`Unknown request method: ${req.method} for ${req.url}`);
             this.handleInvalidMethodRequest(req, res);
-        } catch(err) {
+        } catch (err) {
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.UNKNOWN_ERR)
                 .addMessage(err.message)
                 .addContext(`request`, req)
                 .addContext(`responseWritten`, !res.writable));
 
-            if(res.writable) {
+            if (res.writable) {
                 this.sendApiResponse(res, 500, `Unknown error occurred.`);
             }
             throw err
         }
+    }
+
+    private handlePushSubscription(res: http.ServerResponse, data: {endpoint: string, keys: {p256dh: string, auth: string}}) {
+        Resources.logger(this).debug(`Handling push subscription: ${JSON.stringify(data)}`);
+
+        if (!data.endpoint || !data.keys || !data.keys.p256dh || !data.keys.auth) {
+            Resources.logger(this).error(`Invalid push subscription data: ${JSON.stringify(data)}`);
+            this.sendApiResponse(res, 400, `Invalid push subscription data.`);
+            return;
+        }
+
+        const subscription = {
+            endpoint: data.endpoint,
+            keys: {
+                p256dh: data.keys.p256dh,
+                auth: data.keys.auth
+            }
+        };
+
+        Resources.manager().addNotificationSubscription(subscription);
+
+        Resources.logger(this).info(`New push subscription added.`);
+        this.sendApiResponse(res, 200, `Push subscription added successfully.`);
     }
 
     /**
@@ -239,9 +275,9 @@ export class WebServer {
      * @param res - The HTTP response object
      */
     private handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        if(req.headers[`accept`] === `application/json`) {
+        if (req.headers[`accept`] === `application/json`) {
             Resources.logger(this).debug(`Received JSON request: GET ${req.url}`);
-            if(req.url.startsWith(WEB_SERVER_API_ENDPOINTS.STATE)) {
+            if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.STATE)) {
                 Resources.logger(this).debug(`Received state request`);
                 this.handleStateRequest(res);
             } else {
@@ -250,6 +286,19 @@ export class WebServer {
                 res.write(`Not Found`);
                 res.end();
             }
+            return;
+        }
+
+        if (req.url.startsWith(`/manifest.json`)) {
+            Resources.logger(this).debug(`Serving manifest.json`);
+            res.writeHead(200, {'Content-Type': `application/json`});
+            res.write(JSON.stringify(manifest));
+            res.end();
+            return;
+        }
+
+        if (req.url.startsWith(`/icon.png`)) {
+            this.handleIconRequest(req, res);
             return;
         }
 
@@ -264,12 +313,21 @@ export class WebServer {
     private handleStateRequest(res: http.ServerResponse<http.IncomingMessage>) {
         res.writeHead(200, {'Content-Type': `application/json`});
         res.write(JSON.stringify({
-            state: this.state,
-            stateTimestamp: this.stateTimestamp,
-            nextSyncTimestamp: this.nextSyncTimestamp,
-            waitingForMfa: this.waitingForMfa,
-            errorMessage: this.state == `error` || this.state == `reauthError` ? this.errorMessage : null,
+            ...this.state.getDto(),
+            nextSyncTimestamp: this.nextSyncTimestamp
         }));
+        res.end();
+    }
+
+    private handleIconRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        Resources.logger(this).debug(`Serving icon request: ${req.url}`);
+
+        const buffer = Buffer.from(icon, `base64`);
+        res.writeHead(200, {
+            'Content-Type': `image/png`,
+            'Content-Length': buffer.length,
+        });
+        res.write(buffer);
         res.end();
     }
 
@@ -282,30 +340,30 @@ export class WebServer {
     private handleUiRequest(req: http.IncomingMessage, res: http.ServerResponse): string | null {
         const cleanPath = req.url?.split(`?`)[0];
 
-        if (cleanPath === `/` || cleanPath === ``) {
+        if (cleanPath.startsWith(`/state`)) {
             Resources.logger(this).debug(`State view requested`);
             this.sendHtmlResponse(res, new StateView().asHtml());
             return;
         } else if (cleanPath.startsWith(`/submit-mfa`)) {
             Resources.logger(this).debug(`Submit MFA view requested`);
-            if(!this.waitingForMfa) {
+            if (!this.state.isActive() || !this.state.isWaitingForMfa) {
                 Resources.logger(this).warn(`Submit MFA view requested, but not waiting for it. Redirecting to state view.`);
-                this.sendStateRedirect(cleanPath, res);
+                this.sendStateRedirect(res);
                 return;
             }
             this.sendHtmlResponse(res, new SubmitMfaView().asHtml());
-            return ;
+            return;
         } else if (cleanPath.startsWith(`/request-mfa`)) {
             Resources.logger(this).debug(`Request MFA view requested`);
-            if(!this.waitingForMfa) {
+            if (!this.state.isActive() || !this.state.isWaitingForMfa) {
                 Resources.logger(this).warn(`Request MFA view requested, but not waiting for it. Redirecting to state view.`);
-                this.sendStateRedirect(cleanPath, res);
+                this.sendStateRedirect(res);
                 return;
             }
             this.sendHtmlResponse(res, new RequestMfaView().asHtml());
             return;
         }
-        
+
         Resources.logger(this).warn(`Unknown path requested: ${cleanPath}`);
         res.writeHead(404, {'Content-Type': `text/plain`});
         res.write(`Not Found`);
@@ -326,11 +384,10 @@ export class WebServer {
 
     /**
      * Redirects to the state view
-     * @param cleanPath - The cleaned path of the request URL
      * @param res - The HTTP response object
      */
-    private sendStateRedirect(cleanPath: string, res: http.ServerResponse) {
-        res.writeHead(302, {Location: cleanPath.endsWith(`/`) ? `..` : `.`});
+    private sendStateRedirect(res: http.ServerResponse) {
+        res.writeHead(302, {Location: `./state`});
         res.end();
     }
 
@@ -355,6 +412,9 @@ export class WebServer {
         } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.RESEND_CODE)) {
             Resources.logger(this).debug(`MFA code resend requested`);
             this.handleMFAResend(req, res);
+        } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.SUBSCRIBE)) {
+            Resources.logger(this).debug(`Push subscription requested`);
+            this.handlePushSubscriptionRequest(req, res);
         } else {
             Resources.logger(this).warn(`Unknown endpoint requested: POST ${req.url}`);
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.ROUTE_NOT_FOUND)
@@ -373,7 +433,7 @@ export class WebServer {
         this.triggerReauth()
             // this unchecked cast is a bit nasty, maybe we can listen to a success event so we don't need to set any state based on the promise result
             .then((mfaOk: boolean) => {
-                if(mfaOk) {
+                if (mfaOk) {
                     Resources.emit(iCPSEventWebServer.REAUTH_SUCCESS);
                 } else {
                     Resources.emit(iCPSEventWebServer.REAUTH_ERROR, new iCPSError(WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED));
@@ -424,7 +484,7 @@ export class WebServer {
      * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
      */
     private handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
-        if (!this.waitingForMfa) {
+        if (!this.state.isActive() || !this.state.isWaitingForMfa) {
             this.sendApiResponse(res, 400, `MFA code not expected at this time. Taking you back home.`, `/`);
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.NO_CODE_EXPECTED));
             return;
@@ -473,6 +533,26 @@ export class WebServer {
 
         this.sendApiResponse(res, 200, `Requesting MFA resend with method ${this.mfaMethod}`);
         Resources.emit(iCPSEventMFA.MFA_RESEND, this.mfaMethod);
+    }
+
+    private handlePushSubscriptionRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        Resources.logger(this).debug(`Handling push subscription request.`);
+
+        let body = ``;
+        req.on(`data`, chunk => {
+            body += chunk.toString();
+        });
+        req.on(`end`, () => {
+            try {
+                const data = JSON.parse(body);
+                Resources.logger(this).debug(`Received push subscription request: ${JSON.stringify(data)}`);
+                this.handlePushSubscription(res, data);
+            } catch (err) {
+                Resources.logger(this).error(`Failed to parse push subscription request body: ${err.message}`);
+                this.sendApiResponse(res, 400, `Invalid request body.`);
+            }
+        });
+        return;
     }
 
     /**

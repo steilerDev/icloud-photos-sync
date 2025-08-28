@@ -2,21 +2,37 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {iCPSError} from '../../src/app/error/error';
 import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from '../../src/app/error/error-codes';
+import {manifest} from '../../src/app/web-ui/manifest';
 import {StateView} from '../../src/app/web-ui/view/state-view';
 import type {WebServer as WebServerType} from '../../src/app/web-ui/web-server';
 import {MFAMethod} from '../../src/lib/icloud/mfa/mfa-method';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../src/lib/resources/events-types';
-import {MockedEventManager, prepareResources} from '../_helpers/_general';
+import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {MockedHttpServer, mockHttpServer} from '../_helpers/MockedHttpServer';
+import type { PushSubscription } from 'web-push';
 
 const {mockedHttpServer, createServerMock, WebServer, WEB_SERVER_API_ENDPOINTS} = await mockHttpServer();
 
+jest.mock(`web-push`, () => ({
+    setVapidDetails: jest.fn(),
+    sendNotification: jest.fn(),
+    WebPushError: jest.requireActual<any>(`web-push`).WebPushError
+} as Partial<typeof webpush> as typeof webpush
+));
+
+const webpush = (await import(`web-push`)).default;
+
 export let server: WebServerType;
 let mockedEventManager: MockedEventManager;
+let mockedResourceManager: MockedResourceManager;
 
 beforeEach(async () => {
-    mockedEventManager = prepareResources()!.event;
+    const mockedResources = prepareResources()!
+    mockedEventManager = mockedResources.event;
+    mockedResourceManager = mockedResources.manager
     server = await WebServer.spawn();
+
+    jest.clearAllMocks();
 });
 
 afterEach(async () => {
@@ -25,6 +41,7 @@ afterEach(async () => {
 
 describe(`MFA Code`, () => {
     beforeEach(() => {
+        mockedEventManager.emit(iCPSEventSyncEngine.START);
         mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
     });
 
@@ -168,7 +185,7 @@ describe(`Reauthenticate`, () => {
     const reauthFactory = jest.fn<() => Promise<unknown>>()
 
     beforeEach(() => {
-        reauthFactory.mockReturnValue(new Promise(() => {}));
+        reauthFactory.mockReturnValue(new Promise(() => { }));
         server[`triggerReauth`] = reauthFactory;
     });
 
@@ -286,6 +303,7 @@ describe(`State`, () => {
     });
 
     test(`'waitingForMfa' is set when MFA is required`, async () => {
+        mockedEventManager.emit(iCPSEventSyncEngine.START);
         mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
 
         const response = await mockedHttpServer().getJson(WEB_SERVER_API_ENDPOINTS.STATE);
@@ -331,7 +349,7 @@ describe(`State`, () => {
 
     test(`State is 'reauthError' with corresponding error message if mfa timed out`, async () => {
         server[`triggerReauth`] = jest.fn(() => Promise.resolve(false));
-    
+
         await mockedHttpServer().postJson(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH);
         const response = await mockedHttpServer().getJson(WEB_SERVER_API_ENDPOINTS.STATE);
 
@@ -361,8 +379,20 @@ describe(`State`, () => {
 });
 
 describe(`UI`, () => {
-    test(`State view`, async () => {
+    test(`Redirects root to state view`, async () => {
         const response = await mockedHttpServer().getHtml(`/`);
+        expect(response.statusCode).toBe(302);
+        expect(response.getHeader(`location`)).toBe(`./state`);
+    });
+
+    test(`Redirects path with trailing slash to no trailing slash path`, async () => {
+        const response = await mockedHttpServer().getHtml(`/state/`);
+        expect(response.statusCode).toBe(301);
+        expect(response.getHeader(`location`)).toBe(`/state`);
+    });
+
+    test(`State view`, async () => {
+        const response = await mockedHttpServer().getHtml(`/state`);
 
         expect(response.statusCode).toBe(200);
         const body = await response._getData();
@@ -370,6 +400,7 @@ describe(`UI`, () => {
     });
 
     test(`Resend MFA view`, async () => {
+        mockedEventManager.emit(iCPSEventSyncEngine.START);
         mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
         const response = await mockedHttpServer().getHtml(`/request-mfa`);
 
@@ -379,6 +410,7 @@ describe(`UI`, () => {
     });
 
     test(`Submit MFA view`, async () => {
+        mockedEventManager.emit(iCPSEventSyncEngine.START);
         mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
         const response = await mockedHttpServer().getHtml(`/submit-mfa`);
 
@@ -393,16 +425,16 @@ describe(`UI`, () => {
         const response = await mockedHttpServer().getHtml(`/request-mfa?asdf`);
 
         expect(response.statusCode).toBe(302);
-        expect(response.getHeader(`location`)).toBe(`.`);
+        expect(response.getHeader(`location`)).toBe(`./state`);
     });
 
     test(`redirects /request-mfa/ to state view when no MFA is required`, async () => {
         mockedEventManager.emit(iCPSEventMFA.MFA_RECEIVED);
 
-        const response = await mockedHttpServer().getHtml(`/request-mfa/?asdf`);
+        const response = await mockedHttpServer().getHtml(`/request-mfa?asdf`);
 
         expect(response.statusCode).toBe(302);
-        expect(response.getHeader(`location`)).toBe(`..`);
+        expect(response.getHeader(`location`)).toBe(`./state`);
     });
 
     test(`redirects /submit-mfa to state view when no MFA is required`, async () => {
@@ -411,16 +443,115 @@ describe(`UI`, () => {
         const response = await mockedHttpServer().getHtml(`/submit-mfa`);
 
         expect(response.statusCode).toBe(302);
-        expect(response.getHeader(`location`)).toBe(`.`);
+        expect(response.getHeader(`location`)).toBe(`./state`);
     });
 
-    test(`redirects /submit-mfa/ to state view when no MFA is required`, async () => {
+    test(`redirects /submit-mfa to state view when no MFA is required`, async () => {
         mockedEventManager.emit(iCPSEventMFA.MFA_RECEIVED);
 
-        const response = await mockedHttpServer().getHtml(`/submit-mfa/`);
+        const response = await mockedHttpServer().getHtml(`/submit-mfa`);
 
         expect(response.statusCode).toBe(302);
-        expect(response.getHeader(`location`)).toBe(`..`);
+        expect(response.getHeader(`location`)).toBe(`./state`);
+    });
+
+    describe(`PWA Resources`, () => {
+        test(`Serves manifest`, async () => {
+            const response = await mockedHttpServer().getHtml(`/manifest.json`);
+            expect(response.statusCode).toBe(200);
+            const body = await response._getData();
+            expect(body).toBe(JSON.stringify(manifest));
+        });
+
+        test(`Serves Icon`, async () => {
+            const response = await mockedHttpServer().getHtml(`/icon.png`);
+            expect(response.statusCode).toBe(200);
+            const body = response._getBuffer();
+            expect(body.length).toBeGreaterThan(0);
+        });
+    });
+
+    describe(`Push Notifications`, () => {
+        test(`adds device to subscribers`, async () => {
+            const notificationCredentials = {
+                endpoint: `exampl.com/push`,
+                keys: {
+                    p256dh: `the p256dh key`,
+                    auth: `the auth key`
+                }
+            };
+            await mockedHttpServer().postJson(WEB_SERVER_API_ENDPOINTS.SUBSCRIBE, notificationCredentials);
+
+            expect(mockedResourceManager.notificationSubscriptions).toContainEqual(notificationCredentials)
+        });
+
+        test(`pushes notifications if state changes to error`, async () => {
+            const fakeSubscription: PushSubscription = {
+                endpoint: `https://example.com/push`,
+                keys: {
+                    p256dh: `fakeP256dh`,
+                    auth: `fakeAuth`
+                }
+            };
+            jest.spyOn(mockedResourceManager, `notificationSubscriptions`, `get`) .mockReturnValue([fakeSubscription]);
+
+            mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, iCPSError.toiCPSError(AUTH_ERR.UNAUTHORIZED));
+
+            expect(jest.mocked(webpush.sendNotification).mock.calls.length).toBe(1);
+            const [subscription, payload] = jest.mocked(webpush.sendNotification).mock.calls[0];
+            expect(subscription).toEqual(fakeSubscription);
+            const parsedPayload = JSON.parse(payload as string);
+            expect(parsedPayload).toEqual({
+                state: `error`,
+                waitingForMfa: false,
+                stateTimestamp: expect.closeTo(Date.now(), -5),
+                errorMessage: `Unknown error occurred`
+            });
+        });
+
+        test(`pushes notifications if state changes to successful`, () => {
+            const fakeSubscription: PushSubscription = {
+                endpoint: `https://example.com/push`,
+                keys: {
+                    p256dh: `fakeP256dh`,
+                    auth: `fakeAuth`
+                }
+            };
+            jest.spyOn(mockedResourceManager, `notificationSubscriptions`, `get`).mockReturnValue([fakeSubscription]);
+
+            mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, iCPSError.toiCPSError(AUTH_ERR.UNAUTHORIZED));
+            mockedEventManager.emit(iCPSEventSyncEngine.DONE);
+
+            expect(jest.mocked(webpush.sendNotification).mock.calls.length).toBe(2);
+            const [subscription, payload] = jest.mocked(webpush.sendNotification).mock.calls[1];
+            expect(subscription).toEqual(fakeSubscription);
+            const parsedPayload = JSON.parse(payload as string);
+            expect(parsedPayload).toEqual({
+                state: `ok`,
+                waitingForMfa: false,
+                stateTimestamp: expect.closeTo(Date.now(), -5),
+            });
+        });
+
+        test(`removes subscription if pushing fails with code 410`, async () => {
+            const fakeSubscription: PushSubscription = {
+                endpoint: `https://example.com/push`,
+                keys: {
+                    p256dh: `fakeP256dh`,
+                    auth: `fakeAuth`
+                }
+            };
+            jest.spyOn(mockedResourceManager, `notificationSubscriptions`, `get`).mockReturnValue([fakeSubscription]);
+            jest.spyOn(mockedResourceManager, `removeNotificationSubscription`).mockImplementation(jest.fn());
+
+            jest.mocked(webpush.sendNotification).mockRejectedValue(new webpush.WebPushError(`Gone`, 410, {}, `Gone`, fakeSubscription.endpoint));
+
+            mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, iCPSError.toiCPSError(AUTH_ERR.UNAUTHORIZED));
+
+            await new Promise(res => setTimeout(res));
+
+            expect(jest.mocked(mockedResourceManager.removeNotificationSubscription)).toHaveBeenCalledWith(fakeSubscription);
+        });
     });
 });
 
@@ -454,7 +585,7 @@ describe(`Invalid requests`, () => {
         expect(response.statusCode).toBe(404);
         const body = await response._getJSONData();
         expect(body).toEqual({
-            message: `Route not found, available endpoints: ["/mfa","/reauthenticate","/resend_mfa","/state","/sync"]`,
+            message: `Route not found, available endpoints: ["/api/mfa","/api/reauthenticate","/api/resend_mfa","/api/state","/api/sync","/api/subscribe"]`,
         });
         expect(warnEvent).toHaveBeenCalledWith(new Error(`Received request to unknown endpoint`));
     });
@@ -463,7 +594,7 @@ describe(`Invalid requests`, () => {
 describe(`Server lifecycle`, () => {
     test(`Startup Error`, async () => {
         createServerMock.mockImplementationOnce(() => {
-            const server = new MockedHttpServer(() => {});
+            const server = new MockedHttpServer(() => { });
             server.listen = jest.fn(() => {
                 throw new Error(`some server error`);
             });
@@ -499,7 +630,7 @@ describe(`Server lifecycle`, () => {
         const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR);
         const error = new Error(`No privileges`);
         (error as any).code = `EACCES`;
-        
+
         mockedHttpServer().emit(`error`, error);
 
         expect(errorEvent).toHaveBeenCalledWith(new iCPSError(WEB_SERVER_ERR.INSUFFICIENT_PRIVILEGES));

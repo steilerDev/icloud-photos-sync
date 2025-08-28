@@ -11,18 +11,18 @@ export class RequestMfaView extends View {
             <script>
                 async function requestMfaWithMethod(method) {
                     try {
-                        const response = await fetch(baseUrl + "/../resend_mfa?method=" + method, {method: "POST"});
+                        const response = await fetch("api/resend_mfa?method=" + method, {method: "POST"});
                         if (!response.ok) {
                             throw new Error("MFA trigger request failed: " + response.statusText);
                         }
-                        navigate("../submit-mfa");
+                        navigate("submit-mfa");
                     } catch (e) {
                         console.error(e);
                         alert("Failed to request MFA code: " + e.message);
                     }
                 }
             </script>
-            <button class="inverted" onclick="navigate('..')">Cancel</button>
+            <button class="inverted" onclick="navigate('state')">Cancel</button>
         `;
     }
 }

@@ -13,4 +13,4 @@ HOST="${3:-localhost}"
 
 echo "Resending MFA code with method $1 and phoneNumberId $PHONE_NUMBER_ID to ${HOST}:${MFA_PORT}"
 echo "..."
-curl -s -X POST "${HOST}:${MFA_PORT}/resend_mfa?method=${1}&phoneNumberId=${PHONE_NUMBER_ID}" | jq -crM .message
+curl -s -X POST "${HOST}:${MFA_PORT}/api/resend_mfa?method=${1}&phoneNumberId=${PHONE_NUMBER_ID}" | jq -crM .message

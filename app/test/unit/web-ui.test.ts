@@ -31,7 +31,7 @@ const alertSpy = jest.fn<typeof window.alert>().mockImplementation((text) => {
 // the ui is probably not going to change often enough to justify introducing test id's everywhere, so we use the id attribute as test id
 configure({testIdAttribute: `id`})
 
-const load = async (path: string = ``) => {
+const load = async (path: string = `state`) => {
     const html = await (await mockedHttpServer().fetch(path)).text();
     dom = new JSDOM(html, {
         runScripts: `dangerously`,
@@ -231,6 +231,7 @@ describe(`Web UI`, () => {
         });
 
         it(`shows mfa section when mfa is required`, async () => {
+            mockedEventManager.emit(iCPSEventSyncEngine.START);
             mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
             await load();
 
@@ -274,6 +275,7 @@ describe(`Web UI`, () => {
 
     describe(`Submit MFA View`, () => {
         beforeEach(async () => {
+            mockedEventManager.emit(iCPSEventSyncEngine.START);
             mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
 
             await load(`submit-mfa`);
@@ -333,6 +335,7 @@ describe(`Web UI`, () => {
 
     describe(`Request MFA View`, () => {
         beforeEach(() => {
+            mockedEventManager.emit(iCPSEventSyncEngine.START);
             mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED);
         });
 
