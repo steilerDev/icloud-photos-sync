@@ -36,6 +36,6 @@ runs:
         branch: beta
         if_no_artifact_found: warn
     - id: upload-artifact
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v4
       with:
         path: ${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.site-dir }}
