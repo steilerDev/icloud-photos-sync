@@ -214,7 +214,7 @@ The MFA code can be submitted through an API or a Web UI
 The MFA code can be entered through the exposed API:
 
   - Request: 
-    - Endpoint: `/mfa`
+    - Endpoint: `/api/mfa`
     - Query Parameters:
         - `code` - Expects the 6 digit MFA code
   - Response: 
@@ -254,7 +254,7 @@ In case the primary MFA device is not available, or the initial push is no longe
 This can be requested using the exposed API:
 
   - Request: 
-    - Endpoint: `/resend_mfa`
+    - Endpoint: `/api/resend_mfa`
     - Query Parameters:
         - `method` - Expects one of the following methods: `sms`, `voice`, `device`
         - `phoneNumberId` - If multiple phone numbers are registered, select the appropriate one (if you select a non-existing phone number id, the log of the main application will print valid ones)
