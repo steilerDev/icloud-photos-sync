@@ -10,8 +10,8 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-    if(event.request.method !== "GET") return;
-    if(event.request.mode !== 'navigate' && event.request.destination !== 'document') return;
+    // only cache requests that don't contain /api/ in the path
+    if (event.request.url.includes("/api/")) return;
 
     // Use a "State while revalidate" strategy to cache HTML pages
     event.respondWith(
