@@ -39,7 +39,7 @@ export abstract class View {
 
                 async function getVapidPublicKey() {
                     try {
-                        const response = await fetch("vapid-public-key");
+                        const response = await fetch("api/vapid-public-key");
                         if (!response.ok) {
                             throw new Error("Failed to fetch VAPID public key.");
                         }
