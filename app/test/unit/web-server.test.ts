@@ -378,6 +378,16 @@ describe(`State`, () => {
     });
 });
 
+describe(`VAPID Public Key`, () => {
+    test(`Returns VAPID public key`, async () => {
+        const response = await mockedHttpServer().getJson(WEB_SERVER_API_ENDPOINTS.VAPID_PUBLIC_KEY);
+        expect(response.statusCode).toBe(200);
+        const body = await response._getJSONData() as Record<string, unknown>;
+        expect(body.publicKey).toBeDefined();
+        expect(typeof body.publicKey).toBe(`string`);
+    });
+});
+
 describe(`UI`, () => {
     test(`Redirects root to state view`, async () => {
         const response = await mockedHttpServer().getHtml(`/`);
@@ -585,7 +595,7 @@ describe(`Invalid requests`, () => {
         expect(response.statusCode).toBe(404);
         const body = await response._getJSONData();
         expect(body).toEqual({
-            message: `Route not found, available endpoints: ["/api/mfa","/api/reauthenticate","/api/resend_mfa","/api/state","/api/sync","/api/subscribe"]`,
+            message: `Route not found, available endpoints: ["/api/mfa","/api/reauthenticate","/api/resend_mfa","/api/state","/api/sync","/api/subscribe","/api/vapid-public-key"]`,
         });
         expect(warnEvent).toHaveBeenCalledWith(new Error(`Received request to unknown endpoint`));
     });

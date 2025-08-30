@@ -24,7 +24,8 @@ export const WEB_SERVER_API_ENDPOINTS = {
     RESEND_CODE: `/api/resend_mfa`, // Expecting URL parameter 'method' (either 'device', 'sms', 'voice') and optionally 'phoneNumberId' (any number > 0)
     STATE: `/api/state`, // Expecting no URL parameters
     TRIGGER_SYNC: `/api/sync`, // Expecting no URL parameters
-    SUBSCRIBE: `/api/subscribe`
+    SUBSCRIBE: `/api/subscribe`,
+    VAPID_PUBLIC_KEY: `/api/vapid-public-key`
 };
 
 /**
@@ -213,14 +214,6 @@ export class WebServer {
                 return;
             }
 
-            if (cleanPath.startsWith(`/vapid-public-key`)) {
-                Resources.logger(this).debug(`Serving VAPID public key.`);
-                res.writeHead(200, {'Content-Type': `application/json`});
-                res.write(JSON.stringify({publicKey: Resources.manager().notificationVapidCredentials.publicKey}));
-                res.end();
-                return;
-            }
-
             if (req.method === `GET`) {
                 this.handleGetRequest(req, res);
                 return;
@@ -276,16 +269,7 @@ export class WebServer {
      */
     private handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         if (req.headers[`accept`] === `application/json`) {
-            Resources.logger(this).debug(`Received JSON request: GET ${req.url}`);
-            if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.STATE)) {
-                Resources.logger(this).debug(`Received state request`);
-                this.handleStateRequest(res);
-            } else {
-                Resources.logger(this).warn(`Unknown API endpoint requested: GET ${req.url}`);
-                res.writeHead(404, {'Content-Type': `text/plain`});
-                res.write(`Not Found`);
-                res.end();
-            }
+            this.handleApiGetRequest(req, res);
             return;
         }
 
@@ -305,6 +289,24 @@ export class WebServer {
         this.handleUiRequest(req, res);
     }
 
+    private handleApiGetRequest(req: http.IncomingMessage, res: http.ServerResponse<http.IncomingMessage>) {
+        Resources.logger(this).debug(`Received JSON request: GET ${req.url}`);
+        if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.STATE)) {
+            Resources.logger(this).debug(`Received state request`);
+            this.handleStateRequest(res);
+            return;
+        } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.VAPID_PUBLIC_KEY)) {
+            Resources.logger(this).debug(`Received VAPID public key request`);
+            this.handleVapidPublicKeyRequest(res);
+            return;
+        } else {
+            Resources.logger(this).warn(`Unknown API endpoint requested: GET ${req.url}`);
+            res.writeHead(404, {'Content-Type': `text/plain`});
+            res.write(`Not Found`);
+            res.end();
+        }
+    }
+
     /**
      * This function will handle the request send to the state endpoint
      * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the request method or endpoint of server could not be found - Provides iCPSError as argument
@@ -316,6 +318,13 @@ export class WebServer {
             ...this.state.getDto(),
             nextSyncTimestamp: this.nextSyncTimestamp
         }));
+        res.end();
+    }
+
+    private handleVapidPublicKeyRequest(res: http.ServerResponse<http.IncomingMessage>) {
+        Resources.logger(this).debug(`Serving VAPID public key.`);
+        res.writeHead(200, {'Content-Type': `application/json`});
+        res.write(JSON.stringify({publicKey: Resources.manager().notificationVapidCredentials.publicKey}));
         res.end();
     }
 
