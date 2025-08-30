@@ -1,0 +1,174 @@
+openapi: '3.1.0'
+info:
+  title: icloud-photos-sync local server API
+  version: '1.0'
+  license: 
+    name: GNU General Public License v3.0
+    url: https://github.com/steilerDev/icloud-photos-sync/blob/main/LICENSE
+  description: This document describes the API of icloud-photo-sync's web server
+servers:
+  - url: http://localhost:80
+    description: The URL and port depend on your local setup - by default the webserver is exposed at port 80
+security: 
+  -  {}
+paths:
+  /api/state:
+    get: 
+      summary: Provides the current operational state of the application's
+      operationId: getState
+      responses: 
+        '200':
+          description: Returns the current state
+          content: 
+            application/json:
+              schema: 
+                type: object
+                properties: 
+                  state: 
+                    type: string
+                    enum: ['unknown', 'ok', 'authenticating', 'syncing', 'error', 'reauthSuccess', 'reauthError']
+                  waitingForMfa:
+                    type: boolean
+                  nextSyncTimestamp:
+                    type: string
+                    example: 8/30/2025, 2:00:00 AM
+  /api/reauthenticate:
+    post: 
+      summary: Requests the application to re-authenticate
+      operationId: requestReAuthentication
+      responses: 
+        '200':
+          description: Successfully triggered re-authentication
+          content: 
+            text/plain:
+              schema: 
+                type: string
+                enum: ['Reauthentication requested']
+  /api/sync:
+    post:
+      summary: Requests the application to execute an ad-hoc sync
+      operationId: requestSync
+      responses: 
+        '200':
+          description: Successfully triggered an ad-hoc sync
+          content: 
+            text/plain:
+              schema: 
+                type: string
+                enum: ['Sync requested']
+  /api/resend_mfa:
+    post:
+      summary: Requests the tool to resend the MFA code utilizing the provided method
+      operationId: postResendMFA
+      parameters: 
+        - name: method
+          in: query
+          description: The selected resend method
+          required: true
+          schema: 
+            type: string
+            enum: ['sms', 'voice', 'device']
+        - name: phoneNumberId
+          in: query
+          description: Optionally defining a phone number id (in case multiple trusted phone numbers are registered with the account)
+          required: false
+          schema: 
+            type: integer
+      responses: 
+        '200':
+          description: Successfully requested MFA code resend
+          content: 
+            text/plain:
+              schema: 
+                type: string
+                enum: ['Requesting MFA resend with method $method']
+        '400':
+          description: Resend method does not match expected format
+          content: 
+            text/plain:
+              schema: 
+                type: string
+                enum: ['Resend method does not match expected format']
+  /api/mfa:
+    post:
+      summary: Enters the MFA code for authentication
+      operationId: postMFACode
+      parameters: 
+        - name: code
+          in: query
+          description: The MFA code provided by the trusted source
+          required: true
+          schema: 
+            type: integer
+            maxLength: 6
+            minLength: 6
+      responses:
+        '200':
+          description: MFA code read
+          content: 
+            text/plain:
+              schema: 
+                type: string
+                enum: ['Read MFA code: $code']
+        '400':
+          description: MFA code does not match expected format
+          content: 
+            text/plain:
+              schema: 
+                type: string
+                enum: ['Unexpected MFA code format! Expecting 6 digits']
+        '412':
+          description: MFA code not expected at this time
+          content: 
+            text/plain:
+              schema: 
+                type: string
+                enum: ['MFA code not expected at this time. Taking you back home.']
+  /api/subscribe:
+    post:
+      summary: Creates a notification subscription
+      operationId: postSubscription
+      requestBody: 
+        content: 
+          application/json:
+            schema: 
+              type: object
+              properties: 
+                endpoint:
+                  type: string
+                keys:
+                  type: object
+                  properties: 
+                    p256dh:
+                      type: string
+                    auth: 
+                      type: string
+      responses: 
+        '200':
+          description: Successfully created a notification subscription
+          content: 
+            text/plain:
+              schema: 
+                type: string
+                enum: ['Push subscription added successfully']
+        '400':
+          description: Invalid notification subscription request
+          content: 
+            text/plain:
+              schema: 
+                type: string
+                enum: ['Invalid request body']
+  /api/vapid-public-key:
+    get:
+      summary: Gets the VAPID public key, required for push notification support
+      operationId: getVapidPublicKey
+      responses: 
+        '200':
+          description: The VAPID Public key
+          content: 
+            application/json:
+              schema: 
+                type: object
+                properties: 
+                  publicKey: 
+                    type: string

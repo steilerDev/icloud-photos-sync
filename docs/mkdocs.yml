@@ -12,6 +12,7 @@ nav:
   - 'Get Started': get-started.md
   - 'User Guides':
     - 'CLI Reference': user-guides/cli.md
+    - 'API Reference': user-guides/api.md
     - 'Common Warnings': user-guides/common-warnings.md
     - 'Advanced Data Protection': user-guides/adp.md
     - 'Sync Metrics': user-guides/sync-metrics.md
@@ -60,12 +61,15 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji 
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - admonition
+  - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed:
-      alternate_style: true 
-  - admonition
+      alternate_style: true
 plugins:
   - search
+  - neoteroi.mkdocsoad:
+      use_pymdownx: true
   - redirects: 
      redirect_maps: 
         warnings.md: user-guides/common-warnings.md
