@@ -86,9 +86,9 @@
     "testcontainers": "^11.5.1",
     "ts-jest": "29.3.4",
     "ts-json-schema-generator": "2.4.0",
-    "tsx": "4.20.4",
+    "tsx": "4.20.5",
     "typescript": "5.9.2",
-    "typescript-eslint": "8.40.0"
+    "typescript-eslint": "8.41.0"
   },
   "dependencies": {
     "@backtrace/node": "0.8.0",
