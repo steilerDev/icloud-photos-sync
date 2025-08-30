@@ -259,7 +259,7 @@ export class WebServer {
         Resources.manager().addNotificationSubscription(subscription);
 
         Resources.logger(this).info(`New push subscription added.`);
-        this.sendApiResponse(res, 200, `Push subscription added successfully.`);
+        this.sendApiResponse(res, 200, `Push subscription added successfully`);
     }
 
     /**
@@ -494,7 +494,7 @@ export class WebServer {
      */
     private handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
         if (!this.state.isActive() || !this.state.isWaitingForMfa) {
-            this.sendApiResponse(res, 400, `MFA code not expected at this time. Taking you back home.`, `/`);
+            this.sendApiResponse(res, 412, `MFA code not expected at this time. Taking you back home.`, `/`);
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.NO_CODE_EXPECTED));
             return;
         }
@@ -558,7 +558,7 @@ export class WebServer {
                 this.handlePushSubscription(res, data);
             } catch (err) {
                 Resources.logger(this).error(`Failed to parse push subscription request body: ${err.message}`);
-                this.sendApiResponse(res, 400, `Invalid request body.`);
+                this.sendApiResponse(res, 400, `Invalid request body`);
             }
         });
         return;
