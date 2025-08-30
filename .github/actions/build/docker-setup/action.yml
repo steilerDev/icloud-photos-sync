@@ -22,7 +22,7 @@ runs:
         name: app-artifact-release
         path: ${{ inputs.docker-path }}/rootfs/opt/
     - id: setup-build-app-artifact
-      if: steps.setup-release-app-artifact.conclusion == 'failure'
+      if: steps.setup-release-app-artifact.outcome == 'failure'
       uses: actions/download-artifact@v5
       with:
         name: app-artifact-build
