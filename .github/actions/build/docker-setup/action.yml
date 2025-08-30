@@ -24,9 +24,12 @@ runs:
       with:
         pattern: ${{ inputs.app-artifact-pattern }}
         path: ${{ inputs.docker-path }}/rootfs/opt/
+        merge-multiple: true
     - id: validate-app-artifact
       shell: bash
-      run: tree -a "${{ inputs.docker-path }}/"
+      run: |
+        tree -a "${{ inputs.docker-path }}/"
+        tar -xOf ${{ inputs.docker-path }}/rootfs/opt/npm-pack.tgz package/package.json
     - id: build-rootfs
       shell: bash
       run: tar -C ${{ inputs.docker-path }}/rootfs -czf ${{ inputs.docker-path }}/rootfs.tar.gz ./
