@@ -17,12 +17,12 @@ runs:
       run: mkdir -p "${{ inputs.docker-path }}/rootfs/opt/"
     - id: setup-release-app-artifact
       uses: actions/download-artifact@v5
-      continue-on-error: true
       with:
         name: app-artifact-release
         path: ${{ inputs.docker-path }}/rootfs/opt/
     - id: setup-build-app-artifact
       if: failure()
+      continue-on-error: true
       uses: actions/download-artifact@v5
       with:
         name: app-artifact-build
