@@ -27,10 +27,12 @@ runs:
         name: app-artifact-build
         path: ${{ inputs.docker-path }}/rootfs/opt/
     - id: validate-app-artifact
+      if: always()
       shell: bash
       run: |
         tree -a "${{ inputs.docker-path }}/"
         tar -xOf ${{ inputs.docker-path }}/rootfs/opt/npm-pack.tgz package/package.json
     - id: build-rootfs
+      if: always()
       shell: bash
       run: tar -C ${{ inputs.docker-path }}/rootfs -czf ${{ inputs.docker-path }}/rootfs.tar.gz ./
