@@ -64,6 +64,8 @@ export class ResourceManager {
             const formattedResourceFile: ResourceFile = {
                 libraryVersion: this._resources.libraryVersion,
                 trustToken: this._resources.trustToken,
+                notificationVapidCredentials: this._resources.notificationVapidCredentials,
+                notificationSubscriptions: this._resources.notificationSubscriptions
             };
             const resourceFileData = jsonc.stringify(formattedResourceFile, null, 4);
             Resources.logger(this).debug(`Writing resource file to ${this.resourceFilePath}`);
