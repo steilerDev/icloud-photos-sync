@@ -1,4 +1,7 @@
 #!/bin/bash
+
+echo "DEPRECATION WARNING: This helper tool will be removed in the next major version, please use the WebUI or directly interact with the API" >&2
+
 if [ -z "$1" ]; then
     echo "No code provided"
     echo "Run this utility through:"
