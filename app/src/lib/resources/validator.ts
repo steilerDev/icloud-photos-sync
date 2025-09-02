@@ -4,11 +4,13 @@ import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
 import {COOKIE_KEYS, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
 import {ResourceFile} from "./resource-types.js";
+import {PushSubscription} from './web-server-types.js';
 import PCSResponseSchema from "./schemas/pcs-response.json" with { type: "json" }; // eslint-disable-line
 import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" with { type: "json" }; // eslint-disable-line
 import ResendMFADeviceResponseSchema from "./schemas/resend-mfa-device-response.json" with { type: "json" }; // eslint-disable-line
 import ResendMFAPhoneResponseSchema from "./schemas/resend-mfa-phone-response.json" with { type: "json" }; // eslint-disable-line
 import ResourceFileSchema from "./schemas/resource-file.json" with { type: "json" }; // eslint-disable-line
+import PushSubscriptionSchema from "./schemas/push-subscription.json" with { type: "json" }; // eslint-disable-line
 import SetupResponseSchema from "./schemas/setup-response.json" with { type: "json" }; // eslint-disable-line
 import SigninInitResponseSchema from "./schemas/signin-init-response.json" with { type: "json" }; // eslint-disable-line
 import SigninResponseSchema from "./schemas/signin-response.json" with { type: "json" }; // eslint-disable-line
@@ -30,6 +32,11 @@ export class Validator {
      * Validator for the resource file schema
      */
     _resourceFileValidator: Ajv.ValidateFunction<ResourceFile> = new Ajv.Ajv(AJV_CONF).compile<ResourceFile>(ResourceFileSchema);
+
+    /**
+     * Validator for the push subscription web server request
+     */
+    _pushSubscriptionValidator: Ajv.ValidateFunction<PushSubscription> = new Ajv.Ajv(AJV_CONF).compile<PushSubscription>(PushSubscriptionSchema);
 
     /**
      * Validator for the signin init response schema
@@ -106,6 +113,20 @@ export class Validator {
         return this.validate(
             this._resourceFileValidator,
             VALIDATOR_ERR.RESOURCE_FILE,
+            data,
+        );
+    }
+
+    /**
+     * Validates the provided data string against the push subscription schema
+     * @param data - The data to validate
+     * @throws An error if the data cannot be parsed
+     * @returns The parsed ResourceFile data
+     */
+    validatePushSubscription(data: unknown): PushSubscription {
+        return this.validate(
+            this._pushSubscriptionValidator,
+            VALIDATOR_ERR.PUSH_SUBSCRIPTION,
             data,
         );
     }

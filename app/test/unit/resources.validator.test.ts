@@ -45,6 +45,73 @@ describe(`Validator`, () => {
         });
     });
 
+    describe(`validatePushSubscriptionRequest`, () => {
+        test.each([
+            {
+                data: {
+                    endpoint: `some.endpoint.com`,
+                    keys: {
+                        p256dh: `someKey`,
+                        auth: `someAuth`
+                    }
+                },
+                desc: `minimal push subscription`,
+            }, {
+                data: {
+                    endpoint: `some.endpoint.com`,
+                    expirationTime: 1,
+                    keys: {
+                        p256dh: `someKey`,
+                        auth: `someAuth`
+                    }
+                },
+                desc: `push subscription with expiration time`,
+            }
+        ])(`should validate a valid push subscription request: $desc`, ({data}) => {
+            expect(() => validator.validatePushSubscription(data)).not.toThrow();
+        });
+
+        test.each([
+            {
+                data: {
+                    endpoint: `some.endpoint.com`,
+                    expirationTime: `1`,
+                    keys: {
+                        p256dh: `someKey`,
+                        auth: `someAuth`
+                    }
+                },
+                desc: `expiration time not a number`
+            }, {
+                data: {
+                    endpoint: `some.endpoint.com`,
+                    keys: {
+                        p256dh: `somekey`,
+                    }
+                },
+                desc: `auth missing`
+            }, {
+                data: {
+                    endpoint: `some.endpoint.com`,
+                    keys: {
+                        auth: `someAuth`
+                    }
+                },
+                desc: `p256dh missing`
+            }, {
+                data: {
+                    keys: {
+                        p256dh: `somekey`,
+                        auth: `someAuth`
+                    }
+                },
+                desc: `endpoint missing`
+            },
+        ])(`should throw an error for an invalid push subscription request: $desc`, ({data}) => {
+            expect(() => validator.validatePushSubscription(data)).toThrowError(VALIDATOR_ERR.PUSH_SUBSCRIPTION);
+        });
+    });
+
     describe(`validateSigninInitResponse`, () => {
         test.each([
             {
