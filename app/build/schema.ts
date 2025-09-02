@@ -12,6 +12,10 @@ const schemaList = [
         srcPath: `src/lib/resources/resource-types.ts`,
         allowAdditionalProperties: false,
     }, {
+        typeName: `PushSubscription`,
+        srcPath: `src/lib/resources/web-server-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
         typeName: `SigninResponse`,
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
