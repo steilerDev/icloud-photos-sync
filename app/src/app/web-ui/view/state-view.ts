@@ -167,7 +167,7 @@ export class StateView extends View {
                     }
                 }
                 setTimeout(() => updateState(), 0);
-                setInterval(updateState, 1000);
+                setInterval(updateState, 10000);
             </script>
         `;
     }
