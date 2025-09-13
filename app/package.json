@@ -76,7 +76,7 @@
     "eslint": "9.35.0",
     "jest": "29.7.0",
     "jest-ctrf-json-reporter": "0.0.9",
-    "jsdom": "26.1.0",
+    "jsdom": "27.0.0",
     "knip": "5.63.1",
     "liquidjs": "10.21.1",
     "mock-fs": "5.5.0",
