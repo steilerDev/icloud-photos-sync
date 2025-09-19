@@ -27,7 +27,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
               APPLE_ID_USER: "<iCloud Username>"
               APPLE_ID_PWD: "<iCloud Password>"
               TZ: "Europe/Berlin"                                                       
-              SCHEDULE: "* 2 * * *"
+              SCHEDULE: "0 2 * * *"
               ENABLE_CRASH_REPORTING: true
             ports:
               - 80:80
