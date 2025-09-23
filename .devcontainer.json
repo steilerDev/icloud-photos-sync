@@ -2,7 +2,7 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/typescript-node-12
 {
 	"name": "icloud-photos-sync",
-    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+    "image": "debian:trixie",
     "features": {
         "ghcr.io/devcontainers/features/common-utils:2": {
 			"username": "vscode",
@@ -24,7 +24,8 @@
             "version": "3.9"
         },
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
-            "version": "latest"
+            "version": "latest",
+            "moby": "false"
         }
     },
 
