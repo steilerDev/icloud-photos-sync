@@ -104,7 +104,7 @@
     "croner": "9.1.0",
     "jsonc": "2.0.0",
     "p-event": "7.0.0",
-    "p-queue": "8.1.0",
+    "p-queue": "8.1.1",
     "p-timeout": "6.1.4",
     "tough-cookie": "6.0.0",
     "web-push": "3.6.7"
