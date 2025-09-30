@@ -35,7 +35,7 @@ test(`Libraries version mismatch should throw`, () => {
     mockedResourceManager._resources.libraryVersion = 99;
     expect(() => {
         const _library = new PhotosLibrary();
-    }).toThrowError(/^Library version mismatch$/);
+    }).toThrow(/^Library version mismatch$/);
 
     expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeFalsy();
     expect(fs.existsSync(primaryAssetDir)).toBeFalsy();

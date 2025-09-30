@@ -817,7 +817,7 @@ describe(`Request handling`, () => {
                     message: `Read MFA code: ${code}`,
                 });
 
-                expect(mfaReceivedEvent).toBeCalledWith(new MFAMethod(`device`), code);
+                expect(mfaReceivedEvent).toHaveBeenCalledWith(new MFAMethod(`device`), code);
             });
 
             test(`Invalid code format`, async () => {

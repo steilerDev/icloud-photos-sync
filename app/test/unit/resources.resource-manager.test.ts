@@ -607,7 +607,7 @@ describe(`ResourceManager`, () => {
 
             test(`should throw an error if no session secret is set`, () => {
                 resourceManager._resources.sessionSecret = undefined!;
-                expect(() => resourceManager.sessionSecret).toThrowError(/^No session secret present$/);
+                expect(() => resourceManager.sessionSecret).toThrow(/^No session secret present$/);
             });
         });
 
@@ -625,7 +625,7 @@ describe(`ResourceManager`, () => {
 
             test(`should throw an error if no primary zone is set`, () => {
                 resourceManager._resources.primaryZone = undefined!;
-                expect(() => resourceManager.primaryZone).toThrowError(/^No primary photos zone present$/);
+                expect(() => resourceManager.primaryZone).toThrow(/^No primary photos zone present$/);
             });
         });
 
@@ -644,7 +644,7 @@ describe(`ResourceManager`, () => {
 
             test(`should throw an error if no shared zone is set`, () => {
                 resourceManager._resources.sharedZone = undefined!;
-                expect(() => resourceManager.sharedZone).toThrowError(/^No shared photos zone present$/);
+                expect(() => resourceManager.sharedZone).toThrow(/^No shared photos zone present$/);
             });
         });
 

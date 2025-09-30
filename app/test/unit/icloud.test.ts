@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { test, afterAll, afterEach, beforeAll, beforeEach, describe, expect, jest} from '@jest/globals';
 import { iCPSError } from '../../src/app/error/error';
 import { MFA_ERR, VALIDATOR_ERR } from '../../src/app/error/error-codes';
 import { iCloud } from '../../src/lib/icloud/icloud';
@@ -11,7 +11,6 @@ import { Header } from '../../src/lib/resources/network-manager';
 import { SigninInitResponse } from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
 import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
-import {afterEach} from 'node:test';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;

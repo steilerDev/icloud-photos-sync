@@ -3,7 +3,7 @@ import fs from 'fs';
 import mockfs from 'mock-fs';
 import {stdin} from 'mock-stdin';
 import path from 'path';
-import {appFactory} from '../../src/app/factory';
+import {appFactory, iCPSAppOptions} from '../../src/app/factory';
 import {ArchiveApp, DaemonApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {WebServer} from '../../src/app/web-ui/web-server';
 import {Asset} from '../../src/lib/photos-library/model/asset';
@@ -35,9 +35,9 @@ describe(`App Factory`, () => {
         const setupSpy = jest.spyOn(Resources, `setup`);
         const mockStderr = jest.spyOn(process.stderr, `write`).mockImplementation(() => true);
 
-        await expect(() => appFactory(options)).rejects.toThrowError(expected);
+        await expect(() => appFactory(options)).rejects.toThrow(expected);
 
-        expect(mockStderr).toBeCalledWith(expected + `\n`);
+        expect(mockStderr).toHaveBeenCalledWith(expected + `\n`);
         expect(setupSpy).not.toHaveBeenCalled();
     });
 
@@ -61,7 +61,7 @@ describe(`App Factory`, () => {
         test.each(nonRejectOptions)(`$_desc`, async ({options, expectedOptions}) => {
             const setupSpy = jest.spyOn(Resources, `setup`);
             const app = await appFactory([...options, ...command]);
-            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, ...expectedOptions});
+            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, ...expectedOptions} as iCPSAppOptions);
             expect(app).toBeInstanceOf(appType);
         });
     });
