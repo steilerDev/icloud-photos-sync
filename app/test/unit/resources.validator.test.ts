@@ -25,7 +25,83 @@ describe(`Validator`, () => {
                     trustToken: `someToken`,
                 },
                 desc: `libraryVersion and trustToken`,
-            },
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    notificationVapidCredentials: {
+                        publicKey: `someKey`,
+                        privateKey: `someKey`
+                    }
+                },
+                desc: `libraryVersion and VAPID Credentials`,
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    notificationSubscriptions: {
+                        'http://some.endpoint': {
+                            endpoint: `http://some.endpoint`,
+                            keys: {
+                                p256dh: `someKey`,
+                                auth: `someAuth`
+                            }
+                        }
+                    }
+                },
+                desc: `libraryVersion and one notification subscription`,
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    notificationSubscriptions: {
+                        'http://some.endpoint': {
+                            endpoint: `http://some.endpoint`,
+                            keys: {
+                                p256dh: `someKey`,
+                                auth: `someAuth`
+                            }
+                        },
+                        'http://some.other.endpoint': {
+                            endpoint: `http://some.other.endpoint`,
+                            keys: {
+                                p256dh: `someOtherKey`,
+                                auth: `someOtherAuth`
+                            }
+                        }
+                    }
+                },
+                desc: `libraryVersion and multiple notification subscription`,
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    notificationSubscriptions: {}
+                },
+                desc: `libraryVersion and empty notification subscription`,
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    trustToken: `someToken`,
+                    notificationVapidCredentials: {
+                        publicKey: `someKey`,
+                        privateKey: `someKey`
+                    },
+                    notificationSubscriptions: {
+                        'http://some.endpoint': {
+                            endpoint: `http://some.endpoint`,
+                            keys: {
+                                p256dh: `someKey`,
+                                auth: `someAuth`
+                            }
+                        },
+                        'http://some.other.endpoint': {
+                            endpoint: `http://some.other.endpoint`,
+                            keys: {
+                                p256dh: `someOtherKey`,
+                                auth: `someOtherAuth`
+                            }
+                        }
+                    }
+                },
+                desc: `all keys and values`,
+            }
         ])(`should validate a valid resource file: $desc`, ({data}) => {
             expect(() => validator.validateResourceFile(data)).not.toThrow();
         });
@@ -39,7 +115,13 @@ describe(`Validator`, () => {
             }, {
                 data: {},
                 desc: `empty object`,
-            },
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    notificationVapidCredentials: {}
+                },
+                desc: `libraryVersion and empty VAPID Credentials`,
+            }
         ])(`should throw an error for an invalid resource file: $desc`, ({data}) => {
             expect(() => validator.validateResourceFile(data)).toThrowError(VALIDATOR_ERR.RESOURCE_FILE);
         });

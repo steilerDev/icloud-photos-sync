@@ -1,142 +1,98 @@
-import {MFA_ERR, AUTH_ERR, WEB_SERVER_ERR} from "../error/error-codes.js";
 import {iCPSError} from "../error/error.js";
+import {MFA_ERR, AUTH_ERR, WEB_SERVER_ERR} from "../error/error-codes.js";
 
 export enum StateType {
-    Unknown = `unknown`,
-    Ok = `ok`,
-    Authenticating = `authenticating`,
-    Syncing = `syncing`,
-    Error = `error`,
-    ReauthSuccess = `reauthSuccess`,
-    ReauthError = `reauthError`
+    READY = `ready`,
+    AUTH = `authenticating`,
+    MFA = `mfa_required`,
+    SYNC = `syncing`,
+}
+
+export enum StateTrigger {
+    SYNC = `sync`,
+    AUTH = `auth`,
 }
 
 export class State {
-    protected constructor(public readonly type: StateType) {}
+    /**
+     * Keeps track when the next scheduled sync should happen
+     */
+    nextSync?: number;
+    /**
+     * If error is present, previous state ended in error
+     */
+    prevError?: iCPSError
+    /**
+     * What triggered the current state initially (if applicable)
+     */
+    prevTrigger?: StateTrigger
+    /**
+     * The timestamp when the state was last changed
+     */
+    timestamp: number = Date.now();
 
-    public isWaitingForMfa(): boolean {
-        return false;
-    }
+    /**
+     * Current state of the application
+     */
+    state: StateType = StateType.READY;
 
-    public setWaitingForMfa(_isWaiting: boolean): void {
-        // No-op in base class
-    }
-
-    public isError(): this is ErrorState {
-        return this instanceof ErrorState;
-    }
-
-    public isSettled(): this is SettledState {
-        return this instanceof SettledState;
-    }
-
-    public isActive(): this is ActiveState {
-        return this instanceof ActiveState;
-    }
-
-    public getDto() {
-        return {
-            state: this.type,
-            waitingForMfa: this.isWaitingForMfa()
-        }
-    }
-
-    public static unknown(): State {
-        return new State(StateType.Unknown);
-    }
-}
-
-export class ActiveState extends State {
-    private _isWaitingForMfa = false;
-
-    public constructor(stateType: StateType.Syncing | StateType.Authenticating) {
-        super(stateType);
-    }
-
-    public isWaitingForMfa(): boolean {
-        return this._isWaitingForMfa;
-    }
-
-    public setWaitingForMfa(isWaiting: boolean): void {
-        this._isWaitingForMfa = isWaiting;
-    }
-
-    public static syncing(): State {
-        return new ActiveState(StateType.Syncing);
-    }
-
-    public static authenticating(): State {
-        return new ActiveState(StateType.Authenticating);
-    }
-}
-
-export class SettledState extends State {
-    public readonly timestamp: number = Date.now();
-
-    constructor(public readonly type: StateType.Ok | StateType.ReauthSuccess | StateType.Error | StateType.ReauthError) {
-        super(type);
-    }
-
-    public getDto() {
-        return {
-            ...super.getDto(),
-            stateTimestamp: this.isSettled() ? this.timestamp : null,
+    updateState(newState: StateType, ctx? : {error?: iCPSError, nextSync?: number}) {
+        this.timestamp = Date.now();
+        this.state = newState;
+        if(ctx) {
+            if(ctx.nextSync) {
+                this.nextSync = ctx.nextSync;
+            }
+            if(ctx.error) {
+                this.prevError = iCPSError.toiCPSError(ctx.error);
+            }
         }
         
     }
 
-    public static ok(): State {
-        return new SettledState(StateType.Ok);
+    /**
+     * Indicates that the current state was changed due to a trigger (such as sync or auth).
+     * This will clear any previous error.
+     * @param trigger - The trigger that caused the state change
+     */
+    triggerSync(trigger: StateTrigger) {
+        // First step is always to go to AUTH state
+        this.updateState(StateType.AUTH);
+        this.prevTrigger = trigger;
+        this.prevError = undefined;
     }
 
-    public static reauthSuccess(): State {
-        return new SettledState(StateType.ReauthSuccess);
-    }
-}
+    serialize() {
 
-export class ErrorState extends SettledState {
-    constructor(
-        public readonly type: StateType.Error | StateType.ReauthError,
-        public readonly errorMessage: string
-    ) {
-        super(type);
-    }
+        let error = undefined
+        if(this.prevError) {
+            error = {
+                message: this.prevError.getDescription(),
+                code: this.prevError.getRootErrorCode(),
+            }
 
-    public getDto() {
+            /**
+             * If possible, this will try to convert known error codes into user-friendly messages
+             */
+            switch (error.code) {
+            case MFA_ERR.FAIL_ON_MFA.code:
+                error.message = `MFA code required. Use the 'Renew Authentication' button to request and enter a new code.`;
+                break;
+            case AUTH_ERR.UNAUTHORIZED.code:
+                error.message = `Your credentials seem to be invalid. Please check your iCloud credentials and try again.`;
+                break;
+            case WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED.code:
+                error.message = `MFA code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`;
+                break;
+            }
+        }
+
         return {
-            ...super.getDto(),
-            errorMessage: this.errorMessage
+            state: this.state,
+            nextSync: this.nextSync,
+            prevError: error,
+            prevTrigger: this.prevTrigger,
+            timestamp: this.timestamp,
         };
-    }
-
-    public static error(error: iCPSError | string): ErrorState {
-        if (typeof error === `string`) {
-            return new ErrorState(StateType.Error, error);
-        }
-        return new ErrorState(StateType.Error, this.getMessageFrom(error));
-    }
-
-    public static reauthError(error: iCPSError | string): ErrorState {
-        if (typeof error === `string`) {
-            return new ErrorState(StateType.ReauthError, error);
-        }
-        return new ErrorState(StateType.ReauthError, this.getMessageFrom(error));
-    }
-
-    private static getMessageFrom(error: iCPSError): string {
-        let cause = error
-        while (cause.cause && cause.cause instanceof iCPSError) {
-            cause = cause.cause;
-        }
-        switch (cause.code) {
-        case MFA_ERR.FAIL_ON_MFA.code:
-            return `Multifactor authentication code required. Use the 'Renew Authentication' button to request and enter a new code.`;
-        case AUTH_ERR.UNAUTHORIZED.code:
-            return `Your credentials seem to be invalid. Please check your iCloud credentials and try again.`;
-        case WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED.code:
-            return `Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`;
-        default:
-            return cause.message;
-        }
     }
 }

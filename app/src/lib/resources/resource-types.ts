@@ -3,7 +3,7 @@
  */
 
 import {iCPSAppOptions} from "../../app/factory.js";
-import webpush from "web-push";
+import { PushSubscription } from "./web-server-types.js";
 
 /**
  * File encoding for all text based files written by this application
@@ -68,7 +68,9 @@ export type ResourceFile = {
      * The active notification subscriptions with the server.
      * This is used to send notifications to the client when the state changes
      */
-    notificationSubscriptions?: Map<string, webpush.PushSubscription>
+    notificationSubscriptions?: {
+        [endpoint: string]: PushSubscription
+    }
 }
 
 /**

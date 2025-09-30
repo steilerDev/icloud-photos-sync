@@ -1,7 +1,7 @@
 import {buildErrorStruct, ErrorStruct} from "../error-codes.js";
 
 const name = `WebServerError`;
-const prefix = `WebServer`;
+const prefix = `WEB_SERVER`;
 
 export const SERVER_ERR: ErrorStruct = buildErrorStruct(
     name, prefix, `SERVER_ERR`, `HTTP Server Error`,
@@ -12,7 +12,11 @@ export const STARTUP_FAILED: ErrorStruct = buildErrorStruct(
 );
 
 export const NO_CODE_EXPECTED: ErrorStruct = buildErrorStruct(
-    name, prefix, `NO_CODE_EXPECTED`, `NO_CODE_EXPECTED`,
+    name, prefix, `NO_CODE_EXPECTED`, `No MFA code expected`,
+);
+
+export const SYNC_IN_PROGRESS: ErrorStruct = buildErrorStruct(
+    name, prefix, `SYNC_IN_PROGRESS`, `Cannot perform action while sync is in progress`,
 );
 
 export const ADDR_IN_USE_ERR: ErrorStruct = buildErrorStruct(
@@ -20,15 +24,15 @@ export const ADDR_IN_USE_ERR: ErrorStruct = buildErrorStruct(
 );
 
 export const INSUFFICIENT_PRIVILEGES: ErrorStruct = buildErrorStruct(
-    name, prefix, `ADDR_IN_USE`, `HTTP Server could not start, because user has insufficient privileges to open address/port`,
+    name, prefix, `INSUFFICIENT_PRIVILEGES`, `HTTP Server could not start, because user has insufficient privileges to open address/port`,
 );
 
-export const ROUTE_NOT_FOUND: ErrorStruct = buildErrorStruct(
-    name, prefix, `ROUTE_NOT_FOUND`, `Received request to unknown endpoint`,
+export const BAD_REQUEST: ErrorStruct = buildErrorStruct(
+    name, prefix, `BAD_REQUEST`, `Received unexpected request to unknown endpoint`,
 );
 
-export const METHOD_NOT_FOUND: ErrorStruct = buildErrorStruct(
-    name, prefix, `METHOD_NOT_FOUND`, `Received request with unsupported method`,
+export const UNABLE_TO_READ_BODY: ErrorStruct = buildErrorStruct(
+    name, prefix, `UNABLE_TO_READ_BODY`, `Unable to read request's body`
 );
 
 export const CODE_FORMAT: ErrorStruct = buildErrorStruct(

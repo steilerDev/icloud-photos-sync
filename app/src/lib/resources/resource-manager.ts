@@ -9,7 +9,8 @@ import * as PHOTOS_LIBRARY from '../photos-library/constants.js';
 import {iCPSEventRuntimeWarning} from "./events-types.js";
 import {Resources} from "./main.js";
 import {FILE_ENCODING, HAR_FILE_NAME, LIBRARY_LOCK_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resource-types.js";
-import webpush from "web-push";
+import { PushSubscription } from "./web-server-types.js";
+import webpush from 'web-push'
 
 /**
  * This class handles access to the .icloud-photos-sync resource file and handles currently applied configurations from the CLI and environment variables
@@ -181,16 +182,18 @@ export class ResourceManager {
      * @returns The notification subscriptions, or an empty map if none are set
      */
     get notificationSubscriptions(): webpush.PushSubscription[] {
-        return Array.from(this._resources.notificationSubscriptions?.values() || []);
+        return this._resources.notificationSubscriptions 
+            ? Object.values(this._resources.notificationSubscriptions) 
+            : [];
     }
 
     /**
      * Adds a subscription to the notification subscriptions in the resource file.
      * @param subscription - The notification subscription to add
      */
-    addNotificationSubscription(subscription: webpush.PushSubscription) {
-        this._resources.notificationSubscriptions = this._resources.notificationSubscriptions || new Map<string, webpush.PushSubscription>();
-        this._resources.notificationSubscriptions.set(subscription.endpoint, subscription);
+    addNotificationSubscription(subscription: PushSubscription) {
+        this._resources.notificationSubscriptions = this._resources.notificationSubscriptions || {};
+        this._resources.notificationSubscriptions[subscription.endpoint] = subscription;
         this._writeResourceFile();
     }
 
@@ -199,8 +202,8 @@ export class ResourceManager {
      * @param subscription - The notification subscription to remove
      */
     removeNotificationSubscription(subscription: webpush.PushSubscription) {
-        if (this._resources.notificationSubscriptions) {
-            this._resources.notificationSubscriptions.delete(subscription.endpoint);
+        if (this._resources.notificationSubscriptions && subscription.endpoint in this._resources.notificationSubscriptions) {
+            delete this._resources.notificationSubscriptions[subscription.endpoint]
             this._writeResourceFile();
         } else {
             Resources.logger(this).warn(`No notification subscriptions found to remove endpoint: ${subscription.endpoint}`);
@@ -226,10 +229,6 @@ export class ResourceManager {
      */
     get webServerPort(): number {
         return this._resources.port;
-    }
-
-    set webServerPort(port: number) {
-        this._resources.port = port;
     }
 
     /**

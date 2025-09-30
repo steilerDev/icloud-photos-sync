@@ -3,7 +3,7 @@ import {ENDPOINTS} from '../../resources/network-types.js';
 /**
  * Indicating, which MFA method should be used
  */
-export enum MFAMethodType {
+enum MFAMethodType {
     DEVICE = 1,
     SMS = 2,
     VOICE = 3

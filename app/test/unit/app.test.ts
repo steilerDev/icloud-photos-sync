@@ -7,7 +7,7 @@ import {appFactory} from '../../src/app/factory';
 import {ArchiveApp, DaemonApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {WebServer} from '../../src/app/web-ui/web-server';
 import {Asset} from '../../src/lib/photos-library/model/asset';
-import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError} from '../../src/lib/resources/events-types';
+import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError, iCPSEventWebServer} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
 import {LIBRARY_LOCK_FILE_NAME} from '../../src/lib/resources/resource-types';
 import * as Config from '../_helpers/_config';
@@ -584,6 +584,24 @@ describe(`App control flow`, () => {
 
                 expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
                 expect(eventScheduledOverrun).toHaveBeenCalledTimes(1);
+                expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
+            });
+
+            test(`Trigger job`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
+                    .mockResolvedValue();
+                Resources._instances.manager._resources.schedule = `0 0 ? ? ? ?`; // Should be in the past (Second & Minute zero of the initialized date)
+                const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
+
+                await daemonApp.run();
+
+                Resources._instances.event.emit(iCPSEventWebServer.SYNC_REQUESTED)
+
+                // Cleaning up
+                daemonApp.job?.stop();
+
+                expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
                 expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
             });
         });
