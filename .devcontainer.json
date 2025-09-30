@@ -73,8 +73,8 @@
             //  gpg --edit-key <key-id>
             //  > gpg trust
             //  > gpg 5
-            // git config --global user.signingkey <key-id>
-            // git config --global commit.gpgsign true
+            // git config user.signingkey <key-id>
+            // git config commit.gpgsign true
             "source": "gpg-trust",
             "target": "/home/vscode/.gnupg/",
             "type": "volume"
