@@ -275,6 +275,8 @@ In order to archive an album, the [`archive` command](user-guides/cli.md#archive
 
 ## Contributing & Feedback
 
+Please always make sure that you are able to access your iCloud Photo Library through https://icloud.com. Sometimes it is necessary to agree to a dialogue in the web application in order to use it, which this tool is dependent on.
+
 Please check the [contributing guidelines](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md) to learn how to engage with this project. The document outlines the bug reporting, feature and support request process for this tool.
 
 Consider supporting the development efforts by [sponsoring the author](https://github.com/sponsors/steilerDev).
