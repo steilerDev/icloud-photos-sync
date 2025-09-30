@@ -1,5 +1,6 @@
 {
     "description": "dependencies for releasing semantic release",
+    "packageManager": "npm@10.9.3",
     "devDependencies": {
         "@backtrace/javascript-cli": "0.3.2",
         "@codedependant/semantic-release-docker": "^5.1.1",
