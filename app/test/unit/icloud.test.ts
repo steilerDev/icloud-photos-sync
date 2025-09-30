@@ -11,6 +11,7 @@ import { Header } from '../../src/lib/resources/network-manager';
 import { SigninInitResponse } from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
 import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
+import {afterEach} from 'node:test';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;
@@ -74,6 +75,44 @@ describe(`Control structure`, () => {
 
         expect(icloud.acquirePCSCookies).toHaveBeenCalled();
     });
+
+    describe(`MFA_REQUIRED event triggered`, () => {
+        test(`Should emit error when FAIL_ON_MFA is set`, () => {
+            mockedResourceManager._resources.failOnMfa = true
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR)
+
+            mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED)
+
+            expect(errorEvent).toHaveBeenCalledWith(new Error(`MFA code required, failing due to failOnMfa flag`))
+        })
+
+        test(`Should not emit error when FAIL_ON_MFA and ignoreFailOnMFA is set`, () => {
+            const cleanInstances = prepareResources()!;
+            mockedResourceManager = cleanInstances.manager;
+
+            icloud = new iCloud(true)
+            cleanInstances.manager._resources.failOnMfa = true
+            const errorEvent = cleanInstances.event.spyOnEvent(iCPSEventCloud.ERROR)
+
+            cleanInstances.event.emit(iCPSEventCloud.MFA_REQUIRED)
+
+            expect(errorEvent).not.toHaveBeenCalled()
+        })
+
+        test(`Should timeout`, () => {
+            mockedResourceManager._resources.failOnMfa = false
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR)
+            const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_NOT_PROVIDED)
+
+            mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED)
+            jest.advanceTimersByTime(1000*60*10 + 10)
+
+            expect(errorEvent).not.toHaveBeenCalled()
+            expect(mfaEvent).toHaveBeenCalledWith(new Error(`MFA code timeout (code needs to be provided within 10 minutes)`))
+
+        })
+    })
+
 
     test(`MFA_NOT_PROVIDED event triggered`, async () => {
         const iCloudReady = icloud.getReady();
@@ -556,6 +595,13 @@ describe.each([
         });
 
         describe(`Enter Code`, () => {
+            beforeEach(() => {
+                jest.useFakeTimers()
+                icloud.mfaTimeout = setTimeout(() => {}, 1500)
+            })
+            afterEach(() => {
+                jest.clearAllTimers()
+            })
             describe.each([
                 {
                     method: `device`,
@@ -628,6 +674,7 @@ describe.each([
                     await icloud.submitMFA(new MFAMethod(method as any), `123456`);
 
                     expect(authenticatedEvent).toHaveBeenCalled();
+                    expect(icloud.mfaTimeout).toBeUndefined()
                 });
 
                 test(`Failure`, async () => {
@@ -653,6 +700,7 @@ describe.each([
                     await icloud.submitMFA(new MFAMethod(method as any), `123456`);
 
                     await expect(iCloudReady).rejects.toThrow(/^Unable to submit MFA code$/);
+                    expect(icloud.mfaTimeout).toBeDefined()
                 });
 
                 test.each([{
@@ -709,6 +757,7 @@ describe.each([
                     await icloud.submitMFA(new MFAMethod(method as any), `123456`);
 
                     await expect(iCloudReady).rejects.toThrow(/^MFA code rejected$/);
+                    expect(icloud.mfaTimeout).toBeDefined()
                 });
             });
         });

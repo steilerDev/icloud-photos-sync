@@ -272,9 +272,6 @@ export class iCloud {
     async submitMFA(method: MFAMethod, mfa: string) {
         try {
             Resources.logger(this).info(`Authenticating MFA with code ${mfa}`);
-            if (this.mfaTimeout) {
-                clearTimeout(this.mfaTimeout);
-            }
 
             const url = method.getEnterURL();
             const config: AxiosRequestConfig = {
@@ -287,6 +284,11 @@ export class iCloud {
 
             Resources.logger(this).info(`MFA code correct!`);
             Resources.emit(iCPSEventCloud.AUTHENTICATED);
+
+            if (this.mfaTimeout) {
+                clearTimeout(this.mfaTimeout);
+                this.mfaTimeout = undefined
+            }
         } catch (err) {
             if (err.response?.status === 400) {
                 const augmentedErr = new iCPSError(MFA_ERR.CODE_REJECTED).addCause(err);
