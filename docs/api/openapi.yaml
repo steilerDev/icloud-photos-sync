@@ -23,15 +23,25 @@ paths:
             application/json:
               schema: 
                 type: object
+                required: ['state', 'timestamp']
                 properties: 
                   state: 
                     type: string
-                    enum: ['unknown', 'ok', 'authenticating', 'syncing', 'error', 'reauthSuccess', 'reauthError']
-                  waitingForMfa:
-                    type: boolean
-                  nextSyncTimestamp:
+                    enum: ['ready', 'authenticating', 'mfa_required', 'syncing']
+                  nextSync:
+                    type: number
+                  prevError:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      code:
+                        type: string
+                  prevTrigger:
                     type: string
-                    example: 8/30/2025, 2:00:00 AM
+                    enum: ['sync', 'auth']
+                  timestamp:
+                    type: number
   /api/reauthenticate:
     post: 
       summary: Requests the application to re-authenticate
@@ -108,22 +118,32 @@ paths:
           content: 
             text/plain:
               schema: 
-                type: string
-                enum: ['Read MFA code: $code']
+                type: object
+                properties: 
+                  msg:
+                    type: string
+                    enum: ['Read MFA code: $code']
         '400':
           description: MFA code does not match expected format
           content: 
             text/plain:
               schema: 
-                type: string
-                enum: ['Unexpected MFA code format! Expecting 6 digits']
+                type: object
+                properties: 
+                  msg:
+                    type: string
+                    enum: ['Unexpected MFA code format! Expecting 6 digits']
         '412':
           description: MFA code not expected at this time
           content: 
             text/plain:
               schema: 
-                type: string
-                enum: ['MFA code not expected at this time. Taking you back home.']
+                type: object
+                properties: 
+                  msg:
+                    type: string
+                    enum: ['MFA code not expected at this time. Taking you back home.']
+
   /api/subscribe:
     post:
       summary: Creates a notification subscription
