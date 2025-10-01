@@ -1,4 +1,3 @@
-import {resolveSchema} from "ajv/dist/compile/index.js";
 import {Resources} from "../../../lib/resources/main.js";
 import {logoBase64} from "../assets/logo.js";
 import {viewCSS} from "../css/base-css.js";
