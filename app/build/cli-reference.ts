@@ -100,7 +100,7 @@ try {
     await fs.stat(path.dirname(outputPath));
     await fs.writeFile(outputPath, output, {encoding: `utf-8`});
 } catch (err) {
-    console.error(`Unable to write to file: ${err.message}`);
+    console.error(`Unable to write to file: ${(err as Error).message}`);
     console.log();
     console.log(output);
 }

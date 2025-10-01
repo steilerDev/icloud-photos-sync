@@ -7,6 +7,7 @@ export const defaultConfig = {
     password: `testPass`,
     dataDir: `/opt/icloud-photos-library`,
     port: 80,
+    webBasePath: ``,
     maxRetries: 10,
     downloadThreads: 5,
     downloadTimeout: 10,
@@ -29,6 +30,11 @@ export const defaultConfig = {
 
 export const trustToken = `HSARMTKNSRVWFlaje+uXQGSn7KqxCHcGvTYF5r7F6j8wnFOsemu+g20/1mNJmE+hfNgaB09Bt3RDLzU4kWCsjQUvEsv3C//DrFvldh26AGf9sSv8QyRkUFNJjSHH7fHHiWaZRlWIZk9viZVnxiAh+NE/cA9ZGpbshwkVErwD5/cHN+Ek69ufbIS0O5P0eA==SRVX`;
 export const trustTokenModified = `asefaTKNSRVWFlaje+uXQGSn7KqxCHcGvTYF5r7F6j8wnFOsemu+g20/1mNJmE+hfNgaB09Bt3RDLzU4kWCsjQUvEsv3C//DrFvldh26AGf9sSv8QyRkUFNJjSHH7fHHiWaZRlWIZk9viZVnxiAh+NE/cA9ZGpbshwkVErwD5/cHN+Ek69ufbIS0O5P0eA==SRVX`;
+
+export const notificationVapidCredentials = {
+    publicKey: `BKihOmwLgQ4Ymv6vD5_iKg35tbgIQNHgWc5Q23LbIdM8R0FMKM2_-INjgO2ImpodnGXnaixrfCR6glWPVN01f00`,
+    privateKey: `CbLAmpaDL37C63j6vlR8kJeYfOp42c0reWWXcJzva1E`
+}    
 
 export const iCloudAuthSecrets = {
     scnt: `AAAA-jM2MDVERjQ4QUJBNDlFOTNDREE5ODhEQjlCN0Q4NDE3QUUxMDI1MjM3NDZBOTNGNTIyMjE3QzJENDQ5QTUzOTdDQTRBRUFBNjY3ODNGNTQ1RkUxQjUxRjQ3QkY1ODk5QkJCNTE0NzA4N0QxQTM5ODBCQkNDRjU0QTJGMkEzNjY2N0Y2ODgyQUUzMEZDNjUxMUM0NjA0NjNEQjUyQ0MxNTM4NzNFMzQ5QzVBNTc1QzVEOUM3RTlBRTU4NTU3RjQ0RThENUFDNDQyRTYxOTIyMDdBNjM0MTcyODY5Q0YxMDY4NkQ0OTgyRTlEODQ5QUIyNXwxAAABg2YuFELp_Dzvh1riqxdzhFTO9hsgIst5rbPXUxxxkTs6FutFy63q6O6u6A8EAByNp_FEsjvXb2sQUOPA3qlZny3CU-45lRq-0UOxcw9L-jEJMrwLnw`,

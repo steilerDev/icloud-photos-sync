@@ -636,7 +636,7 @@ describe(`Diffing state`, () => {
                     albumUUID4: new Album(`albumUUID4`, AlbumType.ALBUM, `albumName4`, `folderUUID1`),
                 };
                 // FolderUUID1 is deleted and all albums within are also deleted
-                const toBeAdded = [];
+                const toBeAdded = [] as Album[];
                 const toBeDeleted = [
                     new Album(`folderUUID1`, AlbumType.FOLDER, `folderName1`, ``),
                     new Album(`albumUUID2`, AlbumType.ALBUM, `albumName2`, `folderUUID1`),

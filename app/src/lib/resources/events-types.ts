@@ -86,33 +86,28 @@ export enum iCPSEventWebServer {
     /**
      * Emitted when the Web server has started - provides the port as argument
      */
-    STARTED = `mfa-started`,
+    STARTED = `web-started`,
 
     /**
      * Emitted when the Web server has experienced an error - provides an iCPSError as argument
      */
-    ERROR = `mfa-error`,
+    ERROR = `web-error`,
 
     /**
      * Emitted when a sync is requested via the web server
      */
-    SYNC_REQUESTED = `mfa-sync-requested`,
+    SYNC_REQUESTED = `web-sync_requested`,
 
     /**
      * Emitted when a reauthentication is requested
      */
-    REAUTH_REQUESTED = `reauth-requested`,
-
-    /**
-     * Emitted when reauth succeeded
-     */
-    REAUTH_SUCCESS = `reauth-success`,
+    REAUTH_REQUESTED = `web-reauth_requested`,
 
     /**
      * Emitted when reauth failed
      * provides the error as argument
      */
-    REAUTH_ERROR = `reauth-failed`,
+    REAUTH_ERROR = `web-reauth_failed`,
 }
 
 /**
@@ -130,7 +125,7 @@ export enum iCPSEventPhotos {
      /**
      * Emitted when the icloud photos library has experienced an error - provides an iCPSError as argument
      */
-     ERROR = `error-photos`,
+    ERROR = `error-photos`,
 }
 
 /**

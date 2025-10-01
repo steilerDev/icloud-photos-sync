@@ -5,10 +5,6 @@ inputs:
     description: The path to the docker directory
     required: false
     default: docker
-  app-artifact-pattern:
-    description: The glob pattern of the name of the uploaded app artifact (could be 'app-artifact-build' or 'app-artifact-release')
-    required: false
-    default: app-artifact*
 runs:
   using: composite
   steps:
@@ -16,38 +12,26 @@ runs:
       uses: docker/setup-qemu-action@v3
     - id: setup-buildx
       uses: docker/setup-buildx-action@v3
-    - id: setup-app-artifact
-      uses: actions/download-artifact@v4
+    - id: setup-fs
+      shell: bash
+      run: mkdir -p "${{ inputs.docker-path }}/rootfs/opt/"
+    - id: setup-release-app-artifact
+      uses: actions/download-artifact@v5
+      continue-on-error: true
       with:
-        pattern: ${{ inputs.app-artifact-pattern }}
-        path: ${{ inputs.docker-path }}
-    - id: select-app-artifact
+        name: app-artifact-release
+        path: ${{ inputs.docker-path }}/rootfs/opt/
+    - id: setup-build-app-artifact
+      if: steps.setup-release-app-artifact.outcome == 'failure'
+      uses: actions/download-artifact@v5
+      with:
+        name: app-artifact-build
+        path: ${{ inputs.docker-path }}/rootfs/opt/
+    - id: validate-app-artifact
       shell: bash
       run: |
         tree -a "${{ inputs.docker-path }}/"
-        if [ -d "${{ inputs.docker-path }}/app-artifact-release" ]; then
-          ARTIFACT_DIR="${{ inputs.docker-path }}/app-artifact-release"
-        elif  [ -d "${{ inputs.docker-path }}/app-artifact-build" ]; then
-          ARTIFACT_DIR="${{ inputs.docker-path }}/app-artifact-build"
-        else
-          echo "Unable to find artifact!"
-          exit 1
-        fi
-
-
-        ARTIFACT="$ARTIFACT_DIR/npm-pack.tgz"
-        echo "Found artifact $ARTIFACT"
-
-        if [ ! -f "$ARTIFACT" ]; then
-          echo "Artifact is not file!"
-          exit 1
-        fi
-
-        ARTIFACT_TARGET_PATH="${{ inputs.docker-path }}/rootfs/opt/"
-        mkdir -p "$ARTIFACT_TARGET_PATH"
-
-        echo "Moving $ARTIFACT to $ARTIFACT_TARGET_PATH"
-        mv "$ARTIFACT" "$ARTIFACT_TARGET_PATH"
+        tar -xOf ${{ inputs.docker-path }}/rootfs/opt/npm-pack.tgz package/package.json
     - id: build-rootfs
       shell: bash
       run: tar -C ${{ inputs.docker-path }}/rootfs -czf ${{ inputs.docker-path }}/rootfs.tar.gz ./

@@ -57,13 +57,13 @@ echo "server available"
 
 echo "Requesting code..."
 # Resend MFA code via SMS
-docker exec $DOCKER_NAME resend_mfa $MFA_METHOD $MFA_ID > /dev/null
+docker exec $DOCKER_NAME curl -s -X POST "http://localhost:80/api/resend_mfa?method=${MFA_METHOD}&phoneNumberId=${MFA_ID}" | jq -crM .message
 
 echo "Please enter MFA code:"
 read MFA_CODE
 
 # Send MFA code
-docker exec $DOCKER_NAME enter_mfa $MFA_CODE > /dev/null
+docker exec $DOCKER_NAME curl -s -X POST "http://localhost:80/api/mfa?code=${MFA_CODE}" | jq -crM .message
 
 echo "Waiting for container to exit..."
 docker wait $DOCKER_NAME

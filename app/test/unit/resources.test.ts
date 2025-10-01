@@ -21,7 +21,7 @@ describe(`Initializes correctly`, () => {
 
     test(`setup should throw if called twice`, () => {
         Resources.setup(Config.defaultConfig);
-        expect(() => Resources.setup(Config.defaultConfig)).toThrowError();
+        expect(() => Resources.setup(Config.defaultConfig)).toThrow();
     });
 
     test(`instances should return the singleton instances`, () => {
@@ -34,7 +34,7 @@ describe(`Initializes correctly`, () => {
     });
 
     test(`instances should throw if called before setup`, () => {
-        expect(() => Resources.instances()).toThrowError(/^Resources have not been initiated$/);
+        expect(() => Resources.instances()).toThrow(/^Resources have not been initiated$/);
     });
 
     describe.each([
@@ -59,7 +59,7 @@ describe(`Initializes correctly`, () => {
         test(`${functionName}() should return the ${typeName}`, () => {
             Resources.setup(Config.defaultConfig);
 
-            const obj = Resources[functionName]();
+            const obj = (Resources as {[key: string]: any})[functionName](); // Using this type to suppress typescript error
 
             expect(obj).toBeDefined();
             expect(obj.constructor.name).toEqual(typeName);
@@ -68,7 +68,7 @@ describe(`Initializes correctly`, () => {
         test(`${functionName}() should throw if ${typeName} is uninitialized`, () => {
             Resources._instances = {} as any;
 
-            expect(() => Resources[functionName]()).toThrowError(error);
+            expect(() => (Resources as {[key: string]: any})[functionName]()).toThrow(error); // Using this type to suppress typescript error
         });
     });
 });
@@ -166,7 +166,7 @@ describe(`Creates static helper functions correctly`, () => {
             eventManager.emit = jest.fn<typeof eventManager.emit>()
                 .mockReturnValue(true);
 
-            const staticLogger = Resources.logger(`test`);
+            const staticLogger = Resources.logger(`test`) as {[key: string]: any}; // Using this type to suppress typescript error
             expect(staticLogger).toHaveProperty(functionName);
 
             staticLogger[functionName](`Hello, world!`);

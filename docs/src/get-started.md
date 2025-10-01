@@ -1,8 +1,7 @@
 # Get Started - A Complete User Guide
-
 This guide outlines the lifecycle of this application. Since it is written in Typescript it can be executed directly on various platforms through NodeJS. Please check this application's [OS support matrix](README.md#os-support) for compatibility. Additionally a Docker Image is provided.
 
-The recommended installation path is using `docker compose`, since this nicely manages configuration and dependencies.
+The recommended installation path is using `docker compose`, since this nicely manages configuration and dependencies. How to setup [Docker](https://docs.docker.com/engine/install/), [docker compose](https://docs.docker.com/compose/install/) or a [NodeJS environment](https://nodejs.org/en/download) on your host is out of the scope for this document.
 
 Find examples for the various deployment options within this guide.
 
@@ -17,10 +16,8 @@ The `latest` tag should always represent the latest stable release, whereas the 
         
         Create a `docker-compose.yml` file, similar to the one below. Please add your Apple ID credentials and desired location of the library on disk. Optionally, add the timezone and your local users' `UID` and `GID`. 
         
-        The [CLI Reference](user-guides/cli.md) contains all available configuration options. Add them as environment variables to the `environment` key.
 
         ```
-        version: '2'
         services:
           photos-sync:
             image: steilerdev/icloud-photos-sync:latest
@@ -30,7 +27,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
               APPLE_ID_USER: "<iCloud Username>"
               APPLE_ID_PWD: "<iCloud Password>"
               TZ: "Europe/Berlin"                                                       
-              SCHEDULE: "* 2 * * *"
+              SCHEDULE: "0 2 * * *"
               ENABLE_CRASH_REPORTING: true
             ports:
               - 80:80
@@ -85,7 +82,9 @@ The `latest` tag should always represent the latest stable release, whereas the 
 
 ## Usage
 
-When launching this application, it will start in daemon mode - executing the synchronization based on the provided cron schedule:
+When launching this application without specifying a command, it will start in daemon mode - executing the synchronization based on the provided cron schedule using the supplied credentials (or prompting for credentials upon startup, in case none are supplied). 
+
+Unfortunately iCloud's application specific passwords don't support access to the iCloud Photos Library - therefore you will need to supply your Apple ID password - Passkeys are not supported.
 
 === "Docker"
 
@@ -127,171 +126,38 @@ When launching this application, it will start in daemon mode - executing the sy
             --schedule "* 2 * * *" 
         ```
 
-The application will provide a Web UI, where the current state can be checked, a synchronization can be triggered ad-hoc and the MFA authentication token can be refreshed. If an MFA code is required to perform the sync, this WebUI will also provide the interface to input your code.
-
-## Advanced
-
-This can also been done through the CLI.
-
-### Authentication
-
-Since this application needs full access to a user's iCloud Photos Library, a full authentication with Apple (including Multi-Factor-Authentication) is required. Unfortunately iCloud's application specific passwords don't support access to the iCloud Photos Library.
-
-Upon initial authentication, this application will register as a 'trusted device'. This includes the acquisition of a trust token. As long as this token is valid, no MFA code is required to authenticate. It seems that this token currently expires after 30 days.
-
-In order to only perform authentication (without syncing any assets) and validate or acquire the trust token, the [`token` command](user-guides/cli.md#token) can be used. 
-
-!!! tip "Concurrency"
-    Depending on the defined schedule, the container service might already perform a sync. In order to avoid sync collisions two instances of this application cannot access the same library concurrently, which might lead to `LibraryError (FATAL): Locked by PID 1, cannot release.` errors.
-            
-    In case you are certain that there is no instance running (and the lock is still there, because it was not released properly previously), use the `--force` flag upon the next run to remove it.
-
-=== "Docker"
-
-    === "docker compose"
-        
-        Expecting the [previously defined `docker compose` service](#installation) being running (through `docker compose up -d`):
-
-        ```
-        docker exec -t photos-sync icloud-photos-sync token
-        ```
-    
-    === "docker run"
-
-        ```
-        docker run -v "</path/to/your/local/library>:/opt/icloud-photos-library" --name photos-sync --user <uid>:<gid> steilerdev/icloud-photos-sync:latest \
-            -u "<iCloud Username>" \
-            -p "<iCloud Password>" \
-            --enable-crash-reporting \
-            token
-        ```
-
-        !!! tip "Plain text username/password"
-            If you don't want to store your plain text username and/or password in the docker environment, it is possible to omit the [username](https://icps.steiler.dev/user-guides/cli/#username) and/or [password](https://icps.steiler.dev/user-guides/cli/#password) option. In this scenarios, the username/password needs to be provided manually on each startup from the command line.
-            To input the data into the running Docker container it needs to be started with `docker run -it` [to open tty and stdin](https://docs.docker.com/engine/reference/run/#foreground). Once the container was started, you can attach to the running `icloud-photos-sync` process using [`docker attach photos-sync`](https://docs.docker.com/engine/reference/commandline/attach/), and detach with the sequence `CTRL-p CTRL-q`.
-
-=== "node"
-
-    === "NPM"
-
-        ```
-        icloud-photos-sync \
-            -u "<iCloud Username>" \
-            -p "<iCloud Password>" \
-            -d "</path/to/your/local/library>" \
-            --enable-crash-reporting \
-            token
-        ```
-
-    === "From Source"
-        
-        ```
-        npm run execute -- \
-            -u "<iCloud Username>" \
-            -p "<iCloud Password>" \
-            -d "</path/to/your/local/library>" \
-            --enable-crash-reporting \
-            token
-        ```
-
 !!! warning "Password containing dollar sign (`$`)"
     In case your password contains a dollar sign, this might be mis-handled by your shell. You should [wrap the password string in single quotes](https://stackoverflow.com/a/33353687/3763870) in order to preserve the string literal. E.g. `[...] -p pas$word [...]` would become `[...] -p 'pas$word' [...]`.
 
-#### Multi-Factor-Authentication
+The primary interface to interact with this application is a WebUI, however configuration is performed through CLI arguments and/or environment variables, see the [CLI Reference](user-guides/cli.md) for a comprehensive list of all available options. Additionally [an API is exposed](user-guides/api.md) through the integrated web server.
 
-In case no valid trust token is available, a MFA code is required in order to successfully authenticate. 
+### Authentication
 
-The CLI application will pause execution, in case it detects that a MFA code is necessary, [open a web server](user-guides/cli.md#port) and wait for user input. At this point, a MFA code should have already been sent to the primary device. 
+Since this application needs full access to a user's iCloud Photos Library, a full authentication with Apple (including Multi-Factor-Authentication) is initially required. While this will acquire a trust token, Apple's system requires refreshing this token every ~30 days by providing a re-authentication utilizing an MFA code.
 
-The MFA code needs to be submitted within 10 minutes. If this was not done, the execution will exit and needs to be restarted.
+In order to perform authentication (without syncing any assets) to validate or acquire the trust token, navigate to the WebUI and select `Renew authentication`.
 
-##### Submit MFA Code
+![Initial Sync](../assets/web-ui/unknown.png)
 
-The MFA code can be submitted through an API or a Web UI
+This will trigger the authentication flow and an MFA code will be requested from your trusted devices. This will forward to a form to enter the 6-digit code - use the `Submit` button to confirm your submission.
 
-=== "Web UI"
+![MFA Form](../assets/web-ui/mfa-form.png)
 
-The MFA code can be entered through the exposed API:
+In case your trusted devices are not available and you need to resend the MFA code through other methods, select `Resend Code/Change Method`.
 
-  - Request: 
-    - Endpoint: `/mfa`
-    - Query Parameters:
-        - `code` - Expects the 6 digit MFA code
-  - Response: 
-    - `200 {'message': 'Read MFA code: <code>'}`
-    - `400 {'message': 'Unexpected MFA code format! Expecting 6 digits'}`
+![MFA Methods](../assets/web-ui/mfa-methods.png)
 
-=== "Docker"
+Once the code has been accepted, the program will run autonomously based on the configured cron schedule until an MFA code is required.
 
-    Submitting code `123456` using helper script within running container (run the script without any arguments, to get more details on the available options):
+![Reauth Success](../assets/web-ui/reauth-success.png)
 
-    ```
-    docker exec photos-sync enter_mfa 123456
-    ```
+### Ad-Hoc Sync
 
-=== "node"
+When selecting `Sync now` from the WebUI, the tool will perform authentication, proceed to load the local and remote library and compare the two states. 
 
-    === "NPM"
+![Unknown](../assets/web-ui/unknown.png)
 
-        Submitting code `123456` using a CLI tool for making network requests, e.g. `curl`:
-
-        ```
-        curl -X POST localhost:80/mfa?code=123456
-        ```
-
-    === "From Source"
-
-        Submitting code `123456` using this repository's helper scripts (located in `docker/rootfs/root/`) to a locally running `icloud-photos-sync` (run the script without any arguments, to get more details on the available options):
-
-        ```
-        docker/rootfs/root/enter_mfa 123456
-        ```
-
-##### Re-send MFA Code
-
-In case the primary MFA device is not available, or the initial push is no longer available, you can request a new MFA code. 
-
-This can be requested using the exposed API:
-
-  - Request: 
-    - Endpoint: `/resend_mfa`
-    - Query Parameters:
-        - `method` - Expects one of the following methods: `sms`, `voice`, `device`
-        - `phoneNumberId` - If multiple phone numbers are registered, select the appropriate one (if you select a non-existing phone number id, the log of the main application will print valid ones)
-  - Response: 
-    - `200 {'message': 'Requesting MFA resend with method <method>'}`
-    - `400 {'message': 'Method does not match expected format'}`
-
-=== "Docker"
-
-    Resending MFA code using `sms` to phone with number ID `2` using helper script within running container (run the script without any arguments, to get more details on the available options):
-
-    ```
-    docker exec photos-sync resend_mfa sms 2
-    ```
-
-=== "node"
-
-    === "NPM"
-
-        Resending MFA code using `sms` to phone with number ID `2` using a CLI tool for making network requests, e.g. `curl`:
-
-        ```
-        curl -X POST localhost:80/resend_mfa?method=sms&phoneNumberId=2
-        ```
-
-    === "From Source"
-        
-        Resending MFA code using `sms` to phone with number ID `2` using  this repository's helper scripts (located in `docker/rootfs/root/`) to a locally running `icloud-photos-sync` (run the script without any arguments, to get more details on the available options):
-
-        ```
-        docker/rootfs/root/resend_mfa sms 2
-        ```
-
-
-### Syncing
-
-The `sync` command will perform authentication, proceed to load the local and remote library and compare the two states. The remote state will always be applied:
+The remote state will always be applied:
 
   * Extraneous local files will be removed (exceptions are ['Archived Folders'](#archiving))
   * Missing remote files will be downloaded
@@ -301,123 +167,44 @@ The synchronization will also create the folder structure present in the iCloud 
 !!! warning "File Structure"
     Since this application does not use any local database, it is imperative, that the [file structure](dev/local-file-structure.md) is not changed by any other application or user.
 
-During the sync process various warning could be produced. The list of [common warnings](user-guides/common-warnings.md) contains more details on them.
+During the sync process various warning could be produced within the application logs of the CLI. The list of [common warnings](user-guides/common-warnings.md) contains more details on them.
 
 !!! tip "Syncing large libraries"
     Initial sync of large libraries can take some time. After one hour the initially fetched metadata expires, after 8 hours the session expires, which will lead to a failure of the ongoing sync. The tool will refresh the metadata and/or session, unless the maximum number of retries is reached. Make sure to [set the retry option](user-guides/cli.md#max-retries) to a high number or `Infinity`, otherwise the process might prematurely fail. Restarting a previously failed sync will keep all previously successfully downloaded assets.
 
     Additionally you might need to limit the rate of metadata fetching, because the iCloud API has been observed to enforce rate limits, causing `SOCKET HANGUP` errors. This appears to be applicable for libraries holding more than 10.000 assets. Do this by [setting the metadata rate option](user-guides/cli.md#metadata-rate) - it seems `1/20` ensures sufficient throttling.
 
-#### Ad-hoc
+During the sync, the WebUI will not show any detailed progress information - please check the CLI output and/or log files for more information on the sync progress.
 
-In order to perform a single synchronization execution, the [`sync` command](user-guides/cli.md#sync) will be used.
+![Sync](../assets/web-ui/sync.png)
 
 === "Docker"
 
     === "docker compose"
-
-        Expecting the [previously defined `docker compose` service](#installation) being running (through `docker compose up -d`):
-        
-        ```
-        docker exec -t photos-sync icloud-photos-sync sync
-        ```
 
         !!! tip "File limits"
             Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be set [in the `docker-compose.yml`](https://docs.docker.com/compose/compose-file/05-services/#ulimits), but might require an increase of the [system limits](https://linuxhint.com/permanently_set_ulimit_value/).
     
     === "docker run"
 
-        ```
-        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync  --user <uid>:<gid> steilerdev/icloud-photos-sync:latest \
-            -u "<iCloud Username>" \
-            -p "<iCloud Password>" \
-            --enable-crash-reporting \
-            sync
-        ```
-
         !!! tip "File limits"
             Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be set through [a CLI argument](https://docs.docker.com/engine/reference/commandline/run/#ulimit), but might require an increase of the [system limits](https://linuxhint.com/permanently_set_ulimit_value/).
 
 === "node"
 
-    === "NPM"
-
-        ```
-        icloud-photos-sync \
-            -u "<iCloud Username>" \
-            -p "<iCloud Password>" \
-            -d "</path/to/your/local/library>" \
-            --enable-crash-reporting \
-            sync
-        ```
-
-    === "From Source"
-        
-        ```
-        npm run execute -- \
-            -u "<iCloud Username>" \
-            -p "<iCloud Password>" \
-            -d "</path/to/your/local/library>" \
-            --enable-crash-reporting \
-            sync
-        ```
-
     !!! tip "File limits"
         Syncing a large library might fail due to reaching the maximum limit of open files. The `nofile` limit can be [increased temporarily or permanently](https://linuxhint.com/permanently_set_ulimit_value/).
 
-#### Scheduled
+### PWA & Notifications
 
-When using the [`daemon` command](user-guides/cli.md#daemon), the application will start scheduled synchronization executions based on a [cron schedule](user-guides/cli.md#daemon).
+The Web UI is implemented as a PWA. This way, the app can cleanly be added to the home screen. The Service Worker of the PWA will only cache the static resources, which means that while you are offline or your server is unreachable you can open the PWA, but it will only show you that it can't fetch the state. The PWA can also publish push notifications to inform you about the state of execution. 
 
-This schedule is expected to be in [cron](https://crontab.guru) format. For more details on the specific implementation, see [Croner's pattern documentation](https://github.com/hexagon/croner#pattern).
-
-=== "Docker"
-
-    === "docker compose"
-        
-        Running `docker compose up -d` on the [previously defined `docker-compose.yml`](#installation) launches the app in daemon mode.
-    
-    === "docker run"
-
-        ```
-        docker run -v "</path/to/your/local/library>/library:/opt/icloud-photos-library" --name photos-sync  --user <uid>:<gid> steilerdev/icloud-photos-sync:latest \
-            -u "<iCloud Username>" \
-            -p "<iCloud Password>" \
-            --enable-crash-reporting \
-            --schedule "* 2 * * *" \
-            daemon
-        ```
-
-=== "node"
-
-    === "NPM"
-
-        ```
-        icloud-photos-sync \
-            -u "<iCloud Username>" \
-            -p "<iCloud Password>" \
-            -d "</path/to/your/local/library>" \
-            --enable-crash-reporting \
-            --schedule "* 2 * * *" \
-            daemon
-        ```
-
-    === "From Source"
-        
-        ```
-        npm run execute -- \
-            -u "<iCloud Username>" \
-            -p "<iCloud Password>" \
-            -d "</path/to/your/local/library>" \
-            --enable-crash-reporting \
-            --schedule "* 2 * * *" \
-            daemon
-        ```
-
-!!! tip "MFA Code during scheduled executions"
-    The trust token (used to circumvent the MFA code) is expiring after 30 days. Each authentication will read the trust token from file and exit execution if a trust token has expired and no MFA code was supplied in time (this usually happens during scheduled runs in the night). In this scenario, running the `token` command to update the trust token is possible, without having to restart the scheduled execution.
+To enable notifications, add the PWA to your home screen, tap on the notification and grant notification permissions. Note that notifications or other PWA capabilities might not work, if you do not use a TLS encrypted connection with a certificate trusted by the device. PWA capabilities have only been tested with Safari on MacOS and iOS - utilizing Google's notification system would require the acquisition of a GCM key (this is currently not in scope, but can be requested through a Github issue).
 
 ### Archiving
+
+!!! warning "State of Archiving"
+    The current implementation of archiving should be functional, however has not yet been fully tested in a real world scenario and it's implementation is subject to change. I would not recommend relying on this feature heavily.
 
 In order to reduce complexity and storage needs in the iCloud Photos Library, archiving allows you to take a snapshot of a provided album and ignore changes to the album moving forward. This allows you to remove some or all of the photos within the album in iCloud after it was archived, while retaining a copy of all pictures locally.
 
@@ -483,6 +270,8 @@ In order to archive an album, the [`archive` command](user-guides/cli.md#archive
 - Access your photo library locally through a [web UI](user-guides/web-ui.md)
 
 ## Contributing & Feedback
+
+Please always make sure that you are able to access your iCloud Photo Library through https://icloud.com. Sometimes it is necessary to agree to a dialogue in the web application in order to use it, which this tool is dependent on.
 
 Please check the [contributing guidelines](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md) to learn how to engage with this project. The document outlines the bug reporting, feature and support request process for this tool.
 

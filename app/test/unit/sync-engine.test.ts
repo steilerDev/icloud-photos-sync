@@ -235,7 +235,7 @@ describe(`Coordination`, () => {
         const result = await syncEngine.diffState(...fetchAndLoadStateReturnValue);
 
         expect(diffStartEvent).toHaveBeenCalledTimes(1);
-        expect(SyncEngineHelper.getProcessingQueues).toBeCalledTimes(2);
+        expect(SyncEngineHelper.getProcessingQueues).toHaveBeenCalledTimes(2);
         expect(SyncEngineHelper.getProcessingQueues).toHaveBeenNthCalledWith(1, fetchAndLoadStateReturnValue[0], fetchAndLoadStateReturnValue[2]);
         expect(SyncEngineHelper.getProcessingQueues).toHaveBeenNthCalledWith(2, fetchAndLoadStateReturnValue[1], fetchAndLoadStateReturnValue[3]);
         expect(SyncEngineHelper.resolveHierarchicalDependencies).toHaveBeenCalledTimes(1);
@@ -383,7 +383,7 @@ describe(`Handle processing queue`, () => {
 
             const toBeAdded = [asset1, asset2, asset3];
 
-            await expect(syncEngine.writeAssets([[], toBeAdded, []])).rejects.toThrowError();
+            await expect(syncEngine.writeAssets([[], toBeAdded, []])).rejects.toThrow();
 
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
@@ -629,7 +629,7 @@ describe(`Handle processing queue`, () => {
                         throw new Error(`Unable to retrieve album`);
                     });
 
-                await expect(syncEngine.writeAlbums([[], [album1, album2], []])).rejects.toThrowError(/^Unable to retrieve stashed archived album$/);
+                await expect(syncEngine.writeAlbums([[], [album1, album2], []])).rejects.toThrow(/^Unable to retrieve stashed archived album$/);
 
                 expect(syncEngine.photosLibrary.retrieveStashedAlbum).toHaveBeenCalledTimes(1);
                 expect(syncEngine.photosLibrary.retrieveStashedAlbum).toHaveBeenNthCalledWith(1, album1);
@@ -646,7 +646,7 @@ describe(`Handle processing queue`, () => {
                         throw new Error(`Unable to retrieve album`);
                     });
 
-                await expect(() => syncEngine.writeAlbums([[album1, album2], [], []])).rejects.toThrowError(/^Unable to stash archived album$/);
+                await expect(() => syncEngine.writeAlbums([[album1, album2], [], []])).rejects.toThrow(/^Unable to stash archived album$/);
 
                 expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenCalledTimes(1);
                 expect(syncEngine.photosLibrary.stashArchivedAlbum).toHaveBeenNthCalledWith(1, album2);

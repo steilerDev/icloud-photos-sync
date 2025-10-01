@@ -2,7 +2,7 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/typescript-node-12
 {
 	"name": "icloud-photos-sync",
-    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+    "image": "debian:trixie",
     "features": {
         "ghcr.io/devcontainers/features/common-utils:2": {
 			"username": "vscode",
@@ -18,13 +18,14 @@
             "version": "latest"
         },
         "ghcr.io/devcontainers/features/node:1": {
-            "version": "22.13.1"
+            "version": "22.19.0"
         },
         "ghcr.io/devcontainers/features/python:1": {
             "version": "3.9"
         },
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
-            "version": "latest"
+            "version": "latest",
+            "moby": "false"
         }
     },
 
@@ -72,8 +73,8 @@
             //  gpg --edit-key <key-id>
             //  > gpg trust
             //  > gpg 5
-            // git config --global user.signingkey <key-id>
-            // git config --global commit.gpgsign true
+            // git config user.signingkey <key-id>
+            // git config commit.gpgsign true
             "source": "gpg-trust",
             "target": "/home/vscode/.gnupg/",
             "type": "volume"

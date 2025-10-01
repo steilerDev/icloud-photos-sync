@@ -3,23 +3,40 @@ import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
-import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from '../error/error-codes.js';
+import {WEB_SERVER_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
 import {TokenApp} from '../icloud-app.js';
+import {faviconBase64, iconBase64} from './assets/icons.js';
+import {manifest} from './assets/manifest.js';
+import {serviceWorker} from './scripts/service-worker.js';
 import {RequestMfaView} from './view/request-mfa-view.js';
 import {StateView} from './view/state-view.js';
 import {SubmitMfaView} from './view/submit-mfa-view.js';
+import {State, StateTrigger, StateType} from './state.js';
+import {NotificationPusher} from './notification-pusher.js';
+import {URL} from 'url';
+import {pEvent} from 'p-event';
 
-/**
- * Endpoint URI of Web Server, all expect POST requests
- */
-export const WEB_SERVER_API_ENDPOINTS = {
-    CODE_INPUT: `/mfa`, // Expecting URL parameter 'code' with 6 digits
-    TRIGGER_REAUTH: `/reauthenticate`, // Expecting no URL parameters
-    RESEND_CODE: `/resend_mfa`, // Expecting URL parameter 'method' (either 'device', 'sms', 'voice') and optionally 'phoneNumberId' (any number > 0)
-    STATE: `/state`, // Expecting no URL parameters
-    TRIGGER_SYNC: `/sync` // Expecting no URL parameters
-};
+type WebServerResponse = {
+    code: number, 
+    header: {
+        "Content-Type": string, // eslint-disable-line
+        "Content-Length"?: number, //eslint-disable-line
+        Location?: string
+    }, 
+    body: any
+}
+
+type WebServerRoute = (url: URL, body?: string) => WebServerResponse
+
+type WebServerSitemap = {
+    POST: {
+        [path: string]: WebServerRoute
+    },
+    GET: {
+        [path: string]: WebServerRoute
+    }
+}
 
 /**
  * This objects starts a server, that will listen to incoming MFA codes and other MFA related commands
@@ -35,25 +52,54 @@ export class WebServer {
      */
     mfaMethod: MFAMethod;
 
-    state: `unknown` | `ok` | `authenticating` | `syncing` | `error` | `reauthSuccess` | `reauthError` = `unknown`;
+    /**
+     * Provides notification capabilities to the server
+     */
+    notificationPusher: NotificationPusher = new NotificationPusher();
 
-    stateTimestamp: Date = null;
+    /**
+     * Keeps track of the state of the server
+     */
+    state: State = new State();
 
-    nextSyncTimestamp: Date = null;
+    /**
+     * Routing table for this server
+     */
+    _sitemap: WebServerSitemap = {
+        GET: {
+            '/': this.handleRoot.bind(this),
+            '/state': this.handleStateView.bind(this),
+            '/submit-mfa': this.handleSubmitMFAView.bind(this),
+            '/request-mfa': this.handleRequestMFAView.bind(this),
+            '/service-worker.js': this.handleServiceWorker.bind(this),
+            '/manifest.json': this.handleManifest.bind(this),
+            '/icon.png': this.handleIcon.bind(this),
+            '/favicon.ico': this.handleFavicon.bind(this),
+            '/api/state': this.handleStateRequest.bind(this),
+            '/api/vapid-public-key': this.handleVapidPublicKeyRequest.bind(this)
+        },
+        POST: {
+            '/api/reauthenticate': this.handleReauthRequest.bind(this),
+            '/api/mfa': this.handleMFACode.bind(this),
+            '/api/resend_mfa': this.handleMFAResend.bind(this),
+            '/api/sync': this.handleSyncRequest.bind(this),
+            '/api/subscribe': this.handlePushSubscription.bind(this)
+        }
+    }
 
-    waitingForMfa: boolean = false;
-
-    errorMessage: string = null;
-
+    /**
+     * Creates the server object and starts the web server
+     * @returns 
+     */
     static async spawn(): Promise<WebServer> {
         return new WebServer().startServer();
     }
 
     /**
      * Creates the server object
-     * @emits iCPSEventMFA.ERROR - When an error associated to the server occurs - Provides iCPSError as argument
+     * @emits iCPSEventWebServer.ERROR - When an error associated to the server occurs - Provides iCPSError as argument
      */
-    private constructor() {
+    constructor() {
         Resources.logger(this).debug(`Preparing web server on port ${Resources.manager().webServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
         this.server.on(`error`, err => {
@@ -74,61 +120,64 @@ export class WebServer {
             Resources.emit(iCPSEventWebServer.ERROR, icpsErr);
         });
 
+        // TRIGGERS
+        // Scheduled as well as explicit sync trigger
+        Resources.events(this).on(iCPSEventApp.SCHEDULED_START, () => {
+            this.state.triggerSync(StateTrigger.SYNC);
+        });
+        // Manual Auth Trigger
+        Resources.events(this).on(iCPSEventWebServer.REAUTH_REQUESTED, () => {
+            this.state.triggerSync(StateTrigger.AUTH);
+        });
+
+        // SUCCESS
+        // Scheduled execution done 
+        Resources.events(this).on(iCPSEventApp.SCHEDULED_DONE, (nextSync: Date) => {
+            this.state.updateState(StateType.READY, {nextSync: nextSync.getTime()});
+            this.notificationPusher.sendNotifications(this.state);
+        });
+        // Reauth success
+        Resources.events(this).on(iCPSEventApp.TOKEN, () => {
+            this.state.updateState(StateType.READY);
+            this.notificationPusher.sendNotifications(this.state);
+        });
+
+        // ERROR
+        // Sync error
+        Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, (err: iCPSError) => {
+            this.state.updateState(StateType.READY, {error: err});
+            this.notificationPusher.sendNotifications(this.state);
+        });
+        
+        // MFA not provided
+        Resources.events(this).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
+            this.state.updateState(StateType.READY, {error: new iCPSError(WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED)});
+            this.notificationPusher.sendNotifications(this.state);
+        });
+        
+        // Runtime error during re-auth
+        Resources.events(this).on(iCPSEventWebServer.REAUTH_ERROR, (err: iCPSError) => {
+            this.state.updateState(StateType.READY, {error: err});
+            this.notificationPusher.sendNotifications(this.state);
+        });
+
+        // LIFECYCLE
+        // Sync started after authentication
         Resources.events(this).on(iCPSEventSyncEngine.START, () => {
-            this.state = `syncing`;
+            this.state.updateState(StateType.SYNC);
         });
 
-        Resources.events(this).on(iCPSEventSyncEngine.DONE, () => {
-            this.state = `ok`;
-            this.stateTimestamp = new Date();
-        });
-
-        Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, (error: iCPSError) => {
-            this.state = `error`;
-            this.setErrorMessageFromError(error);
-            this.waitingForMfa = false;
-            this.stateTimestamp = new Date();
-        });
-
+        // MFA required
         Resources.events(this).on(iCPSEventCloud.MFA_REQUIRED, () => {
-            this.waitingForMfa = true;
+            this.state.updateState(StateType.MFA)
+            this.notificationPusher.sendNotifications(this.state);
         });
 
-        Resources.events(this).on(iCPSEventMFA.MFA_RECEIVED, () => {
-            this.waitingForMfa = false;
-        });
-
-        Resources.events(this).on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
-            this.state = `authenticating`;
-        });
-
-        Resources.events(this).on(iCPSEventWebServer.REAUTH_SUCCESS, () => {
-            this.state = `reauthSuccess`;
-            this.stateTimestamp = new Date();
-        });
-
-        Resources.events(this).on(iCPSEventWebServer.REAUTH_ERROR, (error: iCPSError) => {
-            this.state = `reauthError`;
-            this.stateTimestamp = new Date();
-            this.waitingForMfa = false;
-            this.setErrorMessageFromError(error);
-        });
-
+        // Initial scheduled run
         Resources.events(this).on(iCPSEventApp.SCHEDULED, (timestamp: Date) => {
-            this.nextSyncTimestamp = timestamp;
+            this.state.updateState(StateType.READY, {nextSync: timestamp.getTime()});
         });
 
-        Resources.events(this).on(iCPSEventApp.SCHEDULED_DONE, (timestamp: Date) => {
-            this.nextSyncTimestamp = timestamp;
-        });
-
-        Resources.events(this).on(iCPSEventApp.SCHEDULED_DONE, (timestamp: Date) => {
-            this.nextSyncTimestamp = timestamp;
-        });
-
-        Resources.events(this).on(iCPSEventApp.SCHEDULED_OVERRUN, (timestamp: Date) => {
-            this.nextSyncTimestamp = timestamp;
-        });
 
         // allow the process to exit, if this server is the only thing left running
         this.server.unref();
@@ -137,52 +186,34 @@ export class WebServer {
         this.mfaMethod = new MFAMethod();
     }
 
+    /* c8 ignore start */
+    // Never starting/stopping the server just to see logger messages
+
     /**
      * Closes this server
      */
-    public close(): Promise<void> {
+    close(): Promise<void> {
         Resources.events(this).removeListeners();
         return new Promise<void>(resolve => {
             this.server.close(() => resolve());
         });
     }
 
-    private setErrorMessageFromError(error: iCPSError) {
-        let cause = error
-        while (cause.cause && cause.cause instanceof iCPSError) {
-            cause = cause.cause;
-        }
-        switch (cause.code) {
-        case MFA_ERR.FAIL_ON_MFA.code:
-            this.errorMessage = `Multifactor authentication code required. Use the 'Renew Authentication' button to request and enter a new code.`;
-            break;
-        case AUTH_ERR.UNAUTHORIZED.code:
-            this.errorMessage = `Your credentials seem to be invalid. Please check your iCloud credentials and try again.`;
-            break;
-        case WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED.code:
-            this.errorMessage = `Multifactor authentication code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`;
-            break;
-        default:
-            this.errorMessage = cause.message;
-            break;
-        }
-    }
-
     /**
      * Starts the server and listens for incoming requests to perform MFA actions
-     * @emits iCPSEventMFA.STARTED - When the server has started - Provides port number as argument
-     * @emits iCPSEventMFA.MFA_NOT_PROVIDED - When the MFA code was not provided within timeout period - Provides MFA method and iCPSError as arguments
-     * @emits iCPSEventMFA.ERROR - When an error associated to the server startup occurs - Provides iCPSError as argument
      */
-    private startServer() {
+    startServer(): Promise<WebServer> {
         return new Promise<WebServer>((resolve, reject) => {
             try {
                 this.server.listen(Resources.manager().webServerPort, () => {
-                    /* c8 ignore start */
-                    // Never starting the server just to see logger message
+                    
+
+                    // Updating the port to match the actual listening port
+                    //Resources.manager().webServerPort = (this.server.address() as AddressInfo).port
+
                     Resources.emit(iCPSEventWebServer.STARTED, Resources.manager().webServerPort);
-                    Resources.logger(this).info(`Exposing endpoints: ${jsonc.stringify(Object.values(WEB_SERVER_API_ENDPOINTS))}`);
-                    /* c8 ignore stop */
+                    Resources.logger(this).info(`Exposing GET endpoints: ${jsonc.stringify(Object.keys(this._sitemap.GET))}`);
+                    Resources.logger(this).info(`Exposing POST endpoints: ${jsonc.stringify(Object.keys(this._sitemap.POST))}`);
                     resolve(this);
                 });
             } catch (err) {
@@ -193,179 +224,235 @@ export class WebServer {
         });
     }
 
+    /* c8 ignore stop */
+
     /**
      * Handles incoming http requests
      * @param req - The HTTP request object
      * @param res - The HTTP response object
      * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the request method or endpoint of server could not be found - Provides iCPSError as argument
      */
-    private handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+    async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         try {
-            if (req.method === `GET`) {
-                this.handleGetRequest(req, res);
+            const url = new URL(
+                req.url.replace(new RegExp(`^${Resources.manager().webBasePath}`), ``), // Removing the web base path for request matching
+                `http://localhost/` // Necessary, because the req.url is relative
+            )
+            Resources.logger(this).debug(`Received ${req.method} request for URL ${url.toString()}`)
+
+            const body = await this.readBody(req)
+
+            if (req.method === `GET` && url.pathname in this._sitemap.GET) {
+                this.sendResponse(this._sitemap.GET[url.pathname](url, body), res)
                 return;
             }
 
-            if (req.method === `POST`) {
-                this.handlePostRequest(req, res);
+            if (req.method === `POST` && url.pathname in this._sitemap.POST) {
+                this.sendResponse(this._sitemap.POST[url.pathname](url, body), res)
                 return;
             }
 
-            this.handleInvalidMethodRequest(req, res);
-        } catch(err) {
-            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.UNKNOWN_ERR)
-                .addMessage(err.message)
+            Resources.logger(this).warn(`Unknown request method: ${req.method} for ${req.url}`);
+
+            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.BAD_REQUEST)
+                .addMessage(`Unknown path: endpoint ${req.url}, method ${req.method}, pathname ${url.pathname}`)
+                .addContext(`request`, req));
+
+            this.sendResponse({
+                code: 400,
+                header: {
+                    "Content-Type": `application/json`
+                },
+                body: {
+                    message: `Method (${req.method}) not supported on endpoint ${req.url}`
+                }
+            }, res)
+        } catch (err) {
+            const error = new iCPSError(WEB_SERVER_ERR.UNKNOWN_ERR)
+                .addCause(err)
                 .addContext(`request`, req)
-                .addContext(`responseWritten`, !res.writable));
+                .addContext(`responseWritten`, !res.writable)
+            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, error);
 
-            if(res.writable) {
-                this.sendApiResponse(res, 500, `Unknown error occurred.`);
+            if (res.writable) {
+                this.sendResponse({
+                    code: 500,
+                    header: {
+                        "Content-Type": `application/json`
+                    },
+                    body: {
+                        message: error.getDescription()
+                    }
+                }, res)
             }
-            throw err
         }
     }
 
-    /**
-     * Handle incoming GET requests
-     * @param req - The HTTP request object
-     * @param res - The HTTP response object
-     */
-    private handleGetRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        if(req.headers[`content-type`] === `application/json`) {
-            if(req.url.startsWith(WEB_SERVER_API_ENDPOINTS.STATE)) {
-                this.handleStateRequest(res);
-            } else {
-                res.writeHead(404, {'Content-Type': `text/plain`});
-                res.write(`Not Found`);
-                res.end();
-            }
-            return;
-        }
+    async readBody(req: http.IncomingMessage): Promise<string> {
+        try {
+            if(req.headers[`content-length`] && Number.parseInt(req.headers[`content-length`], 10) > 0) {
+                let body = ``;
+                req.on(`data`, chunk => {
+                    body += chunk.toString();
+                });
+                await pEvent(req, `end`, {rejectionEvents: [`error`]})
 
-        this.handleUiRequest(req, res);
+                Resources.logger(this).debug(`Read body: ${body}`)
+                return body;
+            }
+            Resources.logger(this).debug(`No body to read`)
+            return ``;
+        } catch (err) {
+            throw new iCPSError(WEB_SERVER_ERR.UNABLE_TO_READ_BODY)
+                .addCause(err)
+                .addContext(`request`, req)
+        }
+    }
+
+    sendResponse(response: WebServerResponse, res: http.ServerResponse) {
+        res.writeHead(response.code, response.header)
+            .end(
+                typeof response.body === `string` || response.body instanceof Buffer
+                    ? response.body
+                    : jsonc.stringify(response.body)
+            )
+    }
+
+    handleRoot(): WebServerResponse {
+        return {
+            code: 302,
+            header: {
+                "Content-Type": `text/plain`,
+                Location: `/state`
+            },
+            body: ``
+        }
+    }
+
+    handleServiceWorker(): WebServerResponse {
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `application/javascript`
+            },
+            body: serviceWorker(Resources.manager().webBasePath)
+        }
+    }
+
+    handleManifest(): WebServerResponse {
+        return {
+            code: 200,
+            header: {
+                'Content-Type': `application/json`
+            },
+            body: manifest(Resources.manager().webBasePath)
+        }
+    }
+
+    handleIcon(): WebServerResponse {
+        const iconBuffer = Buffer.from(iconBase64, `base64`);
+        return {
+            code: 200,
+            header: {
+                'Content-Type': `image/png`,
+                'Content-Length': iconBuffer.length,
+            },
+            body: iconBuffer
+        }
+    }
+
+    handleFavicon(): WebServerResponse {
+        const faviconBuffer = Buffer.from(faviconBase64, `base64`);
+        return {
+            code: 200,
+            header: {
+                'Content-Type': `image/x-icon`,
+                'Content-Length': faviconBuffer.length,
+            },
+            body: faviconBuffer
+        }
     }
 
     /**
      * This function will handle the request send to the state endpoint
-     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the request method or endpoint of server could not be found - Provides iCPSError as argument
-     * @param res - The HTTP response object
      */
-    private handleStateRequest(res: http.ServerResponse<http.IncomingMessage>) {
-        res.writeHead(200, {'Content-Type': `application/json`});
-        res.write(JSON.stringify({
-            state: this.state,
-            stateTimestamp: this.stateTimestamp,
-            nextSyncTimestamp: this.nextSyncTimestamp,
-            waitingForMfa: this.waitingForMfa,
-            errorMessage: this.state == `error` || this.state == `reauthError` ? this.errorMessage : null,
-        }));
-        res.end();
-    }
-
-    /**
-     * This function will return the HTML content for the UI
-     * @param req - The HTTP request object
-     * @param res - The HTTP response object
-     * @returns HTML content as a string or null if no matching path is found
-     */
-    private handleUiRequest(req: http.IncomingMessage, res: http.ServerResponse): string | null {
-        const cleanPath = req.url?.split(`?`)[0];
-
-        if (cleanPath === `/` || cleanPath === ``) {
-            this.sendHtmlResponse(res, new StateView().asHtml());
-            return;
-        } else if (cleanPath.startsWith(`/submit-mfa`)) {
-            if(!this.waitingForMfa) {
-                this.sendStateRedirect(res);
-                return;
-            }
-            this.sendHtmlResponse(res, new SubmitMfaView().asHtml());
-            return ;
-        } else if (cleanPath.startsWith(`/request-mfa`)) {
-            if(!this.waitingForMfa) {
-                this.sendStateRedirect(res);
-                return;
-            }
-            this.sendHtmlResponse(res, new RequestMfaView().asHtml());
-            return;
+    handleStateRequest(): WebServerResponse {
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `application/json`
+            },
+            body: this.state.serialize()
         }
-        
-        res.writeHead(404, {'Content-Type': `text/plain`});
-        res.write(`Not Found`);
-        res.end();
-        return;
     }
 
-    /**
-     * This function will send the HTML response to the client
-     * @param res - The HTTP response object
-     * @param html - The HTML content to be sent
-     */
-    private sendHtmlResponse(res: http.ServerResponse, html: string) {
-        res.writeHead(200, {'Content-Type': `text/html`});
-        res.write(html);
-        res.end();
-    }
-
-    /**
-     * Redirects to the state view
-     * @param res - The HTTP response object
-     */
-    private sendStateRedirect(res: http.ServerResponse) {
-        res.writeHead(302, {Location: `/`});
-        res.end();
-    }
-
-    /**
-     * Handle incoming POST requests
-     * @param req - The HTTP request object
-     * @param res - The HTTP response object
-     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the MFA code format is not as expected - Provides iCPSError as argument
-     * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
-     */
-    private handlePostRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.TRIGGER_REAUTH)) {
-            this.handleReauthRequest(res);
-        } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.TRIGGER_SYNC)) {
-            this.handleSyncRequest(res);
-        } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.CODE_INPUT)) {
-            this.handleMFACode(req, res);
-        } else if (req.url.startsWith(WEB_SERVER_API_ENDPOINTS.RESEND_CODE)) {
-            this.handleMFAResend(req, res);
-        } else {
-            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.ROUTE_NOT_FOUND)
-                .addMessage(req.url)
-                .addContext(`request`, req));
-            this.sendApiResponse(res, 404, `Route not found, available endpoints: ${jsonc.stringify(Object.values(WEB_SERVER_API_ENDPOINTS))}`);
+    handleVapidPublicKeyRequest(): WebServerResponse {
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `application/json`
+            },
+            body: {
+                publicKey: Resources.manager().notificationVapidCredentials.publicKey
+            }
         }
     }
 
     /**
-     * This function will handle the request send to the reauthentication endpoint
-     * @param res - The HTTP response object
+     * This function will check if the server is currently expecting an MFA code
+     * @returns - Undefined if the server is expecting an MFA code, otherwise a WebServerResponse object indicating the error
      */
-    private handleReauthRequest(res: http.ServerResponse<http.IncomingMessage>) {
-        Resources.emit(iCPSEventWebServer.REAUTH_REQUESTED);
-        this.triggerReauth()
-            // this unchecked cast is a bit nasty, maybe we can listen to a success event so we don't need to set any state based on the promise result
-            .then((mfaOk: boolean) => {
-                if(mfaOk) {
-                    Resources.emit(iCPSEventWebServer.REAUTH_SUCCESS);
-                } else {
-                    Resources.emit(iCPSEventWebServer.REAUTH_ERROR, new iCPSError(WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED));
+    handleInProgress(): WebServerResponse | undefined {
+        if (this.state.state !== StateType.READY) {
+            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.SYNC_IN_PROGRESS));
+            return {
+                code: 412,
+                header: {
+                    "Content-Type": `application/json`
+                },
+                body: {
+                    message: `Cannot perform action while sync is in progress`,
                 }
-            }).catch(err => {
+            }
+        } 
+        return undefined;
+    }
+
+    /**
+     * This function will handle the request send to the re-authentication endpoint
+     * @emits iCPSEventWebServer.REAUTH_REQUESTED - When the request was received
+     * @emits iCPSEventWebServer.REAUTH_ERROR - When there was an error
+     */
+    handleReauthRequest(): WebServerResponse {
+        const check = this.handleInProgress();
+        if (check) {
+            return check;
+        }
+
+        Resources.emit(iCPSEventWebServer.REAUTH_REQUESTED);
+
+        this.triggerReauth()
+            .catch(err => {
                 Resources.emit(iCPSEventWebServer.REAUTH_ERROR, iCPSError.toiCPSError(err));
             });
-        this.sendApiResponse(res, 200, `Reauthentication requested`);
+        
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `application/json`
+            },
+            body: {
+                message: `Reauthentication requested`
+            }
+        }
     }
 
     /**
      * This function will trigger the reauthentication process
+     * @param app - An optional TokenApp instance to use for reauthentication. If not provided, a new instance will be created (structured for testing purposes)
      * @returns A promise that resolves when the reauthentication process is complete
      */
-    private triggerReauth(): Promise<unknown> {
-        const app = new TokenApp(true);
+    triggerReauth(app: TokenApp = new TokenApp(true)): Promise<unknown> {
         return app.run()
     }
 
@@ -374,92 +461,211 @@ export class WebServer {
      * @param res - The HTTP response object
      * @emits iCPSEventWebServer.SYNC_REQUESTED - When the sync was requested
      */
-    private handleSyncRequest(res: http.ServerResponse<http.IncomingMessage>) {
-        Resources.emit(iCPSEventWebServer.SYNC_REQUESTED);
-        this.sendApiResponse(res, 200, `Sync requested`);
+    handleSyncRequest(): WebServerResponse {
+        const check = this.handleInProgress();
+        if (check) {
+            return check;
+        }
+        Resources.emit(iCPSEventWebServer.SYNC_REQUESTED); // Will run a manual trigger for the cron-job
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `application/json`
+            },
+            body: {
+                message: `Sync requested`
+            }
+        }
     }
 
     /**
-     * Handle requests with invalid methods
-     * @param req - The HTTP request object
-     * @param res - The HTTP response object
-     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERROR - When the request method is not as expected - Provides iCPSError as argument
+     * This function will check if the server is currently expecting an MFA code
+     * @returns - Undefined if the server is expecting an MFA code, otherwise a WebServerResponse object indicating the error
      */
-    private handleInvalidMethodRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-        Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.METHOD_NOT_FOUND)
-            .addMessage(`endpoint ${req.url}, method ${req.method}`)
-            .addContext(`request`, req));
-        this.sendApiResponse(res, 405, `Method not supported: ${req.method}`);
+    handleMFACheck(): WebServerResponse | undefined {
+        if (this.state.state !== StateType.MFA) {
+            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.NO_CODE_EXPECTED));
+            return {
+                code: 412,
+                header: {
+                    "Content-Type": `application/json`
+                },
+                body: {
+                    message: `MFA code not expected at this time.`,
+                }
+            }
+        } 
+        return undefined;
     }
 
     /**
      * This function will handle requests send to the MFA code input endpoint
-     * @param req - The HTTP request object
-     * @param res - The HTTP response object
-     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the MFA code format is not as expected - Provides iCPSError as argument
+     * @param url - The parsed URL invoking this request
+     * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the parameters do not match the expected format
      * @emits iCPSEventMFA.MFA_RECEIVED - When the MFA code was received - Provides MFA method and MFA code as arguments
      */
-    private handleMFACode(req: http.IncomingMessage, res: http.ServerResponse) {
-        if (!this.waitingForMfa) {
-            this.sendApiResponse(res, 400, `MFA code not expected at this time. Taking you back home.`, `/`);
-            Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.NO_CODE_EXPECTED));
-            return;
+    handleMFACode(url: URL): WebServerResponse {
+        const check = this.handleMFACheck();
+        if (check) {
+            return check;
         }
 
-        if (!req.url.match(/\?code=\d{6}$/)) {
+        if (!url.search.match(/code=(\d{6})/)) {
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.CODE_FORMAT)
-                .addMessage(req.url)
-                .addContext(`request`, req));
-            this.sendApiResponse(res, 400, `Unexpected MFA code format! Expecting 6 digits`);
-            return;
+                .addMessage(url.toString()));
+            return {
+                code: 400,
+                header: {
+                    "Content-Type": `application/json`
+                },
+                body: {
+                    message: `Unexpected MFA code format! Expecting 6 digits`
+                }
+            }
         }
 
-        const mfa: string = req.url.slice(-6);
+        const mfa: string = url.search.match(/code=(\d{6})/)[1]
 
         Resources.logger(this).debug(`Received MFA: ${mfa}`);
-        this.sendApiResponse(res, 200, `Read MFA code: ${mfa}`);
         Resources.emit(iCPSEventMFA.MFA_RECEIVED, this.mfaMethod, mfa);
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `application/json`
+            },
+            body: {
+                message: `Read MFA code: ${mfa}`
+            }
+        }
     }
 
     /**
      * This function will handle the request send to the MFA code resend endpoint
-     * @param req - The HTTP request object
-     * @param res - The HTTP response object
+     * @param url - The parsed URL invoking this request
      * @emits iCPSEventRuntimeWarning.WEB_SERVER_ERR - When the MFA resend method is not as expected - Provides iCPSError as argument
      * @emits iCPSEventMFA.MFA_RESEND - When the MFA code resend was requested - Provides MFA method as argument
      */
-    private handleMFAResend(req: http.IncomingMessage, res: http.ServerResponse) {
-        const methodMatch = req.url.match(/method=(?:sms|voice|device)/);
+    handleMFAResend(url: URL): WebServerResponse {
+        const check = this.handleMFACheck();
+        if (check) {
+            return check;
+        }
+        
+        const methodMatch = url.search.match(/method=(sms|voice|device)/);
         if (!methodMatch) {
-            this.sendApiResponse(res, 400, `Resend method does not match expected format`);
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.RESEND_METHOD_FORMAT)
-                .addContext(`requestURL`, req.url));
-            return;
+                .addContext(`requestURL`, url));
+            
+            return {
+                code: 400,
+                header: {
+                    "Content-Type": `application/json`
+                },
+                body: {
+                    message: `Resend method does not match expected format`
+                }
+            }
         }
 
-        const methodString = methodMatch[0].slice(7);
+        const methodString = methodMatch[1];
 
-        const phoneNumberIdMatch = req.url.match(/phoneNumberId=\d+/);
+        const phoneNumberIdMatch = url.search.match(/phoneNumberId=(\d+)/);
 
         if (phoneNumberIdMatch && methodString !== `device`) {
-            this.mfaMethod.update(methodString, parseInt(phoneNumberIdMatch[0].slice(14), 10));
+            this.mfaMethod.update(methodString, parseInt(phoneNumberIdMatch[1], 10));
         } else {
             this.mfaMethod.update(methodString);
         }
 
-        this.sendApiResponse(res, 200, `Requesting MFA resend with method ${this.mfaMethod}`);
         Resources.emit(iCPSEventMFA.MFA_RESEND, this.mfaMethod);
+
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `application/json`
+            },
+            body: {
+                message: `Requesting MFA resend with method ${this.mfaMethod}`
+            }
+        }
+    }
+    
+    handlePushSubscription(_url: URL, data?: string): WebServerResponse {
+        try {
+            const pushSubscriptionData = Resources.validator().validatePushSubscription(jsonc.parse(data));
+            Resources.manager().addNotificationSubscription(pushSubscriptionData);
+            return {
+                code: 201,
+                header: {
+                    "Content-Type": `application/json`
+                },
+                body: {
+                    message: `Push subscription added successfully`
+                }
+            }
+        } catch (err) {
+            Resources.logger(this).error(`Unable to register push subscription: ${err}`);
+            return {
+                code: 400,
+                header: {
+                    "Content-Type": `application/json`
+                },
+                body: {
+                    message: `Unable to add push subscription`
+                }
+            }
+        }
     }
 
-    /**
-     * This function will send a response, based on its input variables
-     * @param res - The response object, to send the response to
-     * @param code - The status code for the response
-     * @param msg - The message included in the response
-     * @param newLocation - The new location to redirect to, if any
-     */
-    private sendApiResponse(res: http.ServerResponse, code: number, msg: string, newLocation?: string) {
-        res.writeHead(code, {"Content-Type": `application/json`});
-        res.end(jsonc.stringify({message: msg, newLocation: newLocation}));
+    handleStateView(): WebServerResponse {
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `text/html`
+            },
+            body: new StateView().asHtml()
+        }
+    }
+
+    handleSubmitMFAView(): WebServerResponse {
+        if (this.state.state !== StateType.MFA) {
+            Resources.logger(this).warn(`Submit MFA view requested, but not waiting for it. Redirecting to state view.`);
+            return {
+                code: 302,
+                header: {
+                    "Content-Type": `text/plain`,
+                    Location: `${Resources.manager().webBasePath}/state`
+                },
+                body: {}
+            }
+        }
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `text/html`
+            },
+            body: new SubmitMfaView().asHtml()
+        }
+    }
+
+    handleRequestMFAView(): WebServerResponse {
+        if (this.state.state !== StateType.MFA) {
+            Resources.logger(this).warn(`Request MFA view requested, but not waiting for it. Redirecting to state view.`);
+            return {
+                code: 302,
+                header: {
+                    "Content-Type": `text/plain`,
+                    Location: `${Resources.manager().webBasePath}/state`
+                },
+                body: {}
+            }
+        }
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `text/html`
+            },
+            body: new RequestMfaView().asHtml()
+        }
     }
 }

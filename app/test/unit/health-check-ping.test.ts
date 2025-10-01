@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from "@jest/globals";
-import { HealthCheckPingExecutor } from "../../src/app/event/health-check-ping-executor";
-import { iCPSEventRuntimeError, iCPSEventSyncEngine } from "../../src/lib/resources/events-types";
-import * as Config from '../_helpers/_config';
-import { MockedEventManager, MockedResourceManager, prepareResources } from "../_helpers/_general";
-import mockfs from 'mock-fs';
+import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals";
 import MockAdapter from 'axios-mock-adapter';
+import mockfs from 'mock-fs';
+import {HealthCheckPingExecutor} from "../../src/app/event/health-check-ping-executor";
+import {iCPSEventRuntimeError, iCPSEventSyncEngine} from "../../src/lib/resources/events-types";
+import * as Config from '../_helpers/_config';
+import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general";
 
 const exampleHealthCheckUrl = `https://hc-ping.com/example-healthcheck-slug`;
 let mockedResourceManager: MockedResourceManager;
@@ -58,7 +58,7 @@ describe(`Health Check Pings`, () => {
         await new Promise(resolve => setTimeout(resolve, 0));
 
         expect(mockAdapter.history.post[0].baseURL).toBe(exampleHealthCheckUrl);
-        expect(mockAdapter.history.post[0].url).toBe(`/success`);
+        expect(mockAdapter.history.post[0].url).toBe(``);
         expect(mockAdapter.history.post[0].data).toBe(`Example log message`);
         expect(healthCheckPingExecutor.getLog).toHaveBeenCalledTimes(1)
     });

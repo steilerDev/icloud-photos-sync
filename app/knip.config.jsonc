@@ -1,4 +1,4 @@
 {
-    "entry": ["test/_helpers/*", "test/unit/*", "test/api/*", "src/main.ts", "build/cli-reference.ts", "build/schema.ts", "build/package.ts"],
+    "entry": ["test/_helpers/*", "test/unit/*", "test/api/*", "src/main.ts"],
     "project": ["**/*.ts"]
 }
