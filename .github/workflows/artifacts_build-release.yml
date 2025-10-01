@@ -58,7 +58,7 @@ jobs:
         id: release-app
         uses: ./.github/actions/release/app
         with:
-          # npm-token: ${{ secrets.npm-token }}
+          npm-token: ${{ secrets.npm-token }}
           bt-token: ${{ secrets.bt-token }}
 
   docker-build:
