@@ -37,6 +37,10 @@ Options:
                                    DATA_DIR)
   -P, --port <number>              Port to serve the web ui on and to receive
                                    MFA input on. (default: 80, env: PORT)
+  --web-base-path <string>         The base path for subpath deployments, e.g.
+                                   '/somePath' if the application is hosted
+                                   under 'http://localhost/somepath/'. (default:
+                                   "", env: WEB_BASE_PATH)
   -r, --max-retries <number>       Sets the number of maximum retries upon a
                                    sync error (\`Infinity\` means that it will
                                    always retry). (default: 10, env:
