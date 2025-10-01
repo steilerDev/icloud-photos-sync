@@ -34,26 +34,29 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", (event) => {
     console.log("Push notification received:", event);
     const data = event.data?.json() ?? {
-        state: "error",
-        errorMessage: "Failed to retrieve push notification from pushed data.."
+        state: "ready",
+        prevError: {
+            message: "Failed to retrieve push notification from pushed data!"
+        }
     };
+
+    console.log('Presenting notification: ' + JSON.stringify(data))
 
     let title = "iCloud Photo Sync"
     let body = ""
     let badge = 0
-    let tag = "notification"
 
     switch(data.state) {
         case 'ready':
             if(data.prevError) {
                 title = "iCloud Photo Sync failed"
-                body = "Last " + (state.prevTrigger ?? "operation") + " failed: " + state.prevError.message
+                body = "Last " + (data.prevTrigger ?? "operation") + " failed: " + data.prevError.message
             } else {
                 title = "iCloud Photo Sync succeeded"
-                body = "Last " + (state.prevTrigger ?? "operation") + " succeeded!"
+                body = "Last " + (data.prevTrigger ?? "operation") + " succeeded!"
             }
-            if(state.nextSync) {
-                body += " Next sync scheduled for " + new Date(state.nextSync).toLocaleString()
+            if(data.nextSync) {
+                body += " Next sync scheduled for " + new Date(data.nextSync).toLocaleString()
             }
             break;
         case 'mfa_required':
@@ -69,9 +72,7 @@ self.addEventListener("push", (event) => {
 
     self.registration.showNotification(title, {
         body,
-        icon: "/icon.png",
-        vibrate: [200, 100, 200],
-        tag
+        icon: "/icon.png"
     });
 
     Navigator.setAppBadge(badge);

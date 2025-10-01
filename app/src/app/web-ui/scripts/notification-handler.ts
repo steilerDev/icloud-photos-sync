@@ -5,7 +5,7 @@ export const notificationHandlerScript = `
 window.addEventListener("load", function () {
     if(navigator.serviceWorker) {
         navigator.serviceWorker
-            .register("./service-worker.js", { scope: "./" })
+            .register("/service-worker.js", { scope: "/" })
             .then(function () {
                 console.log("Service Worker Registered");
             });
