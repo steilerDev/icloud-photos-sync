@@ -232,6 +232,13 @@ export class ResourceManager {
     }
 
     /**
+     * @returns The web base path for subpath deployment
+     */
+    get webBasePath(): string {
+        return this._resources.webBasePath;
+    }
+
+    /**
      * @returns The number of retries to use for downloading
      */
     get maxRetries(): number {

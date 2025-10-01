@@ -1,7 +1,7 @@
 /**
  * This script registers the service worker and exposes the requestNotificationPermissions() function, which will perform the necessary handshake to subscribe to push events
  */
-export const notificationHandlerScript = `
+export const notificationHandlerScript = (basePath: string) => `
 window.addEventListener("load", function () {
     if(navigator.serviceWorker) {
         navigator.serviceWorker
@@ -83,7 +83,7 @@ async function requestNotificationPermissions() {
 async function sendSubscriptionToServer(subscription) {
     console.log("Sending subscription to server: " + JSON.stringify(subscription))
     try {
-        const response = await fetch("/api/subscribe", {
+        const response = await fetch("${basePath}/api/subscribe", {
             method: "POST",
             body: JSON.stringify(subscription),
             headers: {
@@ -101,7 +101,7 @@ async function sendSubscriptionToServer(subscription) {
 
 async function getVapidPublicKey() {
     try {
-        const response = await fetch("/api/vapid-public-key");
+        const response = await fetch("${basePath}/api/vapid-public-key");
         if (!response.ok) {
             throw new Error("Failed to fetch VAPID public key.");
         }

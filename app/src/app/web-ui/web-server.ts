@@ -234,18 +234,13 @@ export class WebServer {
      */
     async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         try {
-            const url = new URL(`http://localhost${req.url}`)
+            const url = new URL(
+                req.url.replace(new RegExp(`^${Resources.manager().webBasePath}`), ``), // Removing the web base path for request matching
+                `http://localhost/` // Necessary, because the req.url is relative
+            )
             Resources.logger(this).debug(`Received ${req.method} request for URL ${url.toString()}`)
 
             const body = await this.readBody(req)
-
-            // if (cleanPath.endsWith(`/`)) {
-            //     Resources.logger(this).debug(`Redirecting ${req.url} to same path without trailing slash.`);
-            //     const redirectUrl = cleanPath.slice(0, -1);
-            //     res.writeHead(301, {Location: redirectUrl});
-            //     res.end();
-            //     return;
-            // }
 
             if (req.method === `GET` && url.pathname in this._sitemap.GET) {
                 this.sendResponse(this._sitemap.GET[url.pathname](url, body), res)
@@ -269,7 +264,7 @@ export class WebServer {
                     "Content-Type": `application/json`
                 },
                 body: {
-                    message: `Method (${req.method}) not supported on endpoint ${url.pathname}`
+                    message: `Method (${req.method}) not supported on endpoint ${req.url}`
                 }
             }, res)
         } catch (err) {
@@ -340,7 +335,7 @@ export class WebServer {
             header: {
                 "Content-Type": `application/javascript`
             },
-            body: serviceWorker
+            body: serviceWorker(Resources.manager().webBasePath)
         }
     }
 
@@ -350,7 +345,7 @@ export class WebServer {
             header: {
                 'Content-Type': `application/json`
             },
-            body: manifest
+            body: manifest(Resources.manager().webBasePath)
         }
     }
 
@@ -639,7 +634,7 @@ export class WebServer {
                 code: 302,
                 header: {
                     "Content-Type": `text/plain`,
-                    Location: `/state`
+                    Location: `${Resources.manager().webBasePath}/state`
                 },
                 body: {}
             }
@@ -660,7 +655,7 @@ export class WebServer {
                 code: 302,
                 header: {
                     "Content-Type": `text/plain`,
-                    Location: `/state`
+                    Location: `${Resources.manager().webBasePath}/state`
                 },
                 body: {}
             }

@@ -1,3 +1,4 @@
+import {Resources} from "../../../lib/resources/main.js";
 import {requestMfaScript} from "../scripts/request-mfa-scripts.js";
 import {View} from "./base.js";
 
@@ -10,7 +11,7 @@ export class RequestMfaView extends View {
             <button class="request-buttons" onclick="requestMfaWithMethod('sms')" id="sms-button">Send SMS</button>
             <button class="request-buttons" onclick="requestMfaWithMethod('voice')" id="voice-button">Receive a Call</button>
 
-            <button class="inverted" onclick="navigate('/state')" id="cancel-button">Cancel</button>
+            <button class="inverted" onclick="navigate('${Resources.manager().webBasePath}/state')" id="cancel-button">Cancel</button>
         `;
     }
 

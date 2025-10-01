@@ -1,7 +1,7 @@
 /**
  * This script exposes the submitMfa() function and adds event listeners to the input to progress the cursor
  */
-export const submitMfaScript = ` 
+export const submitMfaScript = (basePath: string) => ` 
 async function submitMfa() {
     document.querySelector("#submitButton").disabled = true
     document.querySelector("#submitButton").style['background-color'] = "rgb(147 157 179)"
@@ -10,7 +10,7 @@ async function submitMfa() {
         .querySelectorAll("#mfaInput input"))
         .reduce((acc, input) => acc + input.value, "");
     try {
-        const response = await fetch("/api/mfa?code=" + mfaCode, {method: "POST"});
+        const response = await fetch("${basePath}/api/mfa?code=" + mfaCode, {method: "POST"});
         if (!response.ok) {
             const body = response.json()
             throw new Error(body?.message ?? response.statusText);
@@ -18,7 +18,7 @@ async function submitMfa() {
     } catch (err) {
         alert("MFA submission failed: " + err.msg)
     }
-    setTimeout(() => navigate("/state"), 2000);
+    setTimeout(() => navigate("${basePath}/state"), 2000);
 }
 
 const mfaInputs = document.querySelectorAll("#mfaInput input");

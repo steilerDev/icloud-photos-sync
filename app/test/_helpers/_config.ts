@@ -7,6 +7,7 @@ export const defaultConfig = {
     password: `testPass`,
     dataDir: `/opt/icloud-photos-library`,
     port: 80,
+    webBasePath: ``,
     maxRetries: 10,
     downloadThreads: 5,
     downloadTimeout: 10,

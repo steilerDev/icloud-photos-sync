@@ -2,9 +2,9 @@
  * This script exposes the triggerSync() and triggerReauth() functions.
  * Additionally the refreshState() function will be executed through an interval.
  */
-export const stateViewScript = `
+export const stateViewScript = (basePath: string) => `
 async function triggerSync() {
-    const response = await fetch("/api/sync", { method: "POST" });
+    const response = await fetch("${basePath}/api/sync", { method: "POST" });
     if (!response.ok) {
         alert("Unable to trigger sync: " + response.statusText);
         return;
@@ -12,7 +12,7 @@ async function triggerSync() {
     await refreshState()
 }
 async function triggerReauth() {
-    const response = await fetch("/api/reauthenticate", { method: "POST" });
+    const response = await fetch("${basePath}/api/reauthenticate", { method: "POST" });
     if (!response.ok) {
         alert("Unable to trigger re-authentication: " + response.statusText);
         return;
@@ -28,7 +28,7 @@ async function refreshState() {
 
 async function fetchState() {
     try{
-        const fetchedState = await fetch("/api/state", { 
+        const fetchedState = await fetch("${basePath}/api/state", { 
             headers: {
                 "Accept": "application/json"
             }
@@ -131,7 +131,7 @@ function updateState(state) {
             enableSymbol("auth")
             return;
         case 'mfa_required': 
-            navigate('/submit-mfa')
+            navigate('${basePath}/submit-mfa')
             return;
         case 'syncing':
             setStateText('Syncing...')

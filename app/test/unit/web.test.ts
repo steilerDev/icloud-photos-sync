@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals";
 import {MockedEventManager, MockedResourceManager, MockedValidator, prepareResources} from "../_helpers/_general";
 import {WebServer} from "../../src/app/web-ui/web-server";
-import { StateTrigger, StateType} from "../../src/app/web-ui/state";
+import { State, StateTrigger, StateType} from "../../src/app/web-ui/state";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from "../../src/lib/resources/events-types";
 import {createRequest, RequestMethod} from 'node-mocks-http'
 import {IncomingMessage} from "http";
@@ -373,25 +373,175 @@ describe(`Notification Pusher`, () => {
     })
 })
 
-describe(`Request handling`, () => {
+test.each([{
+    desc: `Ready`,
+    stateType: StateType.READY,
+    timestamp: 1,
+    result: {
+        state: `ready`,
+        prevTrigger: undefined,
+        prevError: undefined,
+        timestamp: 1,
+        nextSync: undefined
+    }
+},{
+    desc: `Ready with next sync`,
+    stateType: StateType.READY,
+    timestamp: 1,
+    nextSync: 2,
+    result: {
+        state: `ready`,
+        prevTrigger: undefined,
+        prevError: undefined,
+        timestamp: 1,
+        nextSync: 2
+    }
+},{
+    desc: `Ready with previous error`,
+    stateType: StateType.READY,
+    prevError: new iCPSError(),
+    timestamp: 1,
+    result: {
+        state: `ready`,
+        prevTrigger: undefined,
+        prevError: {
+            code: `UNKNOWN`,
+            message: `UNKNOWN: Unknown error occurred`
+        },
+        timestamp: 1,
+        nextSync: undefined
+    }
+},{
+    desc: `Ready with previous fail on MFA error`,
+    stateType: StateType.READY,
+    prevError: new iCPSError(MFA_ERR.FAIL_ON_MFA),
+    timestamp: 1,
+    result: {
+        state: `ready`,
+        prevTrigger: undefined,
+        prevError: {
+            code: `MFA_FAIL_ON_MFA`,
+            message: `MFA code required. Use the 'Renew Authentication' button to request and enter a new code.`
+        },
+        timestamp: 1,
+        nextSync: undefined
+    }
+},{
+    desc: `Ready with previous MFA code not provided error`,
+    stateType: StateType.READY,
+    prevError: new iCPSError(WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED),
+    timestamp: 1,
+    result: {
+        state: `ready`,
+        prevTrigger: undefined,
+        prevError: {
+            code: `WEB_SERVER_MFA_CODE_NOT_PROVIDED`,
+            message: `MFA code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`
+        },
+        timestamp: 1,
+        nextSync: undefined
+    }
+},{
+    desc: `Ready with previous unauthorized error`,
+    stateType: StateType.READY,
+    prevError: new iCPSError(AUTH_ERR.UNAUTHORIZED),
+    timestamp: 1,
+    result: {
+        state: `ready`,
+        prevTrigger: undefined,
+        prevError: {
+            code: `AUTH_UNAUTHORIZED`,
+            message: `Your credentials seem to be invalid. Please check your iCloud credentials and try again.`
+        },
+        timestamp: 1,
+        nextSync: undefined
+    }
+},{
+    stateType: StateType.AUTH,
+    desc: `Auth triggered by Sync`,
+    prevTrigger: StateTrigger.SYNC,
+    timestamp: 1,
+    result: {
+        state: `authenticating`,
+        prevTrigger: `sync`,
+        prevError: undefined,
+        timestamp: 1,
+        nextSync: undefined
+    }
+},{
+    stateType: StateType.AUTH,
+    desc: `Auth triggered by AUTH`,
+    prevTrigger: StateTrigger.AUTH,
+    timestamp: 1,
+    result: {
+        state: `authenticating`,
+        prevTrigger: `auth`,
+        prevError: undefined,
+        timestamp: 1,
+        nextSync: undefined
+    }
+},{
+    stateType: StateType.SYNC,
+    desc: `Sync in progress`,
+    prevTrigger: StateTrigger.SYNC,
+    timestamp: 1,
+    result: {
+        state: `syncing`,
+        prevTrigger: `sync`,
+        prevError: undefined,
+        timestamp: 1,
+        nextSync: undefined
+    }
+},{
+    stateType: StateType.MFA,
+    desc: `Waiting for MFA`,
+    prevTrigger: StateTrigger.SYNC,
+    timestamp: 1,
+    result: {
+        state: `mfa_required`,
+        prevTrigger: `sync`,
+        prevError: undefined,
+        timestamp: 1,
+        nextSync: undefined
+    }
+}])(`Should serialize state - $desc`, async ({stateType, prevError, prevTrigger, timestamp, nextSync, result}) => {
+    const state = new State()
+    state.state = stateType
+    state.prevError = prevError
+    state.timestamp = timestamp
+    state.nextSync = nextSync
+    state.prevTrigger = prevTrigger
+    expect(state.serialize()).toEqual(result)
+})
+
+describe.each([
+    {
+        webBasePath: ``,
+        desc: `Without base path`
+    },{
+        webBasePath: `/test`,
+        desc: `With base path '/test'`
+    }
+])(`Request handling - $desc`, ({webBasePath}) => {
     let webServer: WebServer 
 
     beforeEach(() => {
+        mockedResourceManager._resources.webBasePath = webBasePath
         webServer = new WebServer()
     })
 
     test.each([{
         method: `PUT`,
-        url: `/state`,
+        url: `${webBasePath}/state`,
         desc: `Unsupported method`
     },{
         method: `POST`,
-        url: `/invalid`,
-        desc: `Unsupported path`
+        url: `${webBasePath}/invalid`,
+        desc: `Unsupported post path`
     }, {
         method: `GET`,
-        url: `/invalid`,
-        desc: `Unsupported path`
+        url: `${webBasePath}/invalid`,
+        desc: `Unsupported get path`
     }])(`Illegal request - $desc: $method $url`, async ({method, url}) => {
 
         const req = createRequest<IncomingMessage>({
@@ -410,7 +560,7 @@ describe(`Request handling`, () => {
         const runtimeEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR)
         const req = createRequest<IncomingMessage>({
             method: `POST`,
-            url: `/api/mfa`,
+            url: `${webBasePath}/api/mfa`,
         })
         const res = await sendMockedRequest(webServer, req)
         expect(runtimeEvent).toHaveBeenCalledWith(new Error(`Unknown error`))
@@ -418,11 +568,11 @@ describe(`Request handling`, () => {
         expect(res._getJSONData()).toEqual({message: `WEB_SERVER_UNKNOWN_ERR: Unknown error caused by test`})
     })
 
-    test(`Should handle ready body error`, async () => {
+    test(`Should handle read body error`, async () => {
         const runtimeEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR)
         const req = createRequest<IncomingMessage>({
             method: `POST`,
-            url: `/api/mfa`,
+            url: `${webBasePath}/api/mfa`,
             data: `test`
         })
         req.on = jest.fn<typeof req.on>().mockImplementation(() => {
@@ -438,7 +588,7 @@ describe(`Request handling`, () => {
     test(`Forward root to /state`, async () => {
         const req = createRequest<IncomingMessage>({
             method: `GET`,
-            url: `/`
+            url: `${webBasePath}/`
         }) 
 
         const res = await sendMockedRequest(webServer, req)
@@ -450,7 +600,7 @@ describe(`Request handling`, () => {
     test(`Serve service worker`, async () => {
         const req = createRequest<IncomingMessage>({
             method: `GET`,
-            url: `/service-worker.js`
+            url: `${webBasePath}/service-worker.js`
         }) 
 
         const res = await sendMockedRequest(webServer, req)
@@ -463,7 +613,7 @@ describe(`Request handling`, () => {
     test(`Serve manifest`, async () => {
         const req = createRequest<IncomingMessage>({
             method: `GET`,
-            url: `/manifest.json`
+            url: `${webBasePath}/manifest.json`
         }) 
 
         const res = await sendMockedRequest(webServer, req)
@@ -474,7 +624,7 @@ describe(`Request handling`, () => {
                 {
                     purpose: `any`,
                     sizes: `512x512`,
-                    src: `./icon.png`,
+                    src: `${webBasePath}/icon.png`,
                     type: `image/png`
                 }
             ],
@@ -483,8 +633,8 @@ describe(`Request handling`, () => {
             dir: `auto`,
             lang: `en-GB`,
             description: `iCloud Photos Sync is a one-way sync engine for the iCloud Photos Library`,
-            start_url: `./state`,
-            scope: `/`,
+            start_url: `${webBasePath}/state`,
+            scope: `${webBasePath}/`,
             name: `iCloud Photos Sync`,
             short_name: `ICPS`
         })
@@ -493,7 +643,7 @@ describe(`Request handling`, () => {
     test(`Serve icon`, async () => {
         const req = createRequest<IncomingMessage>({
             method: `GET`,
-            url: `/icon.png`
+            url: `${webBasePath}/icon.png`
         })
         const res = await sendMockedRequest(webServer, req)
         
@@ -506,7 +656,7 @@ describe(`Request handling`, () => {
     test(`Serve favicon`, async () => {
         const req = createRequest<IncomingMessage>({
             method: `GET`,
-            url: `/favicon.ico`
+            url: `${webBasePath}/favicon.ico`
         })
         const res = await sendMockedRequest(webServer, req)
         
@@ -517,150 +667,10 @@ describe(`Request handling`, () => {
     })
 
     describe(`State request`, () => {
-        test.each([{
-            desc: `Ready`,
-            state: StateType.READY,
-            timestamp: 1,
-            result: {
-                state: `ready`,
-                prevTrigger: undefined,
-                prevError: undefined,
-                timestamp: 1,
-                nextSync: undefined
-            }
-        },{
-            desc: `Ready with next sync`,
-            state: StateType.READY,
-            timestamp: 1,
-            nextSync: 2,
-            result: {
-                state: `ready`,
-                prevTrigger: undefined,
-                prevError: undefined,
-                timestamp: 1,
-                nextSync: 2
-            }
-        },{
-            desc: `Ready with previous error`,
-            state: StateType.READY,
-            prevError: new iCPSError(),
-            timestamp: 1,
-            result: {
-                state: `ready`,
-                prevTrigger: undefined,
-                prevError: {
-                    code: `UNKNOWN`,
-                    message: `UNKNOWN: Unknown error occurred`
-                },
-                timestamp: 1,
-                nextSync: undefined
-            }
-        },{
-            desc: `Ready with previous fail on MFA error`,
-            state: StateType.READY,
-            prevError: new iCPSError(MFA_ERR.FAIL_ON_MFA),
-            timestamp: 1,
-            result: {
-                state: `ready`,
-                prevTrigger: undefined,
-                prevError: {
-                    code: `MFA_FAIL_ON_MFA`,
-                    message: `MFA code required. Use the 'Renew Authentication' button to request and enter a new code.`
-                },
-                timestamp: 1,
-                nextSync: undefined
-            }
-        },{
-            desc: `Ready with previous MFA code not provided error`,
-            state: StateType.READY,
-            prevError: new iCPSError(WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED),
-            timestamp: 1,
-            result: {
-                state: `ready`,
-                prevTrigger: undefined,
-                prevError: {
-                    code: `WEB_SERVER_MFA_CODE_NOT_PROVIDED`,
-                    message: `MFA code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`
-                },
-                timestamp: 1,
-                nextSync: undefined
-            }
-        },{
-            desc: `Ready with previous unauthorized error`,
-            state: StateType.READY,
-            prevError: new iCPSError(AUTH_ERR.UNAUTHORIZED),
-            timestamp: 1,
-            result: {
-                state: `ready`,
-                prevTrigger: undefined,
-                prevError: {
-                    code: `AUTH_UNAUTHORIZED`,
-                    message: `Your credentials seem to be invalid. Please check your iCloud credentials and try again.`
-                },
-                timestamp: 1,
-                nextSync: undefined
-            }
-        },{
-            state: StateType.AUTH,
-            desc: `Auth triggered by Sync`,
-            prevTrigger: StateTrigger.SYNC,
-            timestamp: 1,
-            result: {
-                state: `authenticating`,
-                prevTrigger: `sync`,
-                prevError: undefined,
-                timestamp: 1,
-                nextSync: undefined
-            }
-        },{
-            state: StateType.AUTH,
-            desc: `Auth triggered by AUTH`,
-            prevTrigger: StateTrigger.AUTH,
-            timestamp: 1,
-            result: {
-                state: `authenticating`,
-                prevTrigger: `auth`,
-                prevError: undefined,
-                timestamp: 1,
-                nextSync: undefined
-            }
-        },{
-            state: StateType.SYNC,
-            desc: `Sync in progress`,
-            prevTrigger: StateTrigger.SYNC,
-            timestamp: 1,
-            result: {
-                state: `syncing`,
-                prevTrigger: `sync`,
-                prevError: undefined,
-                timestamp: 1,
-                nextSync: undefined
-            }
-        },{
-            state: StateType.MFA,
-            desc: `Waiting for MFA`,
-            prevTrigger: StateTrigger.SYNC,
-            timestamp: 1,
-            result: {
-                state: `mfa_required`,
-                prevTrigger: `sync`,
-                prevError: undefined,
-                timestamp: 1,
-                nextSync: undefined
-            }
-        }])(`Should serialize state - $desc`, async ({state, prevError, prevTrigger, timestamp, nextSync, result}) => {
-            webServer.state.state = state
-            webServer.state.prevError = prevError
-            webServer.state.timestamp = timestamp
-            webServer.state.nextSync = nextSync
-            webServer.state.prevTrigger = prevTrigger
-            expect(webServer.state.serialize()).toEqual(result)
-        })
-
         test(`Should handle state request`, async () => {
             const req = createRequest<IncomingMessage>({
                 method: `GET`,
-                url: `/api/state`
+                url: `${webBasePath}/api/state`
             })
             webServer.state.serialize = jest.fn<typeof webServer.state.serialize>().mockReturnValue({test: true} as any)
 
@@ -675,7 +685,7 @@ describe(`Request handling`, () => {
     test(`Serve public keys`, async () => {
         const req = createRequest<IncomingMessage>({
             method: `GET`,
-            url: `/api/vapid-public-key`
+            url: `${webBasePath}/api/vapid-public-key`
         })
         const res = await sendMockedRequest(webServer, req)
         expect(res._getStatusCode()).toBe(200);
@@ -692,7 +702,7 @@ describe(`Request handling`, () => {
                 const reauthEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.REAUTH_REQUESTED)
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/reauthenticate`
+                    url: `${webBasePath}/api/reauthenticate`
                 })
 
                 const res = await sendMockedRequest(webServer, req)
@@ -710,7 +720,7 @@ describe(`Request handling`, () => {
                 const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.REAUTH_ERROR)
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/reauthenticate`
+                    url: `${webBasePath}/api/reauthenticate`
                 })
 
                 const res = await sendMockedRequest(webServer, req)
@@ -730,7 +740,7 @@ describe(`Request handling`, () => {
             const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR)
             const req = createRequest<IncomingMessage>({
                 method: `POST`,
-                url: `/api/reauthenticate`
+                url: `${webBasePath}/api/reauthenticate`
             })
 
             const res = await sendMockedRequest(webServer, req)
@@ -759,7 +769,7 @@ describe(`Request handling`, () => {
             const syncEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.SYNC_REQUESTED)
             const req = createRequest<IncomingMessage>({
                 method: `POST`,
-                url: `/api/sync`
+                url: `${webBasePath}/api/sync`
             })
 
             const res = await sendMockedRequest(webServer, req)
@@ -776,7 +786,7 @@ describe(`Request handling`, () => {
             const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR)
             const req = createRequest<IncomingMessage>({
                 method: `POST`,
-                url: `/api/sync`
+                url: `${webBasePath}/api/sync`
             })
 
             const res = await sendMockedRequest(webServer, req)
@@ -804,7 +814,7 @@ describe(`Request handling`, () => {
 
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/mfa`,
+                    url: `${webBasePath}/api/mfa`,
                     queryParameters: {
                         code
                     }
@@ -826,7 +836,7 @@ describe(`Request handling`, () => {
 
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/mfa`,
+                    url: `${webBasePath}/api/mfa`,
                     queryParameters: {
                         code
                     }
@@ -846,7 +856,7 @@ describe(`Request handling`, () => {
 
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/mfa`,
+                    url: `${webBasePath}/api/mfa`,
                 })
 
                 const res = await sendMockedRequest(webServer, req)
@@ -881,7 +891,7 @@ describe(`Request handling`, () => {
 
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/resend_mfa`,
+                    url: `${webBasePath}/api/resend_mfa`,
                     queryParameters: {
                         method: mfaMethod,
                         phoneNumberId
@@ -908,7 +918,7 @@ describe(`Request handling`, () => {
 
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/resend_mfa`,
+                    url: `${webBasePath}/api/resend_mfa`,
                     queryParameters: {
                         method: `invalid`
                     }
@@ -932,7 +942,7 @@ describe(`Request handling`, () => {
 
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/resend_mfa`,
+                    url: `${webBasePath}/api/resend_mfa`,
                     queryParameters: {
                         method: `sms`,
                         phoneNumberId: `invalid`
@@ -959,7 +969,7 @@ describe(`Request handling`, () => {
 
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/mfa`,
+                    url: `${webBasePath}/api/mfa`,
                     query: {
                         code
                     }
@@ -982,7 +992,7 @@ describe(`Request handling`, () => {
 
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/mfa`,
+                    url: `${webBasePath}/api/mfa`,
                     query: {
                         code
                     }
@@ -1005,7 +1015,7 @@ describe(`Request handling`, () => {
 
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/mfa`,
+                    url: `${webBasePath}/api/mfa`,
                     query: {
                         code
                     }
@@ -1028,7 +1038,7 @@ describe(`Request handling`, () => {
 
                 const req = createRequest<IncomingMessage>({
                     method: `POST`,
-                    url: `/api/resend_mfa`,
+                    url: `${webBasePath}/api/resend_mfa`,
                     queryParameters: {
                         method: `sms`
                     }
@@ -1064,7 +1074,7 @@ describe(`Request handling`, () => {
             
             const req = createRequest<IncomingMessage>({
                 method: `POST`,
-                url: `/api/subscribe`,
+                url: `${webBasePath}/api/subscribe`,
                 data: JSON.stringify(subscription)
             })
             
@@ -1085,7 +1095,7 @@ describe(`Request handling`, () => {
 
             const req = createRequest<IncomingMessage>({
                 method: `POST`,
-                url: `/api/subscribe`,
+                url: `${webBasePath}/api/subscribe`,
                 data: JSON.stringify(subscription)
             })
             
@@ -1116,7 +1126,7 @@ describe(`Request handling`, () => {
 
         describe(`State UI`, () => {
             test(`Handle state view request`, async () => {
-                const site = await loadMockedSite(webServer, `/state`)
+                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
             
 
                 expect(getByTestId(site.view, `unknown-symbol`)).toBeVisible();
@@ -1134,16 +1144,16 @@ describe(`Request handling`, () => {
                 jest.advanceTimersByTime(1000)
 
                 expect(site.functions.fetch).toHaveBeenCalledTimes(1)
-                expect(site.functions.fetch).toHaveBeenCalledWith(`/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
             })
 
             test(`Handle initial 'ready' state`, async () => {
                 mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-                const site = await loadMockedSite(webServer, `/state`)
+                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
 
                 await site.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
                 expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
                 expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
@@ -1163,11 +1173,11 @@ describe(`Request handling`, () => {
                 mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
                 mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, new Error(`test`))
                 webServer.state.timestamp = 1000
-                const site = await loadMockedSite(webServer, `/state`)
+                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
 
                 await site.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
                 expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
                 expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
@@ -1189,11 +1199,11 @@ describe(`Request handling`, () => {
                 mockedEventManager.emit(iCPSEventWebServer.REAUTH_REQUESTED)
                 mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, new Error(`test`))
                 webServer.state.timestamp = 1000
-                const site = await loadMockedSite(webServer, `/state`)
+                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
 
                 await site.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
                 expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
                 expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
@@ -1215,11 +1225,11 @@ describe(`Request handling`, () => {
                 mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
                 mockedEventManager.emit(iCPSEventApp.SCHEDULED_DONE, new Date(1000))
                 webServer.state.timestamp = 1000
-                const site = await loadMockedSite(webServer, `/state`)
+                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
 
                 await site.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
                 expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
                 expect(getByTestId(site.view, `ok-symbol`)).toBeVisible();
@@ -1240,11 +1250,11 @@ describe(`Request handling`, () => {
             test(`Handle 'auth' state`, async () => {
                 mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
                 webServer.state.timestamp = 1000
-                const site = await loadMockedSite(webServer, `/state`)
+                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
 
                 await site.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
                 expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
                 expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
@@ -1264,11 +1274,11 @@ describe(`Request handling`, () => {
             test(`Handle 'sync' state`, async () => {
                 mockedEventManager.emit(iCPSEventSyncEngine.START)
                 webServer.state.timestamp = 1000
-                const site = await loadMockedSite(webServer, `/state`)
+                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
 
                 await site.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
                 expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
                 expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
@@ -1291,10 +1301,10 @@ describe(`Request handling`, () => {
             test(`Pre-condition not met`, async () => {
                 mockedEventManager.emit(iCPSEventSyncEngine.START);
 
-                const site = await loadMockedSite(webServer, `/submit-mfa`)
+                const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`)
 
                 expect(site.res.statusCode).toEqual(302)
-                expect(site.res.getHeader(`location`)).toEqual(`/state`)
+                expect(site.res.getHeader(`location`)).toEqual(`${webBasePath}/state`)
             })
 
             describe(`Pre-condition met`, () => {
@@ -1303,16 +1313,16 @@ describe(`Request handling`, () => {
                 })
 
                 test(`Handle 'MFA' state`, async () => {
-                    const site = await loadMockedSite(webServer, `/state`)
+                    const site = await loadMockedSite(webServer, `${webBasePath}/state`)
 
                     await site.window.refreshState()
 
-                    expect(site.functions.fetch).toHaveBeenCalledWith(`/api/state`, {headers: {Accept: `application/json`}})
-                    expect(site.functions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                    expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
+                    expect(site.functions.navigate).toHaveBeenCalledWith(`${webBasePath}/submit-mfa`)
                 })
 
                 test(`loads submit-mfa view & focus correctly set`, async () => {
-                    const site = await loadMockedSite(webServer, `/submit-mfa`)
+                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`)
 
                     expect(getByTestId(site.view, `firstDigit`)).toBeVisible();
                     expect(getByTestId(site.view, `secondDigit`)).toBeVisible();
@@ -1330,7 +1340,7 @@ describe(`Request handling`, () => {
                 })
 
                 test(`sets the focus onto the next input field when a digit is entered`, async () => {
-                    const site = await loadMockedSite(webServer, `/submit-mfa`)
+                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`)
 
                     const inputs = site.view.querySelectorAll(`#mfaInput input`);
                     const firstInput = inputs[0] as HTMLInputElement;
@@ -1344,7 +1354,7 @@ describe(`Request handling`, () => {
                 });
 
                 test(`distributes the digits across the input fields when pasting`, async () => {
-                    const site = await loadMockedSite(webServer, `/submit-mfa`)
+                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`)
 
                     const inputs = site.view.querySelectorAll(`#mfaInput input`);
                     const firstInput = inputs[0] as HTMLInputElement;
@@ -1372,7 +1382,7 @@ describe(`Request handling`, () => {
                 });
 
                 test(`enters mfa code`, async () => {
-                    const site = await loadMockedSite(webServer, `/submit-mfa`);
+                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`);
 
                     (getByTestId(site.view, `firstDigit`) as HTMLInputElement).value = `1`;
                     (getByTestId(site.view, `secondDigit`) as HTMLInputElement).value = `2`;
@@ -1386,13 +1396,13 @@ describe(`Request handling`, () => {
 
                     expect(site.functions.navigate).not.toHaveBeenCalled()
                     expect(site.functions.alert).not.toHaveBeenCalled()
-                    expect(site.functions.fetch).toHaveBeenCalledWith(`/api/mfa?code=123456`, {method: `POST`})
+                    expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/mfa?code=123456`, {method: `POST`})
                     expect(getByTestId(site.view, `submitButton`)).not.toBeEnabled()
                     expect(getByTestId(site.view, `submitButton`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
                 })
 
                 test(`displays an alert if mfa code submission failed`, async () => {
-                    const site = await loadMockedSite(webServer, `/submit-mfa`);
+                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`);
                     site.functions.fetch.mockImplementation(() => {
                         throw new Error(`test`)
                     });
@@ -1414,20 +1424,20 @@ describe(`Request handling`, () => {
                 })
 
                 test(`navigates to resend mfa ui`, async () => {
-                    const site = await loadMockedSite(webServer, `/submit-mfa`);
+                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`);
 
                     getByTestId(site.view, `resendButton`).click()
 
-                    expect(site.functions.navigate).toHaveBeenCalledWith(`/request-mfa`)
+                    expect(site.functions.navigate).toHaveBeenCalledWith(`${webBasePath}/request-mfa`)
                     expect(site.functions.fetch).not.toHaveBeenCalled()
                 })
 
                 test(`navigates to state ui on cancel`, async () => {
-                    const site = await loadMockedSite(webServer, `/submit-mfa`);
+                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`);
 
                     getByTestId(site.view, `cancelButton`).click()
 
-                    expect(site.functions.navigate).toHaveBeenCalledWith(`/state`)
+                    expect(site.functions.navigate).toHaveBeenCalledWith(`${webBasePath}/state`)
                     expect(site.functions.fetch).not.toHaveBeenCalled()
 
                 })
@@ -1438,10 +1448,10 @@ describe(`Request handling`, () => {
             test(`Pre-condition not met`, async () => {
                 mockedEventManager.emit(iCPSEventSyncEngine.START);
 
-                const site = await loadMockedSite(webServer, `/request-mfa`)
+                const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`)
 
                 expect(site.res.statusCode).toEqual(302)
-                expect(site.res.getHeader(`location`)).toEqual(`/state`)
+                expect(site.res.getHeader(`location`)).toEqual(`${webBasePath}/state`)
             })
 
             describe(`Pre-condition met`, () => {
@@ -1450,7 +1460,7 @@ describe(`Request handling`, () => {
                 })
 
                 test(`loads request-mfa page`, async () => {
-                    const site = await loadMockedSite(webServer, `/request-mfa`)
+                    const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`)
 
                     expect(getByTestId(site.view, `device-button`)).toBeVisible();
                     expect(getByTestId(site.view, `sms-button`)).toBeVisible();
@@ -1459,11 +1469,11 @@ describe(`Request handling`, () => {
                 })
 
                 test(`requests mfa code via device`, async () => {
-                    const site = await loadMockedSite(webServer, `/request-mfa`);
+                    const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`);
 
                     getByTestId(site.view, `device-button`).click()
 
-                    expect(site.functions.fetch).toHaveBeenCalledWith(`/api/resend_mfa?method=device`, {method: `POST`})
+                    expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=device`, {method: `POST`})
                     expect(getByTestId(site.view, `device-button`)).not.toBeEnabled()
                     expect(getByTestId(site.view, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
                     expect(getByTestId(site.view, `sms-button`)).not.toBeEnabled()
@@ -1477,11 +1487,11 @@ describe(`Request handling`, () => {
                 })
 
                 test(`requests mfa code via sms`, async () => {
-                    const site = await loadMockedSite(webServer, `/request-mfa`);
+                    const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`);
 
                     getByTestId(site.view, `sms-button`).click()
 
-                    expect(site.functions.fetch).toHaveBeenCalledWith(`/api/resend_mfa?method=sms`, {method: `POST`})
+                    expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=sms`, {method: `POST`})
                     expect(getByTestId(site.view, `device-button`)).not.toBeEnabled()
                     expect(getByTestId(site.view, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
                     expect(getByTestId(site.view, `sms-button`)).not.toBeEnabled()
@@ -1495,11 +1505,11 @@ describe(`Request handling`, () => {
                 })
 
                 test(`requests mfa code via voice`, async () => {
-                    const site = await loadMockedSite(webServer, `/request-mfa`);
+                    const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`);
 
                     getByTestId(site.view, `voice-button`).click()
 
-                    expect(site.functions.fetch).toHaveBeenCalledWith(`/api/resend_mfa?method=voice`, {method: `POST`})
+                    expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=voice`, {method: `POST`})
                     expect(getByTestId(site.view, `device-button`)).not.toBeEnabled()
                     expect(getByTestId(site.view, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
                     expect(getByTestId(site.view, `sms-button`)).not.toBeEnabled()
@@ -1513,7 +1523,7 @@ describe(`Request handling`, () => {
                 })
 
                 test(`shows alert if request failed`, async () => {
-                    const site = await loadMockedSite(webServer, `/request-mfa`);
+                    const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`);
 
                     site.functions.fetch.mockImplementation(() => {
                         throw new Error(`test`)

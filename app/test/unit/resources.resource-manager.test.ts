@@ -498,6 +498,12 @@ describe(`ResourceManager`, () => {
             });
         });
 
+        describe(`webBasePath`, () => {
+            test(`should return the base path from the resources`, () => {
+                expect(resourceManager.webBasePath).toEqual(resources.webBasePath);
+            });
+        });
+
         describe(`maxRetries`, () => {
             test(`should return the max retries from the resources`, () => {
                 expect(resourceManager.maxRetries).toEqual(resources.maxRetries);

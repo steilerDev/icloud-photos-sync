@@ -1,4 +1,4 @@
-export const serviceWorker = `
+export const serviceWorker = (basePath: string) => `
 /**
  * Service Worker for iCloud Photos Sync Web UI
  * Caches static assets and handles push notifications
@@ -21,8 +21,8 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
         caches.open("offline").then((cache) => {
             return cache.match(event.request).then((cachedResponse) => {
-                const networkResponse = fetch(event.request).then((networkResponse) => {
-                    cache.put(event.request, networkResponse.clone());
+                const networkResponse = fetch(${basePath}event.request).then((networkResponse) => {
+                    cache.put(${basePath}event.request, networkResponse.clone());
                     return networkResponse;
                 });
                 return cachedResponse || networkResponse;

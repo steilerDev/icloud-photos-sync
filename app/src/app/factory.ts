@@ -126,6 +126,7 @@ export type iCPSAppOptions = {
     trustToken?: string,
     dataDir: string,
     port: number,
+    webBasePath: string,
     maxRetries: number,
     downloadThreads: number,
     downloadTimeout: number,
@@ -178,6 +179,9 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
             .env(`PORT`)
             .default(80)
             .argParser(commanderParsePositiveInt))
+        .addOption(new Option(`--web-base-path <string>`, `The base path for subpath deployments, e.g. '/somePath' if the application is hosted under 'http://localhost/somepath/'.`)
+            .env(`WEB_BASE_PATH`)
+            .default(``))
         .addOption(new Option(`-r, --max-retries <number>`, `Sets the number of maximum retries upon a sync error (\`Infinity\` means that it will always retry).`)
             .env(`MAX_RETRIES`)
             .default(10)

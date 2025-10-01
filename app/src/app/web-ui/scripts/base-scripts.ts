@@ -3,7 +3,7 @@
  * This script provides general helper functions:
  *  - navigate(path: string)
  */
-export const navigationHelperScript = `
+export const navigationHelperScript = (_basePath: string) => `
 function navigate(path) {
     window.location.href = path;
 }
