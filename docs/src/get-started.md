@@ -139,11 +139,7 @@ In order to perform authentication (without syncing any assets) to validate or a
 
 ![Initial Sync](../assets/web-ui/unknown.png)
 
-This will trigger the authentication flow and an MFA code will be requested from your trusted devices. In order to enter the code, proceed by selecting `Enter MFA Code`.
-
-![MFA Required](../assets/web-ui/mfa-required.png)
-
-This will provide a form to enter the 6-digit code - use the `Submit` button to confirm your code.
+This will trigger the authentication flow and an MFA code will be requested from your trusted devices. This will forward to a form to enter the 6-digit code - use the `Submit` button to confirm your submission.
 
 ![MFA Form](../assets/web-ui/mfa-form.png)
 
@@ -201,9 +197,9 @@ During the sync, the WebUI will not show any detailed progress information - ple
 
 ### PWA & Notifications
 
-The Web UI is implemented as a PWA. This way, the app can cleanly be added to the home screen. The Service Worker of the PWA will only cache the static resources, which means that while you are offline or your ICPS Server is unreachable you can open the PWA, but it will only show you that it can't fetch the state. The PWA can also publish push notifications to inform you about the state of execution. 
+The Web UI is implemented as a PWA. This way, the app can cleanly be added to the home screen. The Service Worker of the PWA will only cache the static resources, which means that while you are offline or your server is unreachable you can open the PWA, but it will only show you that it can't fetch the state. The PWA can also publish push notifications to inform you about the state of execution. 
 
-To enable notifications, add the PWA to your home screen, tap on the notification and grant notification permissions. Note that notifications or other PWA capabilities might not work, if you do not use a TLS encrypted connection with a certificate trusted by the device. PWA capabilities have only been tested with Safari on MacOS and iOS.
+To enable notifications, add the PWA to your home screen, tap on the notification and grant notification permissions. Note that notifications or other PWA capabilities might not work, if you do not use a TLS encrypted connection with a certificate trusted by the device. PWA capabilities have only been tested with Safari on MacOS and iOS - utilizing Google's notification system would require the acquisition of a GCM key (this is currently not in scope, but can be requested through a Github issue).
 
 ### Archiving
 
