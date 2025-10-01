@@ -29,6 +29,9 @@ export const stateViewCSS = `
     margin-top: 1rem;
     margin-bottom: 1rem;
 }
+#next-sync-text {
+    text-align: center;
+}
 #enter-mfa-section {
     text-align: center;
     width: 90%;
