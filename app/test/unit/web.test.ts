@@ -755,8 +755,9 @@ describe.each([
         })
 
         test(`Trigger reauth run's Token App`, async () => {
-            const tokenApp = new TokenApp(true);
-            tokenApp.run = jest.fn<typeof tokenApp.run>().mockResolvedValue(`test`)
+            const tokenApp = {
+                run: jest.fn<typeof tokenApp.run>().mockResolvedValue(`test`)
+            } as unknown as TokenApp
 
             await expect(webServer.triggerReauth(tokenApp)).resolves.toBe(`test`)
             expect(tokenApp.run).toHaveBeenCalled()
