@@ -522,13 +522,13 @@ describe(`NetworkManager`, () => {
         });
 
         describe(`Settle queue`, () => {
-            beforeAll(() => {
-                jest.useFakeTimers();
-            });
+            // beforeAll(() => {
+            //     jest.useFakeTimers();
+            // });
 
-            afterAll(() => {
-                jest.useRealTimers();
-            });
+            // afterAll(() => {
+            //     jest.useRealTimers();
+            // });
 
             test.each([
                 {
