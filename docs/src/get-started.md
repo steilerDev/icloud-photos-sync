@@ -181,7 +181,7 @@ The MFA code can be entered through the exposed API:
         Submitting code `123456` using a CLI tool for making network requests, e.g. `curl`:
 
         ```
-        curl -X POST localhost:80/mfa?code=123456
+        curl -X POST 'localhost:80/mfa?code=123456'
         ```
 
     === "From Source"
@@ -222,7 +222,7 @@ This can be requested using the exposed API:
         Resending MFA code using `sms` to phone with number ID `2` using a CLI tool for making network requests, e.g. `curl`:
 
         ```
-        curl -X POST localhost:80/resend_mfa?method=sms&phoneNumberId=2
+        curl -X POST 'localhost:80/resend_mfa?method=sms&phoneNumberId=2'
         ```
 
     === "From Source"
