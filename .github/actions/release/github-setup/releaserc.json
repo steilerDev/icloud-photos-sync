@@ -5,7 +5,7 @@
         {
           "assets": [
             { 
-                "path": "artifacts/app-artifact/npm-pack.tgz", 
+                "path": "artifacts/app-artifact-release/npm-pack.tgz", 
                 "name": "<updated within CI>",
                 "label": "NPM Package Tarball" 
             },{ 
