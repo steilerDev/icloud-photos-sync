@@ -12,6 +12,10 @@ const schemaList = [
         srcPath: `src/lib/resources/resource-types.ts`,
         allowAdditionalProperties: false,
     }, {
+        typeName: `PushSubscription`,
+        srcPath: `src/lib/resources/web-server-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
         typeName: `SigninResponse`,
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
@@ -65,7 +69,7 @@ await Promise.all(schemaList.map(async schemaConfig => {
             return;
         }
     } catch (err) {
-        console.log(`No existing schema for ${schemaConfig.typeName} found at ${outputPath}: ${err.message}`);
+        console.log(`No existing schema for ${schemaConfig.typeName} found at ${outputPath}: ${(err as Error).message}`);
     }
 
     const config: tsj.Config = {

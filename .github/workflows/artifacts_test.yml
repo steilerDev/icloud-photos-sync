@@ -12,7 +12,7 @@ on:
     secrets:
         gh-token:
           description: The Github Token, in order to comment on pull request
-          required: false # Only required for release
+          required: false # Required for PR comments of testing PR
 
 permissions:
   pull-requests: write
@@ -23,7 +23,7 @@ jobs:
     if: contains(fromJSON(inputs.methods), 'unit-ubuntu')
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/test-unit
         uses: ./.github/actions/test/setup
         with:
@@ -39,20 +39,36 @@ jobs:
     if: contains(fromJSON(inputs.methods), 'unit-macos')
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/test-unit
         uses: ./.github/actions/test/setup
         with:
           prepare: app
       - name: action/test-unit
         uses: ./.github/actions/test/unit
+        
+  unit-docker:
+    runs-on: ubuntu-latest
+    if: contains(fromJSON(inputs.methods), 'unit-docker')
+    steps:
+      - name: setup/checkout
+        uses: actions/checkout@v5
+      - name: setup/test-docker
+        uses: ./.github/actions/test/setup
+        with:
+          prepare: docker
+      - name: action/test-docker
+        uses: ./.github/actions/test/docker
+        with:
+          method: unit
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     runs-on: [self-hosted, linux, x64, residential] # This workflow needs to be run from a residential IP address and needs to have the necessary secrets set in it's environment
     if: contains(fromJSON(inputs.methods), 'e2e')
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/test-docker
         uses: ./.github/actions/test/setup
         with:
@@ -68,7 +84,7 @@ jobs:
     if: contains(fromJSON(inputs.methods), 'api')
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/test-api
         uses: ./.github/actions/test/setup
         with:

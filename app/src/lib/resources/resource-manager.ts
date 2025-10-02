@@ -1,14 +1,16 @@
-import { readFileSync, writeFileSync } from "fs";
-import { jsonc } from "jsonc";
+import {readFileSync, writeFileSync} from "fs";
+import {jsonc} from "jsonc";
 import * as path from 'path';
-import { RESOURCES_ERR } from "../../app/error/error-codes.js";
-import { iCPSError } from "../../app/error/error.js";
-import { LogLevel } from "../../app/event/log.js";
-import { iCPSAppOptions } from "../../app/factory.js";
+import {RESOURCES_ERR} from "../../app/error/error-codes.js";
+import {iCPSError} from "../../app/error/error.js";
+import {LogLevel} from "../../app/event/log.js";
+import {iCPSAppOptions} from "../../app/factory.js";
 import * as PHOTOS_LIBRARY from '../photos-library/constants.js';
-import { iCPSEventRuntimeWarning } from "./events-types.js";
-import { Resources } from "./main.js";
-import { FILE_ENCODING, HAR_FILE_NAME, LIBRARY_LOCK_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources } from "./resource-types.js";
+import {iCPSEventRuntimeWarning} from "./events-types.js";
+import {Resources} from "./main.js";
+import {FILE_ENCODING, HAR_FILE_NAME, LIBRARY_LOCK_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resource-types.js";
+import { PushSubscription } from "./web-server-types.js";
+import webpush from 'web-push'
 
 /**
  * This class handles access to the .icloud-photos-sync resource file and handles currently applied configurations from the CLI and environment variables
@@ -63,6 +65,8 @@ export class ResourceManager {
             const formattedResourceFile: ResourceFile = {
                 libraryVersion: this._resources.libraryVersion,
                 trustToken: this._resources.trustToken,
+                notificationVapidCredentials: this._resources.notificationVapidCredentials,
+                notificationSubscriptions: this._resources.notificationSubscriptions
             };
             const resourceFileData = jsonc.stringify(formattedResourceFile, null, 4);
             Resources.logger(this).debug(`Writing resource file to ${this.resourceFilePath}`);
@@ -160,6 +164,53 @@ export class ResourceManager {
     }
 
     /**
+     * Retrieves the notification vapid credentials, generating them if they do not exist.
+     * @returns The notification vapid credentials, containing the public and private key
+     */
+    get notificationVapidCredentials(): { publicKey: string, privateKey: string } {
+        let credentials = this._resources.notificationVapidCredentials;
+        if (!credentials) {
+            credentials = webpush.generateVAPIDKeys();
+            this._resources.notificationVapidCredentials = credentials;
+            this._writeResourceFile();
+        }
+        return credentials;
+    }
+
+    /**
+     * Gets the notification subscriptions from the resource file.
+     * @returns The notification subscriptions, or an empty map if none are set
+     */
+    get notificationSubscriptions(): webpush.PushSubscription[] {
+        return this._resources.notificationSubscriptions 
+            ? Object.values(this._resources.notificationSubscriptions) 
+            : [];
+    }
+
+    /**
+     * Adds a subscription to the notification subscriptions in the resource file.
+     * @param subscription - The notification subscription to add
+     */
+    addNotificationSubscription(subscription: PushSubscription) {
+        this._resources.notificationSubscriptions = this._resources.notificationSubscriptions || {};
+        this._resources.notificationSubscriptions[subscription.endpoint] = subscription;
+        this._writeResourceFile();
+    }
+
+    /**
+     * Removes a subscription from the notification subscriptions in the resource file.
+     * @param subscription - The notification subscription to remove
+     */
+    removeNotificationSubscription(subscription: webpush.PushSubscription) {
+        if (this._resources.notificationSubscriptions && subscription.endpoint in this._resources.notificationSubscriptions) {
+            delete this._resources.notificationSubscriptions[subscription.endpoint]
+            this._writeResourceFile();
+        } else {
+            Resources.logger(this).warn(`No notification subscriptions found to remove endpoint: ${subscription.endpoint}`);
+        }
+    }
+
+    /**
      * @returns The iCloud username
      */
     get username(): string {
@@ -176,8 +227,15 @@ export class ResourceManager {
     /**
      * @returns The port to use for the MFA server
      */
-    get mfaServerPort(): number {
+    get webServerPort(): number {
         return this._resources.port;
+    }
+
+    /**
+     * @returns The web base path for subpath deployment
+     */
+    get webBasePath(): string {
+        return this._resources.webBasePath;
     }
 
     /**

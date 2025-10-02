@@ -35,8 +35,12 @@ Options:
   -d, --data-dir <string>          Directory to store local copy of library.
                                    (default: "/opt/icloud-photos-library", env:
                                    DATA_DIR)
-  -P, --port <number>              Port to listen on when awaiting MFA input.
-                                   (default: 80, env: PORT)
+  -P, --port <number>              Port to serve the web ui on and to receive
+                                   MFA input on. (default: 80, env: PORT)
+  --web-base-path <string>         The base path for subpath deployments, e.g.
+                                   '/somePath' if the application is hosted
+                                   under 'http://localhost/somepath/'. (default:
+                                   "", env: WEB_BASE_PATH)
   -r, --max-retries <number>       Sets the number of maximum retries upon a
                                    sync error (\`Infinity\` means that it will
                                    always retry). (default: 10, env:
@@ -61,7 +65,9 @@ Options:
                                    more information. (default: false, env:
                                    ENABLE_CRASH_REPORTING)
   --fail-on-mfa                    If a MFA is necessary, exit the program.
-                                   (default: false, env: FAIL_ON_MFA)
+                                   Ignored if re-authentication was requested
+                                   from the web UI. (default: false, env:
+                                   FAIL_ON_MFA)
   --force                          Forcefully remove an existing library lock.
                                    USE WITH CAUTION! (default: false, env:
                                    FORCE)

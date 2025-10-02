@@ -32,7 +32,7 @@ jobs:
     permissions: {}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/build-app
         uses: ./.github/actions/build/app-setup
       - name: action/build-app
@@ -51,7 +51,7 @@ jobs:
       url: ${{ steps.release-app.outputs.release-url }}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/release-app
         uses: ./.github/actions/release/app-setup
       - name: action/release-app
@@ -69,14 +69,14 @@ jobs:
       pull-requests: write
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/build-docker
         uses: ./.github/actions/build/docker-setup
       - name: action/build-docker
         uses: ./.github/actions/build/docker
         with:
-          docker-token: ${{ secrets.docker-token }}
           gh-token: ${{ secrets.gh-token }}
+          docker-token: ${{ secrets.docker-token }}
 
   docker-release:
     runs-on: ubuntu-latest
@@ -89,7 +89,7 @@ jobs:
       url: ${{ steps.release-docker.outputs.release-url }}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/release-docker
         uses: ./.github/actions/release/docker-setup
       - name: action/release-docker
@@ -105,7 +105,7 @@ jobs:
     permissions: {}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/build-docs
         uses: ./.github/actions/build/docs-setup
       - name: action/build-docs
@@ -123,7 +123,7 @@ jobs:
       url: ${{ steps.release-docs.outputs.release-url }}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/release-docs
         uses: ./.github/actions/release/docs-setup
       - name: action/release-docs
@@ -145,7 +145,7 @@ jobs:
       url: ${{ steps.release-github.outputs.release-url }}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: setup/release-github
         uses: ./.github/actions/release/github-setup
       - name: action/release-github

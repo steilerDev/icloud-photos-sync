@@ -25,7 +25,83 @@ describe(`Validator`, () => {
                     trustToken: `someToken`,
                 },
                 desc: `libraryVersion and trustToken`,
-            },
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    notificationVapidCredentials: {
+                        publicKey: `someKey`,
+                        privateKey: `someKey`
+                    }
+                },
+                desc: `libraryVersion and VAPID Credentials`,
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    notificationSubscriptions: {
+                        'http://some.endpoint': {
+                            endpoint: `http://some.endpoint`,
+                            keys: {
+                                p256dh: `someKey`,
+                                auth: `someAuth`
+                            }
+                        }
+                    }
+                },
+                desc: `libraryVersion and one notification subscription`,
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    notificationSubscriptions: {
+                        'http://some.endpoint': {
+                            endpoint: `http://some.endpoint`,
+                            keys: {
+                                p256dh: `someKey`,
+                                auth: `someAuth`
+                            }
+                        },
+                        'http://some.other.endpoint': {
+                            endpoint: `http://some.other.endpoint`,
+                            keys: {
+                                p256dh: `someOtherKey`,
+                                auth: `someOtherAuth`
+                            }
+                        }
+                    }
+                },
+                desc: `libraryVersion and multiple notification subscription`,
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    notificationSubscriptions: {}
+                },
+                desc: `libraryVersion and empty notification subscription`,
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    trustToken: `someToken`,
+                    notificationVapidCredentials: {
+                        publicKey: `someKey`,
+                        privateKey: `someKey`
+                    },
+                    notificationSubscriptions: {
+                        'http://some.endpoint': {
+                            endpoint: `http://some.endpoint`,
+                            keys: {
+                                p256dh: `someKey`,
+                                auth: `someAuth`
+                            }
+                        },
+                        'http://some.other.endpoint': {
+                            endpoint: `http://some.other.endpoint`,
+                            keys: {
+                                p256dh: `someOtherKey`,
+                                auth: `someOtherAuth`
+                            }
+                        }
+                    }
+                },
+                desc: `all keys and values`,
+            }
         ])(`should validate a valid resource file: $desc`, ({data}) => {
             expect(() => validator.validateResourceFile(data)).not.toThrow();
         });
@@ -39,9 +115,82 @@ describe(`Validator`, () => {
             }, {
                 data: {},
                 desc: `empty object`,
-            },
+            }, {
+                data: {
+                    libraryVersion: 1,
+                    notificationVapidCredentials: {}
+                },
+                desc: `libraryVersion and empty VAPID Credentials`,
+            }
         ])(`should throw an error for an invalid resource file: $desc`, ({data}) => {
-            expect(() => validator.validateResourceFile(data)).toThrowError(VALIDATOR_ERR.RESOURCE_FILE);
+            expect(() => validator.validateResourceFile(data)).toThrow(VALIDATOR_ERR.RESOURCE_FILE);
+        });
+    });
+
+    describe(`validatePushSubscriptionRequest`, () => {
+        test.each([
+            {
+                data: {
+                    endpoint: `some.endpoint.com`,
+                    keys: {
+                        p256dh: `someKey`,
+                        auth: `someAuth`
+                    }
+                },
+                desc: `minimal push subscription`,
+            }, {
+                data: {
+                    endpoint: `some.endpoint.com`,
+                    expirationTime: 1,
+                    keys: {
+                        p256dh: `someKey`,
+                        auth: `someAuth`
+                    }
+                },
+                desc: `push subscription with expiration time`,
+            }
+        ])(`should validate a valid push subscription request: $desc`, ({data}) => {
+            expect(() => validator.validatePushSubscription(data)).not.toThrow();
+        });
+
+        test.each([
+            {
+                data: {
+                    endpoint: `some.endpoint.com`,
+                    expirationTime: `1`,
+                    keys: {
+                        p256dh: `someKey`,
+                        auth: `someAuth`
+                    }
+                },
+                desc: `expiration time not a number`
+            }, {
+                data: {
+                    endpoint: `some.endpoint.com`,
+                    keys: {
+                        p256dh: `somekey`,
+                    }
+                },
+                desc: `auth missing`
+            }, {
+                data: {
+                    endpoint: `some.endpoint.com`,
+                    keys: {
+                        auth: `someAuth`
+                    }
+                },
+                desc: `p256dh missing`
+            }, {
+                data: {
+                    keys: {
+                        p256dh: `somekey`,
+                        auth: `someAuth`
+                    }
+                },
+                desc: `endpoint missing`
+            },
+        ])(`should throw an error for an invalid push subscription request: $desc`, ({data}) => {
+            expect(() => validator.validatePushSubscription(data)).toThrow(VALIDATOR_ERR.PUSH_SUBSCRIPTION);
         });
     });
 
@@ -192,7 +341,7 @@ describe(`Validator`, () => {
                 desc: `missing data`,
             },
         ])(`should throw an error for an invalid signin init response: $desc`, ({data}) => {
-            expect(() => validator.validateSigninInitResponse(data)).toThrowError(VALIDATOR_ERR.SIGNIN_INIT_RESPONSE);
+            expect(() => validator.validateSigninInitResponse(data)).toThrow(VALIDATOR_ERR.SIGNIN_INIT_RESPONSE);
         });
     });
 
@@ -272,7 +421,7 @@ describe(`Validator`, () => {
                 desc: `too many aasp set-cookie header`,
             },
         ])(`should throw an error for an invalid signin response: $desc`, ({data}) => {
-            expect(() => validator.validateSigninResponse(data)).toThrowError(VALIDATOR_ERR.SIGNIN_RESPONSE);
+            expect(() => validator.validateSigninResponse(data)).toThrow(VALIDATOR_ERR.SIGNIN_RESPONSE);
         });
     });
 
@@ -428,7 +577,7 @@ describe(`Validator`, () => {
             },
             desc: `no trusted phone numbers`,
         }])(`should throw an error for an invalid resend MFA device response: $desc`, ({data}) => {
-            expect(() => validator.validateResendMFADeviceResponse(data)).toThrowError(VALIDATOR_ERR.RESEND_MFA_DEVICE_RESPONSE);
+            expect(() => validator.validateResendMFADeviceResponse(data)).toThrow(VALIDATOR_ERR.RESEND_MFA_DEVICE_RESPONSE);
         });
     });
 
@@ -526,7 +675,7 @@ describe(`Validator`, () => {
             },
             desc: `invalid security code format`,
         }])(`should throw an error for an invalid resend MFA phone response: $desc`, ({data}) => {
-            expect(() => validator.validateResendMFAPhoneResponse(data)).toThrowError(VALIDATOR_ERR.RESEND_MFA_PHONE_RESPONSE);
+            expect(() => validator.validateResendMFAPhoneResponse(data)).toThrow(VALIDATOR_ERR.RESEND_MFA_PHONE_RESPONSE);
         });
     });
 
@@ -559,7 +708,7 @@ describe(`Validator`, () => {
                 desc: `empty session token`,
             },
         ])(`should throw an error for an invalid trust response: $desc`, ({data}) => {
-            expect(() => validator.validateTrustResponse(data)).toThrowError(VALIDATOR_ERR.TRUST_RESPONSE);
+            expect(() => validator.validateTrustResponse(data)).toThrow(VALIDATOR_ERR.TRUST_RESPONSE);
         });
     });
 
@@ -746,7 +895,7 @@ describe(`Validator`, () => {
                 desc: `invalid cookies`,
             },
         ])(`should throw an error for an invalid setup response: $desc`, ({data}) => {
-            expect(() => validator.validateSetupResponse(data)).toThrowError(VALIDATOR_ERR.SETUP_RESPONSE);
+            expect(() => validator.validateSetupResponse(data)).toThrow(VALIDATOR_ERR.SETUP_RESPONSE);
         });
     });
 
@@ -837,7 +986,7 @@ describe(`Validator`, () => {
                 desc: `message missing`,
             },
         ])(`should throw an error for an invalid PCS response: $desc`, ({data}) => {
-            expect(() => validator.validatePCSResponse(data)).toThrowError(VALIDATOR_ERR.PCS_RESPONSE);
+            expect(() => validator.validatePCSResponse(data)).toThrow(VALIDATOR_ERR.PCS_RESPONSE);
         });
     });
 

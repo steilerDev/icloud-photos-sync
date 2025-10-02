@@ -5,6 +5,9 @@ inputs:
     description: The path to the app directory
     required: false
     default: app
+  method:
+    description: If this should run only unit tests ('unit') or all ('all') - defaults to all
+    required: true
   gh-token:
     description: The GH token used for commenting on PR requests
     required: true
@@ -17,7 +20,7 @@ runs:
       shell: bash
       run: |
         export IMAGE_NAME=${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
-        (cd ${{ inputs.app-path }}; npm run test:docker)
+        (cd ${{ inputs.app-path }}; npm run ${{ inputs.method == 'unit' && 'test:docker:unit' || 'test:docker' }})
     - id: publish-test
       if: always()
       uses: ctrf-io/github-test-reporter@v1

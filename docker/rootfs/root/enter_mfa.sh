@@ -1,4 +1,7 @@
 #!/bin/bash
+
+echo "DEPRECATION WARNING: This helper tool will be removed in the next major version, please use the WebUI or directly interact with the API" >&2
+
 if [ -z "$1" ]; then
     echo "No code provided"
     echo "Run this utility through:"
@@ -11,4 +14,4 @@ MFA_PORT="${PORT:-80}"
 HOST="${2:-localhost}"
 echo "Posting MFA code $1 to ${HOST}:${MFA_PORT}"
 echo "..."
-curl -s -X POST "${HOST}:${MFA_PORT}/mfa?code=$1" | jq -crM .message
+curl -s -X POST "${HOST}:${MFA_PORT}/api/mfa?code=$1" | jq -crM .message

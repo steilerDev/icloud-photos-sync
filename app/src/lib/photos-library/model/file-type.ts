@@ -9,6 +9,7 @@ const EXT = {
     'public.png': `png`,
     'public.mpeg-4': `mp4`,
     'public.jpeg': `jpeg`,
+    'public.jpeg-xl': `jxl`,
     'com.apple.quicktime-movie': `mov`,
     'public.heic': `heic`,
     'public.image': `HEIC`,

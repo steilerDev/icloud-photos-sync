@@ -1,17 +1,18 @@
-import mockfs from 'mock-fs';
+import {afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import fs from 'fs';
-import {describe, test, expect, jest, beforeEach, afterEach, beforeAll} from '@jest/globals';
-import * as Config from '../_helpers/_config';
-import {nonRejectOptions, rejectOptions, validOptions} from '../_helpers/app-factory.helper';
-import {ArchiveApp, DaemonApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
-import {appFactory} from '../../src/app/factory';
-import {Asset} from '../../src/lib/photos-library/model/asset';
-import {prepareResources, spyOnEvent} from '../_helpers/_general';
-import path from 'path';
-import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError} from '../../src/lib/resources/events-types';
-import {Resources} from '../../src/lib/resources/main';
+import mockfs from 'mock-fs';
 import {stdin} from 'mock-stdin';
+import path from 'path';
+import {appFactory, iCPSAppOptions} from '../../src/app/factory';
+import {ArchiveApp, DaemonApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
+import {WebServer} from '../../src/app/web-ui/web-server';
+import {Asset} from '../../src/lib/photos-library/model/asset';
+import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError, iCPSEventWebServer} from '../../src/lib/resources/events-types';
+import {Resources} from '../../src/lib/resources/main';
 import {LIBRARY_LOCK_FILE_NAME} from '../../src/lib/resources/resource-types';
+import * as Config from '../_helpers/_config';
+import {prepareResources, spyOnEvent} from '../_helpers/_general';
+import {nonRejectOptions, rejectOptions, validOptions} from '../_helpers/app-factory.helper';
 
 beforeAll(() => {
     // DATA_DIR is set in devcontainer and can lead to conflicts in this test suite
@@ -21,6 +22,7 @@ beforeAll(() => {
 beforeEach(() => {
     mockfs();
     prepareResources(false);
+    jest.spyOn(WebServer, `spawn`).mockImplementation(() => { return Promise.resolve({} as WebServer); });
 });
 
 afterEach(() => {
@@ -33,9 +35,9 @@ describe(`App Factory`, () => {
         const setupSpy = jest.spyOn(Resources, `setup`);
         const mockStderr = jest.spyOn(process.stderr, `write`).mockImplementation(() => true);
 
-        await expect(() => appFactory(options)).rejects.toThrowError(expected);
+        await expect(() => appFactory(options)).rejects.toThrow(expected);
 
-        expect(mockStderr).toBeCalledWith(expected + `\n`);
+        expect(mockStderr).toHaveBeenCalledWith(expected + `\n`);
         expect(setupSpy).not.toHaveBeenCalled();
     });
 
@@ -59,7 +61,7 @@ describe(`App Factory`, () => {
         test.each(nonRejectOptions)(`$_desc`, async ({options, expectedOptions}) => {
             const setupSpy = jest.spyOn(Resources, `setup`);
             const app = await appFactory([...options, ...command]);
-            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, ...expectedOptions});
+            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, ...expectedOptions} as iCPSAppOptions);
             expect(app).toBeInstanceOf(appType);
         });
     });
@@ -100,7 +102,6 @@ describe(`App Factory`, () => {
 
         expect(tokenApp).toBeInstanceOf(TokenApp);
         expect(tokenApp.icloud).toBeDefined();
-        expect(tokenApp.icloud.mfaServer).toBeDefined();
         expect(Resources.manager()).toBeDefined();
         expect(Resources.event()).toBeDefined();
         expect(Resources.validator()).toBeDefined();
@@ -113,7 +114,6 @@ describe(`App Factory`, () => {
 
         expect(syncApp).toBeInstanceOf(SyncApp);
         expect(syncApp.icloud).toBeDefined();
-        expect(syncApp.icloud.mfaServer).toBeDefined();
         expect(Resources.manager()).toBeDefined();
         expect(Resources.event()).toBeDefined();
         expect(Resources.validator()).toBeDefined();
@@ -128,7 +128,6 @@ describe(`App Factory`, () => {
 
         expect(archiveApp).toBeInstanceOf(ArchiveApp);
         expect(archiveApp.icloud).toBeDefined();
-        expect(archiveApp.icloud.mfaServer).toBeDefined();
         expect(Resources.manager()).toBeDefined();
         expect(Resources.event()).toBeDefined();
         expect(Resources.validator()).toBeDefined();
@@ -585,6 +584,24 @@ describe(`App control flow`, () => {
 
                 expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
                 expect(eventScheduledOverrun).toHaveBeenCalledTimes(1);
+                expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
+            });
+
+            test(`Trigger job`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
+                    .mockResolvedValue();
+                Resources._instances.manager._resources.schedule = `0 0 ? ? ? ?`; // Should be in the past (Second & Minute zero of the initialized date)
+                const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
+
+                await daemonApp.run();
+
+                Resources._instances.event.emit(iCPSEventWebServer.SYNC_REQUESTED)
+
+                // Cleaning up
+                daemonApp.job?.stop();
+
+                expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
                 expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
             });
         });

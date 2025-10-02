@@ -8,6 +8,10 @@ export const RESOURCE_FILE: ErrorStruct = buildErrorStruct(
     name, prefix, `RESOURCE_FILE`, `Unable to parse and validate resource file`,
 );
 
+export const PUSH_SUBSCRIPTION: ErrorStruct = buildErrorStruct(
+    name, prefix, `PUSH_SUBSCRIPTION`, `Unable to parse and validate the push subscription`,
+);
+
 export const SIGNIN_INIT_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `SIGNIN_INIT_RESPONSE`, `Unable to parse and validate signin init response`,
 );

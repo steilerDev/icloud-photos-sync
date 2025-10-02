@@ -3,6 +3,7 @@
  */
 
 import {iCPSAppOptions} from "../../app/factory.js";
+import { PushSubscription } from "./web-server-types.js";
 
 /**
  * File encoding for all text based files written by this application
@@ -55,7 +56,21 @@ export type ResourceFile = {
     /**
      * The currently used trust token
      */
-    trustToken?: string
+    trustToken?: string,
+    /**
+     * The notification vapid credentials used to send push notifications
+     */
+    notificationVapidCredentials?: {
+        publicKey: string,
+        privateKey: string
+    },
+    /**
+     * The active notification subscriptions with the server.
+     * This is used to send notifications to the client when the state changes
+     */
+    notificationSubscriptions?: {
+        [endpoint: string]: PushSubscription
+    }
 }
 
 /**

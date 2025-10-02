@@ -1,4 +1,7 @@
 #!/bin/bash
+
+echo "DEPRECATION WARNING: This helper tool will be removed in the next major version, please use the WebUI or directly interact with the API" >&2
+
 if [ -z "$1" ]; then
     echo "No resend method provided!"
     echo "Run this utility through:"
@@ -13,4 +16,4 @@ HOST="${3:-localhost}"
 
 echo "Resending MFA code with method $1 and phoneNumberId $PHONE_NUMBER_ID to ${HOST}:${MFA_PORT}"
 echo "..."
-curl -s -X POST "${HOST}:${MFA_PORT}/resend_mfa?method=${1}&phoneNumberId=${PHONE_NUMBER_ID}" | jq -crM .message
+curl -s -X POST "${HOST}:${MFA_PORT}/api/resend_mfa?method=${1}&phoneNumberId=${PHONE_NUMBER_ID}" | jq -crM .message

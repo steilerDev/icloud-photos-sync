@@ -13,13 +13,14 @@
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["token"],
+            "args": ["daemon", "--schedule", "0 3 * * *", "--fail-on-mfa"],
+            "outputCapture": "std",
             "outFiles": [
                 "${workspaceFolder}/app/build/out/**/*.js",
             ],
-            // "env": {
-            //     "NODE_NO_WARNINGS": "1"
-            // },
+            "env": {
+                "LOG_TO_CLI": "true"
+            },
             "envFile": "${workspaceFolder}/secrets/adp.env"
         }, {
             "name": "Run API Tests",
@@ -60,13 +61,11 @@
             "request": "launch",
             "runtimeArgs": [
                 "--experimental-vm-modules",
-                "--inspect-brk",
+                // "--inspect-brk",
                 "node_modules/.bin/jest",
-                "--runInBand",
-                "--detectOpenHandles",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/docker/sync-cmd.test.ts"
+                "test/unit/web.test.ts"
             ],
             // "env": {
             //     "DEBUG": "testcontainers*",

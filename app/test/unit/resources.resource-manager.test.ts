@@ -384,6 +384,102 @@ describe(`ResourceManager`, () => {
             });
         });
 
+        describe(`VAPID Credentials`, () => {
+            test(`should return the VAPID credentials from the resources`, () => {
+                resourceManager._resources.notificationVapidCredentials = Config.notificationVapidCredentials;
+                expect(resourceManager.notificationVapidCredentials).toEqual(Config.notificationVapidCredentials);
+            })
+
+            test(`should create VAPID credentials if not present in the resources`, () => {
+                (resourceManager._writeResourceFile as jest.Mock).mockReset();
+                resourceManager._resources.notificationVapidCredentials = undefined!;
+                expect(resourceManager.notificationVapidCredentials).toEqual(expect.objectContaining({
+                    publicKey: expect.any(String),
+                    privateKey: expect.any(String),
+                }))
+                expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
+            })
+        })
+
+        describe(`Notification Subscription`, () => {
+            test(`should return the notification subscription from the resources`, () => {
+                const notificationSubscriptions = {
+                    'https://example.com/endpoint': {
+                        endpoint: `https://example.com/endpoint`,
+                        keys: {
+                            p256dh: `p256dhKey`,
+                            auth: `authKey`,
+                        },
+                    }
+                }
+                resourceManager._resources.notificationSubscriptions = notificationSubscriptions;
+                expect(resourceManager.notificationSubscriptions).toEqual([notificationSubscriptions[`https://example.com/endpoint`]]);
+            });
+
+            test(`should return no notification subscription`, () => {
+                expect(resourceManager.notificationSubscriptions).toEqual([]);
+            });
+
+            test(`should add a new notification subscription to the resources and write it to the resource file`, () => {
+                (resourceManager._writeResourceFile as jest.Mock).mockReset();
+                const subscription = {
+                    endpoint: `https://example.com/endpoint`,
+                    keys: {
+                        p256dh: `p256dhKey`,
+                        auth: `authKey`,
+                    },
+                };
+                resourceManager.addNotificationSubscription(subscription);
+                expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
+                expect(resourceManager._resources.notificationSubscriptions).toEqual({
+                    [subscription.endpoint]: subscription,
+                });
+            });
+
+            test(`should remove a notification subscription from the resources and write it to the resource file`, () => {
+                (resourceManager._writeResourceFile as jest.Mock).mockReset();
+                const subscription = {
+                    endpoint: `https://example.com/endpoint`,
+                    keys: {
+                        p256dh: `p256dhKey`,
+                        auth: `authKey`,
+                    },
+                };
+                resourceManager._resources.notificationSubscriptions = {
+                    [subscription.endpoint]: subscription,
+                };
+                resourceManager.removeNotificationSubscription(subscription);
+                expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
+                expect(resourceManager._resources.notificationSubscriptions).toEqual({});
+            })
+
+            test(`should silently fail when trying to remove non-existing notification subscription`, () => {
+                (resourceManager._writeResourceFile as jest.Mock).mockReset();
+                const subscription = {
+                    endpoint: `https://example.com/endpoint`,
+                    keys: {
+                        p256dh: `p256dhKey`,
+                        auth: `authKey`,
+                    },
+                };
+                const someOtherSubscription = {
+                    endpoint: `https://example.com/other-endpoint`,
+                    keys: {
+                        p256dh: `p256dhKey`,
+                        auth: `authKey`,
+                    },
+                };
+                resourceManager._resources.notificationSubscriptions = {
+                    [subscription.endpoint]: subscription,
+                };
+                resourceManager.removeNotificationSubscription(someOtherSubscription);
+                expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(0);
+                expect(resourceManager._resources.notificationSubscriptions).toEqual({
+                    [subscription.endpoint]: subscription,
+                });
+            })
+        });
+
         describe(`username`, () => {
             test(`should return the username from the resources`, () => {
                 expect(resourceManager.username).toEqual(resources.username);
@@ -396,9 +492,15 @@ describe(`ResourceManager`, () => {
             });
         });
 
-        describe(`mfaServerPort`, () => {
+        describe(`webServerPort`, () => {
             test(`should return the port from the resources`, () => {
-                expect(resourceManager.mfaServerPort).toEqual(resources.port);
+                expect(resourceManager.webServerPort).toEqual(resources.port);
+            });
+        });
+
+        describe(`webBasePath`, () => {
+            test(`should return the base path from the resources`, () => {
+                expect(resourceManager.webBasePath).toEqual(resources.webBasePath);
             });
         });
 
@@ -492,6 +594,18 @@ describe(`ResourceManager`, () => {
             });
         });
 
+        describe(`region`, () => {
+            test(`should return the region from the resources`, () => {
+                expect(resourceManager.region).toEqual(resources.region);
+            });
+        });
+
+        describe(`healthCheckURL`, () => {
+            test(`should return the healthCheckURL from the resources`, () => {
+                expect(resourceManager.healthCheckUrl).toEqual(resources.healthCheckUrl);
+            });
+        });
+
         describe(`sessionSecret`, () => {
             test(`should return the session secret from the resources`, () => {
                 expect(resourceManager.sessionSecret).toEqual(resources.sessionSecret);
@@ -499,7 +613,7 @@ describe(`ResourceManager`, () => {
 
             test(`should throw an error if no session secret is set`, () => {
                 resourceManager._resources.sessionSecret = undefined!;
-                expect(() => resourceManager.sessionSecret).toThrowError(/^No session secret present$/);
+                expect(() => resourceManager.sessionSecret).toThrow(/^No session secret present$/);
             });
         });
 
@@ -517,7 +631,7 @@ describe(`ResourceManager`, () => {
 
             test(`should throw an error if no primary zone is set`, () => {
                 resourceManager._resources.primaryZone = undefined!;
-                expect(() => resourceManager.primaryZone).toThrowError(/^No primary photos zone present$/);
+                expect(() => resourceManager.primaryZone).toThrow(/^No primary photos zone present$/);
             });
         });
 
@@ -536,7 +650,7 @@ describe(`ResourceManager`, () => {
 
             test(`should throw an error if no shared zone is set`, () => {
                 resourceManager._resources.sharedZone = undefined!;
-                expect(() => resourceManager.sharedZone).toThrowError(/^No shared photos zone present$/);
+                expect(() => resourceManager.sharedZone).toThrow(/^No shared photos zone present$/);
             });
         });
 

@@ -1,7 +1,6 @@
-import {beforeAll, describe, expect, jest, test} from "@jest/globals";
+import {beforeAll, afterEach, describe, expect, jest, test} from "@jest/globals";
 
 import {ICPSContainer, LIBRARY_HASH, StartedICPSContainer} from "../_helpers/testcontainers.helper";
-import {afterEach} from "node:test";
 
 describe(`Docker Daemon Command`, () => {
     // Increased timeout due to time consuming tasks

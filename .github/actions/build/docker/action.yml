@@ -24,8 +24,6 @@ runs:
       uses: docker/build-push-action@v6
       with:
         context: ${{ inputs.docker-path }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
         platforms: linux/amd64
         tags: ${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
         outputs: type=docker,dest=docker-amd64.tar
@@ -33,13 +31,12 @@ runs:
       uses: docker/build-push-action@v6
       with:
         context: ${{ inputs.docker-path }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
         platforms: linux/arm64
         tags: ${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:${{ steps.get-docker-metadata.outputs.image-tag }}
         outputs: type=docker,dest=docker-arm64.tar
     - id: docker-scout
       uses: docker/scout-action@v1
+      if: github.actor == 'steilerdev'
       with:
         dockerhub-user: ${{ steps.get-docker-metadata.outputs.image-namespace }}
         dockerhub-password: ${{ inputs.docker-token }}

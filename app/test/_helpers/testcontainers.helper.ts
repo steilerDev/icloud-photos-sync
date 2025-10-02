@@ -1,4 +1,4 @@
-import { GenericContainer, StartedTestContainer, AbstractStartedContainer, Wait, ExecResult } from "testcontainers";
+import { GenericContainer, StartedTestContainer, AbstractStartedContainer, Wait, ExecResult, PullPolicy } from "testcontainers";
 import  {extract} from 'tar-stream'
 import {createHash} from 'crypto'
 
@@ -17,6 +17,9 @@ export const LIBRARY_HASH = `5oLbwth8xOC8j25lNdtijFz90xZ+3vllPpO63UEEGts=`
 export class ICPSContainer extends GenericContainer {
     constructor() {
         super(process.env[`IMAGE_NAME`] ?? `steilerdev/icloud-photos-sync:nightly`)
+        if (process.env[`IMAGE_NAME`] === undefined) {
+            this.pullPolicy = PullPolicy.alwaysPull()
+        }
     }
 
     /**

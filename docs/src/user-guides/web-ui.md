@@ -3,7 +3,6 @@
 Since this tool is syncing all assets to the native file system, pretty much any tool can be used to present the pictures. I've been testing some tools recommended by [awesome-selfhosted](https://github.com/awesome-selfhosted/awesome-selfhosted#photo-and-video-galleries) and settled on [Photoview](https://photoview.github.io/). The following `docker-compose.yml` will run `icloud-photos-sync` together with `Photoview`:
 
 ```
-version: '2'
 services:
   photos-sync:
     image: steilerdev/icloud-photos-sync:latest

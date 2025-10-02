@@ -51,7 +51,7 @@ Currently, this can only be achieved, by having a Mac continuously run the *Phot
 
 *icloud-photos-sync is an independent project, and is not affiliated, endorsed, recommended by or otherwise affiliated with Apple Inc.*
 
-This CLI Application offers the following high level functionality:
+This application offers the following high level functionality:
 
 <details>
   <summary><i>Continuously sync your complete remote iCloud Photos Library to your local file system efficiently</i></summary>
@@ -62,6 +62,18 @@ This CLI Application offers the following high level functionality:
       <li>Enable autonomous operation, by caching of MFA trust token</li>
       <li>Support of large libraries, through efficient diffing algorithm instead of full library pull</li>
       <li>Full iCloud Photos Library backup with all important files in their original state and edits - <a href="https://github.com/steilerDev/icloud-photos-sync/issues/121">Live Photos support pending</a></li>
+    </ul>
+  </p>
+</details>
+
+<details>
+  <summary><i>Using the application through a simple and easy to use WebUI</i></summary>
+  <p>
+    <ul>
+      <li>Checking the sync status</li>
+      <li>Triggering ad-hoc sync</li>
+      <li>Entering MFA code, when needed</li>
+      <li>Receiving Push Notification about the synchronization status</li>
     </ul>
   </p>
 </details>

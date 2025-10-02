@@ -946,7 +946,7 @@ describe(`NetworkManager`, () => {
                 // "firing" from the rate limiter queue
                 await (networkManager._rateLimiter.add as any).mock.calls[0][0]();
 
-                expect(networkManager._axios.get).toHaveBeenCalledWith(`someUrl`, {some: `params`});
+                expect(networkManager._axios.get).toHaveBeenCalledWith(`someUrl`, {some: `params`} as any);
             });
 
             test(`metadata post request`, async () => {
@@ -962,7 +962,7 @@ describe(`NetworkManager`, () => {
                 // "firing" from the rate limiter queue
                 await (networkManager._rateLimiter.add as any).mock.calls[0][0]();
 
-                expect(networkManager._axios.post).toHaveBeenCalledWith(`someUrl`, {some: `data`}, {some: `params`});
+                expect(networkManager._axios.post).toHaveBeenCalledWith(`someUrl`, {some: `data`}, {some: `params`} as any);
             });
 
             test(`metadata put request`, async () => {
@@ -978,7 +978,7 @@ describe(`NetworkManager`, () => {
                 // "firing" from the rate limiter queue
                 await (networkManager._rateLimiter.add as any).mock.calls[0][0]();
 
-                expect(networkManager._axios.put).toHaveBeenCalledWith(`someUrl`, {some: `data`}, {some: `params`});
+                expect(networkManager._axios.put).toHaveBeenCalledWith(`someUrl`, {some: `data`}, {some: `params`} as any);
             });
 
             describe(`Download data`, () => {
