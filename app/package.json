@@ -21,7 +21,7 @@
     "build:schema": "npx tsx build/schema.ts",
     "build:typescript": "npx tsc",
     "build:dev": "npm run build:schema && npm run build:typescript",
-    "build": "npm run build:dev",
+    "build": "npm run prebuild && npm run build:dev",
     "dist:clean": "rm -rf bin/ && mkdir -p bin/",
     "dist:package": "npx tsx build/package.ts && cp ../README.md ../LICENSE .",
     "dist:sourcemap": "npx backtrace-js process bin/",
