@@ -9,6 +9,7 @@ import {iCPSEvent} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
 import {Validator} from '../../src/lib/resources/validator';
 import {EventManager} from '../../src/lib/resources/event-manager';
+import {StateManager} from '../../src/lib/resources/state-manager';
 
 export type UnknownFunction = (...args: Array<unknown>) => unknown
 export type UnknownAsyncFunction = (...args: Array<unknown>) => Promise<unknown>
@@ -18,6 +19,7 @@ type MockedResourceInstances = {
     network: MockedNetworkManager,
     validator: MockedValidator,
     event: MockedEventManager,
+    state: StateManager
 }
 
 export type MockedNetworkManager = NetworkManager & {
