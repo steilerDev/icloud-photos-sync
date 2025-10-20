@@ -27,6 +27,5 @@ jobs:
       release: true
     secrets:
       docker-token: ${{ secrets.DOCKER_TOKEN }}
-      npm-token: ${{ secrets.NPM_TOKEN }}
       gh-token: ${{ secrets.GITHUB_TOKEN }}
       bt-token: ${{ secrets.BT_TOKEN }}
