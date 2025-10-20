@@ -1,9 +1,6 @@
 name: release-docker
 description: Releases the npm package to the appropriate channel and updates the uploaded artifact
 inputs:
-  npm-token:
-    description: The npm token used for releasing the package
-    required: true
   bt-token:
     description: The Backtrace symbol access token, in order to deploy the source maps
     required: true
@@ -25,7 +22,6 @@ runs:
     - id: release-app
       shell: bash
       run: |
-        export NPM_TOKEN=${{ inputs.npm-token }}
         export NPM_CONFIG_PROVENANCE=true
         (cd ${{ inputs.release-dir }}; npx semantic-release)
     - id: upload-source-map
