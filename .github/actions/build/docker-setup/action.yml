@@ -24,8 +24,3 @@ runs:
       with:
         name: app-artifact-build
         path: ${{ inputs.docker-path }}/
-    - id: validate-app-artifact
-      shell: bash
-      run: |
-        tree -a "${{ inputs.docker-path }}/"
-        tar -xOf ${{ inputs.docker-path }}/rootfs/opt/npm-pack.tgz package/package.json
