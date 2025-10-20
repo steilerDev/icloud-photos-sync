@@ -114,6 +114,10 @@ function setLog(log) {
         document.getElementById('logContent').innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">No logs to display</div>';
         return
     }
+    if(log.length === document.getElementById('logContent').childElementCount) {
+        //console.log('Not refreshing view because log count is equal')
+        return
+    }
     document.getElementById('logContent').innerHTML = '';
     for (const logLine of log) {
         addLogLine(logLine.level, logLine.source, logLine.message, logLine.time)
