@@ -5,10 +5,9 @@
         "@backtrace/javascript-cli": "0.3.2",
         "@codedependant/semantic-release-docker": "^5.1.1",
         "@semantic-release/github": "11.0.6",
-        "@semantic-release/npm": "13.1.0",
         "@semantic-release/release-notes-generator": "14.1.0",
         "conventional-changelog": "7.1.1",
         "conventional-changelog-conventionalcommits": "9.1.0",
-        "semantic-release": "24.2.9"
+        "semantic-release": "25.0.1"
     }
 }
