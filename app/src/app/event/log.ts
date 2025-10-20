@@ -13,7 +13,7 @@ export class LogInterface {
      */
     private logFileDescriptor: number;
 
-    private logLevels: LogLevel[]
+    private logLevels: LogLevel[] = []
 
     constructor() {
         // Try opening the file - truncate if exists

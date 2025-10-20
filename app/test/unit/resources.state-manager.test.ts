@@ -729,7 +729,6 @@ describe(`Log added`, () => {
                     time: 1
                 }
             ]
-
         })
 
         test.each([
