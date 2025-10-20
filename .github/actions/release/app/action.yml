@@ -21,9 +21,7 @@ runs:
   steps:
     - id: release-app
       shell: bash
-      run: |
-        export NPM_CONFIG_PROVENANCE=true
-        (cd ${{ inputs.release-dir }}; npx semantic-release)
+      run: (cd ${{ inputs.release-dir }}; npx semantic-release)
     - id: upload-source-map
       shell: bash
       run: (cd ${{ inputs.release-dir }}; npx backtrace-js upload app/bin/ --url https://submit.backtrace.io/steilerdev/${{ inputs.bt-token }}/sourcemap)
