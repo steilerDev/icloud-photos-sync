@@ -27,16 +27,18 @@ export class ResourceManager {
      * @param appOptions - The parsed app options
      */
     constructor(appOptions: iCPSAppOptions) {
-        // Cannot use logger here
-        Object.assign(this._resources, appOptions);
+        // Write trust token from app options to file before populating
+        if(appOptions.trustToken) {
+            this.trustToken = appOptions.trustToken
+        }
 
-        const resourceFile = this._readResourceFile(); // Getting data from the resource file
-        this._resources.libraryVersion = resourceFile.libraryVersion; // 'soft' setting the library version (not writing back to file)
+        // Assign app options & resource files to this data structure
+        Object.assign(this._resources, this._readResourceFile(), appOptions);
 
-        // writing back whatever trust token should be used
-        this.trustToken = this._resources.refreshToken
-            ? undefined // If we force refresh the token set to undefined
-            : this._resources.trustToken ?? resourceFile.trustToken; // Use app option over whatever was already in the file
+        // If trustToken should be refreshed, we clear it now
+        if(this._resources.refreshToken) {
+            this.trustToken = undefined
+        }
     }
 
     /**

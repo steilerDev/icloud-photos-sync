@@ -43,10 +43,10 @@ export namespace Resources {
 
         _instances = {} as Resources.Types.Instances; // Creating one-by one, so they are available as soon as possible
         _instances.event = new EventManager();
+        _instances.state = new StateManager();
         _instances.validator = new Validator();
         _instances.manager = new ResourceManager(appOptions);
         _instances.network = new NetworkManager(appOptions);
-        _instances.state = new StateManager();
 
         return _instances;
     }
