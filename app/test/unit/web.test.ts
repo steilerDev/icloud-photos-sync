@@ -1108,6 +1108,15 @@ describe.each([
 
                     expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(3);
                 })
+
+                test(`Don't update if logs are identical`, async () => {
+                    const logLineMock = site.mockFunction(`addLogLine`)
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/log?loglevel=info`, {headers: {Accept: `application/json`}})
+                    expect(logLineMock.jestMock).not.toHaveBeenCalled()
+
+                })
             })
         })
 
