@@ -3,10 +3,6 @@ import {buildErrorStruct, ErrorStruct} from "../error-codes.js";
 const name = `WebServerError`;
 const prefix = `WEB_SERVER`;
 
-export const SERVER_ERR: ErrorStruct = buildErrorStruct(
-    name, prefix, `SERVER_ERR`, `HTTP Server Error`,
-);
-
 export const STARTUP_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `STARTUP_FAILED`, `Unable to start Web server`,
 );

@@ -1,7 +1,7 @@
 import * as http from 'http';
 import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {WEB_SERVER_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
@@ -12,7 +12,7 @@ import {serviceWorker} from './scripts/service-worker.js';
 import {RequestMfaView} from './view/request-mfa-view.js';
 import {StateView} from './view/state-view.js';
 import {SubmitMfaView} from './view/submit-mfa-view.js';
-import {State, StateTrigger, StateType} from './state.js';
+import {LogLevel, StateType} from '../../lib/resources/state-manager.js';
 import {NotificationPusher} from './notification-pusher.js';
 import {URL} from 'url';
 import {pEvent} from 'p-event';
@@ -58,11 +58,6 @@ export class WebServer {
     notificationPusher: NotificationPusher = new NotificationPusher();
 
     /**
-     * Keeps track of the state of the server
-     */
-    state: State = new State();
-
-    /**
      * Routing table for this server
      */
     _sitemap: WebServerSitemap = {
@@ -76,6 +71,7 @@ export class WebServer {
             '/icon.png': this.handleIcon.bind(this),
             '/favicon.ico': this.handleFavicon.bind(this),
             '/api/state': this.handleStateRequest.bind(this),
+            '/api/log': this.handleLogRequest.bind(this),
             '/api/vapid-public-key': this.handleVapidPublicKeyRequest.bind(this)
         },
         POST: {
@@ -102,82 +98,6 @@ export class WebServer {
     constructor() {
         Resources.logger(this).debug(`Preparing web server on port ${Resources.manager().webServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
-        this.server.on(`error`, err => {
-            let icpsErr = new iCPSError(WEB_SERVER_ERR.SERVER_ERR);
-
-            if (Object.hasOwn(err, `code`)) {
-                if ((err as any).code === `EADDRINUSE`) {
-                    icpsErr = new iCPSError(WEB_SERVER_ERR.ADDR_IN_USE_ERR).addContext(`port`, Resources.manager().webServerPort);
-                }
-
-                if ((err as any).code === `EACCES`) {
-                    icpsErr = new iCPSError(WEB_SERVER_ERR.INSUFFICIENT_PRIVILEGES).addContext(`port`, Resources.manager().webServerPort);
-                }
-            }
-
-            icpsErr.addCause(err);
-
-            Resources.emit(iCPSEventWebServer.ERROR, icpsErr);
-        });
-
-        // TRIGGERS
-        // Scheduled as well as explicit sync trigger
-        Resources.events(this).on(iCPSEventApp.SCHEDULED_START, () => {
-            this.state.triggerSync(StateTrigger.SYNC);
-        });
-        // Manual Auth Trigger
-        Resources.events(this).on(iCPSEventWebServer.REAUTH_REQUESTED, () => {
-            this.state.triggerSync(StateTrigger.AUTH);
-        });
-
-        // SUCCESS
-        // Scheduled execution done 
-        Resources.events(this).on(iCPSEventApp.SCHEDULED_DONE, (nextSync: Date) => {
-            this.state.updateState(StateType.READY, {nextSync: nextSync.getTime()});
-            this.notificationPusher.sendNotifications(this.state);
-        });
-        // Reauth success
-        Resources.events(this).on(iCPSEventApp.TOKEN, () => {
-            this.state.updateState(StateType.READY);
-            this.notificationPusher.sendNotifications(this.state);
-        });
-
-        // ERROR
-        // Sync error
-        Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, (err: iCPSError) => {
-            this.state.updateState(StateType.READY, {error: err});
-            this.notificationPusher.sendNotifications(this.state);
-        });
-        
-        // MFA not provided
-        Resources.events(this).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
-            this.state.updateState(StateType.READY, {error: new iCPSError(WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED)});
-            this.notificationPusher.sendNotifications(this.state);
-        });
-        
-        // Runtime error during re-auth
-        Resources.events(this).on(iCPSEventWebServer.REAUTH_ERROR, (err: iCPSError) => {
-            this.state.updateState(StateType.READY, {error: err});
-            this.notificationPusher.sendNotifications(this.state);
-        });
-
-        // LIFECYCLE
-        // Sync started after authentication
-        Resources.events(this).on(iCPSEventSyncEngine.START, () => {
-            this.state.updateState(StateType.SYNC);
-        });
-
-        // MFA required
-        Resources.events(this).on(iCPSEventCloud.MFA_REQUIRED, () => {
-            this.state.updateState(StateType.MFA)
-            this.notificationPusher.sendNotifications(this.state);
-        });
-
-        // Initial scheduled run
-        Resources.events(this).on(iCPSEventApp.SCHEDULED, (timestamp: Date) => {
-            this.state.updateState(StateType.READY, {nextSync: timestamp.getTime()});
-        });
-
 
         // allow the process to exit, if this server is the only thing left running
         this.server.unref();
@@ -207,7 +127,6 @@ export class WebServer {
             try {
                 this.server.listen(Resources.manager().webServerPort, () => {
                     
-
                     // Updating the port to match the actual listening port
                     //Resources.manager().webServerPort = (this.server.address() as AddressInfo).port
 
@@ -217,9 +136,7 @@ export class WebServer {
                     resolve(this);
                 });
             } catch (err) {
-                const icpsErr = new iCPSError(WEB_SERVER_ERR.STARTUP_FAILED).addCause(err);
-                Resources.emit(iCPSEventWebServer.ERROR, icpsErr);
-                reject(icpsErr);
+                reject(new iCPSError(WEB_SERVER_ERR.STARTUP_FAILED).addCause(err));
             }
         });
     }
@@ -238,8 +155,6 @@ export class WebServer {
                 req.url.replace(new RegExp(`^${Resources.manager().webBasePath}`), ``), // Removing the web base path for request matching
                 `http://localhost/` // Necessary, because the req.url is relative
             )
-            Resources.logger(this).debug(`Received ${req.method} request for URL ${url.toString()}`)
-
             const body = await this.readBody(req)
 
             if (req.method === `GET` && url.pathname in this._sitemap.GET) {
@@ -300,7 +215,6 @@ export class WebServer {
                 Resources.logger(this).debug(`Read body: ${body}`)
                 return body;
             }
-            Resources.logger(this).debug(`No body to read`)
             return ``;
         } catch (err) {
             throw new iCPSError(WEB_SERVER_ERR.UNABLE_TO_READ_BODY)
@@ -382,8 +296,22 @@ export class WebServer {
             header: {
                 "Content-Type": `application/json`
             },
-            body: this.state.serialize()
+            body: Resources.state().serialize()
         }
+    }
+
+    handleLogRequest(url: URL): WebServerResponse {
+        const logLevelMatch = url.search.match(/loglevel=(debug|info|warn|error)/);
+        const logLevel = logLevelMatch?.[1] as LogLevel ?? `none`
+
+        return {
+            code: 200,
+            header: {
+                "Content-Type": `application/json`
+            },
+            body: Resources.state().serializeLog({level: logLevel})
+        }
+
     }
 
     handleVapidPublicKeyRequest(): WebServerResponse {
@@ -403,7 +331,7 @@ export class WebServer {
      * @returns - Undefined if the server is expecting an MFA code, otherwise a WebServerResponse object indicating the error
      */
     handleInProgress(): WebServerResponse | undefined {
-        if (this.state.state !== StateType.READY) {
+        if (Resources.state().state !== StateType.READY) {
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.SYNC_IN_PROGRESS));
             return {
                 code: 412,
@@ -483,7 +411,7 @@ export class WebServer {
      * @returns - Undefined if the server is expecting an MFA code, otherwise a WebServerResponse object indicating the error
      */
     handleMFACheck(): WebServerResponse | undefined {
-        if (this.state.state !== StateType.MFA) {
+        if (Resources.state().state !== StateType.BLOCKED) {
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.NO_CODE_EXPECTED));
             return {
                 code: 412,
@@ -628,7 +556,7 @@ export class WebServer {
     }
 
     handleSubmitMFAView(): WebServerResponse {
-        if (this.state.state !== StateType.MFA) {
+        if (Resources.state().state !== StateType.BLOCKED) {
             Resources.logger(this).warn(`Submit MFA view requested, but not waiting for it. Redirecting to state view.`);
             return {
                 code: 302,
@@ -649,7 +577,7 @@ export class WebServer {
     }
 
     handleRequestMFAView(): WebServerResponse {
-        if (this.state.state !== StateType.MFA) {
+        if (Resources.state().state !== StateType.BLOCKED) {
             Resources.logger(this).warn(`Request MFA view requested, but not waiting for it. Redirecting to state view.`);
             return {
                 code: 302,

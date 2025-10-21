@@ -17,7 +17,7 @@ jobs:
     uses: ./.github/workflows/artifacts_build-release.yml
     permissions: 
       contents: write       # for semantic release
-      id-token: write       # for sematic release with provenance and GH pages
+      id-token: write       # for trusted publishing on npm and GH pages
       pages: write          # for GH pages
       issues: write         # for semantic release comments on GH release
       pull-requests: write  # for semantic release comments on GH release
@@ -27,6 +27,5 @@ jobs:
       release: true
     secrets:
       docker-token: ${{ secrets.DOCKER_TOKEN }}
-      npm-token: ${{ secrets.NPM_TOKEN }}
       gh-token: ${{ secrets.GITHUB_TOKEN }}
       bt-token: ${{ secrets.BT_TOKEN }}

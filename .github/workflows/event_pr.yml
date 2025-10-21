@@ -44,14 +44,12 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'steilerdev/icloud-photos-sync'
     permissions:
-      pull-requests: write
-      contents: write
+      contents: write # to create a new branch and merge other branches together
+      pull-requests: write # to create a new PR with the combined changes
+      checks: read # to check if CI is passing or not before combining PRs
     steps:
-      - name: Dependabot metadata
-        id: dependabot-metadata
-        uses: dependabot/fetch-metadata@v2
-      - name: Enable auto-merge for Dependabot PRs
-        if: steps.dependabot-metadata.outputs.update-type == 'version-update:semver-minor' || steps.dependabot-metadata.outputs.update-type == 'version-update:semver-patch'
-        run: gh pr merge --auto --merge "${{github.event.pull_request.html_url}}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: combine-prs
+        id: combine-prs
+        uses: github/combine-prs@v5.2.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

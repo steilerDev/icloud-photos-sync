@@ -1,8 +1,9 @@
 import {IncomingMessage, ServerResponse} from "http"
 import {createRequest, createResponse, MockRequest, MockResponse, RequestMethod} from "node-mocks-http"
 import {WebServer} from "../../src/app/web-ui/web-server"
-import {DOMWindow, JSDOM} from "jsdom";
+import {JSDOM} from "jsdom";
 import {jest} from "@jest/globals";
+import {EventEmitter} from "events";
 
 /**
  * This type extends the mock request type to cover arbitrary body data
@@ -55,69 +56,147 @@ export async function sendMockedRequest(webServer: WebServer, req: iCPSMockReque
 }
 
 /**
- * This type represents a mocked site with all required functions exposed
+ * This class provides access to a mocked UI page
+ * It will pipe
  */
-export type iCPSMockSite = {
-    dom: JSDOM,
-    view: any,
-    window: DOMWindow,
-    res: MockResponse<ServerResponse<IncomingMessage>>,
-    functions: {
+export class iCPSMockedUISite {
+
+    webServer: WebServer
+
+    dom!: JSDOM
+    body!: HTMLElement
+
+    mockedFunctions: {
         alert: any,
+        warn: any,
+        navigate: any,
         fetch: any,
-        navigate: any
+        [key: string]: any
+    } = {} as any
+
+    constructor(webServer: WebServer) {
+        this.webServer = webServer
+    }
+
+    async load(url: string): Promise<MockResponse<ServerResponse>> {
+        const req = createRequest<IncomingMessage>({
+            method: `GET`,
+            url: url
+        })
+
+        const res = await sendMockedRequest(this.webServer, req)
+        this.dom = new JSDOM(res._getData(), {
+            runScripts: `dangerously`,
+            url: `https://localhost${url}`
+        })
+
+        this.mockedFunctions.fetch = this.mockFetch()
+        this.mockedFunctions = {
+            fetch: this.mockFetch(),
+            alert: this.mockAlert(),
+            warn: this.mockWarn(),
+            navigate: this.mockNavigate()
+        }
+        
+        this.body = this.dom.window.document.body
+
+        return res
+    }
+
+    mockFetch() {
+        // This is piping together the browser's fetch method and the provided web server
+        this.dom.window.fetch = jest.fn<typeof this.dom.window.fetch>().mockImplementation(async (fetchUrl: string, init?: RequestInit) => {
+            const fetchReq = createRequest<IncomingMessage>({
+                method: init?.method as RequestMethod,
+                url: fetchUrl,
+                data: init?.body
+            })
+
+            const fetchRes = await sendMockedRequest(this.webServer, fetchReq)
+            
+            return {
+                ok: fetchRes.statusCode >= 200 && fetchRes.statusCode < 300,
+                statusText: fetchRes.statusMessage,
+                json: fetchRes._getJSONData
+            } as Response
+        })
+        return this.dom.window.fetch
+    }
+
+    mockAlert() {
+        this.dom.window.alert = jest.fn<typeof this.dom.window.alert>()
+        return this.dom.window.alert
+    }
+
+    mockWarn() {
+        this.dom.window.console.warn = jest.fn()
+        return this.dom.window.console.warn
+    } 
+
+    mockNavigate() {
+        this.dom.window.navigate = jest.fn()
+        return this.dom.window.navigate
+    }
+
+    /**
+     * This function enables a "wait for" listener to any window function. The original functionality is still provided.
+     * @param functionName 
+     * @returns 
+     */
+    mockFunction(functionName: string): iCPSMockedUIFunction {
+        this.mockedFunctions[functionName] = new iCPSMockedUIFunction(this, functionName)
+        return this.mockedFunctions[functionName] as iCPSMockedUIFunction
     }
 }
 
 /**
- * This functions loads a site provided by the webServer using JSDOM and connects the browser's fetch function with the handleRequest from the webserver
- * @param webServer - the webserver that should be used
- * @param url - the url path
- * @returns A promise that resolves to a mock site
+ * This class represents a mocked function and establishes an EventListener for any JSDOM class to allow us to wait for content to be loaded.
  */
-export async function loadMockedSite(webServer: WebServer, url: string): Promise<iCPSMockSite> {
-    const req = createRequest<IncomingMessage>({
-        method: `GET`,
-        url: url
-    })
+export class iCPSMockedUIFunction {
+    event: EventEmitter = new EventEmitter()
+    callCounter: number = 0
+    originalFunction: any
+    jestMock = jest.fn(this.mockFunction.bind(this))
+    static EVENT_NAME = `event`
 
-    const res = await sendMockedRequest(webServer, req)
-    const dom = new JSDOM(res._getData(), {
-        runScripts: `dangerously`,
-        url: `https://localhost${url}`
-    })
-
-    // This is piping together the browser's fetch method and the provided web server
-    dom.window.fetch = jest.fn<typeof dom.window.fetch>().mockImplementation(async (fetchUrl: string, init?: RequestInit) => {
-        const fetchReq = createRequest<IncomingMessage>({
-            method: init?.method as RequestMethod,
-            url: fetchUrl,
-            data: init?.body
-        })
-
-        const fetchRes = await sendMockedRequest(webServer, fetchReq)
-        
-        return {
-            ok: fetchRes.statusCode >= 200 && fetchRes.statusCode < 300,
-            statusText: fetchRes.statusMessage,
-            json: fetchRes._getJSONData
-        } as Response
-    })
-    dom.window.alert = jest.fn<typeof dom.window.alert>()
-    dom.window.navigate = jest.fn()
-
-    // Suppressing warnings posted to console
-    dom.window.console.warn = jest.fn()
-
-    return {
-        dom,
-        view: dom.window.document.body,
-        window: dom.window,
-        res,
-        functions: {
-            alert: dom.window.alert,
-            fetch: dom.window.fetch,
-            navigate: dom.window.navigate
+    constructor(site: iCPSMockedUISite, functionName: string) {
+        if(!Object.hasOwn(site.dom.window, functionName)){
+            throw new Error(`Site does not have ${functionName}!`)
         }
+        this.originalFunction = site.dom.window[functionName]
+
+        site.dom.window[functionName] = this.jestMock
+    }
+
+    private mockFunction(...args: any[]) {
+        const ret = this.originalFunction(...args)
+        this.event.emit(iCPSMockedUIFunction.EVENT_NAME, ++this.callCounter)
+        return ret
+    }
+
+    /**
+     * This function will resolve, once the mocked function has been called and finished execution
+     * NOTE: The trigger will probably not work on async functions
+     * @returns 
+     */
+    waitUntilCalled(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            this.event.on(iCPSMockedUIFunction.EVENT_NAME, () => {
+                resolve()
+                this.event.removeAllListeners()
+            })
+        })
     }
 }
+
+// return {
+//     dom,
+//     view: dom.window.document.body,
+//     window: dom.window,
+//     res,
+//     functions: {
+//         alert: dom.window.alert,
+//         fetch: dom.window.fetch,
+//         navigate: dom.window.navigate
+//     }
+// }

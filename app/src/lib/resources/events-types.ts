@@ -10,15 +10,28 @@ export type iCPSEvent = iCPSEventArchiveEngine
     | iCPSEventApp
     | iCPSEventRuntimeWarning
     | iCPSEventRuntimeError
-    | iCPSEventWebServer;
+    | iCPSEventWebServer
+    | iCPSState;
 
 /**
  * Possible log events
  */
 export enum iCPSEventLog {
+    /**
+     * Emitted when a log message with level debug was created
+     */
     DEBUG = `log-debug`,
+    /**
+     * Emitted when a log message with level info was created
+     */
     INFO = `log-info`,
+    /**
+     * Emitted when a log message with level warn was created
+     */
     WARN = `log-warn`,
+    /**
+     * Emitted when a log message with level error was created
+     */
     ERROR = `log-error`
 }
 
@@ -87,11 +100,6 @@ export enum iCPSEventWebServer {
      * Emitted when the Web server has started - provides the port as argument
      */
     STARTED = `web-started`,
-
-    /**
-     * Emitted when the Web server has experienced an error - provides an iCPSError as argument
-     */
-    ERROR = `web-error`,
 
     /**
      * Emitted when a sync is requested via the web server
@@ -310,4 +318,17 @@ export enum iCPSEventApp {
      * Emitted when the app should display the latest acquired token - provides the token as argument
      */
     TOKEN = `token`
+}
+
+export enum iCPSState {
+    /**
+     * Emitted when the application state changes
+     * Will emit a SerializedState object
+     */
+    STATE_CHANGED = `state-changed`,
+    /**
+     * Emitted when the application registered a new log entry
+     * Will emit a SerializedLog object
+     */
+    LOG_ADDED = `log-added`
 }

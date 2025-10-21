@@ -17,6 +17,7 @@ describe(`Initializes correctly`, () => {
         expect(instances.validator).toBeDefined();
         expect(instances.manager).toBeDefined();
         expect(instances.network).toBeDefined();
+        expect(instances.state).toBeDefined();
     });
 
     test(`setup should throw if called twice`, () => {
@@ -31,6 +32,7 @@ describe(`Initializes correctly`, () => {
         expect(instances.validator).toBeDefined();
         expect(instances.manager).toBeDefined();
         expect(instances.network).toBeDefined();
+        expect(instances.state).toBeDefined();
     });
 
     test(`instances should throw if called before setup`, () => {
@@ -50,6 +52,10 @@ describe(`Initializes correctly`, () => {
             functionName: `network`,
             typeName: `NetworkManager`,
             error: /^NetworkManager has not been initiated$/,
+        }, {
+            functionName: `state`,
+            typeName: `StateManager`,
+            error: /^State has not been initiated$/,
         }, {
             functionName: `validator`,
             typeName: `Validator`,

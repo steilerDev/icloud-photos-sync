@@ -65,7 +65,7 @@
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/resources.network-manager.test.ts"
+                "test/unit/web.test.ts"
             ],
             // "env": {
             //     "DEBUG": "testcontainers*",

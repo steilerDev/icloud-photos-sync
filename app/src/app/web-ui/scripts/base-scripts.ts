@@ -11,4 +11,11 @@ function navigate(path) {
 function reload() {
     window.location.reload();
 }
+
+function formatDate(date) {
+    if (!date) {
+        return "Unknown";
+    }
+    return new Date(date).toLocaleString()
+}
 `
