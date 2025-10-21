@@ -78,7 +78,7 @@ runs:
         echo "Wrote:"
         cat ${{ inputs.release-dir }}/.releaserc.json
     - id: setup-node
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v6
       with:
         node-version-file: ${{ inputs.node-version-file }}
         cache: npm
