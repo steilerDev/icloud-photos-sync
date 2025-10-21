@@ -13,8 +13,15 @@ RUN npm uninstall npm corepack -g \
 
 FROM alpine:3.22.2 AS hardened-intermediate
 
+# Setting volume for default library path
+VOLUME /opt/icloud-photos-library
+
 # Creating app user
 RUN addgroup -S icps && adduser -s /sbin/nologin -S icps -G icps
+
+# Making sure required volume inherits correct read/write
+RUN mkdir -p /opt/icloud-photos-library && \
+    chmod -R 777 /opt
 
 # Remove unnecessary accounts, excluding current app user and root
 # Remove interactive login shell for everybody
@@ -34,9 +41,6 @@ FROM hardened-intermediate AS runtime
 
 # Change to new user
 USER icps
-
-# Setting volume for default library path
-VOLUME /opt/icloud-photos-library
 
 # Copying node & application artifacts
 COPY --from=builder /usr/lib /usr/lib
