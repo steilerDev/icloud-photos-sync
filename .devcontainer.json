@@ -39,7 +39,8 @@
                 "GitHub.vscode-pull-request-github",
                 "ritwickdey.LiveServer",
                 "vscodevim.vim",
-                "wdhongtw.gpg-indicator"
+                "wdhongtw.gpg-indicator",
+                "docker.docker"
             ]
         }
     },

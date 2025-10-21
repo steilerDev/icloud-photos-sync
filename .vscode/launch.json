@@ -65,11 +65,11 @@
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/resources.network-manager.test.ts"
+                "test/docker/daemon-cmd.test.ts"
             ],
-            // "env": {
-            //     "DEBUG": "testcontainers*",
-            // },
+            "env": {
+                "DEBUG": "testcontainers*",
+            },
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",

@@ -34,6 +34,8 @@ echo -n "Starting $DOCKER_IMAGE..."
 DOCKER_NAME=$(docker run -d \
   -e APPLE_ID_USER="$TEST_APPLE_ID_USER" \
   -e APPLE_ID_PWD="$TEST_APPLE_ID_PWD" \
+  -e PORT="80" \
+  -p 9999:80 \
   -v $TMP_DIR:/opt/icloud-photos-library \
   $DOCKER_IMAGE \
   token
@@ -57,13 +59,13 @@ echo "server available"
 
 echo "Requesting code..."
 # Resend MFA code via SMS
-docker exec $DOCKER_NAME curl -s -X POST "http://localhost:80/api/resend_mfa?method=${MFA_METHOD}&phoneNumberId=${MFA_ID}" | jq -crM .message
+curl -s -X POST "http://localhost:9999/api/resend_mfa?method=${MFA_METHOD}&phoneNumberId=${MFA_ID}" | jq -crM .message
 
 echo "Please enter MFA code:"
 read MFA_CODE
 
 # Send MFA code
-docker exec $DOCKER_NAME curl -s -X POST "http://localhost:80/api/mfa?code=${MFA_CODE}" | jq -crM .message
+curl -s -X POST "http://localhost:9999/api/mfa?code=${MFA_CODE}" | jq -crM .message
 
 echo "Waiting for container to exit..."
 docker wait $DOCKER_NAME

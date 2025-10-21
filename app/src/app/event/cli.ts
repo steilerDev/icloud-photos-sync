@@ -89,11 +89,15 @@ export class CLIInterface {
             .on(iCPSEventWebServer.STARTED, port => {
                 this.print(chalk.white(`Web server is listening on port ${port}`));
             })
-            .on(iCPSEventWebServer.ERROR, (error) => {
-                this.print(chalk.red(`Web server error: ${error}`));
-                this.print(chalk.red(`Failed to start web server. Exiting.`));
-                process.exit(1);
-            });
+            .on(iCPSEventWebServer.SYNC_REQUESTED, () => {
+                this.print(chalk.white(`Sync requested through web interface`))
+            })
+            .on(iCPSEventWebServer.REAUTH_REQUESTED, () => {
+                this.print(chalk.white(`Re-Auth requested through web interface`))
+            })
+            .on(iCPSEventWebServer.REAUTH_ERROR, (err) => {
+                this.printError(`Re-Auth failed: ${err.getDescription()}`)
+            })
 
         Resources.events(this)
             .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {

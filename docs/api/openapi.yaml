@@ -27,7 +27,9 @@ paths:
                 properties: 
                   state: 
                     type: string
-                    enum: ['ready', 'authenticating', 'mfa_required', 'syncing']
+                    enum: ['ready', 'running', 'blocked']
+                  timestamp:
+                    type: number
                   nextSync:
                     type: number
                   prevError:
@@ -40,8 +42,40 @@ paths:
                   prevTrigger:
                     type: string
                     enum: ['sync', 'auth']
-                  timestamp:
+                  progressMsg:
+                    type: string
+                  progress:
                     type: number
+  /api/log:
+    get:
+      summary: Provides all stored log entries since the last trigger
+      operationId: getLog
+      parameters: 
+        - name: loglevel
+          in: query
+          description: The selected log level to be returned by the response, defaults to 'none'
+          schema: 
+            type: string
+            enum: ['none', 'debug', 'info','warn', 'error']
+      responses:
+        '200':
+          description: Returns the logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  type: object
+                  properties:
+                    level:
+                      type: string
+                      enum: ['debug', 'info','warn', 'error']
+                    time:
+                      type: number
+                    source: 
+                      type: string
+                    message: 
+                      type: string
   /api/reauthenticate:
     post: 
       summary: Requests the application to re-authenticate
@@ -50,10 +84,13 @@ paths:
         '200':
           description: Successfully triggered re-authentication
           content: 
-            text/plain:
-              schema: 
-                type: string
-                enum: ['Reauthentication requested']
+            application/json:
+              schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  enum: ['Reauthentication requested']
   /api/sync:
     post:
       summary: Requests the application to execute an ad-hoc sync
@@ -62,10 +99,13 @@ paths:
         '200':
           description: Successfully triggered an ad-hoc sync
           content: 
-            text/plain:
-              schema: 
-                type: string
-                enum: ['Sync requested']
+            application/json:
+              schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  enum: ['Sync requested']
   /api/resend_mfa:
     post:
       summary: Requests the tool to resend the MFA code utilizing the provided method
@@ -88,17 +128,22 @@ paths:
         '200':
           description: Successfully requested MFA code resend
           content: 
-            text/plain:
-              schema: 
-                type: string
-                enum: ['Requesting MFA resend with method $method']
+            application/json:
+              schema:
+              type: object
+              properties:
+                message:
+                  enum: ['Requesting MFA resend with method $method']
         '400':
           description: Resend method does not match expected format
           content: 
-            text/plain:
-              schema: 
-                type: string
-                enum: ['Resend method does not match expected format']
+            application/json:
+              schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  enum: ['Resend method does not match expected format']
   /api/mfa:
     post:
       summary: Enters the MFA code for authentication
@@ -116,33 +161,33 @@ paths:
         '200':
           description: MFA code read
           content: 
-            text/plain:
-              schema: 
-                type: object
-                properties: 
-                  msg:
-                    type: string
-                    enum: ['Read MFA code: $code']
+            application/json:
+              schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  enum: ['Read MFA code: $code']
         '400':
           description: MFA code does not match expected format
           content: 
-            text/plain:
-              schema: 
-                type: object
-                properties: 
-                  msg:
-                    type: string
-                    enum: ['Unexpected MFA code format! Expecting 6 digits']
+            application/json:
+              schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  enum: ['Unexpected MFA code format! Expecting 6 digits']
         '412':
           description: MFA code not expected at this time
           content: 
-            text/plain:
-              schema: 
-                type: object
-                properties: 
-                  msg:
-                    type: string
-                    enum: ['MFA code not expected at this time. Taking you back home.']
+            application/json:
+              schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  enum: ['MFA code not expected at this time. Taking you back home.']
 
   /api/subscribe:
     post:
@@ -167,17 +212,23 @@ paths:
         '200':
           description: Successfully created a notification subscription
           content: 
-            text/plain:
-              schema: 
-                type: string
-                enum: ['Push subscription added successfully']
+            application/json:
+              schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  enum: ['Push subscription added successfully']
         '400':
           description: Invalid notification subscription request
           content: 
-            text/plain:
-              schema: 
-                type: string
-                enum: ['Invalid request body']
+            application/json:
+              schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  enum: ['Invalid request body']
   /api/vapid-public-key:
     get:
       summary: Gets the VAPID public key, required for push notification support

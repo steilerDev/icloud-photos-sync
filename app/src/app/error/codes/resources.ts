@@ -23,6 +23,10 @@ export const VALIDATOR_NOT_INITIATED: ErrorStruct = buildErrorStruct(
     name, prefix, `VALIDATOR_NOT_INITIATED`, `Validator has not been initiated`,
 );
 
+export const STATE_NOT_INITIATED: ErrorStruct = buildErrorStruct(
+    name, prefix, `STATE_NOT_INITIATED`, `State has not been initiated`,
+);
+
 export const ALREADY_INITIATED: ErrorStruct = buildErrorStruct(
     name, prefix, `ALREADY_INITIATED`, `Resources have already been initiated`,
 );
