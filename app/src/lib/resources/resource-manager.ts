@@ -27,18 +27,15 @@ export class ResourceManager {
      * @param appOptions - The parsed app options
      */
     constructor(appOptions: iCPSAppOptions) {
-        // Write trust token from app options to file before populating
-        if(appOptions.trustToken) {
-            this.trustToken = appOptions.trustToken
-        }
-
         // Assign app options & resource files to this data structure
         Object.assign(this._resources, this._readResourceFile(), appOptions);
 
         // If trustToken should be refreshed, we clear it now
         if(this._resources.refreshToken) {
-            this.trustToken = undefined
+            this._resources.trustToken = undefined
         }
+        // Making sure new merged configuration is persisted to file
+        this._writeResourceFile()
     }
 
     /**

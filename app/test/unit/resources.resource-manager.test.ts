@@ -35,9 +35,11 @@ describe(`ResourceManager`, () => {
                     trustToken: undefined,
                 });
             const resourceManager = new ResourceManager(Config.defaultConfig);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toBeUndefined();
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1);
             expect(resourceManager).toBeInstanceOf(ResourceManager);
             expect(resourceManager._readResourceFile).toHaveBeenCalledTimes(1);
-            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(0);
+            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
             expect(resourceManager._resources).toEqual({
                 ...Config.defaultConfig,
                 libraryVersion: 1,
@@ -75,7 +77,9 @@ describe(`ResourceManager`, () => {
 
             const resourceManager = new ResourceManager(Config.defaultConfig);
 
-            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(0);
+            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toEqual(Config.trustToken);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1);
             expect(resourceManager._resources).toEqual({
                 ...Config.defaultConfig,
                 libraryVersion: 1,
@@ -119,10 +123,10 @@ describe(`ResourceManager`, () => {
                 refreshToken: true,
             });
 
-            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(2);
+            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
             // Checking what would have been written
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[1] as ResourceManager)._resources.trustToken).toBeUndefined();
-            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[1] as ResourceManager)._resources.libraryVersion).toEqual(1);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toBeUndefined();
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1);
             expect(resourceManager._resources).toEqual({
                 ...Config.defaultConfig,
                 libraryVersion: 1,
@@ -130,6 +134,40 @@ describe(`ResourceManager`, () => {
                 refreshToken: true,
             });
         });
+
+        test(`should set the VAPID credentials property from the resource file while trust token is in appOptions`, () => {
+            (ResourceManager.prototype._readResourceFile as jest.Mock)
+                .mockReturnValue({
+                    libraryVersion: 1,
+                    notificationVapidCredentials: {
+                        publicKey: `somePublicKey`,
+                        privateKey: `somePrivateKey`
+                    },
+                });
+
+            const resourceManager = new ResourceManager({
+                ...Config.defaultConfig,
+                trustToken: Config.trustToken,
+            });
+
+            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
+            // Checking what would have been written
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.trustToken).toEqual(Config.trustToken);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.libraryVersion).toEqual(1);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.notificationVapidCredentials).toBeDefined();
+
+            // Checking what would have been written
+            expect(resourceManager._resources).toEqual({
+                ...Config.defaultConfig,
+                libraryVersion: 1,
+                trustToken: Config.trustToken,
+                notificationVapidCredentials: {
+                    publicKey: `somePublicKey`,
+                    privateKey: `somePrivateKey`
+                },
+            });
+        });
+
 
         test(`should set the VAPID credentials property from the resource file`, () => {
             (ResourceManager.prototype._readResourceFile as jest.Mock)
@@ -143,7 +181,8 @@ describe(`ResourceManager`, () => {
 
             const resourceManager = new ResourceManager(Config.defaultConfig);
 
-            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(0);
+            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.notificationVapidCredentials).toBeDefined();
             // Checking what would have been written
             expect(resourceManager._resources).toEqual({
                 ...Config.defaultConfig,
@@ -172,7 +211,8 @@ describe(`ResourceManager`, () => {
 
             const resourceManager = new ResourceManager(Config.defaultConfig);
 
-            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(0);
+            expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
+            expect(((resourceManager._writeResourceFile as jest.Mock).mock.contexts[0] as ResourceManager)._resources.notificationSubscriptions).toBeDefined();
             // Checking what would have been written
             expect(resourceManager._resources).toEqual({
                 ...Config.defaultConfig,
