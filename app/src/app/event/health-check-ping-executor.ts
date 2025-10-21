@@ -48,7 +48,7 @@ export class HealthCheckPingExecutor {
 
     private async pingSuccess(): Promise<void> {
         try {
-            await this.networkInterface.post(`/fail`, this.getLog());
+            await this.networkInterface.post(``, this.getLog());
             Resources.logger(this).debug(`Successfully sent success health check ping.`);
         } catch (err) {
             if((err as AxiosError).isAxiosError) {
@@ -73,7 +73,7 @@ export class HealthCheckPingExecutor {
     }
 
     getLog(): string {
-        const logs = Resources.state().serializeLog({level: LogLevel.DEBUG}).map(LogInterface.logToString).join(`\n`)
+        const logs = Resources.state().serializeLog({level: LogLevel.DEBUG}).map(LogInterface.logToString).join(``)
         return Buffer
             .from(logs)
             .subarray(-102400)
