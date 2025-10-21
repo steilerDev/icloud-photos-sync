@@ -1,8 +1,9 @@
 import axios, {AxiosError, AxiosInstance} from "axios";
-import {promises as fs} from 'fs';
-import {iCPSEventRuntimeError, iCPSEventSyncEngine} from "../../lib/resources/events-types.js";
+import {iCPSState} from "../../lib/resources/events-types.js";
 import {Resources} from "../../lib/resources/main.js";
 import {FILE_ENCODING} from "../../lib/resources/resource-types.js";
+import {LogInterface} from "./log.js";
+import {LogLevel, SerializedState, StateType} from "../../lib/resources/state-manager.js";
 
 export class HealthCheckPingExecutor {
 
@@ -15,9 +16,21 @@ export class HealthCheckPingExecutor {
 
         this.networkInterface = axios.create({baseURL: Resources.manager().healthCheckUrl});
 
-        Resources.events(this).on(iCPSEventSyncEngine.START, this.pingStart.bind(this));
-        Resources.events(this).on(iCPSEventSyncEngine.DONE, this.pingSuccess.bind(this));
-        Resources.events(this).on(iCPSEventRuntimeError.HANDLED_ERROR, this.pingError.bind(this));
+        Resources.events(this).on(iCPSState.STATE_CHANGED, async (state: SerializedState) => {
+            if(state.state === StateType.READY && state.prevTrigger) {
+                if(state.prevError) {
+                    await this.pingError()
+                    return
+                } else {
+                    await this.pingSuccess()
+                    return
+                }
+            }
+            if(state.state === StateType.RUNNING && state.progressMsg.startsWith(`Starting`) && state.progress === 0) {
+                await this.pingStart()
+                return
+            }
+        })
     }
 
     private async pingStart(): Promise<void> {
@@ -35,7 +48,7 @@ export class HealthCheckPingExecutor {
 
     private async pingSuccess(): Promise<void> {
         try {
-            await this.getLog().then(log => this.networkInterface.post(``, log));
+            await this.networkInterface.post(`/fail`, this.getLog());
             Resources.logger(this).debug(`Successfully sent success health check ping.`);
         } catch (err) {
             if((err as AxiosError).isAxiosError) {
@@ -46,9 +59,9 @@ export class HealthCheckPingExecutor {
         }
     }
 
-    private async pingError(_err: Error): Promise<void> {
+    private async pingError(): Promise<void> {
         try {
-            await this.getLog().then(log => this.networkInterface.post(`/fail`, log));
+            await this.networkInterface.post(`/fail`, this.getLog());
             Resources.logger(this).debug(`Successfully sent error health check ping.`);
         } catch (err) {
             if((err as AxiosError).isAxiosError) {
@@ -59,9 +72,11 @@ export class HealthCheckPingExecutor {
         }
     }
 
-    async getLog(): Promise<string> {
-        return fs.readFile(Resources.manager().logFilePath)
-            .then(data => data.subarray(-102400).toString(FILE_ENCODING))
-            .catch(() => `failed to read log file`);
+    getLog(): string {
+        const logs = Resources.state().serializeLog({level: LogLevel.DEBUG}).map(LogInterface.logToString).join(`\n`)
+        return Buffer
+            .from(logs)
+            .subarray(-102400)
+            .toString(FILE_ENCODING)
     }
 }
