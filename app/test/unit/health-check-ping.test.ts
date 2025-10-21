@@ -1,9 +1,7 @@
-import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals";
+import {beforeEach, describe, expect, jest, test} from "@jest/globals";
 import MockAdapter from 'axios-mock-adapter';
-import mockfs from 'mock-fs';
 import {HealthCheckPingExecutor} from "../../src/app/event/health-check-ping-executor";
-import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError, iCPSEventSyncEngine} from "../../src/lib/resources/events-types";
-import * as Config from '../_helpers/_config';
+import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError} from "../../src/lib/resources/events-types";
 import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general";
 import {LogLevel, StateManager} from "../../src/lib/resources/state-manager";
 

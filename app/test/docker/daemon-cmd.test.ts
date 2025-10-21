@@ -13,8 +13,6 @@ describe(`Docker Daemon Command`, () => {
             .withDummyCredentials()
             .start();
 
-        const logs = await container.getFullLogs()
-
         // wait a second to make sure status file was written
         await delay(2000)
 
