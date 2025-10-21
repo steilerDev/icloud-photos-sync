@@ -61,6 +61,6 @@ export class LogInterface {
      * @returns A string representation for the log message
      */
     static logToString(msg: LogMessage): string {
-        return `[${new Date(msg.time).toISOString()}] ${msg.level.toUpperCase()} ${msg.source}: ${msg}\n`;
+        return `[${new Date(msg.time).toISOString()}] ${msg.level.toUpperCase()} ${msg.source}: ${msg.message}\n`;
     }
 }
