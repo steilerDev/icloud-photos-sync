@@ -7,11 +7,13 @@ describe(`Docker Daemon Command`, () => {
     // Setting timeout to 20sec, in order for Docker environment to spin up
     jest.setTimeout(20 * 1000);
 
-    test(`Container should enter daemon mode`, async () => {
+    test.only(`Container should enter daemon mode`, async () => {
         const container = await new ICPSContainer()
             .withDaemonCommand()
             .withDummyCredentials()
             .start();
+
+        const logs = await container.getFullLogs()
 
         // wait a second to make sure status file was written
         await delay(2000)

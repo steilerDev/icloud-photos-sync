@@ -39,7 +39,7 @@ jobs:
       gh-token: ${{ secrets.GITHUB_TOKEN }}
 
   dependabot:
-    name: dependabot-auto-merge
+    name: dependabot-combine
     needs: test
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'steilerdev/icloud-photos-sync'
@@ -52,4 +52,5 @@ jobs:
         id: combine-prs
         uses: github/combine-prs@v5.2.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: combined
+          combine_branch_name: combined-dependabot-prs
