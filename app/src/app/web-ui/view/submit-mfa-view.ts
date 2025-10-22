@@ -1,5 +1,5 @@
 import {Resources} from "../../../lib/resources/main.js";
-import {submitMfaCSS} from "../css/submit-mfa-css.js";
+import {submitMfaCSS, submitMfaCSSDark} from "../css/submit-mfa-css.js";
 import {submitMfaScript} from "../scripts/submit-mfa-scripts.js";
 import {View} from "./base.js";
 
@@ -27,5 +27,9 @@ export class SubmitMfaView extends View {
 
     get css() {
         return [...super.css, submitMfaCSS]
+    }
+
+    get cssDark() {
+        return [...super.cssDark, submitMfaCSSDark]
     }
 }

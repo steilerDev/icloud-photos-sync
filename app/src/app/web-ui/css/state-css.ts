@@ -77,3 +77,17 @@ export const stateViewCSS = `
     }
 }
 `
+
+export const stateViewCSSDark = `
+ #progress-container {
+    border: 1px solid #555;
+}
+
+#state-text {
+    color: #e0e0e0;
+}
+    
+#enter-mfa-section {
+    background-color: #3a3a3a;
+}
+`

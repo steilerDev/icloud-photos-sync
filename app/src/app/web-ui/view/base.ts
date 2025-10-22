@@ -1,8 +1,7 @@
 import {Resources} from "../../../lib/resources/main.js";
 import {logoBase64} from "../assets/logo.js";
-import {viewCSS} from "../css/base-css.js";
-import {darkCSS} from "../css/dark-css.js";
-import {logCSS} from "../css/log-css.js";
+import {viewCSS, viewCSSDark} from "../css/base-css.js";
+import {logCSS, logCSSDark} from "../css/log-css.js";
 import {navigationHelperScript} from "../scripts/base-scripts.js";
 import {logScript} from "../scripts/log-script.js";
 import {notificationHandlerScript} from "../scripts/notification-handler.js";
@@ -71,7 +70,14 @@ export abstract class View {
     }
 
     formatCss(): string {
-        return this.css.map((css) => `<style>${css}</style>`).join(`\n`)
+        return `
+            <style>
+            ${this.css.join(`\n`)}
+            @media (prefers-color-scheme: dark) {
+                ${this.cssDark.join(`\n`)}
+            }
+            </style>
+        `
     }
 
     formatScripts(): string {
@@ -79,7 +85,11 @@ export abstract class View {
     }
 
     get css(): string[] {
-        return [viewCSS, logCSS, darkCSS]
+        return [viewCSS, logCSS]
+    }
+
+    get cssDark(): string[] {
+        return [viewCSSDark, logCSSDark]
     }
 
     get scripts(): WebAsset[] {
