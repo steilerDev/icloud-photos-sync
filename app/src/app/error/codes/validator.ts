@@ -36,6 +36,10 @@ export const PHOTOS_SETUP_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `PHOTOS_SETUP_RESPONSE`, `Unable to parse and validate photos setup response`,
 );
 
+export const AUTH_INFORMATION_RESPONSE: ErrorStruct = buildErrorStruct(
+    name, prefix, `AUTH_INFORMATION_RESPONSE`, `Unable to parse and validate auth information response`,
+);
+
 export const RESEND_MFA_PHONE_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `RESEND_MFA_PHONE_RESPONSE`, `Unable to parse and validate resend MFA phone response`,
 );

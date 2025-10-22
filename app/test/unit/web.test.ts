@@ -1279,7 +1279,7 @@ describe.each([
 
             describe(`Pre-condition met`, () => {
                 beforeEach(() => {
-                    mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED)
+                    mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED, [{id: 1, numberWithDialCode: `+123`}, {id: 2, numberWithDialCode: `+456`}])
                 })
 
                 test(`loads request-mfa page`, async () => {
@@ -1309,10 +1309,60 @@ describe.each([
                     expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
                 })
 
-                test(`requests mfa code via sms`, async () => {
+                test(`requests mfa code via sms, id 1`, async () => {
                     await site.load(`${webBasePath}/request-mfa`);
 
                     getByTestId(site.body, `sms-button`).click()
+                    expect(getByTestId(site.body, `sms-option-1`)).toBeVisible()
+                    expect(getByTestId(site.body, `sms-option-1`).children[0].textContent).toEqual(`+123`)
+                    expect(getByTestId(site.body, `sms-option-2`)).toBeVisible()
+                    expect(getByTestId(site.body, `sms-option-2`).children[0].textContent).toEqual(`+456`)
+                    getByTestId(site.body, `sms-option-1`).click()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=sms&phoneNumberId=1`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
+                    // This should happen - not sure why it does not
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
+                })
+
+                test(`requests mfa code via sms, id 2`, async () => {
+                    await site.load(`${webBasePath}/request-mfa`);
+
+                    getByTestId(site.body, `sms-button`).click()
+                    expect(getByTestId(site.body, `sms-option-1`)).toBeVisible()
+                    expect(getByTestId(site.body, `sms-option-1`).children[0].textContent).toEqual(`+123`)
+                    expect(getByTestId(site.body, `sms-option-2`)).toBeVisible()
+                    expect(getByTestId(site.body, `sms-option-2`).children[0].textContent).toEqual(`+456`)
+                    getByTestId(site.body, `sms-option-2`).click()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=sms&phoneNumberId=2`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
+                    // This should happen - not sure why it does not
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
+                })
+
+                test(`requests mfa code via sms, no phone numbers available`, async () => {
+                    mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED, [])
+                    await site.load(`${webBasePath}/request-mfa`);
+
+                    getByTestId(site.body, `sms-button`).click()
+                    expect(getByTestId(site.body, `sms-option-undefined`)).toBeVisible()
+                    expect(getByTestId(site.body, `sms-option-undefined`).children[0].textContent).toEqual(`Default`)
+                    getByTestId(site.body, `sms-option-undefined`).click()
 
                     expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=sms`, {method: `POST`})
                     expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
@@ -1327,12 +1377,17 @@ describe.each([
                     expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
                 })
 
-                test(`requests mfa code via voice`, async () => {
+                test(`requests mfa code via voice, id 1`, async () => {
                     await site.load(`${webBasePath}/request-mfa`);
 
                     getByTestId(site.body, `voice-button`).click()
+                    expect(getByTestId(site.body, `voice-option-1`)).toBeVisible()
+                    expect(getByTestId(site.body, `voice-option-1`).children[0].textContent).toEqual(`+123`)
+                    expect(getByTestId(site.body, `voice-option-2`)).toBeVisible()
+                    expect(getByTestId(site.body, `voice-option-2`).children[0].textContent).toEqual(`+456`)
+                    getByTestId(site.body, `voice-option-1`).click()
 
-                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=voice`, {method: `POST`})
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=voice&phoneNumberId=1`, {method: `POST`})
                     expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
                     expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
                     expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
@@ -1343,6 +1398,51 @@ describe.each([
                     expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
                     // This should happen - not sure why it does not
                     // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                })
+
+                test(`requests mfa code via voice, id 2`, async () => {
+                    await site.load(`${webBasePath}/request-mfa`);
+
+                    getByTestId(site.body, `voice-button`).click()
+                    expect(getByTestId(site.body, `voice-option-1`)).toBeVisible()
+                    expect(getByTestId(site.body, `voice-option-1`).children[0].textContent).toEqual(`+123`)
+                    expect(getByTestId(site.body, `voice-option-2`)).toBeVisible()
+                    expect(getByTestId(site.body, `voice-option-2`).children[0].textContent).toEqual(`+456`)
+                    getByTestId(site.body, `voice-option-2`).click()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=voice&phoneNumberId=2`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
+                    // This should happen - not sure why it does not
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                })
+
+                test(`requests mfa code via voice, no phone numbers available`, async () => {
+                    mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED, [])
+                    await site.load(`${webBasePath}/request-mfa`);
+
+                    getByTestId(site.body, `voice-button`).click()
+                    expect(getByTestId(site.body, `voice-option-undefined`)).toBeVisible()
+                    expect(getByTestId(site.body, `voice-option-undefined`).children[0].textContent).toEqual(`Default`)
+                    getByTestId(site.body, `voice-option-undefined`).click()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=voice`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
+                    // This should happen - not sure why it does not
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
                 })
 
                 test(`shows alert if request failed`, async () => {

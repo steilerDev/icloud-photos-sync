@@ -2,11 +2,12 @@
 import * as Ajv from 'ajv';
 import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
-import {COOKIE_KEYS, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
+import {AuthInformationResponse, COOKIE_KEYS, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
 import {ResourceFile} from "./resource-types.js";
 import {PushSubscription} from './web-server-types.js';
 import PCSResponseSchema from "./schemas/pcs-response.json" with { type: "json" }; // eslint-disable-line
 import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" with { type: "json" }; // eslint-disable-line
+import AuthInformationResponseSchema from "./schemas/auth-information-response.json" with { type: "json" }; // eslint-disable-line
 import ResendMFADeviceResponseSchema from "./schemas/resend-mfa-device-response.json" with { type: "json" }; // eslint-disable-line
 import ResendMFAPhoneResponseSchema from "./schemas/resend-mfa-phone-response.json" with { type: "json" }; // eslint-disable-line
 import ResourceFileSchema from "./schemas/resource-file.json" with { type: "json" }; // eslint-disable-line
@@ -47,6 +48,11 @@ export class Validator {
      * Validator for the signin response schema
      */
     _signinResponseValidator: Ajv.ValidateFunction<SigninResponse> = new Ajv.Ajv(AJV_CONF).compile<SigninResponse>(SigninResponseSchema);
+
+    /**
+     * Validator for the auth information response schema
+     */
+    _authInformationResponseValidator: Ajv.ValidateFunction<AuthInformationResponse> = new Ajv.Ajv(AJV_CONF).compile<AuthInformationResponse>(AuthInformationResponseSchema);
 
     /**
      * Validator for MFA Device Response schema
@@ -157,6 +163,20 @@ export class Validator {
             VALIDATOR_ERR.SIGNIN_RESPONSE,
             data,
             (data: SigninResponse) => data.headers[`set-cookie`].filter(cookieString => cookieString.startsWith(COOKIE_KEYS.AASP)).length <= 1, // AASP cookie is optional
+        );
+    }
+
+    /**
+     * Validates the response from the auth information request
+     * @param data - The data to validate
+     * @returns A validated SigninResponse object
+     * @throws An error if the data cannot be validated
+     */
+    validateAuthInformationResponse(data: unknown): AuthInformationResponse {
+        return this.validate(
+            this._authInformationResponseValidator,
+            VALIDATOR_ERR.AUTH_INFORMATION_RESPONSE,
+            data
         );
     }
 

@@ -44,7 +44,7 @@ export enum iCPSEventCloud {
      */
     AUTHENTICATION_STARTED = `icloud-auth_started`,
     /**
-     * Emitted when the iCloud authentication process requires MFA input
+     * Emitted when the iCloud authentication process requires MFA input. Provides an array of TrustedPhoneNumber objects
      */
     MFA_REQUIRED = `icloud-mfa_req`,
     /**
@@ -188,6 +188,10 @@ export enum iCPSEventRuntimeWarning {
      * Emitted when there is a problem reading/writing the resource file - provides the iCPSError as argument
      */
     RESOURCE_FILE_ERROR = `warn-resource_file_error`,
+    /**
+     * Emitted when there is a problem acquiring the trusted phone numbers of an account
+     */
+    TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`
 }
 
 /**

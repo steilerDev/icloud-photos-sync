@@ -10,7 +10,7 @@ import { Resources } from '../../src/lib/resources/main';
 import { Header } from '../../src/lib/resources/network-manager';
 import { SigninInitResponse } from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
-import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
+import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources, spyOnEvent } from '../_helpers/_general';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;
@@ -212,6 +212,7 @@ describe.each([
         test(`Invalid Trust Token - MFA Required`, async () => {
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
             icloud.getReady = jest.fn<typeof icloud.getReady>().mockResolvedValue(true);
+            icloud.getTrustedPhoneNumbers = jest.fn<typeof icloud.getTrustedPhoneNumbers>().mockResolvedValue(`someVal` as any)
 
             const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
             const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.MFA_REQUIRED);
@@ -227,9 +228,10 @@ describe.each([
 
             await icloud.authenticate();
 
+            expect(icloud.getTrustedPhoneNumbers).toHaveBeenCalled()
             expect(trustedEvent).not.toHaveBeenCalled();
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(mfaEvent).toHaveBeenCalled();
+            expect(mfaEvent).toHaveBeenCalledWith(`someVal`);
             expect(errorEvent).not.toHaveBeenCalled();
             expect(mockedValidator.validateSigninResponse).toHaveBeenCalled();
             expect(mockedNetworkManager.applySigninResponse).toHaveBeenCalled();
@@ -419,6 +421,44 @@ describe.each([
     });
 
     describe(`MFA Flow`, () => {
+
+        describe(`Trusted Phone Numbers`, () => {
+            test(`Success`, async () => {
+                const runtimeWarningEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR)
+                mockedNetworkManager.mock
+                    .onGet(`https://idmsa.apple.com/appleauth/auth`)
+                    .reply(200, {data: `someData`});
+                mockedValidator.validateAuthInformationResponse = jest.fn<typeof mockedValidator.validateAuthInformationResponse>()
+                    .mockReturnValue({data: {trustedPhoneNumbers: [`someData`]}} as any)
+
+                await expect(icloud.getTrustedPhoneNumbers()).resolves.toEqual([`someData`])
+                expect(runtimeWarningEvent).not.toHaveBeenCalled()
+            })
+
+            test(`Invalid response`, async () => {
+                const runtimeWarningEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR)
+                mockedNetworkManager.mock
+                    .onGet(`https://idmsa.apple.com/appleauth/auth`)
+                    .reply(200, {data: `invalidData`});
+                mockedValidator.validateAuthInformationResponse = jest.fn<typeof mockedValidator.validateAuthInformationResponse>(() => {
+                    throw new iCPSError(VALIDATOR_ERR.AUTH_INFORMATION_RESPONSE);
+                });
+
+                await expect(icloud.getTrustedPhoneNumbers()).resolves.toEqual([])
+                expect(runtimeWarningEvent).toHaveBeenCalled()
+            })
+
+            test(`Server error`, async () => {
+                const runtimeWarningEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR)
+                mockedNetworkManager.mock
+                    .onGet(`https://idmsa.apple.com/appleauth/auth`)
+                    .reply(500);
+
+                await expect(icloud.getTrustedPhoneNumbers()).resolves.toEqual([])
+                expect(runtimeWarningEvent).toHaveBeenCalled()
+            })
+        })
+
         describe(`Resend MFA`, () => {
             describe.each([
                 {
