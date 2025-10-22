@@ -31,8 +31,9 @@ RUN sed -i -r "/^(icps|root|nobody)/!d" /etc/group \
 
 # Remove unnecessary system packages (apk, caches, default shell)
 RUN apk --purge del apk-tools \
-  && rm -rf /sbin/apk /etc/apk /lib/apk /var/cache/apk \
-  && rm /bin/sh
+  && rm -rf /sbin/apk /etc/apk /lib/apk /var/cache/apk
+  # Keeping /bin/sh around while waiting for BT library mitigation - https://github.com/backtrace-labs/backtrace-javascript/pull/357
+  # && rm /bin/sh
 
 # We only need binaries from here
 ENV PATH=/usr/local/bin
