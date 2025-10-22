@@ -9,7 +9,7 @@ runs:
   using: composite
   steps:
     - id: setup-node
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v6
       with:
         node-version-file: ${{ inputs.app-path }}/node-version
         cache: npm
