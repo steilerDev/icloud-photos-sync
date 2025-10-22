@@ -57,7 +57,7 @@ export class ICPSContainer extends GenericContainer {
      * Sets the entrypoint to keep container open
      */
     asDummy(): this {
-        return this.withEntrypoint([`tail`, `-f`, `/dev/null`])
+        return this.withEntrypoint([`/usr/bin/tail`, `-f`, `/dev/null`])
     }
 
     /**
@@ -167,9 +167,9 @@ export class StartedICPSContainer extends AbstractStartedContainer {
     /**
      * Uses `unlink` to remove file
      */
-    async unlinkFile(...filePath) {
+    async unlinkFile(...filePath: string[]) {
         for (const _path of filePath) {
-            this.exec([`unlink`, _path])
+            this.exec([`/usr/bin/unlink`, _path])
         }
     }
 
@@ -188,7 +188,7 @@ export class StartedICPSContainer extends AbstractStartedContainer {
      * @returns The execution result
      */
     async deleteFile(...filePath: string[]): Promise<ExecResult> {
-        return this.exec([`rm`, `-rf`, ...filePath])
+        return this.exec([`/bin/rm`, `-rf`, ...filePath])
     }
 
     /**

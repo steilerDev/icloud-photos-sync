@@ -10,15 +10,28 @@ export type iCPSEvent = iCPSEventArchiveEngine
     | iCPSEventApp
     | iCPSEventRuntimeWarning
     | iCPSEventRuntimeError
-    | iCPSEventWebServer;
+    | iCPSEventWebServer
+    | iCPSState;
 
 /**
  * Possible log events
  */
 export enum iCPSEventLog {
+    /**
+     * Emitted when a log message with level debug was created
+     */
     DEBUG = `log-debug`,
+    /**
+     * Emitted when a log message with level info was created
+     */
     INFO = `log-info`,
+    /**
+     * Emitted when a log message with level warn was created
+     */
     WARN = `log-warn`,
+    /**
+     * Emitted when a log message with level error was created
+     */
     ERROR = `log-error`
 }
 
@@ -31,7 +44,7 @@ export enum iCPSEventCloud {
      */
     AUTHENTICATION_STARTED = `icloud-auth_started`,
     /**
-     * Emitted when the iCloud authentication process requires MFA input
+     * Emitted when the iCloud authentication process requires MFA input. Provides an array of TrustedPhoneNumber objects
      */
     MFA_REQUIRED = `icloud-mfa_req`,
     /**
@@ -87,11 +100,6 @@ export enum iCPSEventWebServer {
      * Emitted when the Web server has started - provides the port as argument
      */
     STARTED = `web-started`,
-
-    /**
-     * Emitted when the Web server has experienced an error - provides an iCPSError as argument
-     */
-    ERROR = `web-error`,
 
     /**
      * Emitted when a sync is requested via the web server
@@ -180,6 +188,10 @@ export enum iCPSEventRuntimeWarning {
      * Emitted when there is a problem reading/writing the resource file - provides the iCPSError as argument
      */
     RESOURCE_FILE_ERROR = `warn-resource_file_error`,
+    /**
+     * Emitted when there is a problem acquiring the trusted phone numbers of an account
+     */
+    TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`
 }
 
 /**
@@ -310,4 +322,17 @@ export enum iCPSEventApp {
      * Emitted when the app should display the latest acquired token - provides the token as argument
      */
     TOKEN = `token`
+}
+
+export enum iCPSState {
+    /**
+     * Emitted when the application state changes
+     * Will emit a SerializedState object
+     */
+    STATE_CHANGED = `state-changed`,
+    /**
+     * Emitted when the application registered a new log entry
+     * Will emit a SerializedLog object
+     */
+    LOG_ADDED = `log-added`
 }

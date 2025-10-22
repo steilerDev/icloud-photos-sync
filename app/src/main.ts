@@ -15,9 +15,9 @@ const _logInterface = new LogInterface();
 const _cliInterface = new CLIInterface();
 const _metricsExporter = new MetricsExporter();
 const _healthCheckPingExecutor = new HealthCheckPingExecutor();
-const _webServer = await WebServer.spawn();
 
 try {
+    const _webServer = await WebServer.spawn();
     await app.run();
 } catch (err) {
     await _errorHandler.handleError(err);

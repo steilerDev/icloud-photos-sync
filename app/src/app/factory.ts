@@ -2,8 +2,8 @@ import {input, password} from "@inquirer/prompts";
 import {Command, CommanderError, InvalidArgumentError, Option} from "commander";
 import {Cron} from "croner";
 import {Resources} from "../lib/resources/main.js";
-import {LogLevel} from "./event/log.js";
 import {ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp} from "./icloud-app.js";
+import {LogLevel} from "../lib/resources/state-manager.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails

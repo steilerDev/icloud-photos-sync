@@ -1,6 +1,7 @@
 import {Resources} from "../../lib/resources/main.js";
 import webpush from 'web-push';
-import {State} from "./state.js";
+import {SerializedState, StateTrigger, StateType} from "../../lib/resources/state-manager.js";
+import {iCPSState} from "../../lib/resources/events-types.js";
 
 export class NotificationPusher {
     constructor() {
@@ -9,11 +10,18 @@ export class NotificationPusher {
             Resources.manager().notificationVapidCredentials.publicKey,
             Resources.manager().notificationVapidCredentials.privateKey
         );
+
+        Resources.events(this).on(iCPSState.STATE_CHANGED, (state: SerializedState) => {
+            if((state.state === StateType.READY   && state.prevTrigger === StateTrigger.SYNC) || 
+               (state.state === StateType.BLOCKED && state.progressMsg === `Waiting for MFA code...`)) {
+                this.sendNotifications(state);
+            } 
+        });
     }
 
-    async sendNotifications(state: State): Promise<void[]> {
+    async sendNotifications(state: SerializedState): Promise<void[]> {
         const notificationSubscriptions = Resources.manager().notificationSubscriptions;
-        Resources.logger(this).info(`State changed to: ${state.serialize()}, sending notifications to ${notificationSubscriptions.length} listeners.`);
+        Resources.logger(this).info(`State changed to: ${state.state}, sending notifications to ${notificationSubscriptions.length} listeners.`);
         return Promise.all(
             notificationSubscriptions.map(
                 subscription => this.sendPushNotification(subscription, state)
@@ -21,10 +29,10 @@ export class NotificationPusher {
         )
     }
 
-    async sendPushNotification(subscription: webpush.PushSubscription, state: State) {
+    async sendPushNotification(subscription: webpush.PushSubscription, state: SerializedState) {
         try {
             Resources.logger(this).debug(`Sending notification to ${subscription.endpoint}`);
-            await webpush.sendNotification(subscription, JSON.stringify(state.serialize()));
+            await webpush.sendNotification(subscription, JSON.stringify(state));
         } catch (err) {
             Resources.logger(this).error(`Failed to send notification to subscription: ${err.message}`);
             if (err instanceof webpush.WebPushError) {

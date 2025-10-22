@@ -53,15 +53,18 @@ async function fetchState() {
     }
 }
 
-function formatDate(date) {
-    if (!date) {
-        return "Unknown";
-    }
-    return new Date(date).toLocaleString()
-}
-
 function setStateText(text) {
     document.querySelector("#state-text").innerHTML = text
+}
+
+function setProgress(progress) {
+    if(progress && progress >= 0) {
+        document.getElementById('progress-container').style.display = "block";
+        document.getElementById('progress-bar').style.width = progress + '%';
+    } else {
+        document.getElementById('progress-container').style.display = "none";
+        document.getElementById('progress-bar').style.width = '0%';
+    }
 }
 
 function enableSymbol(symbolName) {
@@ -73,6 +76,7 @@ function enableSymbol(symbolName) {
  */
 function resetState() {
     setStateText('...')
+    setProgress()
     document.querySelectorAll(".state-symbol").forEach((el) => {
         el.style.display = "none";
     });
@@ -90,14 +94,15 @@ function updateState(state) {
         window.location.reload();
     }
 
-    resetState()
-
     if(state.nextSync) {
         document.querySelector("#next-sync-time").innerHTML = formatDate(state.nextSync);
     }
 
     switch (state.state) {
         case 'ready':
+            // Increase time between refresh while application is idle
+            setTimeout(() => refreshState(), 5000);
+
             document.querySelectorAll(".hidden-when-not-ready").forEach((el) => {
                 el.style.display = "block";
             });
@@ -126,25 +131,27 @@ function updateState(state) {
                 formatDate(state.timestamp) 
             )
             return;
-        case 'authenticating':
-            setStateText('Authenticating...')
-            enableSymbol("auth")
-            return;
-        case 'mfa_required': 
+        case 'blocked': 
             navigate('${basePath}/submit-mfa')
             return;
-        case 'syncing':
-            setStateText('Syncing...')
-            enableSymbol('sync')
+        case 'running':
+            // Decrease time between refresh while application is running
+            setTimeout(() => refreshState(), 500);
+
+            setStateText(state.progressMsg ?? 'Syncing...')
+            setProgress(state.progress)
+            enableSymbol('running')
+
             return;
         default:
+            setTimeout(() => refreshState(), 5000);
+
             setStateText('Unknown')
             enableSymbol('unknown')
             return;
     }
 }
 
-// Kick off functions and timer to update state
+// Kick off function to update state
 setTimeout(() => refreshState(), 0);
-setInterval(refreshState, 5000);
 `

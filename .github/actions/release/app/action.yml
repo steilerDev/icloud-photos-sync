@@ -1,9 +1,6 @@
 name: release-docker
 description: Releases the npm package to the appropriate channel and updates the uploaded artifact
 inputs:
-  npm-token:
-    description: The npm token used for releasing the package
-    required: true
   bt-token:
     description: The Backtrace symbol access token, in order to deploy the source maps
     required: true
@@ -24,10 +21,7 @@ runs:
   steps:
     - id: release-app
       shell: bash
-      run: |
-        export NPM_TOKEN=${{ inputs.npm-token }}
-        export NPM_CONFIG_PROVENANCE=true
-        (cd ${{ inputs.release-dir }}; npx semantic-release)
+      run: (cd ${{ inputs.release-dir }}; npx semantic-release)
     - id: upload-source-map
       shell: bash
       run: (cd ${{ inputs.release-dir }}; npx backtrace-js upload app/bin/ --url https://submit.backtrace.io/steilerdev/${{ inputs.bt-token }}/sourcemap)

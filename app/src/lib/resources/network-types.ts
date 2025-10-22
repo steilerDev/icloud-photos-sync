@@ -192,6 +192,18 @@ export type SigninInitResponse = {
 }
 
 /**
+ * The expected response format when getting auth information
+ */
+export type AuthInformationResponse = {
+    data: {
+        /**
+         * @minItems 1
+         */
+        trustedPhoneNumbers: TrustedPhoneNumber[]
+    }
+}
+
+/**
  * The expected response format for the MFA resend request on a trusted device
  * @see {@link ENDPOINTS.AUTH.PATH.MFA.DEVICE_RESEND}
  */
@@ -239,7 +251,7 @@ type PhoneNumberVerification = {
 /**
  * Object representing a trusted phone number used in MFA resend responses
  */
-type TrustedPhoneNumber = {
+export type TrustedPhoneNumber = {
     /**
      * @minimum 0
      */
