@@ -4,7 +4,6 @@ import {iCPSError} from "../../src/app/error/error"
 import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from "../../src/app/error/error-codes"
 import {MockedEventManager, prepareResources} from "../_helpers/_general"
 import {iCPSEvent, iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "../../src/lib/resources/events-types"
-import {TrustedPhoneNumber} from "../../src/lib/resources/network-types"
 
 let mockedEventManager: MockedEventManager
 let mockedState: StateManager

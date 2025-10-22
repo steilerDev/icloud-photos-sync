@@ -10,7 +10,7 @@ import { Resources } from '../../src/lib/resources/main';
 import { Header } from '../../src/lib/resources/network-manager';
 import { SigninInitResponse } from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
-import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources, spyOnEvent } from '../_helpers/_general';
+import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;
