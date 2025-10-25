@@ -13,14 +13,14 @@ runs:
     - id: setup-buildx
       uses: docker/setup-buildx-action@v3
     - id: setup-release-app-artifact
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       continue-on-error: true
       with:
         name: app-artifact-release
         path: ${{ inputs.docker-path }}/
     - id: setup-build-app-artifact
       if: steps.setup-release-app-artifact.outcome == 'failure'
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         name: app-artifact-build
         path: ${{ inputs.docker-path }}/
