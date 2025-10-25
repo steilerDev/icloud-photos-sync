@@ -425,6 +425,75 @@ describe(`Validator`, () => {
         });
     });
 
+    describe(`validateAuthInfoResponse`, () => {
+        test.each([
+            {
+                data: {
+                    data: {
+                        trustedPhoneNumbers: [
+                            {
+                                id: 1,
+                                numberWithDialCode: `123`,
+                                pushMode: `sms`,
+                                obfuscatedNumber: `***`,
+                                lastTwoDigits: `12`
+                            }
+                        ],
+                    }
+                },
+            },
+        ])(`should validate a valid signin response`, ({data}) => {
+            expect(() => validator.validateAuthInformationResponse(data)).not.toThrow();
+        });
+
+        test.each([
+            {
+                data: {
+                    data: {
+                        trustedPhoneNumbers: [],
+                    }
+                },
+                desc: `empty phoneNumbers array`,
+            }, {
+                data: {
+                    data: {}
+                },
+                desc: `no phoneNumbers array`,
+            }, {
+                data: {
+                    data: {
+                        trustedPhoneNumbers: [
+                            {
+                                numberWithDialCode: `123`,
+                                pushMode: `sms`,
+                                obfuscatedNumber: `***`,
+                                lastTwoDigits: `12`
+                            }
+                        ],
+                    }
+                },
+                desc: `no phone number id`,
+            }, {
+                data: {
+                    data: {
+                        trustedPhoneNumbers: [
+                            {
+                                id: 1,
+                                pushMode: `sms`,
+                                obfuscatedNumber: `***`,
+                                lastTwoDigits: `12`
+                            }
+                        ],
+                    }
+                },
+                desc: `no phone number with dial code`,
+            }, {
+            },
+        ])(`should throw an error for an invalid signin response: $desc`, ({data}) => {
+            expect(() => validator.validateAuthInformationResponse(data)).toThrow(VALIDATOR_ERR.AUTH_INFORMATION_RESPONSE);
+        });
+    });
+
     describe(`validateResendMFADeviceResponse`, () => {
         test(`should validate a valid resend MFA device response`, () => {
             const data: ResendMFADeviceResponse = {

@@ -169,7 +169,7 @@ export class StartedICPSContainer extends AbstractStartedContainer {
      */
     async unlinkFile(...filePath: string[]) {
         for (const _path of filePath) {
-            this.exec([`unlink`, _path])
+            this.exec([`/usr/bin/unlink`, _path])
         }
     }
 
@@ -188,7 +188,7 @@ export class StartedICPSContainer extends AbstractStartedContainer {
      * @returns The execution result
      */
     async deleteFile(...filePath: string[]): Promise<ExecResult> {
-        return this.exec([`rm`, `-rf`, ...filePath])
+        return this.exec([`/bin/rm`, `-rf`, ...filePath])
     }
 
     /**

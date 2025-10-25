@@ -6,6 +6,7 @@ import {CPLAsset} from "../icloud/icloud-photos/query-parser.js";
 import {Asset} from "../photos-library/model/asset.js";
 import {Album} from "../photos-library/model/album.js";
 import {MFAMethod} from "../icloud/mfa/mfa-method.js";
+import {TrustedPhoneNumber} from "./network-types.js";
 
 export enum StateType {
     READY = `ready`,
@@ -47,7 +48,11 @@ export type SerializedState = {
     },
     prevTrigger?: StateTrigger,
     progress?: number,
-    progressMsg?: string
+    progressMsg?: string,
+    trustedPhoneNumbers?: {
+        id: number,
+        maskedNumber: string
+    }[]
 }
 
 export class StateManager {
@@ -91,6 +96,8 @@ export class StateManager {
             completedAssets: 0
         }
 
+    trustedPhoneNumbers?: TrustedPhoneNumber[] 
+
     /**
      * Current state of the application
      */
@@ -114,10 +121,11 @@ export class StateManager {
                     progress: 1 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
-            .on(iCPSEventCloud.MFA_REQUIRED, () => {
+            .on(iCPSEventCloud.MFA_REQUIRED, (trustedPhoneNumbers: TrustedPhoneNumber[]) => {
                 this.updateState(StateType.BLOCKED, {
                     progressMsg: `Waiting for MFA code...`, 
-                    progress: 2 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
+                    progress: 2 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1),
+                    trustedPhoneNumbers
                 })
             })
             .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {
@@ -295,7 +303,7 @@ export class StateManager {
      * @param ctx - context for the new state, note: only relevant properties will be overwritten
      * @emits iCPSState.STATE_CHANGED with a serialized copy of the new state
      */
-    updateState(newState: StateType, ctx? : {error?: iCPSError, nextSync?: number, progress?: number, progressMsg?: string}) {
+    updateState(newState: StateType, ctx? : {error?: iCPSError, nextSync?: number, progress?: number, progressMsg?: string, trustedPhoneNumbers?: TrustedPhoneNumber[]}) {
         this.timestamp = Date.now();
         this.state = newState;
         if(ctx) {
@@ -310,6 +318,9 @@ export class StateManager {
                     progress: ctx.progress,
                     message: ctx.progressMsg
                 }
+            }
+            if(ctx.trustedPhoneNumbers) {
+                this.trustedPhoneNumbers = ctx.trustedPhoneNumbers
             }
         }
         Resources.event().emit(iCPSState.STATE_CHANGED, this.serialize())
@@ -375,6 +386,16 @@ export class StateManager {
             }
         }
 
+        let trustedPhoneNumbers = undefined
+        if(this.trustedPhoneNumbers) {
+            trustedPhoneNumbers = this.trustedPhoneNumbers.map((value) => {
+                return {
+                    id: value.id, 
+                    maskedNumber: value.numberWithDialCode
+                }
+            })
+        }
+
         return {
             state: this.state,
             nextSync: this.nextSync,
@@ -382,7 +403,8 @@ export class StateManager {
             prevTrigger: this.prevTrigger,
             timestamp: this.timestamp,
             progress: this.inProgressContext?.progress,
-            progressMsg: this.inProgressContext?.message
+            progressMsg: this.inProgressContext?.message,
+            trustedPhoneNumbers
         };
     }
 

@@ -67,25 +67,33 @@ describe(`State changes`, () => {
             } as SerializedState
         },{
             desc: `Should handle MFA required (triggered by sync)`,
-            events: [iCPSEventApp.SCHEDULED_START, iCPSEventCloud.MFA_REQUIRED],
+            events: [iCPSEventApp.SCHEDULED_START, [iCPSEventCloud.MFA_REQUIRED,[{id: 1, numberWithDialCode: `123`}]]],
             serializedState: {
                 state: `blocked`,
                 nextSync: undefined,
                 prevError: undefined,
                 prevTrigger: `sync`,
                 progress: 2,
-                progressMsg: `Waiting for MFA code...`
+                progressMsg: `Waiting for MFA code...`,
+                trustedPhoneNumbers: [{
+                    id: 1,
+                    maskedNumber: `123`
+                }]
             } as SerializedState
         },{
             desc: `Should handle MFA required (triggered by auth)`,
-            events: [iCPSEventWebServer.REAUTH_REQUESTED, iCPSEventCloud.MFA_REQUIRED],
+            events: [iCPSEventWebServer.REAUTH_REQUESTED, [iCPSEventCloud.MFA_REQUIRED,[{id: 1, numberWithDialCode: `123`}]]],
             serializedState: {
                 state: `blocked`,
                 nextSync: undefined,
                 prevError: undefined,
                 prevTrigger: `auth`,
                 progress: 25,
-                progressMsg: `Waiting for MFA code...`
+                progressMsg: `Waiting for MFA code...`,
+                trustedPhoneNumbers: [{
+                    id: 1,
+                    maskedNumber: `123`
+                }]
             } as SerializedState
         },{
             desc: `Should handle MFA resend (triggered by sync)`,
@@ -531,7 +539,8 @@ describe(`State changes`, () => {
             prevError: serializedState.prevError,
             prevTrigger: serializedState.prevTrigger,
             progress: serializedState.progress,
-            progressMsg: serializedState.progressMsg
+            progressMsg: serializedState.progressMsg,
+            trustedPhoneNumbers: serializedState.trustedPhoneNumbers
         }))
     })
 })

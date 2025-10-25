@@ -5,7 +5,7 @@ import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.
 import {iCPSError} from '../../app/error/error.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
 import {Resources} from '../resources/main.js';
-import {COOKIE_KEYS, ENDPOINTS} from '../resources/network-types.js';
+import {COOKIE_KEYS, ENDPOINTS, TrustedPhoneNumber} from '../resources/network-types.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {iCloudCrypto} from './icloud.crypto.js';
 import {MFAMethod} from './mfa/mfa-method.js';
@@ -125,7 +125,8 @@ export class iCloud {
 
             if (response.status === 409) {
                 Resources.logger(this).debug(`Response status is 409, requiring MFA`);
-                Resources.emit(iCPSEventCloud.MFA_REQUIRED);
+                const trustedPhoneNumbers = await this.getTrustedPhoneNumbers()
+                Resources.emit(iCPSEventCloud.MFA_REQUIRED, trustedPhoneNumbers);
                 return;
             }
 
@@ -226,6 +227,19 @@ export class iCloud {
         } catch (err) {
             throw new iCPSError(AUTH_ERR.SRP_INIT_FAILED).addCause(err);
         }
+    }
+
+    async getTrustedPhoneNumbers(): Promise<TrustedPhoneNumber[]> {
+        Resources.logger(this).info(`Getting trusted phone numbers`)
+
+        try {
+            const authInformationResponse = await Resources.network().get(ENDPOINTS.AUTH.BASE)
+            const validatedAuthInformationResponse = Resources.validator().validateAuthInformationResponse(authInformationResponse)
+            return validatedAuthInformationResponse.data.trustedPhoneNumbers
+        } catch (err) {
+            Resources.emit(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, new iCPSError(MFA_ERR.NO_PHONE_NUMBERS).addCause(err));
+        }
+        return []
     }
 
     /**

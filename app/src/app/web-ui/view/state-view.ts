@@ -1,4 +1,4 @@
-import {stateViewCSS} from "../css/state-css.js";
+import {stateViewCSS, stateViewCSSDark} from "../css/state-css.js";
 import {stateViewScript} from "../scripts/state-scripts.js";
 import {View} from "./base.js";
 
@@ -33,6 +33,10 @@ export class StateView extends View {
 
     get css() {
         return [...super.css, stateViewCSS]
+    }
+
+    get cssDark() {
+        return [...super.cssDark, stateViewCSSDark]
     }
 
     get scripts() {
