@@ -37,20 +37,3 @@ jobs:
       methods: ${{github.base_ref == 'main' && '["unit-ubuntu", "unit-macos", "e2e", "api"]' || (github.base_ref == 'beta' && '["unit-ubuntu", "e2e", "api"]' || '["unit-ubuntu", "unit-docker"]' ) }} # Only running full suite when targeting beta or main
     secrets:
       gh-token: ${{ secrets.GITHUB_TOKEN }}
-
-  dependabot:
-    name: dependabot-combine
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'steilerdev/icloud-photos-sync'
-    permissions:
-      contents: write # to create a new branch and merge other branches together
-      pull-requests: write # to create a new PR with the combined changes
-      checks: read # to check if CI is passing or not before combining PRs
-    steps:
-      - name: combine-prs
-        id: combine-prs
-        uses: github/combine-prs@v5.2.0
-        with:
-          labels: combined
-          combine_branch_name: combined-dependabot-prs
