@@ -54,7 +54,7 @@ runs:
         mv docker-*.tar.gz docker-artifact/
         echo "artifact-path=docker-artifact/" >> $GITHUB_OUTPUT
     - name: upload-artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ steps.package-artifact.outputs.artifact-path }}

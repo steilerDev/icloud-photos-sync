@@ -12,7 +12,7 @@ export const NO_PHONE_NUMBERS: ErrorStruct = buildErrorStruct(
 );
 
 export const MFA_TIMEOUT: ErrorStruct = buildErrorStruct(
-    name, prefix, `TIMEOUT`, `MFA code timeout (code needs to be provided within 10 minutes)`,
+    name, prefix, `TIMEOUT`, `MFA code timeout (consider increasing '--mfa-timeout' if necessary)`,
 );
 
 export const SUBMIT_FAILED: ErrorStruct = buildErrorStruct(

@@ -7,6 +7,32 @@ export const rejectOptions = [
             `test@icloud.com`,
             `-p`,
             `testPass`,
+            `--mfa-timeout`,
+            `abc`,
+        ],
+        _desc: `Invalid MFA Timeout`,
+        expected: `error: option '--mfa-timeout <number>' argument 'abc' is invalid. Not a number.`,
+    },{
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
+            `--mfa-timeout`,
+            `-1`,
+        ],
+        _desc: `Negative MFA Timeout`,
+        expected: `error: option '--mfa-timeout <number>' argument '-1' is invalid. Not a positive number.`,
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
             `-P`,
             `eight`,
             `token`,
@@ -392,11 +418,12 @@ export const nonRejectOptions = [
             `test@icloud.com`,
             `-p`,
             `testPass`,
-            `--fail-on-mfa`,
+            `--mfa-timeout`,
+            `1000`,
         ],
-        _desc: `Fail on MFA enabled`,
+        _desc: `MFA timeout set`,
         expectedOptions: {
-            failOnMfa: true,
+            mfaTimeout: 1000
         },
     }, {
         options: [

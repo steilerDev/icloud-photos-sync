@@ -380,7 +380,7 @@ export class WebServer {
      * @param app - An optional TokenApp instance to use for reauthentication. If not provided, a new instance will be created (structured for testing purposes)
      * @returns A promise that resolves when the reauthentication process is complete
      */
-    triggerReauth(app: TokenApp = new TokenApp(true)): Promise<unknown> {
+    triggerReauth(app: TokenApp = new TokenApp()): Promise<unknown> {
         return app.run()
     }
 
