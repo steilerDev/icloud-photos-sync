@@ -13,7 +13,7 @@ export const defaultConfig = {
     downloadTimeout: 10,
     schedule: `0 2 * * *`,
     enableCrashReporting: false,
-    failOnMfa: false,
+    mfaTimeout: 600,
     force: false,
     refreshToken: false,
     remoteDelete: false,

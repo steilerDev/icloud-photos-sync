@@ -65,7 +65,7 @@
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/docker/daemon-cmd.test.ts"
+                "test/unit/icloud.test.ts"
             ],
             "env": {
                 "DEBUG": "testcontainers*",

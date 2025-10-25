@@ -133,7 +133,7 @@ export type iCPSAppOptions = {
     schedule: string,
     enableCrashReporting: boolean,
     enableNetworkCapture: boolean,
-    failOnMfa: boolean,
+    mfaTimeout: number,
     force: boolean,
     refreshToken: boolean,
     remoteDelete: boolean,
@@ -201,9 +201,10 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://icps.steiler.dev/error-reporting/ for more information.`)
             .env(`ENABLE_CRASH_REPORTING`)
             .default(false))
-        .addOption(new Option(`--fail-on-mfa`, `If a MFA is necessary, exit the program. Ignored if re-authentication was requested from the web UI.`)
-            .env(`FAIL_ON_MFA`)
-            .default(false))
+        .addOption(new Option(`--mfa-timeout <number>`, `If a MFA code is necessary to authenticate, wait for these many seconds before canceling the authentication process. Time in seconds, should not exceed 10mins (due to server side timing).`)
+            .env(`MFA_TIMEOUT`)
+            .default(60 * 10)
+            .argParser(commanderParsePositiveInt))
         .addOption(new Option(`--force`, `Forcefully remove an existing library lock. USE WITH CAUTION!`)
             .env(`FORCE`)
             .default(false))

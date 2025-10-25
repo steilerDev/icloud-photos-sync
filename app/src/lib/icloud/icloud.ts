@@ -11,11 +11,6 @@ import {iCloudCrypto} from './icloud.crypto.js';
 import {MFAMethod} from './mfa/mfa-method.js';
 
 /**
- * The MFA timeout value in milliseconds
- */
-const MFA_TIMEOUT_VALUE = 1000 * 60 * 10; // 10 minutes
-
-/**
  * This class holds the iCloud connection
  */
 export class iCloud {
@@ -34,9 +29,7 @@ export class iCloud {
      * @param ignoreFailOnMfa - If set to true, the authentication will still continue even if MFA is required and the failOnMfa flag is set
      * @emits iCPSEventCloud.ERROR - If the MFA code is required and the failOnMfa flag is set - the iCPSError is provided as argument
      */
-    constructor(
-        private readonly ignoreFailOnMfa: boolean = false
-    ) {
+    constructor() {
         Resources.events(this)
             .on(iCPSEventMFA.MFA_RECEIVED, this.submitMFA.bind(this))
             .on(iCPSEventMFA.MFA_RESEND, this.resendMFA.bind(this));
@@ -46,15 +39,10 @@ export class iCloud {
         // ICloud lifecycle management
         Resources.events(this)
             .on(iCPSEventCloud.MFA_REQUIRED, () => {
-                if (Resources.manager().failOnMfa && !this.ignoreFailOnMfa) {
-                    Resources.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.FAIL_ON_MFA));
-                    return;
-                }
-
                 // MFA code needs to be provided within timeout period
                 this.mfaTimeout = setTimeout(() => {
                     Resources.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.MFA_TIMEOUT));
-                }, MFA_TIMEOUT_VALUE);
+                }, Resources.manager().mfaTimeout * 1000);
             })
             .on(iCPSEventCloud.TRUSTED, async () => {
                 await this.setupAccount();
@@ -85,7 +73,7 @@ export class iCloud {
                     .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => resolve(false))
                     .once(iCPSEventCloud.ERROR, err => reject(err));
             }), {
-                milliseconds: MFA_TIMEOUT_VALUE + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
+                milliseconds: Resources.manager().mfaTimeout  + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
                 message: new iCPSError(AUTH_ERR.SETUP_TIMEOUT),
             },
         );

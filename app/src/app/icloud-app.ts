@@ -84,9 +84,7 @@ abstract class iCloudApp extends iCPSApp {
      * Creates and sets up the necessary infrastructure
      * @param ignoreFailOnMfa - If set to true, the authentication will still continue even if MFA is required and the failOnMfa flag is set
      */
-    constructor(
-        protected readonly ignoreFailOnMfa: boolean = false,
-    ) {
+    constructor() {
         super();
 
         // It's crucial for the data dir to exist, create if it doesn't
@@ -95,7 +93,7 @@ abstract class iCloudApp extends iCPSApp {
         }
 
         // Creating necessary object for this scope
-        this.icloud = new iCloud(ignoreFailOnMfa);
+        this.icloud = new iCloud();
     }
 
     /**
@@ -199,15 +197,6 @@ abstract class iCloudApp extends iCPSApp {
  * This application will print the locally stored token, acquire a new one (if necessary) and print it to the CLI
  */
 export class TokenApp extends iCloudApp {
-    /**
-     * Creates a new TokenApp instance
-     * @param ignoreFailOnMfa - If set to true, the authentication will still continue even if MFA is required and the failOnMfa flag is set
-     */
-    public constructor(
-        ignoreFailOnMfa: boolean = false,
-    ) {
-        super(ignoreFailOnMfa);
-    }
 
     /**
      * This function will validate the currently stored account token and print it afterwards

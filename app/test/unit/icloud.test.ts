@@ -76,38 +76,26 @@ describe(`Control structure`, () => {
     });
 
     describe(`MFA_REQUIRED event triggered`, () => {
-        test(`Should emit error when FAIL_ON_MFA is set`, () => {
-            mockedResourceManager._resources.failOnMfa = true
-            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR)
+        test(`Should emit error when MFA_TIMEOUT is set to zero`, () => {
+            mockedResourceManager._resources.mfaTimeout = 0
+            const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_NOT_PROVIDED)
 
             mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED)
+            jest.advanceTimersByTime(1)
 
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`MFA code required, failing due to failOnMfa flag`))
-        })
-
-        test(`Should not emit error when FAIL_ON_MFA and ignoreFailOnMFA is set`, () => {
-            const cleanInstances = prepareResources()!;
-            mockedResourceManager = cleanInstances.manager;
-
-            icloud = new iCloud(true)
-            cleanInstances.manager._resources.failOnMfa = true
-            const errorEvent = cleanInstances.event.spyOnEvent(iCPSEventCloud.ERROR)
-
-            cleanInstances.event.emit(iCPSEventCloud.MFA_REQUIRED)
-
-            expect(errorEvent).not.toHaveBeenCalled()
+            expect(mfaEvent).toHaveBeenCalledWith(new Error(`MFA code timeout (consider increasing '--mfa-timeout' if necessary)`))
         })
 
         test(`Should timeout`, () => {
-            mockedResourceManager._resources.failOnMfa = false
+            mockedResourceManager._resources.mfaTimeout = 1
             const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR)
             const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_NOT_PROVIDED)
 
             mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED)
-            jest.advanceTimersByTime(1000*60*10 + 10)
+            jest.advanceTimersByTime(1000 + 10)
 
             expect(errorEvent).not.toHaveBeenCalled()
-            expect(mfaEvent).toHaveBeenCalledWith(new Error(`MFA code timeout (code needs to be provided within 10 minutes)`))
+            expect(mfaEvent).toHaveBeenCalledWith(new Error(`MFA code timeout (consider increasing '--mfa-timeout' if necessary)`))
 
         })
     })

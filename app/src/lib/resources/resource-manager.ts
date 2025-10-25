@@ -268,8 +268,8 @@ export class ResourceManager {
     /**
      * @returns If the application should fail on MFA requirement
      */
-    get failOnMfa(): boolean {
-        return this._resources.failOnMfa;
+    get mfaTimeout(): number {
+        return this._resources.mfaTimeout;
     }
 
     /**

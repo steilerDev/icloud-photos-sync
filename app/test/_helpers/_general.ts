@@ -49,7 +49,7 @@ export function prepareResourceForApiTests(): Resources.Types.Instances {
         username: process.env.TEST_APPLE_ID_USER!,
         password: process.env.TEST_APPLE_ID_PWD!,
         trustToken: process.env.TEST_TRUST_TOKEN!,
-        failOnMfa: true,
+        mfaTimeout: 0,
     })!;
 
     instances.manager._writeResourceFile = jest.fn<typeof instances.manager._writeResourceFile>()
