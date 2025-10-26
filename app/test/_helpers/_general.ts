@@ -9,6 +9,7 @@ import {iCPSEvent} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
 import {Validator} from '../../src/lib/resources/validator';
 import {EventManager} from '../../src/lib/resources/event-manager';
+import {StateManager} from '../../src/lib/resources/state-manager';
 
 export type UnknownFunction = (...args: Array<unknown>) => unknown
 export type UnknownAsyncFunction = (...args: Array<unknown>) => Promise<unknown>
@@ -18,6 +19,7 @@ type MockedResourceInstances = {
     network: MockedNetworkManager,
     validator: MockedValidator,
     event: MockedEventManager,
+    state: StateManager
 }
 
 export type MockedNetworkManager = NetworkManager & {
@@ -47,7 +49,7 @@ export function prepareResourceForApiTests(): Resources.Types.Instances {
         username: process.env.TEST_APPLE_ID_USER!,
         password: process.env.TEST_APPLE_ID_PWD!,
         trustToken: process.env.TEST_TRUST_TOKEN!,
-        failOnMfa: true,
+        mfaTimeout: 0,
     })!;
 
     instances.manager._writeResourceFile = jest.fn<typeof instances.manager._writeResourceFile>()

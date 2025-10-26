@@ -1,0 +1,24 @@
+name: '[monitor] Dependabot'
+
+on:
+  schedule:
+    - cron: '0 11 * * 6' # At 11:00 on Saturdays (after dependabot ran at 9:00)
+  workflow_dispatch: # allows you to manually trigger the workflow
+
+# The minimum permissions required to run this Action
+permissions:
+    contents: write # to create a new branch and merge other branches together
+    pull-requests: write # to create a new PR with the combined changes
+    checks: read # to check if CI is passing or not before combining PRs
+
+jobs:
+  dependabot:
+    name: dependabot-combine
+    runs-on: ubuntu-latest
+    steps:
+      - name: combine-prs
+        id: combine-prs
+        uses: github/combine-prs@v5.2.0
+        with:
+          combine_branch_name: combined-dependabot-prs
+          github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -12,26 +12,15 @@ runs:
       uses: docker/setup-qemu-action@v3
     - id: setup-buildx
       uses: docker/setup-buildx-action@v3
-    - id: setup-fs
-      shell: bash
-      run: mkdir -p "${{ inputs.docker-path }}/rootfs/opt/"
     - id: setup-release-app-artifact
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       continue-on-error: true
       with:
         name: app-artifact-release
-        path: ${{ inputs.docker-path }}/rootfs/opt/
+        path: ${{ inputs.docker-path }}/
     - id: setup-build-app-artifact
       if: steps.setup-release-app-artifact.outcome == 'failure'
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         name: app-artifact-build
-        path: ${{ inputs.docker-path }}/rootfs/opt/
-    - id: validate-app-artifact
-      shell: bash
-      run: |
-        tree -a "${{ inputs.docker-path }}/"
-        tar -xOf ${{ inputs.docker-path }}/rootfs/opt/npm-pack.tgz package/package.json
-    - id: build-rootfs
-      shell: bash
-      run: tar -C ${{ inputs.docker-path }}/rootfs -czf ${{ inputs.docker-path }}/rootfs.tar.gz ./
+        path: ${{ inputs.docker-path }}/

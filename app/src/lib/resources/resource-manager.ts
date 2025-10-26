@@ -3,7 +3,6 @@ import {jsonc} from "jsonc";
 import * as path from 'path';
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
-import {LogLevel} from "../../app/event/log.js";
 import {iCPSAppOptions} from "../../app/factory.js";
 import * as PHOTOS_LIBRARY from '../photos-library/constants.js';
 import {iCPSEventRuntimeWarning} from "./events-types.js";
@@ -11,6 +10,7 @@ import {Resources} from "./main.js";
 import {FILE_ENCODING, HAR_FILE_NAME, LIBRARY_LOCK_FILE_NAME, LOG_FILE_NAME, METRICS_FILE_NAME, PhotosAccountZone, RESOURCE_FILE_NAME, ResourceFile, iCPSResources} from "./resource-types.js";
 import { PushSubscription } from "./web-server-types.js";
 import webpush from 'web-push'
+import {LogLevel} from "./state-manager.js";
 
 /**
  * This class handles access to the .icloud-photos-sync resource file and handles currently applied configurations from the CLI and environment variables
@@ -27,16 +27,15 @@ export class ResourceManager {
      * @param appOptions - The parsed app options
      */
     constructor(appOptions: iCPSAppOptions) {
-        // Cannot use logger here
-        Object.assign(this._resources, appOptions);
+        // Assign app options & resource files to this data structure
+        Object.assign(this._resources, this._readResourceFile(), appOptions);
 
-        const resourceFile = this._readResourceFile(); // Getting data from the resource file
-        this._resources.libraryVersion = resourceFile.libraryVersion; // 'soft' setting the library version (not writing back to file)
-
-        // writing back whatever trust token should be used
-        this.trustToken = this._resources.refreshToken
-            ? undefined // If we force refresh the token set to undefined
-            : this._resources.trustToken ?? resourceFile.trustToken; // Use app option over whatever was already in the file
+        // If trustToken should be refreshed, we clear it now
+        if(this._resources.refreshToken) {
+            this._resources.trustToken = undefined
+        }
+        // Making sure new merged configuration is persisted to file
+        this._writeResourceFile()
     }
 
     /**
@@ -269,8 +268,8 @@ export class ResourceManager {
     /**
      * @returns If the application should fail on MFA requirement
      */
-    get failOnMfa(): boolean {
-        return this._resources.failOnMfa;
+    get mfaTimeout(): number {
+        return this._resources.mfaTimeout;
     }
 
     /**

@@ -70,9 +70,9 @@ updates:
       backtrace:
         patterns:
         - "@backtrace*"
-    # ignore:
-    #   - dependency-name: "@types/node"
-    #     versions: ["22.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
+      jsdom:
+        patterns:
+        - "*jsdom"
   
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"

@@ -55,6 +55,15 @@ button.inverted {
     color: rgb(66, 129, 255);
     border: 1px solid rgb(66, 129, 255);
 }
+button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(66, 129, 255, 0.3);
+}
+button:disabled {
+    background-color: rgb(147, 157, 179);
+    cursor: not-allowed;
+    transform: none;
+}
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -93,5 +102,33 @@ input[type="number"] {
 }
 #notificationButton span {
     font-size: 1.2rem;
+}
+`
+
+export const viewCSSDark = `
+ body {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+.content {
+    background-color: #2d2d2d;
+    box-shadow: 0 0 1rem rgba(255, 255, 255, 0.1);
+}
+
+button {
+    background-color: rgb(66, 129, 255);
+    color: #fff;
+}
+
+button.inverted {
+    background-color: #2d2d2d;
+    color: rgb(66, 129, 255);
+    border: 1px solid rgb(66, 129, 255);
+}
+
+#notificationButton {
+    background-color: rgb(66, 129, 255);
+    box-shadow: 0 0 0.5rem rgba(255, 255, 255, 0.2);
 }
 `

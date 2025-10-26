@@ -76,38 +76,26 @@ describe(`Control structure`, () => {
     });
 
     describe(`MFA_REQUIRED event triggered`, () => {
-        test(`Should emit error when FAIL_ON_MFA is set`, () => {
-            mockedResourceManager._resources.failOnMfa = true
-            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR)
+        test(`Should emit error when MFA_TIMEOUT is set to zero`, () => {
+            mockedResourceManager._resources.mfaTimeout = 0
+            const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_NOT_PROVIDED)
 
             mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED)
+            jest.advanceTimersByTime(1)
 
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`MFA code required, failing due to failOnMfa flag`))
-        })
-
-        test(`Should not emit error when FAIL_ON_MFA and ignoreFailOnMFA is set`, () => {
-            const cleanInstances = prepareResources()!;
-            mockedResourceManager = cleanInstances.manager;
-
-            icloud = new iCloud(true)
-            cleanInstances.manager._resources.failOnMfa = true
-            const errorEvent = cleanInstances.event.spyOnEvent(iCPSEventCloud.ERROR)
-
-            cleanInstances.event.emit(iCPSEventCloud.MFA_REQUIRED)
-
-            expect(errorEvent).not.toHaveBeenCalled()
+            expect(mfaEvent).toHaveBeenCalledWith(new Error(`MFA code timeout (consider increasing '--mfa-timeout' if necessary)`))
         })
 
         test(`Should timeout`, () => {
-            mockedResourceManager._resources.failOnMfa = false
+            mockedResourceManager._resources.mfaTimeout = 1
             const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR)
             const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_NOT_PROVIDED)
 
             mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED)
-            jest.advanceTimersByTime(1000*60*10 + 10)
+            jest.advanceTimersByTime(1000 + 10)
 
             expect(errorEvent).not.toHaveBeenCalled()
-            expect(mfaEvent).toHaveBeenCalledWith(new Error(`MFA code timeout (code needs to be provided within 10 minutes)`))
+            expect(mfaEvent).toHaveBeenCalledWith(new Error(`MFA code timeout (consider increasing '--mfa-timeout' if necessary)`))
 
         })
     })
@@ -212,6 +200,7 @@ describe.each([
         test(`Invalid Trust Token - MFA Required`, async () => {
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
             icloud.getReady = jest.fn<typeof icloud.getReady>().mockResolvedValue(true);
+            icloud.getTrustedPhoneNumbers = jest.fn<typeof icloud.getTrustedPhoneNumbers>().mockResolvedValue(`someVal` as any)
 
             const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
             const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.MFA_REQUIRED);
@@ -227,9 +216,10 @@ describe.each([
 
             await icloud.authenticate();
 
+            expect(icloud.getTrustedPhoneNumbers).toHaveBeenCalled()
             expect(trustedEvent).not.toHaveBeenCalled();
             expect(authenticationEvent).toHaveBeenCalled();
-            expect(mfaEvent).toHaveBeenCalled();
+            expect(mfaEvent).toHaveBeenCalledWith(`someVal`);
             expect(errorEvent).not.toHaveBeenCalled();
             expect(mockedValidator.validateSigninResponse).toHaveBeenCalled();
             expect(mockedNetworkManager.applySigninResponse).toHaveBeenCalled();
@@ -419,6 +409,44 @@ describe.each([
     });
 
     describe(`MFA Flow`, () => {
+
+        describe(`Trusted Phone Numbers`, () => {
+            test(`Success`, async () => {
+                const runtimeWarningEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR)
+                mockedNetworkManager.mock
+                    .onGet(`https://idmsa.apple.com/appleauth/auth`)
+                    .reply(200, {data: `someData`});
+                mockedValidator.validateAuthInformationResponse = jest.fn<typeof mockedValidator.validateAuthInformationResponse>()
+                    .mockReturnValue({data: {trustedPhoneNumbers: [`someData`]}} as any)
+
+                await expect(icloud.getTrustedPhoneNumbers()).resolves.toEqual([`someData`])
+                expect(runtimeWarningEvent).not.toHaveBeenCalled()
+            })
+
+            test(`Invalid response`, async () => {
+                const runtimeWarningEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR)
+                mockedNetworkManager.mock
+                    .onGet(`https://idmsa.apple.com/appleauth/auth`)
+                    .reply(200, {data: `invalidData`});
+                mockedValidator.validateAuthInformationResponse = jest.fn<typeof mockedValidator.validateAuthInformationResponse>(() => {
+                    throw new iCPSError(VALIDATOR_ERR.AUTH_INFORMATION_RESPONSE);
+                });
+
+                await expect(icloud.getTrustedPhoneNumbers()).resolves.toEqual([])
+                expect(runtimeWarningEvent).toHaveBeenCalled()
+            })
+
+            test(`Server error`, async () => {
+                const runtimeWarningEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR)
+                mockedNetworkManager.mock
+                    .onGet(`https://idmsa.apple.com/appleauth/auth`)
+                    .reply(500);
+
+                await expect(icloud.getTrustedPhoneNumbers()).resolves.toEqual([])
+                expect(runtimeWarningEvent).toHaveBeenCalled()
+            })
+        })
+
         describe(`Resend MFA`, () => {
             describe.each([
                 {

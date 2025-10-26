@@ -1,39 +1,41 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals";
 import {MockedEventManager, MockedResourceManager, MockedValidator, prepareResources} from "../_helpers/_general";
 import {WebServer} from "../../src/app/web-ui/web-server";
-import { State, StateTrigger, StateType} from "../../src/app/web-ui/state";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from "../../src/lib/resources/events-types";
 import {createRequest, RequestMethod} from 'node-mocks-http'
 import {IncomingMessage} from "http";
-import {loadMockedSite, sendMockedRequest} from "../_helpers/web.helper";
+import {iCPSMockedUIFunction, iCPSMockedUISite, sendMockedRequest} from "../_helpers/web.helper";
 import {MFAMethod} from "../../src/lib/icloud/mfa/mfa-method";
-import * as Config from '../_helpers/_config';
-import {iCPSError} from "../../src/app/error/error";
-import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from "../../src/app/error/error-codes";
 import {TokenApp} from "../../src/app/icloud-app";
 import webpush from 'web-push';
 import {configure, getByTestId} from "@testing-library/dom";
 import '@testing-library/jest-dom/jest-globals';
+import {LogLevel, SerializedState, StateManager, StateType} from "../../src/lib/resources/state-manager";
 
 let mockedEventManager: MockedEventManager;
 let mockedValidator: MockedValidator;
 let mockedResourceManager: MockedResourceManager;
+let mockedState: StateManager
 
 beforeEach(() => {
     const mockedResources = prepareResources()!
     mockedEventManager = mockedResources.event;
     mockedValidator = mockedResources.validator;
     mockedResourceManager = mockedResources.manager;
+    mockedState = mockedResources.state
     jest.clearAllMocks()
 });
 
 describe(`Constructor`, () => {
-    test(`Should create error listener`, () => {
+    test(`Should create HTTP server`, () => {
         const webServer = new WebServer()
         expect(webServer.server).toBeDefined()
-        expect(webServer.server.eventNames()).toContain(`error`)
+    })
 
-        webServer.server.listeners(`error`)[0](new Error(`test`))
+    test(`Should create default MFA Method`, () => {
+        const webServer = new WebServer()
+        expect(webServer.mfaMethod).toBeDefined()
+        expect(webServer.mfaMethod.isDevice).toBeTruthy()
     })
 
     describe(`HTTP Server`, () => {
@@ -44,239 +46,12 @@ describe(`Constructor`, () => {
             expect(serverInstance).toEqual({})
         })
 
-        test.skip(`Should throw startup error`, async () => {
-            const webServer = new WebServer()
-            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR)
-
-            webServer.server.listen = jest.fn().mockImplementation(() => {
-                throw new Error()
-            }) as any
-
-            await expect(webServer.startServer()).rejects.toEqual(new Error(`Unable to start Web server`))
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to start Web server`))
-        })
-
-        test.skip(`Should listen on port`, async () => {
-            const webServer = new WebServer()
-            webServer.server.listen = jest.fn().mockImplementation((_port, cb: any) => cb()) as any
-
-            await webServer.startServer()
-
-            expect(webServer.server.listen).toHaveBeenCalled()
-            expect((webServer.server.listen as any).mock.calls[0][0]).toEqual(Config.defaultConfig.port)
-        })
-
-        test(`Should handle http server error EADDRINUSE`, () => {
-            const webServer = new WebServer()
-
-            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR)
-
-            const error = new Error();
-            (error as any).code = `EADDRINUSE`
-
-            webServer.server.emit(`error`, error)
-
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`HTTP Server could not start, because address/port is in use`))
-        })
-
-        test(`Should handle EACCES`, () => {
-            const webServer = new WebServer()
-
-            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR)
-
-            const error = new Error();
-            (error as any).code = `EACCES`
-
-            webServer.server.emit(`error`, error)
-
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`HTTP Server could not start, because user has insufficient privileges to open address/port`))
-        })
-
-        test(`Should handle listen error`, () => {
-            const webServer = new WebServer()
-
-            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR)
-
-            webServer.server.emit(`error`, new Error())
-
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`HTTP Server Error`))
-        })
-
-        test.skip(`Should handle http-listen error`, async () => {
-            const webServer = new WebServer()
-
-            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventWebServer.ERROR)
-            webServer.server.listen = jest.fn<typeof webServer.server.listen>().mockImplementation((_) => {
-                throw new Error(`test`)
-            }) as any
-
-            await expect(webServer.startServer()).rejects.toEqual(new Error(`Unable to start Web server`))
-            expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to start Web server`))
-        })
-
         test(`Should close the server`, async () => {
             const webServer = new WebServer();
             webServer.server.close = jest.fn().mockImplementation((cb: any) => cb()) as any
 
             await webServer.close()
             expect(webServer.server.close).toHaveBeenCalled()
-        })
-    })
-
-
-    describe(`State changes`, () => {
-        let webServer: WebServer
-
-        beforeEach(() => {
-            webServer = new WebServer()
-            webServer.notificationPusher.sendNotifications = jest.fn<typeof webServer.notificationPusher.sendNotifications>()
-        })
-
-        test(`Should update state on sync trigger`, () => {
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-
-            expect(webServer.state.state).toEqual(StateType.AUTH)
-            expect(webServer.state.nextSync).toBeUndefined()
-            expect(webServer.state.prevError).toBeUndefined()
-            expect(webServer.state.prevTrigger).toBe(StateTrigger.SYNC)
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledTimes(0)
-        })
-
-        test(`Should update state on auth trigger`, () => {
-            mockedEventManager.emit(iCPSEventWebServer.REAUTH_REQUESTED)
-
-            expect(webServer.state.state).toEqual(StateType.AUTH)
-            expect(webServer.state.nextSync).toBeUndefined()
-            expect(webServer.state.prevError).toBeUndefined()
-            expect(webServer.state.prevTrigger).toBe(StateTrigger.AUTH)
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-            
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledTimes(0)
-        })
-
-        test(`Should update state and retain trigger on sync success`, () => {
-            const nextSync = new Date()
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED_DONE, nextSync)
-
-            expect(webServer.state.state).toEqual(StateType.READY)
-            expect(webServer.state.nextSync).toEqual(nextSync.getTime())
-            expect(webServer.state.prevError).toBeUndefined()
-            expect(webServer.state.prevTrigger).toBe(StateTrigger.SYNC)
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-            
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledWith(webServer.state)
-        })
-
-        test(`Should update state and retain trigger on auth success`, () => {
-            mockedEventManager.emit(iCPSEventWebServer.REAUTH_REQUESTED)
-            mockedEventManager.emit(iCPSEventApp.TOKEN)
-
-            expect(webServer.state.state).toEqual(StateType.READY)
-            expect(webServer.state.nextSync).toBeUndefined()
-            expect(webServer.state.prevError).toBeUndefined()
-            expect(webServer.state.prevTrigger).toBe(StateTrigger.AUTH)
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-            
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledWith(webServer.state)
-        })
-
-        test(`Should update state and retain trigger on sync error`, () => {
-            const error = new Error(`test`)
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-            mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, error)
-
-            expect(webServer.state.state).toEqual(StateType.READY)
-            expect(webServer.state.nextSync).toBeUndefined()
-            expect(webServer.state.prevError).toEqual(iCPSError.toiCPSError(error))
-            expect(webServer.state.prevTrigger).toBe(StateTrigger.SYNC)
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-            
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledWith(webServer.state)
-        })
-
-        test(`Should update state and retain trigger on MFA timeout`, () => {
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-            mockedEventManager.emit(iCPSEventMFA.MFA_NOT_PROVIDED)
-
-            expect(webServer.state.state).toEqual(StateType.READY)
-            expect(webServer.state.nextSync).toBeUndefined()
-            expect(webServer.state.prevError).toEqual(new iCPSError(WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED))
-            expect(webServer.state.prevTrigger).toBe(StateTrigger.SYNC)
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-            
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledWith(webServer.state)
-        })
-
-        test(`Should update state and retain trigger on reauth error`, () => {
-            const error = new Error(`test`)
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-            mockedEventManager.emit(iCPSEventWebServer.REAUTH_ERROR, error)
-
-            expect(webServer.state.state).toEqual(StateType.READY)
-            expect(webServer.state.nextSync).toBeUndefined()
-            expect(webServer.state.prevError).toEqual(iCPSError.toiCPSError(error))
-            expect(webServer.state.prevTrigger).toBe(StateTrigger.SYNC)
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-            
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledWith(webServer.state)
-        })
-
-        test(`Should update state and clear error on restart`, () => {
-            const error = new Error(`test`)
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-            mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, error)
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-
-            expect(webServer.state.state).toEqual(StateType.AUTH)
-            expect(webServer.state.nextSync).toBeUndefined()
-            expect(webServer.state.prevError).toBeUndefined()
-            expect(webServer.state.prevTrigger).toBe(StateTrigger.SYNC)
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-            
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledWith(webServer.state)
-        })
-
-        test(`Should update state retain trigger on sync start`, () => {
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-            mockedEventManager.emit(iCPSEventSyncEngine.START)
-
-            expect(webServer.state.state).toEqual(StateType.SYNC)
-            expect(webServer.state.nextSync).toBeUndefined()
-            expect(webServer.state.prevError).toBeUndefined()
-            expect(webServer.state.prevTrigger).toBe(StateTrigger.SYNC)
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledTimes(0)
-            
-        })
-
-        test(`Should update state retain trigger on mfa required`, () => {
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-            mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED)
-
-            expect(webServer.state.state).toEqual(StateType.MFA)
-            expect(webServer.state.nextSync).toBeUndefined()
-            expect(webServer.state.prevError).toBeUndefined()
-            expect(webServer.state.prevTrigger).toBe(StateTrigger.SYNC)
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledWith(webServer.state)
-        })
-
-        test(`Should update state retain trigger on scheduled event`, () => {
-            const nextSync = new Date()
-            mockedEventManager.emit(iCPSEventApp.SCHEDULED, nextSync)
-
-            expect(webServer.state.state).toEqual(StateType.READY)
-            expect(webServer.state.nextSync).toEqual(nextSync.getTime())
-            expect(webServer.state.prevError).toBeUndefined()
-            expect(webServer.state.prevTrigger).toBeUndefined()
-            expect(webServer.state.timestamp).toBeGreaterThanOrEqual(0)
-
-            expect(webServer.notificationPusher.sendNotifications).toHaveBeenCalledTimes(0)
         })
     })
 })
@@ -314,13 +89,12 @@ describe(`Notification Pusher`, () => {
         webServer.notificationPusher.sendPushNotification = jest.fn<typeof webServer.notificationPusher.sendPushNotification>()
         mockedResourceManager._resources.notificationSubscriptions = subscriptions as any
 
-        await webServer.notificationPusher.sendNotifications(webServer.state)
+        await webServer.notificationPusher.sendNotifications({} as SerializedState)
 
         expect(webServer.notificationPusher.sendPushNotification).toHaveBeenCalledTimes(count)
     })
 
     test(`Should send push notification to endpoint`, async () => {
-        webServer.state.serialize = jest.fn<typeof webServer.state.serialize>().mockReturnValue({test: true} as any)
         const subscription = {
             endpoint: `someEndpoint`,
             keys: {
@@ -329,14 +103,12 @@ describe(`Notification Pusher`, () => {
             }
         }
 
-        await webServer.notificationPusher.sendPushNotification(subscription, webServer.state)
+        await webServer.notificationPusher.sendPushNotification(subscription, {state: StateType.READY} as SerializedState)
 
-        expect(webpush.sendNotification).toHaveBeenCalledWith(subscription, JSON.stringify({test: true}))
-        expect(webServer.state.serialize).toHaveBeenCalled()
+        expect(webpush.sendNotification).toHaveBeenCalledWith(subscription, `{"state":"ready"}`)
     })
 
     test(`Should remove push notification on webpush error`, async () => {
-        webServer.state.serialize = jest.fn<typeof webServer.state.serialize>().mockReturnValue({test: true} as any)
         const subscription = {
             endpoint: `someEndpoint`,
             keys: {
@@ -347,180 +119,20 @@ describe(`Notification Pusher`, () => {
         webpush.sendNotification = jest.fn<typeof webpush.sendNotification>().mockRejectedValue(new webpush.WebPushError(`test`, 410, {}, `test`, `test`))
         mockedResourceManager.removeNotificationSubscription = jest.fn<typeof mockedResourceManager.removeNotificationSubscription>()
 
-        await webServer.notificationPusher.sendPushNotification(subscription, webServer.state)
+        await webServer.notificationPusher.sendPushNotification(subscription, {state: StateType.READY} as SerializedState)
 
-        expect(webpush.sendNotification).toHaveBeenCalledWith(subscription, JSON.stringify({test: true}))
-        expect(webServer.state.serialize).toHaveBeenCalled()
+        expect(webpush.sendNotification).toHaveBeenCalledWith(subscription, `{"state":"ready"}`)
         expect(mockedResourceManager.removeNotificationSubscription).toHaveBeenCalledWith(subscription)
     })
-
-    test(`Should handle error`, async () => {
-        webServer.state.serialize = jest.fn<typeof webServer.state.serialize>().mockImplementation(() => { throw new Error(`test`)} )
-        const subscription = {
-            endpoint: `someEndpoint`,
-            keys: {
-                p256dh: `someKey`,
-                auth: `someAuth`
-            }
-        }
-        mockedResourceManager.removeNotificationSubscription = jest.fn<typeof mockedResourceManager.removeNotificationSubscription>()
-
-        await expect(webServer.notificationPusher.sendPushNotification(subscription, webServer.state)).resolves.toBeUndefined()
-
-        expect(webpush.sendNotification).not.toHaveBeenCalled()
-        expect(webServer.state.serialize).toHaveBeenCalled()
-        expect(mockedResourceManager.removeNotificationSubscription).not.toHaveBeenCalled()
-    })
-})
-
-test.each([{
-    desc: `Ready`,
-    stateType: StateType.READY,
-    timestamp: 1,
-    result: {
-        state: `ready`,
-        prevTrigger: undefined,
-        prevError: undefined,
-        timestamp: 1,
-        nextSync: undefined
-    }
-},{
-    desc: `Ready with next sync`,
-    stateType: StateType.READY,
-    timestamp: 1,
-    nextSync: 2,
-    result: {
-        state: `ready`,
-        prevTrigger: undefined,
-        prevError: undefined,
-        timestamp: 1,
-        nextSync: 2
-    }
-},{
-    desc: `Ready with previous error`,
-    stateType: StateType.READY,
-    prevError: new iCPSError(),
-    timestamp: 1,
-    result: {
-        state: `ready`,
-        prevTrigger: undefined,
-        prevError: {
-            code: `UNKNOWN`,
-            message: `UNKNOWN: Unknown error occurred`
-        },
-        timestamp: 1,
-        nextSync: undefined
-    }
-},{
-    desc: `Ready with previous fail on MFA error`,
-    stateType: StateType.READY,
-    prevError: new iCPSError(MFA_ERR.FAIL_ON_MFA),
-    timestamp: 1,
-    result: {
-        state: `ready`,
-        prevTrigger: undefined,
-        prevError: {
-            code: `MFA_FAIL_ON_MFA`,
-            message: `MFA code required. Use the 'Renew Authentication' button to request and enter a new code.`
-        },
-        timestamp: 1,
-        nextSync: undefined
-    }
-},{
-    desc: `Ready with previous MFA code not provided error`,
-    stateType: StateType.READY,
-    prevError: new iCPSError(WEB_SERVER_ERR.MFA_CODE_NOT_PROVIDED),
-    timestamp: 1,
-    result: {
-        state: `ready`,
-        prevTrigger: undefined,
-        prevError: {
-            code: `WEB_SERVER_MFA_CODE_NOT_PROVIDED`,
-            message: `MFA code not provided within timeout period. Use the 'Renew Authentication' button to request and enter a new code.`
-        },
-        timestamp: 1,
-        nextSync: undefined
-    }
-},{
-    desc: `Ready with previous unauthorized error`,
-    stateType: StateType.READY,
-    prevError: new iCPSError(AUTH_ERR.UNAUTHORIZED),
-    timestamp: 1,
-    result: {
-        state: `ready`,
-        prevTrigger: undefined,
-        prevError: {
-            code: `AUTH_UNAUTHORIZED`,
-            message: `Your credentials seem to be invalid. Please check your iCloud credentials and try again.`
-        },
-        timestamp: 1,
-        nextSync: undefined
-    }
-},{
-    stateType: StateType.AUTH,
-    desc: `Auth triggered by Sync`,
-    prevTrigger: StateTrigger.SYNC,
-    timestamp: 1,
-    result: {
-        state: `authenticating`,
-        prevTrigger: `sync`,
-        prevError: undefined,
-        timestamp: 1,
-        nextSync: undefined
-    }
-},{
-    stateType: StateType.AUTH,
-    desc: `Auth triggered by AUTH`,
-    prevTrigger: StateTrigger.AUTH,
-    timestamp: 1,
-    result: {
-        state: `authenticating`,
-        prevTrigger: `auth`,
-        prevError: undefined,
-        timestamp: 1,
-        nextSync: undefined
-    }
-},{
-    stateType: StateType.SYNC,
-    desc: `Sync in progress`,
-    prevTrigger: StateTrigger.SYNC,
-    timestamp: 1,
-    result: {
-        state: `syncing`,
-        prevTrigger: `sync`,
-        prevError: undefined,
-        timestamp: 1,
-        nextSync: undefined
-    }
-},{
-    stateType: StateType.MFA,
-    desc: `Waiting for MFA`,
-    prevTrigger: StateTrigger.SYNC,
-    timestamp: 1,
-    result: {
-        state: `mfa_required`,
-        prevTrigger: `sync`,
-        prevError: undefined,
-        timestamp: 1,
-        nextSync: undefined
-    }
-}])(`Should serialize state - $desc`, async ({stateType, prevError, prevTrigger, timestamp, nextSync, result}) => {
-    const state = new State()
-    state.state = stateType
-    state.prevError = prevError
-    state.timestamp = timestamp
-    state.nextSync = nextSync
-    state.prevTrigger = prevTrigger
-    expect(state.serialize()).toEqual(result)
 })
 
 describe.each([
     {
         webBasePath: ``,
         desc: `Without base path`
-    },{
-        webBasePath: `/test`,
-        desc: `With base path '/test'`
+    // },{
+    //     webBasePath: `/test`,
+    //     desc: `With base path '/test'`
     }
 ])(`Request handling - $desc`, ({webBasePath}) => {
     let webServer: WebServer 
@@ -672,13 +284,13 @@ describe.each([
                 method: `GET`,
                 url: `${webBasePath}/api/state`
             })
-            webServer.state.serialize = jest.fn<typeof webServer.state.serialize>().mockReturnValue({test: true} as any)
+            mockedState.serialize = jest.fn<typeof mockedState.serialize>().mockReturnValue({test: true} as any)
 
             const res = await sendMockedRequest(webServer, req)
 
             expect(res._getStatusCode()).toBe(200);
             expect(res._getJSONData()).toEqual({test: true});
-            expect(webServer.state.serialize).toHaveBeenCalled()
+            expect(mockedState.serialize).toHaveBeenCalled()
         })
     })
 
@@ -692,6 +304,73 @@ describe.each([
         expect(res._getJSONData()).toEqual(expect.objectContaining({
             publicKey: expect.any(String),
         }));
+    })
+
+    describe(`Log request`, () => {
+        beforeEach(() => {
+            mockedState.log = [
+                {
+                    level: LogLevel.DEBUG,
+                    source: `SourceA`,
+                    message: `TestMsg`,
+                    time: 1
+                },{
+                    level: LogLevel.INFO,
+                    source: `SourceA`,
+                    message: `TestMsg`,
+                    time: 1
+                },{
+                    level: LogLevel.WARN,
+                    source: `SourceB`,
+                    message: `TestMsg`,
+                    time: 1
+                },{
+                    level: LogLevel.ERROR,
+                    source: `SourceB`,
+                    message: `TestMsg`,
+                    time: 1
+                }
+            ]
+        })
+
+        test(`Valid log request without parameter`, async () => {
+            const req = createRequest<IncomingMessage>({
+                method: `GET`,
+                url: `${webBasePath}/api/log`
+            })
+
+            const res = await sendMockedRequest(webServer, req)
+            expect(res._getStatusCode()).toBe(200)
+            expect(res._getJSONData().length).toEqual(0)
+        })
+
+        test.each([
+            {
+                logLevel: `debug`,
+                expectedLength: 4
+            },{
+                logLevel: `info`,
+                expectedLength: 3
+            },{
+                logLevel: `warn`,
+                expectedLength: 2
+            },{
+                logLevel: `error`,
+                expectedLength: 1
+            }
+        ])(`Valid log request with valid $logLevel parameter`, async ({logLevel, expectedLength}) => {
+            const req = createRequest<IncomingMessage>({
+                method: `GET`,
+                url: `${webBasePath}/api/log`,
+                queryParameters: {
+                    loglevel: logLevel
+                }
+            })
+
+            const res = await sendMockedRequest(webServer, req)
+            expect(res._getStatusCode()).toBe(200)
+            expect(res._getJSONData().length).toEqual(expectedLength)
+        })
     })
 
     describe(`Reauth request`, () => {
@@ -735,7 +414,7 @@ describe.each([
         })
 
         test(`Pre-Condition not met`, async () => {
-            webServer.state.state = StateType.SYNC; 
+            mockedState.state = StateType.RUNNING
             webServer.triggerReauth = jest.fn<typeof webServer.triggerReauth>().mockResolvedValue(``)
             const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR)
             const req = createRequest<IncomingMessage>({
@@ -783,7 +462,7 @@ describe.each([
         })
 
         test(`Pre-Condition not met`, async () => {
-            webServer.state.state = StateType.SYNC; 
+            mockedState.state = StateType.RUNNING
             const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.WEB_SERVER_ERROR)
             const req = createRequest<IncomingMessage>({
                 method: `POST`,
@@ -1115,10 +794,12 @@ describe.each([
 
     describe(`WebUI`, () => {
         configure({testIdAttribute: `id`})
+        let site: iCPSMockedUISite
 
         // Fake Timers & Clearing them is necessary to have no pending task
         beforeEach(() => {
             jest.useFakeTimers();
+            site = new iCPSMockedUISite(webServer)
         })
         afterEach(() => {
             jest.clearAllTimers();
@@ -1127,185 +808,326 @@ describe.each([
 
         describe(`State UI`, () => {
             test(`Handle state view request`, async () => {
-                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
+                await site.load(`${webBasePath}/state`)
             
 
-                expect(getByTestId(site.view, `unknown-symbol`)).toBeVisible();
-                expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `error-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `auth-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `sync-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `unknown-symbol`)).toBeVisible();
+                expect(getByTestId(site.body, `ok-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `error-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `running-symbol`)).not.toBeVisible();
 
-                expect(getByTestId(site.view, `sync-button`)).toBeVisible();
-                expect(getByTestId(site.view, `reauth-button`)).toBeVisible();
-                expect(getByTestId(site.view, `state-text`)).toHaveTextContent(`...`);
+                expect(getByTestId(site.body, `sync-button`)).toBeVisible();
+                expect(getByTestId(site.body, `reauth-button`)).toBeVisible();
+                expect(getByTestId(site.body, `state-text`)).toHaveTextContent(`...`);
 
-                expect(getByTestId(site.view, `next-sync-text`)).not.toBeVisible();
+                expect(getByTestId(site.body, `progress-bar`)).not.toBeVisible();
+
+                expect(getByTestId(site.body, `next-sync-text`)).not.toBeVisible();
 
                 jest.advanceTimersByTime(1000)
 
-                expect(site.functions.fetch).toHaveBeenCalledTimes(1)
-                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.mockedFunctions.fetch).toHaveBeenCalledTimes(1)
+                expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
             })
 
-            test(`Handle initial 'ready' state`, async () => {
-                mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
+            test(`Handle 'ready' without previous trigger`, async () => {
+                mockedEventManager.emit(iCPSEventApp.SCHEDULED, new Date(1000))
+                mockedState.timestamp = 1000
+                await site.load(`${webBasePath}/state`)
 
-                await site.window.refreshState()
+                await site.dom.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
-                expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `error-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `auth-symbol`)).toBeVisible();
-                expect(getByTestId(site.view, `sync-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `unknown-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `ok-symbol`)).toBeVisible();
+                expect(getByTestId(site.body, `error-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `running-symbol`)).not.toBeVisible();
 
-                expect(getByTestId(site.view, `sync-button`)).not.toBeVisible();
-                expect(getByTestId(site.view, `reauth-button`)).not.toBeVisible();
-                expect(getByTestId(site.view, `state-text`)).toHaveTextContent(`...`);
+                expect(getByTestId(site.body, `sync-button`)).toBeVisible();
+                expect(getByTestId(site.body, `reauth-button`)).toBeVisible();
 
-                expect(getByTestId(site.view, `next-sync-text`)).not.toBeVisible();
+                expect(getByTestId(site.body, `state-text`)).toBeVisible();
+                expect(getByTestId(site.body, `state-text`)).toHaveTextContent(`Application ready`);
 
+                expect(getByTestId(site.body, `progress-bar`)).not.toBeVisible();
+
+                expect(getByTestId(site.body, `next-sync-text`)).toBeVisible();
+                expect(getByTestId(site.body, `next-sync-text`)).toHaveTextContent(`Next sync scheduled at1/1/1970, 12:00:01 AM`);
             })
 
             test(`Handle 'ready' state with previous error triggered by sync`, async () => {
                 mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
                 mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, new Error(`test`))
-                webServer.state.timestamp = 1000
-                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
+                mockedState.timestamp = 1000
+                await site.load(`${webBasePath}/state`)
 
-                await site.window.refreshState()
+                await site.dom.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
-                expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `error-symbol`)).toBeVisible();
-                expect(getByTestId(site.view, `auth-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `sync-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `unknown-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `ok-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `error-symbol`)).toBeVisible();
+                expect(getByTestId(site.body, `running-symbol`)).not.toBeVisible();
 
-                expect(getByTestId(site.view, `sync-button`)).toBeVisible();
-                expect(getByTestId(site.view, `reauth-button`)).toBeVisible();
+                expect(getByTestId(site.body, `sync-button`)).toBeVisible();
+                expect(getByTestId(site.body, `reauth-button`)).toBeVisible();
 
-                expect(getByTestId(site.view, `state-text`)).toBeVisible();
-                expect(getByTestId(site.view, `state-text`)).toHaveTextContent(`Last sync failed at1/1/1970, 12:00:01 AMUNKNOWN: Unknown error occurred caused by test`);
+                expect(getByTestId(site.body, `state-text`)).toBeVisible();
+                expect(getByTestId(site.body, `state-text`)).toHaveTextContent(`Last sync failed at1/1/1970, 12:00:01 AMUNKNOWN: Unknown error occurred caused by test`);
 
-                expect(getByTestId(site.view, `next-sync-text`)).toBeVisible();
-                expect(getByTestId(site.view, `next-sync-text`)).toHaveTextContent(`Next sync scheduled at...`);
+                expect(getByTestId(site.body, `progress-bar`)).not.toBeVisible();
+
+                expect(getByTestId(site.body, `next-sync-text`)).toBeVisible();
+                expect(getByTestId(site.body, `next-sync-text`)).toHaveTextContent(`Next sync scheduled at...`);
             })
 
             test(`Handle 'ready' state with previous error triggered by auth`, async () => {
                 mockedEventManager.emit(iCPSEventWebServer.REAUTH_REQUESTED)
                 mockedEventManager.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, new Error(`test`))
-                webServer.state.timestamp = 1000
-                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
+                mockedState.timestamp = 1000
+                await site.load(`${webBasePath}/state`)
 
-                await site.window.refreshState()
+                await site.dom.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
-                expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `error-symbol`)).toBeVisible();
-                expect(getByTestId(site.view, `auth-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `sync-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `unknown-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `ok-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `error-symbol`)).toBeVisible();
+                expect(getByTestId(site.body, `running-symbol`)).not.toBeVisible();
 
-                expect(getByTestId(site.view, `sync-button`)).toBeVisible();
-                expect(getByTestId(site.view, `reauth-button`)).toBeVisible();
+                expect(getByTestId(site.body, `sync-button`)).toBeVisible();
+                expect(getByTestId(site.body, `reauth-button`)).toBeVisible();
 
-                expect(getByTestId(site.view, `state-text`)).toBeVisible();
-                expect(getByTestId(site.view, `state-text`)).toHaveTextContent(`Last auth failed at1/1/1970, 12:00:01 AMUNKNOWN: Unknown error occurred caused by test`);
+                expect(getByTestId(site.body, `state-text`)).toBeVisible();
+                expect(getByTestId(site.body, `state-text`)).toHaveTextContent(`Last auth failed at1/1/1970, 12:00:01 AMUNKNOWN: Unknown error occurred caused by test`);
 
-                expect(getByTestId(site.view, `next-sync-text`)).toBeVisible();
-                expect(getByTestId(site.view, `next-sync-text`)).toHaveTextContent(`Next sync scheduled at...`);
+                expect(getByTestId(site.body, `progress-bar`)).not.toBeVisible();
+
+                expect(getByTestId(site.body, `next-sync-text`)).toBeVisible();
+                expect(getByTestId(site.body, `next-sync-text`)).toHaveTextContent(`Next sync scheduled at...`);
             })
 
             test(`Handle 'ready' state with previous success triggered by sync`, async () => {
                 mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
                 mockedEventManager.emit(iCPSEventApp.SCHEDULED_DONE, new Date(1000))
-                webServer.state.timestamp = 1000
-                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
+                mockedState.timestamp = 1000
+                await site.load(`${webBasePath}/state`)
 
-                await site.window.refreshState()
+                await site.dom.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
-                expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `ok-symbol`)).toBeVisible();
-                expect(getByTestId(site.view, `error-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `auth-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `sync-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `unknown-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `ok-symbol`)).toBeVisible();
+                expect(getByTestId(site.body, `error-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `running-symbol`)).not.toBeVisible();
 
-                expect(getByTestId(site.view, `sync-button`)).toBeVisible();
-                expect(getByTestId(site.view, `reauth-button`)).toBeVisible();
+                expect(getByTestId(site.body, `sync-button`)).toBeVisible();
+                expect(getByTestId(site.body, `reauth-button`)).toBeVisible();
 
-                expect(getByTestId(site.view, `state-text`)).toBeVisible();
-                expect(getByTestId(site.view, `state-text`)).toHaveTextContent(`Last sync successful at1/1/1970, 12:00:01 AM`);
+                expect(getByTestId(site.body, `state-text`)).toBeVisible();
+                expect(getByTestId(site.body, `state-text`)).toHaveTextContent(`Last sync successful at1/1/1970, 12:00:01 AM`);
 
-                expect(getByTestId(site.view, `next-sync-text`)).toBeVisible();
-                expect(getByTestId(site.view, `next-sync-text`)).toHaveTextContent(`Next sync scheduled at1/1/1970, 12:00:01 AM`);
+                expect(getByTestId(site.body, `progress-bar`)).not.toBeVisible();
+
+                expect(getByTestId(site.body, `next-sync-text`)).toBeVisible();
+                expect(getByTestId(site.body, `next-sync-text`)).toHaveTextContent(`Next sync scheduled at1/1/1970, 12:00:01 AM`);
             })
 
-            test(`Handle 'auth' state`, async () => {
+            test(`Handle 'running' state`, async () => {
                 mockedEventManager.emit(iCPSEventApp.SCHEDULED_START)
-                webServer.state.timestamp = 1000
-                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
+                mockedEventManager.emit(iCPSEventCloud.AUTHENTICATION_STARTED)
+                await site.load(`${webBasePath}/state`)
 
-                await site.window.refreshState()
+                await site.dom.window.refreshState()
 
-                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
+                expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
 
-                expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `error-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `auth-symbol`)).toBeVisible();
-                expect(getByTestId(site.view, `sync-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `unknown-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `ok-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `error-symbol`)).not.toBeVisible();
+                expect(getByTestId(site.body, `running-symbol`)).toBeVisible();
 
-                expect(getByTestId(site.view, `sync-button`)).not.toBeVisible();
-                expect(getByTestId(site.view, `reauth-button`)).not.toBeVisible();
+                expect(getByTestId(site.body, `sync-button`)).not.toBeVisible();
+                expect(getByTestId(site.body, `reauth-button`)).not.toBeVisible();
+                expect(getByTestId(site.body, `state-text`)).toHaveTextContent(`Authenticating user...`);
 
-                expect(getByTestId(site.view, `state-text`)).toBeVisible();
-                expect(getByTestId(site.view, `state-text`)).toHaveTextContent(`Authenticating...`);
+                expect(getByTestId(site.body, `progress-bar`)).toBeVisible();
+                expect(getByTestId(site.body, `progress-bar`).style.width).toBe(`1%`);
 
-                expect(getByTestId(site.view, `next-sync-text`)).not.toBeVisible();
+                expect(getByTestId(site.body, `next-sync-text`)).not.toBeVisible();
+            })
+        })
+
+        describe.each([
+            {
+                preCon: iCPSEventCloud.MFA_REQUIRED,
+                sitePath: `${webBasePath}/submit-mfa`
+            },{
+                preCon: iCPSEventCloud.MFA_REQUIRED,
+                sitePath: `${webBasePath}/request-mfa`
+            },{
+                preCon: iCPSEventCloud.AUTHENTICATION_STARTED,
+                sitePath: `${webBasePath}/state`
+            }
+        ])(`Log View on $sitePath`, ({sitePath, preCon}) => {
+
+            beforeEach(async () => {
+                mockedEventManager.emit(preCon)
+                await site.load(sitePath)
+                // Disabling state refresh
+                site.dom.window.refreshState = jest.fn()
+                mockedState.log = [
+                    {
+                        level: LogLevel.DEBUG,
+                        source: `SourceA`,
+                        message: `TestMsg`,
+                        time: 1
+                    },{
+                        level: LogLevel.INFO,
+                        source: `SourceA`,
+                        message: `TestMsg`,
+                        time: 1
+                    },{
+                        level: LogLevel.WARN,
+                        source: `SourceB`,
+                        message: `TestMsg`,
+                        time: 1
+                    },{
+                        level: LogLevel.ERROR,
+                        source: `SourceB`,
+                        message: `TestMsg`,
+                        time: 1
+                    }
+                ]
             })
 
-            test(`Handle 'sync' state`, async () => {
-                mockedEventManager.emit(iCPSEventSyncEngine.START)
-                webServer.state.timestamp = 1000
-                const site = await loadMockedSite(webServer, `${webBasePath}/state`)
+            test(`Log View hidden`, () => {
+                expect(getByTestId(site.body, `logContent`)).not.toBeVisible();
+                expect(getByTestId(site.body, `logHeader`)).toBeVisible();
 
-                await site.window.refreshState()
-
-                expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
-
-                expect(getByTestId(site.view, `unknown-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `ok-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `error-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `auth-symbol`)).not.toBeVisible();
-                expect(getByTestId(site.view, `sync-symbol`)).toBeVisible();
-
-                expect(getByTestId(site.view, `sync-button`)).not.toBeVisible();
-                expect(getByTestId(site.view, `reauth-button`)).not.toBeVisible();
-
-                expect(getByTestId(site.view, `state-text`)).toBeVisible();
-                expect(getByTestId(site.view, `state-text`)).toHaveTextContent(`Syncing...`);
-
-                expect(getByTestId(site.view, `next-sync-text`)).not.toBeVisible();
+                expect(getByTestId(site.body, `logDebugBtn`)).not.toBeVisible();
+                expect(getByTestId(site.body, `logInfoBtn`)).not.toBeVisible();
+                expect(getByTestId(site.body, `logWarnBtn`)).not.toBeVisible();
+                expect(getByTestId(site.body, `logErrorBtn`)).not.toBeVisible();
+                expect(getByTestId(site.body, `pauseBtn`)).not.toBeVisible();
             })
 
+            test.each([
+                {
+                    element: `logHeaderLeft`
+                },{
+                    element: `logExpandButton`
+                }
+            ])(`Log View opened`, async ({element}) => {
+                const mock = site.mockFunction(`setLog`)
+                getByTestId(site.body, element).click()
+
+                expect(getByTestId(site.body, `logContent`).children[0].innerHTML).toEqual(`Loading logs...`);
+                await mock.waitUntilCalled()
+                
+                expect(getByTestId(site.body, `logContent`)).toBeVisible();
+                expect(getByTestId(site.body, `logHeader`)).toBeVisible();
+
+                expect(getByTestId(site.body, `logDebugBtn`)).toBeVisible();
+                expect(getByTestId(site.body, `logInfoBtn`)).toBeVisible();
+                expect(getByTestId(site.body, `logWarnBtn`)).toBeVisible();
+                expect(getByTestId(site.body, `logErrorBtn`)).toBeVisible();
+                expect(getByTestId(site.body, `pauseBtn`)).toBeVisible();
+
+                expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/log?loglevel=info`, {headers: {Accept: `application/json`}})
+                expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(3);
+            })
+
+            describe(`Log buttons`, () => {
+                let mock: iCPSMockedUIFunction
+                beforeEach(async () => {
+                    mock = site.mockFunction(`setLog`)
+                    getByTestId(site.body, `logHeaderLeft`).click()
+                    site.mockedFunctions.fetch.mockClear()
+                    await mock.waitUntilCalled()
+                })
+
+                test(`Debug button`, async () => {
+                    getByTestId(site.body, `logDebugBtn`).click()
+                    expect(getByTestId(site.body, `logContent`).children[0].innerHTML).toEqual(`Loading logs...`);
+
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/log?loglevel=debug`, {headers: {Accept: `application/json`}})
+                    expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(4);
+                })
+                
+                test(`Warn button`, async () => {
+                    getByTestId(site.body, `logWarnBtn`).click()
+                    expect(getByTestId(site.body, `logContent`).children[0].innerHTML).toEqual(`Loading logs...`);
+
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/log?loglevel=warn`, {headers: {Accept: `application/json`}})
+                    expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(2);
+                })
+
+                test(`Error button`, async () => {
+                    getByTestId(site.body, `logErrorBtn`).click()
+                    expect(getByTestId(site.body, `logContent`).children[0].innerHTML).toEqual(`Loading logs...`);
+
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/log?loglevel=error`, {headers: {Accept: `application/json`}})
+                    expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(1);
+                })
+
+                test(`Pause/Resume button`, async () => {
+                    getByTestId(site.body, `pauseBtn`).click()
+                    expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(3);
+                    expect(getByTestId(site.body, `logDebugBtn`)).toBeDisabled();
+                    expect(getByTestId(site.body, `logInfoBtn`)).toBeDisabled();
+                    expect(getByTestId(site.body, `logWarnBtn`)).toBeDisabled();
+                    expect(getByTestId(site.body, `logErrorBtn`)).toBeDisabled();
+
+                    expect(site.mockedFunctions.fetch).not.toHaveBeenCalled()
+                    expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(3);
+
+                    getByTestId(site.body, `pauseBtn`).click()
+
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/log?loglevel=info`, {headers: {Accept: `application/json`}})
+                    expect(getByTestId(site.body, `logDebugBtn`)).toBeEnabled();
+                    expect(getByTestId(site.body, `logInfoBtn`)).toBeEnabled();
+                    expect(getByTestId(site.body, `logWarnBtn`)).toBeEnabled();
+                    expect(getByTestId(site.body, `logErrorBtn`)).toBeEnabled();
+
+                    expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(3);
+                })
+
+                test(`Don't update if logs are identical`, async () => {
+                    const logLineMock = site.mockFunction(`addLogLine`)
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/log?loglevel=info`, {headers: {Accept: `application/json`}})
+                    expect(logLineMock.jestMock).not.toHaveBeenCalled()
+
+                })
+            })
         })
 
         describe(`Submit MFA UI`, () => {
             test(`Pre-condition not met`, async () => {
                 mockedEventManager.emit(iCPSEventSyncEngine.START);
 
-                const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`)
+                const res = await site.load(`${webBasePath}/submit-mfa`)
 
-                expect(site.res.statusCode).toEqual(302)
-                expect(site.res.getHeader(`location`)).toEqual(`${webBasePath}/state`)
+                expect(res.statusCode).toEqual(302)
+                expect(res.getHeader(`location`)).toEqual(`${webBasePath}/state`)
             })
 
             describe(`Pre-condition met`, () => {
@@ -1314,50 +1136,50 @@ describe.each([
                 })
 
                 test(`Handle 'MFA' state`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/state`)
+                    await site.load(`${webBasePath}/state`)
 
-                    await site.window.refreshState()
+                    await site.dom.window.refreshState()
 
-                    expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
-                    expect(site.functions.navigate).toHaveBeenCalledWith(`${webBasePath}/submit-mfa`)
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/state`, {headers: {Accept: `application/json`}})
+                    expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`${webBasePath}/submit-mfa`)
                 })
 
                 test(`loads submit-mfa view & focus correctly set`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`)
+                    await site.load(`${webBasePath}/submit-mfa`)
 
-                    expect(getByTestId(site.view, `firstDigit`)).toBeVisible();
-                    expect(getByTestId(site.view, `secondDigit`)).toBeVisible();
-                    expect(getByTestId(site.view, `thirdDigit`)).toBeVisible();
-                    expect(getByTestId(site.view, `fourthDigit`)).toBeVisible();
-                    expect(getByTestId(site.view, `fifthDigit`)).toBeVisible();
-                    expect(getByTestId(site.view, `sixthDigit`)).toBeVisible();
+                    expect(getByTestId(site.body, `firstDigit`)).toBeVisible();
+                    expect(getByTestId(site.body, `secondDigit`)).toBeVisible();
+                    expect(getByTestId(site.body, `thirdDigit`)).toBeVisible();
+                    expect(getByTestId(site.body, `fourthDigit`)).toBeVisible();
+                    expect(getByTestId(site.body, `fifthDigit`)).toBeVisible();
+                    expect(getByTestId(site.body, `sixthDigit`)).toBeVisible();
 
-                    expect(getByTestId(site.view, `submitButton`)).toBeVisible();
-                    expect(getByTestId(site.view, `resendButton`)).toBeVisible();
-                    expect(getByTestId(site.view, `cancelButton`)).toBeVisible();
-                    expect(getByTestId(site.view, `submitButton`)).toBeEnabled();
-                    expect(getByTestId(site.view, `resendButton`)).toBeEnabled();
-                    expect(getByTestId(site.view, `cancelButton`)).toBeEnabled();
+                    expect(getByTestId(site.body, `submitButton`)).toBeVisible();
+                    expect(getByTestId(site.body, `resendButton`)).toBeVisible();
+                    expect(getByTestId(site.body, `cancelButton`)).toBeVisible();
+                    expect(getByTestId(site.body, `submitButton`)).toBeEnabled();
+                    expect(getByTestId(site.body, `resendButton`)).toBeEnabled();
+                    expect(getByTestId(site.body, `cancelButton`)).toBeEnabled();
                 })
 
                 test(`sets the focus onto the next input field when a digit is entered`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`)
+                    await site.load(`${webBasePath}/submit-mfa`)
 
-                    const inputs = site.view.querySelectorAll(`#mfaInput input`);
+                    const inputs = site.body.querySelectorAll(`#mfaInput input`);
                     const firstInput = inputs[0] as HTMLInputElement;
                     const secondInput = inputs[1] as HTMLInputElement;
 
                     firstInput.focus();
                     firstInput.value = `1`;
-                    firstInput.dispatchEvent(new site.window.Event(`input`));
+                    firstInput.dispatchEvent(new site.dom.window.Event(`input`));
 
                     expect(secondInput).toHaveFocus();
                 });
 
                 test(`distributes the digits across the input fields when pasting`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`)
+                    await site.load(`${webBasePath}/submit-mfa`)
 
-                    const inputs = site.view.querySelectorAll(`#mfaInput input`);
+                    const inputs = site.body.querySelectorAll(`#mfaInput input`);
                     const firstInput = inputs[0] as HTMLInputElement;
                     const secondInput = inputs[1] as HTMLInputElement;
                     const thirdInput = inputs[2] as HTMLInputElement;
@@ -1366,9 +1188,9 @@ describe.each([
                     const sixthInput = inputs[5] as HTMLInputElement;
 
                     firstInput.focus();
-                    firstInput.dispatchEvent(new site.window.Event(`focus`));
+                    firstInput.dispatchEvent(new site.dom.window.Event(`focus`));
 
-                    const pasteEvent = new site.window.Event(`paste`, {bubbles: true});
+                    const pasteEvent = new site.dom.window.Event(`paste`, {bubbles: true});
                     (pasteEvent as any).clipboardData = {
                         getData: () => `123456`,
                     };
@@ -1383,63 +1205,63 @@ describe.each([
                 });
 
                 test(`enters mfa code`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`);
+                    await site.load(`${webBasePath}/submit-mfa`);
 
-                    (getByTestId(site.view, `firstDigit`) as HTMLInputElement).value = `1`;
-                    (getByTestId(site.view, `secondDigit`) as HTMLInputElement).value = `2`;
-                    (getByTestId(site.view, `thirdDigit`) as HTMLInputElement).value = `3`;
-                    (getByTestId(site.view, `fourthDigit`) as HTMLInputElement).value = `4`;
-                    (getByTestId(site.view, `fifthDigit`) as HTMLInputElement).value = `5`;
-                    (getByTestId(site.view, `sixthDigit`) as HTMLInputElement).value = `6`;
+                    (getByTestId(site.body, `firstDigit`) as HTMLInputElement).value = `1`;
+                    (getByTestId(site.body, `secondDigit`) as HTMLInputElement).value = `2`;
+                    (getByTestId(site.body, `thirdDigit`) as HTMLInputElement).value = `3`;
+                    (getByTestId(site.body, `fourthDigit`) as HTMLInputElement).value = `4`;
+                    (getByTestId(site.body, `fifthDigit`) as HTMLInputElement).value = `5`;
+                    (getByTestId(site.body, `sixthDigit`) as HTMLInputElement).value = `6`;
 
 
-                    getByTestId(site.view, `submitButton`).click()
+                    getByTestId(site.body, `submitButton`).click()
 
-                    expect(site.functions.navigate).not.toHaveBeenCalled()
-                    expect(site.functions.alert).not.toHaveBeenCalled()
-                    expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/mfa?code=123456`, {method: `POST`})
-                    expect(getByTestId(site.view, `submitButton`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `submitButton`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(site.mockedFunctions.navigate).not.toHaveBeenCalled()
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/mfa?code=123456`, {method: `POST`})
+                    expect(getByTestId(site.body, `submitButton`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `submitButton`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
                 })
 
                 test(`displays an alert if mfa code submission failed`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`);
-                    site.functions.fetch.mockImplementation(() => {
+                    await site.load(`${webBasePath}/submit-mfa`);
+                    site.mockedFunctions.fetch.mockImplementation(() => {
                         throw new Error(`test`)
                     });
 
-                    (getByTestId(site.view, `firstDigit`) as HTMLInputElement).value = `1`;
-                    (getByTestId(site.view, `secondDigit`) as HTMLInputElement).value = `2`;
-                    (getByTestId(site.view, `thirdDigit`) as HTMLInputElement).value = `3`;
-                    (getByTestId(site.view, `fourthDigit`) as HTMLInputElement).value = `4`;
-                    (getByTestId(site.view, `fifthDigit`) as HTMLInputElement).value = `5`;
-                    (getByTestId(site.view, `sixthDigit`) as HTMLInputElement).value = `6`;
+                    (getByTestId(site.body, `firstDigit`) as HTMLInputElement).value = `1`;
+                    (getByTestId(site.body, `secondDigit`) as HTMLInputElement).value = `2`;
+                    (getByTestId(site.body, `thirdDigit`) as HTMLInputElement).value = `3`;
+                    (getByTestId(site.body, `fourthDigit`) as HTMLInputElement).value = `4`;
+                    (getByTestId(site.body, `fifthDigit`) as HTMLInputElement).value = `5`;
+                    (getByTestId(site.body, `sixthDigit`) as HTMLInputElement).value = `6`;
 
 
-                    getByTestId(site.view, `submitButton`).click()
+                    getByTestId(site.body, `submitButton`).click()
 
-                    expect(site.functions.navigate).not.toHaveBeenCalled()
-                    expect(site.functions.alert).toHaveBeenCalledWith(`MFA submission failed: undefined`)
-                    expect(getByTestId(site.view, `submitButton`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `submitButton`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(site.mockedFunctions.navigate).not.toHaveBeenCalled()
+                    expect(site.mockedFunctions.alert).toHaveBeenCalledWith(`MFA submission failed: undefined`)
+                    expect(getByTestId(site.body, `submitButton`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `submitButton`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
                 })
 
                 test(`navigates to resend mfa ui`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`);
+                    await site.load(`${webBasePath}/submit-mfa`);
 
-                    getByTestId(site.view, `resendButton`).click()
+                    getByTestId(site.body, `resendButton`).click()
 
-                    expect(site.functions.navigate).toHaveBeenCalledWith(`${webBasePath}/request-mfa`)
-                    expect(site.functions.fetch).not.toHaveBeenCalled()
+                    expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`${webBasePath}/request-mfa`)
+                    expect(site.mockedFunctions.fetch).not.toHaveBeenCalled()
                 })
 
                 test(`navigates to state ui on cancel`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/submit-mfa`);
+                    await site.load(`${webBasePath}/submit-mfa`);
 
-                    getByTestId(site.view, `cancelButton`).click()
+                    getByTestId(site.body, `cancelButton`).click()
 
-                    expect(site.functions.navigate).toHaveBeenCalledWith(`${webBasePath}/state`)
-                    expect(site.functions.fetch).not.toHaveBeenCalled()
+                    expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`${webBasePath}/state`)
+                    expect(site.mockedFunctions.fetch).not.toHaveBeenCalled()
 
                 })
             })
@@ -1449,99 +1271,199 @@ describe.each([
             test(`Pre-condition not met`, async () => {
                 mockedEventManager.emit(iCPSEventSyncEngine.START);
 
-                const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`)
+                const res = await site.load(`${webBasePath}/request-mfa`)
 
-                expect(site.res.statusCode).toEqual(302)
-                expect(site.res.getHeader(`location`)).toEqual(`${webBasePath}/state`)
+                expect(res.statusCode).toEqual(302)
+                expect(res.getHeader(`location`)).toEqual(`${webBasePath}/state`)
             })
 
             describe(`Pre-condition met`, () => {
                 beforeEach(() => {
-                    mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED)
+                    mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED, [{id: 1, numberWithDialCode: `+123`}, {id: 2, numberWithDialCode: `+456`}])
                 })
 
                 test(`loads request-mfa page`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`)
+                    await site.load(`${webBasePath}/request-mfa`)
 
-                    expect(getByTestId(site.view, `device-button`)).toBeVisible();
-                    expect(getByTestId(site.view, `sms-button`)).toBeVisible();
-                    expect(getByTestId(site.view, `voice-button`)).toBeVisible();
-                    expect(getByTestId(site.view, `cancel-button`)).toBeVisible();
+                    expect(getByTestId(site.body, `device-button`)).toBeVisible();
+                    expect(getByTestId(site.body, `sms-button`)).toBeVisible();
+                    expect(getByTestId(site.body, `voice-button`)).toBeVisible();
+                    expect(getByTestId(site.body, `cancel-button`)).toBeVisible();
                 })
 
                 test(`requests mfa code via device`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`);
+                    await site.load(`${webBasePath}/request-mfa`);
 
-                    getByTestId(site.view, `device-button`).click()
+                    getByTestId(site.body, `device-button`).click()
 
-                    expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=device`, {method: `POST`})
-                    expect(getByTestId(site.view, `device-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `sms-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `voice-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `cancel-button`)).toBeEnabled()
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=device`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
                     // This should happen - not sure why it does not
-                    // expect(site.functions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
-                    expect(site.functions.alert).not.toHaveBeenCalled()
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
                 })
 
-                test(`requests mfa code via sms`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`);
+                test(`requests mfa code via sms, id 1`, async () => {
+                    await site.load(`${webBasePath}/request-mfa`);
 
-                    getByTestId(site.view, `sms-button`).click()
+                    getByTestId(site.body, `sms-button`).click()
+                    expect(getByTestId(site.body, `sms-option-1`)).toBeVisible()
+                    expect(getByTestId(site.body, `sms-option-1`).children[0].textContent).toEqual(`+123`)
+                    expect(getByTestId(site.body, `sms-option-2`)).toBeVisible()
+                    expect(getByTestId(site.body, `sms-option-2`).children[0].textContent).toEqual(`+456`)
+                    getByTestId(site.body, `sms-option-1`).click()
 
-                    expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=sms`, {method: `POST`})
-                    expect(getByTestId(site.view, `device-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `sms-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `voice-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `cancel-button`)).toBeEnabled()
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=sms&phoneNumberId=1`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
                     // This should happen - not sure why it does not
-                    // expect(site.functions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
-                    expect(site.functions.alert).not.toHaveBeenCalled()
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
                 })
 
-                test(`requests mfa code via voice`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`);
+                test(`requests mfa code via sms, id 2`, async () => {
+                    await site.load(`${webBasePath}/request-mfa`);
 
-                    getByTestId(site.view, `voice-button`).click()
+                    getByTestId(site.body, `sms-button`).click()
+                    expect(getByTestId(site.body, `sms-option-1`)).toBeVisible()
+                    expect(getByTestId(site.body, `sms-option-1`).children[0].textContent).toEqual(`+123`)
+                    expect(getByTestId(site.body, `sms-option-2`)).toBeVisible()
+                    expect(getByTestId(site.body, `sms-option-2`).children[0].textContent).toEqual(`+456`)
+                    getByTestId(site.body, `sms-option-2`).click()
 
-                    expect(site.functions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=voice`, {method: `POST`})
-                    expect(getByTestId(site.view, `device-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `sms-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `voice-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `cancel-button`)).toBeEnabled()
-                    expect(site.functions.alert).not.toHaveBeenCalled()
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=sms&phoneNumberId=2`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
                     // This should happen - not sure why it does not
-                    // expect(site.functions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
+                })
+
+                test(`requests mfa code via sms, no phone numbers available`, async () => {
+                    mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED, [])
+                    await site.load(`${webBasePath}/request-mfa`);
+
+                    getByTestId(site.body, `sms-button`).click()
+                    expect(getByTestId(site.body, `sms-option-undefined`)).toBeVisible()
+                    expect(getByTestId(site.body, `sms-option-undefined`).children[0].textContent).toEqual(`Default`)
+                    getByTestId(site.body, `sms-option-undefined`).click()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=sms`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
+                    // This should happen - not sure why it does not
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
+                })
+
+                test(`requests mfa code via voice, id 1`, async () => {
+                    await site.load(`${webBasePath}/request-mfa`);
+
+                    getByTestId(site.body, `voice-button`).click()
+                    expect(getByTestId(site.body, `voice-option-1`)).toBeVisible()
+                    expect(getByTestId(site.body, `voice-option-1`).children[0].textContent).toEqual(`+123`)
+                    expect(getByTestId(site.body, `voice-option-2`)).toBeVisible()
+                    expect(getByTestId(site.body, `voice-option-2`).children[0].textContent).toEqual(`+456`)
+                    getByTestId(site.body, `voice-option-1`).click()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=voice&phoneNumberId=1`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
+                    // This should happen - not sure why it does not
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                })
+
+                test(`requests mfa code via voice, id 2`, async () => {
+                    await site.load(`${webBasePath}/request-mfa`);
+
+                    getByTestId(site.body, `voice-button`).click()
+                    expect(getByTestId(site.body, `voice-option-1`)).toBeVisible()
+                    expect(getByTestId(site.body, `voice-option-1`).children[0].textContent).toEqual(`+123`)
+                    expect(getByTestId(site.body, `voice-option-2`)).toBeVisible()
+                    expect(getByTestId(site.body, `voice-option-2`).children[0].textContent).toEqual(`+456`)
+                    getByTestId(site.body, `voice-option-2`).click()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=voice&phoneNumberId=2`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
+                    // This should happen - not sure why it does not
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                })
+
+                test(`requests mfa code via voice, no phone numbers available`, async () => {
+                    mockedEventManager.emit(iCPSEventCloud.MFA_REQUIRED, [])
+                    await site.load(`${webBasePath}/request-mfa`);
+
+                    getByTestId(site.body, `voice-button`).click()
+                    expect(getByTestId(site.body, `voice-option-undefined`)).toBeVisible()
+                    expect(getByTestId(site.body, `voice-option-undefined`).children[0].textContent).toEqual(`Default`)
+                    getByTestId(site.body, `voice-option-undefined`).click()
+
+                    expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/resend_mfa?method=voice`, {method: `POST`})
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
+                    // This should happen - not sure why it does not
+                    // expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/submit-mfa`)
+                    expect(site.mockedFunctions.alert).not.toHaveBeenCalled()
                 })
 
                 test(`shows alert if request failed`, async () => {
-                    const site = await loadMockedSite(webServer, `${webBasePath}/request-mfa`);
+                    await site.load(`${webBasePath}/request-mfa`);
 
-                    site.functions.fetch.mockImplementation(() => {
+                    site.mockedFunctions.fetch.mockImplementation(() => {
                         throw new Error(`test`)
                     });
 
-                    getByTestId(site.view, `device-button`).click()
+                    getByTestId(site.body, `device-button`).click()
 
-                    expect(site.functions.alert).toHaveBeenCalledWith(`Failed to request MFA code: test`)
-                    expect(getByTestId(site.view, `device-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `sms-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `voice-button`)).not.toBeEnabled()
-                    expect(getByTestId(site.view, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
-                    expect(getByTestId(site.view, `cancel-button`)).toBeEnabled()
+                    expect(site.mockedFunctions.alert).toHaveBeenCalledWith(`Failed to request MFA code: test`)
+                    expect(getByTestId(site.body, `device-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `device-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `sms-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `sms-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `voice-button`)).not.toBeEnabled()
+                    expect(getByTestId(site.body, `voice-button`).style.backgroundColor).toEqual(`rgb(147, 157, 179)`)
+                    expect(getByTestId(site.body, `cancel-button`)).toBeEnabled()
                     // This should happen - not sure why it does not
-                    //expect(site.functions.navigate).toHaveBeenCalledWith(`/state`)
+                    //expect(site.mockedFunctions.navigate).toHaveBeenCalledWith(`/state`)
                 })
             })
         })

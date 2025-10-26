@@ -20,3 +20,17 @@ div#mfaInput input {
     -moz-appearance: textfield;
 }
 `
+
+export const submitMfaCSSDark = `
+div#mfaInput input {
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+    border: 1px solid #555;
+}
+
+div#mfaInput input:focus {
+    border-color: #4281ff;
+    outline: none;
+    background-color: #2d2d2d;
+}
+`

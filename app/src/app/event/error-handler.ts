@@ -71,13 +71,6 @@ export class ErrorHandler {
                     'application.version': Resources.PackageInfo.version,
                 },
                 url: endpoint,
-                // Database: {
-                //     enable: true,
-                //     path: path.join(Resources.manager().dataDir, `.crash-reporter`),
-                //     captureNativeCrashes: true,
-                //     createDatabaseDirectory: true,
-                //     autoSend: true,
-                // },
                 breadcrumbs: {
                     enable: true,
                     eventType: BreadcrumbType.Manual,
@@ -234,9 +227,15 @@ export class ErrorHandler {
             .on(iCPSEventWebServer.STARTED, () => {
                 this.btClient.breadcrumbs.info(`WEB_SERVER_STARTED`);
             })
-            .on(iCPSEventWebServer.ERROR, () => {
-                this.btClient.breadcrumbs.info(`WEB_SERVER_ERROR`);
-            });
+            .on(iCPSEventWebServer.SYNC_REQUESTED, () => {
+                this.btClient.breadcrumbs.info(`WEB_SERVER_SYNC_REQUESTED`)
+            })
+            .on(iCPSEventWebServer.REAUTH_REQUESTED, () => {
+                this.btClient.breadcrumbs.info(`WEB_SERVER_AUTH_REQUESTED`)
+            })
+            .on(iCPSEventWebServer.REAUTH_ERROR, (err) => {
+                this.btClient.breadcrumbs.warn(`REAUTH_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()})
+            })
 
         Resources.events(this)
             .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {

@@ -64,10 +64,11 @@ Options:
                                    https://icps.steiler.dev/error-reporting/ for
                                    more information. (default: false, env:
                                    ENABLE_CRASH_REPORTING)
-  --fail-on-mfa                    If a MFA is necessary, exit the program.
-                                   Ignored if re-authentication was requested
-                                   from the web UI. (default: false, env:
-                                   FAIL_ON_MFA)
+  --mfa-timeout <number>           If a MFA code is necessary to authenticate,
+                                   wait for these many seconds before canceling 
+                                   the authentication process. Time in seconds,
+                                   should not exceed 10mins (due to server side timing).
+                                   (default: 600, env: MFA_TIMEOUT)             
   --force                          Forcefully remove an existing library lock.
                                    USE WITH CAUTION! (default: false, env:
                                    FORCE)

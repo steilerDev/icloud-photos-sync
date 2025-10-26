@@ -1,5 +1,5 @@
 
-import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
+import {afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import axios from "axios";
 import {AxiosHarTracker} from 'axios-har-tracker';
 import fs from 'fs';
@@ -522,13 +522,13 @@ describe(`NetworkManager`, () => {
         });
 
         describe(`Settle queue`, () => {
-            beforeAll(() => {
-                jest.useFakeTimers();
-            });
+            // beforeAll(() => {
+            //     jest.useFakeTimers();
+            // });
 
-            afterAll(() => {
-                jest.useRealTimers();
-            });
+            // afterAll(() => {
+            //     jest.useRealTimers();
+            // });
 
             test.each([
                 {
@@ -935,7 +935,7 @@ describe(`NetworkManager`, () => {
         describe(`Network methods`, () => {
             test(`metadata get request`, async () => {
                 networkManager._axios.get = jest.fn<typeof networkManager._axios.get>() as any;
-                networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>();
+                networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
                 networkManager.get(`someUrl`, {some: `params`} as any);
 
@@ -951,7 +951,7 @@ describe(`NetworkManager`, () => {
 
             test(`metadata post request`, async () => {
                 networkManager._axios.post = jest.fn<typeof networkManager._axios.post>() as any;
-                networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>();
+                networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
                 networkManager.post(`someUrl`, {some: `data`}, {some: `params`} as any);
 
@@ -967,7 +967,7 @@ describe(`NetworkManager`, () => {
 
             test(`metadata put request`, async () => {
                 networkManager._axios.put = jest.fn<typeof networkManager._axios.put>() as any;
-                networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>();
+                networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
                 networkManager.put(`someUrl`, {some: `data`}, {some: `params`} as any);
 
@@ -999,7 +999,7 @@ describe(`NetworkManager`, () => {
                     const data = `someData`;
                     const url = `someUrl`;
 
-                    networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>();
+                    networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>() as any;
                     networkManager._streamingAxios.get = jest.fn<typeof networkManager._streamingAxios.get>()
                         .mockImplementation((() => {
                             const readableStream = new Stream.Readable();
@@ -1035,7 +1035,7 @@ describe(`NetworkManager`, () => {
                         },
                     });
 
-                    networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>();
+                    networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>() as any;
                     networkManager._streamingAxios.get = jest.fn<typeof networkManager._streamingAxios.get>() as any;
 
                     networkManager.downloadData(url, downloadPath);
@@ -1062,7 +1062,7 @@ describe(`NetworkManager`, () => {
                         },
                     });
 
-                    networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>();
+                    networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>() as any;
                     networkManager._streamingAxios.get = jest.fn<typeof networkManager._streamingAxios.get>() as any;
 
                     networkManager.downloadData(url, downloadPath);

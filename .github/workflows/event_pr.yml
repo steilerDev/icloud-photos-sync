@@ -37,21 +37,3 @@ jobs:
       methods: ${{github.base_ref == 'main' && '["unit-ubuntu", "unit-macos", "e2e", "api"]' || (github.base_ref == 'beta' && '["unit-ubuntu", "e2e", "api"]' || '["unit-ubuntu", "unit-docker"]' ) }} # Only running full suite when targeting beta or main
     secrets:
       gh-token: ${{ secrets.GITHUB_TOKEN }}
-
-  dependabot:
-    name: dependabot-auto-merge
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'steilerdev/icloud-photos-sync'
-    permissions:
-      pull-requests: write
-      contents: write
-    steps:
-      - name: Dependabot metadata
-        id: dependabot-metadata
-        uses: dependabot/fetch-metadata@v2
-      - name: Enable auto-merge for Dependabot PRs
-        if: steps.dependabot-metadata.outputs.update-type == 'version-update:semver-minor' || steps.dependabot-metadata.outputs.update-type == 'version-update:semver-patch'
-        run: gh pr merge --auto --merge "${{github.event.pull_request.html_url}}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

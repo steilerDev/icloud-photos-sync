@@ -7,8 +7,12 @@ export const FAIL_ON_MFA: ErrorStruct = buildErrorStruct(
     name, prefix, `FAIL_ON_MFA`, `MFA code required, failing due to failOnMfa flag`,
 );
 
+export const NO_PHONE_NUMBERS: ErrorStruct = buildErrorStruct(
+    name, prefix, `NO_PHONE_NUMBERS`, `Unable to acquire trusted phone numbers`,
+);
+
 export const MFA_TIMEOUT: ErrorStruct = buildErrorStruct(
-    name, prefix, `TIMEOUT`, `MFA code timeout (code needs to be provided within 10 minutes)`,
+    name, prefix, `TIMEOUT`, `MFA code timeout (consider increasing '--mfa-timeout' if necessary)`,
 );
 
 export const SUBMIT_FAILED: ErrorStruct = buildErrorStruct(

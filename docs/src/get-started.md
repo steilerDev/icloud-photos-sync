@@ -137,25 +137,35 @@ Since this application needs full access to a user's iCloud Photos Library, a fu
 
 In order to perform authentication (without syncing any assets) to validate or acquire the trust token, navigate to the WebUI and select `Renew authentication`.
 
-![Initial Sync](../assets/web-ui/unknown.png)
+![Ready](../assets/web-ui/00_ready.png#only-light)
+![Ready (dark mode)](../assets/web-ui/00_ready-dark.png#only-dark)
 
 This will trigger the authentication flow and an MFA code will be requested from your trusted devices. This will forward to a form to enter the 6-digit code - use the `Submit` button to confirm your submission.
 
-![MFA Form](../assets/web-ui/mfa-form.png)
+![Enter MFA](../assets/web-ui/01_enter-mfa.png#only-light)
+![Enter MFA (dark mode)](../assets/web-ui/01_enter-mfa-dark.png#only-dark)
 
 In case your trusted devices are not available and you need to resend the MFA code through other methods, select `Resend Code/Change Method`.
 
-![MFA Methods](../assets/web-ui/mfa-methods.png)
+![Choose MFA](../assets/web-ui/02_choose-mfa.png#only-light)
+![Choose MFA (dark mode)](../assets/web-ui/02_choose-mfa-dark.png#only-dark)
 
-Once the code has been accepted, the program will run autonomously based on the configured cron schedule until an MFA code is required.
+When selecting a phone base MFA method, the application will present all available 'trusted' numbers. Select the appropriate one for confirmation.
 
-![Reauth Success](../assets/web-ui/reauth-success.png)
+![Choose MFA Number](../assets/web-ui/03_choose-mfa-number.png#only-light)
+![Choose MFA Number (dark mode)](../assets/web-ui/03_choose-mfa-number-dark.png#only-dark)
+
+Once the code has been accepted, the program will run autonomously based on the configured cron schedule until an MFA code is required (~30 days).
+
+![Auth Success](../assets/web-ui/04_auth-success.png#only-light)
+![Auth Success (dark mode)](../assets/web-ui/04_auth-success-dark.png#only-dark)
 
 ### Ad-Hoc Sync
 
-When selecting `Sync now` from the WebUI, the tool will perform authentication, proceed to load the local and remote library and compare the two states. 
+When selecting `Sync now` from the WebUI, the tool will perform authentication and proceed to perform a sync immediately.
 
-![Unknown](../assets/web-ui/unknown.png)
+![Ready](../assets/web-ui/00_ready.png#only-light)
+![Ready (dark mode)](../assets/web-ui/00_ready-dark.png#only-dark)
 
 The remote state will always be applied:
 
@@ -176,7 +186,8 @@ During the sync process various warning could be produced within the application
 
 During the sync, the WebUI will not show any detailed progress information - please check the CLI output and/or log files for more information on the sync progress.
 
-![Sync](../assets/web-ui/sync.png)
+![Running](../assets/web-ui/05_running.png#only-light)
+![Running (dark mode)](../assets/web-ui/05_running-dark.png#only-dark)
 
 === "Docker"
 

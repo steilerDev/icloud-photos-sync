@@ -6,6 +6,7 @@ import {EventManager, ListenerFunction} from "./event-manager.js";
 import {iCPSEvent, iCPSEventLog} from "./events-types.js";
 import {NetworkManager} from "./network-manager.js";
 import {ResourceManager} from "./resource-manager.js";
+import {StateManager} from './state-manager.js';
 import {Validator} from "./validator.js";
 
 /* eslint-disable @typescript-eslint/no-namespace */
@@ -42,6 +43,7 @@ export namespace Resources {
 
         _instances = {} as Resources.Types.Instances; // Creating one-by one, so they are available as soon as possible
         _instances.event = new EventManager();
+        _instances.state = new StateManager();
         _instances.validator = new Validator();
         _instances.manager = new ResourceManager(appOptions);
         _instances.network = new NetworkManager(appOptions);
@@ -111,6 +113,19 @@ export namespace Resources {
         }
 
         return validator;
+    }
+
+    /**
+     * @returns THe Singleton instance of the shared state
+     * @throws If the function is called before the singleton is initiated
+     */
+    export function state(): StateManager {
+        const {state} = instances()
+        if(!state) {
+            throw new iCPSError(RESOURCES_ERR.STATE_NOT_INITIATED);
+        }
+
+        return state;
     }
 
     /**
@@ -214,6 +229,10 @@ export namespace Resources {
              * The event manager instance
              */
             event: EventManager,
+            /**
+             * THe state manager instance
+             */
+            state: StateManager
         }
 
         /**

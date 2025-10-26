@@ -24,6 +24,10 @@ const schemaList = [
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
     }, {
+        typeName: `AuthInformationResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
         typeName: `ResendMFADeviceResponse`,
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,

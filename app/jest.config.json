@@ -1,28 +1,28 @@
 {
-    "preset": "ts-jest/presets/default-esm",
-    "testEnvironment": "node",
-    "slowTestThreshold": 30,
-    "reporters": [
-      "default",
-      ["jest-ctrf-json-reporter", {
-        "outputDir": "coverage/"
-      }]
-    ],
-    "collectCoverage": true,
-    "collectCoverageFrom": [
-      "src/**/*.ts",
-      "!src/main.ts",
-      "!src/app/event/**/*",
-      "!src/app/error/**/*",
-      "!src/lib/photos-library/model/photos-entity.ts"
-    ],
-    "coverageProvider": "v8",
-    "coverageReporters": [
-      "text-summary",
-      "html",
-      "json-summary"
-    ],
-    "moduleNameMapper": {
-      "^(\\.{1,2}/.*)\\.js$": "$1"
-    }
+  "preset": "ts-jest/presets/default-esm",
+  "testEnvironment": "node",
+  "slowTestThreshold": 30,
+  "reporters": [
+    "default",
+    ["jest-ctrf-json-reporter", {
+      "outputDir": "coverage/"
+    }]
+  ],
+  "collectCoverage": true,
+  "collectCoverageFrom": [
+    "src/**/*.ts",
+    "!src/main.ts",
+    "!src/app/event/**/*",
+    "!src/app/error/**/*",
+    "!src/lib/photos-library/model/photos-entity.ts"
+  ],
+  "coverageProvider": "v8",
+  "coverageReporters": [
+    "text-summary",
+    "html",
+    "json-summary"
+  ],
+  "moduleNameMapper": {
+    "^(\\.{1,2}/.*)\\.js$": "$1"
   }
+}
