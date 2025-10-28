@@ -1,4 +1,4 @@
-import {readFileSync, writeFileSync} from "fs";
+import {existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
 import {jsonc} from "jsonc";
 import * as path from 'path';
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
@@ -27,6 +27,14 @@ export class ResourceManager {
      * @param appOptions - The parsed app options
      */
     constructor(appOptions: iCPSAppOptions) {
+        // Setting data dir, before accessing it
+        this._resources.dataDir = appOptions.dataDir
+
+        // It's crucial for the data dir to exist, create if it doesn't
+        if (!existsSync(this.dataDir)) {
+            mkdirSync(this.dataDir, {recursive: true});
+        }
+
         // Assign app options & resource files to this data structure
         Object.assign(this._resources, this._readResourceFile(), appOptions);
 
