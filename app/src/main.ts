@@ -11,6 +11,10 @@ import {Resources} from "./lib/resources/main.js";
 const app = await appFactory(process.argv)
     .catch(() => process.exit(3)); // Error message is printed by factory
 
+process.on(`exit`, () => {
+    Resources.state().releaseLibraryLock()
+})
+
 const errorHandler = new ErrorHandler();
 
 try {
@@ -24,7 +28,5 @@ try {
     await app.run();
 } catch (err) {
     await errorHandler.handleError(err);
-    process.exit(1)
-} finally {
-    await Resources.state().releaseLibraryLock()
+    process.exitCode = 1
 }

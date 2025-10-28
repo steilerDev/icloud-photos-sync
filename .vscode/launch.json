@@ -65,7 +65,7 @@
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/app.test.ts"
+                "test/unit/resources.state-manager.test.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

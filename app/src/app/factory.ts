@@ -294,8 +294,11 @@ export async function appFactory(argv: string[]): Promise<iCPSApp> {
     return new Promise((resolve, reject) => {
         try {
             argParser(async (res: iCPSApp) => {
-                await Resources.state().acquireLibraryLock()
-                    .catch((err) => reject(err))
+                try {
+                    Resources.state().acquireLibraryLock()
+                } catch (err) {
+                    reject(err)
+                }
                 resolve(res);
             }).parse(argv);
         } catch (err) {

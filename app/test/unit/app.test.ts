@@ -22,7 +22,7 @@ beforeEach(() => {
     mockfs();
     prepareResources(false);
     jest.spyOn(WebServer, `spawn`).mockImplementation(() => { return Promise.resolve({} as WebServer); });
-    StateManager.prototype.acquireLibraryLock = jest.fn<typeof StateManager.prototype.acquireLibraryLock>().mockResolvedValue()
+    StateManager.prototype.acquireLibraryLock = jest.fn<typeof StateManager.prototype.acquireLibraryLock>()
 });
 
 afterEach(() => {
@@ -98,7 +98,9 @@ describe(`App Factory`, () => {
     });
 
     test(`Fail app creation if lock cannot be acquired`, async () => {
-        StateManager.prototype.acquireLibraryLock = jest.fn<typeof StateManager.prototype.acquireLibraryLock>().mockRejectedValue(new Error(`TestError`))
+        StateManager.prototype.acquireLibraryLock = jest.fn<typeof StateManager.prototype.acquireLibraryLock>().mockImplementation(() => {
+            throw new Error(`TestError`)
+        })
 
         await expect(appFactory(validOptions.token)).rejects.toThrow(new Error(`TestError`))
     })

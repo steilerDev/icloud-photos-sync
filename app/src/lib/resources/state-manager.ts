@@ -440,8 +440,8 @@ export class StateManager {
      * Tries to acquire the lock for the local library to execute a sync
      * @throws An iCPSError, if the lock could not be acquired
      */
-    async acquireLibraryLock() {
-        const {lockFileExists, lockFilePath, lockingProcess} = await this.getLockStat() 
+    acquireLibraryLock() {
+        const {lockFileExists, lockFilePath, lockingProcess} = Resources.getLockStat() 
 
         if (lockFileExists) {
             if (Resources.pidIsRunning(lockingProcess) && !Resources.manager().force && process.pid !== lockingProcess) {
@@ -452,19 +452,19 @@ export class StateManager {
             Resources.logger(this).info(`Clearing stale lock`)
 
             // Clear stale lock file
-            await fs.promises.rm(lockFilePath, {force: true});
+            fs.rmSync(lockFilePath, {force: true});
         }
 
         // Create lock file
-        await fs.promises.writeFile(lockFilePath, process.pid.toString(), {encoding: `utf-8`, flush: true});
+        fs.writeFileSync(lockFilePath, process.pid.toString(), {encoding: `utf-8`, flush: true});
     }
 
     /**
      * Tries to release the lock for the local library after completing a sync
      * @throws An iCPSError, if the lock could not be released
      */
-    async releaseLibraryLock() {
-        const {lockFileExists, lockFilePath, lockingProcess} = await this.getLockStat()
+    releaseLibraryLock() {
+        const {lockFileExists, lockFilePath, lockingProcess} = Resources.getLockStat()
 
         if (!lockFileExists) {
             Resources.logger(this).warn(`Cannot release lock: Lock file does not exist.`);
@@ -476,21 +476,6 @@ export class StateManager {
                 .addMessage(`Locked by foreign PID ${lockingProcess}, cannot release`);
         }
 
-        await fs.promises.rm(lockFilePath, {force: true});
-    }
-
-    async getLockStat() {
-        const {lockFilePath} = Resources.manager();
-        const lockFileExists = await fs.promises.stat(lockFilePath)
-            .then(stat => stat.isFile())
-            .catch(() => false);
-
-        return {
-            lockFilePath,
-            lockFileExists,
-            lockingProcess: lockFileExists ? 
-                parseInt(await fs.promises.readFile(lockFilePath, `utf-8`), 10) :
-                undefined
-        }
+        fs.rmSync(lockFilePath, {force: true});
     }
 }

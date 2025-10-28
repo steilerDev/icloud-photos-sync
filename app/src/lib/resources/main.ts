@@ -8,6 +8,7 @@ import {NetworkManager} from "./network-manager.js";
 import {ResourceManager} from "./resource-manager.js";
 import {StateManager} from './state-manager.js';
 import {Validator} from "./validator.js";
+import {readFileSync, statSync} from 'fs'
 
 /* eslint-disable @typescript-eslint/no-namespace */
 
@@ -202,6 +203,28 @@ export namespace Resources {
             return true;
         } catch (e) {
             return e.code === `EPERM`;
+        }
+    }
+
+    /**
+     * Returns information on the library's locking status
+     * @returns Information about the logFilePath, file exist and locking process
+     */
+    export function getLockStat() {
+        const {lockFilePath} = Resources.manager();
+        let lockFileExists = false
+        try {
+            lockFileExists = statSync(lockFilePath).isFile()
+        } catch {
+            lockFileExists = false
+        }
+
+        return {
+            lockFilePath,
+            lockFileExists,
+            lockingProcess: lockFileExists ? 
+                parseInt(readFileSync(lockFilePath, `utf-8`), 10) :
+                NaN
         }
     }
 

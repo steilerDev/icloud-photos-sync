@@ -816,7 +816,7 @@ describe(`Library Lock`, () => {
     test(`Acquire lock`, async () => {
         const thisPID = process.pid.toString();
 
-        await expect(mockedState.acquireLibraryLock()).resolves.toBeUndefined();
+        expect(mockedState.acquireLibraryLock.bind(mockedState)).not.toThrow();
 
         const lockFile = (await fs.promises.readFile(path.join(Config.defaultConfig.dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
         
@@ -835,7 +835,7 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await expect(mockedState.acquireLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
+        expect(mockedState.acquireLibraryLock.bind(mockedState)).toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
         expect(Resources.pidIsRunning).toHaveBeenCalled();
         expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeTruthy();
     });
@@ -849,7 +849,7 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await expect(mockedState.acquireLibraryLock()).resolves.toBeUndefined();
+        expect(mockedState.acquireLibraryLock.bind(mockedState)).not.toThrow();
 
         const lockFile = (await fs.promises.readFile(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
@@ -867,7 +867,7 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await expect(mockedState.acquireLibraryLock()).resolves.toBeUndefined();
+        expect(mockedState.acquireLibraryLock.bind(mockedState)).not.toThrow();
 
         const lockFile = (await fs.promises.readFile(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
         expect(lockFile).toEqual(thisPID);
@@ -886,7 +886,7 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await expect(mockedState.acquireLibraryLock()).resolves.toBeUndefined();
+        expect(mockedState.acquireLibraryLock.bind(mockedState)).not.toThrow();
 
         expect(Resources.pidIsRunning).toHaveBeenCalled();
         const lockFile = (await fs.promises.readFile(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
@@ -902,7 +902,7 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await expect(mockedState.releaseLibraryLock()).resolves.toBeUndefined();
+        expect(mockedState.releaseLibraryLock.bind(mockedState)).not.toThrow();
 
         expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeFalsy();
     });
@@ -919,7 +919,7 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await expect(mockedState.releaseLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
+        expect(mockedState.releaseLibraryLock.bind(mockedState)).toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
 
         expect(Resources.pidIsRunning).toHaveBeenCalled();
         expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeTruthy();
@@ -937,7 +937,7 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await expect(mockedState.releaseLibraryLock()).resolves.toBeUndefined();
+        expect(mockedState.releaseLibraryLock.bind(mockedState)).not.toThrow();
 
         expect(Resources.pidIsRunning).toHaveBeenCalled();
         expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeFalsy();
@@ -955,7 +955,7 @@ describe(`Library Lock`, () => {
             },
         });
 
-        await expect(mockedState.releaseLibraryLock()).resolves.toBeUndefined();
+        expect(mockedState.releaseLibraryLock.bind(mockedState)).not.toThrow();
 
         expect(Resources.pidIsRunning).toHaveBeenCalled();
         expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeFalsy();
@@ -963,8 +963,8 @@ describe(`Library Lock`, () => {
 
     test(`Release lock warning - no lock`, async () => {
 
-        await expect(mockedState.releaseLibraryLock()).resolves.toBeUndefined();
+        expect(mockedState.releaseLibraryLock.bind(mockedState)).not.toThrow();
 
-        expect(!fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeTruthy();
+        expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeFalsy();
     });
 });
