@@ -1,17 +1,25 @@
-import {beforeEach, describe, expect, jest, test} from "@jest/globals"
+import mockfs from 'mock-fs';
+import fs from 'fs';
+import {afterEach, beforeAll, beforeEach, describe, expect, jest, test} from "@jest/globals"
 import {LogLevel, LogMessage, SerializedState, StateManager, StateTrigger} from "../../src/lib/resources/state-manager"
 import {iCPSError} from "../../src/app/error/error"
 import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from "../../src/app/error/error-codes"
-import {MockedEventManager, prepareResources} from "../_helpers/_general"
+import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general"
 import {iCPSEvent, iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "../../src/lib/resources/events-types"
+import path from 'path';
+import * as Config from '../_helpers/_config';
+import {LIBRARY_LOCK_FILE_NAME} from '../../src/lib/resources/resource-types';
+import {Resources} from '../../src/lib/resources/main';
 
 let mockedEventManager: MockedEventManager
 let mockedState: StateManager
+let mockedResourceManager: MockedResourceManager
 
 beforeEach(() => {
     const instances = prepareResources()
     mockedEventManager = instances!.event
     mockedState = instances!.state
+    mockedResourceManager = instances!.manager
 })
 
 
@@ -792,3 +800,171 @@ describe(`Log added`, () => {
         })
     })
 })
+
+
+describe(`Library Lock`, () => {
+    beforeEach(() => {
+        mockfs({
+            [Config.defaultConfig.dataDir]: {}
+        });
+    });
+
+    afterEach(() => {
+        mockfs.restore();
+    });
+    
+    test(`Acquire lock`, async () => {
+        const thisPID = process.pid.toString();
+
+        await expect(mockedState.acquireLibraryLock()).resolves.toBeUndefined();
+
+        const lockFile = (await fs.promises.readFile(path.join(Config.defaultConfig.dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
+        
+        expect(lockFile).toEqual(thisPID);
+    });
+
+    test(`Acquire lock error - already locked by running process`, async () => {
+
+        const notThisPID = (process.pid + 1).toString();
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(true);
+
+        mockfs({
+            [Config.defaultConfig.dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: notThisPID,
+            },
+        });
+
+        await expect(mockedState.acquireLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
+        expect(Resources.pidIsRunning).toHaveBeenCalled();
+        expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeTruthy();
+    });
+
+    test(`Acquire lock warning - already locked by this process`, async () => {
+        const thisPID = process.pid.toString();
+
+        mockfs({
+            [Config.defaultConfig.dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: thisPID,
+            },
+        });
+
+        await expect(mockedState.acquireLibraryLock()).resolves.toBeUndefined();
+
+        const lockFile = (await fs.promises.readFile(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
+        expect(lockFile).toEqual(thisPID);
+    });
+
+    test(`Acquire lock warning - already locked by non-running process`, async () => {
+        const thisPID = process.pid.toString();
+        const notThisPID = (process.pid + 1).toString();
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(false);
+
+        mockfs({
+            [Config.defaultConfig.dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: notThisPID,
+            },
+        });
+
+        await expect(mockedState.acquireLibraryLock()).resolves.toBeUndefined();
+
+        const lockFile = (await fs.promises.readFile(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
+        expect(lockFile).toEqual(thisPID);
+    });
+
+    test(`Acquire lock warning - already locked by running process with --force`, async () => {
+        mockedResourceManager._resources.force = true
+        const thisPID = process.pid.toString();
+        const notThisPID = (process.pid + 1).toString();
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(true);
+
+        mockfs({
+            [Resources.manager().dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: notThisPID,
+            },
+        });
+
+        await expect(mockedState.acquireLibraryLock()).resolves.toBeUndefined();
+
+        expect(Resources.pidIsRunning).toHaveBeenCalled();
+        const lockFile = (await fs.promises.readFile(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME), {encoding: `utf-8`})).toString();
+        expect(lockFile).toEqual(thisPID);
+    });
+
+    test(`Release lock`, async () => {
+        const thisPID = process.pid.toString();
+
+        mockfs({
+            [Config.defaultConfig.dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: thisPID,
+            },
+        });
+
+        await expect(mockedState.releaseLibraryLock()).resolves.toBeUndefined();
+
+        expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeFalsy();
+    });
+
+    test(`Release lock error - other running process' lock`, async () => {
+        const notThisPID = (process.pid + 1).toString();
+
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(true);
+
+        mockfs({
+            [Resources.manager().dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: notThisPID,
+            },
+        });
+
+        await expect(mockedState.releaseLibraryLock()).rejects.toThrow(/^Library locked. Use --force \(or FORCE env variable\) to forcefully remove the lock$/);
+
+        expect(Resources.pidIsRunning).toHaveBeenCalled();
+        expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeTruthy();
+    });
+
+    test(`Release lock warning - other non-running process' lock`, async () => {
+        const notThisPID = (process.pid + 1).toString();
+
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(false);
+
+        mockfs({
+            [Resources.manager().dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: notThisPID,
+            },
+        });
+
+        await expect(mockedState.releaseLibraryLock()).resolves.toBeUndefined();
+
+        expect(Resources.pidIsRunning).toHaveBeenCalled();
+        expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeFalsy();
+    });
+
+    test(`Release lock warning - not this process' lock with --force`, async () => {
+        mockedResourceManager._resources.force = true
+        const notThisPID = (process.pid + 1).toString();
+        Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+            .mockReturnValue(true);
+
+        mockfs({
+            [Resources.manager().dataDir]: {
+                [LIBRARY_LOCK_FILE_NAME]: notThisPID,
+            },
+        });
+
+        await expect(mockedState.releaseLibraryLock()).resolves.toBeUndefined();
+
+        expect(Resources.pidIsRunning).toHaveBeenCalled();
+        expect(fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeFalsy();
+    });
+
+    test(`Release lock warning - no lock`, async () => {
+
+        await expect(mockedState.releaseLibraryLock()).resolves.toBeUndefined();
+
+        expect(!fs.existsSync(path.join(Resources.manager().dataDir, LIBRARY_LOCK_FILE_NAME))).toBeTruthy();
+    });
+});

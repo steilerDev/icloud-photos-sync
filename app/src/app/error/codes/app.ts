@@ -18,3 +18,7 @@ export const SYNC: ErrorStruct = buildErrorStruct(
 export const ARCHIVE: ErrorStruct = buildErrorStruct(
     name, prefix, `ARCHIVE`, `Archive failed`,
 );
+
+export const NOT_READY: ErrorStruct = buildErrorStruct(
+    name, prefix, `NOT_READY`, `Application not ready`
+)

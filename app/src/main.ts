@@ -6,20 +6,28 @@ import {LogInterface} from "./app/event/log.js";
 import {MetricsExporter} from "./app/event/metrics-exporter.js";
 import {appFactory} from "./app/factory.js";
 import {WebServer} from "./app/web-ui/web-server.js";
+import {Resources} from "./lib/resources/main.js";
+
+let exitCode = 0
 
 const app = await appFactory(process.argv)
     .catch(() => process.exit(3)); // Error message is printed by factory
 
-const _errorHandler = new ErrorHandler();
-const _logInterface = new LogInterface();
-const _cliInterface = new CLIInterface();
-const _metricsExporter = new MetricsExporter();
-const _healthCheckPingExecutor = new HealthCheckPingExecutor();
+const errorHandler = new ErrorHandler();
 
 try {
-    const _webServer = await WebServer.spawn();
+    const _apps = [
+        new LogInterface(),
+        new CLIInterface(),
+        new MetricsExporter(),
+        new HealthCheckPingExecutor(),
+        await WebServer.spawn()
+    ]
     await app.run();
 } catch (err) {
-    await _errorHandler.handleError(err);
-    process.exit(1);
+    await errorHandler.handleError(err);
+    exitCode = 1
+} finally {
+    await Resources.state().releaseLibraryLock()
+    process.exit(exitCode)
 }

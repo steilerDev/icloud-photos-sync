@@ -1,5 +1,4 @@
 import {Cron} from "croner";
-import * as fs from 'fs';
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {iCloud} from "../lib/icloud/icloud.js";
 import {Album} from "../lib/photos-library/model/album.js";
@@ -8,8 +7,9 @@ import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventWebServer} from "../lib/resources/events-types.js";
 import {Resources} from "../lib/resources/main.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
-import {APP_ERR, AUTH_ERR, LIBRARY_ERR} from "./error/error-codes.js";
+import {APP_ERR, AUTH_ERR } from "./error/error-codes.js";
 import {iCPSError} from "./error/error.js";
+import {StateType} from "../lib/resources/state-manager.js";
 
 /**
  * Abstract class returned by the factory function
@@ -78,35 +78,16 @@ abstract class iCloudApp extends iCPSApp {
     /**
      * This sessions' iCloud object
      */
-    icloud: iCloud;
+    icloud: iCloud = new iCloud()
 
     /**
-     * Creates and sets up the necessary infrastructure
-     * @param ignoreFailOnMfa - If set to true, the authentication will still continue even if MFA is required and the failOnMfa flag is set
-     */
-    constructor() {
-        super();
-
-        // It's crucial for the data dir to exist, create if it doesn't
-        if (!fs.existsSync(Resources.manager().dataDir)) {
-            fs.mkdirSync(Resources.manager().dataDir, {recursive: true});
-        }
-
-        // Creating necessary object for this scope
-        this.icloud = new iCloud();
-    }
-
-    /**
-     * This function acquires the library lock and establishes the iCloud connection.
+     * This function establishes the iCloud connection.
      * @returns A promise that resolves to true once the iCloud service is fully available. If it resolves to false, the MFA code was not provided in time and the object is not ready.
      * @throws An iCPSError in case an error occurs
      */
     async run(): Promise<unknown> {
-        try {
-            await this.acquireLibraryLock();
-        } catch (err) {
-            throw new iCPSError(LIBRARY_ERR.LOCK_ACQUISITION)
-                .addCause(err);
+        if(Resources.state().state !== StateType.READY) {
+            throw new iCPSError(APP_ERR.NOT_READY)
         }
 
         try {
@@ -118,17 +99,13 @@ abstract class iCloudApp extends iCPSApp {
     }
 
     /**
-     * Removes all established event listeners, resets the network connection and releases the library lock
+     * Removes all established event listeners, resets the network connection 
      */
     async clean() {
         await Resources.network().resetSession();
         Resources.events(this.icloud.photos).removeListeners();
         Resources.events(this.icloud).removeListeners();
-        try {
-            await this.releaseLibraryLock();
-        } catch (err) {
-            Resources.logger(this).warn(`Failed to release library lock: ${err}`);
-        }
+
         try {
             await this.icloud.logout();
         } catch (err) {
@@ -136,61 +113,7 @@ abstract class iCloudApp extends iCPSApp {
         }
     }
 
-    /**
-     * Tries to acquire the lock for the local library to execute a sync
-     * @throws An iCPSError, if the lock could not be acquired
-     */
-    async acquireLibraryLock() {
-        const {lockFilePath} = Resources.manager();
-        const lockFileExists = await fs.promises.stat(lockFilePath)
-            .then(stat => stat.isFile())
-            .catch(() => false);
-
-        if (lockFileExists) {
-            const lockingProcess = parseInt(await fs.promises.readFile(lockFilePath, `utf-8`), 10);
-
-            if (process.pid === lockingProcess) {
-                Resources.logger(this).warn(`Lock file exists, but is owned by this process. Continuing.`);
-                return;
-            }
-
-            if (Resources.pidIsRunning(lockingProcess) && !Resources.manager().force) {
-                throw new iCPSError(LIBRARY_ERR.LOCKED)
-                    .addMessage(`Locked by PID ${lockingProcess}`);
-            }
-
-            // Clear stale lock file
-            await fs.promises.rm(lockFilePath, {force: true});
-        }
-
-        // Create lock file
-        await fs.promises.writeFile(lockFilePath, process.pid.toString(), {encoding: `utf-8`, flush: true});
-    }
-
-    /**
-     * Tries to release the lock for the local library after completing a sync
-     * @throws An iCPSError, if the lock could not be released
-     */
-    async releaseLibraryLock() {
-        const {lockFilePath} = Resources.manager();
-        const lockFileExists = await fs.promises.stat(lockFilePath)
-            .then(stat => stat.isFile())
-            .catch(() => false);
-
-        if (!lockFileExists) {
-            Resources.logger(this).warn(`Cannot release lock: Lock file does not exist.`);
-            return;
-        }
-
-        const lockingProcess = parseInt(await fs.promises.readFile(lockFilePath, `utf-8`), 10);
-
-        if (process.pid !== lockingProcess && Resources.pidIsRunning(lockingProcess) && !Resources.manager().force) {
-            throw new iCPSError(LIBRARY_ERR.LOCKED)
-                .addMessage(`Locked by PID ${lockingProcess}`);
-        }
-
-        await fs.promises.rm(lockFilePath, {force: true});
-    }
+    
 }
 
 /**
@@ -242,21 +165,12 @@ export class SyncApp extends iCloudApp {
     /**
      * This sessions' Photos Library object
      */
-    photosLibrary: PhotosLibrary;
+    photosLibrary: PhotosLibrary = new PhotosLibrary();
 
     /**
      * This sessions' Sync Engine object
      */
-    syncEngine: SyncEngine;
-
-    /**
-     * Creates and sets up the necessary infrastructure for this app
-     */
-    constructor() {
-        super();
-        this.photosLibrary = new PhotosLibrary();
-        this.syncEngine = new SyncEngine(this.icloud, this.photosLibrary);
-    }
+    syncEngine: SyncEngine = new SyncEngine(this.icloud, this.photosLibrary);
 
     /**
      * Runs the synchronization of the local Photo Library
@@ -297,7 +211,7 @@ export class ArchiveApp extends SyncApp {
     /**
      * This sessions' Archive Engine object
      */
-    archiveEngine: ArchiveEngine;
+    archiveEngine: ArchiveEngine = new ArchiveEngine(this.icloud, this.photosLibrary);
 
     /**
      * The local path to be archived
@@ -311,7 +225,6 @@ export class ArchiveApp extends SyncApp {
     constructor(archivePath: string) {
         super();
         this.archivePath = archivePath;
-        this.archiveEngine = new ArchiveEngine(this.icloud, this.photosLibrary);
     }
 
     /**

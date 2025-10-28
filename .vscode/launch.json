@@ -13,7 +13,7 @@
             ],
             "preLaunchTask": "Build App",
             "program": "${workspaceFolder}/app/src/main.ts",
-            "args": ["daemon", "--schedule", "0 3 * * *", "--fail-on-mfa"],
+            "args": ["token"],
             "outputCapture": "std",
             "outFiles": [
                 "${workspaceFolder}/app/build/out/**/*.js",
@@ -21,7 +21,7 @@
             "env": {
                 "LOG_TO_CLI": "true"
             },
-            "envFile": "${workspaceFolder}/secrets/adp.env"
+            "envFile": "${workspaceFolder}/secrets/test.env"
         }, {
             "name": "Run API Tests",
             "type": "node",
@@ -65,11 +65,8 @@
                 "node_modules/.bin/jest",
                 "--config", "jest.config.json",
                 //"--detectOpenHandles",
-                "test/unit/icloud.test.ts"
+                "test/unit/app.test.ts"
             ],
-            "env": {
-                "DEBUG": "testcontainers*",
-            },
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/app",

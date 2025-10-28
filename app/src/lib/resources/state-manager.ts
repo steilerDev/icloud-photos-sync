@@ -1,5 +1,5 @@
 import {iCPSError} from "../../app/error/error.js";
-import {MFA_ERR, AUTH_ERR, WEB_SERVER_ERR} from "../../app/error/error-codes.js";
+import {MFA_ERR, AUTH_ERR, WEB_SERVER_ERR, LIBRARY_ERR} from "../../app/error/error-codes.js";
 import {Resources} from "./main.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "./events-types.js";
 import {CPLAsset} from "../icloud/icloud-photos/query-parser.js";
@@ -7,6 +7,7 @@ import {Asset} from "../photos-library/model/asset.js";
 import {Album} from "../photos-library/model/album.js";
 import {MFAMethod} from "../icloud/mfa/mfa-method.js";
 import {TrustedPhoneNumber} from "./network-types.js";
+import * as fs from 'fs';
 
 export enum StateType {
     READY = `ready`,
@@ -433,5 +434,63 @@ export class StateManager {
         return this.log.filter(_value => {
             return logLevels.includes(_value.level) && _value.source.match(logFilter?.source) // .match(undefined) returns true
         })
+    }
+
+    /**
+     * Tries to acquire the lock for the local library to execute a sync
+     * @throws An iCPSError, if the lock could not be acquired
+     */
+    async acquireLibraryLock() {
+        const {lockFileExists, lockFilePath, lockingProcess} = await this.getLockStat() 
+
+        if (lockFileExists) {
+            if (Resources.pidIsRunning(lockingProcess) && !Resources.manager().force && process.pid !== lockingProcess) {
+                throw new iCPSError(LIBRARY_ERR.LOCKED)
+                    .addMessage(`Locked by foreign PID ${lockingProcess}, cannot acquire`);
+            }
+
+            Resources.logger(this).info(`Clearing stale lock`)
+
+            // Clear stale lock file
+            await fs.promises.rm(lockFilePath, {force: true});
+        }
+
+        // Create lock file
+        await fs.promises.writeFile(lockFilePath, process.pid.toString(), {encoding: `utf-8`, flush: true});
+    }
+
+    /**
+     * Tries to release the lock for the local library after completing a sync
+     * @throws An iCPSError, if the lock could not be released
+     */
+    async releaseLibraryLock() {
+        const {lockFileExists, lockFilePath, lockingProcess} = await this.getLockStat()
+
+        if (!lockFileExists) {
+            Resources.logger(this).warn(`Cannot release lock: Lock file does not exist.`);
+            return;
+        }
+
+        if (process.pid !== lockingProcess && Resources.pidIsRunning(lockingProcess) && !Resources.manager().force && process.pid !== lockingProcess) {
+            throw new iCPSError(LIBRARY_ERR.LOCKED)
+                .addMessage(`Locked by foreign PID ${lockingProcess}, cannot release`);
+        }
+
+        await fs.promises.rm(lockFilePath, {force: true});
+    }
+
+    async getLockStat() {
+        const {lockFilePath} = Resources.manager();
+        const lockFileExists = await fs.promises.stat(lockFilePath)
+            .then(stat => stat.isFile())
+            .catch(() => false);
+
+        return {
+            lockFilePath,
+            lockFileExists,
+            lockingProcess: lockFileExists ? 
+                parseInt(await fs.promises.readFile(lockFilePath, `utf-8`), 10) :
+                undefined
+        }
     }
 }
