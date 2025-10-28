@@ -8,26 +8,23 @@ import {appFactory} from "./app/factory.js";
 import {WebServer} from "./app/web-ui/web-server.js";
 import {Resources} from "./lib/resources/main.js";
 
-let exitCode = 0
-
 const app = await appFactory(process.argv)
     .catch(() => process.exit(3)); // Error message is printed by factory
 
 const errorHandler = new ErrorHandler();
 
 try {
-    const _apps = [
+    const _eventApps = [
         new LogInterface(),
         new CLIInterface(),
         new MetricsExporter(),
         new HealthCheckPingExecutor(),
-        await WebServer.spawn()
+        await WebServer.spawn(),
     ]
     await app.run();
 } catch (err) {
     await errorHandler.handleError(err);
-    exitCode = 1
+    process.exit(1)
 } finally {
     await Resources.state().releaseLibraryLock()
-    process.exit(exitCode)
 }
