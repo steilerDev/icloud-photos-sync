@@ -12,7 +12,6 @@
                     "attest": "type=sbom,generator=docker/scout-sbom-indexer:latest",
                     "provenance=mode=max": null
                 },
-                "dockerBuildCacheFrom": "type=gha",
                 "dockerContext": "<updated within CI>",
                 "dockerFile": "<updated within CI>",
                 "dockerImage": "<updated within CI>",
