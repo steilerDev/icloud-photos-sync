@@ -79,7 +79,7 @@
     "jest-ctrf-json-reporter": "0.0.9",
     "jsdom": "27.0.0",
     "knip": "5.66.2",
-    "liquidjs": "10.23.0",
+    "liquidjs": "10.24.0",
     "mock-fs": "5.5.0",
     "mock-stdin": "1.0.0",
     "node-mocks-http": "1.17.2",
