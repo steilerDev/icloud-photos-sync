@@ -1,4 +1,4 @@
-FROM node:22.21.0-alpine3.22 AS builder
+FROM node:22.21.1-alpine3.22 AS builder
 
 COPY npm-pack.tgz /opt/npm-pack.tgz
 
