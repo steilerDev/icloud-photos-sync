@@ -120,7 +120,8 @@ export class iCloud {
 
             if (response.status === 200) {
                 Resources.logger(this).debug(`Response status is 200, authentication successful - device trusted`);
-                Resources.emit(iCPSEventCloud.TRUSTED, Resources.manager().trustToken);
+                // Use _resources.trustToken directly to avoid getter re-reading file and overwriting the value
+                Resources.emit(iCPSEventCloud.TRUSTED, Resources.manager()._resources.trustToken);
             }
 
             // This should never happen
@@ -325,7 +326,8 @@ export class iCloud {
             Resources.network().applyTrustResponse(validatedResponse);
 
             Resources.logger(this).debug(`Acquired account tokens`);
-            Resources.emit(iCPSEventCloud.TRUSTED, Resources.manager().trustToken);
+            // Use _resources.trustToken directly to avoid getter re-reading file and overwriting the value
+            Resources.emit(iCPSEventCloud.TRUSTED, Resources.manager()._resources.trustToken);
         } catch (err) {
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.ACQUIRE_ACCOUNT_TOKENS).addCause(err));
         }
