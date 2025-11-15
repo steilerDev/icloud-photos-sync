@@ -84,7 +84,7 @@
     "mock-stdin": "1.0.0",
     "node-mocks-http": "1.17.2",
     "tar-stream": "3.1.7",
-    "testcontainers": "11.7.2",
+    "testcontainers": "11.8.1",
     "ts-jest": "29.4.5",
     "ts-json-schema-generator": "2.4.0",
     "tsx": "4.20.6",
