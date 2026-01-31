@@ -11,7 +11,7 @@ RUN npm install -g /opt/npm-pack.tgz && \
 RUN npm uninstall npm corepack -g \
   && rm -f /usr/local/bin/yarn /usr/local/bin/yarnpkg /usr/local/bin/docker-entrypoint.sh
 
-FROM alpine:3.22.2 AS hardened-intermediate
+FROM alpine:3.23.3 AS hardened-intermediate
 
 # Setting volume for default library path
 VOLUME /opt/icloud-photos-library
