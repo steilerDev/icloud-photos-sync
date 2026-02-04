@@ -82,6 +82,7 @@ jobs:
   api:
     runs-on: [self-hosted, linux, x64, residential] # This workflow needs to be run from a residential IP address and needs to have the necessary secrets set in it's environment
     if: contains(fromJSON(inputs.methods), 'api')
+    timeout-minutes: 30 # Fail fast if runner is unavailable or tests hang
     steps:
       - name: setup/checkout
         uses: actions/checkout@v5
