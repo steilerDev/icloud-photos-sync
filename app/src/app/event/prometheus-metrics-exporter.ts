@@ -10,18 +10,18 @@ const phaseLabels = [`authentication`, `fetchAndLoad`, `diff`, `writeAssets`, `w
 
 export class PrometheusMetricsExporter {
     private readonly metrics = {
-     state : new PrometheusSimpleMetric(`sync_status`, `Current status of the sync engine.`, `gauge`, [`unknown` , `ok` , `authenticating` , `syncing` , `error`], `unknown`),
-     durations : new PrometheusMultipleValueMetric<number>(`sync_durations_second`, `Duration of the last sync run in seconds, split by phases, each labeled with the phase name.`, `gauge`, `phase`, phaseLabels, 0),
-     loadedLocalAlbums : new PrometheusSimpleMetric(`loaded_local_albums`, `Number of albums loaded from the local library during the last sync run.`, `gauge`, undefined, 0 as number),
-     loadedLocalAssets : new PrometheusSimpleMetric(`loaded_local_assets`, `Number of assets loaded from the local library during the last sync run.`, `gauge`, undefined, 0 as number),
-     loadedRemoteAlbums : new PrometheusSimpleMetric(`loaded_remote_albums`, `Number of albums loaded from the remote library during the last sync run.`, `gauge`, undefined, 0 as number),
-     loadedRemoteAssets : new PrometheusSimpleMetric(`loaded_remote_assets`, `Number of assets loaded from the remote library during the last sync run.`, `gauge`, undefined, 0 as number),
-     assetsToBeAdded : new PrometheusSimpleMetric(`assets_to_be_added`, `Number of assets that need to be added to the local library during the last sync run.`, `gauge`, undefined, 0 as number),
-     assetsToBeDeleted : new PrometheusSimpleMetric(`assets_to_be_deleted`, `Number of assets that need to be deleted from the local library during the last sync run.`, `gauge`, undefined, 0 as number),
-     assetsToBeKept : new PrometheusSimpleMetric(`assets_to_be_kept`, `Number of assets that need to be kept in the local library during the last sync run.`, `gauge`, undefined, 0 as number),
-     albumsToBeAdded : new PrometheusSimpleMetric(`albums_to_be_added`, `Number of albums that need to be added to the local library during the last sync run.`, `gauge`, undefined, 0 as number),
-     albumsToBeDeleted : new PrometheusSimpleMetric(`albums_to_be_deleted`, `Number of albums that need to be deleted from the local library during the last sync run.`, `gauge`, undefined, 0 as number),
-     albumsToBeKept : new PrometheusSimpleMetric(`albums_to_be_kept`, `Number of albums that need to be kept in the local library during the last sync run.`, `gauge`, undefined, 0 as number),
+        state: new PrometheusSimpleMetric(`sync_status`, `Current status of the sync engine.`, `gauge`, [`unknown` , `ok` , `authenticating` , `syncing` , `error`], `unknown`),
+        durations: new PrometheusMultipleValueMetric<number>(`sync_durations_second`, `Duration of the last sync run in seconds, split by phases, each labeled with the phase name.`, `gauge`, `phase`, phaseLabels, 0),
+        loadedLocalAlbums: new PrometheusSimpleMetric(`loaded_local_albums`, `Number of albums loaded from the local library during the last sync run.`, `gauge`, undefined, 0 as number),
+        loadedLocalAssets: new PrometheusSimpleMetric(`loaded_local_assets`, `Number of assets loaded from the local library during the last sync run.`, `gauge`, undefined, 0 as number),
+        loadedRemoteAlbums: new PrometheusSimpleMetric(`loaded_remote_albums`, `Number of albums loaded from the remote library during the last sync run.`, `gauge`, undefined, 0 as number),
+        loadedRemoteAssets: new PrometheusSimpleMetric(`loaded_remote_assets`, `Number of assets loaded from the remote library during the last sync run.`, `gauge`, undefined, 0 as number),
+        assetsToBeAdded: new PrometheusSimpleMetric(`assets_to_be_added`, `Number of assets that need to be added to the local library during the last sync run.`, `gauge`, undefined, 0 as number),
+        assetsToBeDeleted: new PrometheusSimpleMetric(`assets_to_be_deleted`, `Number of assets that need to be deleted from the local library during the last sync run.`, `gauge`, undefined, 0 as number),
+        assetsToBeKept: new PrometheusSimpleMetric(`assets_to_be_kept`, `Number of assets that need to be kept in the local library during the last sync run.`, `gauge`, undefined, 0 as number),
+        albumsToBeAdded: new PrometheusSimpleMetric(`albums_to_be_added`, `Number of albums that need to be added to the local library during the last sync run.`, `gauge`, undefined, 0 as number),
+        albumsToBeDeleted: new PrometheusSimpleMetric(`albums_to_be_deleted`, `Number of albums that need to be deleted from the local library during the last sync run.`, `gauge`, undefined, 0 as number),
+        albumsToBeKept: new PrometheusSimpleMetric(`albums_to_be_kept`, `Number of albums that need to be kept in the local library during the last sync run.`, `gauge`, undefined, 0 as number),
     }
 
     private startTimes: Map<string, number> = new Map();

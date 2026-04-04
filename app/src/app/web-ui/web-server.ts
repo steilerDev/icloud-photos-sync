@@ -369,7 +369,7 @@ export class WebServer {
             body: Object.values(this.prometheusMetricsExporter.getMetrics())
                 .flatMap((metric) => {
                     let helperText = `# HELP icps_${metric.name} ${metric.description}`;
-                    let valueLines: string[] = [];
+                    const valueLines: string[] = [];
                     if(metric instanceof PrometheusSimpleMetric) {
                         if(metric.supportedValues) {
                             helperText += ` Possible values: ${metric.supportedValues.join(`|`)}.`;
