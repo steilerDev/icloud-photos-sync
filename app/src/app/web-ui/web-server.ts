@@ -12,10 +12,23 @@ import {serviceWorker} from './scripts/service-worker.js';
 import {RequestMfaView} from './view/request-mfa-view.js';
 import {StateView} from './view/state-view.js';
 import {SubmitMfaView} from './view/submit-mfa-view.js';
+import {PrometheusSimpleMetric, PrometheusMetricsExporter} from "../event/prometheus-metrics-exporter.js";
 import {LogLevel, StateType} from '../../lib/resources/state-manager.js';
 import {NotificationPusher} from './notification-pusher.js';
 import {URL} from 'url';
 import {pEvent} from 'p-event';
+
+/**
+ * Endpoint URI of Web Server, all expect POST requests
+ */
+export const WEB_SERVER_API_ENDPOINTS = {
+    CODE_INPUT: `/mfa`, // Expecting URL parameter 'code' with 6 digits
+    TRIGGER_REAUTH: `/reauthenticate`, // Expecting no URL parameters
+    RESEND_CODE: `/resend_mfa`, // Expecting URL parameter 'method' (either 'device', 'sms', 'voice') and optionally 'phoneNumberId' (any number > 0)
+    STATE: `/state`, // Expecting no URL parameters
+    TRIGGER_SYNC: `/sync`, // Expecting no URL parameters
+    METRICS: `/metrics` // Expecting no URL parameters
+};
 
 type WebServerResponse = {
     code: number, 
@@ -27,7 +40,7 @@ type WebServerResponse = {
     body: any
 }
 
-type WebServerRoute = (url: URL, body?: string) => WebServerResponse
+type WebServerRoute = (url: URL, body?: string, headers?: http.IncomingHttpHeaders) => WebServerResponse
 
 type WebServerSitemap = {
     POST: {
@@ -72,7 +85,8 @@ export class WebServer {
             '/favicon.ico': this.handleFavicon.bind(this),
             '/api/state': this.handleStateRequest.bind(this),
             '/api/log': this.handleLogRequest.bind(this),
-            '/api/vapid-public-key': this.handleVapidPublicKeyRequest.bind(this)
+            '/api/vapid-public-key': this.handleVapidPublicKeyRequest.bind(this),
+            '/metrics': this.handleMetricsRequest.bind(this)
         },
         POST: {
             '/api/reauthenticate': this.handleReauthRequest.bind(this),
@@ -87,15 +101,17 @@ export class WebServer {
      * Creates the server object and starts the web server
      * @returns 
      */
-    static async spawn(): Promise<WebServer> {
-        return new WebServer().startServer();
+    static async spawn(prometheusMetricsExporter: PrometheusMetricsExporter): Promise<WebServer> {
+        return new WebServer(prometheusMetricsExporter).startServer();
     }
 
     /**
      * Creates the server object
      * @emits iCPSEventWebServer.ERROR - When an error associated to the server occurs - Provides iCPSError as argument
      */
-    constructor() {
+    constructor(
+        private readonly prometheusMetricsExporter: PrometheusMetricsExporter
+    ) {
         Resources.logger(this).debug(`Preparing web server on port ${Resources.manager().webServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
 
@@ -155,14 +171,15 @@ export class WebServer {
                 `http://localhost/` // Necessary, because the req.url is relative
             )
             const body = await this.readBody(req)
+            const headers = req.headers
 
             if (req.method === `GET` && url.pathname in this._sitemap.GET) {
-                this.sendResponse(this._sitemap.GET[url.pathname](url, body), res)
+                this.sendResponse(this._sitemap.GET[url.pathname](url, body, headers), res)
                 return;
             }
 
             if (req.method === `POST` && url.pathname in this._sitemap.POST) {
-                this.sendResponse(this._sitemap.POST[url.pathname](url, body), res)
+                this.sendResponse(this._sitemap.POST[url.pathname](url, body, headers), res)
                 return;
             }
 
@@ -322,6 +339,56 @@ export class WebServer {
             body: {
                 publicKey: Resources.manager().notificationVapidCredentials.publicKey
             }
+        }
+    }
+
+    /**
+     * This function will handle the request send to the metrics endpoint. Metrics are exposed in the prometheus format.
+     * @param res - The HTTP response object
+     */
+    handleMetricsRequest(_url: URL, _body: string, headers: http.IncomingHttpHeaders): WebServerResponse {
+        if (!Resources.manager().exportPrometheusMetrics) {
+            return {
+                code: 403,
+                header: {
+                    "Content-Type": `text/plain`
+                },
+                body: `Forbidden: Prometheus metrics export is not enabled in the configuration.`
+            };
+        }
+        let contentType = `text/plain`;
+        if (headers[`accept`] && headers[`accept`].includes(`application/openmetrics-text`)) {
+            contentType = `application/openmetrics-text; version=1.0.0; charset=utf-8`;
+        }
+
+        return {
+            code: 200,
+            header: {
+                "Content-Type": contentType
+            },
+            body: Object.values(this.prometheusMetricsExporter.getMetrics())
+                .flatMap((metric) => {
+                    let helperText = `# HELP icps_${metric.name} ${metric.description}`;
+                    let valueLines: string[] = [];
+                    if(metric instanceof PrometheusSimpleMetric) {
+                        if(metric.supportedValues) {
+                            helperText += ` Possible values: ${metric.supportedValues.join(`|`)}.`;
+                        }
+                        valueLines.push(`icps_${metric.name} ${metric.value}`);
+                    } else {
+                        helperText += ` Supported labels: ${metric.labelName}=${metric.supportedLabelValues.join(`|`)}.`;
+                        for (const [labelValue, metricValue] of metric.getValues().entries()) {
+                            const labelString = `${metric.labelName}="${labelValue}"`
+                            valueLines.push(`icps_${metric.name}{${labelString}} ${metricValue}`);
+                        }
+                    }
+
+                    return [
+                        helperText,
+                        `# TYPE icps_${metric.name} ${metric.type}`,
+                        ...valueLines
+                    ];
+                }).join(`\n`)
         }
     }
 

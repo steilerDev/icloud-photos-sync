@@ -142,6 +142,7 @@ export type iCPSAppOptions = {
     logToCli: boolean,
     suppressWarnings: boolean,
     exportMetrics: boolean,
+    exportPrometheusMetrics: boolean,
     region: Resources.Types.Region,
     legacyLogin: boolean,
     metadataRate: [number, number],
@@ -229,6 +230,9 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
             .default(false))
         .addOption(new Option(`--export-metrics`, `Enables the export of sync metrics to a file using the Influx Line Protocol. Written to \`.icloud-photos-sync.metrics\` in the data dir.`)
             .env(`EXPORT_METRICS`)
+            .default(false))
+        .addOption(new Option(`--export-prometheus-metrics`, `Enables the export of sync metrics to a /metrics endpint in the openmetrics or plaintext format (depending on the request header) to be read by tools like prometheus. Exposed on the same port as the web UI.`)
+            .env(`EXPORT_PROMETHEUS_METRICS`)
             .default(false))
         .addOption(new Option(`--enable-network-capture`, `Enables network capture, and generate a HAR file for debugging purposes. Written to \`.icloud-photos-sync.har\` in the data dir.`)
             .env(`ENABLE_NETWORK_CAPTURE`)

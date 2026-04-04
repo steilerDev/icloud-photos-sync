@@ -22,6 +22,7 @@ export const defaultConfig = {
     logToCli: false,
     suppressWarnings: false,
     exportMetrics: false,
+    exportPrometheusMetrics: false,
     metadataRate: [Infinity, 0],
     enableNetworkCapture: false,
     region: `world`,
