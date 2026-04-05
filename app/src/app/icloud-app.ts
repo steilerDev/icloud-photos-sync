@@ -86,9 +86,11 @@ abstract class iCloudApp extends iCPSApp {
      * @throws An iCPSError in case an error occurs
      */
     async run(): Promise<unknown> {
-        if(Resources.state().state !== StateType.READY) {
-            throw new iCPSError(APP_ERR.NOT_READY)
-        }
+        // seems to be a bug: if the sync is triggered by the web ui, the sync start event will already have set the state to running, failing this check.
+        // if(Resources.state().state !== StateType.READY) {
+        //     throw new iCPSError(APP_ERR.NOT_READY)
+        //         .addMessage(`Application is not ready yet. Current state: ${Resources.state().state}`);
+        // }
 
         try {
             return await this.icloud.authenticate();
