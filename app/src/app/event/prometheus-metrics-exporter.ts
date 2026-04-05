@@ -10,7 +10,14 @@ const phaseLabels = [`authentication`, `fetchAndLoad`, `diff`, `writeAssets`, `w
 
 export class PrometheusMetricsExporter {
     private readonly metrics = {
-        state: new PrometheusSimpleMetric(`sync_status`, `Current status of the sync engine.`, `gauge`, [`unknown` , `ok` , `authenticating` , `syncing` , `error`], `unknown`),
+        state: new PrometheusMultipleValueMetric(`sync_status`, `Current status of the sync engine.`, `gauge`,
+            `state`, [
+                `unknown`,
+                `ok`,
+                `authenticating`,
+                `syncing`,
+                `error`,
+            ], 0 as number),
         durations: new PrometheusMultipleValueMetric<number>(`sync_durations_second`, `Duration of the last sync run in seconds, split by phases, each labeled with the phase name.`, `gauge`, `phase`, phaseLabels, 0),
         loadedLocalAlbums: new PrometheusSimpleMetric(`loaded_local_albums`, `Number of albums loaded from the local library during the last sync run.`, `gauge`, undefined, 0 as number),
         loadedLocalAssets: new PrometheusSimpleMetric(`loaded_local_assets`, `Number of assets loaded from the local library during the last sync run.`, `gauge`, undefined, 0 as number),
@@ -27,27 +34,33 @@ export class PrometheusMetricsExporter {
     private startTimes: Map<string, number> = new Map();
 
     constructor() {
+        this.metrics.state.setValue(`unknown`, 1);
+
         if (!Resources.manager().exportPrometheusMetrics) {
             return;
         }
-
+        
         this.setupListeners();
     }
 
     private setupListeners() {
         Resources.events(this).on(iCPSEventSyncEngine.START, () => {
             this.resetMetrics();
-            this.metrics.state.value = `syncing`;
+            this.metrics.state.setValue(`syncing`, 1);
         }).on(iCPSEventSyncEngine.DONE, () => {
-            this.metrics.state.value = `ok`;
+            this.metrics.state.resetValues();
+            this.metrics.state.setValue(`ok`, 1);
         }).on(iCPSEventRuntimeError.SCHEDULED_ERROR, () => {
-            this.metrics.state.value = `error`;
+            this.metrics.state.resetValues();
+            this.metrics.state.setValue(`error`, 1);
             this.updateAllDurations();
         }).on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
-            this.metrics.state.value = `error`;
+            this.metrics.state.resetValues();
+            this.metrics.state.setValue(`error`, 1);
             this.updateAllDurations();
         }).on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
-            this.metrics.state.value = `authenticating`;
+            this.metrics.state.resetValues();
+            this.metrics.state.setValue(`authenticating`, 1);
             this.setStartTime(`authentication`);
         }).on(iCPSEventCloud.ACCOUNT_READY, () => {
             this.updateDuration(`authentication`);
@@ -112,7 +125,7 @@ export class PrometheusMetricsExporter {
     }
 
     public resetMetrics() {
-        for(const metricKey in this.metrics) {
+        for (const metricKey in this.metrics) {
             const metric = this.metrics[metricKey as keyof typeof this.metrics];
             if (metric instanceof PrometheusSimpleMetric) {
                 metric.resetValue();
@@ -123,7 +136,7 @@ export class PrometheusMetricsExporter {
     }
 }
 
-export class PrometheusSimpleMetric<C extends string | number> {
+export class PrometheusSimpleMetric<C extends number> {
     public value: C;
     constructor(
         public readonly name: string,
@@ -131,7 +144,7 @@ export class PrometheusSimpleMetric<C extends string | number> {
         public readonly type: `gauge` | `counter`,
         public readonly supportedValues: readonly C[] | undefined,
         public readonly initialValue: C
-    ) { 
+    ) {
         this.value = initialValue;
     }
 
