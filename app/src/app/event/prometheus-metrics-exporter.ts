@@ -49,7 +49,7 @@ export class PrometheusMetricsExporter {
         }).on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
             this.metrics.state.value = `authenticating`;
             this.setStartTime(`authentication`);
-        }).on(iCPSEventCloud.AUTHENTICATED, () => {
+        }).on(iCPSEventCloud.ACCOUNT_READY, () => {
             this.updateDuration(`authentication`);
         }).on(iCPSEventSyncEngine.FETCH_N_LOAD, () => {
             this.setStartTime(`fetchAndLoad`);
