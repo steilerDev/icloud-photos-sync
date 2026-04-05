@@ -12,7 +12,7 @@ import {serviceWorker} from './scripts/service-worker.js';
 import {RequestMfaView} from './view/request-mfa-view.js';
 import {StateView} from './view/state-view.js';
 import {SubmitMfaView} from './view/submit-mfa-view.js';
-import {PrometheusSimpleMetric, PrometheusMetricsExporter} from "../event/prometheus-metrics-exporter.js";
+import {PrometheusSimpleMetric, PrometheusMetricsExporter, PrometheusMultipleValueMetric} from "../event/prometheus-metrics-exporter.js";
 import {LogLevel, StateType} from '../../lib/resources/state-manager.js';
 import {NotificationPusher} from './notification-pusher.js';
 import {URL} from 'url';
@@ -342,10 +342,6 @@ export class WebServer {
         }
     }
 
-    /**
-     * This function will handle the request send to the metrics endpoint. Metrics are exposed in the prometheus format.
-     * @param res - The HTTP response object
-     */
     handleMetricsRequest(_url: URL, _body: string, headers: http.IncomingHttpHeaders): WebServerResponse {
         if (!Resources.manager().exportPrometheusMetrics) {
             return {
@@ -368,28 +364,32 @@ export class WebServer {
             },
             body: Object.values(this.prometheusMetricsExporter.getMetrics())
                 .flatMap((metric) => {
-                    let helperText = `# HELP icps_${metric.name} ${metric.description}`;
-                    const valueLines: string[] = [];
-                    if(metric instanceof PrometheusSimpleMetric) {
-                        if(metric.supportedValues) {
-                            helperText += ` Possible values: ${metric.supportedValues.join(`|`)}.`;
-                        }
-                        valueLines.push(`icps_${metric.name} ${metric.value}`);
-                    } else {
-                        helperText += ` Supported labels: ${metric.labelName}=${metric.supportedLabelValues.join(`|`)}.`;
-                        for (const [labelValue, metricValue] of metric.getValues().entries()) {
-                            const labelString = `${metric.labelName}="${labelValue}"`
-                            valueLines.push(`icps_${metric.name}{${labelString}} ${metricValue}`);
-                        }
-                    }
-
-                    return [
-                        helperText,
-                        `# TYPE icps_${metric.name} ${metric.type}`,
-                        ...valueLines
-                    ];
-                }).join(`\n`)
+                    return this.getPrometheusLinesFor(metric);
+                }).join(`\n`) + `\n# EOF`
         }
+    }
+
+    private getPrometheusLinesFor(metric: PrometheusMultipleValueMetric<number> | PrometheusSimpleMetric<number>) {
+        let helperText = `# HELP icps_${metric.name} ${metric.description}`;
+        const valueLines: string[] = [];
+        if (metric instanceof PrometheusSimpleMetric) {
+            if (metric.supportedValues) {
+                helperText += ` Possible values: ${metric.supportedValues.join(`|`)}.`;
+            }
+            valueLines.push(`icps_${metric.name} ${metric.value}`);
+        } else {
+            helperText += ` Supported labels: ${metric.labelName}=${metric.supportedLabelValues.join(`|`)}.`;
+            for (const [labelValue, metricValue] of metric.getValues().entries()) {
+                const labelString = `${metric.labelName}="${labelValue}"`;
+                valueLines.push(`icps_${metric.name}{${labelString}} ${metricValue}`);
+            }
+        }
+
+        return [
+            helperText,
+            `# TYPE icps_${metric.name} ${metric.type}`,
+            ...valueLines
+        ];
     }
 
     /**
