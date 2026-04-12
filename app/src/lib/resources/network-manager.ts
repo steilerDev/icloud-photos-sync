@@ -71,6 +71,10 @@ export class HeaderJar {
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Response-Type`, `code`));
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Response-Mode`, `web_message`));
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Client-Type`, `firstPartyAuth`));
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Redirect-URI`, `https://www.icloud.com`));
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Require-Grant-Code`, `true`));
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-State`, CLIENT_ID));
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-Offer-Security-Upgrade`, `1`));
 
         axios.interceptors.request.use(config => this._injectHeaders(config));
         axios.interceptors.response.use(response => this._extractHeaders(response));
@@ -109,6 +113,12 @@ export class HeaderJar {
         if (response.headers.scnt && this.isApplicable(response.config, new Header(`idmsa.apple.com`, ``, ``))) {
             Resources.logger(this).debug(`Extracted scnt from response header with length ` + response.headers.scnt.length);
             this.setHeader(new Header(`idmsa.apple.com`, HEADER_KEYS.SCNT, response.headers.scnt));
+        }
+
+        const authAttributes = response.headers[HEADER_KEYS.AUTH_ATTRIBUTES.toLowerCase()];
+        if (authAttributes && this.isApplicable(response.config, new Header(`idmsa.apple.com`, ``, ``))) {
+            Resources.logger(this).debug(`Extracted auth attributes from response header with length ` + authAttributes.length);
+            this.setHeader(new Header(`idmsa.apple.com`, HEADER_KEYS.AUTH_ATTRIBUTES, authAttributes));
         }
 
         if (response.headers[`set-cookie`] && Array.isArray(response.headers[`set-cookie`])) {
@@ -268,6 +278,7 @@ export class NetworkManager {
 
         this._headerJar.clearHeader(HEADER_KEYS.SCNT);
         this._headerJar.clearHeader(HEADER_KEYS.SESSION_ID);
+        this._headerJar.clearHeader(HEADER_KEYS.AUTH_ATTRIBUTES);
 
         await this.settleRateLimiter();
         await this.settleCCYLimiter();

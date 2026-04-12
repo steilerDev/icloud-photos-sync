@@ -113,7 +113,7 @@ export class iCloud {
 
             if (response.status === 409) {
                 Resources.logger(this).debug(`Response status is 409, requiring MFA`);
-                const trustedPhoneNumbers = await this.getTrustedPhoneNumbers()
+                const trustedPhoneNumbers = await this.requestMFAViaSMS();
                 Resources.emit(iCPSEventCloud.MFA_REQUIRED, trustedPhoneNumbers);
                 return;
             }
@@ -228,6 +228,40 @@ export class iCloud {
             Resources.emit(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, new iCPSError(MFA_ERR.NO_PHONE_NUMBERS).addCause(err));
         }
         return []
+    }
+
+    /**
+     * Requests an MFA code via SMS to the first trusted phone number.
+     * Required since iOS 26.4 where device push notifications no longer arrive for third-party auth.
+     * The SMS flow still works with legacy endpoints (PUT /verify/phone).
+     * The response contains the list of trusted phone numbers (since GET /auth now returns HTML).
+     * @returns The list of trusted phone numbers from the SMS request response
+     */
+    async requestMFAViaSMS(): Promise<TrustedPhoneNumber[]> {
+        try {
+            Resources.logger(this).info(`Requesting MFA code via SMS`);
+
+            const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.MFA.PHONE_RESEND;
+            const config: AxiosRequestConfig = {
+                validateStatus: status => status === 200,
+            };
+            const data = {
+                phoneNumber: {
+                    id: 1,
+                },
+                mode: `sms`,
+            };
+
+            const response = await Resources.network().put(url, data, config);
+            const validatedResponse = Resources.validator().validateResendMFAPhoneResponse(response);
+            Resources.logger(this).info(`Successfully requested MFA code via SMS to ${validatedResponse.data.trustedPhoneNumber.numberWithDialCode}`);
+
+            return validatedResponse.data.trustedPhoneNumbers ?? [];
+        } catch (err) {
+            Resources.logger(this).warn(`Failed to request MFA via SMS: ${err}`);
+        }
+
+        return [];
     }
 
     /**

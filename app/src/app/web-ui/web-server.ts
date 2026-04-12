@@ -102,7 +102,6 @@ export class WebServer {
         // allow the process to exit, if this server is the only thing left running
         this.server.unref();
 
-        // Default MFA request always goes to device
         this.mfaMethod = new MFAMethod();
     }
 

@@ -32,6 +32,7 @@ export const CLIENT_INFO = jsonc.stringify({
 export const HEADER_KEYS = {
     SCNT: `scnt`,
     SESSION_ID: `X-Apple-ID-Session-Id`,
+    AUTH_ATTRIBUTES: `X-Apple-Auth-Attributes`,
     COOKIE: `Cookie`,
 };
 

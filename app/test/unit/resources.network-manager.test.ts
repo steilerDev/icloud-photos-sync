@@ -24,7 +24,7 @@ describe(`HeaderJar`, () => {
         const axiosInstance = axios.create();
         const headerJar = new HeaderJar(axiosInstance);
 
-        expect(headerJar.headers.size).toBe(13);
+        expect(headerJar.headers.size).toBe(17);
         expect((axiosInstance.interceptors.request as any).handlers.length).toBe(1);
     });
 

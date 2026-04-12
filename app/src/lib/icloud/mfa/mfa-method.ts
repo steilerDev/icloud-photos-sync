@@ -27,7 +27,7 @@ export class MFAMethod {
      * @param mfaMethod - The method to be used. Defaults to `device`
      * @param numberId - The number id used for sending sms or voice codes. Defaults to 1
      */
-    constructor(mfaMethod: `device` | `voice` | `sms` = `device`, numberId: number = 1) {
+    constructor(mfaMethod: `device` | `voice` | `sms` = `sms`, numberId: number = 1) {
         this.update(mfaMethod, numberId);
     }
 
