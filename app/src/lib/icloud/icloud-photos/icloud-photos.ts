@@ -516,10 +516,10 @@ export class iCloudPhotos {
     async fetchAllCPLAssetsMasters(parentId?: string): Promise<[CPLAsset[], CPLMaster[]]> {
         Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
 
-        let expectedNumberOfRecords = -1;
-        let allRecords: any[] = [];
         const cplMasters: CPLMaster[] = [];
         const cplAssets: CPLAsset[] = [];
+        let allRecords: any[];
+        let expectedNumberOfRecords: number;
         try {
             [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, parentId);
 

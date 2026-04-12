@@ -212,7 +212,7 @@ export namespace Resources {
      */
     export function getLockStat() {
         const {lockFilePath} = Resources.manager();
-        let lockFileExists = false
+        let lockFileExists: boolean;
         try {
             lockFileExists = statSync(lockFilePath).isFile()
         } catch {
