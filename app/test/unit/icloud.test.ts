@@ -200,7 +200,7 @@ describe.each([
         test(`Invalid Trust Token - MFA Required`, async () => {
             // ICloud.authenticate returns ready promise. Need to modify in order to resolve at the end of the test
             icloud.getReady = jest.fn<typeof icloud.getReady>().mockResolvedValue(true);
-            icloud.getTrustedPhoneNumbers = jest.fn<typeof icloud.getTrustedPhoneNumbers>().mockResolvedValue(`someVal` as any)
+            icloud.requestMFAViaSMS = jest.fn<typeof icloud.requestMFAViaSMS>().mockResolvedValue(`someVal` as any);
 
             const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
             const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.MFA_REQUIRED);
@@ -216,7 +216,7 @@ describe.each([
 
             await icloud.authenticate();
 
-            expect(icloud.getTrustedPhoneNumbers).toHaveBeenCalled()
+            expect(icloud.requestMFAViaSMS).toHaveBeenCalled()
             expect(trustedEvent).not.toHaveBeenCalled();
             expect(authenticationEvent).toHaveBeenCalled();
             expect(mfaEvent).toHaveBeenCalledWith(`someVal`);
