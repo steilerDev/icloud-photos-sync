@@ -92,7 +92,7 @@
     "typescript-eslint": "8.58.1"
   },
   "dependencies": {
-    "@backtrace/node": "0.8.0",
+    "@backtrace/node": "0.8.1",
     "@foxt/js-srp": "0.0.3-patch2",
     "@inquirer/prompts": "7.9.0",
     "ajv": "8.18.0",
