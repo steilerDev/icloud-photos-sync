@@ -83,7 +83,7 @@
     "mock-fs": "5.5.0",
     "mock-stdin": "1.0.0",
     "node-mocks-http": "1.17.2",
-    "tar-stream": "3.1.8",
+    "tar-stream": "3.2.0",
     "testcontainers": "11.14.0",
     "ts-jest": "29.4.9",
     "ts-json-schema-generator": "2.9.0",
