@@ -94,7 +94,7 @@
   "dependencies": {
     "@backtrace/node": "0.8.0",
     "@foxt/js-srp": "0.0.3-patch2",
-    "@inquirer/prompts": "7.9.0",
+    "@inquirer/prompts": "8.5.1",
     "ajv": "8.18.0",
     "axios": "1.15.0",
     "axios-har-tracker": "0.8.0",
