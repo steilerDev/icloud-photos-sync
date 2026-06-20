@@ -23,7 +23,7 @@ jobs:
     if: contains(fromJSON(inputs.methods), 'unit-ubuntu')
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/test-unit
         uses: ./.github/actions/test/setup
         with:
@@ -39,7 +39,7 @@ jobs:
     if: contains(fromJSON(inputs.methods), 'unit-macos')
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/test-unit
         uses: ./.github/actions/test/setup
         with:
@@ -52,7 +52,7 @@ jobs:
     if: contains(fromJSON(inputs.methods), 'unit-docker')
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/test-docker
         uses: ./.github/actions/test/setup
         with:
@@ -68,7 +68,7 @@ jobs:
     if: contains(fromJSON(inputs.methods), 'e2e')
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/test-docker
         uses: ./.github/actions/test/setup
         with:
@@ -85,7 +85,7 @@ jobs:
     timeout-minutes: 30 # Fail fast if runner is unavailable or tests hang
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/test-api
         uses: ./.github/actions/test/setup
         with:
