@@ -23,7 +23,7 @@
         "ghcr.io/devcontainers/features/python:1": {
             "version": "3.9"
         },
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+        "ghcr.io/devcontainers/features/docker-in-docker:4": {
             "version": "latest",
             "moby": "false"
         }
