@@ -82,7 +82,7 @@
     "liquidjs": "10.25.5",
     "mock-fs": "5.5.0",
     "mock-stdin": "1.0.0",
-    "node-mocks-http": "1.17.2",
+    "node-mocks-http": "1.18.0",
     "tar-stream": "3.1.8",
     "testcontainers": "11.14.0",
     "ts-jest": "29.4.9",
