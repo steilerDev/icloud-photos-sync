@@ -113,8 +113,9 @@ export class iCloud {
 
             if (response.status === 409) {
                 Resources.logger(this).debug(`Response status is 409, requiring MFA`);
-                const trustedPhoneNumbers = await this.requestMFAViaSMS();
-                Resources.emit(iCPSEventCloud.MFA_REQUIRED, trustedPhoneNumbers);
+                // iOS 26.4: trigger the code on the trusted device via PUT /verify/trusteddevice/securitycode
+                await this.requestMFAViaDevice();
+                Resources.emit(iCPSEventCloud.MFA_REQUIRED, []);
                 return;
             }
 
@@ -265,6 +266,29 @@ export class iCloud {
     }
 
     /**
+     * Triggers a 2FA code on the user's trusted device(s).
+     * iOS 26.4 workaround: the code must be requested via PUT /verify/trusteddevice/securitycode.
+     * The old POST /verify/trusteddevice no longer triggers a code (returns 405), and for some
+     * accounts Apple rejects the SMS submit with 409 - the trusted-device path still works.
+     * Mirrors icloudpd's send_2fa_code (iowk, tested on iOS/macOS 26.4).
+     */
+    async requestMFAViaDevice(): Promise<void> {
+        try {
+            Resources.logger(this).info(`Requesting MFA code via trusted device`);
+
+            const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.MFA.DEVICE_ENTER;
+            const config: AxiosRequestConfig = {
+                validateStatus: status => status >= 200 && status < 300,
+            };
+
+            await Resources.network().put(url, undefined, config);
+            Resources.logger(this).info(`Successfully requested MFA code via trusted device`);
+        } catch (err) {
+            Resources.logger(this).warn(`Failed to request MFA via trusted device: ${err}`);
+        }
+    }
+
+    /**
      * This function will ask the iCloud backend, to re-send the MFA token, using the provided method and number
      * @param method - The method to be used
      * @returns A promise that resolves once all activity has been completed
@@ -311,12 +335,22 @@ export class iCloud {
 
             const url = method.getEnterURL();
             const config: AxiosRequestConfig = {
-                validateStatus: method.enterSuccessful.bind(method),
+                // iOS 26.4: hsa2 accounts return HTTP 409 (with securityCode.valid=true in the body)
+                // on a *correct* code instead of 204. Accept 409 here and validate via the body below;
+                // pyicloud/icloudpd tolerate this same 409 and proceed to the trust step.
+                validateStatus: status => method.enterSuccessful(status) || status === 409,
             };
             const data = method.getEnterPayload(mfa);
 
             Resources.logger(this).debug(`Entering MFA code via URL ${url} with data ${jsonc.stringify(data)}`);
-            await Resources.network().post(url, data, config);
+            const response = await Resources.network().post(url, data, config);
+
+            // A 409 is only a success when Apple reports the submitted code as valid; otherwise reject.
+            if (response.status === 409 && (response.data as any)?.securityCode?.valid !== true) {
+                Resources.logger(this).warn(`MFA submit returned 409 without a valid security code`);
+                Resources.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.CODE_REJECTED));
+                return;
+            }
 
             Resources.logger(this).info(`MFA code correct!`);
             Resources.emit(iCPSEventCloud.AUTHENTICATED);

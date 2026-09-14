@@ -1,5 +1,6 @@
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import {AxiosHarTracker} from "axios-har-tracker";
+import {randomUUID} from "crypto";
 import {createWriteStream} from "fs";
 import fs from "fs/promises";
 import {jsonc} from "jsonc";
@@ -73,7 +74,9 @@ export class HeaderJar {
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Client-Type`, `firstPartyAuth`));
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Redirect-URI`, `https://www.icloud.com`));
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Require-Grant-Code`, `true`));
-        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-State`, CLIENT_ID));
+        // iOS 26.4: X-Apple-OAuth-State must be a per-session value distinct from the widget key
+        // (icloudpd uses `auth-<uuid>`); reusing CLIENT_ID here appears to cause the securitycode 409.
+        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-State`, `auth-${randomUUID()}`));
         this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-Offer-Security-Upgrade`, `1`));
 
         axios.interceptors.request.use(config => this._injectHeaders(config));
@@ -100,6 +103,23 @@ export class HeaderJar {
             .forEach(header => {
                 config.headers[header.key] = header.value;
             });
+
+        // iOS 26.4: match icloud.com's request shape for the MFA securitycode requests (trigger +
+        // submit) and the 2sv/trust request, or Apple rejects the submit with HTTP 409. Use the
+        // icloud.com Origin/Referer (the OAuth redirect-uri), and drop the extra headers icloud.com
+        // does not send here (Offer-Security-Upgrade steers Apple to the bridge/upgrade flow;
+        // Auth-Attributes is stale in this context). Signin keeps the idmsa Origin set above.
+        if (config.url?.includes(`/securitycode`) || config.url?.includes(`/2sv/trust`)) {
+            config.headers[`Origin`] = `https://www.icloud.com`;
+            config.headers[`Referer`] = `https://www.icloud.com/`;
+            for (const extraHeader of [`X-Apple-Offer-Security-Upgrade`, `X-Apple-I-FD-Client-Info`, HEADER_KEYS.AUTH_ATTRIBUTES]) {
+                if (typeof (config.headers as any).delete === `function`) {
+                    (config.headers as any).delete(extraHeader);
+                } else {
+                    delete (config.headers as any)[extraHeader];
+                }
+            }
+        }
 
         return config;
     }
