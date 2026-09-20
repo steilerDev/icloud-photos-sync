@@ -32,6 +32,7 @@ DOCKER_IMAGE="steilerdev/icloud-photos-sync:$IMAGE_TAG"
 echo -n "Starting $DOCKER_IMAGE..."
 
 DOCKER_NAME=$(docker run -d \
+  -u $(id -u):$(id -g) \
   -e APPLE_ID_USER="$TEST_APPLE_ID_USER" \
   -e APPLE_ID_PWD="$TEST_APPLE_ID_PWD" \
   -e PORT="80" \
