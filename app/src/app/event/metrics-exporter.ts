@@ -501,7 +501,7 @@ export class MetricsExporter {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.SYNC_COMPLETED));
             })
-            .on(iCPSEventSyncEngine.RETRY, () => {
+            .on(iCPSEventRuntimeWarning.RETRY, () => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.SYNC_RETRY));
             });

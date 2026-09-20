@@ -64,7 +64,7 @@ export class SyncEngine {
                 retryError.addContext(`error-try-${retryCount}`, err);
                 retryCount++;
 
-                Resources.emit(iCPSEventSyncEngine.RETRY, retryCount, (err as AxiosError).isAxiosError
+                Resources.emit(iCPSEventRuntimeWarning.RETRY, retryCount, (err as AxiosError).isAxiosError
                     ? new iCPSError(SYNC_ERR.NETWORK).addCause(err)
                     : new iCPSError(SYNC_ERR.UNKNOWN).addCause(err));
 

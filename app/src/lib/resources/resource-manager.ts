@@ -151,13 +151,9 @@ export class ResourceManager {
     }
 
     /**
-     * This will always read the resource file for the most recently trust token and update the internal data structure
-     * @returns The currently used trust token, or undefined if none is set.
+     * @returns The currently stored trust token, or undefined if none is set.
      */
     get trustToken(): string | undefined {
-        const resourceFile = this._readResourceFile();
-        this._resources.trustToken = resourceFile.trustToken;
-
         return this._resources.trustToken;
     }
 

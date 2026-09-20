@@ -189,9 +189,13 @@ export enum iCPSEventRuntimeWarning {
      */
     RESOURCE_FILE_ERROR = `warn-resource_file_error`,
     /**
-     * Emitted when there is a problem acquiring the trusted phone numbers of an account
+     * Emitted when there is a problem acquiring the trusted phone numbers of an account - provides the iCPSError as argument
      */
-    TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`
+    TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`,
+    /**
+     * Emitted when the sync process has experienced an error and will retry - provides the number of retries as argument as well as the iCPSError leading to the retry
+     */
+    RETRY = `sync-retry`,
 }
 
 /**
@@ -266,10 +270,6 @@ export enum iCPSEventSyncEngine {
      * Emitted when the sync process has completed
      */
     DONE = `sync-done`,
-    /**
-     * Emitted when the sync process has experienced an error and will retry - provides the number of retries as argument as well as the iCPSError leading to the retry
-     */
-    RETRY = `sync-retry`,
 }
 
 /**
@@ -334,5 +334,10 @@ export enum iCPSState {
      * Emitted when the application registered a new log entry
      * Will emit a SerializedLog object
      */
-    LOG_ADDED = `log-added`
+    LOG_ADDED = `state-log-added`,
+    /**
+     * Emitted when the application registered a new runtime warning
+     * Will emit a string message associated to the warning
+     */
+    RUNTIME_WARNING = `state-runtime-warning`
 }

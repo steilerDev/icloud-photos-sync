@@ -22,7 +22,6 @@ beforeEach(() => {
     mockedResourceManager = instances!.manager
 })
 
-
 describe(`State changes`, () => { 
     let stateChangeEvent: jest.Mock
     beforeEach(() => {
@@ -365,7 +364,8 @@ describe(`State changes`, () => {
                 prevError: undefined,
                 prevTrigger: `sync`,
                 progress: 31.5,
-                progressMsg: `Syncing assets: 1/10`
+                progressMsg: `Syncing assets: 1/10`,
+                runtimeWarningCount: 1
             } as SerializedState
         },{
             desc: `Should handle write assets completed (triggered by sync)`,
@@ -410,17 +410,6 @@ describe(`State changes`, () => {
                 prevTrigger: `sync`,
                 progress: 99,
                 progressMsg: `Successfully wrote diff to disk!`
-            } as SerializedState
-        },{
-            desc: `Should handle retry (triggered by sync)`,
-            events: [iCPSEventApp.SCHEDULED_START, [iCPSEventSyncEngine.RETRY, 1, new Error(`Test`)]],
-            serializedState: {
-                state: `running`,
-                nextSync: undefined,
-                prevError: undefined,
-                prevTrigger: `sync`,
-                progress: 15,
-                progressMsg: `Detected error during sync: UNKNOWN: Unknown error occurred caused by Test, Refreshing iCloud connection & retrying (attempt #1)...`
             } as SerializedState
         },{
             desc: `Should update state and retain trigger on sync success`,
@@ -523,14 +512,15 @@ describe(`State changes`, () => {
             } as SerializedState
         },{
             desc: `Should clear error on trigger`,
-            events: [iCPSEventWebServer.REAUTH_REQUESTED, [iCPSEventWebServer.REAUTH_ERROR, new Error(`Test`)], iCPSEventApp.SCHEDULED_START],
+            events: [iCPSEventWebServer.REAUTH_REQUESTED, [iCPSEventWebServer.REAUTH_ERROR, new Error(`Test`)], [iCPSEventRuntimeWarning.RETRY, 1, new Error(`Test`)], iCPSEventApp.SCHEDULED_START],
             serializedState: {
                 state: `running`,
                 nextSync: undefined,
                 prevError: undefined,
                 prevTrigger: `sync`,
                 progress: 0,
-                progressMsg: `Starting sync...`
+                progressMsg: `Starting sync...`,
+                runtimeWarningCount: 0
             } as SerializedState
         }
     ])(`$desc`, ({events, serializedState}) => {
@@ -553,40 +543,17 @@ describe(`State changes`, () => {
     })
 })
 
-describe(`Log added`, () => { 
+describe(`Runtime warning added`, () => {
     let logAddedEvent: jest.Mock
+    let warningAddedEvent: jest.Mock
+
     beforeEach(() => {
         logAddedEvent = mockedEventManager.spyOnEvent(iCPSState.LOG_ADDED)
+        warningAddedEvent = mockedEventManager.spyOnEvent(iCPSState.RUNTIME_WARNING)
     })
+
     test.each([
         {
-            desc: `Should handle debug log`,
-            event: iCPSEventLog.DEBUG,
-            args: [`SourceObject`, `TestMsg`],
-            serializedMessage: {
-                level: `debug`,
-                source: `SourceObject`,
-                message: `TestMsg`
-            } as LogMessage
-        },{
-            desc: `Should handle info log`,
-            event: iCPSEventLog.INFO,
-            args: [`SourceObject`, `TestMsg`],
-            serializedMessage: {
-                level: `info`,
-                source: `SourceObject`,
-                message: `TestMsg`
-            } as LogMessage
-        },{
-            desc: `Should handle warn log`,
-            event: iCPSEventLog.WARN,
-            args: [`SourceObject`, `TestMsg`],
-            serializedMessage: {
-                level: `warn`,
-                source: `SourceObject`,
-                message: `TestMsg`
-            } as LogMessage
-        },{
             desc: `Should handle runtime warning: count mismatch`,
             event: iCPSEventRuntimeWarning.COUNT_MISMATCH,
             args: [`Album`, 1, 2, 3],
@@ -602,7 +569,7 @@ describe(`Log added`, () => {
             serializedMessage: {
                 level: `warn`,
                 source: `RuntimeWarning`,
-                message: `Unknown file extension .png for descriptor png`
+                message: `Unknown file extension .png for descriptor png - see GH issue 143"`
             } as LogMessage
         },{
             desc: `Should handle runtime warning: library load error`,
@@ -696,12 +663,72 @@ describe(`Log added`, () => {
             } as LogMessage
         },{
             desc: `Should handle runtime warning: retry`,
-            event: iCPSEventSyncEngine.RETRY,
+            event: iCPSEventRuntimeWarning.RETRY,
             args: [1, new Error(`Test`)],
             serializedMessage: {
                 level: `warn`,
                 source: `RuntimeWarning`,
-                message: `Detected error during sync: UNKNOWN: Unknown error occurred caused by Test`
+                message: `Detected error during sync: UNKNOWN: Unknown error occurred caused by Test - retrying (#1)`
+            } as LogMessage
+        }
+    ])(`$desc`, ({event, args, serializedMessage}) => {
+        const preEventLogLength = mockedState.log!.length
+        const preEventWarningLength = mockedState.runtimeWarnings[event]?.length ?? 0
+        const preEventWarningCount = mockedState.runtimeWarningsCount
+
+        mockedEventManager.emit(event, ...args)
+        expect(logAddedEvent).toHaveBeenLastCalledWith(expect.objectContaining({
+            level: serializedMessage.level,
+            source: serializedMessage.source,
+            message: serializedMessage.message
+        }))
+        expect(mockedState.log?.length).toEqual(preEventLogLength + 1)
+        expect(mockedState.runtimeWarnings[event]?.length).toEqual(preEventWarningLength + 1)
+        expect(mockedState.runtimeWarningsCount).toEqual(preEventWarningCount + 1)
+    })
+})
+
+describe(`Log added`, () => { 
+    let logAddedEvent: jest.Mock
+    beforeEach(() => {
+        logAddedEvent = mockedEventManager.spyOnEvent(iCPSState.LOG_ADDED)
+    })
+    test.each([
+        {
+            desc: `Should handle debug log`,
+            event: iCPSEventLog.DEBUG,
+            args: [`SourceObject`, `TestMsg`],
+            serializedMessage: {
+                level: `debug`,
+                source: `SourceObject`,
+                message: `TestMsg`
+            } as LogMessage
+        },{
+            desc: `Should handle info log`,
+            event: iCPSEventLog.INFO,
+            args: [`SourceObject`, `TestMsg`],
+            serializedMessage: {
+                level: `info`,
+                source: `SourceObject`,
+                message: `TestMsg`
+            } as LogMessage
+        },{
+            desc: `Should handle warn log`,
+            event: iCPSEventLog.WARN,
+            args: [`SourceObject`, `TestMsg`],
+            serializedMessage: {
+                level: `warn`,
+                source: `SourceObject`,
+                message: `TestMsg`
+            } as LogMessage
+        },{
+            desc: `Should handle runtime warning: count mismatch`,
+            event: iCPSEventRuntimeWarning.COUNT_MISMATCH,
+            args: [`Album`, 1, 2, 3],
+            serializedMessage: {
+                level: `warn`,
+                source: `RuntimeWarning`,
+                message: `Expected 1 CPLAssets & CPLMasters, but got 2 CPLAssets and 3 CPLMasters for album Album`
             } as LogMessage
         }
     ])(`$desc`, ({event, args, serializedMessage}) => {

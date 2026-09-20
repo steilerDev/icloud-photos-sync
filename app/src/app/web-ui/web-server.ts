@@ -357,12 +357,12 @@ export class WebServer {
             return check;
         }
 
-        Resources.emit(iCPSEventWebServer.REAUTH_REQUESTED);
-
         this.triggerReauth()
             .catch(err => {
                 Resources.emit(iCPSEventWebServer.REAUTH_ERROR, iCPSError.toiCPSError(err));
             });
+
+        Resources.emit(iCPSEventWebServer.REAUTH_REQUESTED);
         
         return {
             code: 200,

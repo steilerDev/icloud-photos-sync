@@ -47,6 +47,7 @@ export type SerializedState = {
         message: string,
         code: string
     },
+    runtimeWarningCount: number,
     prevTrigger?: StateTrigger,
     progress?: number,
     progressMsg?: string,
@@ -77,6 +78,12 @@ export class StateManager {
      * THe full log since the last trigger
      */
     log?: LogMessage[]
+
+    runtimeWarnings: {
+        [key in iCPSEventRuntimeWarning]?: string[]
+    } = {}
+
+    runtimeWarningsCount: number = 0
 
     /**
      * Additional in progress context to provide more granular information on the current progress
@@ -221,9 +228,6 @@ export class StateManager {
             .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
                 this.updateState(StateType.RUNNING, {progressMsg: `Successfully wrote diff to disk!`, progress: 99});
             })
-            .on(iCPSEventSyncEngine.RETRY, (retryCount: number, err: iCPSError) => {
-                this.updateState(StateType.RUNNING, {progressMsg: `Detected error during sync: ${iCPSError.toiCPSError(err).getDescription()}, Refreshing iCloud connection & retrying (attempt #${retryCount})...`, progress: 15});
-            });
 
 
         // SUCCESS
@@ -256,43 +260,46 @@ export class StateManager {
             .on(iCPSEventLog.INFO, (source: unknown, msg: string) => this.addLog(LogLevel.INFO, source, msg))
             .on(iCPSEventLog.WARN, (source: unknown, msg: string) => this.addLog(LogLevel.WARN, source, msg))
             .on(iCPSEventRuntimeWarning.COUNT_MISMATCH, (album: string, expectedCount: number, actualCPLAssets: number, actualCPLMasters: number) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Expected ${expectedCount} CPLAssets & CPLMasters, but got ${actualCPLAssets} CPLAssets and ${actualCPLMasters} CPLMasters for album ${album}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.COUNT_MISMATCH, `Expected ${expectedCount} CPLAssets & CPLMasters, but got ${actualCPLAssets} CPLAssets and ${actualCPLMasters} CPLMasters for album ${album}`)
             })
             .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Unknown file extension ${ext} for descriptor ${descriptor}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.FILETYPE_ERROR, `Unknown file extension ${ext} for descriptor ${descriptor} - see GH issue 143`);
             })
             .on(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, (err: Error, filePath: string) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error while loading file ${filePath}: ${iCPSError.toiCPSError(err).getDescription()}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, `Error while loading file ${filePath}: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
             .on(iCPSEventRuntimeWarning.EXTRANEOUS_FILE, (filePath: string) => {
                 this.addLog(LogLevel.WARN, `RuntimeWarning`, `Extraneous file found in directory ${filePath}`);
             })
             .on(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR, (err: Error, asset: CPLAsset) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error while loading iCloud asset ${asset.recordName}: ${iCPSError.toiCPSError(err).getDescription()}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR, `Error while loading iCloud asset ${asset.recordName}: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
             .on(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, (err: Error, asset: Asset) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error while verifying asset ${asset?.getDisplayName()}: ${iCPSError.toiCPSError(err).getDescription()}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, `Error while verifying asset ${asset?.getDisplayName()}: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
             .on(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, (err: Error, album: Album) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error while writing album ${album?.getDisplayName()}: ${iCPSError.toiCPSError(err).getDescription()}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, `Error while writing album ${album?.getDisplayName()}: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
             .on(iCPSEventRuntimeWarning.LINK_ERROR, (err: Error, srcPath: string, dstPath: string) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error while linking ${srcPath} to ${dstPath}: ${iCPSError.toiCPSError(err).getDescription()}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.LINK_ERROR, `Error while linking ${srcPath} to ${dstPath}: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
             .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error within MFA flow: ${iCPSError.toiCPSError(err).getDescription()}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.MFA_ERROR, `Error within MFA flow: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
             .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error within web server: ${iCPSError.toiCPSError(err).getDescription()}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, `Error within web server: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
             .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: Error) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error while accessing resource file: ${iCPSError.toiCPSError(err).getDescription()}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, `Error while accessing resource file: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
             .on(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, (err: Error, assetPath: string) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error while archiving asset ${assetPath}: ${iCPSError.toiCPSError(err).getDescription()}`);
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, `Error while archiving asset ${assetPath}: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
-            .on(iCPSEventSyncEngine.RETRY, (_retryCount: number, err: Error) => {
-                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Detected error during sync: ${iCPSError.toiCPSError(err).getDescription()}`);
+            .on(iCPSEventRuntimeWarning.RETRY, (retryCount: number, err: Error) => {
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, `Detected error during sync: ${iCPSError.toiCPSError(err).getDescription()} - retrying (#${retryCount})`);
+            })
+            .on(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, (err: Error) => {
+                this.addRuntimeWarning(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, `Unable to acquire trusted phone numbers: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
             .on(iCPSEventLog.ERROR, (source: unknown, msg: string) => this.addLog(LogLevel.ERROR, source, msg))
             .on(iCPSEventRuntimeError.HANDLED_ERROR, (err: iCPSError) => this.addLog(LogLevel.ERROR, `RuntimeError`, iCPSError.toiCPSError(err).getDescription()));
@@ -335,12 +342,25 @@ export class StateManager {
     triggerSync(trigger: StateTrigger) {
         this.prevTrigger = trigger;
         this.prevError = undefined;
+        this.runtimeWarnings = {}
+        this.runtimeWarningsCount = 0
         this.log = []
         this.inProgressAssets = {
             totalAssets: 0,
             completedAssets: 0
         }
         this.updateState(StateType.RUNNING, {progress: 0, progressMsg: `Starting ${trigger}...`})
+    }
+
+    addRuntimeWarning(event: iCPSEventRuntimeWarning, msg: string) {
+        if(!this.runtimeWarnings[event]) {
+            this.runtimeWarnings[event] = []
+        }
+
+        this.runtimeWarningsCount++
+        this.runtimeWarnings[event].push(msg)
+        this.addLog(LogLevel.WARN, `RuntimeWarning`, msg)
+        Resources.event().emit(iCPSState.RUNTIME_WARNING, msg)
     }
 
     addLog(level: LogLevel, source: string | any, message: string) {
@@ -401,6 +421,7 @@ export class StateManager {
             state: this.state,
             nextSync: this.nextSync,
             prevError: error,
+            runtimeWarningCount: this.runtimeWarningsCount,
             prevTrigger: this.prevTrigger,
             timestamp: this.timestamp,
             progress: this.inProgressContext?.progress,

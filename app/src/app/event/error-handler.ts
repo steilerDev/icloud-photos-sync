@@ -5,12 +5,12 @@ import {jsonc} from "jsonc";
 import {pEvent} from 'p-event';
 import {Readable} from 'stream';
 import * as zlib from 'zlib';
-import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {iCPSEventArchiveEngine, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSState} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR, WEB_SERVER_ERR} from "../error/error-codes.js";
 import {iCPSError} from "../error/error.js";
+import {SerializedState} from "../../lib/resources/state-manager.js";
 
 /**
  * List of errors that will never get reported
@@ -156,174 +156,12 @@ export class ErrorHandler {
         }
 
         Resources.events(this)
-            .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
-                this.btClient.breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
+            .on(iCPSState.STATE_CHANGED, (state: SerializedState) => {
+                this.btClient.breadcrumbs.info(`State changed to ${state.state}`, state as Record<string, any>)
             })
-            .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
-                this.btClient.breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
+            .on(iCPSState.RUNTIME_WARNING, (msg: string) => {
+                this.btClient.breadcrumbs.warn(`Runtime warning: ${msg}`)
             })
-            .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
-                this.btClient.breadcrumbs.warn(`FILETYPE_ERROR`, {ext, descriptor});
-            })
-            .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: iCPSError) => {
-                this.btClient.breadcrumbs.warn(`RESOURCE_FILE_ERROR`, {error: err.getDescription()});
-            })
-            .on(iCPSEventRuntimeWarning.EXTRANEOUS_FILE, () => {
-                this.btClient.breadcrumbs.warn(`EXTRANEOUS_FILE`);
-            })
-            .on(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`LIBRARY_LOAD_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
-            })
-            .on(iCPSEventRuntimeWarning.COUNT_MISMATCH, (_album: string, expectedCount: number, actualCPLAssets: number, actualCPLMasters: number) => {
-                this.btClient.breadcrumbs.warn(`COUNT_MISMATCH`, {
-                    expectedCount,
-                    actualCPLAssets,
-                    actualCPLMasters,
-                });
-            })
-            .on(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`ICLOUD_LOAD_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
-            })
-            .on(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`WRITE_ASSET_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
-            })
-            .on(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`WRITE_ALBUM_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
-            })
-            .on(iCPSEventRuntimeWarning.LINK_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`LINK_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
-            })
-            .on(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`ARCHIVE_ASSET_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
-            });
-
-        Resources.events(this)
-            .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
-                this.btClient.breadcrumbs.info(`AUTHENTICATION_STARTED`);
-            })
-            .on(iCPSEventCloud.AUTHENTICATED, () => {
-                this.btClient.breadcrumbs.info(`AUTHENTICATED`);
-            })
-            .on(iCPSEventCloud.MFA_REQUIRED, () => {
-                this.btClient.breadcrumbs.warn(`MFA_REQUIRED`);
-            })
-            .on(iCPSEventCloud.TRUSTED, () => {
-                this.btClient.breadcrumbs.info(`TRUSTED`);
-            })
-            .on(iCPSEventCloud.ACCOUNT_READY, () => {
-                this.btClient.breadcrumbs.info(`ACCOUNT_READY`);
-            })
-            .on(iCPSEventCloud.SESSION_EXPIRED, () => {
-                this.btClient.breadcrumbs.info(`SESSION_EXPIRED`);
-            })
-            .on(iCPSEventCloud.PCS_REQUIRED, () => {
-                this.btClient.breadcrumbs.info(`PCS_REQUIRED`);
-            })
-            .on(iCPSEventCloud.PCS_NOT_READY, () => {
-                this.btClient.breadcrumbs.info(`PCS_NOT_READY`);
-            });
-
-        Resources.events(this)
-            .on(iCPSEventWebServer.STARTED, () => {
-                this.btClient.breadcrumbs.info(`WEB_SERVER_STARTED`);
-            })
-            .on(iCPSEventWebServer.SYNC_REQUESTED, () => {
-                this.btClient.breadcrumbs.info(`WEB_SERVER_SYNC_REQUESTED`)
-            })
-            .on(iCPSEventWebServer.REAUTH_REQUESTED, () => {
-                this.btClient.breadcrumbs.info(`WEB_SERVER_AUTH_REQUESTED`)
-            })
-            .on(iCPSEventWebServer.REAUTH_ERROR, (err) => {
-                this.btClient.breadcrumbs.warn(`REAUTH_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()})
-            })
-
-        Resources.events(this)
-            .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {
-                this.btClient.breadcrumbs.info(`MFA_RESEND`, {method: method.toString()});
-            })
-            .on(iCPSEventMFA.MFA_RECEIVED, (method: MFAMethod) => {
-                this.btClient.breadcrumbs.info(`MFA_RECEIVED`, {method: method.toString()});
-            })
-            .on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
-                this.btClient.breadcrumbs.error(`MFA_NOT_PROVIDED`);
-            });
-
-        Resources.events(this)
-            .on(iCPSEventPhotos.SETUP_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`SETUP_COMPLETED`);
-            })
-            .on(iCPSEventPhotos.READY, () => {
-                this.btClient.breadcrumbs.info(`PHOTOS_READY`);
-            });
-
-        Resources.events(this)
-            .on(iCPSEventSyncEngine.START, () => {
-                this.btClient.breadcrumbs.info(`SYNC_STARTED`);
-            })
-            .on(iCPSEventSyncEngine.FETCH_N_LOAD, () => {
-                this.btClient.breadcrumbs.info(`FETCH_N_LOAD`);
-            })
-            .on(iCPSEventSyncEngine.FETCH_N_LOAD_COMPLETED, (remoteAssetCount: number, remoteAlbumCount: number, localAssetCount: number, localAlbumCount: number) => {
-                this.btClient.breadcrumbs.info(`FETCH_N_LOAD_COMPLETED`, {
-                    remoteAssetCount,
-                    remoteAlbumCount,
-                    localAssetCount,
-                    localAlbumCount,
-                });
-            })
-            .on(iCPSEventSyncEngine.DIFF, () => {
-                this.btClient.breadcrumbs.info(`DIFF`);
-            })
-            .on(iCPSEventSyncEngine.DIFF_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`DIFF_COMPLETED`);
-            })
-            .on(iCPSEventSyncEngine.WRITE, () => {
-                this.btClient.breadcrumbs.info(`WRITE`);
-            })
-            .on(iCPSEventSyncEngine.WRITE_ASSETS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
-                this.btClient.breadcrumbs.info(`WRITE_ASSETS`, {
-                    toBeDeletedCount,
-                    toBeAddedCount,
-                    toBeKept,
-                });
-            })
-            .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {
-                const writeAssetCount = Resources.event().getEventCount(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
-                this.btClient.breadcrumbs.info(`WRITE_ASSETS_COMPLETED`, {writeAssetCount});
-            })
-            .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
-                this.btClient.breadcrumbs.info(`WRITE_ALBUMS`, {
-                    toBeDeletedCount,
-                    toBeAddedCount,
-                    toBeKept,
-                });
-            })
-            .on(iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`WRITE_ALBUMS_COMPLETED`);
-            })
-            .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`WRITE_COMPLETED`);
-            })
-            .on(iCPSEventSyncEngine.DONE, () => {
-                this.btClient.breadcrumbs.info(`SYNC_COMPLETED`);
-            })
-            .on(iCPSEventSyncEngine.RETRY, (retryCount: number, err: iCPSError) => {
-                this.btClient.breadcrumbs.warn(`SYNC_RETRY`, {retryCount, error: iCPSError.toiCPSError(err).getDescription()});
-            });
-
-        Resources.events(this)
-            .on(iCPSEventArchiveEngine.ARCHIVE_START, () => {
-                this.btClient.breadcrumbs.info(`ARCHIVE_STARTED`);
-            })
-            .on(iCPSEventArchiveEngine.PERSISTING_START, (numberOfAssets: number) => {
-                this.btClient.breadcrumbs.info(`PERSISTING_START`, {numberOfAssets});
-            })
-            .on(iCPSEventArchiveEngine.REMOTE_DELETE, (numberOfAssets: number) => {
-                this.btClient.breadcrumbs.info(`REMOTE_DELETE`, {numberOfAssets});
-            })
-            .on(iCPSEventArchiveEngine.ARCHIVE_DONE, () => {
-                this.btClient.breadcrumbs.info(`ARCHIVE_COMPLETED`);
-            });
     }
 
     /**
