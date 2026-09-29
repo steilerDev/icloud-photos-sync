@@ -35,7 +35,7 @@ describe(`Constructor`, () => {
     test(`Should create default MFA Method`, () => {
         const webServer = new WebServer()
         expect(webServer.mfaMethod).toBeDefined()
-        expect(webServer.mfaMethod.isDevice).toBeTruthy()
+        expect(webServer.mfaMethod.isSMS).toBeTruthy()
     })
 
     describe(`HTTP Server`, () => {
@@ -507,7 +507,7 @@ describe.each([
                     message: `Read MFA code: ${code}`,
                 });
 
-                expect(mfaReceivedEvent).toHaveBeenCalledWith(new MFAMethod(`device`), code);
+                expect(mfaReceivedEvent).toHaveBeenCalledWith(new MFAMethod(`sms`), code);
             });
 
             test(`Invalid code format`, async () => {
