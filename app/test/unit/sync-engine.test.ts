@@ -1,4 +1,4 @@
-import mockfs from 'mock-fs';
+import mockfs from '../_helpers/mock-fs.helper';
 import {describe, test, jest, expect, afterEach, beforeEach} from '@jest/globals';
 
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';

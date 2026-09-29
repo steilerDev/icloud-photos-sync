@@ -1,6 +1,6 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import fs from 'fs';
-import mockfs from 'mock-fs';
+import mockfs from '../_helpers/mock-fs.helper';
 import {stdin} from 'mock-stdin';
 import {appFactory, iCPSAppOptions} from '../../src/app/factory';
 import {ArchiveApp, DaemonApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
@@ -14,8 +14,8 @@ import {nonRejectOptions, rejectOptions, validOptions} from '../_helpers/app-fac
 import {StateManager, StateType} from '../../src/lib/resources/state-manager';
 
 beforeAll(() => {
-    // DATA_DIR is set in devcontainer and can lead to conflicts in this test suite
-    delete process.env.DATA_DIR;
+    // DATA_DIR is set in devcontainer and can lead to conflicts in this test suite - making sure the app factory uses the temporary data dir by default
+    process.env.DATA_DIR = Config.defaultConfig.dataDir;
 });
 
 beforeEach(() => {
@@ -114,7 +114,7 @@ describe(`App Factory`, () => {
         expect(Resources.event()).toBeDefined();
         expect(Resources.validator()).toBeDefined();
         expect(Resources.network()).toBeDefined();
-        expect(fs.existsSync(`/opt/icloud-photos-library`));
+        expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeTruthy();
     });
 
     test(`Create Sync App`, async () => {
@@ -128,7 +128,7 @@ describe(`App Factory`, () => {
         expect(Resources.network()).toBeDefined();
         expect(syncApp.photosLibrary).toBeDefined();
         expect(syncApp.syncEngine).toBeDefined();
-        expect(fs.existsSync(`/opt/icloud-photos-library`));
+        expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeTruthy();
     });
 
     test(`Create Archive App`, async () => {
@@ -143,7 +143,7 @@ describe(`App Factory`, () => {
         expect(archiveApp.photosLibrary).toBeDefined();
         expect(archiveApp.syncEngine).toBeDefined();
         expect(archiveApp.archiveEngine).toBeDefined();
-        expect(fs.existsSync(`/opt/icloud-photos-library`));
+        expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeTruthy();
     });
 
     test(`Create Daemon App`, async () => {

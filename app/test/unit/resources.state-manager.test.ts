@@ -1,4 +1,4 @@
-import mockfs from 'mock-fs';
+import mockfs from '../_helpers/mock-fs.helper';
 import fs from 'fs';
 import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals"
 import {LogLevel, LogMessage, SerializedState, StateManager, StateTrigger} from "../../src/lib/resources/state-manager"

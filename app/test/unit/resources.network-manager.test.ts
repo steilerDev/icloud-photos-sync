@@ -3,7 +3,7 @@ import {afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@j
 import axios from "axios";
 import {AxiosHarTracker} from 'axios-har-tracker';
 import fs from 'fs';
-import mockfs from 'mock-fs';
+import mockfs from '../_helpers/mock-fs.helper';
 import PQueue from 'p-queue';
 import path from 'path';
 import {Stream} from 'stream';
