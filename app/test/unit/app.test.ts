@@ -199,7 +199,8 @@ describe(`App control flow`, () => {
         expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
     });
 
-    test(`Handle app not ready`, async () => {
+    test(`Authenticates while state is running`, async () => {
+        // The Web UI moves the state to RUNNING (through REAUTH_REQUESTED), before running the TokenApp
         const tokenApp = await appFactory(validOptions.token) as TokenApp;
         Resources.state().state = StateType.RUNNING
         tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>()
@@ -211,9 +212,9 @@ describe(`App control flow`, () => {
         Resources._instances.event.removeListenersFromRegistry = jest.fn<typeof Resources._instances.event.removeListenersFromRegistry>()
             .mockReturnValue(Resources._instances.event);
 
-        await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
+        await expect(tokenApp.run()).resolves.toBeTruthy();
 
-        expect(tokenApp.icloud.authenticate).not.toHaveBeenCalled();
+        expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(1);
 
         expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
         expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
@@ -275,28 +276,6 @@ describe(`App control flow`, () => {
             expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
 
             expect(tokenEvent).toHaveBeenCalledTimes(1);
-        });
-
-        test(`Handle not ready`, async () => {
-            const tokenApp = await appFactory(validOptions.token) as TokenApp;
-            Resources.state().state = StateType.RUNNING
-
-            tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>()
-                .mockResolvedValue(true);
-            tokenApp.icloud.logout = jest.fn<typeof tokenApp.icloud.logout>()
-                .mockResolvedValue();
-
-            Resources._instances.network.resetSession = jest.fn<typeof Resources._instances.network.resetSession>()
-                .mockResolvedValue();
-            Resources._instances.event.removeListenersFromRegistry = jest.fn<typeof Resources._instances.event.removeListenersFromRegistry>()
-                .mockReturnValue(Resources._instances.event);
-
-            await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
-
-            expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(0);
-            expect(tokenApp.icloud.logout).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
         });
     });
 
@@ -369,30 +348,6 @@ describe(`App control flow`, () => {
             expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
             expect(syncApp.icloud.logout).toHaveBeenCalledTimes(1);
             expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
-        });
-
-        test(`Handle not ready`, async () => {
-            const syncApp = await appFactory(validOptions.sync) as SyncApp;
-            Resources.state().state = StateType.RUNNING
-
-            syncApp.icloud.authenticate = jest.fn<typeof syncApp.icloud.authenticate>()
-                .mockResolvedValue(true);
-            syncApp.icloud.logout = jest.fn<typeof syncApp.icloud.logout>()
-                .mockResolvedValue();
-            syncApp.syncEngine.sync = jest.fn<typeof syncApp.syncEngine.sync>()
-                .mockResolvedValue([[], []]);
-            Resources._instances.network.resetSession = jest.fn<typeof Resources._instances.network.resetSession>()
-                .mockResolvedValue();
-            Resources._instances.event.removeListenersFromRegistry = jest.fn<typeof Resources._instances.event.removeListenersFromRegistry>()
-                .mockReturnValue(Resources._instances.event);
-
-            await expect(syncApp.run()).rejects.toThrow(/^Sync failed$/);
-
-            expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(0);
-            expect(syncApp.icloud.logout).toHaveBeenCalledTimes(1);
-            expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(0);
             expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
             expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
@@ -482,34 +437,6 @@ describe(`App control flow`, () => {
             expect(archiveApp.icloud.logout).toHaveBeenCalledTimes(1);
             expect(archiveApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
-        });
-
-        test(`Handle not ready`, async () => {
-            const archiveApp = await appFactory(validOptions.archive) as ArchiveApp;
-            Resources.state().state = StateType.RUNNING
-
-            archiveApp.icloud.authenticate = jest.fn<typeof archiveApp.icloud.authenticate>()
-                .mockResolvedValue(true);
-            archiveApp.icloud.logout = jest.fn<typeof archiveApp.icloud.logout>()
-                .mockResolvedValue();
-            const remoteState = [{fileChecksum: `someChecksum`}] as Asset[];
-            archiveApp.syncEngine.sync = jest.fn<typeof archiveApp.syncEngine.sync>()
-                .mockResolvedValue([remoteState, []]);
-            archiveApp.archiveEngine.archivePath = jest.fn<typeof archiveApp.archiveEngine.archivePath>()
-                .mockResolvedValue();
-            Resources._instances.network.resetSession = jest.fn<typeof Resources._instances.network.resetSession>()
-                .mockResolvedValue();
-            Resources._instances.event.removeListenersFromRegistry = jest.fn<typeof Resources._instances.event.removeListenersFromRegistry>()
-                .mockReturnValue(Resources._instances.event);
-
-            await expect(archiveApp.run()).rejects.toThrow(/^Archive failed$/);
-
-            expect(archiveApp.icloud.authenticate).toHaveBeenCalledTimes(0);
-            expect(archiveApp.icloud.logout).toHaveBeenCalledTimes(1);
-            expect(archiveApp.syncEngine.sync).toHaveBeenCalledTimes(0);
-            expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledTimes(0);
             expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
             expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
@@ -634,6 +561,44 @@ describe(`App control flow`, () => {
 
             expect(syncApp.run).toHaveBeenCalled();
             expect(successEvent).not.toHaveBeenCalled();
+        });
+
+        test(`Scheduled sync skipped while another operation is in progress`, async () => {
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+            Resources.state().state = StateType.RUNNING
+            const startEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_START);
+            const overrunEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_OVERRUN);
+            const errorEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeError.SCHEDULED_ERROR);
+
+            const syncApp = new SyncApp();
+            syncApp.run = jest.fn<typeof syncApp.run>()
+                .mockResolvedValue([[], []]);
+
+            await daemonApp.performScheduledSync(syncApp);
+
+            expect(syncApp.run).not.toHaveBeenCalled();
+            expect(startEvent).not.toHaveBeenCalled();
+            expect(overrunEvent).toHaveBeenCalled();
+            expect(errorEvent).not.toHaveBeenCalled();
+            expect(Resources.state().state).toBe(StateType.RUNNING);
+        });
+
+        test(`Scheduled sync executes after moving to running state`, async () => {
+            // Regression test: SCHEDULED_START moves the state to RUNNING, the sync must still execute
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+            Resources.state().state = StateType.READY
+            const errorEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeError.SCHEDULED_ERROR);
+
+            const syncApp = new SyncApp();
+            syncApp.icloud.authenticate = jest.fn<typeof syncApp.icloud.authenticate>()
+                .mockResolvedValue(false);
+            syncApp.clean = jest.fn<typeof syncApp.clean>()
+                .mockResolvedValue();
+
+            await daemonApp.performScheduledSync(syncApp);
+
+            expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
+            expect(errorEvent).not.toHaveBeenCalled();
         });
 
         test(`Scheduled sync fails`, async () => {
