@@ -15,7 +15,7 @@ div#mfaInput input {
     border: 1px solid #ccc;
     text-align: center;
 
-    // no up/down arrows in number inputs
+    /* no up/down arrows in number inputs */
     -webkit-appearance: none;
     -moz-appearance: textfield;
 }

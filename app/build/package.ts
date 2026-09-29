@@ -17,12 +17,12 @@ async function copyDir(dirSrc: string, dirTarget: string) {
     const srcStat = await fs.readdir(dirSrc, {withFileTypes: true});
     for (const entry of srcStat) {
         if (entry.isDirectory()) {
-            copyDir(path.join(entry.path, entry.name), path.join(dirTarget, entry.name));
+            await copyDir(path.join(entry.parentPath, entry.name), path.join(dirTarget, entry.name));
             continue;
         }
 
         if (entry.isFile()) {
-            await copyFile(path.join(entry.path, entry.name), path.join(dirTarget, entry.name));
+            await copyFile(path.join(entry.parentPath, entry.name), path.join(dirTarget, entry.name));
         }
     }
 }

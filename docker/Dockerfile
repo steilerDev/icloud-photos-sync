@@ -1,4 +1,5 @@
-FROM node:22.21.0-alpine3.22 AS builder
+# The runtime stage copies /usr/lib and /usr/local from this stage - the Alpine version of both stages MUST match
+FROM node:26.10.0-alpine3.24 AS builder
 
 COPY npm-pack.tgz /opt/npm-pack.tgz
 
@@ -6,15 +7,18 @@ COPY npm-pack.tgz /opt/npm-pack.tgz
 RUN npm install -g /opt/npm-pack.tgz && \
     rm /opt/npm-pack.tgz
 
-# Removing npm, corepack, yarn and other unnecessary node related files
+# Removing npm, yarn and other unnecessary node related files (corepack is no longer shipped since Node 25)
 # These would be transferred with the build artifacts, which is why we are removing them at this stage
-RUN npm uninstall npm corepack -g \
+RUN npm uninstall npm -g \
   && rm -f /usr/local/bin/yarn /usr/local/bin/yarnpkg /usr/local/bin/docker-entrypoint.sh
 
-FROM alpine:3.22.2 AS hardened-intermediate
+FROM alpine:3.24.2 AS hardened-intermediate
 
-# Setting volume for default library path
-VOLUME /opt/icloud-photos-library
+LABEL org.opencontainers.image.title="icloud-photos-sync" \
+      org.opencontainers.image.description="One-way sync engine for the iCloud Photos Library into the native file system with archiving capabilities" \
+      org.opencontainers.image.source="https://github.com/steilerDev/icloud-photos-sync" \
+      org.opencontainers.image.url="https://icps.steiler.dev/" \
+      org.opencontainers.image.licenses="GPL-3.0-or-later"
 
 # Creating app user
 RUN addgroup -S icps && adduser -s /sbin/nologin -S icps -G icps
@@ -22,6 +26,9 @@ RUN addgroup -S icps && adduser -s /sbin/nologin -S icps -G icps
 # Making sure required volume inherits correct read/write
 RUN mkdir -p /opt/icloud-photos-library && \
     chmod -R 777 /opt
+
+# Setting volume for default library path - after the directory was prepared, since changes to a volume path after its declaration might be discarded
+VOLUME /opt/icloud-photos-library
 
 # Remove unnecessary accounts, excluding current app user and root
 # Remove interactive login shell for everybody
