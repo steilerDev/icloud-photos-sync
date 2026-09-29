@@ -1,6 +1,5 @@
 import {AxiosRequestConfig, isAxiosError} from 'axios';
 import {jsonc} from 'jsonc';
-import pTimeout from 'p-timeout';
 import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.js';
 import {iCPSError} from '../../app/error/error.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
@@ -66,17 +65,26 @@ export class iCloud {
      * @returns A promise that will resolve to true, if the connection was established successfully, false in case the MFA code was not provided in time or reject, in case there is an error
      */
     getReady(): Promise<boolean> {
-        return pTimeout(
-            new Promise<boolean>((resolve, reject) => {
-                Resources.events(this)
-                    .once(iCPSEventPhotos.READY, () => resolve(true))
-                    .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => resolve(false))
-                    .once(iCPSEventCloud.ERROR, err => reject(err));
-            }), {
-                milliseconds: Resources.manager().mfaTimeout  + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
-                message: new iCPSError(AUTH_ERR.SETUP_TIMEOUT),
-            },
-        );
+        return new Promise<boolean>((resolve, reject) => {
+            const timeout = setTimeout(
+                () => reject(new iCPSError(AUTH_ERR.SETUP_TIMEOUT)),
+                Resources.manager().mfaTimeout + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
+            );
+
+            Resources.events(this)
+                .once(iCPSEventPhotos.READY, () => {
+                    clearTimeout(timeout);
+                    resolve(true);
+                })
+                .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
+                    clearTimeout(timeout);
+                    resolve(false);
+                })
+                .once(iCPSEventCloud.ERROR, err => {
+                    clearTimeout(timeout);
+                    reject(err);
+                });
+        });
     }
 
     /**

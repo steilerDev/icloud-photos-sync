@@ -1,7 +1,7 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import fs from 'fs';
 import mockfs from '../_helpers/mock-fs.helper';
-import {stdin} from 'mock-stdin';
+import {PassThrough} from 'stream';
 import {appFactory, iCPSAppOptions} from '../../src/app/factory';
 import {ArchiveApp, DaemonApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {WebServer} from '../../src/app/web-ui/web-server';
@@ -79,7 +79,8 @@ describe(`App Factory`, () => {
     }])(`Asking user to provide $desc`, async ({options, stdinValue, stdOutValue}) => {
         const setupSpy = jest.spyOn(Resources, `setup`);
         const mockStdout = jest.spyOn(process.stdout, `write`).mockImplementation(() => true);
-        const mockStdin = stdin();
+        const mockStdin = new PassThrough();
+        const stdinSpy = jest.spyOn(process, `stdin`, `get`).mockReturnValue(mockStdin as unknown as typeof process.stdin);
 
         const app = appFactory(
             [
@@ -95,11 +96,13 @@ describe(`App Factory`, () => {
             await new Promise(resolve => setImmediate(resolve));
         }
 
-        mockStdin.send(`${stdinValue}\n`);
+        mockStdin.write(`${stdinValue}\n`);
 
         expect(await app).toBeInstanceOf(TokenApp);
         expect(mockStdout).toHaveBeenNthCalledWith(1, expect.stringMatching(new RegExp(`${stdOutValue}`)));
         expect(setupSpy).toHaveBeenCalledWith(Config.defaultConfig);
+
+        stdinSpy.mockRestore();
     });
 
     test(`Fail app creation if lock cannot be acquired`, async () => {

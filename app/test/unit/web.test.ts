@@ -126,6 +126,30 @@ describe(`Notification Pusher`, () => {
     })
 })
 
+describe(`Web base path`, () => {
+    test.each([{
+        url: `/icps.v1/service-worker.js`,
+        expectedStatus: 200,
+        desc: `Matching base path`,
+    }, {
+        url: `/icpsXv1/service-worker.js`,
+        expectedStatus: 400,
+        desc: `Regular expression characters in base path are matched literally`,
+    }])(`$desc`, async ({url, expectedStatus}) => {
+        mockedResourceManager._resources.webBasePath = `/icps.v1`
+        const webServer = new WebServer()
+
+        const req = createRequest<IncomingMessage>({
+            method: `GET`,
+            url,
+        })
+
+        const res = await sendMockedRequest(webServer, req)
+
+        expect(res._getStatusCode()).toEqual(expectedStatus)
+    })
+})
+
 describe.each([
     {
         webBasePath: ``,

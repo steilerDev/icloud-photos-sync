@@ -15,7 +15,7 @@ import {SubmitMfaView} from './view/submit-mfa-view.js';
 import {LogLevel, StateType} from '../../lib/resources/state-manager.js';
 import {NotificationPusher} from './notification-pusher.js';
 import {URL} from 'url';
-import {pEvent} from 'p-event';
+import {once} from 'events';
 
 type WebServerResponse = {
     code: number,
@@ -151,7 +151,7 @@ export class WebServer {
     async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         try {
             const url = new URL(
-                (req.url ?? `/`).replace(new RegExp(`^${Resources.manager().webBasePath}`), ``), // Removing the web base path for request matching
+                (req.url ?? `/`).replace(new RegExp(`^${RegExp.escape(Resources.manager().webBasePath)}`), ``), // Removing the web base path for request matching (escaping, since it is user provided)
                 `http://localhost/` // Necessary, because the req.url is relative
             )
             const body = await this.readBody(req)
@@ -209,7 +209,7 @@ export class WebServer {
                 req.on(`data`, chunk => {
                     body += chunk.toString();
                 });
-                await pEvent(req, `end`, {rejectionEvents: [`error`]})
+                await once(req, `end`) // Rejects if an 'error' event is emitted
 
                 Resources.logger(this).debug(`Read body: ${body}`)
                 return body;
