@@ -70,3 +70,7 @@ export const COUNT_DATA: ErrorStruct = buildErrorStruct(
 export const FETCH_RECORDS: ErrorStruct = buildErrorStruct(
     name, prefix, `FETCH_RECORDS`, `Unable to fetch records`,
 );
+
+export const MISSING_DOWNLOAD_URL: ErrorStruct = buildErrorStruct(
+    name, prefix, `MISSING_DOWNLOAD_URL`, `Asset has no download URL`,
+);

@@ -90,6 +90,11 @@ describe(`App Factory`, () => {
             ],
         );
 
+        // Inquirer ignores keypresses sent before the prompt was rendered - waiting for the prompt
+        while (mockStdout.mock.calls.length === 0) {
+            await new Promise(resolve => setImmediate(resolve));
+        }
+
         mockStdin.send(`${stdinValue}\n`);
 
         expect(await app).toBeInstanceOf(TokenApp);

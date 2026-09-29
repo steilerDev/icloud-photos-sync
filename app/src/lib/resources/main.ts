@@ -1,4 +1,4 @@
-import PackageData from '../../../package.json' with { type: 'json' }; // eslint-disable-line
+import PackageData from '../../../package.json' with { type: 'json' };
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -202,7 +202,7 @@ export namespace Resources {
             process.kill(pid, 0);
             return true;
         } catch (e) {
-            return e.code === `EPERM`;
+            return (e as NodeJS.ErrnoException).code === `EPERM`;
         }
     }
 
@@ -279,70 +279,70 @@ export namespace Resources {
         * Interface to logger event bus, with a source bound to it
         */
         export type Logger = {
-           /**
+            /**
             * Logs a message to the event bus
             * @param args - The arguments to log
             */
-           log: (...args: any[]) => void,
-           /**
+            log: (...args: any[]) => void,
+            /**
             * Logs a debug message to the event bus
             * @param args - The arguments to log
             */
-           debug: (...args: any[]) => void,
-           /**
+            debug: (...args: any[]) => void,
+            /**
             * Logs an info message to the event bus
             * @param args - The arguments to log
             */
-           info: (...args: any[]) => void,
-           /**
+            info: (...args: any[]) => void,
+            /**
             * Logs a warn message to the event bus
             * @param args - The arguments to log
             */
-           warn: (...args: any[]) => void,
-           /**
+            warn: (...args: any[]) => void,
+            /**
             * Logs an error message to the event bus
             * @param args - The arguments to log
             */
-           error: (...args: any[]) => void,
-       }
+            error: (...args: any[]) => void,
+        }
 
-       /**
+        /**
         * Interface to listener functions of the event bus, with a listener bound to it
         */
-       export type Events = {
-           /**
+        export type Events = {
+            /**
             * Registers an event listener to the event bus
             * @param event - The event to listen to
             * @param listener - The listener function to call upon the event
             * @returns This instance for chaining
             */
-           on: (event: iCPSEvent, listener: ListenerFunction) => Resources.Types.Events,
-           /**
+            on: (event: iCPSEvent, listener: ListenerFunction) => Resources.Types.Events,
+            /**
             * Registers an one-time event listener to the event bus
             * @param event - The event to listen to
             * @param listener - The listener function to call upon the event
             * @returns This instance for chaining
             */
-           once: (event: iCPSEvent, listener: ListenerFunction) => Resources.Types.Events,
-           /**
+            once: (event: iCPSEvent, listener: ListenerFunction) => Resources.Types.Events,
+            /**
             * Removes all listeners from the source from the event bus
             * @param event - Optional event to remove listeners for - otherwise all will be removed
             */
-           removeListeners: (event?: iCPSEvent) => Resources.Types.Events,
-       }
+            removeListeners: (event?: iCPSEvent) => Resources.Types.Events,
+        }
 
-       /**
+        /**
         * Possible regions for this tool to operate in
         */
-       export enum Region {
+        export enum Region {
         /**
          * Will use icloud.com
          */
-        WORLD = `world`,
-        /**
+            WORLD = `world`,
+            /**
          * Will use icloud.com.cn
          */
-        CHINA = `china`,
-       }
-   }
+            CHINA = `china`,
+        }
+    }
 }

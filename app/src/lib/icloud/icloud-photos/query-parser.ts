@@ -16,24 +16,24 @@ export class AssetID {
      * 28 chars, probably base64 encoded (21 bytes / 168 bit)
      * Unsure how this is computed
      */
-    fileChecksum: string;
+    fileChecksum!: string;
     /**
      * File size in bytes
      */
-    size: number;
+    size!: number;
     /**
      * Probably base64 encoded
      */
-    wrappingKey: string;
+    wrappingKey!: string;
     /**
      * An unknown checksum, different form fileChecksum.
      * Probably base64 encoded
      */
-    referenceChecksum: string;
+    referenceChecksum!: string;
     /**
      * The backend URL for this asset
      */
-    downloadURL: string;
+    downloadURL!: string;
 
     /**
      * Parses from a record sourced through the API
@@ -91,7 +91,7 @@ export class CPLAsset {
     /**
      * UUID of the asset
      */
-    recordName: string;
+    recordName!: string;
     /**
      * Name of the application that made changes to the file
      */
@@ -99,28 +99,28 @@ export class CPLAsset {
     /**
      * The hash of a CPLMaster record
      */
-    masterRef: string;
+    masterRef!: string;
     /**
      * The 'current' resource
      */
-    resource: AssetID;
+    resource?: AssetID;
     /**
      * The type of resource
      */
-    resourceType: string;
+    resourceType?: string;
     /**
      * If the resource is favorite, '1' if 'true'
      */
-    favorite: number;
+    favorite!: number;
     /**
      * Timestamp in nanoseconds since epoch
      */
-    modified: number;
+    modified!: number;
 
     /**
      * The zone name where the asset resides
      */
-    zoneName: string;
+    zoneName!: string;
 
     /**
      * Parses from a record sourced through the API
@@ -143,10 +143,10 @@ export class CPLAsset {
             asset.adjustmentType = cplRecord.fields.adjustmentType.value;
             if (cplRecord.fields.resJPEGFullRes) {
                 asset.resource = AssetID.parseFromQuery(cplRecord.fields.resJPEGFullRes);
-                asset.resourceType = cplRecord.fields.resJPEGFullFileType.value;
+                asset.resourceType = cplRecord.fields.resJPEGFullFileType?.value;
             } else if (cplRecord.fields.resVidFullRes) {
                 asset.resource = AssetID.parseFromQuery(cplRecord.fields.resVidFullRes);
-                asset.resourceType = cplRecord.fields.resVidFullFileType.value;
+                asset.resourceType = cplRecord.fields.resVidFullFileType?.value;
             }
         }
 
@@ -218,28 +218,28 @@ export class CPLMaster {
     /**
      * (Unique?) hash of the file
      */
-    recordName: string;
+    recordName!: string;
     /**
      *  The master asset attached to this record
      */
-    resource: AssetID;
+    resource!: AssetID;
     /**
      * The type of asset attached to this record
      */
-    resourceType: string;
+    resourceType!: string;
     /**
      * Base64 encoded filename
      */
-    filenameEnc: string;
+    filenameEnc!: string;
     /**
      * Timestamp in nanoseconds since epoch
      */
-    modified: number;
+    modified!: number;
 
     /**
      * The zone name where the asset resides
      */
-    zoneName: string;
+    zoneName!: string;
 
     // Can optionally have the following keys (indicating that this is a live photo, the following keys hold the information about the 'video' part of this):
     // resOriginalVidComplRes -> AssetID
@@ -318,23 +318,23 @@ export class CPLAlbum {
     /**
      * UUID of the album
      */
-    recordName: string;
+    recordName!: string;
     /**
      * AlbumType representation (e.g. Album or Folder)
      */
-    albumType: number;
+    albumType!: number;
     /**
      * Base64 encoded album name
      */
-    albumNameEnc: string;
+    albumNameEnc!: string;
     /**
      * The UUID of the parent folder
      */
-    parentId: string;
+    parentId?: string;
     /**
      * Timestamp in nanoseconds since epoch
      */
-    modified: number;
+    modified!: number;
     /**
      * A list of assets contained in this album
      */
@@ -360,7 +360,7 @@ export class CPLAlbum {
 /**
  * Expected query result for CPLAlbum
  */
- type CPLAlbumQuery = {
+type CPLAlbumQuery = {
     recordType: string
     recordName: string
     modified: {

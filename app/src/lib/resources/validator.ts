@@ -5,17 +5,17 @@ import {iCPSError} from "../../app/error/error.js";
 import {AuthInformationResponse, COOKIE_KEYS, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
 import {ResourceFile} from "./resource-types.js";
 import {PushSubscription} from './web-server-types.js';
-import PCSResponseSchema from "./schemas/pcs-response.json" with { type: "json" }; // eslint-disable-line
-import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" with { type: "json" }; // eslint-disable-line
-import AuthInformationResponseSchema from "./schemas/auth-information-response.json" with { type: "json" }; // eslint-disable-line
-import ResendMFADeviceResponseSchema from "./schemas/resend-mfa-device-response.json" with { type: "json" }; // eslint-disable-line
-import ResendMFAPhoneResponseSchema from "./schemas/resend-mfa-phone-response.json" with { type: "json" }; // eslint-disable-line
-import ResourceFileSchema from "./schemas/resource-file.json" with { type: "json" }; // eslint-disable-line
-import PushSubscriptionSchema from "./schemas/push-subscription.json" with { type: "json" }; // eslint-disable-line
-import SetupResponseSchema from "./schemas/setup-response.json" with { type: "json" }; // eslint-disable-line
-import SigninInitResponseSchema from "./schemas/signin-init-response.json" with { type: "json" }; // eslint-disable-line
-import SigninResponseSchema from "./schemas/signin-response.json" with { type: "json" }; // eslint-disable-line
-import TrustResponseSchema from "./schemas/trust-response.json" with { type: "json" }; // eslint-disable-line
+import PCSResponseSchema from "./schemas/pcs-response.json" with { type: "json" };
+import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" with { type: "json" };
+import AuthInformationResponseSchema from "./schemas/auth-information-response.json" with { type: "json" };
+import ResendMFADeviceResponseSchema from "./schemas/resend-mfa-device-response.json" with { type: "json" };
+import ResendMFAPhoneResponseSchema from "./schemas/resend-mfa-phone-response.json" with { type: "json" };
+import ResourceFileSchema from "./schemas/resource-file.json" with { type: "json" };
+import PushSubscriptionSchema from "./schemas/push-subscription.json" with { type: "json" };
+import SetupResponseSchema from "./schemas/setup-response.json" with { type: "json" };
+import SigninInitResponseSchema from "./schemas/signin-init-response.json" with { type: "json" };
+import SigninResponseSchema from "./schemas/signin-response.json" with { type: "json" };
+import TrustResponseSchema from "./schemas/trust-response.json" with { type: "json" };
 
 /**
  * Common configuration for the schema validator

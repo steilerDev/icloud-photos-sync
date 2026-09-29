@@ -18,12 +18,12 @@ import {URL} from 'url';
 import {pEvent} from 'p-event';
 
 type WebServerResponse = {
-    code: number, 
+    code: number,
     header: {
-        "Content-Type": string, // eslint-disable-line
-        "Content-Length"?: number, //eslint-disable-line
+        "Content-Type": string,
+        "Content-Length"?: number,
         Location?: string
-    }, 
+    },
     body: any
 }
 
@@ -151,7 +151,7 @@ export class WebServer {
     async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         try {
             const url = new URL(
-                req.url.replace(new RegExp(`^${Resources.manager().webBasePath}`), ``), // Removing the web base path for request matching
+                (req.url ?? `/`).replace(new RegExp(`^${Resources.manager().webBasePath}`), ``), // Removing the web base path for request matching
                 `http://localhost/` // Necessary, because the req.url is relative
             )
             const body = await this.readBody(req)
@@ -437,7 +437,8 @@ export class WebServer {
             return check;
         }
 
-        if (!url.search.match(/code=(\d{6})/)) {
+        const codeMatch = url.search.match(/code=(\d{6})/);
+        if (!codeMatch) {
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.CODE_FORMAT)
                 .addMessage(url.toString()));
             return {
@@ -451,7 +452,7 @@ export class WebServer {
             }
         }
 
-        const mfa: string = url.search.match(/code=(\d{6})/)[1]
+        const mfa: string = codeMatch[1]
 
         Resources.logger(this).debug(`Received MFA: ${mfa}`);
         Resources.emit(iCPSEventMFA.MFA_RECEIVED, this.mfaMethod, mfa);
@@ -519,7 +520,7 @@ export class WebServer {
     
     handlePushSubscription(_url: URL, data?: string): WebServerResponse {
         try {
-            const pushSubscriptionData = Resources.validator().validatePushSubscription(jsonc.parse(data));
+            const pushSubscriptionData = Resources.validator().validatePushSubscription(jsonc.parse(data ?? ``));
             Resources.manager().addNotificationSubscription(pushSubscriptionData);
             return {
                 code: 201,

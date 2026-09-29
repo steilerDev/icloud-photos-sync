@@ -16,11 +16,11 @@ export class MFAMethod {
     /**
      * The type of MFA method used
      */
-    type: MFAMethodType;
+    type!: MFAMethodType;
     /**
-     * The id of the device used
+     * The id of the phone number used - only set for sms and voice methods
      */
-    numberId: number;
+    numberId?: number;
 
     /**
      * Creates a new MFAMethod object to hold status information

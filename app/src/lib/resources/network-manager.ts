@@ -7,7 +7,7 @@ import {pEvent} from "p-event";
 import PQueue from "p-queue";
 import {Cookie} from "tough-cookie";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
-import {iCPSError} from "../../app/error/error.js";
+import {errorMessage, iCPSError} from "../../app/error/error.js";
 import {iCPSAppOptions} from "../../app/factory.js";
 import {Resources} from "./main.js";
 import {CLIENT_ID, CLIENT_INFO, COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse, USER_AGENT} from "./network-types.js";
@@ -124,6 +124,11 @@ export class HeaderJar {
         if (response.headers[`set-cookie`] && Array.isArray(response.headers[`set-cookie`])) {
             response.headers[`set-cookie`].forEach(cookie => {
                 const parsedCookie = Cookie.parse(cookie);
+                if (!parsedCookie) {
+                    Resources.logger(this).debug(`Unable to parse cookie from response header, ignoring...`);
+                    return;
+                }
+
                 Resources.logger(this).debug(`Extracted cookie from response header: ${parsedCookie.key} (domain ${parsedCookie.domain}) with length ${parsedCookie.value.length}`);
                 this.setCookie(parsedCookie);
             });
@@ -159,13 +164,18 @@ export class HeaderJar {
      */
     isApplicable(config: InternalAxiosRequestConfig, object: Header | Cookie): boolean {
         const objectDomain = object.domain;
+        if (objectDomain === null) {
+            // Cookies without domain are never applicable
+            return false;
+        }
 
-        if (config.baseURL && !this.absoluteURLRegex.test(config.url)) {
+        const url = config.url ?? ``;
+        if (config.baseURL && !this.absoluteURLRegex.test(url)) {
             // Base URL is not used if config URL is absolute
             return config.baseURL.includes(objectDomain);
         }
 
-        return config.url.includes(objectDomain);
+        return url.includes(objectDomain);
     }
 
     /**
@@ -193,6 +203,10 @@ export class HeaderJar {
     setCookie(...cookie: (Cookie | string)[]) {
         for (const c of cookie) {
             const _cookie = typeof c === `string` ? Cookie.parse(c) : c;
+            if (!_cookie) {
+                continue;
+            }
+
             if (_cookie.value.length > 0) {
                 this.cookies.set(_cookie.key, _cookie);
             } else {
@@ -285,7 +299,7 @@ export class NetworkManager {
 
         if (Resources.manager().enableNetworkCapture) {
             await this.writeHarFile();
-            this._harTracker.resetHar();
+            this._harTracker?.resetHar();
         }
     }
 
@@ -337,9 +351,9 @@ export class NetworkManager {
         }
 
         try {
-            const generatedObject = this._harTracker.getGeneratedHar();
+            const generatedObject = this._harTracker?.getGeneratedHar();
 
-            if (generatedObject.log.entries.length === 0) {
+            if (!generatedObject || generatedObject.log.entries.length === 0) {
                 Resources.logger(this).debug(`Not writing HAR file because no entries were captured`);
                 return false;
             }
@@ -350,7 +364,7 @@ export class NetworkManager {
             Resources.logger(this).info(`HAR file written`);
             return true;
         } catch (err) {
-            Resources.logger(this).error(`Unable to write HAR file: ${err.message}`);
+            Resources.logger(this).error(`Unable to write HAR file: ${errorMessage(err)}`);
             return false;
         }
     }

@@ -130,7 +130,7 @@ export enum iCPSEventPhotos {
      * Emitted when the photos library is ready to use
      */
     READY = `photos-ready`,
-     /**
+    /**
      * Emitted when the icloud photos library has experienced an error - provides an iCPSError as argument
      */
     ERROR = `error-photos`,

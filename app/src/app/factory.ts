@@ -111,7 +111,7 @@ async function completeConfigurationOptionsFromCommand(parsedCommand: unknown): 
     }
 
     while (!opts.password || opts.password.length === 0) {
-        opts.password = await password({message: `Please enter your AppleID password`, mask: `*`});
+        opts.password = await password({message: `Please enter your AppleID password`, mask: `*`, toggleMask: true});
     }
 
     return opts;
