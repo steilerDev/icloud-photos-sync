@@ -1,4 +1,7 @@
 # Making sure dependencies are kept up-to-date
+# Updates are grouped to keep the number of PRs manageable - a dependency is assigned to the first group matching it.
+# Major updates are raised individually (unless part of a coordinated group), so breaking changes can be reviewed in isolation.
+# A cooldown delays updates of freshly published versions, reducing churn and supply chain risk.
 version: 2
 updates:
   # Maintain dependencies for GitHub Actions
@@ -8,7 +11,7 @@ updates:
       - "/"                     # to match /.github/workflows
       - "/.github/actions/**/*" # to match repository actions
     target-branch: "dev"
-    open-pull-requests-limit: 20
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "chore: [ci] "
     schedule:
@@ -16,20 +19,31 @@ updates:
       day: "saturday"
       time: "09:00"
       timezone: "Europe/Berlin"
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    groups:
+      # A single PR for all actions across all directories
+      github-actions:
+        patterns:
+        - "*"
 
   # Maintain dependencies for devcontainer
-  - package-ecosystem: "devcontainers" # See documentation for possible values
+  - package-ecosystem: "devcontainers"
     labels: [ ]
     directory: "/"
     target-branch: "dev"
-    open-pull-requests-limit: 20
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "chore: [dev] "
     schedule:
-      interval: "weekly"
-      day: "saturday"
+      interval: "monthly"
       time: "09:00"
       timezone: "Europe/Berlin"
+    groups:
+      devcontainer:
+        patterns:
+        - "*"
 
   # Maintain dependencies for npm
   - package-ecosystem: "npm"
@@ -37,7 +51,7 @@ updates:
     directory: "/app"
     target-branch: "dev"
     versioning-strategy: "increase"
-    open-pull-requests-limit: 50
+    open-pull-requests-limit: 20
     commit-message:
       prefix: "chore: [app] "
     schedule:
@@ -45,50 +59,75 @@ updates:
       day: "saturday"
       time: "09:00"
       timezone: "Europe/Berlin"
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    ignore:
+      # Types need to match the Node.js runtime (app/node-version), which is updated manually
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 is not yet supported by typescript-eslint and ts-jest
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
-      jest:
-        patterns:
-        - "jest*"
-        - "@types/jest*"
-        - "@jest/globals*"
-        - "ts-jest*"
-      mockfs:
-        patterns:
-        - "mock-fs*"
-        - "@types/mock-fs*"
-      tar-stream:
-        patterns:
-        - "*tar-stream*"
+      # Coordinated groups - these packages need to be updated together (including major versions)
       typescript:
         patterns:
-        - "@typescript-eslint*"
-        - "@types/typescript*"
-        - 'eslint*'
-        - "typescript*"
-        - "tsx*"
-        - "typedoc*"
-      backtrace:
+        - "typescript"
+        - "typescript-eslint"
+        - "@typescript-eslint/*"
+        - "eslint"
+        - "@eslint/*"
+        - "@stylistic/*"
+        - "tsx"
+      jest:
         patterns:
-        - "@backtrace*"
+        - "jest"
+        - "jest-*"
+        - "@jest/*"
+        - "@types/jest"
+        - "ts-jest"
       jsdom:
         patterns:
-        - "*jsdom"
-  
+        - "jsdom"
+        - "@types/jsdom"
+        - "@testing-library/*"
+      backtrace:
+        patterns:
+        - "@backtrace/*"
+      # Catch-all groups for non-breaking updates
+      production-minor-patch:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      development-minor-patch:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"
     labels: [ ]
     directory: "/docker"
     target-branch: "dev"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "chore: [docker] "
     schedule:
       interval: "weekly"
       day: "saturday"
+      time: "09:00"
       timezone: "Europe/Berlin"
-    # ignore:
-    #   - dependency-name: "node"
-    #     versions: ["22.x.x"] # Ignoring non-LTS version - See https://github.com/nodejs/Release
+    cooldown:
+      default-days: 7
+    ignore:
+      # Node.js major versions are updated manually together with the runtime (app/node-version)
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # The runtime stage copies libraries from the builder stage - both need to use the same Alpine version
+      base-images:
+        patterns:
+        - "node"
+        - "alpine"
 
   # Maintain dependencies for pip (docs site)
   - package-ecosystem: "pip"
@@ -96,36 +135,44 @@ updates:
     directory: "/docs"
     target-branch: "dev"
     versioning-strategy: "increase"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "chore: [docs] "
     schedule:
-      interval: "weekly"
-      day: "saturday"
+      interval: "monthly"
       time: "09:00"
       timezone: "Europe/Berlin"
+    cooldown:
+      default-days: 7
     groups:
       mkdocs:
         patterns:
-        - "mkdocs*"
+        - "*"
 
-  # Maintain dependencies for semantic release
+  # Maintain dependencies for semantic release (kept outside of .github/, since Dependabot is not able to update files there)
   - package-ecosystem: "npm"
     labels: [ ]
-    directory: "/.github/actions/helper/prepare-semantic-release"
+    directory: "/tools/release"
     target-branch: "dev"
     versioning-strategy: "increase"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "chore: [semantic-release] "
     schedule:
-      interval: "weekly"
-      day: "saturday"
+      interval: "monthly"
       time: "09:00"
       timezone: "Europe/Berlin"
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    ignore:
+      # Version 10 requires conventional-changelog-writer 9, while @semantic-release/release-notes-generator still uses version 8
+      - dependency-name: "conventional-changelog-conventionalcommits"
+        versions: [">= 10"]
+      # Version 8 passes boolean flags (provenance / attest) through to buildx - requires validation of the release output
+      - dependency-name: "@codedependant/semantic-release-docker"
+        versions: [">= 8"]
     groups:
       semantic-release:
         patterns:
-        - "semantic-release*"
-        - "@semantic-release*"
-        - "conventional-changelog*"
+        - "*"

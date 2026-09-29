@@ -8,7 +8,7 @@ runs:
   using: composite
   steps:
     - id: merge-main-to-dev
-      uses: devmasx/merge-branch@master
+      uses: devmasx/merge-branch@6ec8363d74aad4f1615d1234ae1908b4185c4313 # master, pinned to commit
       with:
         type: now
         from_branch: main
