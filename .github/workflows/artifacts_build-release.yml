@@ -14,8 +14,8 @@ on:
         type: boolean
     secrets:
         docker-token:
-          description: The Docker token used for releasing the image
-          required: true # Scout action will always run
+          description: The Docker token used for pulling the base images and releasing the image
+          required: true # Base images are pulled from dhi.io and Scout action will always run
         gh-token:
           description: The Github Token, in order to deploy assets to Github
           required: false # Only required for release
@@ -68,6 +68,8 @@ jobs:
         uses: actions/checkout@v7
       - name: setup/build-docker
         uses: ./.github/actions/build/docker-setup
+        with:
+          docker-token: ${{ secrets.docker-token }}
       - name: action/build-docker
         uses: ./.github/actions/build/docker
         with:
@@ -88,6 +90,8 @@ jobs:
         uses: actions/checkout@v7
       - name: setup/release-docker
         uses: ./.github/actions/release/docker-setup
+        with:
+          docker-token: ${{ secrets.docker-token }}
       - name: action/release-docker
         id: release-docker
         uses: ./.github/actions/release/docker

@@ -18,3 +18,7 @@ export const SYNC: ErrorStruct = buildErrorStruct(
 export const ARCHIVE: ErrorStruct = buildErrorStruct(
     name, prefix, `ARCHIVE`, `Archive failed`,
 );
+
+export const INSUFFICIENT_PERMISSIONS: ErrorStruct = buildErrorStruct(
+    name, prefix, `INSUFFICIENT_PERMISSIONS`, `Node.js permission model is enabled, but required permissions are missing`,
+);

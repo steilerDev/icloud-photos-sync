@@ -58,7 +58,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
 
             Alternatively, it is possible to omit the [username](user-guides/cli.md#username) and/or [password](user-guides/cli.md#password) option entirely. In this scenarios, the username/password needs to be provided manually on each startup from the command line.
             To input the data into the running Docker container it needs to be started with [`tty: true`](https://docs.docker.com/reference/compose-file/services/#tty) and [`stdin_open: true`](https://docs.docker.com/reference/compose-file/services/#stdin_open). Once the container was started, you can attach to the running `icloud-photos-sync` process using [`docker attach photos-sync`](https://docs.docker.com/engine/reference/commandline/attach/), and detach with the sequence `CTRL-p CTRL-q`.
-            To execute a command within the running container (that needs access to the credentials), use `docker exec -it` [to open tty and stdin](https://docs.docker.com/reference/cli/docker/container/exec/#run-docker-exec-on-a-running-container), e.g. `docker exec -it photos-sync token`.
+            To execute a command within the running container (that needs access to the credentials), use `docker exec -it` [to open tty and stdin](https://docs.docker.com/reference/cli/docker/container/exec/#run-docker-exec-on-a-running-container), e.g. `docker exec -it photos-sync icloud-photos-sync token`.
 
         Get the latest image by running:
 

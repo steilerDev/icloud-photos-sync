@@ -42,7 +42,7 @@ runs:
         dockerhub-password: ${{ inputs.docker-token }}
         github-token: ${{ inputs.gh-token }}
         organization: ${{ steps.get-docker-metadata.outputs.image-namespace }}
-        command: compare,recommendations #policy,cves
+        command: compare #policy,cves - recommendations is not available, since Scout does not detect Docker Hardened Images as base image
         image: archive://docker-amd64.tar
         to: registry://${{ steps.get-docker-metadata.outputs.image-namespace }}/${{ steps.get-docker-metadata.outputs.image-repository }}:latest
         only-severities: critical,high

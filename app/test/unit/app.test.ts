@@ -3,7 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import mockfs from '../_helpers/mock-fs.helper';
 import {PassThrough} from 'stream';
-import {appFactory, iCPSAppOptions} from '../../src/app/factory';
+import {iCPSError} from '../../src/app/error/error';
+import {appFactory, iCPSAppOptions, validatePermissions} from '../../src/app/factory';
 import {ArchiveApp, DaemonApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {WebServer} from '../../src/app/web-ui/web-server';
 import {Asset} from '../../src/lib/photos-library/model/asset';
@@ -202,6 +203,70 @@ describe(`App Factory`, () => {
 
         await expect(appFactory(validOptions.token)).rejects.toThrow(new Error(`TestError`))
     })
+
+    describe(`Permission model`, () => {
+        const originalNodeOptions = process.env.NODE_OPTIONS;
+
+        /**
+         * Simulates an enabled permission model, granting the provided scopes
+         * @param grantedScopes - The scopes for which `process.permission.has` returns true
+         */
+        function mockPermission(...grantedScopes: string[]) {
+            Object.defineProperty(process, `permission`, {
+                value: {has: (scope: string) => grantedScopes.includes(scope)},
+                configurable: true,
+            });
+        }
+
+        afterEach(() => {
+            Reflect.deleteProperty(process, `permission`);
+            process.env.NODE_OPTIONS = originalNodeOptions;
+        });
+
+        test(`Create app without permission model`, async () => {
+            expect(process.permission).toBeUndefined();
+            expect(() => validatePermissions()).not.toThrow();
+        });
+
+        test(`Create app with sufficient permissions`, async () => {
+            mockPermission(`fs.read`, `fs.write`, `net`);
+
+            expect(() => validatePermissions()).not.toThrow();
+            expect(await appFactory(validOptions.token)).toBeInstanceOf(TokenApp);
+        });
+
+        test.each([{
+            desc: `restricted file system write`,
+            granted: [`fs.read`, `net`],
+            expected: `(missing --allow-fs-write=*)`,
+        }, {
+            desc: `restricted file system read`,
+            granted: [`fs.write`, `net`],
+            expected: `(missing --allow-fs-read=*)`,
+        }, {
+            desc: `missing network access`,
+            granted: [`fs.read`, `fs.write`],
+            expected: `(missing --allow-net)`,
+        }, {
+            desc: `no permissions`,
+            granted: [],
+            expected: `(missing --allow-fs-read=* --allow-fs-write=* --allow-net)`,
+        }])(`Fail app creation with $desc`, async ({granted, expected}) => {
+            mockPermission(...granted);
+
+            expect(() => validatePermissions()).toThrow(`Node.js permission model is enabled, but required permissions are missing`);
+            const err = await appFactory(validOptions.token).catch(err => err) as iCPSError;
+            expect(err.getDescription()).toEqual(`APP_INSUFFICIENT_PERMISSIONS: Node.js permission model is enabled, but required permissions are missing ${expected}`);
+            expect(StateManager.prototype.acquireLibraryLock).not.toHaveBeenCalled();
+        });
+
+        test(`Ignore missing permissions in audit mode`, () => {
+            mockPermission();
+            process.env.NODE_OPTIONS = `--max-old-space-size=4096 --permission-audit`;
+
+            expect(() => validatePermissions()).not.toThrow();
+        });
+    });
 
     test(`Create Token App`, async () => {
         const tokenApp = await appFactory(validOptions.token) as TokenApp;

@@ -9,6 +9,9 @@ inputs:
     description: The path to the docker directory
     required: false
     default: docker
+  docker-token:
+    description: The Docker token used for pulling the Docker Hardened base images
+    required: true
 runs:
   using: composite
   steps:
@@ -32,3 +35,6 @@ runs:
         cat ${{ inputs.release-dir }}/.releaserc.json
     - id: prepare-docker-build
       uses: ./.github/actions/build/docker-setup
+      with:
+        docker-path: ${{ inputs.docker-path }}
+        docker-token: ${{ inputs.docker-token }}

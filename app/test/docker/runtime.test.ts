@@ -14,11 +14,28 @@ describe(`Docker Runtime`, () => {
     })
 
     test(`icloud-photos-sync linked & executable`, async () => {
-        const which = await container.exec([`/usr/bin/which`, `icloud-photos-sync`])
+        const which = await container.execNode(`
+            const fs = require('fs');
+            const bin = process.env.PATH.split(':').map(dir => dir + '/icloud-photos-sync').find(file => fs.existsSync(file));
+            fs.accessSync(bin, fs.constants.X_OK);
+            console.log(bin);
+        `)
         expect(which.exitCode).toEqual(0)
-        
-        const stat = await container.exec([`/bin/stat`, `-c`, `%a`, which.output.trim()])
-        expect(stat.exitCode).toEqual(0)
-        expect(stat.output.trim()).toEqual(`777`)
+        expect(which.output.trim()).toEqual(`/usr/local/bin/icloud-photos-sync`)
+    })
+
+    test(`Runtime does not provide a shell`, async () => {
+        const shell = await container.execNode(`console.log(require('fs').existsSync('/bin/sh'))`)
+        expect(shell.exitCode).toEqual(0)
+        expect(shell.output.trim()).toEqual(`false`)
+    })
+
+    test(`Runs as icps user & owns default library`, async () => {
+        const user = await container.execNode(`
+            const {uid, gid} = require('fs').statSync('/opt/icloud-photos-library');
+            console.log(process.getuid(), process.getgid(), uid, gid);
+        `)
+        expect(user.exitCode).toEqual(0)
+        expect(user.output.trim()).toEqual(`100 101 100 101`)
     })
 })

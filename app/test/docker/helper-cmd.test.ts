@@ -12,7 +12,7 @@ describe(`Docker Help Command`, () => {
             .withHelpCommand()
             .start();
 
-        expect(container.getFullLogs()).resolves.toEqual(`Usage: icloud-photos-sync [options] [command]
+        await expect(container.getFullLogs()).resolves.toEqual(`Usage: icloud-photos-sync [options] [command]
 
 One-way sync engine for the iCloud Photos Library into the native file system
 with archiving capabilities
@@ -75,10 +75,10 @@ Options:
                                    more information. (default: false, env:
                                    ENABLE_CRASH_REPORTING)
   --mfa-timeout <number>           If a MFA code is necessary to authenticate,
-                                   wait for these many seconds before canceling 
+                                   wait for these many seconds before canceling
                                    the authentication process. Time in seconds,
-                                   should not exceed 10mins (due to server side timing).
-                                   (default: 600, env: MFA_TIMEOUT)             
+                                   should not exceed 10mins (due to server side
+                                   timing). (default: 600, env: MFA_TIMEOUT)
   --force                          Forcefully remove an existing library lock.
                                    USE WITH CAUTION! (default: false, env:
                                    FORCE)

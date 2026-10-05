@@ -1,6 +1,8 @@
-import {BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceData, BacktraceReport, BreadcrumbType} from "@backtrace/node";
+import {BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceClientBuilder, BacktraceData, BacktraceReport, BacktraceSetupConfiguration, BreadcrumbType} from "@backtrace/node";
 import {randomUUID} from "crypto";
+import {readFileSync} from 'fs';
 import fs from 'fs/promises';
+import {hostname} from 'os';
 import {jsonc} from "jsonc";
 import {once} from 'events';
 import {Readable} from 'stream';
@@ -36,6 +38,76 @@ const BACKTRACE_SUBMISSION = {
     TYPE: `json`,
 };
 
+type BacktraceAttributeProvider = Parameters<BacktraceClientBuilder[`addAttributeProvider`]>[0];
+
+/**
+ * Provides the `guid` attribute without spawning a shell.
+ * Backtrace's default provider uses `execSync` to read the machine id, which requires `/bin/sh` and is denied by Node's permission model (unless `--allow-child-process` is granted).
+ * On Linux, the machine id files are read directly - producing the same `guid` as the default provider. On other platforms, the default provider is only used if spawning child processes is permitted.
+ */
+export class MachineIdAttributeProvider implements BacktraceAttributeProvider {
+    /**
+     * @param shellProvider - Backtrace's default machine identifier provider, used on platforms without machine id files
+     * @param machineIdFiles - Files holding the machine id, in order of precedence
+     */
+    constructor(
+        private readonly shellProvider?: BacktraceAttributeProvider,
+        private readonly machineIdFiles: string[] = [`/var/lib/dbus/machine-id`, `/etc/machine-id`],
+    ) {}
+
+    get type() {
+        return `scoped` as const;
+    }
+
+    get(): Record<string, unknown> {
+        return {
+            guid: this.generateGuid() || randomUUID(),
+        };
+    }
+
+    /**
+     * @returns The normalized machine id, or undefined if it could not be determined
+     */
+    generateGuid(): string | undefined {
+        if (process.platform !== `linux`) {
+            return process.permission?.has(`child`) === false
+                ? undefined
+                : this.shellProvider?.get()[`guid`] as string | undefined;
+        }
+
+        // Equivalent to `( cat /var/lib/dbus/machine-id /etc/machine-id || hostname ) | head -n 1` - cat fails if any file is unreadable, appending the hostname
+        let output = ``;
+        let unreadable = false;
+        for (const file of this.machineIdFiles) {
+            try {
+                output += readFileSync(file, {encoding: `utf8`});
+            } catch {
+                unreadable = true;
+            }
+        }
+
+        if (unreadable) {
+            output += `${hostname()}\n`;
+        }
+
+        return output.split(`\n`)[0].replace(/\s+/g, ``).toLowerCase();
+    }
+}
+
+/**
+ * Backtrace client builder, replacing the default machine identifier provider with the shell-free MachineIdAttributeProvider
+ */
+export class ShellFreeBacktraceClientBuilder extends BacktraceClientBuilder {
+    constructor(options: BacktraceSetupConfiguration) {
+        super({options});
+        const providers = this.clientSetup.attributeProviders ?? [];
+        // The default provider is not exported, identifying it by its distinct method
+        const shellProvider = providers.find(provider => `generateGuid` in provider);
+        this.clientSetup.attributeProviders = providers.filter(provider => provider !== shellProvider);
+        this.addAttributeProvider(new MachineIdAttributeProvider(shellProvider));
+    }
+}
+
 /**
  * This class handles errors and error reporting
  */
@@ -65,7 +137,7 @@ export class ErrorHandler {
                                 + `${Resources.PackageInfo.version === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
                                 + BACKTRACE_SUBMISSION.TYPE;
 
-            const btClient = BacktraceClient.initialize({
+            const btClient = new ShellFreeBacktraceClientBuilder({
                 userAttributes: {
                     application: Resources.PackageInfo.name,
                     'application.version': Resources.PackageInfo.version,
@@ -86,7 +158,7 @@ export class ErrorHandler {
                         jsonc.parse(ErrorHandler.maskConfidentialData(jsonc.stringify(data))),
                     );
                 },
-            });
+            }).build();
 
             this.btClient = btClient;
 

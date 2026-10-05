@@ -3,6 +3,8 @@ import {Command, CommanderError, InvalidArgumentError, Option} from "commander";
 import {Cron} from "croner";
 import {readFileSync} from "fs";
 import {Resources} from "../lib/resources/main.js";
+import {APP_ERR} from "./error/error-codes.js";
+import {iCPSError} from "./error/error.js";
 import {ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp} from "./icloud-app.js";
 import {LogLevel} from "../lib/resources/state-manager.js";
 
@@ -327,6 +329,38 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
 }
 
 /**
+ * Permissions required when running with Node's permission model (`--permission`), mapped to the flag granting them.
+ * Node only permits `fs.symlink` (used for linking albums) with unrestricted file system read and write access.
+ */
+const REQUIRED_PERMISSIONS = {
+    'fs.read': `--allow-fs-read=*`,
+    'fs.write': `--allow-fs-write=*`,
+    net: `--allow-net`,
+};
+
+/**
+ * Makes sure the application is able to operate, if Node's permission model is enabled - instead of failing during the sync.
+ * In audit mode (`--permission-audit`), access is not denied, therefore no permissions are required.
+ * @throws An iCPSError, if required permissions are missing
+ */
+export function validatePermissions() {
+    const {permission} = process;
+    const nodeOptions = [...process.execArgv, ...(process.env.NODE_OPTIONS?.split(/\s+/) ?? [])];
+    if (!permission || nodeOptions.includes(`--permission-audit`)) {
+        return;
+    }
+
+    const missingFlags = Object.entries(REQUIRED_PERMISSIONS)
+        .filter(([scope]) => !permission.has(scope))
+        .map(([, flag]) => flag);
+
+    if (missingFlags.length > 0) {
+        throw new iCPSError(APP_ERR.INSUFFICIENT_PERMISSIONS)
+            .addMessage(`missing ${missingFlags.join(` `)}`);
+    }
+}
+
+/**
  * This function will parse the provided string array and environment variables and return the correct application object.
  * @param argv - The argument vector to be parsed
  * @returns - A promise that resolves to the correct application object. Once the promise resolves, the global resource singleton will also be available. If the program is not able to parse the options, or required options are missing, an error message is printed to stderr and the promise rejects with a CommanderError.
@@ -336,6 +370,7 @@ export async function appFactory(argv: string[]): Promise<iCPSApp> {
         try {
             argParser(async (res: iCPSApp) => {
                 try {
+                    validatePermissions()
                     Resources.state().acquireLibraryLock()
                 } catch (err) {
                     reject(err)
