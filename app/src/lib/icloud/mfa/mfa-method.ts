@@ -21,35 +21,44 @@ export class MFAMethod {
      * The id of the phone number used - only set for sms and voice methods
      */
     numberId?: number;
+    /**
+     * The backend's 'nonFTEU' flag of the phone number used - only set for sms and voice methods, if provided by the backend
+     */
+    nonFTEU?: boolean;
 
     /**
      * Creates a new MFAMethod object to hold status information
-     * @param mfaMethod - The method to be used. Defaults to `sms`
+     * @param mfaMethod - The method to be used. Defaults to `device`
      * @param numberId - The number id used for sending sms or voice codes. Defaults to 1
+     * @param nonFTEU - The backend's 'nonFTEU' flag of the phone number used for sending sms or voice codes
      */
-    constructor(mfaMethod: `device` | `voice` | `sms` = `sms`, numberId: number = 1) {
-        this.update(mfaMethod, numberId);
+    constructor(mfaMethod: `device` | `voice` | `sms` = `device`, numberId: number = 1, nonFTEU?: boolean) {
+        this.update(mfaMethod, numberId, nonFTEU);
     }
 
     /**
      * Updates this object to the given method and number id
      * @param mfaMethod - The method to be used. Defaults to `device`
      * @param numberId - The number id used for sending sms or voice codes. Defaults to 1
+     * @param nonFTEU - The backend's 'nonFTEU' flag of the phone number used for sending sms or voice codes
      */
-    update(mfaMethod: `device` | `voice` | `sms` | string = `device`, numberId: number = 1) {
+    update(mfaMethod: `device` | `voice` | `sms` | string = `device`, numberId: number = 1, nonFTEU?: boolean) {
         switch (mfaMethod) {
         case `sms`:
             this.type = MFAMethodType.SMS;
             this.numberId = numberId;
+            this.nonFTEU = nonFTEU;
             break;
         case `voice`:
             this.type = MFAMethodType.VOICE;
             this.numberId = numberId;
+            this.nonFTEU = nonFTEU;
             break;
         default:
         case `device`:
             this.type = MFAMethodType.DEVICE;
             this.numberId = undefined;
+            this.nonFTEU = undefined;
             break;
         }
     }
@@ -147,7 +156,7 @@ export class MFAMethod {
             return status === 200;
         default:
         case MFAMethodType.DEVICE:
-            return status === 202;
+            return status === 202 || status === 200;
         }
     }
 
@@ -162,9 +171,7 @@ export class MFAMethod {
                 securityCode: {
                     code: `${mfa}`,
                 },
-                phoneNumber: {
-                    id: this.numberId,
-                },
+                phoneNumber: this.phoneNumberPayload,
                 mode: `voice`,
             };
         case MFAMethodType.SMS:
@@ -172,9 +179,7 @@ export class MFAMethod {
                 securityCode: {
                     code: `${mfa}`,
                 },
-                phoneNumber: {
-                    id: this.numberId,
-                },
+                phoneNumber: this.phoneNumberPayload,
                 mode: `sms`,
             };
         default:
@@ -203,11 +208,25 @@ export class MFAMethod {
     }
 
     /**
+     * The phone number object used in the payload when entering a code received via sms or voice
+     */
+    private get phoneNumberPayload(): {id?: number, nonFTEU?: boolean} {
+        return this.nonFTEU === undefined
+            ? {id: this.numberId}
+            : {id: this.numberId, nonFTEU: this.nonFTEU};
+    }
+
+    /**
      * Checks if the status code matches our expectation for a successful enter
+     * Since iOS 26.4 the backend acknowledges a valid code with status 409 - the response body needs to be checked by the caller in this case
      * @param status - The status code for the response received from the backend
-     * @returns True, if the response was successful, based on the currently selected MFA Method
+     * @returns True, if the response was successful (or potentially successful), based on the currently selected MFA Method
      */
     enterSuccessful(status: number): boolean {
+        if (status === 409) {
+            return true;
+        }
+
         switch (this.type) {
         case MFAMethodType.VOICE:
         case MFAMethodType.SMS:

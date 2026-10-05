@@ -18,11 +18,12 @@ export class iCloudCrypto {
 
     /**
      * Creates a new crypto object and initiates the ephemeral values for this session
+     * @param accountName - The account name used within the SRP protocol - defaults to the configured username. The escrow flow uses an empty account name.
      */
-    constructor() {
+    constructor(accountName: string = Resources.manager().username) {
         this.srp = new Srp(Mode.GSA, Hash.SHA256, 2048);
         this.srpClient = this.srp.newClient(
-            Buffer.from(Resources.manager().username),
+            Buffer.from(accountName),
             // Placeholder, until we can derive the password key using the server response
             new Uint8Array(),
         );
@@ -89,5 +90,13 @@ export class iCloudCrypto {
         ).toString(`base64`);
 
         return [m1, m2];
+    }
+
+    /**
+     * The shared session key, which is required by the escrow flow - only available after the proof values have been generated
+     * @returns A Promise that will resolve to the session key K, formatted as base64 string
+     */
+    async getSessionKey(): Promise<string> {
+        return Buffer.from((await this.srpClient).K).toString(`base64`);
     }
 }

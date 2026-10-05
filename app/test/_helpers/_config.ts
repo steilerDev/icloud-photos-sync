@@ -99,7 +99,14 @@ export const REQUEST_HEADER = {
         'X-Apple-OAuth-Client-Type': `firstPartyAuth`,
         'X-Apple-OAuth-Redirect-URI': `https://www.icloud.com`,
         'X-Apple-OAuth-Require-Grant-Code': `true`,
-        'X-Apple-OAuth-State': `d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d`,
+        'X-Apple-OAuth-State': `00000000-0000-4000-8000-000000000000`,
+        'X-Apple-Frame-Id': `00000000-0000-4000-8000-000000000000`,
         'X-Apple-Offer-Security-Upgrade': `1`,
+        'X-Apple-Domain-Id': `3`,
     },
 };
+
+/**
+ * Deterministic frame id used during tests (randomly generated otherwise)
+ */
+export const frameId = `00000000-0000-4000-8000-000000000000`;

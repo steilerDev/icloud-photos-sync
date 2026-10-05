@@ -1,3 +1,4 @@
+import {createHash} from 'crypto';
 
 import {describe, test, beforeEach, expect} from '@jest/globals';
 import {MockedResourceManager, prepareResources} from '../_helpers/_general';
@@ -74,5 +75,49 @@ describe.each([
         const [m1Proof, m2Proof] = await icloudCrypto.getProofValues(derivedPassword, serverPublicValue, salt);
         expect(m1Proof).toEqual(m1);
         expect(m2Proof).toEqual(m2);
+    });
+
+    test(`should provide the session key used for the proof values`, async () => {
+        const derivedPassword = await icloudCrypto.derivePassword(protocol as SRPProtocol, salt, iterations);
+        const [m1Proof, m2Proof] = await icloudCrypto.getProofValues(derivedPassword, serverPublicValue, salt);
+        const sessionKey = await icloudCrypto.getSessionKey();
+
+        // K = SHA256(S) -> 32 bytes
+        expect(Buffer.from(sessionKey, `base64`).length).toBe(32);
+        // M2 = H(A | M1 | K) - verifying the provided key is the one used during proof generation
+        const expectedM2 = createHash(`sha256`)
+            .update(Buffer.from(clientEphemeral, `base64`))
+            .update(Buffer.from(m1Proof, `base64`))
+            .update(Buffer.from(sessionKey, `base64`))
+            .digest(`base64`);
+        expect(m2Proof).toEqual(expectedM2);
+    });
+});
+
+describe(`escrow`, () => {
+    test(`should use the provided account name`, async () => {
+        const icloudCrypto = new iCloudCrypto(``);
+        const client = await icloudCrypto.srpClient;
+
+        expect(client.i).toEqual(Buffer.from(``));
+    });
+
+    test(`should generate different proof values for an empty account name`, async () => {
+        const seed = 4583464597706057374074568200686733333845316356957220074367768845250116954003020789631509921160041128250281115189321084127530556466418206894891765906279948360470987821066372075131278941770946795626302727478894190131926680682722191273867216250892152543053567943074039877468968328059297735718354983367158283181087322686097141645793870364626344374302246144622606785340696269402880773974149060918050546459694416131751963256042025191510245022814863735411041522861008849293340319607550193092573656363442241160172566724626024492443228367796159771603009300820441703601914229690671456525732449870676671357654372201494514766191n;
+        const serverPublicValue = `b44vF54k7KDvvfIeQyEUk90ahsajSqdEv/4kiv/CdPGk0Wf3oVMlGfdrdZtAUrYWD6jzVc4BKbkqsIwZFK7v5o7/bYxYgzllPG5LXO0Ve5Zs4DgZPjFNzb9Ky7kFtC8gl7D5dKmGTxwwiEPRvE6SlmUWOhHTUg2q3EN7cRXV8HkdrYkNONT4ndHKHEuMV6BlVGuNdYDGMSOGidVK1uW1MwxRIzKWZSJLmF4PzUuvT89QWoFzNbDlVRc2R6Xa+sqjMUC9GM5UKcdug9RMLgj7xNXg5HR3HgVyCMe22woaYhpLP1Ak/VpOknXmnBKvEtWu2TIQggEof8CeqasYM8G8qw==`;
+        const salt = `foI2z4yTi2LkZ+Wrr7HFEQ==`;
+
+        const userCrypto = new iCloudCrypto();
+        userCrypto.srpClient = userCrypto.srp.newClient(Buffer.from(mockedResourceManager.username), new Uint8Array(), seed);
+        const escrowCrypto = new iCloudCrypto(``);
+        escrowCrypto.srpClient = escrowCrypto.srp.newClient(Buffer.from(``), new Uint8Array(), seed);
+
+        const derivedPassword = await userCrypto.derivePassword(`s2k`, salt, 20403);
+        const [userM1] = await userCrypto.getProofValues(derivedPassword, serverPublicValue, salt);
+        const [escrowM1] = await escrowCrypto.getProofValues(derivedPassword, serverPublicValue, salt);
+
+        // M1 = H(H(N) xor H(g) | H(I) | s | A | B | K) - only H(I) differs, since the account name is not part of the password key in GSA mode
+        expect(escrowM1).not.toEqual(userM1);
+        expect(await escrowCrypto.getSessionKey()).toEqual(await userCrypto.getSessionKey());
     });
 });
