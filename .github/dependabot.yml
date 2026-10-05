@@ -149,10 +149,10 @@ updates:
         patterns:
         - "*"
 
-  # Maintain dependencies for semantic release (kept outside of .github/, since Dependabot is not able to update files there)
+  # Maintain dependencies for semantic release
   - package-ecosystem: "npm"
     labels: [ ]
-    directory: "/tools/release"
+    directory: "/.github/actions/helper/prepare-semantic-release"
     target-branch: "dev"
     versioning-strategy: "increase"
     open-pull-requests-limit: 5

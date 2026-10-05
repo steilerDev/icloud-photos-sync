@@ -11,7 +11,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `docs/postman/` — Postman collection of the iCloud API. It is **outdated**; see "iCloud API surface" below.
   - `docs/src/dev/` — developer docs, including `api.md` (iCloud auth flow) and `local-file-structure.md` (on-disk library layout).
 - `secrets/` — env files for real Apple accounts (see next section).
-- `tools/release/` — semantic-release dependencies (kept outside `.github/` so Dependabot updates them).
 - `.github/` — workflows plus composite actions (see "CI/CD").
 
 ## Accounts, secrets and trust tokens
@@ -254,7 +253,7 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - `unit-docker` (`test:docker:unit`) loads `docker-artifact` from the same run.
 - `e2e` (`test:docker`) and `api` (`test:api`, 30 min) run on the **self-hosted `residential` runner**, with `TEST_*` taken from the runner's `.env`. They can't use GitHub-hosted runners: trust tokens are IP-bound, and hosted runners get a different IP on every run, which trips Apple's security. Don't move these jobs to `ubuntu-latest`. They are required for beta/main PRs and stay queued while the runner is offline.
 
-**Release** (semantic-release, dependencies in `tools/release/`):
+**Release** (semantic-release, dependencies in `.github/actions/helper/prepare-semantic-release/`):
 - The config is assembled at runtime by `helper/prepare-semantic-release` from `releaserc.json` files next to `release/{app,docker,github}-setup`, and patched **by array index**. Don't reorder plugins or assets.
 - semantic-release runs three times on the same commit (npm, docker, github). The app and docker runs delete their git tag so all three compute the same version; only the GitHub run keeps the tag.
 - Channels:
