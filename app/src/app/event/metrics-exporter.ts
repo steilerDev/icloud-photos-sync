@@ -243,8 +243,9 @@ class InfluxLineProtocolPoint {
 
         if (typeof value === `boolean`) {
             this.fieldSet[key] = value ? `TRUE` : `FALSE`;
-            return this;
         }
+
+        return this;
     }
 
     /**
@@ -292,9 +293,9 @@ class iCPSInfluxLineProtocolPoint extends InfluxLineProtocolPoint {
  */
 export class MetricsExporter {
     /**
-     * The opened file descriptor of the metrics file
+     * The opened file descriptor of the metrics file - only set (and used), if metrics export is enabled
      */
-    private metricsFileDescriptor: number;
+    private metricsFileDescriptor!: number;
 
     /**
      * Creates the exporter and checks for the file

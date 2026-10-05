@@ -139,12 +139,12 @@ export type SigninResponse = {
          * Session secret - required to keep track of MFA request
          * @minLength 1
          */
-        'x-apple-session-token': string, // eslint-disable-line
+        'x-apple-session-token': string,
         /**
          * Should hold the 'aasp' cookie
          * @minItems 1
          */
-        'set-cookie': string[], // eslint-disable-line
+        'set-cookie': string[],
     }
 }
 
@@ -210,7 +210,7 @@ export type AuthInformationResponse = {
  */
 export type ResendMFADeviceResponse = {
     data: {
-         /**
+        /**
          * Number of available trusted devices
          * @minimum 1
          */
@@ -297,12 +297,12 @@ export type TrustResponse = {
          * TwoTrust token for future requests
          * @minLength 1
          */
-        'x-apple-twosv-trust-token': string, // eslint-disable-line
+        'x-apple-twosv-trust-token': string,
         /**
          * Session token to setup the account
          * @minLength 1
          */
-        'x-apple-session-token': string, // eslint-disable-line
+        'x-apple-session-token': string,
     }
 }
 
@@ -316,7 +316,7 @@ export type SetupResponse = {
          * Should hold the apple authentication
          * @minItems 1
          */
-        'set-cookie': string[],  // eslint-disable-line
+        'set-cookie': string[],
     }
     data: {
         dsInfo: {
@@ -358,7 +358,7 @@ export type PCSResponse = {
         /**
          * Should hold the PCS cookies
          */
-        'set-cookie'?: string[],  // eslint-disable-line
+        'set-cookie'?: string[],
     }
     data: {
         /**

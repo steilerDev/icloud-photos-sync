@@ -75,7 +75,7 @@ export class ResourceManager {
                 notificationVapidCredentials: this._resources.notificationVapidCredentials,
                 notificationSubscriptions: this._resources.notificationSubscriptions
             };
-            const resourceFileData = jsonc.stringify(formattedResourceFile, null, 4);
+            const resourceFileData = jsonc.stringify(formattedResourceFile, undefined, 4);
             Resources.logger(this).debug(`Writing resource file to ${this.resourceFilePath}`);
 
             writeFileSync(this.resourceFilePath, resourceFileData, {encoding: FILE_ENCODING, flush: true});
@@ -190,7 +190,7 @@ export class ResourceManager {
      */
     get notificationSubscriptions(): webpush.PushSubscription[] {
         return this._resources.notificationSubscriptions 
-            ? Object.values(this._resources.notificationSubscriptions) 
+            ? Object.values(this._resources.notificationSubscriptions)
             : [];
     }
 
@@ -424,7 +424,10 @@ export class ResourceManager {
         return this._resources.legacyLogin;
     }
 
-    get healthCheckUrl(): string {
+    /**
+     * @returns The health check ping URL, if configured
+     */
+    get healthCheckUrl(): string | undefined {
         return this._resources.healthCheckUrl;
     }
 }

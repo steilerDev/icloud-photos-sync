@@ -93,9 +93,9 @@ export class StateManager {
         totalAssets: number,
         completedAssets: number
     } = {
-            totalAssets: 0,
-            completedAssets: 0
-        }
+        totalAssets: 0,
+        completedAssets: 0
+    }
 
     trustedPhoneNumbers?: TrustedPhoneNumber[] 
 
@@ -118,38 +118,38 @@ export class StateManager {
         Resources.events(this)
             .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
                 this.updateState(StateType.RUNNING, {
-                    progressMsg: `Authenticating user...`, 
+                    progressMsg: `Authenticating user...`,
                     progress: 1 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
             .on(iCPSEventCloud.MFA_REQUIRED, (trustedPhoneNumbers: TrustedPhoneNumber[]) => {
                 this.updateState(StateType.BLOCKED, {
-                    progressMsg: `Waiting for MFA code...`, 
+                    progressMsg: `Waiting for MFA code...`,
                     progress: 2 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1),
                     trustedPhoneNumbers
                 })
             })
             .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {
                 this.updateState(StateType.BLOCKED, {
-                    progressMsg: `Resending MFA code via ${method.toString()}...`, 
+                    progressMsg: `Resending MFA code via ${method.toString()}...`,
                     progress: 2 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
             .on(iCPSEventMFA.MFA_RECEIVED, (method: MFAMethod, code: string) => {
                 this.updateState(StateType.BLOCKED, {
-                    progressMsg: `MFA code received from ${method.toString()} (${code})`, 
+                    progressMsg: `MFA code received from ${method.toString()} (${code})`,
                     progress: 2 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
             .on(iCPSEventCloud.AUTHENTICATED, () => {
                 this.updateState(StateType.RUNNING, {
-                    progressMsg: `User authenticated`, 
+                    progressMsg: `User authenticated`,
                     progress: 5 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
             .on(iCPSEventCloud.TRUSTED, () => {
                 this.updateState(StateType.RUNNING, {
-                    progressMsg: `Device trusted`, 
+                    progressMsg: `Device trusted`,
                     progress: 8 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
@@ -391,7 +391,7 @@ export class StateManager {
         if(this.trustedPhoneNumbers) {
             trustedPhoneNumbers = this.trustedPhoneNumbers.map((value) => {
                 return {
-                    id: value.id, 
+                    id: value.id,
                     maskedNumber: value.numberWithDialCode
                 }
             })
@@ -431,8 +431,8 @@ export class StateManager {
             logLevels.push(LogLevel.ERROR)
         }
 
-        return this.log.filter(_value => {
-            return logLevels.includes(_value.level) && _value.source.match(logFilter?.source) // .match(undefined) returns true
+        return (this.log ?? []).filter(_value => {
+            return logLevels.includes(_value.level) && (logFilter?.source === undefined || _value.source.match(logFilter.source) !== null)
         })
     }
 
@@ -441,7 +441,7 @@ export class StateManager {
      * @throws An iCPSError, if the lock could not be acquired
      */
     acquireLibraryLock() {
-        const {lockFileExists, lockFilePath, lockingProcess} = Resources.getLockStat() 
+        const {lockFileExists, lockFilePath, lockingProcess} = Resources.getLockStat()
 
         if (lockFileExists) {
             if (Resources.pidIsRunning(lockingProcess) && !Resources.manager().force && process.pid !== lockingProcess) {

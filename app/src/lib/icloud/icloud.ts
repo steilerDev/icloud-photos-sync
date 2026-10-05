@@ -1,4 +1,4 @@
-import {AxiosError, AxiosRequestConfig} from 'axios';
+import {AxiosRequestConfig, isAxiosError} from 'axios';
 import {jsonc} from 'jsonc';
 import pTimeout from 'p-timeout';
 import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.js';
@@ -20,9 +20,9 @@ export class iCloud {
     photos: iCloudPhotos;
 
     /**
-     * Timeout for MFA code submission
+     * Timeout for MFA code submission - set while waiting for an MFA code
      */
-    mfaTimeout: NodeJS.Timeout;
+    mfaTimeout?: NodeJS.Timeout;
 
     /**
      * Creates a new iCloud Object
@@ -115,7 +115,7 @@ export class iCloud {
                 Resources.logger(this).debug(`Response status is 409, requiring MFA`);
                 const trustedPhoneNumbers = await this.requestMFAViaSMS();
                 Resources.emit(iCPSEventCloud.MFA_REQUIRED, trustedPhoneNumbers);
-                return;
+                return ready;
             }
 
             if (response.status === 200) {
@@ -128,13 +128,12 @@ export class iCloud {
         } catch (err) {
             if (err instanceof iCPSError) {
                 Resources.emit(iCPSEventCloud.ERROR, err);
-                return;
+                return ready;
             }
 
-            // Does not seem to work
-            // if (err instanceof AxiosError) {
-            if ((err as AxiosError).isAxiosError) {
-                switch (err.response.status) {
+            // Using the isAxiosError type guard, since `err instanceof AxiosError` does not seem to work
+            if (isAxiosError(err)) {
+                switch (err.response?.status) {
                 case 401:
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
                     break;
@@ -148,11 +147,11 @@ export class iCloud {
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNEXPECTED_RESPONSE).addCause(err));
                 }
 
-                return;
+                return ready;
             }
 
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNKNOWN).addCause(err));
-            return;
+            return ready;
         } finally {
             // Return in finally is required because control flow of try/catch block is complicated
             // eslint-disable-next-line no-unsafe-finally
@@ -326,9 +325,9 @@ export class iCloud {
                 this.mfaTimeout = undefined
             }
         } catch (err) {
-            if (err.response?.status === 400) {
+            if (isAxiosError(err) && err.response?.status === 400) {
                 const augmentedErr = new iCPSError(MFA_ERR.CODE_REJECTED).addCause(err);
-                if (Array.isArray(err.response?.data?.service_errors)) {
+                if (Array.isArray(err.response.data?.service_errors)) {
                     augmentedErr.addMessage(err.response.data.service_errors.map((serviceError: any) => serviceError?.message));
                 }
 
@@ -392,7 +391,7 @@ export class iCloud {
             Resources.logger(this).debug(`Account ready`);
             Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
-            if ((err as any).isAxiosError && err.response.status === 421) {
+            if (isAxiosError(err) && err.response?.status === 421) {
                 Resources.logger(this).debug(`Session token expired, re-acquiring...`);
                 Resources.emit(iCPSEventCloud.SESSION_EXPIRED);
                 return;

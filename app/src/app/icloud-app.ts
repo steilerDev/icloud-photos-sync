@@ -26,9 +26,9 @@ export abstract class iCPSApp {
  */
 export class DaemonApp extends iCPSApp {
     /**
-     * Holds the cron job
+     * Holds the cron job - available once the app is running
      */
-    job: Cron;
+    job?: Cron;
 
     /**
      * Schedule the synchronization based on the provided cron string
