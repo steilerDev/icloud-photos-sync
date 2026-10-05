@@ -36,7 +36,27 @@ The `latest` tag should always represent the latest stable release, whereas the 
         ```
 
         !!! tip "Plain text username/password"
-            If you don't want to store your plain text username and/or password in the docker environment, it is possible to omit the [username](user-guides/cli.md#username) and/or [password](user-guides/cli.md#password) option. In this scenarios, the username/password needs to be provided manually on each startup from the command line.
+            If you don't want to store your plain text username and/or password in the docker environment, the [username file](user-guides/cli.md#username-file) and [password file](user-guides/cli.md#password-file) options (`APPLE_ID_USER_FILE` and `APPLE_ID_PWD_FILE`) can be used instead of `APPLE_ID_USER` and `APPLE_ID_PWD`. They point to files containing the respective value and work well with [Docker secrets](https://docs.docker.com/compose/how-tos/use-secrets/). Trailing line breaks are removed from the file content.
+
+            ```
+            services:
+              photos-sync:
+                image: steilerdev/icloud-photos-sync:latest
+                environment:
+                  APPLE_ID_USER_FILE: /run/secrets/apple_id_user
+                  APPLE_ID_PWD_FILE: /run/secrets/apple_id_pwd
+                secrets:
+                  - apple_id_user
+                  - apple_id_pwd
+                # ...
+            secrets:
+              apple_id_user:
+                file: ./apple_id_user.txt
+              apple_id_pwd:
+                file: ./apple_id_pwd.txt
+            ```
+
+            Alternatively, it is possible to omit the [username](user-guides/cli.md#username) and/or [password](user-guides/cli.md#password) option entirely. In this scenarios, the username/password needs to be provided manually on each startup from the command line.
             To input the data into the running Docker container it needs to be started with [`tty: true`](https://docs.docker.com/reference/compose-file/services/#tty) and [`stdin_open: true`](https://docs.docker.com/reference/compose-file/services/#stdin_open). Once the container was started, you can attach to the running `icloud-photos-sync` process using [`docker attach photos-sync`](https://docs.docker.com/engine/reference/commandline/attach/), and detach with the sequence `CTRL-p CTRL-q`.
             To execute a command within the running container (that needs access to the credentials), use `docker exec -it` [to open tty and stdin](https://docs.docker.com/reference/cli/docker/container/exec/#run-docker-exec-on-a-running-container), e.g. `docker exec -it photos-sync token`.
 

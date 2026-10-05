@@ -25,6 +25,16 @@ Options:
   -p, --password <string>          AppleID password. Omitting the option will
                                    result in the CLI to ask for user input
                                    before startup. (env: APPLE_ID_PWD)
+  --username-file <path>           Path to a file containing the AppleID
+                                   username (e.g. a Docker secret), as an
+                                   alternative to the username option. Trailing
+                                   line breaks are removed. (env:
+                                   APPLE_ID_USER_FILE)
+  --password-file <path>           Path to a file containing the AppleID
+                                   password (e.g. a Docker secret), as an
+                                   alternative to the password option. Trailing
+                                   line breaks are removed. (env:
+                                   APPLE_ID_PWD_FILE)
   -T, --trust-token <string>       The trust token for authentication. If not
                                    provided, the trust token is read from the
                                    \`.icloud-photos-sync\` resource file in data
