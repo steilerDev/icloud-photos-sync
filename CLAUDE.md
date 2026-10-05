@@ -298,10 +298,12 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 
 - Branch from `dev` and open PRs against `dev`. `beta` and `main` only receive release PRs (`dev` → `beta` → `main`), and branch protection blocks direct commits.
 - `dev` is the base branch, but GitHub's default branch is `main`. Claude Code worktrees branch from `origin/HEAD`, so the maintainer's clone sets `git remote set-head origin dev` together with `remote.origin.followRemoteHEAD=never`. In any other clone, check that new work starts from `dev` before committing: `git merge-base --is-ancestor origin/dev HEAD`. If the branch started from `main`, rebase it onto `origin/dev`.
-- **Once a PR is merged, remove its worktree.**
+- **Once a PR is merged, remove its worktree, its local branch and its remote branch.**
   1. Leave the worktree (`ExitWorktree`), then run the cleanup from the main checkout.
-  2. `git fetch origin`, then confirm the branch is merged: `git merge-base --is-ancestor <branch> origin/dev`.
+  2. Confirm the PR is merged: `gh pr view <number> --json state` must say `MERGED`. Then `git fetch origin`.
   3. Run `git worktree remove .claude/worktrees/<name>` and `git branch -d <branch>`. `-d` may warn that the branch is "not yet merged to HEAD" when the main checkout's local `dev` is behind `origin/dev`; that is harmless.
-  4. If `git worktree remove` refuses because of uncommitted or untracked changes, stop and ask the user instead of forcing it. Leave the remote branch alone unless asked.
+  4. Delete the remote branch: `git push origin --delete <branch>`.
+  5. **Never delete `dev`, `beta` or `main`**, locally or remotely. Release PRs use them as their head branch.
+  6. If `git worktree remove` refuses because of uncommitted or untracked changes, stop and ask the user instead of forcing it. Don't delete either branch in that case.
 - Commits follow conventional commits, since semantic-release derives versions and notes from them.
 - Summaries are imperative, lower-case, with no trailing period. Use an area tag after the type, e.g. `fix: [app] restore MFA flow for iOS 26.4+`, `chore: [docs] …`, `ci: …`.
