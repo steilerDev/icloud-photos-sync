@@ -24,8 +24,25 @@ describe(`HeaderJar`, () => {
         const axiosInstance = axios.create();
         const headerJar = new HeaderJar(axiosInstance);
 
-        expect(headerJar.headers.size).toBe(17);
+        expect(headerJar.headers.size).toBe(19);
         expect((axiosInstance.interceptors.request as any).handlers.length).toBe(1);
+    });
+
+    test(`Should generate a frame id, used as OAuth state`, () => {
+        const headerJar = new HeaderJar(axios.create());
+        const frameId = headerJar.headers.get(`X-Apple-Frame-Id`)!.value;
+
+        expect(frameId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+        expect(headerJar.headers.get(`X-Apple-OAuth-State`)!.value).toEqual(frameId);
+        expect(headerJar.headers.get(`X-Apple-Frame-Id`)!.domain).toEqual(`idmsa.apple.com`);
+
+        headerJar.resetFrameId();
+        expect(headerJar.headers.get(`X-Apple-Frame-Id`)!.value).not.toEqual(frameId);
+        expect(headerJar.headers.get(`X-Apple-OAuth-State`)!.value).toEqual(headerJar.headers.get(`X-Apple-Frame-Id`)!.value);
+
+        headerJar.resetFrameId(`someFrameId`);
+        expect(headerJar.headers.get(`X-Apple-Frame-Id`)!.value).toEqual(`someFrameId`);
+        expect(headerJar.headers.get(`X-Apple-OAuth-State`)!.value).toEqual(`someFrameId`);
     });
 
     describe.each([
@@ -475,6 +492,8 @@ describe(`NetworkManager`, () => {
 
             expect(networkManager._headerJar.headers.has(`scnt`)).toBeFalsy();
             expect(networkManager._headerJar.headers.has(`X-Apple-ID-Session-Id`)).toBeFalsy();
+            // A new authentication flow uses a new frame id
+            expect(networkManager._headerJar.headers.get(`X-Apple-Frame-Id`)!.value).not.toEqual(Config.frameId);
             expect(networkManager.settleRateLimiter).toHaveBeenCalled();
             expect(networkManager.settleCCYLimiter).toHaveBeenCalled();
             expect(networkManager.writeHarFile).not.toHaveBeenCalled();
@@ -637,7 +656,7 @@ describe(`NetworkManager`, () => {
         describe(`Setter methods`, () => {
             test(`set sessionID`, () => {
                 networkManager.sessionId = `someSessionId`;
-                expect(Resources.manager()._resources.sessionSecret).toEqual(`someSessionId`);
+                expect(Resources.manager()._resources.sessionSecret).toBeUndefined();
                 expect(networkManager._headerJar.headers.get(`X-Apple-ID-Session-Id`)!.value).toEqual(`someSessionId`);
             });
 
@@ -669,7 +688,52 @@ describe(`NetworkManager`, () => {
                 networkManager.applySigninResponse(signinResponse);
 
                 expect(Resources.manager()._resources.sessionSecret).toEqual(`someSessionToken`);
+                // Falling back to session token, if no dedicated session id is provided
                 expect(networkManager._headerJar.headers.get(`X-Apple-ID-Session-Id`)!.value).toEqual(`someSessionToken`);
+                expect(networkManager.accountCountry).toBeUndefined();
+            });
+
+            test(`Apply SigninResponse - with session id and account country`, () => {
+                const signinResponse = {
+                    data: {
+                        authType: `hsa2`,
+                    },
+                    headers: {
+                        scnt: `someScnt`,
+                        'x-apple-session-token': `someSessionToken`,
+                        'x-apple-id-session-id': `someSessionId`,
+                        'x-apple-id-account-country': `DEU`,
+                        'set-cookie': [],
+                    },
+                } as SigninResponse;
+
+                networkManager.applySigninResponse(signinResponse);
+
+                expect(Resources.manager()._resources.sessionSecret).toEqual(`someSessionToken`);
+                expect(networkManager._headerJar.headers.get(`X-Apple-ID-Session-Id`)!.value).toEqual(`someSessionId`);
+                expect(networkManager.accountCountry).toEqual(`DEU`);
+            });
+
+            test.each([
+                {
+                    desc: `with session token`,
+                    headers: {'x-apple-session-token': `newSessionToken`},
+                    expected: `newSessionToken`,
+                }, {
+                    desc: `without session token`,
+                    headers: {},
+                    expected: `oldSessionToken`,
+                }, {
+                    desc: `with empty session token`,
+                    headers: {'x-apple-session-token': ``},
+                    expected: `oldSessionToken`,
+                },
+            ])(`Apply MFA response $desc`, ({headers, expected}) => {
+                Resources.manager()._resources.sessionSecret = `oldSessionToken`;
+
+                networkManager.applySessionTokenUpdate({headers} as any);
+
+                expect(Resources.manager()._resources.sessionSecret).toEqual(expected);
             });
 
             test(`Apply TrustResponse`, () => {

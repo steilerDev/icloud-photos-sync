@@ -51,6 +51,10 @@ export const SRP_INIT_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `SRP_INIT_FAILED`, `Unable to initialize SRP authentication protocol`,
 );
 
+export const ESCROW_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `ESCROW_FAILED`, `Unable to complete the escrow password verification`,
+);
+
 export const LOGOUT_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `LOGOUT_FAILED`, `Failed to logout from iCloud`,
 );

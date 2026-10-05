@@ -140,7 +140,7 @@ In order to perform authentication (without syncing any assets) to validate or a
 ![Ready](../assets/web-ui/00_ready.png#only-light)
 ![Ready (dark mode)](../assets/web-ui/00_ready-dark.png#only-dark)
 
-This will trigger the authentication flow and an MFA code will be requested from your trusted devices. This will forward to a form to enter the 6-digit code - use the `Submit` button to confirm your submission.
+This will trigger the authentication flow and an MFA code will be pushed to your trusted devices. This will forward to a form to enter the 6-digit code - use the `Submit` button to confirm your submission.
 
 ![Enter MFA](../assets/web-ui/01_enter-mfa.png#only-light)
 ![Enter MFA (dark mode)](../assets/web-ui/01_enter-mfa-dark.png#only-dark)

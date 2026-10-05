@@ -100,6 +100,7 @@ export function prepareResources(initiate: boolean = true, appOptions: iCPSAppOp
         ResourceManager.prototype._writeResourceFile = originalWriteResourceFile;
         ResourceManager.prototype._readResourceFile = originalReadResourceFile;
 
+        instances.network._headerJar.resetFrameId(Config.frameId);
         instances.network.mock = new MockAdapter(instances.network._axios, {onNoMatch: `throwException`});
         instances.event.spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(instances.event._eventBus, event, removeListeners);
         return instances;

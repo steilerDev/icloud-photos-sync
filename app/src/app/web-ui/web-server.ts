@@ -1,7 +1,7 @@
 import * as http from 'http';
 import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import {iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {WEB_SERVER_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
@@ -103,6 +103,11 @@ export class WebServer {
         this.server.unref();
 
         this.mfaMethod = new MFAMethod();
+
+        // Every new MFA flow starts with the code pushed to the trusted devices
+        Resources.events(this).on(iCPSEventCloud.MFA_REQUIRED, () => {
+            this.mfaMethod = new MFAMethod();
+        });
     }
 
     /* c8 ignore start */
@@ -500,7 +505,9 @@ export class WebServer {
         const phoneNumberIdMatch = url.search.match(/phoneNumberId=(\d+)/);
 
         if (phoneNumberIdMatch && methodString !== `device`) {
-            this.mfaMethod.update(methodString, parseInt(phoneNumberIdMatch[1], 10));
+            const phoneNumberId = parseInt(phoneNumberIdMatch[1], 10);
+            const trustedPhoneNumber = Resources.state().trustedPhoneNumbers?.find(phoneNumber => phoneNumber.id === phoneNumberId);
+            this.mfaMethod.update(methodString, phoneNumberId, trustedPhoneNumber?.nonFTEU);
         } else {
             this.mfaMethod.update(methodString);
         }

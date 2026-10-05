@@ -1,6 +1,7 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals";
 import {MockedEventManager, MockedResourceManager, MockedValidator, prepareResources} from "../_helpers/_general";
 import {WebServer} from "../../src/app/web-ui/web-server";
+import {Resources} from "../../src/lib/resources/main";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from "../../src/lib/resources/events-types";
 import {createRequest, RequestMethod} from 'node-mocks-http'
 import {IncomingMessage} from "http";
@@ -35,7 +36,17 @@ describe(`Constructor`, () => {
     test(`Should create default MFA Method`, () => {
         const webServer = new WebServer()
         expect(webServer.mfaMethod).toBeDefined()
-        expect(webServer.mfaMethod.isSMS).toBeTruthy()
+        expect(webServer.mfaMethod.isDevice).toBeTruthy()
+    })
+
+    test(`Should reset MFA Method when new MFA flow starts`, () => {
+        const webServer = new WebServer()
+        webServer.mfaMethod.update(`sms`, 2)
+
+        Resources.emit(iCPSEventCloud.MFA_REQUIRED, [])
+
+        expect(webServer.mfaMethod.isDevice).toBeTruthy()
+        expect(webServer.mfaMethod.numberId).toBeUndefined()
     })
 
     describe(`HTTP Server`, () => {
@@ -531,7 +542,7 @@ describe.each([
                     message: `Read MFA code: ${code}`,
                 });
 
-                expect(mfaReceivedEvent).toHaveBeenCalledWith(new MFAMethod(`sms`), code);
+                expect(mfaReceivedEvent).toHaveBeenCalledWith(new MFAMethod(`device`), code);
             });
 
             test(`Invalid code format`, async () => {
@@ -609,10 +620,41 @@ describe.each([
                     message: `Requesting MFA resend with method ${mfaString}`,
                 });
                 if(phoneNumberId) {
-                    expect(updateSpy).toHaveBeenCalledWith(mfaMethod, phoneNumber)
+                    expect(updateSpy).toHaveBeenCalledWith(mfaMethod, phoneNumber, undefined)
                 } else {
                     expect(updateSpy).toHaveBeenCalledWith(mfaMethod)
                 }
+                expect(mfaEvent).toHaveBeenCalled()
+            });
+
+            test(`Resend code with sms - forwarding phone number flags`, async () => {
+                Resources.state().trustedPhoneNumbers = [{
+                    id: 2,
+                    numberWithDialCode: `+49 •••• •••••12`,
+                    nonFTEU: true,
+                }]
+                const updateSpy = jest.spyOn(webServer.mfaMethod, `update`);
+                const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
+
+                const req = createRequest<IncomingMessage>({
+                    method: `POST`,
+                    url: `${webBasePath}/api/resend_mfa`,
+                    queryParameters: {
+                        method: `sms`,
+                        phoneNumberId: `2`
+                    }
+                })
+
+                const res = await sendMockedRequest(webServer, req)
+
+                expect(res._getStatusCode()).toBe(200);
+                expect(updateSpy).toHaveBeenCalledWith(`sms`, 2, true)
+                expect(webServer.mfaMethod.nonFTEU).toBe(true)
+                expect(webServer.mfaMethod.getEnterPayload(`123456`)).toEqual({
+                    securityCode: {code: `123456`},
+                    phoneNumber: {id: 2, nonFTEU: true},
+                    mode: `sms`,
+                })
                 expect(mfaEvent).toHaveBeenCalled()
             });
 
