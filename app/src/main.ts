@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import {CommanderError} from "commander";
+import {iCPSError} from "./app/error/error.js";
 import {CLIInterface} from "./app/event/cli.js";
 import {ErrorHandler} from "./app/event/error-handler.js";
 import {HealthCheckPingExecutor} from "./app/event/health-check-ping-executor.js";
@@ -9,7 +11,12 @@ import {WebServer} from "./app/web-ui/web-server.js";
 import {Resources} from "./lib/resources/main.js";
 
 const app = await appFactory(process.argv)
-    .catch(() => process.exit(3)); // Error message is printed by factory
+    .catch(err => {
+        if (!(err instanceof CommanderError)) { // Commander prints its own error message
+            console.error(iCPSError.toiCPSError(err).getDescription());
+        }
+        process.exit(3);
+    });
 
 process.on(`exit`, () => {
     Resources.state().releaseLibraryLock()
