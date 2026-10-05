@@ -2,9 +2,8 @@ name: '[monitor] iCloud API'
 # This workflow continuously runs the API Tests for this project twice a day, in order to check, if the remote API is still compatible with this tool.
 
 on:
-  # Schedule disabled, since the required self-hosted 'residential' runner is currently unavailable - scheduled runs would queue for 24h and get cancelled
-  # schedule:
-  #   - cron: '20 5,17 * * *'
+  schedule:
+    - cron: '20 5,17 * * *'
   workflow_dispatch: # Allow manual triggering for testing
 
 permissions:
