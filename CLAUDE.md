@@ -305,5 +305,21 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
   4. Delete the remote branch: `git push origin --delete <branch>`.
   5. **Never delete `dev`, `beta` or `main`**, locally or remotely. Release PRs use them as their head branch.
   6. If `git worktree remove` refuses because of uncommitted or untracked changes, stop and ask the user instead of forcing it. Don't delete either branch in that case.
+- **Issue labels.** When working on a GitHub issue, keep **exactly one `class(...)` and exactly one `status(...)` label** on it. Use only the existing labels; never create new ones.
+  - **Classes:** `class(bug)`, `class(feature)` (new functionality), `class(improvement)` (improves an existing feature), `class(documentation)`, `class(known issue)`, `class(duplicate)`, `class(invalid)`.
+  - **Status lifecycle:**
+    - Before work starts: `status(open)` (new and unclassified), `status(investigating)`, `status(backlog)`, `status(help needed)`, or `status(wontfix)`.
+    - **Starting work:** set `status(in progress)`. Also check the class label and correct it if needed.
+    - **PR merged into `dev`:** set `status(implemented)`.
+    - **Beta release:** semantic-release adds `status(previewed)` (configured in `.github/actions/release/github-setup/action.yml`).
+    - **Production release from `main`:** semantic-release adds `status(released)`.
+  - semantic-release only *adds* its label and never removes the previous status. Whenever you touch an issue that has more than one `status(...)`, keep only the most advanced stage (`released` > `previewed` > `implemented`) and remove the rest.
+  - Reference the issue with a closing keyword (`Fixes #<n>`) in the PR description and the commit footer, so semantic-release can find it when it releases. PRs target `dev`, not the default branch, so merging does not close the issue on GitHub.
+  - Change labels with the REST API; `gh issue edit` can fail on the retired Projects-classic API. To swap the status while keeping all other labels:
+    ```sh
+    gh api repos/steilerDev/icloud-photos-sync/issues/<n> --jq '{labels: ([.labels[].name | select(startswith("status(") | not)] + ["status(implemented)"])}' \
+      | gh api -X PUT repos/steilerDev/icloud-photos-sync/issues/<n>/labels --input -
+    ```
+    Swap a class the same way, filtering on `class(` instead.
 - Commits follow conventional commits, since semantic-release derives versions and notes from them.
 - Summaries are imperative, lower-case, with no trailing period. Use an area tag after the type, e.g. `fix: [app] restore MFA flow for iOS 26.4+`, `chore: [docs] …`, `ci: …`.
