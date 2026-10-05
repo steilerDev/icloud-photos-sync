@@ -26,7 +26,7 @@
     "dist:package": "npx tsx build/package.ts && cp ../README.md ../LICENSE .",
     "dist:sourcemap": "npx backtrace-js process bin/",
     "dist": "npm run dist:clean && npm run dist:package && npm run dist:sourcemap",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
+    "test": "TZ=UTC NODE_OPTIONS='--experimental-vm-modules' npx jest --config jest.config.json",
     "test:unit": "npm run test test/unit/",
     "test:api": "npm run test test/api/",
     "test:docker": "npm run test -- --coverage false test/docker/",

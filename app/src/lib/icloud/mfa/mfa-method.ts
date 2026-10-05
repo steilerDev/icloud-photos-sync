@@ -24,7 +24,7 @@ export class MFAMethod {
 
     /**
      * Creates a new MFAMethod object to hold status information
-     * @param mfaMethod - The method to be used. Defaults to `device`
+     * @param mfaMethod - The method to be used. Defaults to `sms`
      * @param numberId - The number id used for sending sms or voice codes. Defaults to 1
      */
     constructor(mfaMethod: `device` | `voice` | `sms` = `sms`, numberId: number = 1) {
