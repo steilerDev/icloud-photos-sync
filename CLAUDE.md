@@ -55,8 +55,15 @@ npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the
 ```
 
 - Tests must go through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (ts-jest ESM preset). Running `npx jest` directly fails.
-- `test:api` hits the real iCloud backend with the test account.
+- **Running the API tests and the full Docker tests:** always use the stored test account credentials from `secrets/test.env`. Never use the prod account for them, and never ask the user to type credentials. Load the file into the environment of the same command:
+  ```sh
+  set -a; . ../secrets/test.env; set +a; npm run test:api
+  set -a; . ../secrets/test.env; set +a; IMAGE_NAME=<image> npm run test:docker
+  ```
+  If authentication fails, the stored `TEST_TRUST_TOKEN` has most likely expired. Follow the renewal steps above, together with the user.
+- `test:api` hits the real iCloud backend.
 - `test:docker` runs testcontainers against `$IMAGE_NAME` (default `steilerdev/icloud-photos-sync:nightly`). `test:docker:unit` is the subset that needs no credentials.
+- **Testing local code in the Docker tests:** build an image first. `npm run build && npm run dist && npm pack`, then move the tarball to `../docker/npm-pack.tgz` (gitignored) and run `docker build -t icps:local ../docker`. Then use `IMAGE_NAME=icps:local`.
 
 ## Architecture
 
