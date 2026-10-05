@@ -25,6 +25,10 @@ The maintainer keeps two real Apple accounts. Each has a `secrets/<name>.env` fi
 
 `adp.env` is optional, for an Advanced Data Protection account. Load an env file with `set -a; . ../secrets/test.env; set +a` before running a command. Never print, log or commit the values, and never paste them into files or tool output.
 
+**How trust tokens behave** (from the maintainer's experience):
+- Many trust tokens can co-exist for the same account. Acquiring a new one does not invalidate the others, so renew a token only where it actually expired.
+- Tokens are **bound to the IP they were acquired from**. A token from one network (e.g. this machine) is rejected from another (e.g. the CI runner), and the failure looks just like an expired token. Never copy a token between machines; each location acquires its own.
+
 **When a trust token expires, renew it together with the user.** Expiry shows up as the signin returning 409 / "MFA code required" where a trusted session was expected; API tests then fail during authentication. Renewing needs an MFA code that only the user can provide:
 
 1. Tell the user the token expired, and which account it belongs to.
@@ -34,7 +38,7 @@ The maintainer keeps two real Apple accounts. Each has a `secrets/<name>.env` fi
    - **Prod account:** the automatic trusted-device push works, so no extra request is needed.
    - Then ask the user for the code and submit it with `curl -X POST "localhost:8080/api/mfa?code=<code>"`. The default MFA timeout is 10 minutes, so ask promptly.
 4. The new token is printed ("Validated token") and stored in `<data-dir>/.icloud-photos-sync` (`.trustToken`). Update `TEST_TRUST_TOKEN` in `secrets/test.env` only after confirming with the user. For `prod`, the token lives in that account's own data dir.
-5. CI does **not** read the token from GitHub secrets. The self-hosted `residential` runner keeps `TEST_*` in `/opt/actions-runner/.env`. Remind the user to run `.github/acquire-trust-token.sh` on that runner host (it does the same flow using the published image).
+5. CI has its own token. The self-hosted `residential` runner keeps `TEST_*` in `/opt/actions-runner/.env`, not in GitHub secrets. Because tokens are IP-bound, it must be renewed **on the runner host** by the user, with `.github/acquire-trust-token.sh`, which runs the same flow using the published image. This is only needed when the CI API/e2e jobs fail authentication. A locally renewed token neither fixes nor breaks the runner's token.
 
 ## Commands (run in `app/`)
 
@@ -247,7 +251,7 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 **Tests** (`artifacts_test.yml`):
 - unit runs on `ubuntu-latest`/`macos-latest`. It uploads `coverage-artifact-<OS>` and the CTRF report, which posts a PR comment per suite.
 - `unit-docker` (`test:docker:unit`) loads `docker-artifact` from the same run.
-- `e2e` (`test:docker`) and `api` (`test:api`, 30 min) run on the **self-hosted `residential` runner**, with `TEST_*` taken from the runner's `.env`. These runs are needed for beta/main PRs and stay queued when the runner is offline.
+- `e2e` (`test:docker`) and `api` (`test:api`, 30 min) run on the **self-hosted `residential` runner**, with `TEST_*` taken from the runner's `.env`. They can't use GitHub-hosted runners: trust tokens are IP-bound, and hosted runners get a different IP on every run, which trips Apple's security. Don't move these jobs to `ubuntu-latest`. They are required for beta/main PRs and stay queued while the runner is offline.
 
 **Release** (semantic-release, dependencies in `tools/release/`):
 - The config is assembled at runtime by `helper/prepare-semantic-release` from `releaserc.json` files next to `release/{app,docker,github}-setup`, and patched **by array index**. Don't reorder plugins or assets.
