@@ -53,8 +53,9 @@ runs:
       run: |
         mkdir -p ${{ inputs.release-dir }}
 
-        cp ${{ github.action_path }}/package.json \
-          ${{ github.action_path }}/package-lock.json \
+        # Release dependencies are kept outside of .github/, so Dependabot is able to update them
+        cp ${{ github.workspace }}/tools/release/package.json \
+          ${{ github.workspace }}/tools/release/package-lock.json \
           ${{ inputs.release-dir }}/
 
         cat ${{ inputs.release-config-dir}}/releaserc.json |\
@@ -78,7 +79,7 @@ runs:
         echo "Wrote:"
         cat ${{ inputs.release-dir }}/.releaserc.json
     - id: setup-node
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@v7
       with:
         node-version-file: ${{ inputs.node-version-file }}
         cache: npm
