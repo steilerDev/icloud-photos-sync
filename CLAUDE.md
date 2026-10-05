@@ -290,5 +290,6 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 ## Git workflow
 
 - Branch from `dev` and open PRs against `dev`. `beta` and `main` only receive release PRs (`dev` → `beta` → `main`), and branch protection blocks direct commits.
+- `dev` is the base branch, but GitHub's default branch is `main`. Claude Code worktrees branch from `origin/HEAD`, so the maintainer's clone sets `git remote set-head origin dev` together with `remote.origin.followRemoteHEAD=never`. In any other clone, check that new work starts from `dev` before committing: `git merge-base --is-ancestor origin/dev HEAD`. If the branch started from `main`, rebase it onto `origin/dev`.
 - Commits follow conventional commits, since semantic-release derives versions and notes from them.
 - Summaries are imperative, lower-case, with no trailing period. Use an area tag after the type, e.g. `fix: [app] restore MFA flow for iOS 26.4+`, `chore: [docs] …`, `ci: …`.
