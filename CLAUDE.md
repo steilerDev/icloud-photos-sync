@@ -26,6 +26,7 @@ The maintainer keeps two real Apple accounts. Each has a `secrets/<name>.env` fi
 `adp.env` is optional, for an Advanced Data Protection account. Load an env file with `set -a; . ../secrets/test.env; set +a` before running a command. Never print, log or commit the values, and never paste them into files or tool output.
 
 **How trust tokens behave** (from the maintainer's experience):
+- Tokens expire roughly every 30 days. The app has no client-side expiry check, so an auth failure on a token older than about a month is most likely plain expiry.
 - Many trust tokens can co-exist for the same account. Acquiring a new one does not invalidate the others, so renew a token only where it actually expired.
 - Tokens are **bound to the IP they were acquired from**. A token from one network (e.g. this machine) is rejected from another (e.g. the CI runner), and the failure looks just like an expired token. Never copy a token between machines; each location acquires its own.
 
