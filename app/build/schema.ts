@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 // This script generates the json schema used for validation of externally provided date
 import fs from "fs/promises";
 import path from "path";

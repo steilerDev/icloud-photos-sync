@@ -3,7 +3,7 @@ import {AxiosHarTracker} from "axios-har-tracker";
 import {createWriteStream} from "fs";
 import fs from "fs/promises";
 import {jsonc} from "jsonc";
-import {pEvent} from "p-event";
+import {once} from "events";
 import PQueue from "p-queue";
 import {Cookie} from "tough-cookie";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
@@ -539,7 +539,7 @@ export class NetworkManager {
             Resources.logger(this).debug(`Starting to write ${url} to ${location}`);
             const writeStream = createWriteStream(location, {flags: `w`});
             response.data.pipe(writeStream);
-            await pEvent(writeStream, `finish`, {rejectionEvents: [`error`]});
+            await once(writeStream, `finish`); // Rejects if an 'error' event is emitted
             Resources.logger(this).debug(`Finished download of ${url}`);
         });
     }

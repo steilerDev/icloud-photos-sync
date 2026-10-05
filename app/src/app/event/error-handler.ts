@@ -2,7 +2,7 @@ import {BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, Backtra
 import {randomUUID} from "crypto";
 import fs from 'fs/promises';
 import {jsonc} from "jsonc";
-import {pEvent} from 'p-event';
+import {once} from 'events';
 import {Readable} from 'stream';
 import * as zlib from 'zlib';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
@@ -463,7 +463,7 @@ export class ErrorHandler {
             chunks.push(chunk);
         });
         data.pipe(brotliStream);
-        await pEvent(brotliStream, `end`, {rejectionEvents: [`error`]});
+        await once(brotliStream, `end`); // Rejects if an 'error' event is emitted
         return Buffer.concat(chunks);
     }
 

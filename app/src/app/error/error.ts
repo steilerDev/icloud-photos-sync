@@ -167,7 +167,8 @@ export class iCPSError extends Error {
 
         const _err = new iCPSError();
 
-        if (err instanceof Error) {
+        // Error.isError also detects errors from other realms, e.g. vm contexts
+        if (Error.isError(err)) {
             return _err.addCause(err);
         }
 
@@ -181,5 +182,5 @@ export class iCPSError extends Error {
  * @returns The error's message, if it is an Error, the stringified value otherwise
  */
 export function errorMessage(err: unknown): string {
-    return err instanceof Error ? err.message : String(err);
+    return Error.isError(err) ? err.message : String(err);
 }
