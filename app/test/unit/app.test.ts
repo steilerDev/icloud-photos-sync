@@ -1,5 +1,6 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import fs from 'fs';
+import path from 'path';
 import mockfs from '../_helpers/mock-fs.helper';
 import {PassThrough} from 'stream';
 import {appFactory, iCPSAppOptions} from '../../src/app/factory';
@@ -103,6 +104,95 @@ describe(`App Factory`, () => {
         expect(setupSpy).toHaveBeenCalledWith(Config.defaultConfig);
 
         stdinSpy.mockRestore();
+    });
+
+    describe(`Credentials from file`, () => {
+        const secretsDir = `${Config.defaultConfig.dataDir}-secrets`;
+        const usernameFile = path.join(secretsDir, `username`);
+        const passwordFile = path.join(secretsDir, `password`);
+        const emptyFile = path.join(secretsDir, `empty`);
+        const credentialEnvVars = [`APPLE_ID_USER`, `APPLE_ID_PWD`, `APPLE_ID_USER_FILE`, `APPLE_ID_PWD_FILE`];
+
+        beforeEach(() => {
+            mockfs({
+                [secretsDir]: {
+                    username: `${Config.defaultConfig.username}\n`,
+                    password: `${Config.defaultConfig.password}\r\n\n`,
+                    empty: `\n`,
+                },
+            });
+        });
+
+        afterEach(() => {
+            credentialEnvVars.forEach(envVar => delete process.env[envVar]);
+        });
+
+        test(`Read credentials from files provided through CLI`, async () => {
+            const setupSpy = jest.spyOn(Resources, `setup`);
+            const app = await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `--username-file`, usernameFile, `--password-file`, passwordFile, `token`]);
+
+            expect(app).toBeInstanceOf(TokenApp);
+            expect(setupSpy).toHaveBeenCalledWith(Config.defaultConfig);
+        });
+
+        test(`Read credentials from files provided through environment`, async () => {
+            process.env.APPLE_ID_USER_FILE = usernameFile;
+            process.env.APPLE_ID_PWD_FILE = passwordFile;
+            const setupSpy = jest.spyOn(Resources, `setup`);
+            const app = await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `token`]);
+
+            expect(app).toBeInstanceOf(TokenApp);
+            expect(setupSpy).toHaveBeenCalledWith(Config.defaultConfig);
+        });
+
+        test(`Only trailing line breaks are removed from file content`, async () => {
+            fs.writeFileSync(passwordFile, ` test Pass\t\n\r\n`);
+            const setupSpy = jest.spyOn(Resources, `setup`);
+            await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `-u`, Config.defaultConfig.username, `--password-file`, passwordFile, `token`]);
+
+            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, password: ` test Pass\t`});
+        });
+
+        test.each([{
+            desc: `username and username file provided through CLI`,
+            options: [`-u`, Config.defaultConfig.username, `--username-file`, usernameFile, `-p`, Config.defaultConfig.password],
+            env: {},
+            expected: `error: option '--username-file <path>' cannot be used with option '-u, --username <string>'`,
+        }, {
+            desc: `password and password file provided through CLI`,
+            options: [`-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password, `--password-file`, passwordFile],
+            env: {},
+            expected: `error: option '--password-file <path>' cannot be used with option '-p, --password <string>'`,
+        }, {
+            desc: `username and username file provided through environment`,
+            options: [`-p`, Config.defaultConfig.password],
+            env: {APPLE_ID_USER: Config.defaultConfig.username, APPLE_ID_USER_FILE: usernameFile},
+            expected: `error: environment variable 'APPLE_ID_USER_FILE' cannot be used with environment variable 'APPLE_ID_USER'`,
+        }, {
+            desc: `password provided through CLI and password file provided through environment`,
+            options: [`-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password],
+            env: {APPLE_ID_PWD_FILE: passwordFile},
+            expected: `error: environment variable 'APPLE_ID_PWD_FILE' cannot be used with option '-p, --password <string>'`,
+        }, {
+            desc: `non-existing password file`,
+            options: [`-u`, Config.defaultConfig.username, `--password-file`, `${passwordFile}-missing`],
+            env: {},
+            expected: `error: option '--password-file <path>' argument '${passwordFile}-missing' is invalid. Unable to read file: ENOENT: no such file or directory, open '${passwordFile}-missing'`,
+        }, {
+            desc: `empty username file`,
+            options: [`-p`, Config.defaultConfig.password],
+            env: {APPLE_ID_USER_FILE: emptyFile},
+            expected: `error: option '--username-file <path>' value '${emptyFile}' from env 'APPLE_ID_USER_FILE' is invalid. File is empty.`,
+        }])(`Reject $desc`, async ({options, env, expected}) => {
+            Object.assign(process.env, env);
+            const setupSpy = jest.spyOn(Resources, `setup`);
+            const mockStderr = jest.spyOn(process.stderr, `write`).mockImplementation(() => true);
+
+            await expect(() => appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, ...options, `token`])).rejects.toThrow(expected);
+
+            expect(mockStderr).toHaveBeenCalledWith(expected + `\n`);
+            expect(setupSpy).not.toHaveBeenCalled();
+        });
     });
 
     test(`Fail app creation if lock cannot be acquired`, async () => {
