@@ -3,6 +3,13 @@
 # Major updates are raised individually (unless part of a coordinated group), so breaking changes can be reviewed in isolation.
 # A cooldown delays updates of freshly published versions, reducing churn and supply chain risk.
 version: 2
+registries:
+  # Docker Hardened Images require authentication with a Docker Hub account - DOCKER_TOKEN needs to be available as Dependabot secret
+  dhi:
+    type: docker-registry
+    url: dhi.io
+    username: steilerdev
+    password: ${{secrets.DOCKER_TOKEN}}
 updates:
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
@@ -107,6 +114,8 @@ updates:
   - package-ecosystem: "docker"
     labels: [ ]
     directory: "/docker"
+    registries:
+      - dhi
     target-branch: "dev"
     open-pull-requests-limit: 5
     commit-message:
@@ -120,14 +129,13 @@ updates:
       default-days: 7
     ignore:
       # Node.js major versions are updated manually together with the runtime (app/node-version)
-      - dependency-name: "node"
+      - dependency-name: "*node"
         update-types: ["version-update:semver-major"]
     groups:
-      # The runtime stage copies libraries from the builder stage - both need to use the same Alpine version
+      # The application is installed by the builder stage and executed by the runtime stage - both need to use the same Node.js version
       base-images:
         patterns:
-        - "node"
-        - "alpine"
+        - "*node"
 
   # Maintain dependencies for pip (docs site)
   - package-ecosystem: "pip"
