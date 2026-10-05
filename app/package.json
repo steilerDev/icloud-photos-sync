@@ -40,7 +40,7 @@
     "type": "git",
     "url": "git+https://github.com/steilerDev/icloud-photos-sync.git"
   },
-  "packageManager": "npm@10.9.3",
+  "packageManager": "npm@11.19.1",
   "keywords": [
     "icloud",
     "icloud-sync",
@@ -53,7 +53,7 @@
   },
   "homepage": "https://icps.steiler.dev/",
   "engines": {
-    "node": ">=22"
+    "node": ">=26"
   },
   "os": [
     "linux",
@@ -68,20 +68,20 @@
     "@testing-library/jest-dom": "6.9.1",
     "@types/cli-progress": "3.11.6",
     "@types/jest": "30.0.0",
-    "@types/jsdom": "27.0.0",
-    "@types/node": "22.19.17",
+    "@types/jsdom": "30.0.0",
+    "@types/node": "26.6.3",
     "@types/web-push": "3.6.4",
     "axios-mock-adapter": "2.1.0",
     "eslint": "10.11.0",
     "jest": "30.5.2",
     "jest-ctrf-json-reporter": "0.0.11",
-    "jsdom": "27.0.0",
+    "jsdom": "30.1.1",
     "knip": "6.38.0",
     "liquidjs": "10.29.0",
     "mock-stdin": "1.0.0",
     "node-mocks-http": "1.18.1",
     "tar-stream": "3.2.1",
-    "testcontainers": "11.14.0",
+    "testcontainers": "12.2.0",
     "ts-jest": "29.4.14",
     "ts-json-schema-generator": "2.9.0",
     "tsx": "4.23.15",
@@ -105,11 +105,5 @@
     "p-timeout": "7.0.2",
     "tough-cookie": "6.0.2",
     "web-push": "3.6.7"
-  },
-  "overrides": {
-    "jsdom": {
-      "cssstyle": "5.3.1",
-      "@asamuzakjp/css-color": "4.0.5"
-    }
   }
 }
