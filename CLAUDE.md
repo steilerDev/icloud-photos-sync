@@ -307,9 +307,13 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - **Issue labels.** When working on a GitHub issue, keep **exactly one `class(...)` and exactly one `status(...)` label** on it. Use only the existing labels; never create new ones.
   - **Classes:** `class(bug)`, `class(feature)` (new functionality), `class(improvement)` (improves an existing feature), `class(documentation)`, `class(known issue)`, `class(duplicate)`, `class(invalid)`.
   - **Status lifecycle:**
-    - Before work starts: `status(open)` (new and unclassified), `status(investigating)`, `status(backlog)`, `status(help needed)`, or `status(wontfix)`.
-    - **Starting work:** set `status(in progress)`. Also check the class label and correct it if needed.
-    - **PR merged into `dev`:** set `status(implemented)`.
+    - `status(open)`: new; nobody has looked at it yet.
+    - `status(investigating)`: the root cause is being analysed.
+    - `status(backlog)`: analysed, but coding has not started.
+    - `status(help needed)`: input from other people is needed.
+    - `status(wontfix)`: will not be worked on.
+    - `status(in progress)`: actively being worked on, and the work has not completed yet. Set it **when you start coding**, and check the class label at the same time. Don't use it for work that stalled or for an unreviewed community PR; use `backlog` (if analysed) or `open` for those.
+    - `status(implemented)`: set it **once the PR is merged into `dev`**.
     - **Beta release:** semantic-release adds `status(previewed)` (configured in `.github/actions/release/github-setup/action.yml`).
     - **Production release from `main`:** semantic-release adds `status(released)`.
   - semantic-release only *adds* its label and never removes the previous status. Whenever you touch an issue that has more than one `status(...)`, keep only the most advanced stage (`released` > `previewed` > `implemented`) and remove the rest.
