@@ -31,7 +31,7 @@ The maintainer keeps two real Apple accounts. Each has a `secrets/<name>.env` fi
 2. Build (`npm run build:dev`). Run the token command with the account's credentials, a scratch data dir and a non-privileged port, e.g. `APPLE_ID_USER=… APPLE_ID_PWD=… node build/out/src/main.js token -d "$(mktemp -d)" -P 8080`. For the test account, map `TEST_APPLE_ID_USER`/`TEST_APPLE_ID_PWD` to `APPLE_ID_USER`/`APPLE_ID_PWD`.
 3. Wait until it prints "MFA code required".
    - **Test account:** its trusted devices are unreachable, so the automatic device push never arrives (a long-standing quirk). Always request an SMS to phone id `2`: `curl -X POST "localhost:8080/api/resend_mfa?method=sms&phoneNumberId=2"`. `acquire-trust-token.sh` does the same.
-   - **Prod account:** ask the user which delivery method to use.
+   - **Prod account:** the automatic trusted-device push works, so no extra request is needed.
    - Then ask the user for the code and submit it with `curl -X POST "localhost:8080/api/mfa?code=<code>"`. The default MFA timeout is 10 minutes, so ask promptly.
 4. The new token is printed ("Validated token") and stored in `<data-dir>/.icloud-photos-sync` (`.trustToken`). Update `TEST_TRUST_TOKEN` in `secrets/test.env` only after confirming with the user. For `prod`, the token lives in that account's own data dir.
 5. CI does **not** read the token from GitHub secrets. The self-hosted `residential` runner keeps `TEST_*` in `/opt/actions-runner/.env`. Remind the user to run `.github/acquire-trust-token.sh` on that runner host (it does the same flow using the published image).
