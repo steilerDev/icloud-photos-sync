@@ -1,4 +1,4 @@
-import mockfs from 'mock-fs';
+import mockfs from '../_helpers/mock-fs.helper';
 import {beforeAll, describe, expect, test, jest, beforeEach, afterEach, afterAll} from '@jest/globals';
 import {iCloud} from '../../src/lib/icloud/icloud.js';
 import crypto from 'crypto';

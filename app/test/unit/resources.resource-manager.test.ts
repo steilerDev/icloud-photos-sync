@@ -1,7 +1,7 @@
 
 import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import * as fs from 'fs';
-import mockfs from 'mock-fs';
+import mockfs from '../_helpers/mock-fs.helper';
 import path from 'path';
 import {EventManager} from '../../src/lib/resources/event-manager';
 import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';

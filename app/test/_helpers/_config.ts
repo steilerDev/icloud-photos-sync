@@ -1,11 +1,15 @@
 /* CSpell:disable */
+import {randomUUID} from "crypto";
+import * as fs from "fs";
+import os from "os";
+import path from "path";
 import {iCPSAppOptions} from "../../src/app/factory";
 import {ZoneArea} from "../../src/lib/resources/resource-types";
 
 export const defaultConfig = {
     username: `test@icloud.com`,
     password: `testPass`,
-    dataDir: `/opt/icloud-photos-library`,
+    dataDir: path.join(fs.realpathSync(os.tmpdir()), `icps-test-${randomUUID()}`),
     port: 80,
     webBasePath: ``,
     maxRetries: 10,
