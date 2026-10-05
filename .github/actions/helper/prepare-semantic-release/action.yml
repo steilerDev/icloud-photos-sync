@@ -53,9 +53,8 @@ runs:
       run: |
         mkdir -p ${{ inputs.release-dir }}
 
-        # Release dependencies are kept outside of .github/, so Dependabot is able to update them
-        cp ${{ github.workspace }}/tools/release/package.json \
-          ${{ github.workspace }}/tools/release/package-lock.json \
+        cp ${{ github.action_path }}/package.json \
+          ${{ github.action_path }}/package-lock.json \
           ${{ inputs.release-dir }}/
 
         cat ${{ inputs.release-config-dir}}/releaserc.json |\
