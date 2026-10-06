@@ -9,6 +9,7 @@ import {MetricsExporter} from "./app/event/metrics-exporter.js";
 import {appFactory} from "./app/factory.js";
 import {WebServer} from "./app/web-ui/web-server.js";
 import {Resources} from "./lib/resources/main.js";
+import {PrometheusMetricsExporter} from "./app/event/prometheus-metrics-exporter.js";
 
 const app = await appFactory(process.argv)
     .catch(err => {
@@ -25,12 +26,13 @@ process.on(`exit`, () => {
 const errorHandler = new ErrorHandler();
 
 try {
+    const prometheusMetricsExporter = new PrometheusMetricsExporter();
     const _eventApps = [
         new LogInterface(),
         new CLIInterface(),
         new MetricsExporter(),
         new HealthCheckPingExecutor(),
-        await WebServer.spawn(),
+        await WebServer.spawn(prometheusMetricsExporter),
     ]
     await app.run();
 } catch (err) {

@@ -238,8 +238,37 @@ paths:
           description: The VAPID Public key
           content: 
             application/json:
-              schema: 
+              schema:
                 type: object
-                properties: 
-                  publicKey: 
+                properties:
+                  publicKey:
                     type: string
+  /metrics:
+    get:
+      summary: Provides sync metrics in the Prometheus/OpenMetrics exposition format
+      description: |
+        Only available if the Prometheus metrics export is enabled (`--export-prometheus-metrics`), otherwise the endpoint does not exist and the request is rejected with `400`.
+        The exposition format is negotiated through the `Accept` header, following the [Prometheus content negotiation](https://prometheus.io/docs/instrumenting/content_negotiation/): OpenMetrics 1.0.0 and the Prometheus text formats 1.0.0 and 0.0.4 are supported, the Prometheus text format 0.0.4 is used as fallback.
+        See the [sync metrics documentation](https://icps.steiler.dev/user-guides/sync-metrics/) for the exposed metrics.
+      operationId: getMetrics
+      parameters:
+        - name: Accept
+          in: header
+          description: The accepted exposition formats, e.g. as sent by Prometheus
+          required: false
+          schema:
+            type: string
+            example: 'application/openmetrics-text;version=1.0.0;escaping=allow-utf-8;q=0.5,text/plain;version=0.0.4;q=0.2,*/*;q=0.1'
+      responses:
+        '200':
+          description: The current metrics, in the negotiated exposition format
+          content:
+            application/openmetrics-text; version=1.0.0; charset=utf-8:
+              schema:
+                type: string
+            text/plain; version=1.0.0; charset=utf-8:
+              schema:
+                type: string
+            text/plain; version=0.0.4; charset=utf-8:
+              schema:
+                type: string

@@ -12,6 +12,7 @@ import {serviceWorker} from './scripts/service-worker.js';
 import {RequestMfaView} from './view/request-mfa-view.js';
 import {StateView} from './view/state-view.js';
 import {SubmitMfaView} from './view/submit-mfa-view.js';
+import {PrometheusMetricsExporter} from '../event/prometheus-metrics-exporter.js';
 import {LogLevel, StateType} from '../../lib/resources/state-manager.js';
 import {NotificationPusher} from './notification-pusher.js';
 import {URL} from 'url';
@@ -27,7 +28,7 @@ type WebServerResponse = {
     body: any
 }
 
-type WebServerRoute = (url: URL, body?: string) => WebServerResponse
+type WebServerRoute = (url: URL, body?: string, headers?: http.IncomingHttpHeaders) => WebServerResponse
 
 type WebServerSitemap = {
     POST: {
@@ -56,6 +57,11 @@ export class WebServer {
      * Provides notification capabilities to the server
      */
     notificationPusher: NotificationPusher = new NotificationPusher();
+
+    /**
+     * Provides the metrics for the /metrics endpoint - only set, if the prometheus metrics export is enabled
+     */
+    prometheusMetricsExporter?: PrometheusMetricsExporter;
 
     /**
      * Routing table for this server
@@ -87,15 +93,16 @@ export class WebServer {
      * Creates the server object and starts the web server
      * @returns 
      */
-    static async spawn(): Promise<WebServer> {
-        return new WebServer().startServer();
+    static async spawn(prometheusMetricsExporter?: PrometheusMetricsExporter): Promise<WebServer> {
+        return new WebServer(prometheusMetricsExporter).startServer();
     }
 
     /**
      * Creates the server object
+     * @param prometheusMetricsExporter - The exporter serving the /metrics endpoint - the endpoint is only exposed, if the exporter is provided and the prometheus metrics export is enabled
      * @emits iCPSEventWebServer.ERROR - When an error associated to the server occurs - Provides iCPSError as argument
      */
-    constructor() {
+    constructor(prometheusMetricsExporter?: PrometheusMetricsExporter) {
         Resources.logger(this).debug(`Preparing web server on port ${Resources.manager().webServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
 
@@ -103,6 +110,11 @@ export class WebServer {
         this.server.unref();
 
         this.mfaMethod = new MFAMethod();
+
+        if (prometheusMetricsExporter && Resources.manager().exportPrometheusMetrics) {
+            this.prometheusMetricsExporter = prometheusMetricsExporter;
+            this._sitemap.GET[`/metrics`] = this.handleMetricsRequest.bind(this);
+        }
 
         // Every new MFA flow starts with the code pushed to the trusted devices
         Resources.events(this).on(iCPSEventCloud.MFA_REQUIRED, () => {
@@ -160,14 +172,15 @@ export class WebServer {
                 `http://localhost/` // Necessary, because the req.url is relative
             )
             const body = await this.readBody(req)
+            const headers = req.headers
 
             if (req.method === `GET` && url.pathname in this._sitemap.GET) {
-                this.sendResponse(this._sitemap.GET[url.pathname](url, body), res)
+                this.sendResponse(this._sitemap.GET[url.pathname](url, body, headers), res)
                 return;
             }
 
             if (req.method === `POST` && url.pathname in this._sitemap.POST) {
-                this.sendResponse(this._sitemap.POST[url.pathname](url, body), res)
+                this.sendResponse(this._sitemap.POST[url.pathname](url, body, headers), res)
                 return;
             }
 
@@ -327,6 +340,24 @@ export class WebServer {
             body: {
                 publicKey: Resources.manager().notificationVapidCredentials.publicKey
             }
+        }
+    }
+
+    /**
+     * This function will handle the request send to the metrics endpoint, negotiating the exposition format based on the Accept header
+     * @param _url - The parsed URL invoking this request
+     * @param _body - The request body
+     * @param headers - The request headers
+     */
+    handleMetricsRequest(_url: URL, _body?: string, headers?: http.IncomingHttpHeaders): WebServerResponse {
+        const exporter = this.prometheusMetricsExporter!;
+        const {contentType, body} = exporter.render(exporter.negotiate(headers?.accept));
+        return {
+            code: 200,
+            header: {
+                "Content-Type": contentType
+            },
+            body
         }
     }
 

@@ -12,6 +12,7 @@ import webpush from 'web-push';
 import {configure, getByTestId} from "@testing-library/dom";
 import '@testing-library/jest-dom/jest-globals';
 import {LogLevel, SerializedState, StateManager, StateType} from "../../src/lib/resources/state-manager";
+import {PrometheusMetricsExporter} from "../../src/app/event/prometheus-metrics-exporter";
 
 let mockedEventManager: MockedEventManager;
 let mockedValidator: MockedValidator;
@@ -134,6 +135,79 @@ describe(`Notification Pusher`, () => {
 
         expect(webpush.sendNotification).toHaveBeenCalledWith(subscription, `{"state":"ready"}`)
         expect(mockedResourceManager.removeNotificationSubscription).toHaveBeenCalledWith(subscription)
+    })
+})
+
+describe(`Metrics endpoint`, () => {
+    test.each([{
+        exportPrometheusMetrics: false,
+        exporter: true,
+        desc: `export disabled`
+    }, {
+        exportPrometheusMetrics: true,
+        exporter: false,
+        desc: `no exporter provided`
+    }])(`Should not expose /metrics with $desc`, async ({exportPrometheusMetrics, exporter}) => {
+        mockedResourceManager._resources.exportPrometheusMetrics = exportPrometheusMetrics
+        const webServer = new WebServer(exporter ? new PrometheusMetricsExporter() : undefined)
+
+        const req = createRequest<IncomingMessage>({
+            method: `GET`,
+            url: `/metrics`
+        })
+        const res = await sendMockedRequest(webServer, req)
+
+        expect(webServer._sitemap.GET[`/metrics`]).toBeUndefined()
+        expect(res._getStatusCode()).toEqual(400)
+    })
+
+    describe(`Enabled`, () => {
+        let webServer: WebServer
+
+        beforeEach(() => {
+            mockedResourceManager._resources.exportPrometheusMetrics = true
+            webServer = new WebServer(new PrometheusMetricsExporter())
+        })
+
+        test(`Should serve Prometheus text format by default`, async () => {
+            const req = createRequest<IncomingMessage>({
+                method: `GET`,
+                url: `/metrics`
+            })
+            const res = await sendMockedRequest(webServer, req)
+
+            expect(res._getStatusCode()).toEqual(200)
+            expect(res._getHeaders()[`content-type`]).toEqual(`text/plain; version=0.0.4; charset=utf-8`)
+            expect(res._getData()).toContain(`# TYPE icps_sync_runs_total counter`)
+            expect(res._getData()).not.toContain(`# EOF`)
+        })
+
+        test(`Should serve OpenMetrics if requested`, async () => {
+            const req = createRequest<IncomingMessage>({
+                method: `GET`,
+                url: `/metrics`,
+                headers: {
+                    accept: `application/openmetrics-text;version=1.0.0;escaping=allow-utf-8;q=0.5,text/plain;version=0.0.4;q=0.2,*/*;q=0.1`
+                }
+            })
+            const res = await sendMockedRequest(webServer, req)
+
+            expect(res._getStatusCode()).toEqual(200)
+            expect(res._getHeaders()[`content-type`]).toEqual(`application/openmetrics-text; version=1.0.0; charset=utf-8; escaping=allow-utf-8`)
+            expect(res._getData()).toContain(`# TYPE icps_sync_runs counter`)
+            expect(res._getData()).toMatch(/# EOF\n$/)
+        })
+
+        test(`Should serve metrics below the web base path`, async () => {
+            mockedResourceManager._resources.webBasePath = `/icps`
+            const req = createRequest<IncomingMessage>({
+                method: `GET`,
+                url: `/icps/metrics`
+            })
+            const res = await sendMockedRequest(webServer, req)
+
+            expect(res._getStatusCode()).toEqual(200)
+        })
     })
 })
 

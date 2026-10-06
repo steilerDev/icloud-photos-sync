@@ -551,6 +551,20 @@ export const nonRejectOptions = [
             `test@icloud.com`,
             `-p`,
             `testPass`,
+            `--export-prometheus-metrics`,
+        ],
+        _desc: `Export Prometheus metrics enabled`,
+        expectedOptions: {
+            exportPrometheusMetrics: true,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
             `--metadata-rate`,
             `5/10`,
         ],

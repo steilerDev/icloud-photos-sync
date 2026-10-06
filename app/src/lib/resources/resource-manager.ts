@@ -330,6 +330,13 @@ export class ResourceManager {
     }
 
     /**
+     * @returns If the application should export prometheus metrics
+     */
+    get exportPrometheusMetrics(): boolean {
+        return this._resources.exportPrometheusMetrics;
+    }
+
+    /**
      * @returns The rate at which the metadata should be downloaded
      */
     get metadataRate(): [number, number] {

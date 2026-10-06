@@ -669,6 +669,12 @@ describe(`ResourceManager`, () => {
             });
         });
 
+        describe(`exportPrometheusMetrics`, () => {
+            test(`should return the export prometheus metrics flag from the resources`, () => {
+                expect(resourceManager.exportPrometheusMetrics).toEqual(resources.exportPrometheusMetrics);
+            });
+        });
+
         describe(`metadataRate`, () => {
             test(`should return the metadata rate from the resources`, () => {
                 expect(resourceManager.metadataRate).toEqual(resources.metadataRate);

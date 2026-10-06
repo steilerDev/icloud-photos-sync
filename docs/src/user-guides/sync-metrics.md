@@ -1,6 +1,9 @@
 # Sync Metrics Export
 
-This application can export various sync related metrics, which can be used to monitor the sync activities and status. Those metrics are exported to a file, formatted using the [Influx Line Protocol](https://docs.influxdata.com/influxdb/v2.6/reference/syntax/line-protocol/). 
+This application can export various sync related metrics, which can be used to monitor the sync activities and status. Two independent exporters are available:
+
+  - A file, formatted using the [Influx Line Protocol](https://docs.influxdata.com/influxdb/v2.6/reference/syntax/line-protocol/), containing every status change as an event (described below)
+  - A [Prometheus/OpenMetrics endpoint](#prometheus-openmetrics), exposing the current state and aggregated metrics to be scraped
 
 ## Usage
 
@@ -87,3 +90,67 @@ The following fields will be written:
     - `warn-mfa_resend_error`
     - `warn-resource_file_error`
     - `warn-archive_asset_error`
+
+## Prometheus / OpenMetrics
+
+Set the [export Prometheus metrics flag](cli.md#export-prometheus-metrics), in order to expose the `/metrics` endpoint on the web server. The endpoint is served on the [web server port](cli.md#port), below the [web base path](cli.md#web-base-path) (e.g. `http://<host>:80/metrics`). Without the flag, the endpoint does not exist.
+
+The exposition format is negotiated using the `Accept` header, following the [Prometheus content negotiation](https://prometheus.io/docs/instrumenting/content_negotiation/): [OpenMetrics 1.0.0](https://prometheus.io/docs/specs/om/open_metrics_spec/) as well as the [Prometheus text formats](https://prometheus.io/docs/instrumenting/exposition_formats/) 1.0.0 and 0.0.4 are supported, the Prometheus text format 0.0.4 is used as fallback. Prometheus will select OpenMetrics with its default configuration.
+
+The following is a sample scrape configuration:
+
+```yaml
+scrape_configs:
+  - job_name: icloud-photos-sync
+    scrape_interval: 1m
+    # Loading a large local library can block the application for a while, delaying the response (see #1006)
+    scrape_timeout: 30s
+    static_configs:
+      - targets: ['icloud-photos-sync:80']
+```
+
+The web server is not authenticated, make sure it is only reachable from trusted networks (see [security](security.md)).
+
+### Metrics
+
+All metrics are prefixed with `icps_`. State, error and schedule are read from the application state at scrape time, sync related values reflect the last sync. Metrics without a value (e.g. before the first sync) are omitted. Counters reset upon application restart.
+
+| Metric | Type | Labels | Description |
+|---|---|---|---|
+| `icps_build_info` | info | `version` | Build information, always `1` |
+| `icps_state` | stateset | `icps_state` (`ready`, `running`, `blocked`) | Current application state, `1` for the active state. `blocked` means the application is waiting for the MFA code |
+| `icps_last_run_error` | gauge | | `1` if the last run (sync or re-authentication) ended with an error, cleared when the next run starts |
+| `icps_next_sync_timestamp_seconds` | gauge | | Time of the next scheduled sync |
+| `icps_last_sync_success_timestamp_seconds` | gauge | | Time of the last successful sync |
+| `icps_sync_phase_duration_seconds` | gauge | `phase` (`authentication`, `fetchAndLoad`, `diff`, `writeAssets`, `writeAlbums`) | Duration of the last completed run of each sync phase. Authentication includes the time waiting for the MFA code |
+| `icps_loaded_local_assets`, `icps_loaded_local_albums` | gauge | | Number of assets/albums loaded from the local library during the last sync |
+| `icps_loaded_remote_assets`, `icps_loaded_remote_albums` | gauge | | Number of assets/albums fetched from iCloud during the last sync |
+| `icps_assets_to_be_added`, `icps_assets_to_be_deleted`, `icps_assets_to_be_kept` | gauge | | Number of assets to be added, deleted or kept after diffing the local and remote state during the last sync |
+| `icps_albums_to_be_added`, `icps_albums_to_be_deleted`, `icps_albums_to_be_kept` | gauge | | Number of albums to be added, deleted or kept after diffing the local and remote state during the last sync |
+| `icps_sync_runs_total` | counter | `result` (`success`, `failure`) | Number of finished sync runs |
+| `icps_sync_retries_total` | counter | | Number of sync attempts that failed and were retried |
+| `icps_assets_written_total` | counter | | Number of assets written to the local library |
+| `icps_warnings_total` | counter | `type` | Number of runtime warnings by type (see [common warnings](common-warnings.md)) |
+
+When serving OpenMetrics, counters also carry a `_created` sample. Prometheus stores those as separate series, unless the `created-timestamp-zero-ingestion` feature flag is enabled.
+
+### Sample Alerts
+
+```yaml
+groups:
+  - name: icloud-photos-sync
+    rules:
+      - alert: ICPSSyncStale
+        expr: time() - icps_last_sync_success_timestamp_seconds > 2 * 24 * 3600
+        annotations:
+          summary: No successful sync within the last two days
+      - alert: ICPSWaitingForMFA
+        expr: icps_state{icps_state="blocked"} == 1
+        for: 5m
+        annotations:
+          summary: Waiting for the MFA code, use the web UI to provide it
+      - alert: ICPSLastRunFailed
+        expr: icps_last_run_error == 1
+        annotations:
+          summary: The last run ended with an error, check the web UI for details
+```
