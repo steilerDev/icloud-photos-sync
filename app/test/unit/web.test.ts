@@ -650,6 +650,10 @@ describe.each([
                 expect(res._getStatusCode()).toBe(200);
                 expect(updateSpy).toHaveBeenCalledWith(`sms`, 2, true)
                 expect(webServer.mfaMethod.nonFTEU).toBe(true)
+                expect(webServer.mfaMethod.getResendPayload()).toEqual({
+                    phoneNumber: {id: 2, nonFTEU: true},
+                    mode: `sms`,
+                })
                 expect(webServer.mfaMethod.getEnterPayload(`123456`)).toEqual({
                     securityCode: {code: `123456`},
                     phoneNumber: {id: 2, nonFTEU: true},
