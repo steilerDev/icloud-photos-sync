@@ -28,7 +28,6 @@ updates:
       timezone: "Europe/Berlin"
     cooldown:
       default-days: 7
-      semver-major-days: 30
     groups:
       # A single PR for all actions across all directories
       github-actions:
