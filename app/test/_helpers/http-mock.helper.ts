@@ -1,5 +1,10 @@
 import {isDeepStrictEqual} from 'util';
-import {HttpClient, HttpMethod, HttpRawResponse, HttpRequest} from '../../src/lib/resources/http-client';
+import {HttpClient, HttpMethod, HttpRawResponse, HttpRequest, HttpResponse, ResponseValidator} from '../../src/lib/resources/http-client';
+
+/**
+ * Test only: Passes the raw response through - production code needs to use the schema backed validators provided by the Validator
+ */
+export const RAW_RESPONSE = (response => response) as ResponseValidator<HttpResponse>;
 
 /**
  * The reply of a mocked route: status, data and headers

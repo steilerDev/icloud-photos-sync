@@ -2,7 +2,7 @@ import {jsonc} from 'jsonc';
 import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.js';
 import {iCPSError} from '../../app/error/error.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
-import {HttpRequestConfig, HttpResponse, isHttpError, NO_VALIDATION} from '../resources/http-client.js';
+import {HttpRequestConfig, HttpResponse, isHttpError} from '../resources/http-client.js';
 import {Resources} from '../resources/main.js';
 import {COOKIE_KEYS, ENDPOINTS, TrustedPhoneNumber} from '../resources/network-types.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
@@ -117,7 +117,7 @@ export class iCloud {
                 ? this.getLegacyLogin()
                 : await this.getSRPLogin();
 
-            const response = await Resources.network().post(url, data, signinResponse => Resources.validator().validateSigninResponse(signinResponse), config);
+            const response = await Resources.network().post(url, data, Resources.validator().response.signin, config);
             Resources.network().applySigninResponse(response);
 
             Resources.logger(this).debug(`Acquired signin secrets`);
@@ -211,7 +211,7 @@ export class iCloud {
                     `s2k`,
                     `s2k_fo`,
                 ],
-            }, initResponse => Resources.validator().validateSigninInitResponse(initResponse));
+            }, Resources.validator().response.signinInit);
 
             const derivedPassword = await authenticator.derivePassword(validatedInitResponse.data.protocol, validatedInitResponse.data.salt, validatedInitResponse.data.iteration);
             const [m1Proof, m2Proof] = await authenticator.getProofValues(derivedPassword, validatedInitResponse.data.b, validatedInitResponse.data.salt);
@@ -243,17 +243,17 @@ export class iCloud {
         Resources.logger(this).info(`Getting trusted phone numbers`);
 
         try {
-            const validatedAuthInformationResponse = await Resources.network().get(ENDPOINTS.AUTH.BASE, response => {
+            const validatedAuthInformationResponse = await Resources.network().get(ENDPOINTS.AUTH.BASE, Resources.validator().response.authInformation(response => {
                 const authInformation = typeof response.data === `string`
                     ? this.extractBootArgsFromHTML(response.data)?.direct?.twoSV
                     : response.data;
 
-                return Resources.validator().validateAuthInformationResponse({
+                return {
                     data: {
                         trustedPhoneNumbers: this.findTrustedPhoneNumbers(authInformation),
                     },
-                });
-            }, {
+                };
+            }), {
                 headers: {
                     Accept: `application/json`,
                 },
@@ -308,13 +308,13 @@ export class iCloud {
 
         try {
             if (method.isSMS || method.isVoice) {
-                const validatedResponse = await Resources.network().put(url, data, response => Resources.validator().validateResendMFAPhoneResponse(response), config);
+                const validatedResponse = await Resources.network().put(url, data, Resources.validator().response.resendMFAPhone, config);
                 Resources.logger(this).info(`Successfully requested new MFA code using phone ${validatedResponse.data.trustedPhoneNumber.numberWithDialCode}`);
                 return;
             }
 
             if (method.isDevice) {
-                const validatedResponse = await Resources.network().put(url, data, response => Resources.validator().validateResendMFADeviceResponse(response), config);
+                const validatedResponse = await Resources.network().put(url, data, Resources.validator().response.resendMFADevice, config);
                 const trustedDeviceCount = validatedResponse.data ? validatedResponse.data.trustedDeviceCount : undefined;
                 Resources.logger(this).info(`Successfully requested new MFA code using ${trustedDeviceCount ?? `all`} trusted device(s)`);
             }
@@ -340,16 +340,16 @@ export class iCloud {
             const data = method.getEnterPayload(mfa);
 
             Resources.logger(this).debug(`Entering MFA code via URL ${url} with data ${jsonc.stringify(data)}`);
-            // The response body is only relevant for status 409 and checked below
-            const response = await Resources.network().post(url, data, NO_VALIDATION, config);
+            const response = await Resources.network().post(url, data, Resources.validator().response.mfaSubmit, config);
 
             if (response.status === 409) {
                 // Since iOS 26.4 the backend acknowledges a valid code with status 409
-                if (response.data?.securityCode?.valid !== true && !response.headers[`x-apple-session-token`]) {
+                const result = response.data === `` ? undefined : response.data;
+                if (result?.securityCode?.valid !== true && !response.headers[`x-apple-session-token`]) {
                     const rejectedErr = new iCPSError(MFA_ERR.CODE_REJECTED)
                         .addContext(`responseData`, response.data);
-                    if (Array.isArray(response.data?.service_errors)) {
-                        rejectedErr.addMessage(...response.data.service_errors.map((serviceError: any) => serviceError?.message));
+                    if (Array.isArray(result?.service_errors)) {
+                        rejectedErr.addMessage(...result.service_errors.flatMap(serviceError => serviceError?.message ?? []));
                     }
 
                     throw rejectedErr;
@@ -414,7 +414,7 @@ export class iCloud {
                     `s2k`,
                     `s2k_fo`,
                 ],
-            }, initResponse => Resources.validator().validateEscrowInitResponse(initResponse));
+            }, Resources.validator().response.escrowInit);
 
             const derivedPassword = await authenticator.derivePassword(validatedInitResponse.data.protocol, validatedInitResponse.data.salt, validatedInitResponse.data.iteration);
             const [m1Proof, m2Proof] = await authenticator.getProofValues(derivedPassword, validatedInitResponse.data.b, validatedInitResponse.data.salt);
@@ -424,7 +424,7 @@ export class iCloud {
                 m2: m2Proof,
                 c: validatedInitResponse.data.c,
                 k: await authenticator.getSessionKey(),
-            }, NO_VALIDATION); // The updated session token is optional
+            }, Resources.validator().response.escrowComplete);
 
             Resources.network().applySessionTokenUpdate(completeResponse);
             Resources.logger(this).debug(`Escrow completed`);
@@ -457,7 +457,7 @@ export class iCloud {
                 validateStatus: status => status === 204,
             };
 
-            const validatedResponse = await Resources.network().get(url, response => Resources.validator().validateTrustResponse(response), config);
+            const validatedResponse = await Resources.network().get(url, Resources.validator().response.trust, config);
             Resources.network().applyTrustResponse(validatedResponse);
 
             Resources.logger(this).debug(`Acquired account tokens`);
@@ -487,7 +487,7 @@ export class iCloud {
                 trustToken: Resources.manager().trustToken,
             };
 
-            const validatedResponse = await Resources.network().post(url, data, response => Resources.validator().validateSetupResponse(response));
+            const validatedResponse = await Resources.network().post(url, data, Resources.validator().response.setup);
             if (!Resources.network().applySetupResponse(validatedResponse)) {
                 Resources.logger(this).debug(`PCS required, acquiring...`);
                 Resources.emit(iCPSEventCloud.PCS_REQUIRED);
@@ -524,7 +524,7 @@ export class iCloud {
                 derivedFromUserAction: true,
             };
 
-            const validatedResponse = await Resources.network().post(url, data, response => Resources.validator().validatePCSResponse(response));
+            const validatedResponse = await Resources.network().post(url, data, Resources.validator().response.pcs);
 
             if (validatedResponse.data.status === `failure`) {
                 Resources.logger(this).info(`Failed to acquire PCS cookies: ${validatedResponse.data.message}`);
@@ -563,7 +563,7 @@ export class iCloud {
 
             Resources.logger(this).info(`Logging current account out`);
 
-            await Resources.network().post(url, data, NO_VALIDATION, config);
+            await Resources.network().post(url, data, Resources.validator().response.logout, config);
         } catch (err) {
             throw new iCPSError(AUTH_ERR.LOGOUT_FAILED).addCause(err);
         }

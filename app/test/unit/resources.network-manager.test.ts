@@ -8,7 +8,8 @@ import PQueue from 'p-queue';
 import path from 'path';
 import {Cookie} from 'tough-cookie';
 import {Resources} from '../../src/lib/resources/main';
-import {Header, HeaderJar, HttpClient, NetworkCapture, NO_VALIDATION} from '../../src/lib/resources/http-client';
+import {Header, HeaderJar, HttpClient, HttpResponse, NetworkCapture, ResponseValidator} from '../../src/lib/resources/http-client';
+import {RAW_RESPONSE} from '../_helpers/http-mock.helper';
 import {NetworkManager} from "../../src/lib/resources/network-manager";
 import {PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse} from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
@@ -118,7 +119,7 @@ describe(`NetworkManager`, () => {
                 networkManager = new NetworkManager({...defaultConfig, useSystemProxy: true});
                 expect(networkManager._restoreProxy).toBeDefined();
 
-                const response = await networkManager._http.get(`http://icloud-photos-sync-proxy-test.invalid/path`, NO_VALIDATION);
+                const response = await networkManager._http.get(`http://icloud-photos-sync-proxy-test.invalid/path`, RAW_RESPONSE);
 
                 expect(response.data).toEqual({proxied: true});
                 expect(proxiedURLs).toEqual([`http://icloud-photos-sync-proxy-test.invalid/path`]);
@@ -663,7 +664,7 @@ describe(`NetworkManager`, () => {
         });
 
         describe(`Network methods`, () => {
-            const validator = (response: any) => response.data;
+            const validator = ((response: HttpResponse) => response.data) as ResponseValidator<unknown>;
 
             test(`metadata get request`, async () => {
                 networkManager._http.get = jest.fn<typeof networkManager._http.get>() as any;

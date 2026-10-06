@@ -5,7 +5,7 @@ import PQueue from "p-queue";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {errorMessage, iCPSError} from "../../app/error/error.js";
 import {iCPSAppOptions} from "../../app/factory.js";
-import {HeaderJar, Header, HttpClient, HttpRequestConfig, HttpResponse, NetworkCapture, ResponseValidator} from "./http-client.js";
+import {HeaderJar, Header, HttpClient, HttpRequestConfig, NetworkCapture, ResponseValidator} from "./http-client.js";
 import {Resources} from "./main.js";
 import {COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse} from "./network-types.js";
 import {PhotosAccountZone, ZoneArea} from "./resource-types.js";
@@ -234,7 +234,7 @@ export class NetworkManager {
      * Applies an updated session token, provided by the backend after a successfully validated MFA code or completed escrow (since iOS 26.4)
      * @param response - The response received from the server
      */
-    applySessionTokenUpdate(response: HttpResponse) {
+    applySessionTokenUpdate(response: {headers: {'x-apple-session-token'?: string}}) {
         const sessionToken = response.headers[`x-apple-session-token`];
         if (typeof sessionToken === `string` && sessionToken.length > 0) {
             this.sessionToken = sessionToken;
@@ -313,7 +313,7 @@ export class NetworkManager {
      * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
      * @param data - The data to send
-     * @param validate - Validates the response and provides the return value - use NO_VALIDATION to explicitly skip validation
+     * @param validate - Validates the response and provides the return value - created by the Validator (see `Validator.response`)
      * @param config - Additional configuration
      * @returns A promise, that resolves to the validated response once the request has been completed
      * @throws An HttpError if the request was not successful, the validator's error if the response is invalid
@@ -326,7 +326,7 @@ export class NetworkManager {
      * Perform a GET request using the HTTP client
      * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
-     * @param validate - Validates the response and provides the return value - use NO_VALIDATION to explicitly skip validation
+     * @param validate - Validates the response and provides the return value - created by the Validator (see `Validator.response`)
      * @param config - Additional configuration
      * @returns A promise, that resolves to the validated response once the request has been completed
      * @throws An HttpError if the request was not successful, the validator's error if the response is invalid
@@ -340,7 +340,7 @@ export class NetworkManager {
      * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
      * @param data - The data to send
-     * @param validate - Validates the response and provides the return value - use NO_VALIDATION to explicitly skip validation
+     * @param validate - Validates the response and provides the return value - created by the Validator (see `Validator.response`)
      * @param config - Additional configuration
      * @returns A promise, that resolves to the validated response once the request has been completed
      * @throws An HttpError if the request was not successful, the validator's error if the response is invalid

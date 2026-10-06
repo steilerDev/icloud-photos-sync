@@ -105,16 +105,15 @@ export type HttpRawResponse = {
 }
 
 /**
- * Validates (and potentially reshapes) a response - expected to throw an iCPSError, if the response is invalid
+ * Brand of response validators - only exists on type level
  */
-export type ResponseValidator<T> = (response: HttpResponse) => T;
+declare const RESPONSE_VALIDATOR: unique symbol;
 
 /**
- * Explicitly skips schema validation of a response - to be used only for responses that are intentionally not schema validated (e.g. parsed defensively by the caller)
- * @param response - The response
- * @returns The unmodified response
+ * Validates a response against a JSON schema and provides the validated value - throws an iCPSError, if the response is invalid
+ * The brand ensures that response validators can only be created by the Validator (see `Validator.response`), so every request's response is schema validated
  */
-export const NO_VALIDATION: ResponseValidator<HttpResponse> = response => response;
+export type ResponseValidator<T> = ((response: HttpResponse) => T) & {readonly [RESPONSE_VALIDATOR]: true};
 
 /**
  * Error thrown by the HttpClient, if a request fails or the response status is not accepted

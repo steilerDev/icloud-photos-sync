@@ -7,12 +7,12 @@ import {gzipSync} from 'zlib';
 import {Cookie} from 'tough-cookie';
 import {iCPSError} from '../../src/app/error/error';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
-import {Header, HeaderJar, HttpClient, HttpError, HttpRequest, isHttpError, NetworkCapture, NO_VALIDATION} from '../../src/lib/resources/http-client';
+import {Header, HeaderJar, HttpClient, HttpError, HttpRequest, HttpResponse, isHttpError, NetworkCapture, ResponseValidator} from '../../src/lib/resources/http-client';
 import {NetworkManager} from '../../src/lib/resources/network-manager';
 import * as Config from '../_helpers/_config';
 import {defaultConfig} from '../_helpers/_config';
 import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
-import {HttpMock} from '../_helpers/http-mock.helper';
+import {HttpMock, RAW_RESPONSE} from '../_helpers/http-mock.helper';
 import mockfs from '../_helpers/mock-fs.helper';
 
 describe(`HeaderJar`, () => {
@@ -373,7 +373,7 @@ describe(`NetworkCapture`, () => {
             'set-cookie': [`a=b=c; Path=/`, `noValue`],
         });
 
-        await client.post(`/path`, {some: `request`}, NO_VALIDATION, {
+        await client.post(`/path`, {some: `request`}, RAW_RESPONSE, {
             params: {query: `value`},
             headers: {Cookie: `x=y=; z`},
         });
@@ -411,7 +411,7 @@ describe(`NetworkCapture`, () => {
     test(`Should capture a request without body`, async () => {
         mock.onGet(`https://example.com/path`).reply(204);
 
-        await client.get(`https://example.com/path`, NO_VALIDATION);
+        await client.get(`https://example.com/path`, RAW_RESPONSE);
 
         const entry = networkCapture.log.log.entries[0];
         expect(entry.request.method).toEqual(`GET`);
@@ -426,7 +426,7 @@ describe(`NetworkCapture`, () => {
     test(`Should capture a text response`, async () => {
         mock.onGet(`https://example.com/path`).reply(200, `<html></html>`, {'Content-Type': `text/html`});
 
-        await client.get(`https://example.com/path`, NO_VALIDATION);
+        await client.get(`https://example.com/path`, RAW_RESPONSE);
 
         expect(networkCapture.log.log.entries[0].response.content).toEqual({
             size: 13,
@@ -438,7 +438,7 @@ describe(`NetworkCapture`, () => {
     test(`Should capture an error response and rethrow`, async () => {
         mock.onPost(`https://example.com/path`).reply(409, {error: `conflict`}, {scnt: `someScnt`});
 
-        await expect(client.post(`https://example.com/path`, `plain text`, NO_VALIDATION)).rejects.toThrow(`Request failed with status code 409`);
+        await expect(client.post(`https://example.com/path`, `plain text`, RAW_RESPONSE)).rejects.toThrow(`Request failed with status code 409`);
 
         expect(networkCapture.log.log.entries).toHaveLength(1);
         const entry = networkCapture.log.log.entries[0];
@@ -462,7 +462,7 @@ describe(`NetworkCapture`, () => {
     ])(`Should capture a request without response - $desc`, async ({setup, expectedError}) => {
         setup(mock);
 
-        await expect(client.get(`https://example.com/path`, NO_VALIDATION)).rejects.toBeInstanceOf(HttpError);
+        await expect(client.get(`https://example.com/path`, RAW_RESPONSE)).rejects.toBeInstanceOf(HttpError);
 
         expect(networkCapture.log.log.entries).toHaveLength(1);
         const entry = networkCapture.log.log.entries[0];
@@ -476,9 +476,9 @@ describe(`NetworkCapture`, () => {
         mock.onGet(`https://example.com/path`).reply(200, `ok`);
         const validationError = new iCPSError(VALIDATOR_ERR.SIGNIN_RESPONSE);
 
-        await expect(client.get(`https://example.com/path`, () => {
+        await expect(client.get(`https://example.com/path`, (() => {
             throw validationError;
-        })).rejects.toBe(validationError);
+        }) as ResponseValidator<never>)).rejects.toBe(validationError);
 
         expect(networkCapture.log.log.entries).toHaveLength(1);
         expect(networkCapture.log.log.entries[0]._error).toBeUndefined();
@@ -493,8 +493,8 @@ describe(`NetworkCapture`, () => {
         mock.onPost(`https://example.com/fast`).reply(200, `fast`);
 
         await Promise.all([
-            client.post(`https://example.com/slow`, `slowRequest`, NO_VALIDATION),
-            client.post(`https://example.com/fast`, `fastRequest`, NO_VALIDATION),
+            client.post(`https://example.com/slow`, `slowRequest`, RAW_RESPONSE),
+            client.post(`https://example.com/fast`, `fastRequest`, RAW_RESPONSE),
         ]);
 
         const entries = networkCapture.log.log.entries;
@@ -511,13 +511,13 @@ describe(`NetworkCapture`, () => {
             throw new Error(`some error`);
         });
 
-        await expect(client.get(`https://example.com/path`, NO_VALIDATION)).resolves.toMatchObject({data: `ok`});
+        await expect(client.get(`https://example.com/path`, RAW_RESPONSE)).resolves.toMatchObject({data: `ok`});
         expect(networkCapture.log.log.entries).toHaveLength(0);
     });
 
     test(`Should reset captured entries`, async () => {
         mock.onGet(`https://example.com/path`).reply(200);
-        await client.get(`https://example.com/path`, NO_VALIDATION);
+        await client.get(`https://example.com/path`, RAW_RESPONSE);
         expect(networkCapture.log.log.entries).toHaveLength(1);
 
         networkCapture.reset();
@@ -540,7 +540,7 @@ describe(`NetworkCapture`, () => {
         networkManager._headerJar.setCookie(`aasp=someCookie=; Domain=idmsa.apple.com; Path=/`);
         networkManagerMock.onGet(`https://idmsa.apple.com/appleauth/auth`).reply(200);
 
-        await networkManager._http.get(`https://idmsa.apple.com/appleauth/auth`, NO_VALIDATION);
+        await networkManager._http.get(`https://idmsa.apple.com/appleauth/auth`, RAW_RESPONSE);
 
         const headers = networkManager._networkCapture!.log.log.entries[0].request.headers;
         expect(headers).toContainEqual({name: `Cookie`, value: `aasp=someCookie=`});
@@ -713,21 +713,21 @@ describe(`HttpClient`, () => {
         test(`Request is handed to the transport synchronously`, async () => {
             mock.onPost(`https://example.com`).reply(200);
 
-            const pending = client.post(`https://example.com`, `data`, NO_VALIDATION);
+            const pending = client.post(`https://example.com`, `data`, RAW_RESPONSE);
             expect(mock.history.post).toHaveLength(1);
 
             await pending;
         });
 
         test(`Failure while building the request rejects`, async () => {
-            await expect(client.post(`https://example.com`, {big: BigInt(1)}, NO_VALIDATION)).rejects.toThrow(TypeError);
+            await expect(client.post(`https://example.com`, {big: BigInt(1)}, RAW_RESPONSE)).rejects.toThrow(TypeError);
             expect(mock.history.post).toHaveLength(0);
         });
 
         test.each([
-            {method: `GET`, call: (c: HttpClient) => c.get(`https://example.com`, NO_VALIDATION, {params: {a: `b`}})},
-            {method: `POST`, call: (c: HttpClient) => c.post(`https://example.com`, {a: `b`}, NO_VALIDATION, {params: {a: `b`}})},
-            {method: `PUT`, call: (c: HttpClient) => c.put(`https://example.com`, {a: `b`}, NO_VALIDATION, {params: {a: `b`}})},
+            {method: `GET`, call: (c: HttpClient) => c.get(`https://example.com`, RAW_RESPONSE, {params: {a: `b`}})},
+            {method: `POST`, call: (c: HttpClient) => c.post(`https://example.com`, {a: `b`}, RAW_RESPONSE, {params: {a: `b`}})},
+            {method: `PUT`, call: (c: HttpClient) => c.put(`https://example.com`, {a: `b`}, RAW_RESPONSE, {params: {a: `b`}})},
         ])(`$method request`, async ({method, call}) => {
             mock.onAny(`https://example.com`).reply(200);
 
@@ -755,7 +755,7 @@ describe(`HttpClient`, () => {
                 'Set-Cookie': [`a=b`, `c=d`],
             });
 
-            const response = await client.get(`https://example.com`, NO_VALIDATION);
+            const response = await client.get(`https://example.com`, RAW_RESPONSE);
 
             expect(response.headers).toEqual({
                 'x-some-header': `value`,
@@ -766,7 +766,7 @@ describe(`HttpClient`, () => {
         test(`Omits set-cookie header if not present`, async () => {
             mock.onGet(`https://example.com`).reply(200, `ok`, {'X-Some-Header': `value`});
 
-            const response = await client.get(`https://example.com`, NO_VALIDATION);
+            const response = await client.get(`https://example.com`, RAW_RESPONSE);
 
             expect(response.headers).toEqual({'x-some-header': `value`});
             expect(response.config).toBe(mock.history.get[0]);
@@ -783,7 +783,7 @@ describe(`HttpClient`, () => {
         ])(`Status $status (custom validation: $validateStatus)`, async ({status, validateStatus, accepted, code}) => {
             mock.onGet(`https://example.com`).reply(status, {some: `data`});
 
-            const request = client.get(`https://example.com`, NO_VALIDATION, {validateStatus});
+            const request = client.get(`https://example.com`, RAW_RESPONSE, {validateStatus});
 
             if (accepted) {
                 await expect(request).resolves.toMatchObject({status, data: {some: `data`}});
@@ -801,7 +801,7 @@ describe(`HttpClient`, () => {
 
         test(`Returns validated value`, async () => {
             mock.onGet(`https://example.com`).reply(200, {some: `data`});
-            const validator = jest.fn((response: any) => response.data.some as string);
+            const validator = jest.fn((response: HttpResponse) => response.data.some as string) as unknown as ResponseValidator<string>;
 
             await expect(client.get(`https://example.com`, validator)).resolves.toEqual(`data`);
             expect(validator).toHaveBeenCalledWith(expect.objectContaining({status: 200, data: {some: `data`}}));
@@ -811,14 +811,14 @@ describe(`HttpClient`, () => {
             mock.onGet(`https://example.com`).reply(200, {some: `data`});
             const validationError = new iCPSError(VALIDATOR_ERR.SIGNIN_RESPONSE);
 
-            await expect(client.get(`https://example.com`, () => {
+            await expect(client.get(`https://example.com`, (() => {
                 throw validationError;
-            })).rejects.toBe(validationError);
+            }) as ResponseValidator<never>)).rejects.toBe(validationError);
         });
 
         test(`Does not validate rejected status`, async () => {
             mock.onGet(`https://example.com`).reply(500);
-            const validator = jest.fn(NO_VALIDATION);
+            const validator = jest.fn(RAW_RESPONSE) as unknown as ResponseValidator<HttpResponse>;
 
             await expect(client.get(`https://example.com`, validator)).rejects.toBeInstanceOf(HttpError);
             expect(validator).not.toHaveBeenCalled();
@@ -833,14 +833,14 @@ describe(`HttpClient`, () => {
             mock = new HttpMock(client);
             mock.onPost(`https://idmsa.apple.com/appleauth/auth`).reply(status, ``, {scnt: `someScnt`, 'set-cookie': [`aasp=someValue; Domain=idmsa.apple.com`]});
 
-            await client.post(`https://idmsa.apple.com/appleauth/auth`, {}, NO_VALIDATION).catch(() => undefined);
+            await client.post(`https://idmsa.apple.com/appleauth/auth`, {}, RAW_RESPONSE).catch(() => undefined);
 
             expect(headerJar.headers.get(`scnt`)?.value).toEqual(extracted ? `someScnt` : undefined);
             expect(headerJar.cookies.has(`aasp`)).toBe(extracted);
         });
 
         test(`Unmatched mock request is reported as network error`, async () => {
-            await expect(client.get(`https://example.com/unknown`, NO_VALIDATION)).rejects.toMatchObject({
+            await expect(client.get(`https://example.com/unknown`, RAW_RESPONSE)).rejects.toMatchObject({
                 code: `ERR_NETWORK`,
                 message: `Could not find mock for GET https://example.com/unknown`,
             });
@@ -994,7 +994,7 @@ describe(`HttpClient with fetch`, () => {
         headerJar.setCookie(`someCookie=someValue; Domain=127.0.0.1`);
         const client = new HttpClient({baseURL, headers: {Origin: `https://www.icloud.com`}, headerJar});
 
-        const response = await client.post(`/json`, {some: `request`}, NO_VALIDATION, {params: {remapEnums: `True`}});
+        const response = await client.post(`/json`, {some: `request`}, RAW_RESPONSE, {params: {remapEnums: `True`}});
 
         expect(response.status).toEqual(200);
         expect(response.data).toEqual({some: `data`});
@@ -1021,7 +1021,7 @@ describe(`HttpClient with fetch`, () => {
     test(`Follows redirects`, async () => {
         const client = new HttpClient({baseURL});
 
-        const response = await client.get(`/redirect`, NO_VALIDATION);
+        const response = await client.get(`/redirect`, RAW_RESPONSE);
 
         expect(response.status).toEqual(200);
         expect(response.data).toEqual({some: `data`});
@@ -1031,7 +1031,7 @@ describe(`HttpClient with fetch`, () => {
     test(`Handles empty responses`, async () => {
         const client = new HttpClient({baseURL});
 
-        const response = await client.put(`/empty`, undefined, NO_VALIDATION);
+        const response = await client.put(`/empty`, undefined, RAW_RESPONSE);
 
         expect(response.status).toEqual(204);
         expect(response.data).toEqual(``);
@@ -1046,7 +1046,7 @@ describe(`HttpClient with fetch`, () => {
 
         const client = new HttpClient({baseURL: closedURL});
 
-        await expect(client.get(`/json`, NO_VALIDATION)).rejects.toMatchObject({
+        await expect(client.get(`/json`, RAW_RESPONSE)).rejects.toMatchObject({
             name: `HttpError`,
             code: `ECONNREFUSED`,
         });

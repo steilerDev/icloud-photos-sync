@@ -5,7 +5,7 @@ import {errorMessage, iCPSError} from '../../../app/error/error.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
-import {HttpRequestConfig, NO_VALIDATION} from '../../resources/http-client.js';
+import {HttpRequestConfig} from '../../resources/http-client.js';
 import {Resources} from '../../resources/main.js';
 import {ENDPOINTS, PhotosSetupResponseZone} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
@@ -87,7 +87,7 @@ export class iCloudPhotos {
      */
     private async getZonesInArea(area: ZoneArea): Promise<PhotosSetupResponseZone[]> {
         Resources.logger(this).debug(`Getting zones in ${area} area`);
-        const validatedResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[area] + ENDPOINTS.PHOTOS.PATH.ZONES, {}, response => Resources.validator().validatePhotosSetupResponse(response));
+        const validatedResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[area] + ENDPOINTS.PHOTOS.PATH.ZONES, {}, Resources.validator().response.photosSetup);
         return validatedResponse.data.zones;
     }
 
@@ -194,16 +194,9 @@ export class iCloudPhotos {
             data.resultsLimit = resultsLimit;
         }
 
-        // CloudKit query responses are not schema validated, but parsed defensively
-        const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, NO_VALIDATION, config);
-
-        const fetchedRecords = queryResponse?.data?.records;
-        if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
-            throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_QUERY_RESPONSE)
-                .addContext(`queryResponse`, queryResponse);
-        }
-
-        return fetchedRecords;
+        // Only the response format is schema validated, the records are parsed defensively
+        const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, Resources.validator().response.query, config);
+        return queryResponse.data.records;
     }
 
     /**
@@ -243,15 +236,9 @@ export class iCloudPhotos {
             },
         }));
 
-        // CloudKit operation responses are not schema validated, but parsed defensively
-        const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, NO_VALIDATION, config);
-        const fetchedRecords = operationResponse?.data?.records;
-        if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
-            throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)
-                .addContext(`operationResponse`, operationResponse);
-        }
-
-        return fetchedRecords;
+        // Only the response format is schema validated, the records are parsed defensively
+        const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, Resources.validator().response.operation, config);
+        return operationResponse.data.records;
     }
 
     /**

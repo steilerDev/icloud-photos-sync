@@ -455,3 +455,90 @@ export type PhotosSetupResponseZone = {
      */
     deleted?: boolean
 }
+
+/**
+ * A service error, as returned by the auth backend
+ */
+type ServiceError = {
+    code?: string,
+    message?: string,
+}
+
+/**
+ * The expected response format for the MFA code submission
+ * @see {@link ENDPOINTS.AUTH.PATH.MFA.DEVICE_ENTER}
+ * @see {@link ENDPOINTS.AUTH.PATH.MFA.PHONE_ENTER}
+ */
+export type MFASubmitResponse = {
+    /**
+     * 204 (device) or 200 (phone) for an accepted code - since iOS 26.4 the backend responds with 409, the body indicates if the code was valid
+     */
+    status: 200 | 204 | 409,
+    /**
+     * Empty for status 204
+     */
+    data: {
+        /**
+         * Result of the code verification (since iOS 26.4)
+         */
+        securityCode?: {
+            valid?: boolean,
+        },
+        /**
+         * Errors, e.g. if the code was incorrect
+         */
+        service_errors?: ServiceError[],
+    } | ``,
+    headers: {
+        /**
+         * Updated session token, provided for a valid code since iOS 26.4
+         * @minLength 1
+         */
+        'x-apple-session-token'?: string,
+    },
+}
+
+/**
+ * The expected response format for the escrow completion request
+ * @see {@link ENDPOINTS.AUTH.PATH.ESCROW.COMPLETE}
+ */
+export type EscrowCompleteResponse = {
+    headers: {
+        /**
+         * Updated session token
+         * @minLength 1
+         */
+        'x-apple-session-token'?: string,
+    },
+}
+
+/**
+ * The expected response format for the logout request
+ * @see {@link ENDPOINTS.SETUP.PATH.LOGOUT}
+ */
+export type LogoutResponse = {
+    /**
+     * 200 if the logout was successful, 421 if the session was no longer valid
+     */
+    status: 200 | 421,
+}
+
+/**
+ * The expected response format for CloudKit record queries and operations
+ * The records themselves are parsed defensively by the query parser
+ * @see {@link ENDPOINTS.PHOTOS.PATH.QUERY}
+ * @see {@link ENDPOINTS.PHOTOS.PATH.MODIFY}
+ */
+export type CloudKitRecordsResponse = {
+    data: {
+        records: any[],
+    },
+}
+
+/**
+ * The expected response format for health check pings (healthchecks.io responds with a plain text 'OK')
+ */
+export type HealthCheckPingResponse = {
+    status: 200,
+    data: string,
+}

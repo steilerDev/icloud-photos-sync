@@ -1,5 +1,5 @@
 import {iCPSState} from "../../lib/resources/events-types.js";
-import {HttpClient, isHttpError, NO_VALIDATION} from "../../lib/resources/http-client.js";
+import {HttpClient, isHttpError} from "../../lib/resources/http-client.js";
 import {Resources} from "../../lib/resources/main.js";
 import {FILE_ENCODING} from "../../lib/resources/resource-types.js";
 import {LogInterface} from "./log.js";
@@ -39,7 +39,7 @@ export class HealthCheckPingExecutor {
 
     private async pingStart(): Promise<void> {
         try {
-            await this.networkInterface.post(`/start`, undefined, NO_VALIDATION);
+            await this.networkInterface.post(`/start`, undefined, Resources.validator().response.healthCheckPing);
             Resources.logger(this).debug(`Successfully sent start health check ping.`);
         } catch (err) {
             if(isHttpError(err)) {
@@ -52,7 +52,7 @@ export class HealthCheckPingExecutor {
 
     private async pingSuccess(): Promise<void> {
         try {
-            await this.networkInterface.post(``, this.getLog(), NO_VALIDATION);
+            await this.networkInterface.post(``, this.getLog(), Resources.validator().response.healthCheckPing);
             Resources.logger(this).debug(`Successfully sent success health check ping.`);
         } catch (err) {
             if(isHttpError(err)) {
@@ -65,7 +65,7 @@ export class HealthCheckPingExecutor {
 
     private async pingError(): Promise<void> {
         try {
-            await this.networkInterface.post(`/fail`, this.getLog(), NO_VALIDATION);
+            await this.networkInterface.post(`/fail`, this.getLog(), Resources.validator().response.healthCheckPing);
             Resources.logger(this).debug(`Successfully sent error health check ping.`);
         } catch (err) {
             if(isHttpError(err)) {
