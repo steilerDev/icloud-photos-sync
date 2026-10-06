@@ -334,7 +334,7 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - npm uses trusted publishing (OIDC, no token). Backtrace sourcemaps are uploaded with `BT_TOKEN`.
 - DockerHub gets `steilerdev/icloud-photos-sync:{version,nightly|beta|latest}`, multi-arch with SBOM and provenance. The README is synced to DockerHub on `main`.
 - GitHub releases (with tarball assets) happen only on beta/main.
-- After a `main` release, `clean-after-prod-release` merges `main` into `dev` and deletes `*-nightly*` tags.
+- After a `main` release, `clean-after-prod-release` opens a `main` → `dev` PR and deletes `*-nightly*` tags. Workflows don't run on PRs opened by `GITHUB_TOKEN`, so an admin merges it with a merge commit, bypassing the required checks (or closes and re-opens it to run them).
 - `app/package.json` stays at `0.0.0-development`; nothing commits a version back.
 - Release rules:
   - breaking or `majorfeat`: major
@@ -343,9 +343,17 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
   - `style|no-release`: none
   - On `dev`, a catch-all makes **every push publish a nightly** to npm and DockerHub. (CONTRIBUTING.md's type table differs slightly; the CI rules are what apply.)
 
+**Branch rulesets** (repository settings, not in the repo): all three branches block deletion and force pushes, and require these checks:
+- `dev`: `build / app-build`, `build / docker-build`, `build / docs-build`, `test / unit-ubuntu`, `test / unit-docker`. Repository admins may bypass.
+- `beta`: the `build / *` checks above, plus `test / unit-ubuntu`, `test / docker` and `test / api`, and a PR with a successful `dev` deployment.
+- `main`: as `beta`, plus `test / unit-macos`, and a successful `beta` deployment.
+- A skipped check counts as passing, so one ruleset covers every base-branch test matrix in `event_pr.yml`.
+
 **Repo secrets:** `DOCKER_TOKEN` (also needed for PR builds), `BT_TOKEN`, `GITHUB_TOKEN`. Release jobs use GitHub Environments named `dev`/`beta`/`main`.
 
-**Dependabot:** all ecosystems target `dev`.
+**Dependabot:** all ecosystems target `dev`. Security updates are enabled.
+- Dependabot reads `dependabot.yml` **from the default branch (`main`)**, so a config change on `dev` takes effect only after the next production release.
+- GitHub pauses version updates when nobody acts on Dependabot PRs for about 90 days. Merge or close them regularly.
 - Commit prefixes: `chore: [ci]`, `[app]`, `[docker]`, `[docs]`, `[dev]`, `[semantic-release]`.
 - Ignored majors: `@types/node` (tied to `app/node-version`), `typescript`, and `node` in Docker.
 - In the Dockerfile, `node` and `alpine` are grouped because their Alpine versions must match.
@@ -356,7 +364,8 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - The CTRF report path `app/coverage/ctrf-report.json`.
 - `docs/mkdocs.yml` `site_dir`/`docs_dir`: these must stay single-quoted on one line, because CI greps them.
 - The Node version: it is set in `app/node-version` (drives every `setup-node`), `docker/Dockerfile` (`node:<ver>-alpine<ver>`, matching the runtime `alpine` stage) and `.devcontainer.json`. Update all three together.
-- Actions use major tags, except `devmasx/merge-branch`, which is pinned by SHA. `actionlint.yaml` declares the `residential` label.
+- Job names in `artifacts_build-release.yml` and `artifacts_test.yml`: the branch rulesets require them as `build / <job>` and `test / <job>`. Renaming a job blocks every PR until the ruleset is updated as well.
+- Actions use major tags. `actionlint.yaml` declares the `residential` label.
 
 ## Git workflow
 
