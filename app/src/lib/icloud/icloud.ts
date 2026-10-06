@@ -73,7 +73,7 @@ export class iCloud {
         return new Promise<boolean>((resolve, reject) => {
             const timeout = setTimeout(
                 () => reject(new iCPSError(AUTH_ERR.SETUP_TIMEOUT)),
-                Resources.manager().mfaTimeout + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
+                (Resources.manager().mfaTimeout * 1000) + (1000 * 60 * 5), // 5 minutes on top of mfa timeout (in seconds) should be sufficient
             );
 
             Resources.events(this)

@@ -44,9 +44,8 @@ describe(`Setup iCloud Photos`, () => {
     const setupSharedURL = `${Config.photosDomain}/database/1/com.apple.photos.cloud/production/shared/changes/database`;
 
     test(`Success`, async () => {
-        photos.ready = Promise.resolve();
-
         const setupCompletedEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.SETUP_COMPLETED);
+        setupCompletedEvent.mockImplementation(() => mockedEventManager.emit(iCPSEventPhotos.READY));
 
         mockedValidator.validatePhotosSetupResponse = jest.fn<typeof mockedValidator.validatePhotosSetupResponse>()
             .mockReturnValue({
@@ -99,6 +98,56 @@ describe(`Setup iCloud Photos`, () => {
 
         await expect(photos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
         expect(errorEvent).toHaveBeenCalledWith(new Error(`Unexpected error while setting up iCloud Photos`));
+    });
+
+    test(`Repeated setup reports failure after previous success`, async () => {
+        photos.checkingIndexingStatus = jest.fn<typeof photos.checkingIndexingStatus>(async () => {
+            mockedEventManager.emit(iCPSEventPhotos.READY);
+        });
+
+        mockedValidator.validatePhotosSetupResponse = jest.fn<typeof mockedValidator.validatePhotosSetupResponse>()
+            .mockReturnValue({
+                data: {
+                    zones: []
+                } as Partial<PhotosSetupResponse[`data`]> as PhotosSetupResponse[`data`],
+            } as Partial<PhotosSetupResponse> as PhotosSetupResponse);
+        mockedNetworkManager.applyZones = jest.fn<typeof mockedNetworkManager.applyZones>();
+
+        mockedNetworkManager.mock
+            .onPost(setupPrivateURL, {})
+            .replyOnce(200)
+            .onPost(setupSharedURL, {})
+            .replyOnce(200)
+            .onPost(setupPrivateURL, {})
+            .replyOnce(500);
+
+        await expect(photos.setup()).resolves.toBeUndefined();
+        await expect(photos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
+    });
+
+    test(`Repeated setup reports success after previous failure`, async () => {
+        photos.checkingIndexingStatus = jest.fn<typeof photos.checkingIndexingStatus>(async () => {
+            mockedEventManager.emit(iCPSEventPhotos.READY);
+        });
+
+        mockedValidator.validatePhotosSetupResponse = jest.fn<typeof mockedValidator.validatePhotosSetupResponse>()
+            .mockReturnValue({
+                data: {
+                    zones: []
+                } as Partial<PhotosSetupResponse[`data`]> as PhotosSetupResponse[`data`],
+            } as Partial<PhotosSetupResponse> as PhotosSetupResponse);
+        mockedNetworkManager.applyZones = jest.fn<typeof mockedNetworkManager.applyZones>();
+
+        mockedNetworkManager.mock
+            .onPost(setupPrivateURL, {})
+            .replyOnce(500)
+            .onPost(setupPrivateURL, {})
+            .replyOnce(200)
+            .onPost(setupSharedURL, {})
+            .replyOnce(200);
+
+        await expect(photos.setup()).rejects.toThrow(/^Unexpected error while setting up iCloud Photos$/);
+        await expect(photos.setup()).resolves.toBeUndefined();
     });
 
     test(`Check indexing state after setup`, () => {

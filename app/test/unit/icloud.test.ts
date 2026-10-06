@@ -121,10 +121,17 @@ describe(`Control structure`, () => {
     });
 
     test(`Authentication timeout`, async () => {
+        mockedResourceManager._resources.mfaTimeout = 60 * 10; // Seconds
         const iCloudReady = icloud.getReady();
         const timeoutValue = 1000 * 60 * (10 + 5);
+
+        jest.advanceTimersByTime(timeoutValue - 1);
+        mockedEventManager.emit(iCPSEventPhotos.READY);
+        await expect(iCloudReady).resolves.toBeTruthy();
+
+        const timedOutICloudReady = icloud.getReady();
         jest.advanceTimersByTime(timeoutValue + 1);
-        await expect(iCloudReady).rejects.toThrow(/iCloud setup did not complete successfully within expected amount of time$/);
+        await expect(timedOutICloudReady).rejects.toThrow(/iCloud setup did not complete successfully within expected amount of time$/);
     });
 });
 
@@ -1720,6 +1727,31 @@ describe.each([
             await expect(iCloudReady).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
 
             expect(icloud.photos.setup).toHaveBeenCalled();
+        });
+
+        test(`Repeated setup rejects after previous success`, async () => {
+            icloud.photos.checkingIndexingStatus = jest.fn<typeof icloud.photos.checkingIndexingStatus>(async () => {
+                Resources.emit(iCPSEventPhotos.READY);
+            });
+            mockedValidator.validatePhotosSetupResponse = jest.fn<typeof mockedValidator.validatePhotosSetupResponse>()
+                .mockReturnValue({data: {zones: []}} as any);
+            mockedNetworkManager.applyZones = jest.fn<typeof mockedNetworkManager.applyZones>();
+            mockedNetworkManager.mock
+                .onPost(/changes\/database$/)
+                .replyOnce(200)
+                .onPost(/changes\/database$/)
+                .replyOnce(200)
+                .onPost(/changes\/database$/)
+                .replyOnce(500);
+
+            const firstICloudReady = icloud.getReady();
+            await icloud.getPhotosReady();
+            await expect(firstICloudReady).resolves.toBeTruthy();
+
+            // Re-establishing the connection, e.g. during a sync retry
+            const secondICloudReady = icloud.getReady();
+            await icloud.getPhotosReady();
+            await expect(secondICloudReady).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
         });
 
         test(`Photos Object invalid`, async () => {
