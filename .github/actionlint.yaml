@@ -1,0 +1,4 @@
+# Configuration for actionlint (https://github.com/rhysd/actionlint)
+self-hosted-runner:
+  labels:
+    - residential # Runner with a residential IP address, required for tests against the iCloud API

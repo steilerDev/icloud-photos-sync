@@ -1,4 +1,4 @@
-import mockfs from 'mock-fs';
+import mockfs from '../_helpers/mock-fs.helper';
 import {describe, test, beforeEach, afterEach, expect, jest} from '@jest/globals';
 import * as Config from '../_helpers/_config';
 import {PRIMARY_ASSET_DIR, ARCHIVE_DIR} from '../../src/lib/photos-library/constants';
@@ -90,7 +90,7 @@ describe.each([{
                 .mockReturnValueOnce(asset3.recordName);
             archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-            await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
+            await archiveEngine.archivePath(path.join(Config.defaultConfig.dataDir, `Random`), [asset1, asset2, asset3]);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
             expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
@@ -171,7 +171,7 @@ describe.each([{
                 .mockReturnValueOnce(asset3.recordName);
             archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-            await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset1Edit, asset2, asset3]);
+            await archiveEngine.archivePath(path.join(Config.defaultConfig.dataDir, `Random`), [asset1, asset1Edit, asset2, asset3]);
 
             expect(errorEvent).not.toHaveBeenCalled();
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(4);
@@ -242,7 +242,7 @@ describe.each([{
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
                 archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/.cc40a239-2beb-483e-acee-e897db1b818a`, [asset1, asset2, asset3])).rejects.toThrow(/^UUID path selected, use named path only$/);
+                await expect(archiveEngine.archivePath(path.join(Config.defaultConfig.dataDir, `.cc40a239-2beb-483e-acee-e897db1b818a`), [asset1, asset2, asset3])).rejects.toThrow(/^UUID path selected, use named path only$/);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
                 expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
@@ -302,7 +302,7 @@ describe.each([{
                 archiveEngine.prepareForRemoteDeletion = jest.fn(() => `a`);
                 archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-                await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random1`, [asset1, asset2, asset3])).rejects.toThrow(/^Only able to archive non-archived albums$/);
+                await expect(archiveEngine.archivePath(path.join(Config.defaultConfig.dataDir, `Random1`), [asset1, asset2, asset3])).rejects.toThrow(/^Only able to archive non-archived albums$/);
 
                 expect(archiveEngine.persistAsset).not.toHaveBeenCalled();
                 expect(archiveEngine.prepareForRemoteDeletion).not.toHaveBeenCalled();
@@ -423,7 +423,7 @@ describe.each([{
                 .mockReturnValueOnce(asset3.recordName);
             archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-            await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
+            await archiveEngine.archivePath(path.join(Config.defaultConfig.dataDir, `Random`), [asset1, asset2, asset3]);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
             expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
@@ -495,7 +495,7 @@ describe.each([{
                 .mockReturnValueOnce(asset3.recordName);
             archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.resolve());
 
-            await archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3]);
+            await archiveEngine.archivePath(path.join(Config.defaultConfig.dataDir, `Random`), [asset1, asset2, asset3]);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
             expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
@@ -564,7 +564,7 @@ describe.each([{
                 .mockReturnValueOnce(asset3.recordName);
             archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.reject());
 
-            await expect(archiveEngine.archivePath(`/opt/icloud-photos-library/Random`, [asset1, asset2, asset3])).rejects.toThrow(/^Unable to delete remote assets$/);
+            await expect(archiveEngine.archivePath(path.join(Config.defaultConfig.dataDir, `Random`), [asset1, asset2, asset3])).rejects.toThrow(/^Unable to delete remote assets$/);
 
             expect(archiveEngine.persistAsset).toHaveBeenCalledTimes(3);
             expect(archiveEngine.persistAsset).toHaveBeenCalledWith(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()), path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
@@ -639,23 +639,23 @@ describe.each([{
         const asset1AssetStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset1.getAssetFilename()));
         const asset1ArchivedStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset1.getPrettyFilename()));
         expect(asset1AssetStats.isFile()).toBeTruthy();
-        expect(asset1ArchivedStats.mtimeMs).toEqual(asset1.modified);
+        expect(Math.round(asset1ArchivedStats.mtimeMs)).toEqual(asset1.modified);
         expect(asset1ArchivedStats.isFile()).toBeTruthy();
-        expect(asset1ArchivedStats.mtimeMs).toEqual(asset1.modified);
+        expect(Math.round(asset1ArchivedStats.mtimeMs)).toEqual(asset1.modified);
 
         const asset2AssetStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()));
         const asset2ArchivedStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset2.getPrettyFilename()));
         expect(asset2AssetStats.isFile()).toBeTruthy();
-        expect(asset2ArchivedStats.mtimeMs).toEqual(asset2.modified);
+        expect(Math.round(asset2ArchivedStats.mtimeMs)).toEqual(asset2.modified);
         expect(asset2ArchivedStats.isFile()).toBeTruthy();
-        expect(asset2ArchivedStats.mtimeMs).toEqual(asset2.modified);
+        expect(Math.round(asset2ArchivedStats.mtimeMs)).toEqual(asset2.modified);
 
         const asset3AssetStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()));
         const asset3ArchivedStats = fs.lstatSync(path.join(Config.defaultConfig.dataDir, albumUUIDPath, asset3.getPrettyFilename()));
         expect(asset3AssetStats.isFile()).toBeTruthy();
-        expect(asset3ArchivedStats.mtimeMs).toEqual(asset3.modified);
+        expect(Math.round(asset3ArchivedStats.mtimeMs)).toEqual(asset3.modified);
         expect(asset3ArchivedStats.isFile()).toBeTruthy();
-        expect(asset3ArchivedStats.mtimeMs).toEqual(asset3.modified);
+        expect(Math.round(asset3ArchivedStats.mtimeMs)).toEqual(asset3.modified);
     });
 
     describe(`Delete remote asset`, () => {

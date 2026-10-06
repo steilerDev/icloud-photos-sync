@@ -1,15 +1,20 @@
 import eslint from '@eslint/js';
+import stylistic from '@stylistic/eslint-plugin';
+import {defineConfig} from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+export default defineConfig(
     eslint.configs.recommended,
     tseslint.configs.recommended,
     {
         "ignores": ["build/out/**/*"],
+        "plugins": {
+            "@stylistic": stylistic,
+        },
         "rules": {
-            "quotes": ["error", "backtick"],
-            "quote-props": ["error", "as-needed"],
-            "indent": ["error", 4],
+            "@stylistic/quotes": ["error", "backtick"],
+            "@stylistic/quote-props": ["error", "as-needed"],
+            "@stylistic/indent": ["error", 4, {"SwitchCase": 0}],
             "@typescript-eslint/no-unused-vars": ["warn",
             {
                 "args": "all",

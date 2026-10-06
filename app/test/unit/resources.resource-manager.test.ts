@@ -1,7 +1,7 @@
 
 import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import * as fs from 'fs';
-import mockfs from 'mock-fs';
+import mockfs from '../_helpers/mock-fs.helper';
 import path from 'path';
 import {EventManager} from '../../src/lib/resources/event-manager';
 import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
@@ -666,6 +666,12 @@ describe(`ResourceManager`, () => {
         describe(`exportMetrics`, () => {
             test(`should return the export metrics flag from the resources`, () => {
                 expect(resourceManager.exportMetrics).toEqual(resources.exportMetrics);
+            });
+        });
+
+        describe(`exportPrometheusMetrics`, () => {
+            test(`should return the export prometheus metrics flag from the resources`, () => {
+                expect(resourceManager.exportPrometheusMetrics).toEqual(resources.exportPrometheusMetrics);
             });
         });
 

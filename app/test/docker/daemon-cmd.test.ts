@@ -1,5 +1,6 @@
 import {describe, expect, test, jest} from "@jest/globals";
 
+import {Wait} from "testcontainers";
 import {delay, ICPSContainer} from "../_helpers/testcontainers.helper";
 
 describe(`Docker Daemon Command`, () => {
@@ -17,6 +18,31 @@ describe(`Docker Daemon Command`, () => {
         await delay(2000)
 
         expect(await container.syncMetrics()).toMatch(/status="SCHEDULED"/)
+    })
+
+    test(`Container should enter daemon mode with permission model`, async () => {
+        const container = await new ICPSContainer()
+            .withDaemonCommand()
+            .withDummyCredentials()
+            .withPermissionModel()
+            .withEnvironment({ENABLE_CRASH_REPORTING: `true`})
+            .start();
+
+        // wait a second to make sure status file was written
+        await delay(2000)
+
+        expect(await container.syncMetrics()).toMatch(/status="SCHEDULED"/)
+    })
+
+    test(`Container should fail with insufficient permissions`, async () => {
+        const container = await new ICPSContainer()
+            .withCommand([`daemon`])
+            .withDummyCredentials()
+            .withPermissionModel(`--allow-fs-read=* --allow-fs-write=/opt/icloud-photos-library --allow-net`)
+            .withWaitStrategy(Wait.forLogMessage(`APP_INSUFFICIENT_PERMISSIONS`))
+            .start();
+
+        expect(await container.getFullLogs()).toMatch(`APP_INSUFFICIENT_PERMISSIONS: Node.js permission model is enabled, but required permissions are missing (missing --allow-fs-write=*)`)
     })
 
     test(`Should trigger run`, async () => {

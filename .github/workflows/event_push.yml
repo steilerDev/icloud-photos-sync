@@ -12,8 +12,19 @@ on:
       - '**'
 
 jobs:
+  test:
+    name: test
+    uses: ./.github/workflows/artifacts_test.yml
+    permissions:
+      pull-requests: write
+    with:
+      methods: '["unit-ubuntu"]' # Making sure the unit tests pass, before releasing any artifacts
+    secrets:
+      gh-token: ${{ secrets.GITHUB_TOKEN }}
+
   ci:
     name: ci
+    needs: test
     uses: ./.github/workflows/artifacts_build-release.yml
     permissions: 
       contents: write       # for semantic release

@@ -1,11 +1,11 @@
-import {AxiosRequestConfig} from 'axios';
 import fs from 'fs/promises';
 import {jsonc} from 'jsonc';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
-import {iCPSError} from '../../../app/error/error.js';
+import {errorMessage, iCPSError} from '../../../app/error/error.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
+import {HttpRequestConfig} from '../../resources/http-client.js';
 import {Resources} from '../../resources/main.js';
 import {ENDPOINTS, PhotosSetupResponseZone} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
@@ -45,10 +45,14 @@ export class iCloudPhotos {
     }
 
     /**
-     *
+     * Listeners of a previously created promise are removed, so that a stale (already settled) promise does not consume the events of a later setup
      * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR'
      */
     getReady(): Promise<void> {
+        Resources.events(this)
+            .removeListeners(iCPSEventPhotos.READY)
+            .removeListeners(iCPSEventPhotos.ERROR);
+
         return new Promise<void>((resolve, reject) => {
             Resources.events(this)
                 .once(iCPSEventPhotos.READY, () => resolve())
@@ -64,6 +68,8 @@ export class iCloudPhotos {
      * @emits iCPSEventPhotos.ERROR - In case of an error during setup - The iCPSError is provided as argument
      */
     async setup() {
+        // The setup is repeated when re-establishing the connection (e.g. on sync retries), the result of a previous setup must not be re-used
+        this.ready = this.getReady();
         try {
             Resources.logger(this).debug(`Getting iCloud Photos account information`);
 
@@ -87,8 +93,7 @@ export class iCloudPhotos {
      */
     private async getZonesInArea(area: ZoneArea): Promise<PhotosSetupResponseZone[]> {
         Resources.logger(this).debug(`Getting zones in ${area} area`);
-        const response = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[area] + ENDPOINTS.PHOTOS.PATH.ZONES, {});
-        const validatedResponse = Resources.validator().validatePhotosSetupResponse(response);
+        const validatedResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[area] + ENDPOINTS.PHOTOS.PATH.ZONES, {}, Resources.validator().response.photosSetup);
         return validatedResponse.data.zones;
     }
 
@@ -164,7 +169,7 @@ export class iCloudPhotos {
      * @throws An iCPSError if the query fails
      */
     async performQuery(zone: QueryBuilder.Zones, recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
-        const config: AxiosRequestConfig = {
+        const config: HttpRequestConfig = {
             params: {
                 remapEnums: `True`,
             },
@@ -195,15 +200,9 @@ export class iCloudPhotos {
             data.resultsLimit = resultsLimit;
         }
 
-        const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, config);
-
-        const fetchedRecords = queryResponse?.data?.records;
-        if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
-            throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_QUERY_RESPONSE)
-                .addContext(`queryResponse`, queryResponse);
-        }
-
-        return fetchedRecords;
+        // Only the response format is schema validated, the records are parsed defensively
+        const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, Resources.validator().response.query, config);
+        return queryResponse.data.records;
     }
 
     /**
@@ -215,7 +214,7 @@ export class iCloudPhotos {
      * @returns An array of records that have been altered
      */
     async performOperation(zone: QueryBuilder.Zones, operationType: string, fields: any, recordNames: string[]): Promise<any[]> {
-        const config: AxiosRequestConfig = {
+        const config: HttpRequestConfig = {
             params: {
                 remapEnums: `True`,
             },
@@ -243,14 +242,9 @@ export class iCloudPhotos {
             },
         }));
 
-        const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, config);
-        const fetchedRecords = operationResponse?.data?.records;
-        if (!fetchedRecords || !Array.isArray(fetchedRecords)) {
-            throw new iCPSError(ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE)
-                .addContext(`operationResponse`, operationResponse);
-        }
-
-        return fetchedRecords;
+        // Only the response format is schema validated, the records are parsed defensively
+        const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, Resources.validator().response.operation, config);
+        return operationResponse.data.records;
     }
 
     /**
@@ -272,8 +266,8 @@ export class iCloudPhotos {
             queue.push(this.fetchCPLAlbums());
 
             while (queue.length > 0) {
-                // Getting next item in the queue
-                for (const nextAlbum of await queue.shift()) {
+                // Getting next item in the queue - queue is not empty, as checked by the loop condition
+                for (const nextAlbum of await queue.shift()!) {
                     // If album is a folder, there is stuff in there, adding it to the queue
                     if (nextAlbum.albumType === AlbumType.FOLDER) {
                         Resources.logger(this).debug(`Adding child elements of ${nextAlbum.albumNameEnc} to the processing queue`);
@@ -365,7 +359,7 @@ export class iCloudPhotos {
                     cplAlbums.push(CPLAlbum.parseFromQuery(album));
                 }
             } catch (err) {
-                Resources.logger(this).info(`Error processing CPLAlbum: ${jsonc.stringify(album)}: ${err.message}`);
+                Resources.logger(this).info(`Error processing CPLAlbum: ${jsonc.stringify(album)}: ${errorMessage(err)}`);
             }
         }
 
@@ -516,10 +510,10 @@ export class iCloudPhotos {
     async fetchAllCPLAssetsMasters(parentId?: string): Promise<[CPLAsset[], CPLMaster[]]> {
         Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
 
-        let expectedNumberOfRecords = -1;
-        let allRecords: any[] = [];
         const cplMasters: CPLMaster[] = [];
         const cplAssets: CPLAsset[] = [];
+        let allRecords: any[];
+        let expectedNumberOfRecords: number;
         try {
             [allRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, parentId);
 
@@ -589,6 +583,11 @@ export class iCloudPhotos {
      * @throws An error, in case the asset could not be downloaded
      */
     async downloadAsset(asset: Asset): Promise<void> {
+        if (!asset.downloadURL) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.MISSING_DOWNLOAD_URL)
+                .addContext(`asset`, asset);
+        }
+
         const location = asset.getAssetFilePath();
         await Resources.network().downloadData(asset.downloadURL, location);
         await fs.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file

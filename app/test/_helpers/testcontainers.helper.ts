@@ -57,7 +57,17 @@ export class ICPSContainer extends GenericContainer {
      * Sets the entrypoint to keep container open
      */
     asDummy(): this {
-        return this.withEntrypoint([`/usr/bin/tail`, `-f`, `/dev/null`])
+        return this.withEntrypoint([`node`, `-e`, `setInterval(() => {}, 2 ** 30)`])
+    }
+
+    /**
+     * Enables Node's permission model, with the minimal set of permissions required by the application
+     * @param permissionFlags - The permission flags to use instead
+     */
+    withPermissionModel(permissionFlags = `--allow-fs-read=* --allow-fs-write=* --allow-net`): this {
+        return this.withEnvironment({
+            NODE_OPTIONS: `--permission ${permissionFlags}`
+        })
     }
 
     /**
@@ -165,12 +175,20 @@ export class StartedICPSContainer extends AbstractStartedContainer {
     }
 
     /**
-     * Uses `unlink` to remove file
+     * Executes a Node.js script within the container - the runtime image does not provide a shell
+     * @param script - The script to execute
+     * @param args - Arguments available through `process.argv.slice(1)`
+     * @returns The execution result
      */
-    async unlinkFile(...filePath: string[]) {
-        for (const _path of filePath) {
-            this.exec([`/usr/bin/unlink`, _path])
-        }
+    async execNode(script: string, ...args: string[]): Promise<ExecResult> {
+        return this.exec([`node`, `-e`, script, ...args])
+    }
+
+    /**
+     * Removes the provided files (without following symlinks)
+     */
+    async unlinkFile(...filePath: string[]): Promise<ExecResult> {
+        return this.execNode(`process.argv.slice(1).forEach(file => require('fs').unlinkSync(file))`, ...filePath)
     }
 
     /**
@@ -178,17 +196,17 @@ export class StartedICPSContainer extends AbstractStartedContainer {
      * @param asset The file path
      * @returns An exec result
      */
-    async unlinkLibraryAsset(...asset: string[]): Promise<void> {
+    async unlinkLibraryAsset(...asset: string[]): Promise<ExecResult> {
         return this.unlinkFile(...asset.map(assetPath => `/opt/icloud-photos-library/` + assetPath))
     }
 
     /**
      * Deletes a file or folder in the container's path
-     * @param filePath - Path to delete
+     * @param filePath - Path to delete, supporting glob patterns
      * @returns The execution result
      */
     async deleteFile(...filePath: string[]): Promise<ExecResult> {
-        return this.exec([`/bin/rm`, `-rf`, ...filePath])
+        return this.execNode(`const fs = require('fs'); process.argv.slice(1).flatMap(pattern => fs.globSync(pattern)).forEach(file => fs.rmSync(file, {recursive: true, force: true}))`, ...filePath)
     }
 
     /**

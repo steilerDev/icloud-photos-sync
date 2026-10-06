@@ -4,7 +4,7 @@ import {Album, AlbumType} from './model/album.js';
 import fs from 'fs';
 import {Asset} from './model/asset.js';
 import {PLibraryEntities} from './model/photos-entity.js';
-import {iCPSError} from '../../app/error/error.js';
+import {errorMessage, iCPSError} from '../../app/error/error.js';
 import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
 import {Resources} from '../resources/main.js';
@@ -182,7 +182,7 @@ export class PhotosLibrary {
      * @param cause - Optional cause of the execution of this function
      * @throws An iCPSError in case the provided path is NOT a dead symlink
      */
-    async removeDeadSymlink(symlinkPath: string, cause?: Error) {
+    async removeDeadSymlink(symlinkPath: string, cause?: unknown) {
         try {
             // Checking if there is actually a dead symlink
             if (await fs.promises.lstat(symlinkPath) && !fs.existsSync(symlinkPath)) {
@@ -518,7 +518,7 @@ export class PhotosLibrary {
             srcNameStats = fs.lstatSync(srcNamePath);
             fs.unlinkSync(srcNamePath);
         } catch (err) {
-            Resources.logger(this).debug(`Unable to unlink ${srcNamePath}: ${err.message}`);
+            Resources.logger(this).debug(`Unable to unlink ${srcNamePath}: ${errorMessage(err)}`);
         }
 
         Resources.logger(this).debug(`Re-linking ${destNamePath}`);

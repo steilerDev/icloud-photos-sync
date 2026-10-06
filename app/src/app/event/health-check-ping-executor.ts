@@ -1,5 +1,5 @@
-import axios, {AxiosError, AxiosInstance} from "axios";
 import {iCPSState} from "../../lib/resources/events-types.js";
+import {HttpClient, isHttpError} from "../../lib/resources/http-client.js";
 import {Resources} from "../../lib/resources/main.js";
 import {FILE_ENCODING} from "../../lib/resources/resource-types.js";
 import {LogInterface} from "./log.js";
@@ -7,14 +7,18 @@ import {LogLevel, SerializedState, StateType} from "../../lib/resources/state-ma
 
 export class HealthCheckPingExecutor {
 
-    networkInterface: AxiosInstance;
+    /**
+     * The network interface used for pinging - only set (and used), if a health check URL is configured
+     */
+    networkInterface!: HttpClient;
 
     public constructor() {
         if (!Resources.manager().healthCheckUrl) {
             return;
         }
 
-        this.networkInterface = axios.create({baseURL: Resources.manager().healthCheckUrl});
+        // Neither header jar nor network capture, the health check endpoint is not related to iCloud
+        this.networkInterface = new HttpClient({baseURL: Resources.manager().healthCheckUrl});
 
         Resources.events(this).on(iCPSState.STATE_CHANGED, async (state: SerializedState) => {
             if(state.state === StateType.READY && state.prevTrigger) {
@@ -26,7 +30,7 @@ export class HealthCheckPingExecutor {
                     return
                 }
             }
-            if(state.state === StateType.RUNNING && state.progressMsg.startsWith(`Starting`) && state.progress === 0) {
+            if(state.state === StateType.RUNNING && state.progressMsg?.startsWith(`Starting`) && state.progress === 0) {
                 await this.pingStart()
                 return
             }
@@ -35,11 +39,11 @@ export class HealthCheckPingExecutor {
 
     private async pingStart(): Promise<void> {
         try {
-            await this.networkInterface.post(`/start`);
+            await this.networkInterface.post(`/start`, undefined, Resources.validator().response.healthCheckPing);
             Resources.logger(this).debug(`Successfully sent start health check ping.`);
         } catch (err) {
-            if((err as AxiosError).isAxiosError) {
-                Resources.logger(this).error(`Failed to send start health check ping: ${(err as AxiosError).message}, got response: ${JSON.stringify((err as AxiosError).response?.data)}`);
+            if(isHttpError(err)) {
+                Resources.logger(this).error(`Failed to send start health check ping: ${err.message}, got response: ${JSON.stringify(err.response?.data)}`);
             } else {
                 Resources.logger(this).error(`Failed to send start health check ping: ${err}`);
             }
@@ -48,11 +52,11 @@ export class HealthCheckPingExecutor {
 
     private async pingSuccess(): Promise<void> {
         try {
-            await this.networkInterface.post(``, this.getLog());
+            await this.networkInterface.post(``, this.getLog(), Resources.validator().response.healthCheckPing);
             Resources.logger(this).debug(`Successfully sent success health check ping.`);
         } catch (err) {
-            if((err as AxiosError).isAxiosError) {
-                Resources.logger(this).error(`Failed to send success health check ping: ${(err as AxiosError).message}, got response: ${JSON.stringify((err as AxiosError).response?.data)}`);
+            if(isHttpError(err)) {
+                Resources.logger(this).error(`Failed to send success health check ping: ${err.message}, got response: ${JSON.stringify(err.response?.data)}`);
             } else {
                 Resources.logger(this).error(`Failed to send success health check ping: ${err}`);
             }
@@ -61,11 +65,11 @@ export class HealthCheckPingExecutor {
 
     private async pingError(): Promise<void> {
         try {
-            await this.networkInterface.post(`/fail`, this.getLog());
+            await this.networkInterface.post(`/fail`, this.getLog(), Resources.validator().response.healthCheckPing);
             Resources.logger(this).debug(`Successfully sent error health check ping.`);
         } catch (err) {
-            if((err as AxiosError).isAxiosError) {
-                Resources.logger(this).error(`Failed to send error health check ping: ${(err as AxiosError).message}, got response: ${JSON.stringify((err as AxiosError).response?.data)}`);
+            if(isHttpError(err)) {
+                Resources.logger(this).error(`Failed to send error health check ping: ${err.message}, got response: ${JSON.stringify(err.response?.data)}`);
             } else {
                 Resources.logger(this).error(`Failed to send error health check ping: ${err}`);
             }

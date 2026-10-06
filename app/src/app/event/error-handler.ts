@@ -1,8 +1,10 @@
-import {BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceData, BacktraceReport, BreadcrumbType} from "@backtrace/node";
+import {BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceClientBuilder, BacktraceData, BacktraceReport, BacktraceSetupConfiguration, BreadcrumbType} from "@backtrace/node";
 import {randomUUID} from "crypto";
+import {readFileSync} from 'fs';
 import fs from 'fs/promises';
+import {hostname} from 'os';
 import {jsonc} from "jsonc";
-import {pEvent} from 'p-event';
+import {once} from 'events';
 import {Readable} from 'stream';
 import * as zlib from 'zlib';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
@@ -10,7 +12,7 @@ import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, i
 import {Resources} from '../../lib/resources/main.js';
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
 import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR, WEB_SERVER_ERR} from "../error/error-codes.js";
-import {iCPSError} from "../error/error.js";
+import {errorMessage, iCPSError} from "../error/error.js";
 
 /**
  * List of errors that will never get reported
@@ -35,6 +37,76 @@ const BACKTRACE_SUBMISSION = {
     },
     TYPE: `json`,
 };
+
+type BacktraceAttributeProvider = Parameters<BacktraceClientBuilder[`addAttributeProvider`]>[0];
+
+/**
+ * Provides the `guid` attribute without spawning a shell.
+ * Backtrace's default provider uses `execSync` to read the machine id, which requires `/bin/sh` and is denied by Node's permission model (unless `--allow-child-process` is granted).
+ * On Linux, the machine id files are read directly - producing the same `guid` as the default provider. On other platforms, the default provider is only used if spawning child processes is permitted.
+ */
+export class MachineIdAttributeProvider implements BacktraceAttributeProvider {
+    /**
+     * @param shellProvider - Backtrace's default machine identifier provider, used on platforms without machine id files
+     * @param machineIdFiles - Files holding the machine id, in order of precedence
+     */
+    constructor(
+        private readonly shellProvider?: BacktraceAttributeProvider,
+        private readonly machineIdFiles: string[] = [`/var/lib/dbus/machine-id`, `/etc/machine-id`],
+    ) {}
+
+    get type() {
+        return `scoped` as const;
+    }
+
+    get(): Record<string, unknown> {
+        return {
+            guid: this.generateGuid() || randomUUID(),
+        };
+    }
+
+    /**
+     * @returns The normalized machine id, or undefined if it could not be determined
+     */
+    generateGuid(): string | undefined {
+        if (process.platform !== `linux`) {
+            return process.permission?.has(`child`) === false
+                ? undefined
+                : this.shellProvider?.get()[`guid`] as string | undefined;
+        }
+
+        // Equivalent to `( cat /var/lib/dbus/machine-id /etc/machine-id || hostname ) | head -n 1` - cat fails if any file is unreadable, appending the hostname
+        let output = ``;
+        let unreadable = false;
+        for (const file of this.machineIdFiles) {
+            try {
+                output += readFileSync(file, {encoding: `utf8`});
+            } catch {
+                unreadable = true;
+            }
+        }
+
+        if (unreadable) {
+            output += `${hostname()}\n`;
+        }
+
+        return output.split(`\n`)[0].replace(/\s+/g, ``).toLowerCase();
+    }
+}
+
+/**
+ * Backtrace client builder, replacing the default machine identifier provider with the shell-free MachineIdAttributeProvider
+ */
+export class ShellFreeBacktraceClientBuilder extends BacktraceClientBuilder {
+    constructor(options: BacktraceSetupConfiguration) {
+        super({options});
+        const providers = this.clientSetup.attributeProviders ?? [];
+        // The default provider is not exported, identifying it by its distinct method
+        const shellProvider = providers.find(provider => `generateGuid` in provider);
+        this.clientSetup.attributeProviders = providers.filter(provider => provider !== shellProvider);
+        this.addAttributeProvider(new MachineIdAttributeProvider(shellProvider));
+    }
+}
 
 /**
  * This class handles errors and error reporting
@@ -65,7 +137,7 @@ export class ErrorHandler {
                                 + `${Resources.PackageInfo.version === `0.0.0-development` ? BACKTRACE_SUBMISSION.TOKEN.DEV : BACKTRACE_SUBMISSION.TOKEN.PROD}/`
                                 + BACKTRACE_SUBMISSION.TYPE;
 
-            this.btClient = BacktraceClient.initialize({
+            const btClient = new ShellFreeBacktraceClientBuilder({
                 userAttributes: {
                     application: Resources.PackageInfo.name,
                     'application.version': Resources.PackageInfo.version,
@@ -86,19 +158,21 @@ export class ErrorHandler {
                         jsonc.parse(ErrorHandler.maskConfidentialData(jsonc.stringify(data))),
                     );
                 },
-            });
+            }).build();
+
+            this.btClient = btClient;
 
             // Register listener for unknown filetypes
             Resources.events(this).on(iCPSEventRuntimeWarning.FILETYPE_ERROR, this.handleFiletype.bind(this));
 
             // Usage statistics
             Resources.events(this).on(iCPSEventSyncEngine.START, () => {
-                this.btClient.metrics.addSummedEvent(`SyncExecution`);
-                this.btClient.metrics.send();
+                btClient.metrics?.addSummedEvent(`SyncExecution`);
+                btClient.metrics?.send();
             });
             Resources.events(this).on(iCPSEventArchiveEngine.ARCHIVE_START, () => {
-                this.btClient.metrics.addSummedEvent(`ArchiveExecution`);
-                this.btClient.metrics.send();
+                btClient.metrics?.addSummedEvent(`ArchiveExecution`);
+                btClient.metrics?.send();
             });
 
             this.registerBreadcrumbs();
@@ -151,120 +225,121 @@ export class ErrorHandler {
      * Registers event listeners to provide breadcrumbs
      */
     registerBreadcrumbs() {
-        if (this.btClient === undefined || this.btClient.breadcrumbs === undefined) {
+        const breadcrumbs = this.btClient?.breadcrumbs;
+        if (breadcrumbs === undefined) {
             return;
         }
 
         Resources.events(this)
             .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
-                this.btClient.breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
+                breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
             })
             .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
-                this.btClient.breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
+                breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
             })
             .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
-                this.btClient.breadcrumbs.warn(`FILETYPE_ERROR`, {ext, descriptor});
+                breadcrumbs.warn(`FILETYPE_ERROR`, {ext, descriptor});
             })
             .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: iCPSError) => {
-                this.btClient.breadcrumbs.warn(`RESOURCE_FILE_ERROR`, {error: err.getDescription()});
+                breadcrumbs.warn(`RESOURCE_FILE_ERROR`, {error: err.getDescription()});
             })
             .on(iCPSEventRuntimeWarning.EXTRANEOUS_FILE, () => {
-                this.btClient.breadcrumbs.warn(`EXTRANEOUS_FILE`);
+                breadcrumbs.warn(`EXTRANEOUS_FILE`);
             })
             .on(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`LIBRARY_LOAD_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+                breadcrumbs.warn(`LIBRARY_LOAD_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
             })
             .on(iCPSEventRuntimeWarning.COUNT_MISMATCH, (_album: string, expectedCount: number, actualCPLAssets: number, actualCPLMasters: number) => {
-                this.btClient.breadcrumbs.warn(`COUNT_MISMATCH`, {
+                breadcrumbs.warn(`COUNT_MISMATCH`, {
                     expectedCount,
                     actualCPLAssets,
                     actualCPLMasters,
                 });
             })
             .on(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`ICLOUD_LOAD_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+                breadcrumbs.warn(`ICLOUD_LOAD_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
             })
             .on(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`WRITE_ASSET_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+                breadcrumbs.warn(`WRITE_ASSET_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
             })
             .on(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`WRITE_ALBUM_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+                breadcrumbs.warn(`WRITE_ALBUM_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
             })
             .on(iCPSEventRuntimeWarning.LINK_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`LINK_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+                breadcrumbs.warn(`LINK_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
             })
             .on(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, (err: Error) => {
-                this.btClient.breadcrumbs.warn(`ARCHIVE_ASSET_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
+                breadcrumbs.warn(`ARCHIVE_ASSET_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()});
             });
 
         Resources.events(this)
             .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
-                this.btClient.breadcrumbs.info(`AUTHENTICATION_STARTED`);
+                breadcrumbs.info(`AUTHENTICATION_STARTED`);
             })
             .on(iCPSEventCloud.AUTHENTICATED, () => {
-                this.btClient.breadcrumbs.info(`AUTHENTICATED`);
+                breadcrumbs.info(`AUTHENTICATED`);
             })
             .on(iCPSEventCloud.MFA_REQUIRED, () => {
-                this.btClient.breadcrumbs.warn(`MFA_REQUIRED`);
+                breadcrumbs.warn(`MFA_REQUIRED`);
             })
             .on(iCPSEventCloud.TRUSTED, () => {
-                this.btClient.breadcrumbs.info(`TRUSTED`);
+                breadcrumbs.info(`TRUSTED`);
             })
             .on(iCPSEventCloud.ACCOUNT_READY, () => {
-                this.btClient.breadcrumbs.info(`ACCOUNT_READY`);
+                breadcrumbs.info(`ACCOUNT_READY`);
             })
             .on(iCPSEventCloud.SESSION_EXPIRED, () => {
-                this.btClient.breadcrumbs.info(`SESSION_EXPIRED`);
+                breadcrumbs.info(`SESSION_EXPIRED`);
             })
             .on(iCPSEventCloud.PCS_REQUIRED, () => {
-                this.btClient.breadcrumbs.info(`PCS_REQUIRED`);
+                breadcrumbs.info(`PCS_REQUIRED`);
             })
             .on(iCPSEventCloud.PCS_NOT_READY, () => {
-                this.btClient.breadcrumbs.info(`PCS_NOT_READY`);
+                breadcrumbs.info(`PCS_NOT_READY`);
             });
 
         Resources.events(this)
             .on(iCPSEventWebServer.STARTED, () => {
-                this.btClient.breadcrumbs.info(`WEB_SERVER_STARTED`);
+                breadcrumbs.info(`WEB_SERVER_STARTED`);
             })
             .on(iCPSEventWebServer.SYNC_REQUESTED, () => {
-                this.btClient.breadcrumbs.info(`WEB_SERVER_SYNC_REQUESTED`)
+                breadcrumbs.info(`WEB_SERVER_SYNC_REQUESTED`)
             })
             .on(iCPSEventWebServer.REAUTH_REQUESTED, () => {
-                this.btClient.breadcrumbs.info(`WEB_SERVER_AUTH_REQUESTED`)
+                breadcrumbs.info(`WEB_SERVER_AUTH_REQUESTED`)
             })
             .on(iCPSEventWebServer.REAUTH_ERROR, (err) => {
-                this.btClient.breadcrumbs.warn(`REAUTH_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()})
+                breadcrumbs.warn(`REAUTH_ERROR`, {error: iCPSError.toiCPSError(err).getDescription()})
             })
 
         Resources.events(this)
             .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {
-                this.btClient.breadcrumbs.info(`MFA_RESEND`, {method: method.toString()});
+                breadcrumbs.info(`MFA_RESEND`, {method: method.toString()});
             })
             .on(iCPSEventMFA.MFA_RECEIVED, (method: MFAMethod) => {
-                this.btClient.breadcrumbs.info(`MFA_RECEIVED`, {method: method.toString()});
+                breadcrumbs.info(`MFA_RECEIVED`, {method: method.toString()});
             })
             .on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
-                this.btClient.breadcrumbs.error(`MFA_NOT_PROVIDED`);
+                breadcrumbs.error(`MFA_NOT_PROVIDED`);
             });
 
         Resources.events(this)
             .on(iCPSEventPhotos.SETUP_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`SETUP_COMPLETED`);
+                breadcrumbs.info(`SETUP_COMPLETED`);
             })
             .on(iCPSEventPhotos.READY, () => {
-                this.btClient.breadcrumbs.info(`PHOTOS_READY`);
+                breadcrumbs.info(`PHOTOS_READY`);
             });
 
         Resources.events(this)
             .on(iCPSEventSyncEngine.START, () => {
-                this.btClient.breadcrumbs.info(`SYNC_STARTED`);
+                breadcrumbs.info(`SYNC_STARTED`);
             })
             .on(iCPSEventSyncEngine.FETCH_N_LOAD, () => {
-                this.btClient.breadcrumbs.info(`FETCH_N_LOAD`);
+                breadcrumbs.info(`FETCH_N_LOAD`);
             })
             .on(iCPSEventSyncEngine.FETCH_N_LOAD_COMPLETED, (remoteAssetCount: number, remoteAlbumCount: number, localAssetCount: number, localAlbumCount: number) => {
-                this.btClient.breadcrumbs.info(`FETCH_N_LOAD_COMPLETED`, {
+                breadcrumbs.info(`FETCH_N_LOAD_COMPLETED`, {
                     remoteAssetCount,
                     remoteAlbumCount,
                     localAssetCount,
@@ -272,16 +347,16 @@ export class ErrorHandler {
                 });
             })
             .on(iCPSEventSyncEngine.DIFF, () => {
-                this.btClient.breadcrumbs.info(`DIFF`);
+                breadcrumbs.info(`DIFF`);
             })
             .on(iCPSEventSyncEngine.DIFF_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`DIFF_COMPLETED`);
+                breadcrumbs.info(`DIFF_COMPLETED`);
             })
             .on(iCPSEventSyncEngine.WRITE, () => {
-                this.btClient.breadcrumbs.info(`WRITE`);
+                breadcrumbs.info(`WRITE`);
             })
             .on(iCPSEventSyncEngine.WRITE_ASSETS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
-                this.btClient.breadcrumbs.info(`WRITE_ASSETS`, {
+                breadcrumbs.info(`WRITE_ASSETS`, {
                     toBeDeletedCount,
                     toBeAddedCount,
                     toBeKept,
@@ -289,40 +364,40 @@ export class ErrorHandler {
             })
             .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {
                 const writeAssetCount = Resources.event().getEventCount(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED);
-                this.btClient.breadcrumbs.info(`WRITE_ASSETS_COMPLETED`, {writeAssetCount});
+                breadcrumbs.info(`WRITE_ASSETS_COMPLETED`, {writeAssetCount});
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
-                this.btClient.breadcrumbs.info(`WRITE_ALBUMS`, {
+                breadcrumbs.info(`WRITE_ALBUMS`, {
                     toBeDeletedCount,
                     toBeAddedCount,
                     toBeKept,
                 });
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`WRITE_ALBUMS_COMPLETED`);
+                breadcrumbs.info(`WRITE_ALBUMS_COMPLETED`);
             })
             .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
-                this.btClient.breadcrumbs.info(`WRITE_COMPLETED`);
+                breadcrumbs.info(`WRITE_COMPLETED`);
             })
             .on(iCPSEventSyncEngine.DONE, () => {
-                this.btClient.breadcrumbs.info(`SYNC_COMPLETED`);
+                breadcrumbs.info(`SYNC_COMPLETED`);
             })
             .on(iCPSEventSyncEngine.RETRY, (retryCount: number, err: iCPSError) => {
-                this.btClient.breadcrumbs.warn(`SYNC_RETRY`, {retryCount, error: iCPSError.toiCPSError(err).getDescription()});
+                breadcrumbs.warn(`SYNC_RETRY`, {retryCount, error: iCPSError.toiCPSError(err).getDescription()});
             });
 
         Resources.events(this)
             .on(iCPSEventArchiveEngine.ARCHIVE_START, () => {
-                this.btClient.breadcrumbs.info(`ARCHIVE_STARTED`);
+                breadcrumbs.info(`ARCHIVE_STARTED`);
             })
             .on(iCPSEventArchiveEngine.PERSISTING_START, (numberOfAssets: number) => {
-                this.btClient.breadcrumbs.info(`PERSISTING_START`, {numberOfAssets});
+                breadcrumbs.info(`PERSISTING_START`, {numberOfAssets});
             })
             .on(iCPSEventArchiveEngine.REMOTE_DELETE, (numberOfAssets: number) => {
-                this.btClient.breadcrumbs.info(`REMOTE_DELETE`, {numberOfAssets});
+                breadcrumbs.info(`REMOTE_DELETE`, {numberOfAssets});
             })
             .on(iCPSEventArchiveEngine.ARCHIVE_DONE, () => {
-                this.btClient.breadcrumbs.info(`ARCHIVE_COMPLETED`);
+                breadcrumbs.info(`ARCHIVE_COMPLETED`);
             });
     }
 
@@ -420,7 +495,7 @@ export class ErrorHandler {
 
             return await this.compressStream(truncatedData);
         } catch (err) {
-            Resources.logger(this).warn(`Unable to prepare log file for crash report: ${err.message}`);
+            Resources.logger(this).warn(`Unable to prepare log file for crash report: ${errorMessage(err)}`);
             return undefined;
         }
     }
@@ -443,7 +518,7 @@ export class ErrorHandler {
 
             return this.compressStream(dataStream);
         } catch (err) {
-            Resources.logger(this).warn(`Unable to prepare HAR file for crash report: ${err.message}`);
+            Resources.logger(this).warn(`Unable to prepare HAR file for crash report: ${errorMessage(err)}`);
             return undefined;
         }
     }
@@ -455,12 +530,12 @@ export class ErrorHandler {
      */
     async compressStream(data: Readable): Promise<Buffer> {
         const brotliStream = zlib.createBrotliCompress();
-        const chunks = [];
-        brotliStream.on(`data`, chunk => {
+        const chunks: Buffer[] = [];
+        brotliStream.on(`data`, (chunk: Buffer) => {
             chunks.push(chunk);
         });
         data.pipe(brotliStream);
-        await pEvent(brotliStream, `end`, {rejectionEvents: [`error`]});
+        await once(brotliStream, `end`); // Rejects if an 'error' event is emitted
         return Buffer.concat(chunks);
     }
 
@@ -470,9 +545,14 @@ export class ErrorHandler {
      * @returns The string, with masked confidential data
      */
     static maskConfidentialData(input: string): string {
-        return input
+        const masked = input
             .replaceAll(Resources.manager().username, `<APPLE ID USERNAME>`)
-            .replaceAll(Resources.manager().password, `<APPLE ID PASSWORD>`)
-            .replaceAll(Resources.manager()._resources.trustToken, `<TRUST TOKEN>`); // Reading cached trust token, instead of re-reading from file
+            .replaceAll(Resources.manager().password, `<APPLE ID PASSWORD>`);
+
+        // Reading cached trust token, instead of re-reading from file
+        const {trustToken} = Resources.manager()._resources;
+        return trustToken
+            ? masked.replaceAll(trustToken, `<TRUST TOKEN>`)
+            : masked;
     }
 }

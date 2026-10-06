@@ -5,10 +5,10 @@ import {Album, AlbumType} from '../photos-library/model/album.js';
 import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
 import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
+import {isHttpError} from '../resources/http-client.js';
 import {Resources} from '../resources/main.js';
 import {SyncEngineHelper} from './helper.js';
 import {iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../resources/events-types.js';
-import {AxiosError} from 'axios';
 
 /**
  * This class handles the photos sync
@@ -64,7 +64,7 @@ export class SyncEngine {
                 retryError.addContext(`error-try-${retryCount}`, err);
                 retryCount++;
 
-                Resources.emit(iCPSEventSyncEngine.RETRY, retryCount, (err as AxiosError).isAxiosError
+                Resources.emit(iCPSEventSyncEngine.RETRY, retryCount, isHttpError(err)
                     ? new iCPSError(SYNC_ERR.NETWORK).addCause(err)
                     : new iCPSError(SYNC_ERR.UNKNOWN).addCause(err));
 

@@ -1,205 +1,23 @@
-import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
-import {AxiosHarTracker} from "axios-har-tracker";
-import {createWriteStream} from "fs";
 import fs from "fs/promises";
+import {setGlobalProxyFromEnv} from "http";
 import {jsonc} from "jsonc";
-import {pEvent} from "p-event";
 import PQueue from "p-queue";
-import {Cookie} from "tough-cookie";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
-import {iCPSError} from "../../app/error/error.js";
+import {errorMessage, iCPSError} from "../../app/error/error.js";
 import {iCPSAppOptions} from "../../app/factory.js";
+import {HeaderJar, Header, HttpClient, HttpRequestConfig, NetworkCapture, ResponseValidator} from "./http-client.js";
 import {Resources} from "./main.js";
-import {CLIENT_ID, CLIENT_INFO, COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse, USER_AGENT} from "./network-types.js";
+import {COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse} from "./network-types.js";
 import {PhotosAccountZone, ZoneArea} from "./resource-types.js";
-
-/**
- * Object holding all necessary information for a specific header value, that needs to be reused across multiple requests
- */
-export class Header {
-    key: string;
-    value: string;
-    domain: string;
-
-    /**
-     * Creates a new header object
-     * @param domain - The domain the header should be applied to, or an empty string if it should be applied to all domains
-     * @param key - The header key
-     * @param value - The header value
-     */
-    constructor(domain: string, key: string, value: string) {
-        this.domain = domain;
-        this.key = key;
-        this.value = value;
-    }
-}
-
-export class HeaderJar {
-    headers: Map<string, Header> = new Map();
-    cookies: Map<string, Cookie> = new Map();
-
-    /**
-     * A regex to check if a URL is absolute:
-     * ^ - beginning of the string
-     * (?: - beginning of a non-captured group
-     *   [a-z+]+ - any character of 'a' to 'z' or "+" 1 or more times
-     *   : - string (colon character)
-     * )? - end of the non-captured group. Group appearing 0 or 1 times
-     * // - string (two forward slash characters)
-     * 'i' - non case-sensitive flag
-     */
-    absoluteURLRegex = /^(?:[a-z+]+:)?\/\//i;
-
-    /**
-     * Creates a new header jar with static header values applied
-     * @param axios - The axios instance to apply the headers to
-     */
-    constructor(axios: AxiosInstance) {
-        // Default headers
-        this.setHeader(new Header(``, `Accept`, `application/json`));
-        this.setHeader(new Header(``, `Content-Type`, `application/json`));
-        this.setHeader(new Header(``, `Connection`, `keep-alive`));
-        this.setHeader(new Header(``, `Accept-Encoding`, `gzip, deflate, br`));
-        this.setHeader(new Header(``, `User-Agent`, USER_AGENT));
-
-        // Static auth headers
-        this.setHeader(new Header(`idmsa.apple.com`, `Origin`, `https://idmsa.apple.com`)); // This should overwrite the default 'Origin' header
-        this.setHeader(new Header(`idmsa.apple.com`, `Referer`, `https://idmsa.apple.com/`));
-        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-Widget-Key`, CLIENT_ID));
-        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Client-Id`, CLIENT_ID));
-        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-I-FD-Client-Info`, CLIENT_INFO));
-        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Response-Type`, `code`));
-        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Response-Mode`, `web_message`));
-        this.setHeader(new Header(`idmsa.apple.com`, `X-Apple-OAuth-Client-Type`, `firstPartyAuth`));
-
-        axios.interceptors.request.use(config => this._injectHeaders(config));
-        axios.interceptors.response.use(response => this._extractHeaders(response));
-    }
-
-    /**
-     * Injects the relevant headers and cookies into the request
-     * @param config - The request config
-     * @returns An adjusted request config containing relevant cookies and headers
-     */
-    _injectHeaders(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
-        const requestCookieString = Array.from(this.cookies.values())
-            .filter(cookie => this.isApplicable(config, cookie))
-            .filter(cookie => this.isNotExpired(cookie))
-            .map(cookie => cookie.cookieString()).join(`; `);
-
-        if (requestCookieString.length > 0) {
-            config.headers[HEADER_KEYS.COOKIE] = requestCookieString;
-        }
-
-        Array.from(this.headers.values())
-            .filter(cookie => this.isApplicable(config, cookie))
-            .forEach(header => {
-                config.headers[header.key] = header.value;
-            });
-
-        return config;
-    }
-
-    /**
-     * Extracts general applicable header (scnt) and set-cookies from the response
-     * @param response - The Axios response
-     * @returns The unmodified response
-     */
-    _extractHeaders(response: AxiosResponse): AxiosResponse {
-        if (response.headers.scnt && this.isApplicable(response.config, new Header(`idmsa.apple.com`, ``, ``))) {
-            Resources.logger(this).debug(`Extracted scnt from response header with length ` + response.headers.scnt.length);
-            this.setHeader(new Header(`idmsa.apple.com`, HEADER_KEYS.SCNT, response.headers.scnt));
-        }
-
-        if (response.headers[`set-cookie`] && Array.isArray(response.headers[`set-cookie`])) {
-            response.headers[`set-cookie`].forEach(cookie => {
-                const parsedCookie = Cookie.parse(cookie);
-                Resources.logger(this).debug(`Extracted cookie from response header: ${parsedCookie.key} (domain ${parsedCookie.domain}) with length ${parsedCookie.value.length}`);
-                this.setCookie(parsedCookie);
-            });
-        }
-
-        return response;
-    }
-
-    /**
-     * Checks metadata of the provided cookie to check if it's still valid
-     * @param cookie - The cookie to check
-     * @returns False if expired, true otherwise
-     */
-    isNotExpired(cookie: Cookie): boolean {
-        if (cookie.TTL() > 0) {
-            return true;
-        }
-
-        // Cookie.expires could also be the string 'Infinity', but then TTL() would be the number Infinity
-        if ((cookie.expires as Date).getTime() === 1000) { // For some reason some Apple Headers have a magic expire unix time of 1000 (X-APPLE-WEBAUTH-HSA-LOGIN), including them for now...
-            return true;
-        }
-
-        Resources.logger(this).debug(`Not applying expired cookie ${cookie.key}`);
-        return false;
-    }
-
-    /**
-     * Checks if a given object is applicable to the axios request. Takes URL and base URL into account
-     * @param config - The axios request config
-     * @param object - The object to check
-     * @returns True if the object is applicable to the request, false otherwise
-     */
-    isApplicable(config: InternalAxiosRequestConfig, object: Header | Cookie): boolean {
-        const objectDomain = object.domain;
-
-        if (config.baseURL && !this.absoluteURLRegex.test(config.url)) {
-            // Base URL is not used if config URL is absolute
-            return config.baseURL.includes(objectDomain);
-        }
-
-        return config.url.includes(objectDomain);
-    }
-
-    /**
-     * Sets a header object in the header jar - overwrites existing headers with the same key
-     * @param header - The header to set
-     */
-    setHeader(...header: Header[]) {
-        for (const h of header) {
-            this.headers.set(h.key, h);
-        }
-    }
-
-    /**
-     * Clearing a header from the header jar
-     * @param key - The key of the header to clear
-     */
-    clearHeader(key: string) {
-        this.headers.delete(key);
-    }
-
-    /**
-     * Sets a cookie object in the header jar - overwrites existing cookies with the same key
-     * @param cookie - The cookie to set
-     */
-    setCookie(...cookie: (Cookie | string)[]) {
-        for (const c of cookie) {
-            const _cookie = typeof c === `string` ? Cookie.parse(c) : c;
-            if (_cookie.value.length > 0) {
-                this.cookies.set(_cookie.key, _cookie);
-            } else {
-                this.cookies.delete(_cookie.key);
-            }
-        }
-    }
-}
 
 /**
  * This class is responsible for keeping track of the shared network connection
  */
 export class NetworkManager {
     /**
-     * Local axios instance to handle network requests
+     * HTTP client handling all network requests - applies the header jar and (if enabled) the network capture
      */
-    _axios: AxiosInstance;
+    _http: HttpClient;
 
     /**
      * Queue to enable metadata rate limiting. Applied to regular (non-streaming) requests
@@ -207,10 +25,14 @@ export class NetworkManager {
     _rateLimiter: PQueue;
 
     /**
-     * A separate axios instance to handle stream based downloads of assets
-     * This allows us to bypass har files for those big files - additionally HarTracker is not handling the stream correctly
+     * Restores the previous global proxy settings, if the system proxy was applied
      */
-    _streamingAxios: AxiosInstance;
+    _restoreProxy?: () => void;
+
+    /**
+     * Timeout (in ms) for asset downloads, undefined if downloads should not time out
+     */
+    _downloadTimeout?: number;
 
     /**
      * Queue to enable CCY rate limiting. Applied to streaming requests
@@ -218,14 +40,19 @@ export class NetworkManager {
     _streamingCCYLimiter: PQueue;
 
     /**
-     * Collection of header values and cookies that are applied based on the request
+     * Collection of header values and cookies that are applied based on the request - owned and applied by the HTTP client
      */
     _headerJar: HeaderJar;
 
     /**
-     * Axios HAR tracker to capture network requests
+     * The account's country code, as provided by the backend during signin - required for account setup
      */
-    _harTracker?: AxiosHarTracker;
+    accountCountry?: string;
+
+    /**
+     * Captures network requests, if network capture is enabled - owned and applied by the HTTP client
+     */
+    _networkCapture?: NetworkCapture;
 
     /**
      * Creates a new network manager
@@ -238,43 +65,55 @@ export class NetworkManager {
             interval: resources.metadataRate[1],
         });
 
-        this._axios = axios.create({
+        if (resources.useSystemProxy) {
+            try {
+                // Applies HTTP_PROXY, HTTPS_PROXY and NO_PROXY to Node's built-in fetch (and http/https modules)
+                this._restoreProxy = setGlobalProxyFromEnv(process.env);
+            } catch (err) {
+                throw new iCPSError(RESOURCES_ERR.INVALID_PROXY).addCause(err);
+            }
+        }
+
+        this._headerJar = new HeaderJar();
+
+        if (resources.enableNetworkCapture) {
+            this._networkCapture = new NetworkCapture();
+        }
+
+        this._http = new HttpClient({
             headers: {
                 Origin: `https://www.${this.iCloudRegionUrl(resources.region)}`,
             },
+            headerJar: this._headerJar,
+            networkCapture: this._networkCapture,
         });
-
-        if (resources.enableNetworkCapture) {
-            this._harTracker = new AxiosHarTracker(this._axios as any, {name: Resources.PackageInfo.name, version: Resources.PackageInfo.version});
-        }
-
-        this._headerJar = new HeaderJar(this._axios);
 
         this._streamingCCYLimiter = new PQueue({
             concurrency: resources.downloadThreads,
-            timeout: resources.downloadTimeout === Infinity ? undefined : (1000 * 60 * resources.downloadTimeout),
         });
 
-        this._streamingAxios = axios.create({
-            responseType: `stream`,
-        });
+        this._downloadTimeout = resources.downloadTimeout === Infinity
+            ? undefined
+            : (1000 * 60 * resources.downloadTimeout);
     }
 
     /**
      * This closes the current session, clears resources that are not persisted and writes the HAR file to disk, in case network capture is enabled
      */
     async resetSession() {
-        this._axios.defaults.baseURL = undefined;
+        this._http.baseURL = undefined;
 
         this._headerJar.clearHeader(HEADER_KEYS.SCNT);
         this._headerJar.clearHeader(HEADER_KEYS.SESSION_ID);
+        this._headerJar.clearHeader(HEADER_KEYS.AUTH_ATTRIBUTES);
+        this._headerJar.resetFrameId();
 
         await this.settleRateLimiter();
         await this.settleCCYLimiter();
 
         if (Resources.manager().enableNetworkCapture) {
             await this.writeHarFile();
-            this._harTracker.resetHar();
+            this._networkCapture?.reset();
         }
     }
 
@@ -326,9 +165,9 @@ export class NetworkManager {
         }
 
         try {
-            const generatedObject = this._harTracker.getGeneratedHar();
+            const generatedObject = this._networkCapture?.log;
 
-            if (generatedObject.log.entries.length === 0) {
+            if (!generatedObject || generatedObject.log.entries.length === 0) {
                 Resources.logger(this).debug(`Not writing HAR file because no entries were captured`);
                 return false;
             }
@@ -339,7 +178,7 @@ export class NetworkManager {
             Resources.logger(this).info(`HAR file written`);
             return true;
         } catch (err) {
-            Resources.logger(this).error(`Unable to write HAR file: ${err.message}`);
+            Resources.logger(this).error(`Unable to write HAR file: ${errorMessage(err)}`);
             return false;
         }
     }
@@ -349,8 +188,7 @@ export class NetworkManager {
      * @param sessionId - The session id value to use
      */
     set sessionId(sessionId: string) {
-        Resources.logger(this).debug(`Setting session secret to ${sessionId}`);
-        Resources.manager().sessionSecret = sessionId;
+        Resources.logger(this).debug(`Setting session id with length ${sessionId.length}`);
         this._headerJar.setHeader(new Header(`idmsa.apple.com`, HEADER_KEYS.SESSION_ID, sessionId));
     }
 
@@ -358,7 +196,7 @@ export class NetworkManager {
      * Persist the session token as session secret, required for setup
      */
     set sessionToken(sessionToken: string) {
-        Resources.logger(this).debug(`Setting session secret to ${sessionToken}`);
+        Resources.logger(this).debug(`Setting session secret with length ${sessionToken.length}`);
         Resources.manager().sessionSecret = sessionToken;
     }
 
@@ -378,7 +216,7 @@ export class NetworkManager {
      */
     set photosUrl(url: string) {
         Resources.logger(this).debug(`Setting photosUrl to ${url}`);
-        this._axios.defaults.baseURL = url + ENDPOINTS.PHOTOS.BASE_PATH;
+        this._http.baseURL = url + ENDPOINTS.PHOTOS.BASE_PATH;
     }
 
     /**
@@ -386,7 +224,21 @@ export class NetworkManager {
      * @param signinResponse- The response received from the server
      */
     applySigninResponse(signinResponse: SigninResponse) {
-        this.sessionId = signinResponse.headers[`x-apple-session-token`];
+        this.sessionToken = signinResponse.headers[`x-apple-session-token`];
+        this.accountCountry = signinResponse.headers[`x-apple-id-account-country`];
+        // The backend provides a dedicated session id, which is used by the web frontend - falling back to the session token for backwards compatibility
+        this.sessionId = signinResponse.headers[`x-apple-id-session-id`] ?? signinResponse.headers[`x-apple-session-token`];
+    }
+
+    /**
+     * Applies an updated session token, provided by the backend after a successfully validated MFA code or completed escrow (since iOS 26.4)
+     * @param response - The response received from the server
+     */
+    applySessionTokenUpdate(response: {headers: {'x-apple-session-token'?: string}}) {
+        const sessionToken = response.headers[`x-apple-session-token`];
+        if (typeof sessionToken === `string` && sessionToken.length > 0) {
+            this.sessionToken = sessionToken;
+        }
     }
 
     /**
@@ -457,38 +309,44 @@ export class NetworkManager {
     }
 
     /**
-     * Perform a POST request using the local axios instance and configuration
+     * Perform a POST request using the HTTP client
      * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
      * @param data - The data to send
+     * @param validate - Validates the response and provides the return value - created by the Validator (see `Validator.response`)
      * @param config - Additional configuration
-     * @returns A promise, that resolves once the request has been completed, or rejects if the request was not successful.
+     * @returns A promise, that resolves to the validated response once the request has been completed
+     * @throws An HttpError if the request was not successful, the validator's error if the response is invalid
      */
-    async post<T = any, R = AxiosResponse<T>, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R> {
-        return this._rateLimiter.add(async () => this._axios.post(url, data, config)) as R;
+    async post<T>(url: string, data: unknown, validate: ResponseValidator<T>, config?: HttpRequestConfig): Promise<T> {
+        return this._rateLimiter.add(async () => this._http.post(url, data, validate, config));
     }
 
     /**
-     * Perform a GET request using the local axios instance and configuration
+     * Perform a GET request using the HTTP client
      * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
+     * @param validate - Validates the response and provides the return value - created by the Validator (see `Validator.response`)
      * @param config - Additional configuration
-     * @returns A promise, that resolves once the request has been completed, or rejects if the request was not successful.
+     * @returns A promise, that resolves to the validated response once the request has been completed
+     * @throws An HttpError if the request was not successful, the validator's error if the response is invalid
      */
-    async get<T = any, R = AxiosResponse<T>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R> {
-        return this._rateLimiter.add(async () => this._axios.get(url, config)) as Promise<R>;
+    async get<T>(url: string, validate: ResponseValidator<T>, config?: HttpRequestConfig): Promise<T> {
+        return this._rateLimiter.add(async () => this._http.get(url, validate, config));
     }
 
     /**
-     * Perform a PUT request using the local axios instance and configuration
+     * Perform a PUT request using the HTTP client
      * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
      * @param data - The data to send
+     * @param validate - Validates the response and provides the return value - created by the Validator (see `Validator.response`)
      * @param config - Additional configuration
-     * @returns A promise, that resolves once the request has been completed.
+     * @returns A promise, that resolves to the validated response once the request has been completed
+     * @throws An HttpError if the request was not successful, the validator's error if the response is invalid
      */
-    async put<T = any, R = AxiosResponse<T>, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R> {
-        return this._rateLimiter.add(async () => this._axios.put(url, data, config)) as R;
+    async put<T>(url: string, data: unknown, validate: ResponseValidator<T>, config?: HttpRequestConfig): Promise<T> {
+        return this._rateLimiter.add(async () => this._http.put(url, data, validate, config));
     }
 
     /**
@@ -509,12 +367,8 @@ export class NetworkManager {
                 return;
             }
 
-            Resources.logger(this).debug(`Starting download of ${url}`);
-            const response = await this._streamingAxios.get(url);
-            Resources.logger(this).debug(`Starting to write ${url} to ${location}`);
-            const writeStream = createWriteStream(location, {flags: `w`});
-            response.data.pipe(writeStream);
-            await pEvent(writeStream, `finish`, {rejectionEvents: [`error`]});
+            Resources.logger(this).debug(`Starting download of ${url} to ${location}`);
+            await this._http.download(url, location, this._downloadTimeout);
             Resources.logger(this).debug(`Finished download of ${url}`);
         });
     }

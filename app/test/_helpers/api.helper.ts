@@ -1,4 +1,3 @@
-import mockfs from 'mock-fs';
 import * as fs from 'fs';
 import {CPLAlbum, CPLAsset, CPLMaster} from "../../src/lib/icloud/icloud-photos/query-parser";
 import path from "path";
@@ -84,5 +83,5 @@ export async function postProcessAlbumData(a: CPLAlbum): Promise<any> {
  */
 export function writeTestData(data: any, pathExt: string) {
     const basePath = `/home/coder/project/icloud-photos-sync/app/test/_data`;
-    mockfs.bypass(() => fs.writeFileSync(path.join(basePath, `${pathExt}.json`), JSON.stringify(data)));
+    fs.writeFileSync(path.join(basePath, `${pathExt}.json`), JSON.stringify(data));
 }

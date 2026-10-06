@@ -17,12 +17,12 @@ export class iCPSError extends Error {
     /**
      * Optional cause of this error
      */
-    cause?: Error;
+    cause?: unknown;
 
     /**
      * Additional 'free form' context - to be uploaded to error reporting solution
      */
-    context: unknown = {};
+    context: Record<string, unknown> = {};
 
     /**
      * Additional message, to be presented to the user
@@ -51,10 +51,10 @@ export class iCPSError extends Error {
 
     /**
      * Adds the provided error as cause of this error and applies the causing error's stack trace to maintain fingerprinting capabilities
-     * @param err - The cause of this error
+     * @param err - The cause of this error - usually an Error, however any thrown value is accepted (e.g. from a catch clause)
      * @returns This object for chaining convenience
      */
-    addCause(err: Error): iCPSError {
+    addCause(err: unknown): iCPSError {
         if (err) {
             this.cause = err;
             if (err instanceof iCPSError) {
@@ -104,7 +104,7 @@ export class iCPSError extends Error {
             if (this.cause instanceof iCPSError) {
                 desc += this.cause.getDescription();
             } else {
-                desc += this.cause.message;
+                desc += errorMessage(this.cause);
             }
         }
 
@@ -167,10 +167,20 @@ export class iCPSError extends Error {
 
         const _err = new iCPSError();
 
-        if (err instanceof Error) {
+        // Error.isError also detects errors from other realms, e.g. vm contexts
+        if (Error.isError(err)) {
             return _err.addCause(err);
         }
 
         return _err.addContext(`unknownErrorObject`, err);
     }
+}
+
+/**
+ * Extracts a human readable message from any thrown value
+ * @param err - The thrown value, e.g. from a catch clause
+ * @returns The error's message, if it is an Error, the stringified value otherwise
+ */
+export function errorMessage(err: unknown): string {
+    return Error.isError(err) ? err.message : String(err);
 }

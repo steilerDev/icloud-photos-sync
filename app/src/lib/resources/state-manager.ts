@@ -1,5 +1,5 @@
 import {iCPSError} from "../../app/error/error.js";
-import {MFA_ERR, AUTH_ERR, WEB_SERVER_ERR} from "../../app/error/error-codes.js";
+import {MFA_ERR, AUTH_ERR, WEB_SERVER_ERR, LIBRARY_ERR} from "../../app/error/error-codes.js";
 import {Resources} from "./main.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "./events-types.js";
 import {CPLAsset} from "../icloud/icloud-photos/query-parser.js";
@@ -7,6 +7,7 @@ import {Asset} from "../photos-library/model/asset.js";
 import {Album} from "../photos-library/model/album.js";
 import {MFAMethod} from "../icloud/mfa/mfa-method.js";
 import {TrustedPhoneNumber} from "./network-types.js";
+import * as fs from 'fs';
 
 export enum StateType {
     READY = `ready`,
@@ -92,9 +93,9 @@ export class StateManager {
         totalAssets: number,
         completedAssets: number
     } = {
-            totalAssets: 0,
-            completedAssets: 0
-        }
+        totalAssets: 0,
+        completedAssets: 0
+    }
 
     trustedPhoneNumbers?: TrustedPhoneNumber[] 
 
@@ -117,38 +118,38 @@ export class StateManager {
         Resources.events(this)
             .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
                 this.updateState(StateType.RUNNING, {
-                    progressMsg: `Authenticating user...`, 
+                    progressMsg: `Authenticating user...`,
                     progress: 1 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
             .on(iCPSEventCloud.MFA_REQUIRED, (trustedPhoneNumbers: TrustedPhoneNumber[]) => {
                 this.updateState(StateType.BLOCKED, {
-                    progressMsg: `Waiting for MFA code...`, 
+                    progressMsg: `Waiting for MFA code...`,
                     progress: 2 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1),
                     trustedPhoneNumbers
                 })
             })
             .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {
                 this.updateState(StateType.BLOCKED, {
-                    progressMsg: `Resending MFA code via ${method.toString()}...`, 
+                    progressMsg: `Resending MFA code via ${method.toString()}...`,
                     progress: 2 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
             .on(iCPSEventMFA.MFA_RECEIVED, (method: MFAMethod, code: string) => {
                 this.updateState(StateType.BLOCKED, {
-                    progressMsg: `MFA code received from ${method.toString()} (${code})`, 
+                    progressMsg: `MFA code received from ${method.toString()} (${code})`,
                     progress: 2 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
             .on(iCPSEventCloud.AUTHENTICATED, () => {
                 this.updateState(StateType.RUNNING, {
-                    progressMsg: `User authenticated`, 
+                    progressMsg: `User authenticated`,
                     progress: 5 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
             .on(iCPSEventCloud.TRUSTED, () => {
                 this.updateState(StateType.RUNNING, {
-                    progressMsg: `Device trusted`, 
+                    progressMsg: `Device trusted`,
                     progress: 8 * (this.prevTrigger === StateTrigger.AUTH ? 12.5 : 1)
                 });
             })
@@ -390,7 +391,7 @@ export class StateManager {
         if(this.trustedPhoneNumbers) {
             trustedPhoneNumbers = this.trustedPhoneNumbers.map((value) => {
                 return {
-                    id: value.id, 
+                    id: value.id,
                     maskedNumber: value.numberWithDialCode
                 }
             })
@@ -430,8 +431,51 @@ export class StateManager {
             logLevels.push(LogLevel.ERROR)
         }
 
-        return this.log.filter(_value => {
-            return logLevels.includes(_value.level) && _value.source.match(logFilter?.source) // .match(undefined) returns true
+        return (this.log ?? []).filter(_value => {
+            return logLevels.includes(_value.level) && (logFilter?.source === undefined || _value.source.match(logFilter.source) !== null)
         })
+    }
+
+    /**
+     * Tries to acquire the lock for the local library to execute a sync
+     * @throws An iCPSError, if the lock could not be acquired
+     */
+    acquireLibraryLock() {
+        const {lockFileExists, lockFilePath, lockingProcess} = Resources.getLockStat()
+
+        if (lockFileExists) {
+            if (Resources.pidIsRunning(lockingProcess) && !Resources.manager().force && process.pid !== lockingProcess) {
+                throw new iCPSError(LIBRARY_ERR.LOCKED)
+                    .addMessage(`Locked by foreign PID ${lockingProcess}, cannot acquire`);
+            }
+
+            Resources.logger(this).info(`Clearing stale lock`)
+
+            // Clear stale lock file
+            fs.rmSync(lockFilePath, {force: true});
+        }
+
+        // Create lock file
+        fs.writeFileSync(lockFilePath, process.pid.toString(), {encoding: `utf-8`, flush: true});
+    }
+
+    /**
+     * Tries to release the lock for the local library after completing a sync
+     * @throws An iCPSError, if the lock could not be released
+     */
+    releaseLibraryLock() {
+        const {lockFileExists, lockFilePath, lockingProcess} = Resources.getLockStat()
+
+        if (!lockFileExists) {
+            Resources.logger(this).warn(`Cannot release lock: Lock file does not exist.`);
+            return;
+        }
+
+        if (process.pid !== lockingProcess && Resources.pidIsRunning(lockingProcess) && !Resources.manager().force && process.pid !== lockingProcess) {
+            throw new iCPSError(LIBRARY_ERR.LOCKED)
+                .addMessage(`Locked by foreign PID ${lockingProcess}, cannot release`);
+        }
+
+        fs.rmSync(lockFilePath, {force: true});
     }
 }

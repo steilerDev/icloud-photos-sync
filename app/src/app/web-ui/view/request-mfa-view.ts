@@ -6,14 +6,16 @@ import {View} from "./base.js";
 
 export class RequestMfaView extends View {
     protected override get content(): string {
-        const trustedPhoneNumbers = Array.isArray(Resources.state().trustedPhoneNumbers) && Resources.state().trustedPhoneNumbers.length > 0 ?
-            Resources.state().trustedPhoneNumbers :
+        const storedPhoneNumbers = Resources.state().trustedPhoneNumbers;
+        // Falling back to Apple's default number (without id), if no trusted phone numbers are known
+        const trustedPhoneNumbers: (Partial<Pick<TrustedPhoneNumber, `id`>> & Pick<TrustedPhoneNumber, `numberWithDialCode`>)[] = Array.isArray(storedPhoneNumbers) && storedPhoneNumbers.length > 0 ?
+            storedPhoneNumbers :
             [
                 {
                     id: undefined,
                     numberWithDialCode: `Default`
                 }
-            ] as TrustedPhoneNumber[]
+            ]
         return `
             <!-- Options are sms, voice, device -->
             <h2>Choose MFA Method</h2>

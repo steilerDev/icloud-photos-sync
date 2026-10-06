@@ -4,6 +4,7 @@ name: '[monitor] iCloud API'
 on:
   schedule:
     - cron: '20 5,17 * * *'
+  workflow_dispatch: # Allow manual triggering for testing
 
 permissions:
   pull-requests: write
@@ -11,7 +12,7 @@ permissions:
 jobs:
   api-test:
     name: api-test
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/artifacts_test.yml
     with:
       methods: '["api"]'

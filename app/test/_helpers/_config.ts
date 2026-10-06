@@ -1,11 +1,15 @@
 /* CSpell:disable */
+import {randomUUID} from "crypto";
+import * as fs from "fs";
+import os from "os";
+import path from "path";
 import {iCPSAppOptions} from "../../src/app/factory";
 import {ZoneArea} from "../../src/lib/resources/resource-types";
 
 export const defaultConfig = {
     username: `test@icloud.com`,
     password: `testPass`,
-    dataDir: `/opt/icloud-photos-library`,
+    dataDir: path.join(fs.realpathSync(os.tmpdir()), `icps-test-${randomUUID()}`),
     port: 80,
     webBasePath: ``,
     maxRetries: 10,
@@ -22,8 +26,10 @@ export const defaultConfig = {
     logToCli: false,
     suppressWarnings: false,
     exportMetrics: false,
+    exportPrometheusMetrics: false,
     metadataRate: [Infinity, 0],
     enableNetworkCapture: false,
+    useSystemProxy: false,
     region: `world`,
     legacyLogin: false,
 } as iCPSAppOptions;
@@ -93,5 +99,16 @@ export const REQUEST_HEADER = {
         'X-Apple-OAuth-Response-Type': `code`,
         'X-Apple-OAuth-Response-Mode': `web_message`,
         'X-Apple-OAuth-Client-Type': `firstPartyAuth`,
+        'X-Apple-OAuth-Redirect-URI': `https://www.icloud.com`,
+        'X-Apple-OAuth-Require-Grant-Code': `true`,
+        'X-Apple-OAuth-State': `00000000-0000-4000-8000-000000000000`,
+        'X-Apple-Frame-Id': `00000000-0000-4000-8000-000000000000`,
+        'X-Apple-Offer-Security-Upgrade': `1`,
+        'X-Apple-Domain-Id': `3`,
     },
 };
+
+/**
+ * Deterministic frame id used during tests (randomly generated otherwise)
+ */
+export const frameId = `00000000-0000-4000-8000-000000000000`;

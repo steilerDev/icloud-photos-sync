@@ -1,7 +1,7 @@
 import * as http from 'http';
 import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import {iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {WEB_SERVER_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
@@ -12,22 +12,23 @@ import {serviceWorker} from './scripts/service-worker.js';
 import {RequestMfaView} from './view/request-mfa-view.js';
 import {StateView} from './view/state-view.js';
 import {SubmitMfaView} from './view/submit-mfa-view.js';
+import {PrometheusMetricsExporter} from '../event/prometheus-metrics-exporter.js';
 import {LogLevel, StateType} from '../../lib/resources/state-manager.js';
 import {NotificationPusher} from './notification-pusher.js';
 import {URL} from 'url';
-import {pEvent} from 'p-event';
+import {once} from 'events';
 
 type WebServerResponse = {
-    code: number, 
+    code: number,
     header: {
-        "Content-Type": string, // eslint-disable-line
-        "Content-Length"?: number, //eslint-disable-line
+        "Content-Type": string,
+        "Content-Length"?: number,
         Location?: string
-    }, 
+    },
     body: any
 }
 
-type WebServerRoute = (url: URL, body?: string) => WebServerResponse
+type WebServerRoute = (url: URL, body?: string, headers?: http.IncomingHttpHeaders) => WebServerResponse
 
 type WebServerSitemap = {
     POST: {
@@ -56,6 +57,11 @@ export class WebServer {
      * Provides notification capabilities to the server
      */
     notificationPusher: NotificationPusher = new NotificationPusher();
+
+    /**
+     * Provides the metrics for the /metrics endpoint - only set, if the prometheus metrics export is enabled
+     */
+    prometheusMetricsExporter?: PrometheusMetricsExporter;
 
     /**
      * Routing table for this server
@@ -87,23 +93,33 @@ export class WebServer {
      * Creates the server object and starts the web server
      * @returns 
      */
-    static async spawn(): Promise<WebServer> {
-        return new WebServer().startServer();
+    static async spawn(prometheusMetricsExporter?: PrometheusMetricsExporter): Promise<WebServer> {
+        return new WebServer(prometheusMetricsExporter).startServer();
     }
 
     /**
      * Creates the server object
+     * @param prometheusMetricsExporter - The exporter serving the /metrics endpoint - the endpoint is only exposed, if the exporter is provided and the prometheus metrics export is enabled
      * @emits iCPSEventWebServer.ERROR - When an error associated to the server occurs - Provides iCPSError as argument
      */
-    constructor() {
+    constructor(prometheusMetricsExporter?: PrometheusMetricsExporter) {
         Resources.logger(this).debug(`Preparing web server on port ${Resources.manager().webServerPort}`);
         this.server = http.createServer(this.handleRequest.bind(this));
 
         // allow the process to exit, if this server is the only thing left running
         this.server.unref();
 
-        // Default MFA request always goes to device
         this.mfaMethod = new MFAMethod();
+
+        if (prometheusMetricsExporter && Resources.manager().exportPrometheusMetrics) {
+            this.prometheusMetricsExporter = prometheusMetricsExporter;
+            this._sitemap.GET[`/metrics`] = this.handleMetricsRequest.bind(this);
+        }
+
+        // Every new MFA flow starts with the code pushed to the trusted devices
+        Resources.events(this).on(iCPSEventCloud.MFA_REQUIRED, () => {
+            this.mfaMethod = new MFAMethod();
+        });
     }
 
     /* c8 ignore start */
@@ -152,18 +168,19 @@ export class WebServer {
     async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         try {
             const url = new URL(
-                req.url.replace(new RegExp(`^${Resources.manager().webBasePath}`), ``), // Removing the web base path for request matching
+                (req.url ?? `/`).replace(new RegExp(`^${RegExp.escape(Resources.manager().webBasePath)}`), ``), // Removing the web base path for request matching (escaping, since it is user provided)
                 `http://localhost/` // Necessary, because the req.url is relative
             )
             const body = await this.readBody(req)
+            const headers = req.headers
 
             if (req.method === `GET` && url.pathname in this._sitemap.GET) {
-                this.sendResponse(this._sitemap.GET[url.pathname](url, body), res)
+                this.sendResponse(this._sitemap.GET[url.pathname](url, body, headers), res)
                 return;
             }
 
             if (req.method === `POST` && url.pathname in this._sitemap.POST) {
-                this.sendResponse(this._sitemap.POST[url.pathname](url, body), res)
+                this.sendResponse(this._sitemap.POST[url.pathname](url, body, headers), res)
                 return;
             }
 
@@ -210,7 +227,7 @@ export class WebServer {
                 req.on(`data`, chunk => {
                     body += chunk.toString();
                 });
-                await pEvent(req, `end`, {rejectionEvents: [`error`]})
+                await once(req, `end`) // Rejects if an 'error' event is emitted
 
                 Resources.logger(this).debug(`Read body: ${body}`)
                 return body;
@@ -327,6 +344,24 @@ export class WebServer {
     }
 
     /**
+     * This function will handle the request send to the metrics endpoint, negotiating the exposition format based on the Accept header
+     * @param _url - The parsed URL invoking this request
+     * @param _body - The request body
+     * @param headers - The request headers
+     */
+    handleMetricsRequest(_url: URL, _body?: string, headers?: http.IncomingHttpHeaders): WebServerResponse {
+        const exporter = this.prometheusMetricsExporter!;
+        const {contentType, body} = exporter.render(exporter.negotiate(headers?.accept));
+        return {
+            code: 200,
+            header: {
+                "Content-Type": contentType
+            },
+            body
+        }
+    }
+
+    /**
      * This function will check if the server is currently expecting an MFA code
      * @returns - Undefined if the server is expecting an MFA code, otherwise a WebServerResponse object indicating the error
      */
@@ -438,7 +473,8 @@ export class WebServer {
             return check;
         }
 
-        if (!url.search.match(/code=(\d{6})/)) {
+        const codeMatch = url.search.match(/code=(\d{6})/);
+        if (!codeMatch) {
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.CODE_FORMAT)
                 .addMessage(url.toString()));
             return {
@@ -452,7 +488,7 @@ export class WebServer {
             }
         }
 
-        const mfa: string = url.search.match(/code=(\d{6})/)[1]
+        const mfa: string = codeMatch[1]
 
         Resources.logger(this).debug(`Received MFA: ${mfa}`);
         Resources.emit(iCPSEventMFA.MFA_RECEIVED, this.mfaMethod, mfa);
@@ -500,7 +536,9 @@ export class WebServer {
         const phoneNumberIdMatch = url.search.match(/phoneNumberId=(\d+)/);
 
         if (phoneNumberIdMatch && methodString !== `device`) {
-            this.mfaMethod.update(methodString, parseInt(phoneNumberIdMatch[1], 10));
+            const phoneNumberId = parseInt(phoneNumberIdMatch[1], 10);
+            const trustedPhoneNumber = Resources.state().trustedPhoneNumbers?.find(phoneNumber => phoneNumber.id === phoneNumberId);
+            this.mfaMethod.update(methodString, phoneNumberId, trustedPhoneNumber?.nonFTEU);
         } else {
             this.mfaMethod.update(methodString);
         }
@@ -520,7 +558,7 @@ export class WebServer {
     
     handlePushSubscription(_url: URL, data?: string): WebServerResponse {
         try {
-            const pushSubscriptionData = Resources.validator().validatePushSubscription(jsonc.parse(data));
+            const pushSubscriptionData = Resources.validator().validatePushSubscription(jsonc.parse(data ?? ``));
             Resources.manager().addNotificationSubscription(pushSubscriptionData);
             return {
                 code: 201,

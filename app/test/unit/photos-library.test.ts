@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import fs from 'fs';
-import mockfs from 'mock-fs';
+import mockfs from '../_helpers/mock-fs.helper';
 import path from 'path';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 import {ARCHIVE_DIR, PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, STASH_DIR} from '../../src/lib/photos-library/constants';
@@ -278,7 +278,7 @@ describe(`Load state`, () => {
 
             expect(Object.keys(albums).length).toEqual(0);
 
-            expect(() => fs.lstatSync(path.join(Config.defaultConfig.dataDir, orphanedAlbumName))).toThrow(/^ENOENT, no such file or directory '\/opt\/icloud-photos-library\/Orphan'$/);
+            expect(() => fs.lstatSync(path.join(Config.defaultConfig.dataDir, orphanedAlbumName))).toThrow(/^ENOENT: no such file or directory/);
         });
 
         test(`Unexpected loading error`, async () => {
@@ -1563,13 +1563,13 @@ describe(`Write state`, () => {
 
                     expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`))).toBeTruthy();
                     expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset1Name))).toBeTruthy();
-                    expect(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset1Name)).mtimeMs).toEqual(asset1Modified);
+                    expect(Math.round(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset1Name)).mtimeMs)).toEqual(asset1Modified);
                     expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset2Name))).toBeTruthy();
-                    expect(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset2Name)).mtimeMs).toEqual(asset2Modified);
+                    expect(Math.round(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset2Name)).mtimeMs)).toEqual(asset2Modified);
                     expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset3Name))).toBeTruthy();
-                    expect(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset3Name)).mtimeMs).toEqual(asset3Modified);
+                    expect(Math.round(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset3Name)).mtimeMs)).toEqual(asset3Modified);
                     expect(fs.existsSync(path.join(stashDir, `.${archivedUUID}`, asset4Name))).toBeTruthy();
-                    expect(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset4Name)).mtimeMs).toEqual(asset4Modified);
+                    expect(Math.round(fs.statSync(path.join(stashDir, `.${archivedUUID}`, asset4Name)).mtimeMs)).toEqual(asset4Modified);
                     expect(fs.existsSync(path.join(stashDir, archivedName))).toBeTruthy();
 
                     expect(fs.existsSync(path.join(Config.defaultConfig.dataDir, `.${archivedUUID}`))).toBeFalsy();

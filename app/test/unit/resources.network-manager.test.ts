@@ -1,456 +1,140 @@
 
-import {afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
-import axios from "axios";
-import {AxiosHarTracker} from 'axios-har-tracker';
+import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import fs from 'fs';
-import mockfs from 'mock-fs';
+import http from 'http';
+import {AddressInfo} from 'net';
+import mockfs from '../_helpers/mock-fs.helper';
 import PQueue from 'p-queue';
 import path from 'path';
-import {Stream} from 'stream';
 import {Cookie} from 'tough-cookie';
 import {Resources} from '../../src/lib/resources/main';
-import {Header, HeaderJar, NetworkManager} from "../../src/lib/resources/network-manager";
+import {Header, HeaderJar, HttpClient, HttpResponse, NetworkCapture, ResponseValidator} from '../../src/lib/resources/http-client';
+import {RAW_RESPONSE} from '../_helpers/http-mock.helper';
+import {NetworkManager} from "../../src/lib/resources/network-manager";
 import {PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse} from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
 import {defaultConfig} from '../_helpers/_config';
-import {addHoursToCurrentDate, getDateInThePast, prepareResources} from '../_helpers/_general';
-
-describe(`HeaderJar`, () => {
-    beforeAll(() => {
-        prepareResources(); // Only setting up for access to logger
-    });
-
-    test(`Should initialize`, () => {
-        const axiosInstance = axios.create();
-        const headerJar = new HeaderJar(axiosInstance);
-
-        expect(headerJar.headers.size).toBe(13);
-        expect((axiosInstance.interceptors.request as any).handlers.length).toBe(1);
-    });
-
-    describe.each([
-        {
-            desc: `Only URL`,
-            requestConfig: {
-                url: `https://icloud.com`,
-            },
-        }, {
-            desc: `URL and baseUrl`,
-            requestConfig: {
-                url: `/somePath`,
-                baseURL: `https://icloud.com`,
-            },
-        }, {
-            desc: `Fully qualified URL and baseURL`,
-            requestConfig: {
-                url: `https://icloud.com/somePath`,
-                baseURL: `https://weirdBase.com`,
-            },
-        }, {
-            desc: `Subdomain base URL`,
-            requestConfig: {
-                url: `/somePath`,
-                baseURL: `https://subdomain.icloud.com`,
-            },
-        }, {
-            desc: `Fully qualified subdomain URL and baseURL`,
-            requestConfig: {
-                url: `https://subdomain.icloud.com/somePath`,
-                baseURL: `https://weirdBase.com`,
-            },
-        },
-    ])(`Inject headers ($desc)`, ({requestConfig}) => {
-        describe.each([
-            {
-                desc: `No Headers`,
-                headers: [],
-                injectedHeaders: {},
-            },
-            {
-                desc: `Single Header - Exact URL match`,
-                headers: [
-                    new Header(`icloud.com`, `someKey`, `someValue`),
-                ],
-                injectedHeaders: {
-                    someKey: `someValue`,
-                },
-            },
-            {
-                desc: `Single Header - Wildcard URL match`,
-                headers: [
-                    new Header(``, `someKey`, `someValue`),
-                ],
-                injectedHeaders: {
-                    someKey: `someValue`,
-                },
-            },
-            {
-                desc: `Multiple Headers - Exact URL match`,
-                headers: [
-                    new Header(`icloud.com`, `someKey`, `someValue`),
-                    new Header(`icloud.com`, `someOtherKey`, `someValue`),
-                ],
-                injectedHeaders: {
-                    someKey: `someValue`,
-                    someOtherKey: `someValue`,
-                },
-            },
-        ])(`$desc`, ({headers, injectedHeaders}) => {
-            test.each([
-                {
-                    desc: `No Cookies`,
-                    cookies: [],
-                    injectedCookieHeader: {},
-                },
-                {
-                    desc: `Cookie - Exact URL match (Cookie string)`,
-                    cookies: [
-                        `someKey=someValue; Domain=icloud.com`,
-                    ],
-                    injectedCookieHeader: {
-                        Cookie: `someKey=someValue`,
-                    },
-                },
-                {
-                    desc: `Cookie - Exact URL match`,
-                    cookies: [
-                        new Cookie({value: `someValue`, key: `someKey`, domain: `icloud.com`, expires: addHoursToCurrentDate(36)}),
-                    ],
-                    injectedCookieHeader: {
-                        Cookie: `someKey=someValue`,
-                    },
-                },
-                {
-                    desc: `Cookie - Exact URL match - Multiple cookies`,
-                    cookies: [
-                        new Cookie({value: `someValue`, key: `someKey`, domain: `icloud.com`, expires: addHoursToCurrentDate(36)}),
-                        new Cookie({value: `someValue`, key: `someOtherKey`, domain: `icloud.com`, expires: addHoursToCurrentDate(36)}),
-                    ],
-                    injectedCookieHeader: {
-                        Cookie: `someKey=someValue; someOtherKey=someValue`,
-                    },
-                },
-                {
-                    desc: `Cookie - Expired cookie`,
-                    cookies: [
-                        new Cookie({value: `someValue`, key: `someKey`, domain: `icloud.com`, expires: getDateInThePast()}),
-                    ],
-                    injectedCookieHeader: {},
-                },
-                {
-                    desc: `Cookie - No URL match`,
-                    cookies: [
-                        new Cookie({value: `someValue`, key: `someKey`, domain: `weirdURL.com`, expires: addHoursToCurrentDate(36)}),
-                    ],
-                    injectedCookieHeader: {},
-                },
-                {
-                    desc: `Cookie - No Expires`,
-                    cookies: [
-                        new Cookie({value: `someValue`, key: `someKey`, domain: `icloud.com`, expires: `Infinity`}),
-                    ],
-                    injectedCookieHeader: {
-                        Cookie: `someKey=someValue`,
-                    },
-                },
-                {
-                    desc: `Cookie - Magic Expires`,
-                    cookies: [
-                        new Cookie({value: `someValue`, key: `someKey`, domain: `icloud.com`, expires: new Date(1000)}),
-                    ],
-                    injectedCookieHeader: {
-                        Cookie: `someKey=someValue`,
-                    },
-                },
-            ])(`$desc`, ({cookies, injectedCookieHeader}) => {
-                const axiosInstance = axios.create();
-                const headerJar = new HeaderJar(axiosInstance);
-                headerJar.headers.clear();
-                headerJar.cookies.clear();
-
-                headerJar.setCookie(...cookies);
-                headerJar.setHeader(...headers);
-
-                const injectedRequestConfig = headerJar._injectHeaders({
-                    ...requestConfig,
-                    headers: {},
-                } as any);
-
-                expect(injectedRequestConfig.headers).toEqual({
-                    ...injectedHeaders,
-                    ...injectedCookieHeader,
-                });
-            });
-        });
-    });
-
-    describe(`Extract headers`, () => {
-        test.each([
-            {
-                desc: `No headers`,
-                url: `icloud.com`,
-                headers: [],
-                extractedCookies: [],
-                extractedHeaders: [],
-            }, {
-                desc: `Single cookie`,
-                url: `icloud.com`,
-                headers: {
-                    'set-cookie': [
-                        `someKey=someValue; Domain=icloud.com`,
-                    ],
-                },
-                extractedCookies: [
-                    {value: `someValue`, key: `someKey`, domain: `icloud.com`},
-                ],
-                extractedHeaders: [],
-            }, {
-                desc: `Multiple cookies`,
-                url: `icloud.com`,
-                headers: {
-                    'set-cookie': [
-                        `someKey=someValue; Domain=icloud.com`,
-                        `someOtherKey=someOtherValue; Domain=icloud.com`,
-                    ],
-                },
-                extractedCookies: [
-                    {value: `someValue`, key: `someKey`, domain: `icloud.com`},
-                    {value: `someOtherValue`, key: `someOtherKey`, domain: `icloud.com`},
-                ],
-                extractedHeaders: [],
-            }, {
-                desc: `Empty cookie`,
-                url: `icloud.com`,
-                headers: {
-                    'set-cookie': [
-                        `someKey=; Domain=icloud.com`,
-                    ],
-                },
-                extractedCookies: [],
-                extractedHeaders: [],
-            }, {
-                desc: `scnt header from idmsa.apple.com`,
-                url: `idmsa.apple.com`,
-                headers: {
-                    scnt: `someValue`,
-                },
-                extractedCookies: [],
-                extractedHeaders: [
-                    {key: `scnt`, value: `someValue`, domain: `idmsa.apple.com`},
-                ],
-            }, {
-                desc: `scnt header from non idmsa.apple.com`,
-                url: `icloud.com`,
-                headers: {
-                    scnt: `someValue`,
-                },
-                extractedCookies: [],
-                extractedHeaders: [],
-            }, {
-                desc: `ignoring random header`,
-                url: `icloud.com`,
-                headers: {
-                    random: `someValue`,
-                },
-                extractedCookies: [],
-                extractedHeaders: [],
-            }, {
-                desc: `scnt header & cookies`,
-                url: `idmsa.apple.com`,
-                headers: {
-                    scnt: `someValue`,
-                    'set-cookie': [
-                        `someKey=someValue; Domain=icloud.com`,
-                        `someOtherKey=someOtherValue; Domain=icloud.com`,
-                    ],
-                },
-                extractedCookies: [
-                    {value: `someValue`, key: `someKey`, domain: `icloud.com`},
-                    {value: `someOtherValue`, key: `someOtherKey`, domain: `icloud.com`},
-                ],
-                extractedHeaders: [
-                    {key: `scnt`, value: `someValue`, domain: `idmsa.apple.com`},
-                ],
-            },
-        ])(`$desc`, ({headers, extractedCookies, extractedHeaders, url}) => {
-            const axiosInstance = axios.create();
-            const headerJar = new HeaderJar(axiosInstance);
-
-            headerJar.headers.clear();
-            headerJar.cookies.clear();
-
-            headerJar._extractHeaders({
-                config: {
-                    baseURL: url,
-                },
-                headers,
-            } as any);
-
-            expect(Array.from(headerJar.cookies.values())).toMatchObject(extractedCookies);
-            expect(Array.from(headerJar.headers.values())).toMatchObject(extractedHeaders);
-        });
-    });
-
-    describe(`Clear header`, () => {
-        test(`Don't inject cleared header`, () => {
-            const axiosInstance = axios.create();
-            const headerJar = new HeaderJar(axiosInstance);
-            headerJar.headers.clear();
-
-            headerJar.setHeader(new Header(`icloud.com`, `someKey`, `someValue`));
-            headerJar.clearHeader(`someKey`);
-
-            const injectedRequestConfig = headerJar._injectHeaders({
-                url: `https://icloud.com/`,
-                headers: {},
-            } as any);
-
-            expect(injectedRequestConfig.headers).toEqual({});
-        });
-
-        test(`Don't clear unrelated header`, () => {
-            const axiosInstance = axios.create();
-            const headerJar = new HeaderJar(axiosInstance);
-            headerJar.headers.clear();
-
-            headerJar.setHeader(new Header(`icloud.com`, `someKey`, `someValue`));
-            headerJar.setHeader(new Header(`icloud.com`, `someOtherKey`, `someOtherValue`));
-            headerJar.clearHeader(`someKey`);
-
-            const injectedRequestConfig = headerJar._injectHeaders({
-                url: `https://icloud.com/`,
-                headers: {},
-            } as any);
-
-            expect(injectedRequestConfig.headers).toEqual({
-                someOtherKey: `someOtherValue`,
-            });
-        });
-    });
-});
+import {prepareResources} from '../_helpers/_general';
 
 describe(`NetworkManager`, () => {
     describe(`Constructor`, () => {
-        test(`Creates a new instance with default config`, () => {
-            const networkManager = new NetworkManager(defaultConfig);
+        test.each([
+            {
+                desc: `default config`,
+                config: {},
+                origin: `https://www.icloud.com`,
+                networkCapture: false,
+                downloadTimeout: 1000 * 60 * 10,
+            }, {
+                desc: `network capture enabled`,
+                config: {enableNetworkCapture: true},
+                origin: `https://www.icloud.com`,
+                networkCapture: true,
+                downloadTimeout: 1000 * 60 * 10,
+            }, {
+                desc: `china region`,
+                config: {region: Resources.Types.Region.CHINA},
+                origin: `https://www.icloud.com.cn`,
+                networkCapture: false,
+                downloadTimeout: 1000 * 60 * 10,
+            }, {
+                desc: `download timeout disabled`,
+                config: {downloadTimeout: Infinity},
+                origin: `https://www.icloud.com`,
+                networkCapture: false,
+                downloadTimeout: undefined,
+            }, {
+                desc: `download timeout set to 1`,
+                config: {downloadTimeout: 1},
+                origin: `https://www.icloud.com`,
+                networkCapture: false,
+                downloadTimeout: 1000 * 60 * 1,
+            },
+        ])(`Creates a new instance with $desc`, ({config, origin, networkCapture, downloadTimeout}) => {
+            const networkManager = new NetworkManager({...defaultConfig, ...config});
             expect(networkManager).toBeInstanceOf(NetworkManager);
 
-            expect(networkManager._axios).toBeDefined();
-            expect(networkManager._axios.defaults.headers.Origin).toEqual(`https://www.icloud.com`);
-
-            expect(networkManager._streamingAxios).toBeDefined();
-            expect(networkManager._streamingAxios.defaults.responseType).toEqual(`stream`);
+            expect(networkManager._http).toBeInstanceOf(HttpClient);
+            expect(networkManager._http.defaultHeaders).toEqual({Origin: origin});
+            expect(networkManager._http.baseURL).toBeUndefined();
 
             expect(networkManager._headerJar).toBeInstanceOf(HeaderJar);
-            expect(networkManager._harTracker).toBeUndefined();
+            expect(networkManager._http.headerJar).toBe(networkManager._headerJar);
 
-            // HeaderJar
-            expect((networkManager._axios.interceptors.request as any).handlers).toHaveLength(1);
-            expect((networkManager._axios.interceptors.response as any).handlers).toHaveLength(1);
+            if (networkCapture) {
+                expect(networkManager._networkCapture).toBeInstanceOf(NetworkCapture);
+                expect(networkManager._http.networkCapture).toBe(networkManager._networkCapture);
+            } else {
+                expect(networkManager._networkCapture).toBeUndefined();
+                expect(networkManager._http.networkCapture).toBeUndefined();
+            }
+
+            expect(networkManager._restoreProxy).toBeUndefined();
 
             expect(networkManager._rateLimiter).toBeInstanceOf(PQueue);
             expect(networkManager._streamingCCYLimiter).toBeInstanceOf(PQueue);
-            expect(networkManager._streamingCCYLimiter.timeout).toEqual(1000 * 60 * 10);
+            expect(networkManager._streamingCCYLimiter.concurrency).toEqual(defaultConfig.downloadThreads);
+            expect(networkManager._downloadTimeout).toEqual(downloadTimeout);
         });
 
-        test(`Creates a new instance with network capture enabled`, () => {
-            const networkManager = new NetworkManager({
-                ...defaultConfig,
-                enableNetworkCapture: true,
+        describe(`System proxy`, () => {
+            const proxyEnvKeys = [`HTTP_PROXY`, `http_proxy`, `HTTPS_PROXY`, `https_proxy`, `NO_PROXY`, `no_proxy`];
+            let originalEnv: Record<string, string | undefined>;
+            let proxy: http.Server;
+            let proxiedURLs: string[];
+            let networkManager: NetworkManager | undefined;
+
+            beforeEach(async () => {
+                prepareResources(); // Only setting up for access to logger
+                originalEnv = Object.fromEntries(proxyEnvKeys.map(key => [key, process.env[key]]));
+                proxyEnvKeys.forEach(key => delete process.env[key]);
+
+                proxiedURLs = [];
+                proxy = http.createServer((req, res) => {
+                    // A forward proxy receives the absolute target URL as request target
+                    proxiedURLs.push(req.url!);
+                    res.writeHead(200, {'Content-Type': `application/json`});
+                    res.end(`{"proxied":true}`);
+                });
+                await new Promise<void>(resolve => proxy.listen(0, `127.0.0.1`, resolve));
             });
-            expect(networkManager).toBeInstanceOf(NetworkManager);
 
-            expect(networkManager._axios).toBeDefined();
-            expect(networkManager._axios.defaults.headers.Origin).toEqual(`https://www.icloud.com`);
-
-            expect(networkManager._streamingAxios).toBeDefined();
-            expect(networkManager._streamingAxios.defaults.responseType).toEqual(`stream`);
-
-            expect(networkManager._headerJar).toBeInstanceOf(HeaderJar);
-            expect(networkManager._harTracker).toBeInstanceOf(AxiosHarTracker);
-
-            // HeaderJar + NetworkCapture
-            expect((networkManager._axios.interceptors.request as any).handlers).toHaveLength(2);
-            expect((networkManager._axios.interceptors.response as any).handlers).toHaveLength(2);
-
-            expect(networkManager._rateLimiter).toBeInstanceOf(PQueue);
-            expect(networkManager._streamingCCYLimiter).toBeInstanceOf(PQueue);
-            expect(networkManager._streamingCCYLimiter.timeout).toEqual(1000 * 60 * 10);
-        });
-
-        test(`Creates a new instance with china region`, () => {
-            const networkManager = new NetworkManager({
-                ...defaultConfig,
-                region: Resources.Types.Region.CHINA,
+            afterEach(async () => {
+                networkManager?._restoreProxy?.();
+                networkManager = undefined;
+                proxyEnvKeys.forEach(key => {
+                    if (originalEnv[key] === undefined) {
+                        delete process.env[key];
+                    } else {
+                        process.env[key] = originalEnv[key];
+                    }
+                });
+                proxy.closeAllConnections();
+                await new Promise(resolve => proxy.close(resolve));
             });
-            expect(networkManager).toBeInstanceOf(NetworkManager);
 
-            expect(networkManager._axios).toBeDefined();
-            expect(networkManager._axios.defaults.headers.Origin).toEqual(`https://www.icloud.com.cn`);
+            test(`Routes requests through the configured proxy`, async () => {
+                process.env.HTTP_PROXY = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`;
 
-            expect(networkManager._streamingAxios).toBeDefined();
-            expect(networkManager._streamingAxios.defaults.responseType).toEqual(`stream`);
+                networkManager = new NetworkManager({...defaultConfig, useSystemProxy: true});
+                expect(networkManager._restoreProxy).toBeDefined();
 
-            expect(networkManager._headerJar).toBeInstanceOf(HeaderJar);
-            expect(networkManager._harTracker).toBeUndefined();
+                const response = await networkManager._http.get(`http://icloud-photos-sync-proxy-test.invalid/path`, RAW_RESPONSE);
 
-            // HeaderJar
-            expect((networkManager._axios.interceptors.request as any).handlers).toHaveLength(1);
-            expect((networkManager._axios.interceptors.response as any).handlers).toHaveLength(1);
-
-            expect(networkManager._rateLimiter).toBeInstanceOf(PQueue);
-            expect(networkManager._streamingCCYLimiter).toBeInstanceOf(PQueue);
-            expect(networkManager._streamingCCYLimiter.timeout).toEqual(1000 * 60 * 10);
-        });
-
-        test(`Creates a new instance with download timeout disabled`, () => {
-            const networkManager = new NetworkManager({
-                ...defaultConfig,
-                downloadTimeout: Infinity,
+                expect(response.data).toEqual({proxied: true});
+                expect(proxiedURLs).toEqual([`http://icloud-photos-sync-proxy-test.invalid/path`]);
             });
-            expect(networkManager).toBeInstanceOf(NetworkManager);
 
-            expect(networkManager._axios).toBeDefined();
-            expect(networkManager._axios.defaults.headers.Origin).toEqual(`https://www.icloud.com`);
-
-            expect(networkManager._streamingAxios).toBeDefined();
-            expect(networkManager._streamingAxios.defaults.responseType).toEqual(`stream`);
-
-            expect(networkManager._headerJar).toBeInstanceOf(HeaderJar);
-            expect(networkManager._harTracker).toBeUndefined();
-
-            // HeaderJar
-            expect((networkManager._axios.interceptors.request as any).handlers).toHaveLength(1);
-            expect((networkManager._axios.interceptors.response as any).handlers).toHaveLength(1);
-
-            expect(networkManager._rateLimiter).toBeInstanceOf(PQueue);
-            expect(networkManager._streamingCCYLimiter).toBeInstanceOf(PQueue);
-            expect(networkManager._streamingCCYLimiter.timeout).toBeUndefined();
-        });
-
-        test(`Creates a new instance with download timeout set to 1`, () => {
-            const networkManager = new NetworkManager({
-                ...defaultConfig,
-                downloadTimeout: 1,
+            test(`Accepts missing proxy configuration`, () => {
+                networkManager = new NetworkManager({...defaultConfig, useSystemProxy: true});
+                expect(networkManager._restoreProxy).toBeDefined();
             });
-            expect(networkManager).toBeInstanceOf(NetworkManager);
 
-            expect(networkManager._axios).toBeDefined();
-            expect(networkManager._axios.defaults.headers.Origin).toEqual(`https://www.icloud.com`);
+            test(`Throws on invalid proxy configuration`, () => {
+                process.env.HTTPS_PROXY = `not a url`;
 
-            expect(networkManager._streamingAxios).toBeDefined();
-            expect(networkManager._streamingAxios.defaults.responseType).toEqual(`stream`);
-
-            expect(networkManager._headerJar).toBeInstanceOf(HeaderJar);
-            expect(networkManager._harTracker).toBeUndefined();
-
-            // HeaderJar
-            expect((networkManager._axios.interceptors.request as any).handlers).toHaveLength(1);
-            expect((networkManager._axios.interceptors.response as any).handlers).toHaveLength(1);
-
-            expect(networkManager._rateLimiter).toBeInstanceOf(PQueue);
-            expect(networkManager._streamingCCYLimiter).toBeInstanceOf(PQueue);
-            expect(networkManager._streamingCCYLimiter.timeout).toEqual(1000 * 60 * 1);
+                expect(() => new NetworkManager({...defaultConfig, useSystemProxy: true})).toThrow(/^Unable to apply the proxy configured through HTTP_PROXY \/ HTTPS_PROXY$/);
+            });
         });
     });
 
@@ -467,20 +151,22 @@ describe(`NetworkManager`, () => {
             networkManager.settleRateLimiter = jest.fn<typeof networkManager.settleRateLimiter>();
             networkManager.settleCCYLimiter = jest.fn<typeof networkManager.settleCCYLimiter>();
             networkManager.writeHarFile = jest.fn<typeof networkManager.writeHarFile>();
-            networkManager._harTracker!.resetHar = jest.fn<() => void>();
-            networkManager._axios.defaults.baseURL = `https://www.icloud.com`;
+            networkManager._networkCapture!.reset = jest.fn<() => void>();
+            networkManager._http.baseURL = `https://www.icloud.com`;
 
             Resources.manager()._resources.enableNetworkCapture = false;
             await networkManager.resetSession();
 
             expect(networkManager._headerJar.headers.has(`scnt`)).toBeFalsy();
             expect(networkManager._headerJar.headers.has(`X-Apple-ID-Session-Id`)).toBeFalsy();
+            // A new authentication flow uses a new frame id
+            expect(networkManager._headerJar.headers.get(`X-Apple-Frame-Id`)!.value).not.toEqual(Config.frameId);
             expect(networkManager.settleRateLimiter).toHaveBeenCalled();
             expect(networkManager.settleCCYLimiter).toHaveBeenCalled();
             expect(networkManager.writeHarFile).not.toHaveBeenCalled();
-            expect(networkManager._harTracker!.resetHar).not.toHaveBeenCalled();
+            expect(networkManager._networkCapture!.reset).not.toHaveBeenCalled();
 
-            expect(networkManager._axios.defaults.baseURL).toBeUndefined();
+            expect(networkManager._http.baseURL).toBeUndefined();
         });
 
         test(`Reset network - Network capture enabled`, async () => {
@@ -489,8 +175,8 @@ describe(`NetworkManager`, () => {
             networkManager.settleRateLimiter = jest.fn<typeof networkManager.settleRateLimiter>();
             networkManager.settleCCYLimiter = jest.fn<typeof networkManager.settleCCYLimiter>();
             networkManager.writeHarFile = jest.fn<typeof networkManager.writeHarFile>();
-            networkManager._harTracker!.resetHar = jest.fn<() => void>();
-            networkManager._axios.defaults.baseURL = `https://www.icloud.com`;
+            networkManager._networkCapture!.reset = jest.fn<() => void>();
+            networkManager._http.baseURL = `https://www.icloud.com`;
 
             Resources.manager()._resources.enableNetworkCapture = true;
             await networkManager.resetSession();
@@ -500,9 +186,9 @@ describe(`NetworkManager`, () => {
             expect(networkManager.settleRateLimiter).toHaveBeenCalled();
             expect(networkManager.settleCCYLimiter).toHaveBeenCalled();
             expect(networkManager.writeHarFile).toHaveBeenCalled();
-            expect(networkManager._harTracker!.resetHar).toHaveBeenCalled();
+            expect(networkManager._networkCapture!.reset).toHaveBeenCalled();
 
-            expect(networkManager._axios.defaults.baseURL).toBeUndefined();
+            expect(networkManager._http.baseURL).toBeUndefined();
         });
 
         test(`Settle rate limiter`, async () => {
@@ -585,10 +271,10 @@ describe(`NetworkManager`, () => {
 
             test(`Network capture enabled - error thrown`, async () => {
                 Resources.manager()._resources.enableNetworkCapture = true;
-                (networkManager._harTracker! as any).generatedHar.log.entries = [];
-
-                networkManager._harTracker!.getGeneratedHar = jest.fn(() => {
-                    throw new Error(`some error`);
+                Object.defineProperty(networkManager._networkCapture!, `log`, {
+                    get: () => {
+                        throw new Error(`some error`);
+                    },
                 });
 
                 const fileWritten = await networkManager.writeHarFile();
@@ -599,7 +285,7 @@ describe(`NetworkManager`, () => {
 
             test(`Network capture enabled - no entries`, async () => {
                 Resources.manager()._resources.enableNetworkCapture = true;
-                (networkManager._harTracker! as any).generatedHar.log.entries = [];
+                networkManager._networkCapture!.log.log.entries = [];
 
                 const fileWritten = await networkManager.writeHarFile();
 
@@ -609,7 +295,7 @@ describe(`NetworkManager`, () => {
 
             test(`Network capture enabled - valid entries`, async () => {
                 Resources.manager()._resources.enableNetworkCapture = true;
-                (networkManager._harTracker! as any).generatedHar.log.entries = [{someEntry: `someEntry`}];
+                networkManager._networkCapture!.log.log.entries = [{someEntry: `someEntry`} as any];
                 const expectedFileContents = JSON.stringify({
                     log: {
                         version: `1.2`,
@@ -637,7 +323,7 @@ describe(`NetworkManager`, () => {
         describe(`Setter methods`, () => {
             test(`set sessionID`, () => {
                 networkManager.sessionId = `someSessionId`;
-                expect(Resources.manager()._resources.sessionSecret).toEqual(`someSessionId`);
+                expect(Resources.manager()._resources.sessionSecret).toBeUndefined();
                 expect(networkManager._headerJar.headers.get(`X-Apple-ID-Session-Id`)!.value).toEqual(`someSessionId`);
             });
 
@@ -649,7 +335,7 @@ describe(`NetworkManager`, () => {
 
             test(`set photos url`, () => {
                 networkManager.photosUrl = `www.someUrl.com`;
-                expect(networkManager._axios.defaults.baseURL).toEqual(`www.someUrl.com/database/1/com.apple.photos.cloud/production`);
+                expect(networkManager._http.baseURL).toEqual(`www.someUrl.com/database/1/com.apple.photos.cloud/production`);
             });
         });
 
@@ -669,7 +355,52 @@ describe(`NetworkManager`, () => {
                 networkManager.applySigninResponse(signinResponse);
 
                 expect(Resources.manager()._resources.sessionSecret).toEqual(`someSessionToken`);
+                // Falling back to session token, if no dedicated session id is provided
                 expect(networkManager._headerJar.headers.get(`X-Apple-ID-Session-Id`)!.value).toEqual(`someSessionToken`);
+                expect(networkManager.accountCountry).toBeUndefined();
+            });
+
+            test(`Apply SigninResponse - with session id and account country`, () => {
+                const signinResponse = {
+                    data: {
+                        authType: `hsa2`,
+                    },
+                    headers: {
+                        scnt: `someScnt`,
+                        'x-apple-session-token': `someSessionToken`,
+                        'x-apple-id-session-id': `someSessionId`,
+                        'x-apple-id-account-country': `DEU`,
+                        'set-cookie': [],
+                    },
+                } as SigninResponse;
+
+                networkManager.applySigninResponse(signinResponse);
+
+                expect(Resources.manager()._resources.sessionSecret).toEqual(`someSessionToken`);
+                expect(networkManager._headerJar.headers.get(`X-Apple-ID-Session-Id`)!.value).toEqual(`someSessionId`);
+                expect(networkManager.accountCountry).toEqual(`DEU`);
+            });
+
+            test.each([
+                {
+                    desc: `with session token`,
+                    headers: {'x-apple-session-token': `newSessionToken`},
+                    expected: `newSessionToken`,
+                }, {
+                    desc: `without session token`,
+                    headers: {},
+                    expected: `oldSessionToken`,
+                }, {
+                    desc: `with empty session token`,
+                    headers: {'x-apple-session-token': ``},
+                    expected: `oldSessionToken`,
+                },
+            ])(`Apply MFA response $desc`, ({headers, expected}) => {
+                Resources.manager()._resources.sessionSecret = `oldSessionToken`;
+
+                networkManager.applySessionTokenUpdate({headers} as any);
+
+                expect(Resources.manager()._resources.sessionSecret).toEqual(expected);
             });
 
             test(`Apply TrustResponse`, () => {
@@ -734,7 +465,7 @@ describe(`NetworkManager`, () => {
                 } as SetupResponse;
                 expect(networkManager.applySetupResponse(setupResponse)).toBe(expectedReturnVal);
 
-                expect(networkManager._axios.defaults.baseURL).toEqual(expectedPhotosUrl);
+                expect(networkManager._http.baseURL).toEqual(expectedPhotosUrl);
             });
 
 
@@ -933,59 +664,64 @@ describe(`NetworkManager`, () => {
         });
 
         describe(`Network methods`, () => {
+            const validator = ((response: HttpResponse) => response.data) as ResponseValidator<unknown>;
+
             test(`metadata get request`, async () => {
-                networkManager._axios.get = jest.fn<typeof networkManager._axios.get>() as any;
+                networkManager._http.get = jest.fn<typeof networkManager._http.get>() as any;
                 networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
-                networkManager.get(`someUrl`, {some: `params`} as any);
+                networkManager.get(`someUrl`, validator, {params: {some: `params`}});
 
                 // Making sure request is added to the rate limiter queue
                 expect(networkManager._rateLimiter.add).toHaveBeenCalledTimes(1);
 
-                expect(networkManager._axios.get).toHaveBeenCalledTimes(0);
+                expect(networkManager._http.get).toHaveBeenCalledTimes(0);
                 // "firing" from the rate limiter queue
                 await (networkManager._rateLimiter.add as any).mock.calls[0][0]();
 
-                expect(networkManager._axios.get).toHaveBeenCalledWith(`someUrl`, {some: `params`} as any);
+                expect(networkManager._http.get).toHaveBeenCalledWith(`someUrl`, validator, {params: {some: `params`}});
             });
 
             test(`metadata post request`, async () => {
-                networkManager._axios.post = jest.fn<typeof networkManager._axios.post>() as any;
+                networkManager._http.post = jest.fn<typeof networkManager._http.post>() as any;
                 networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
-                networkManager.post(`someUrl`, {some: `data`}, {some: `params`} as any);
+                networkManager.post(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
 
                 // Making sure request is added to the rate limiter queue
                 expect(networkManager._rateLimiter.add).toHaveBeenCalledTimes(1);
 
-                expect(networkManager._axios.post).toHaveBeenCalledTimes(0);
+                expect(networkManager._http.post).toHaveBeenCalledTimes(0);
                 // "firing" from the rate limiter queue
                 await (networkManager._rateLimiter.add as any).mock.calls[0][0]();
 
-                expect(networkManager._axios.post).toHaveBeenCalledWith(`someUrl`, {some: `data`}, {some: `params`} as any);
+                expect(networkManager._http.post).toHaveBeenCalledWith(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
             });
 
             test(`metadata put request`, async () => {
-                networkManager._axios.put = jest.fn<typeof networkManager._axios.put>() as any;
+                networkManager._http.put = jest.fn<typeof networkManager._http.put>() as any;
                 networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
-                networkManager.put(`someUrl`, {some: `data`}, {some: `params`} as any);
+                networkManager.put(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
 
                 // Making sure request is added to the rate limiter queue
                 expect(networkManager._rateLimiter.add).toHaveBeenCalledTimes(1);
 
-                expect(networkManager._axios.put).toHaveBeenCalledTimes(0);
+                expect(networkManager._http.put).toHaveBeenCalledTimes(0);
                 // "firing" from the rate limiter queue
                 await (networkManager._rateLimiter.add as any).mock.calls[0][0]();
 
-                expect(networkManager._axios.put).toHaveBeenCalledWith(`someUrl`, {some: `data`}, {some: `params`} as any);
+                expect(networkManager._http.put).toHaveBeenCalledWith(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
+            });
+
+            test(`metadata request returns validated response`, async () => {
+                networkManager._http._send = jest.fn<typeof networkManager._http._send>()
+                    .mockResolvedValue({status: 200, statusText: ``, headers: new Headers(), body: `{"some":"data"}`});
+
+                await expect(networkManager.get(`https://icloud.com`, validator)).resolves.toEqual({some: `data`});
             });
 
             describe(`Download data`, () => {
-                beforeEach(() => {
-
-                });
-
                 afterEach(() => {
                     mockfs.restore();
                 });
@@ -996,32 +732,52 @@ describe(`NetworkManager`, () => {
                     });
 
                     const downloadPath = path.join(Config.defaultConfig.dataDir, `some.file`);
-                    const data = `someData`;
                     const url = `someUrl`;
 
                     networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>() as any;
-                    networkManager._streamingAxios.get = jest.fn<typeof networkManager._streamingAxios.get>()
-                        .mockImplementation((() => {
-                            const readableStream = new Stream.Readable();
-                            readableStream._read = () => { };
-                            readableStream.push(data);
-                            readableStream.push(null);
-                            return {
-                                data: readableStream,
-                            };
-                        }) as any) as any;
+                    networkManager._http.download = jest.fn<typeof networkManager._http.download>()
+                        .mockResolvedValue();
 
                     networkManager.downloadData(url, downloadPath);
 
                     // Making sure request is added to CCY limiter queue
                     expect(networkManager._streamingCCYLimiter.add).toHaveBeenCalledTimes(1);
+                    expect(networkManager._http.download).not.toHaveBeenCalled();
 
                     // 'firing' from the CCY limiter queue
                     await (networkManager._streamingCCYLimiter.add as any).mock.calls[0][0]();
 
-                    expect(networkManager._streamingAxios.get).toHaveBeenCalledWith(url);
-                    expect(fs.existsSync(downloadPath)).toBeTruthy();
-                    expect(fs.readFileSync(downloadPath, `utf8`)).toEqual(data);
+                    expect(networkManager._http.download).toHaveBeenCalledWith(url, downloadPath, 1000 * 60 * 10);
+                });
+
+                test(`Download data - writes file`, async () => {
+                    mockfs({
+                        [Config.defaultConfig.dataDir]: {},
+                    });
+
+                    const downloadPath = path.join(Config.defaultConfig.dataDir, `some.file`);
+                    networkManager._http._fetch = jest.fn<typeof networkManager._http._fetch>()
+                        .mockResolvedValue(new Response(`someData`));
+
+                    await networkManager.downloadData(`https://cvws.icloud-content.com/someAsset`, downloadPath);
+
+                    expect(networkManager._http._fetch).toHaveBeenCalledWith(`https://cvws.icloud-content.com/someAsset`, {signal: expect.any(AbortSignal)});
+                    expect(fs.readFileSync(downloadPath, `utf8`)).toEqual(`someData`);
+                });
+
+                test(`Download data - no timeout`, async () => {
+                    mockfs({
+                        [Config.defaultConfig.dataDir]: {},
+                    });
+
+                    const downloadPath = path.join(Config.defaultConfig.dataDir, `some.file`);
+                    networkManager._downloadTimeout = undefined;
+                    networkManager._http._fetch = jest.fn<typeof networkManager._http._fetch>()
+                        .mockResolvedValue(new Response(`someData`));
+
+                    await networkManager.downloadData(`https://cvws.icloud-content.com/someAsset`, downloadPath);
+
+                    expect(networkManager._http._fetch).toHaveBeenCalledWith(`https://cvws.icloud-content.com/someAsset`, {signal: undefined});
                 });
 
                 test(`Download data - file exists`, async () => {
@@ -1036,7 +792,7 @@ describe(`NetworkManager`, () => {
                     });
 
                     networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>() as any;
-                    networkManager._streamingAxios.get = jest.fn<typeof networkManager._streamingAxios.get>() as any;
+                    networkManager._http.download = jest.fn<typeof networkManager._http.download>() as any;
 
                     networkManager.downloadData(url, downloadPath);
 
@@ -1046,7 +802,7 @@ describe(`NetworkManager`, () => {
                     // 'firing' from the CCY limiter queue
                     await (networkManager._streamingCCYLimiter.add as any).mock.calls[0][0]();
 
-                    expect(networkManager._streamingAxios.get).not.toHaveBeenCalled();
+                    expect(networkManager._http.download).not.toHaveBeenCalled();
 
                     expect(fs.existsSync(downloadPath)).toBeTruthy();
                     expect(fs.readFileSync(downloadPath, `utf8`)).toEqual(data);
@@ -1063,7 +819,7 @@ describe(`NetworkManager`, () => {
                     });
 
                     networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>() as any;
-                    networkManager._streamingAxios.get = jest.fn<typeof networkManager._streamingAxios.get>() as any;
+                    networkManager._http.download = jest.fn<typeof networkManager._http.download>() as any;
 
                     networkManager.downloadData(url, downloadPath);
 
@@ -1073,7 +829,7 @@ describe(`NetworkManager`, () => {
                     // 'firing' from the CCY limiter queue
                     await (networkManager._streamingCCYLimiter.add as any).mock.calls[0][0]();
 
-                    expect(networkManager._streamingAxios.get).not.toHaveBeenCalled();
+                    expect(networkManager._http.download).not.toHaveBeenCalled();
                 });
             });
         });
