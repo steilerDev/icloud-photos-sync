@@ -481,7 +481,7 @@ export class iCloud {
      * @emits iCPSEventCloud.ACCOUNT_READY - When account is ready to be used
      * @emits iCPSEventCloud.SESSION_EXPIRED - When the session token has expired
      * @emits iCPSEventCloud.PCS_REQUIRED - When the account is setup using ADP and PCS cookies are required
-     * @emits iCPSEventCloud.ERROR - When an error occurs - provides iCPSError as argument
+     * @emits iCPSEventCloud.ERROR - When an error occurs (including an account that requires an action through the iCloud web frontend) - provides iCPSError as argument
      */
     async setupAccount() {
         try {
@@ -498,6 +498,16 @@ export class iCloud {
 
             const response = await Resources.network().post(url, data);
             const validatedResponse = Resources.validator().validateSetupResponse(response);
+
+            // In case the account requires an action through the iCloud web frontend (e.g. accepting updated terms), the backend only provides a 'repair' session without web auth token
+            const webAuthTokenProvided = validatedResponse.headers[`set-cookie`].some(cookieString => cookieString.startsWith(`${COOKIE_KEYS.WEBAUTH_TOKEN}=`));
+            if (validatedResponse.data.isRepairNeeded || validatedResponse.data.termsUpdateNeeded || !webAuthTokenProvided) {
+                throw new iCPSError(AUTH_ERR.ACCOUNT_SETUP_INCOMPLETE)
+                    .addContext(`isRepairNeeded`, validatedResponse.data.isRepairNeeded)
+                    .addContext(`termsUpdateNeeded`, validatedResponse.data.termsUpdateNeeded)
+                    .addContext(`webAuthTokenProvided`, webAuthTokenProvided);
+            }
+
             if (!Resources.network().applySetupResponse(validatedResponse)) {
                 Resources.logger(this).debug(`PCS required, acquiring...`);
                 Resources.emit(iCPSEventCloud.PCS_REQUIRED);

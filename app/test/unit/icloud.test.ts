@@ -1283,6 +1283,7 @@ describe.each([
                         'set-cookie': [
                             `X-APPLE-WEBAUTH-PCS-Photos="someVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
                             `X-APPLE-WEBAUTH-PCS-Sharing="someOtherVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                            `X-APPLE-WEBAUTH-TOKEN="someToken";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
                         ],
                     },
                     data: {
@@ -1329,7 +1330,9 @@ describe.each([
             mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>()
                 .mockReturnValue({
                     headers: {
-                        'set-cookie': [],   
+                        'set-cookie': [
+                            `X-APPLE-WEBAUTH-TOKEN="someToken";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                        ],
                     },
                     data: {
                         dsInfo: {
@@ -1365,6 +1368,60 @@ describe.each([
             expect(mockedNetworkManager.applySetupResponse).toHaveBeenCalled();
             expect(pcsRequiredEvent).toHaveBeenCalledTimes(1);
             expect(icloud.photos).toBeDefined();
+        });
+
+        test.each([
+            {
+                desc: `repair needed`,
+                data: {isRepairNeeded: true},
+                cookies: [`X-APPLE-WEBAUTH-TOKEN="someToken";Path=/;Domain=.icloud.com;Secure;HttpOnly`],
+            }, {
+                desc: `terms update needed`,
+                data: {termsUpdateNeeded: true},
+                cookies: [`X-APPLE-WEBAUTH-TOKEN="someToken";Path=/;Domain=.icloud.com;Secure;HttpOnly`],
+            }, {
+                desc: `web auth token missing`,
+                data: {isRepairNeeded: false, termsUpdateNeeded: false},
+                cookies: [`X-APPLE-WEBAUTH-REPAIR="someVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`],
+            },
+        ])(`Error - Account setup incomplete ($desc)`, async ({data, cookies}) => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>()
+                .mockReturnValue({
+                    headers: {
+                        'set-cookie': cookies,
+                    },
+                    data: {
+                        ...data,
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {
+                            ckdatabasews: {
+                                url: `someURL`,
+                                pcsRequired: true,
+                                status: `active`,
+                            },
+                        },
+                    },
+                });
+            mockedNetworkManager.applySetupResponse = jest.fn<typeof mockedNetworkManager.applySetupResponse>();
+
+            const pcsRequiredEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.PCS_REQUIRED);
+
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(200);
+
+            await icloud.setupAccount();
+            const err = await iCloudReady.catch(err => err) as iCPSError;
+
+            expect(err.message).toEqual(`Unable to setup iCloud Account`);
+            expect((err.cause as iCPSError).code).toEqual(AUTH_ERR.ACCOUNT_SETUP_INCOMPLETE.code);
+            expect(mockedNetworkManager.applySetupResponse).not.toHaveBeenCalled();
+            expect(pcsRequiredEvent).not.toHaveBeenCalled();
         });
 
         test(`Session expired`, async () => {

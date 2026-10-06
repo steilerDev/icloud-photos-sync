@@ -821,6 +821,27 @@ describe(`Validator`, () => {
             expect(() => validator.validateSetupResponse(data)).not.toThrow();
         });
 
+        test(`should validate a valid setup response requiring an action through the iCloud web frontend`, () => {
+            const data = {
+                headers: getICloudCookieHeader(),
+                data: {
+                    dsInfo: {
+                        isWebAccessAllowed: true,
+                    },
+                    isRepairNeeded: true,
+                    termsUpdateNeeded: true,
+                    webservices: {
+                        ckdatabasews: {
+                            url: Config.photosDomain,
+                            pcsRequired: true,
+                            status: `active`,
+                        },
+                    },
+                },
+            };
+            expect(() => validator.validateSetupResponse(data)).not.toThrow();
+        });
+
         test.each([
             {
                 data: {

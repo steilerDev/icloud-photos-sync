@@ -46,6 +46,7 @@ export const COOKIE_KEYS = {
     X_APPLE: `X-APPLE-`,
     PCS_PHOTOS: `X-APPLE-WEBAUTH-PCS-Photos`,
     PCS_SHARING: `X-APPLE-WEBAUTH-PCS-Sharing`,
+    WEBAUTH_TOKEN: `X-APPLE-WEBAUTH-TOKEN`,
 };
 
 /**
@@ -355,6 +356,14 @@ export type SetupResponse = {
              */
             isWebAccessAllowed: true,
         }
+        /**
+         * Set, if the account requires a repair through the iCloud web frontend - if missing not necessary
+         */
+        isRepairNeeded?: boolean,
+        /**
+         * Set, if updated terms and conditions need to be accepted through the iCloud web frontend - if missing not necessary
+         */
+        termsUpdateNeeded?: boolean,
         /**
          * Holds the dynamic iCloud service URLs
          */
