@@ -7,7 +7,7 @@ import { iCloudCrypto } from '../../src/lib/icloud/icloud.crypto';
 import { MFAMethod } from '../../src/lib/icloud/mfa/mfa-method';
 import { iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning } from '../../src/lib/resources/events-types';
 import { Resources } from '../../src/lib/resources/main';
-import { Header } from '../../src/lib/resources/network-manager';
+import { Header } from '../../src/lib/resources/http-client';
 import { SigninInitResponse } from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
 import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
@@ -187,7 +187,7 @@ describe.each([
             const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
             const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR);
 
-            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>();
+            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>(response => response as any);
             mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
             mockedNetworkManager.mock
@@ -215,7 +215,7 @@ describe.each([
             const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
             const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR);
 
-            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>();
+            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>(response => response as any);
             mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
             mockedNetworkManager.mock
@@ -251,7 +251,7 @@ describe.each([
             const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
             const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR);
 
-            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>();
+            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>(response => response as any);
             mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
             mockedNetworkManager.mock
@@ -277,7 +277,7 @@ describe.each([
             const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
             const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR);
 
-            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>();
+            mockedValidator.validateSigninResponse = jest.fn<typeof mockedValidator.validateSigninResponse>(response => response as any);
             mockedNetworkManager.applySigninResponse = jest.fn<typeof mockedNetworkManager.applySigninResponse>();
 
             mockedNetworkManager.mock

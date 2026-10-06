@@ -112,6 +112,12 @@ Options:
                                    file for debugging purposes. Written to
                                    \`.icloud-photos-sync.har\` in the data dir.
                                    (default: false, env: ENABLE_NETWORK_CAPTURE)
+  --use-system-proxy               Routes all requests through the proxy
+                                   configured by the \`HTTP_PROXY\` and
+                                   \`HTTPS_PROXY\` environment variables
+                                   (honouring \`NO_PROXY\`). Proxy variables are
+                                   ignored otherwise. (default: false, env:
+                                   USE_SYSTEM_PROXY)
   --metadata-rate <interval>       Limits the rate of metadata fetching in order
                                    to avoid getting throttled by the API.
                                    Expects the format

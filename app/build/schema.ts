@@ -55,6 +55,26 @@ const schemaList = [
         typeName: `PhotosSetupResponse`,
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
+    }, {
+        typeName: `MFASubmitResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `EscrowCompleteResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `LogoutResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `CloudKitRecordsResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `HealthCheckPingResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
     },
 ];
 

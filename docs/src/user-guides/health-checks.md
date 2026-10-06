@@ -14,5 +14,6 @@ ICPS uses the health check ping url in compliance with [healthchecks.io](https:/
 2. When the sync completes successfully, ICPS will send a POST request to the plain health check URL.
 3. When the sync fails, ICPS will send a POST request to the health check URL with `/fail` appended.
 4. Each of the requests contain the last 100KB of logs in the request body.
+5. ICPS expects a successful (`2xx`) plain text response (`Content-Type: text/plain`), as sent by healthchecks.io. Any other response is logged as a failed ping, the sync itself is not affected.
 
 Aside from the explicit failure request, the monitoring service is expected to consider the service unhealthy if the success request is not received within the configured interval.

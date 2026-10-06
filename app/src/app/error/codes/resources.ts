@@ -50,3 +50,7 @@ export const NO_PRIMARY_ZONE: ErrorStruct = buildErrorStruct(
 export const NO_SHARED_ZONE: ErrorStruct = buildErrorStruct(
     name, prefix, `NO_SHARED_ZONE`, `No shared photos zone present`,
 );
+
+export const INVALID_PROXY: ErrorStruct = buildErrorStruct(
+    name, prefix, `INVALID_PROXY`, `Unable to apply the proxy configured through HTTP_PROXY / HTTPS_PROXY`,
+);

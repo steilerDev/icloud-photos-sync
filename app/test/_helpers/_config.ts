@@ -29,6 +29,7 @@ export const defaultConfig = {
     exportPrometheusMetrics: false,
     metadataRate: [Infinity, 0],
     enableNetworkCapture: false,
+    useSystemProxy: false,
     region: `world`,
     legacyLogin: false,
 } as iCPSAppOptions;

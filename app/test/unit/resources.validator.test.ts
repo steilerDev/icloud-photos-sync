@@ -1,9 +1,10 @@
-import {describe, test, expect, beforeEach} from '@jest/globals';
+import {describe, test, expect, beforeEach, jest} from '@jest/globals';
 import {Validator} from '../../src/lib/resources/validator';
-import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
+import {ICLOUD_PHOTOS_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {ResendMFADeviceResponse, ResendMFAPhoneResponse, TrustResponse} from '../../src/lib/resources/network-types';
 import {getICloudCookieHeader} from '../_helpers/icloud.helper';
 import * as Config from '../_helpers/_config';
+import {HttpResponse} from '../../src/lib/resources/http-client';
 
 describe(`Validator`, () => {
     let validator: Validator;
@@ -349,6 +350,19 @@ describe(`Validator`, () => {
         test.each([
             {
                 data: {
+                    status: 409,
+                    data: {
+                        authType: `hsa2`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                        'x-apple-session-token': `sessionToken`,
+                        'set-cookie': [`aasp=123`],
+                    },
+                },
+            }, {
+                data: {
+                    status: 200,
                     data: {
                         authType: `hsa2`,
                     },
@@ -366,6 +380,7 @@ describe(`Validator`, () => {
         test.each([
             {
                 data: {
+                    status: 409,
                     data: {},
                     headers: {
                         scnt: `scntString`,
@@ -376,6 +391,20 @@ describe(`Validator`, () => {
                 desc: `missing auth type in body`,
             }, {
                 data: {
+                    status: 500,
+                    data: {
+                        authType: `hsa2`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                        'x-apple-session-token': `sessionToken`,
+                        'set-cookie': [`aasp=123`],
+                    },
+                },
+                desc: `unexpected status`,
+            }, {
+                data: {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },
@@ -387,6 +416,7 @@ describe(`Validator`, () => {
                 desc: `missing scnt header value`,
             }, {
                 data: {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },
@@ -398,6 +428,7 @@ describe(`Validator`, () => {
                 desc: `missing session token in headers`,
             }, {
                 data: {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },
@@ -409,6 +440,7 @@ describe(`Validator`, () => {
                 desc: `missing set-cookie headers`,
             }, {
                 data: {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },
@@ -1332,6 +1364,132 @@ describe(`Validator`, () => {
             } 
         ])(`should throw an error for an invalid photos setup response: $desc`, ({data}) => {
             expect(() => validator.validatePhotosSetupResponse(data)).toThrow(VALIDATOR_ERR.PHOTOS_SETUP_RESPONSE);
+        });
+    });
+    describe.each([
+        {
+            desc: `MFA submit response`,
+            validate: (v: Validator, data: unknown) => v.validateMFASubmitResponse(data),
+            error: VALIDATOR_ERR.MFA_SUBMIT_RESPONSE,
+            valid: [
+                {desc: `device code accepted`, data: {status: 204, data: ``, headers: {}}},
+                {desc: `phone code accepted`, data: {status: 200, data: {securityCode: {code: `123456`}}, headers: {}}},
+                {desc: `valid code since iOS 26.4`, data: {status: 409, data: {securityCode: {valid: true}}, headers: {'x-apple-session-token': `someToken`}}},
+                {desc: `rejected code since iOS 26.4`, data: {status: 409, data: {service_errors: [{code: `-21669`, message: `Incorrect verification code.`}]}, headers: {}}},
+            ],
+            invalid: [
+                {desc: `unexpected status`, data: {status: 202, data: ``, headers: {}}},
+                {desc: `invalid validity flag`, data: {status: 409, data: {securityCode: {valid: `true`}}, headers: {}}},
+                {desc: `invalid service errors`, data: {status: 409, data: {service_errors: `someError`}, headers: {}}},
+                {desc: `empty session token`, data: {status: 409, data: ``, headers: {'x-apple-session-token': ``}}},
+                {desc: `missing headers`, data: {status: 204, data: ``}},
+            ],
+        }, {
+            desc: `escrow complete response`,
+            validate: (v: Validator, data: unknown) => v.validateEscrowCompleteResponse(data),
+            error: VALIDATOR_ERR.ESCROW_COMPLETE_RESPONSE,
+            valid: [
+                {desc: `with session token`, data: {status: 200, data: ``, headers: {'x-apple-session-token': `someToken`}}},
+                {desc: `without session token`, data: {status: 200, data: ``, headers: {}}},
+            ],
+            invalid: [
+                {desc: `empty session token`, data: {status: 200, data: ``, headers: {'x-apple-session-token': ``}}},
+                {desc: `missing headers`, data: {status: 200, data: ``}},
+            ],
+        }, {
+            desc: `logout response`,
+            validate: (v: Validator, data: unknown) => v.validateLogoutResponse(data),
+            error: VALIDATOR_ERR.LOGOUT_RESPONSE,
+            valid: [
+                {desc: `logged out`, data: {status: 200, data: {success: true}, headers: {}}},
+                {desc: `session expired`, data: {status: 421, data: ``, headers: {}}},
+            ],
+            invalid: [
+                {desc: `unexpected status`, data: {status: 204, data: ``, headers: {}}},
+            ],
+        }, {
+            desc: `query response`,
+            validate: (v: Validator, data: unknown) => v.validateQueryResponse(data),
+            error: ICLOUD_PHOTOS_ERR.UNEXPECTED_QUERY_RESPONSE,
+            valid: [
+                {desc: `records`, data: {status: 200, data: {records: [{recordName: `someRecord`}]}, headers: {}}},
+                {desc: `records with continuation marker`, data: {status: 200, data: {records: [], continuationMarker: `someMarker`}, headers: {}}},
+            ],
+            invalid: [
+                {desc: `missing records`, data: {status: 200, data: {}, headers: {}}},
+                {desc: `records not an array`, data: {status: 200, data: {records: `someRecord`}, headers: {}}},
+                {desc: `empty body`, data: {status: 200, data: ``, headers: {}}},
+            ],
+        }, {
+            desc: `operation response`,
+            validate: (v: Validator, data: unknown) => v.validateOperationResponse(data),
+            error: ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE,
+            valid: [
+                {desc: `records`, data: {status: 200, data: {records: [{recordName: `someRecord`}]}, headers: {}}},
+            ],
+            invalid: [
+                {desc: `missing records`, data: {status: 200, data: {}, headers: {}}},
+            ],
+        }, {
+            desc: `health check ping response`,
+            validate: (v: Validator, data: unknown) => v.validateHealthCheckPingResponse(data),
+            error: VALIDATOR_ERR.HEALTH_CHECK_PING_RESPONSE,
+            valid: [
+                {desc: `OK`, data: {status: 200, data: `OK`, text: `OK`, headers: {'content-type': `text/plain; charset=utf-8`}}},
+                {desc: `empty body`, data: {status: 200, data: ``, text: ``, headers: {'content-type': `text/plain`}}},
+                {desc: `other successful status`, data: {status: 204, data: ``, text: ``, headers: {'content-type': `text/plain`}}},
+            ],
+            invalid: [
+                {desc: `JSON response`, data: {status: 200, data: {ok: true}, text: `{"ok":true}`, headers: {'content-type': `application/json`}}},
+                {desc: `HTML response`, data: {status: 200, data: `<html></html>`, text: `<html></html>`, headers: {'content-type': `text/html`}}},
+                {desc: `missing content type`, data: {status: 200, data: `OK`, text: `OK`, headers: {}}},
+                {desc: `unsuccessful status`, data: {status: 302, data: `OK`, text: `OK`, headers: {'content-type': `text/plain`}}},
+                {desc: `missing text`, data: {status: 200, data: `OK`, headers: {'content-type': `text/plain`}}},
+            ],
+        },
+    ])(`$desc`, ({validate, error, valid, invalid}) => {
+        test.each(valid)(`should validate: $desc`, ({data}) => {
+            expect(validate(validator, data)).toBe(data);
+        });
+
+        test.each(invalid)(`should throw an error: $desc`, ({data}) => {
+            expect(() => validate(validator, data)).toThrow(error);
+        });
+    });
+
+    describe(`Response validators`, () => {
+        const response = {status: 200, statusText: ``, headers: {}, data: {}, text: `{}`, config: {method: `GET`, url: ``, fullURL: ``, headers: {}, startedAt: 0}} as HttpResponse;
+
+        test.each([
+            {key: `signinInit`, method: `validateSigninInitResponse`},
+            {key: `signin`, method: `validateSigninResponse`},
+            {key: `escrowInit`, method: `validateEscrowInitResponse`},
+            {key: `escrowComplete`, method: `validateEscrowCompleteResponse`},
+            {key: `resendMFADevice`, method: `validateResendMFADeviceResponse`},
+            {key: `resendMFAPhone`, method: `validateResendMFAPhoneResponse`},
+            {key: `mfaSubmit`, method: `validateMFASubmitResponse`},
+            {key: `trust`, method: `validateTrustResponse`},
+            {key: `setup`, method: `validateSetupResponse`},
+            {key: `pcs`, method: `validatePCSResponse`},
+            {key: `logout`, method: `validateLogoutResponse`},
+            {key: `photosSetup`, method: `validatePhotosSetupResponse`},
+            {key: `query`, method: `validateQueryResponse`},
+            {key: `operation`, method: `validateOperationResponse`},
+            {key: `healthCheckPing`, method: `validateHealthCheckPingResponse`},
+        ] as const)(`$key delegates to $method at validation time`, ({key, method}) => {
+            (validator as any)[method] = jest.fn(() => `validated`);
+
+            expect(validator.response[key](response)).toEqual(`validated`);
+            expect((validator as any)[method]).toHaveBeenCalledWith(response);
+        });
+
+        test(`authInformation validates the extracted value`, () => {
+            validator.validateAuthInformationResponse = jest.fn<typeof validator.validateAuthInformationResponse>(() => `validated` as any);
+            const extract = jest.fn(() => `extracted`);
+
+            expect(validator.response.authInformation(extract)(response)).toEqual(`validated`);
+            expect(extract).toHaveBeenCalledWith(response);
+            expect(validator.validateAuthInformationResponse).toHaveBeenCalledWith(`extracted`);
         });
     });
 });

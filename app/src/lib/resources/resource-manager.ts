@@ -351,6 +351,13 @@ export class ResourceManager {
     }
 
     /**
+     * @returns If the application should route requests through the proxy configured in the environment
+     */
+    get useSystemProxy(): boolean {
+        return this._resources.useSystemProxy;
+    }
+
+    /**
      * @returns The region to be used for this app
      */
     get region(): Resources.Types.Region {

@@ -1,8 +1,9 @@
 
 import * as Ajv from 'ajv';
-import {ErrorStruct, VALIDATOR_ERR} from "../../app/error/error-codes.js";
+import {ErrorStruct, ICLOUD_PHOTOS_ERR, VALIDATOR_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
-import {AuthInformationResponse, COOKIE_KEYS, EscrowInitResponse, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
+import {HttpResponse, ResponseValidator} from "./http-client.js";
+import {AuthInformationResponse, CloudKitRecordsResponse, COOKIE_KEYS, EscrowCompleteResponse, EscrowInitResponse, HealthCheckPingResponse, LogoutResponse, MFASubmitResponse, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
 import {ResourceFile} from "./resource-types.js";
 import {PushSubscription} from './web-server-types.js';
 import PCSResponseSchema from "./schemas/pcs-response.json" with { type: "json" };
@@ -17,6 +18,11 @@ import SigninInitResponseSchema from "./schemas/signin-init-response.json" with 
 import EscrowInitResponseSchema from "./schemas/escrow-init-response.json" with { type: "json" };
 import SigninResponseSchema from "./schemas/signin-response.json" with { type: "json" };
 import TrustResponseSchema from "./schemas/trust-response.json" with { type: "json" };
+import MFASubmitResponseSchema from "./schemas/mfa-submit-response.json" with { type: "json" };
+import EscrowCompleteResponseSchema from "./schemas/escrow-complete-response.json" with { type: "json" };
+import LogoutResponseSchema from "./schemas/logout-response.json" with { type: "json" };
+import CloudKitRecordsResponseSchema from "./schemas/cloud-kit-records-response.json" with { type: "json" };
+import HealthCheckPingResponseSchema from "./schemas/health-check-ping-response.json" with { type: "json" };
 
 /**
  * Common configuration for the schema validator
@@ -25,6 +31,15 @@ const AJV_CONF = {
     verbose: true,
     // Logger: ResourceManager.logger(`AjvValidator`),
 };
+
+/**
+ * Marks a function as response validator - only used within this module, so every response validator passed to a request is backed by a JSON schema
+ * @param validate - The validation function, expected to validate the response (or the value derived from it) against a JSON schema
+ * @returns The response validator
+ */
+function responseValidator<T>(validate: (response: HttpResponse) => T): ResponseValidator<T> {
+    return validate as ResponseValidator<T>;
+}
 
 /**
  * This class is responsible for validating 3rd party provided JSON based resources using previously compiled JSON schemas
@@ -89,6 +104,59 @@ export class Validator {
      * Validator for the iCloud photos setup response schema
      */
     _photosSetupResponseValidator: Ajv.ValidateFunction<PhotosSetupResponse> = new Ajv.Ajv(AJV_CONF).compile<PhotosSetupResponse>(PhotosSetupResponseSchema);
+
+    /**
+     * Validator for the MFA submit response schema
+     */
+    _mfaSubmitResponseValidator: Ajv.ValidateFunction<MFASubmitResponse> = new Ajv.Ajv(AJV_CONF).compile<MFASubmitResponse>(MFASubmitResponseSchema);
+
+    /**
+     * Validator for the escrow complete response schema
+     */
+    _escrowCompleteResponseValidator: Ajv.ValidateFunction<EscrowCompleteResponse> = new Ajv.Ajv(AJV_CONF).compile<EscrowCompleteResponse>(EscrowCompleteResponseSchema);
+
+    /**
+     * Validator for the logout response schema
+     */
+    _logoutResponseValidator: Ajv.ValidateFunction<LogoutResponse> = new Ajv.Ajv(AJV_CONF).compile<LogoutResponse>(LogoutResponseSchema);
+
+    /**
+     * Validator for the CloudKit records response schema (queries and operations)
+     */
+    _cloudKitRecordsResponseValidator: Ajv.ValidateFunction<CloudKitRecordsResponse> = new Ajv.Ajv(AJV_CONF).compile<CloudKitRecordsResponse>(CloudKitRecordsResponseSchema);
+
+    /**
+     * Validator for the health check ping response schema
+     */
+    _healthCheckPingResponseValidator: Ajv.ValidateFunction<HealthCheckPingResponse> = new Ajv.Ajv(AJV_CONF).compile<HealthCheckPingResponse>(HealthCheckPingResponseSchema);
+
+    /**
+     * Response validators, to be passed to network requests - every request needs to validate its response against a JSON schema
+     * The validators delegate to the respective validate function at the time of validation
+     */
+    response = {
+        signinInit: responseValidator(response => this.validateSigninInitResponse(response)),
+        signin: responseValidator(response => this.validateSigninResponse(response)),
+        escrowInit: responseValidator(response => this.validateEscrowInitResponse(response)),
+        escrowComplete: responseValidator(response => this.validateEscrowCompleteResponse(response)),
+        /**
+         * The auth information is either provided as JSON or embedded in HTML, therefore it needs to be extracted before validation
+         * @param extract - Extracts the auth information from the response
+         * @returns The response validator
+         */
+        authInformation: (extract: (response: HttpResponse) => unknown) => responseValidator(response => this.validateAuthInformationResponse(extract(response))),
+        resendMFADevice: responseValidator(response => this.validateResendMFADeviceResponse(response)),
+        resendMFAPhone: responseValidator(response => this.validateResendMFAPhoneResponse(response)),
+        mfaSubmit: responseValidator(response => this.validateMFASubmitResponse(response)),
+        trust: responseValidator(response => this.validateTrustResponse(response)),
+        setup: responseValidator(response => this.validateSetupResponse(response)),
+        pcs: responseValidator(response => this.validatePCSResponse(response)),
+        logout: responseValidator(response => this.validateLogoutResponse(response)),
+        photosSetup: responseValidator(response => this.validatePhotosSetupResponse(response)),
+        query: responseValidator(response => this.validateQueryResponse(response)),
+        operation: responseValidator(response => this.validateOperationResponse(response)),
+        healthCheckPing: responseValidator(response => this.validateHealthCheckPingResponse(response)),
+    };
 
     /**
      * Generic validation function
@@ -281,6 +349,90 @@ export class Validator {
         return this.validate(
             this._photosSetupResponseValidator,
             VALIDATOR_ERR.PHOTOS_SETUP_RESPONSE,
+            data,
+        );
+    }
+
+    /**
+     * Validates the response from the MFA code submission
+     * @param data - The data to validate
+     * @returns A validated MFASubmitResponse object
+     * @throws An error if the data cannot be validated
+     */
+    validateMFASubmitResponse(data: unknown): MFASubmitResponse {
+        return this.validate(
+            this._mfaSubmitResponseValidator,
+            VALIDATOR_ERR.MFA_SUBMIT_RESPONSE,
+            data,
+        );
+    }
+
+    /**
+     * Validates the response from the escrow completion request
+     * @param data - The data to validate
+     * @returns A validated EscrowCompleteResponse object
+     * @throws An error if the data cannot be validated
+     */
+    validateEscrowCompleteResponse(data: unknown): EscrowCompleteResponse {
+        return this.validate(
+            this._escrowCompleteResponseValidator,
+            VALIDATOR_ERR.ESCROW_COMPLETE_RESPONSE,
+            data,
+        );
+    }
+
+    /**
+     * Validates the response from the logout request
+     * @param data - The data to validate
+     * @returns A validated LogoutResponse object
+     * @throws An error if the data cannot be validated
+     */
+    validateLogoutResponse(data: unknown): LogoutResponse {
+        return this.validate(
+            this._logoutResponseValidator,
+            VALIDATOR_ERR.LOGOUT_RESPONSE,
+            data,
+        );
+    }
+
+    /**
+     * Validates the response from a CloudKit query - the records themselves are parsed defensively by the query parser
+     * @param data - The data to validate
+     * @returns A validated CloudKitRecordsResponse object
+     * @throws An error if the data cannot be validated
+     */
+    validateQueryResponse(data: unknown): CloudKitRecordsResponse {
+        return this.validate(
+            this._cloudKitRecordsResponseValidator,
+            ICLOUD_PHOTOS_ERR.UNEXPECTED_QUERY_RESPONSE,
+            data,
+        );
+    }
+
+    /**
+     * Validates the response from a CloudKit operation - the records themselves are parsed defensively by the query parser
+     * @param data - The data to validate
+     * @returns A validated CloudKitRecordsResponse object
+     * @throws An error if the data cannot be validated
+     */
+    validateOperationResponse(data: unknown): CloudKitRecordsResponse {
+        return this.validate(
+            this._cloudKitRecordsResponseValidator,
+            ICLOUD_PHOTOS_ERR.UNEXPECTED_OPERATIONS_RESPONSE,
+            data,
+        );
+    }
+
+    /**
+     * Validates the response from a health check ping
+     * @param data - The data to validate
+     * @returns A validated HealthCheckPingResponse object
+     * @throws An error if the data cannot be validated
+     */
+    validateHealthCheckPingResponse(data: unknown): HealthCheckPingResponse {
+        return this.validate(
+            this._healthCheckPingResponseValidator,
+            VALIDATOR_ERR.HEALTH_CHECK_PING_RESPONSE,
             data,
         );
     }

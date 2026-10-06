@@ -1,8 +1,8 @@
 import {beforeEach, describe, expect, jest, test} from "@jest/globals";
-import MockAdapter from 'axios-mock-adapter';
 import {HealthCheckPingExecutor} from "../../src/app/event/health-check-ping-executor";
-import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError} from "../../src/lib/resources/events-types";
+import {iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventRuntimeError} from "../../src/lib/resources/events-types";
 import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general";
+import {HttpMock} from "../_helpers/http-mock.helper";
 import {LogLevel, StateManager} from "../../src/lib/resources/state-manager";
 
 const exampleHealthCheckUrl = `https://hc-ping.com/example-healthcheck-slug`;
@@ -37,13 +37,13 @@ describe(`Health check initiates`, () => {
 
 describe(`Health Check Pings`, () => {
     let healthCheckPingExecutor: HealthCheckPingExecutor;
-    let mockAdapter: MockAdapter;
+    let mockAdapter: HttpMock;
 
     beforeEach(() => {
         healthCheckPingExecutor = new HealthCheckPingExecutor();
         healthCheckPingExecutor.getLog = jest.fn<typeof healthCheckPingExecutor.getLog>().mockReturnValue(`Example log message`);
-        mockAdapter = new MockAdapter(healthCheckPingExecutor.networkInterface);
-        mockAdapter.onPost().reply(200);
+        mockAdapter = new HttpMock(healthCheckPingExecutor.networkInterface);
+        mockAdapter.onPost().reply(200, `OK`, {'Content-Type': `text/plain; charset=utf-8`});
     });
 
     test(`Sends start if sync is started`, async () => {
@@ -76,7 +76,48 @@ describe(`Health Check Pings`, () => {
     test(`Does not send data if state changes`, async () => {
         mockedEventManager.emit(iCPSEventCloud.AUTHENTICATION_STARTED);
 
-        expect(mockAdapter.history).toHaveLength(0);
+        expect(mockAdapter.history.post).toHaveLength(0);
+    });
+
+    test(`Logs plain text response as successful ping`, async () => {
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventLog.ERROR);
+        const debugEvent = mockedEventManager.spyOnEvent(iCPSEventLog.DEBUG);
+
+        await (healthCheckPingExecutor as any).pingStart();
+
+        expect(errorEvent).not.toHaveBeenCalled();
+        expect(debugEvent).toHaveBeenCalledWith(healthCheckPingExecutor, `Successfully sent start health check ping.`);
+    });
+
+    test.each([
+        {
+            desc: `JSON response`,
+            reply: [200, {ok: true}, {'Content-Type': `application/json`}],
+        }, {
+            desc: `missing content type`,
+            reply: [200, `OK`, {}],
+        }, {
+            desc: `HTML response`,
+            reply: [200, `<html></html>`, {'Content-Type': `text/html`}],
+        },
+    ])(`Logs non plain text response as failed ping - $desc`, async ({reply}) => {
+        mockAdapter.reset();
+        mockAdapter.onPost().reply(...(reply as [number, unknown, Record<string, string>]));
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventLog.ERROR);
+
+        await expect((healthCheckPingExecutor as any).pingSuccess()).resolves.toBeUndefined();
+
+        expect(errorEvent).toHaveBeenCalledWith(healthCheckPingExecutor, expect.stringMatching(/^Failed to send success health check ping: .*Unable to parse and validate health check ping response/));
+    });
+
+    test(`Logs rejected status as failed ping`, async () => {
+        mockAdapter.reset();
+        mockAdapter.onPost().reply(404, `not found`, {'Content-Type': `text/plain`});
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventLog.ERROR);
+
+        await (healthCheckPingExecutor as any).pingError();
+
+        expect(errorEvent).toHaveBeenCalledWith(healthCheckPingExecutor, `Failed to send error health check ping: Request failed with status code 404, got response: "not found"`);
     });
 });
 

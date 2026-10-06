@@ -168,6 +168,7 @@ export type iCPSAppOptions = {
     schedule: string,
     enableCrashReporting: boolean,
     enableNetworkCapture: boolean,
+    useSystemProxy: boolean,
     mfaTimeout: number,
     force: boolean,
     refreshToken: boolean,
@@ -279,6 +280,9 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
             .default(false))
         .addOption(new Option(`--enable-network-capture`, `Enables network capture, and generate a HAR file for debugging purposes. Written to \`.icloud-photos-sync.har\` in the data dir.`)
             .env(`ENABLE_NETWORK_CAPTURE`)
+            .default(false))
+        .addOption(new Option(`--use-system-proxy`, `Routes all requests through the proxy configured by the \`HTTP_PROXY\` and \`HTTPS_PROXY\` environment variables (honouring \`NO_PROXY\`). Proxy variables are ignored otherwise.`)
+            .env(`USE_SYSTEM_PROXY`)
             .default(false))
         .addOption(new Option(`--metadata-rate <interval>`, `Limits the rate of metadata fetching in order to avoid getting throttled by the API. Expects the format \`<numberOfRequests|Infinity>/<timeInMs>\`, e.g. \`1/20\` to limit requests to one request in 20ms.`)
             .env(`METADATA_RATE`)
