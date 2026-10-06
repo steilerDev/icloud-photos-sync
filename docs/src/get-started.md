@@ -77,7 +77,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
 
 === "node"
 
-    When setting up the environment, please keep the [currently recommended NodeJS version](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/node-version) in mind.
+    Node.js `26` or newer is required. When setting up the environment, please keep the [currently recommended NodeJS version](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/node-version) in mind.
 
     === "NPM"
 
