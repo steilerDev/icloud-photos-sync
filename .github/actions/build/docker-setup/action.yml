@@ -5,22 +5,34 @@ inputs:
     description: The path to the docker directory
     required: false
     default: docker
+  docker-token:
+    description: The Docker token used for pulling the Docker Hardened base images
+    required: true
 runs:
   using: composite
   steps:
+    - id: get-docker-metadata
+      uses: ./.github/actions/helper/docker-metadata
+    # Docker Hardened Images require authentication with a Docker Hub account
+    - id: login-dhi
+      uses: docker/login-action@v4
+      with:
+        registry: dhi.io
+        username: ${{ steps.get-docker-metadata.outputs.image-namespace }}
+        password: ${{ inputs.docker-token }}
     - id: setup-qemu
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@v4
     - id: setup-buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
     - id: setup-release-app-artifact
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v8
       continue-on-error: true
       with:
         name: app-artifact-release
         path: ${{ inputs.docker-path }}/
     - id: setup-build-app-artifact
       if: steps.setup-release-app-artifact.outcome == 'failure'
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v8
       with:
         name: app-artifact-build
         path: ${{ inputs.docker-path }}/

@@ -1,8 +1,10 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import fs from 'fs';
-import mockfs from 'mock-fs';
-import {stdin} from 'mock-stdin';
-import {appFactory, iCPSAppOptions} from '../../src/app/factory';
+import path from 'path';
+import mockfs from '../_helpers/mock-fs.helper';
+import {PassThrough} from 'stream';
+import {iCPSError} from '../../src/app/error/error';
+import {appFactory, iCPSAppOptions, validatePermissions} from '../../src/app/factory';
 import {ArchiveApp, DaemonApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {WebServer} from '../../src/app/web-ui/web-server';
 import {Asset} from '../../src/lib/photos-library/model/asset';
@@ -14,8 +16,8 @@ import {nonRejectOptions, rejectOptions, validOptions} from '../_helpers/app-fac
 import {StateManager, StateType} from '../../src/lib/resources/state-manager';
 
 beforeAll(() => {
-    // DATA_DIR is set in devcontainer and can lead to conflicts in this test suite
-    delete process.env.DATA_DIR;
+    // DATA_DIR is set in devcontainer and can lead to conflicts in this test suite - making sure the app factory uses the temporary data dir by default
+    process.env.DATA_DIR = Config.defaultConfig.dataDir;
 });
 
 beforeEach(() => {
@@ -79,7 +81,8 @@ describe(`App Factory`, () => {
     }])(`Asking user to provide $desc`, async ({options, stdinValue, stdOutValue}) => {
         const setupSpy = jest.spyOn(Resources, `setup`);
         const mockStdout = jest.spyOn(process.stdout, `write`).mockImplementation(() => true);
-        const mockStdin = stdin();
+        const mockStdin = new PassThrough();
+        const stdinSpy = jest.spyOn(process, `stdin`, `get`).mockReturnValue(mockStdin as unknown as typeof process.stdin);
 
         const app = appFactory(
             [
@@ -90,11 +93,107 @@ describe(`App Factory`, () => {
             ],
         );
 
-        mockStdin.send(`${stdinValue}\n`);
+        // Inquirer ignores keypresses sent before the prompt was rendered - waiting for the prompt
+        while (mockStdout.mock.calls.length === 0) {
+            await new Promise(resolve => setImmediate(resolve));
+        }
+
+        mockStdin.write(`${stdinValue}\n`);
 
         expect(await app).toBeInstanceOf(TokenApp);
         expect(mockStdout).toHaveBeenNthCalledWith(1, expect.stringMatching(new RegExp(`${stdOutValue}`)));
         expect(setupSpy).toHaveBeenCalledWith(Config.defaultConfig);
+
+        stdinSpy.mockRestore();
+    });
+
+    describe(`Credentials from file`, () => {
+        const secretsDir = `${Config.defaultConfig.dataDir}-secrets`;
+        const usernameFile = path.join(secretsDir, `username`);
+        const passwordFile = path.join(secretsDir, `password`);
+        const emptyFile = path.join(secretsDir, `empty`);
+        const credentialEnvVars = [`APPLE_ID_USER`, `APPLE_ID_PWD`, `APPLE_ID_USER_FILE`, `APPLE_ID_PWD_FILE`];
+
+        beforeEach(() => {
+            mockfs({
+                [secretsDir]: {
+                    username: `${Config.defaultConfig.username}\n`,
+                    password: `${Config.defaultConfig.password}\r\n\n`,
+                    empty: `\n`,
+                },
+            });
+        });
+
+        afterEach(() => {
+            credentialEnvVars.forEach(envVar => delete process.env[envVar]);
+        });
+
+        test(`Read credentials from files provided through CLI`, async () => {
+            const setupSpy = jest.spyOn(Resources, `setup`);
+            const app = await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `--username-file`, usernameFile, `--password-file`, passwordFile, `token`]);
+
+            expect(app).toBeInstanceOf(TokenApp);
+            expect(setupSpy).toHaveBeenCalledWith(Config.defaultConfig);
+        });
+
+        test(`Read credentials from files provided through environment`, async () => {
+            process.env.APPLE_ID_USER_FILE = usernameFile;
+            process.env.APPLE_ID_PWD_FILE = passwordFile;
+            const setupSpy = jest.spyOn(Resources, `setup`);
+            const app = await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `token`]);
+
+            expect(app).toBeInstanceOf(TokenApp);
+            expect(setupSpy).toHaveBeenCalledWith(Config.defaultConfig);
+        });
+
+        test(`Only trailing line breaks are removed from file content`, async () => {
+            fs.writeFileSync(passwordFile, ` test Pass\t\n\r\n`);
+            const setupSpy = jest.spyOn(Resources, `setup`);
+            await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `-u`, Config.defaultConfig.username, `--password-file`, passwordFile, `token`]);
+
+            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, password: ` test Pass\t`});
+        });
+
+        test.each([{
+            desc: `username and username file provided through CLI`,
+            options: [`-u`, Config.defaultConfig.username, `--username-file`, usernameFile, `-p`, Config.defaultConfig.password],
+            env: {},
+            expected: `error: option '--username-file <path>' cannot be used with option '-u, --username <string>'`,
+        }, {
+            desc: `password and password file provided through CLI`,
+            options: [`-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password, `--password-file`, passwordFile],
+            env: {},
+            expected: `error: option '--password-file <path>' cannot be used with option '-p, --password <string>'`,
+        }, {
+            desc: `username and username file provided through environment`,
+            options: [`-p`, Config.defaultConfig.password],
+            env: {APPLE_ID_USER: Config.defaultConfig.username, APPLE_ID_USER_FILE: usernameFile},
+            expected: `error: environment variable 'APPLE_ID_USER_FILE' cannot be used with environment variable 'APPLE_ID_USER'`,
+        }, {
+            desc: `password provided through CLI and password file provided through environment`,
+            options: [`-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password],
+            env: {APPLE_ID_PWD_FILE: passwordFile},
+            expected: `error: environment variable 'APPLE_ID_PWD_FILE' cannot be used with option '-p, --password <string>'`,
+        }, {
+            desc: `non-existing password file`,
+            options: [`-u`, Config.defaultConfig.username, `--password-file`, `${passwordFile}-missing`],
+            env: {},
+            expected: `error: option '--password-file <path>' argument '${passwordFile}-missing' is invalid. Unable to read file: ENOENT: no such file or directory, open '${passwordFile}-missing'`,
+        }, {
+            desc: `empty username file`,
+            options: [`-p`, Config.defaultConfig.password],
+            env: {APPLE_ID_USER_FILE: emptyFile},
+            expected: `error: option '--username-file <path>' value '${emptyFile}' from env 'APPLE_ID_USER_FILE' is invalid. File is empty.`,
+        }])(`Reject $desc`, async ({options, env, expected}) => {
+            Object.assign(process.env, env);
+            const setupSpy = jest.spyOn(Resources, `setup`);
+            const mockStderr = jest.spyOn(process.stderr, `write`).mockImplementation(() => true);
+
+            await expect(() => appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, ...options, `token`])).rejects.toThrow(expected);
+
+            expect(mockStderr).toHaveBeenCalledWith(expected + `\n`);
+            expect(setupSpy).not.toHaveBeenCalled();
+        });
     });
 
     test(`Fail app creation if lock cannot be acquired`, async () => {
@@ -105,6 +204,70 @@ describe(`App Factory`, () => {
         await expect(appFactory(validOptions.token)).rejects.toThrow(new Error(`TestError`))
     })
 
+    describe(`Permission model`, () => {
+        const originalNodeOptions = process.env.NODE_OPTIONS;
+
+        /**
+         * Simulates an enabled permission model, granting the provided scopes
+         * @param grantedScopes - The scopes for which `process.permission.has` returns true
+         */
+        function mockPermission(...grantedScopes: string[]) {
+            Object.defineProperty(process, `permission`, {
+                value: {has: (scope: string) => grantedScopes.includes(scope)},
+                configurable: true,
+            });
+        }
+
+        afterEach(() => {
+            Reflect.deleteProperty(process, `permission`);
+            process.env.NODE_OPTIONS = originalNodeOptions;
+        });
+
+        test(`Create app without permission model`, async () => {
+            expect(process.permission).toBeUndefined();
+            expect(() => validatePermissions()).not.toThrow();
+        });
+
+        test(`Create app with sufficient permissions`, async () => {
+            mockPermission(`fs.read`, `fs.write`, `net`);
+
+            expect(() => validatePermissions()).not.toThrow();
+            expect(await appFactory(validOptions.token)).toBeInstanceOf(TokenApp);
+        });
+
+        test.each([{
+            desc: `restricted file system write`,
+            granted: [`fs.read`, `net`],
+            expected: `(missing --allow-fs-write=*)`,
+        }, {
+            desc: `restricted file system read`,
+            granted: [`fs.write`, `net`],
+            expected: `(missing --allow-fs-read=*)`,
+        }, {
+            desc: `missing network access`,
+            granted: [`fs.read`, `fs.write`],
+            expected: `(missing --allow-net)`,
+        }, {
+            desc: `no permissions`,
+            granted: [],
+            expected: `(missing --allow-fs-read=* --allow-fs-write=* --allow-net)`,
+        }])(`Fail app creation with $desc`, async ({granted, expected}) => {
+            mockPermission(...granted);
+
+            expect(() => validatePermissions()).toThrow(`Node.js permission model is enabled, but required permissions are missing`);
+            const err = await appFactory(validOptions.token).catch(err => err) as iCPSError;
+            expect(err.getDescription()).toEqual(`APP_INSUFFICIENT_PERMISSIONS: Node.js permission model is enabled, but required permissions are missing ${expected}`);
+            expect(StateManager.prototype.acquireLibraryLock).not.toHaveBeenCalled();
+        });
+
+        test(`Ignore missing permissions in audit mode`, () => {
+            mockPermission();
+            process.env.NODE_OPTIONS = `--max-old-space-size=4096 --permission-audit`;
+
+            expect(() => validatePermissions()).not.toThrow();
+        });
+    });
+
     test(`Create Token App`, async () => {
         const tokenApp = await appFactory(validOptions.token) as TokenApp;
 
@@ -114,7 +277,7 @@ describe(`App Factory`, () => {
         expect(Resources.event()).toBeDefined();
         expect(Resources.validator()).toBeDefined();
         expect(Resources.network()).toBeDefined();
-        expect(fs.existsSync(`/opt/icloud-photos-library`));
+        expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeTruthy();
     });
 
     test(`Create Sync App`, async () => {
@@ -128,7 +291,7 @@ describe(`App Factory`, () => {
         expect(Resources.network()).toBeDefined();
         expect(syncApp.photosLibrary).toBeDefined();
         expect(syncApp.syncEngine).toBeDefined();
-        expect(fs.existsSync(`/opt/icloud-photos-library`));
+        expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeTruthy();
     });
 
     test(`Create Archive App`, async () => {
@@ -143,7 +306,7 @@ describe(`App Factory`, () => {
         expect(archiveApp.photosLibrary).toBeDefined();
         expect(archiveApp.syncEngine).toBeDefined();
         expect(archiveApp.archiveEngine).toBeDefined();
-        expect(fs.existsSync(`/opt/icloud-photos-library`));
+        expect(fs.existsSync(Config.defaultConfig.dataDir)).toBeTruthy();
     });
 
     test(`Create Daemon App`, async () => {
@@ -199,7 +362,8 @@ describe(`App control flow`, () => {
         expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
     });
 
-    test(`Handle app not ready`, async () => {
+    test(`Authenticates while state is running`, async () => {
+        // The Web UI moves the state to RUNNING (through REAUTH_REQUESTED), before running the TokenApp
         const tokenApp = await appFactory(validOptions.token) as TokenApp;
         Resources.state().state = StateType.RUNNING
         tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>()
@@ -211,9 +375,9 @@ describe(`App control flow`, () => {
         Resources._instances.event.removeListenersFromRegistry = jest.fn<typeof Resources._instances.event.removeListenersFromRegistry>()
             .mockReturnValue(Resources._instances.event);
 
-        await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
+        await expect(tokenApp.run()).resolves.toBeTruthy();
 
-        expect(tokenApp.icloud.authenticate).not.toHaveBeenCalled();
+        expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(1);
 
         expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
         expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
@@ -275,28 +439,6 @@ describe(`App control flow`, () => {
             expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
 
             expect(tokenEvent).toHaveBeenCalledTimes(1);
-        });
-
-        test(`Handle not ready`, async () => {
-            const tokenApp = await appFactory(validOptions.token) as TokenApp;
-            Resources.state().state = StateType.RUNNING
-
-            tokenApp.icloud.authenticate = jest.fn<typeof tokenApp.icloud.authenticate>()
-                .mockResolvedValue(true);
-            tokenApp.icloud.logout = jest.fn<typeof tokenApp.icloud.logout>()
-                .mockResolvedValue();
-
-            Resources._instances.network.resetSession = jest.fn<typeof Resources._instances.network.resetSession>()
-                .mockResolvedValue();
-            Resources._instances.event.removeListenersFromRegistry = jest.fn<typeof Resources._instances.event.removeListenersFromRegistry>()
-                .mockReturnValue(Resources._instances.event);
-
-            await expect(tokenApp.run()).rejects.toThrow(/^Unable to acquire trust token$/);
-
-            expect(tokenApp.icloud.authenticate).toHaveBeenCalledTimes(0);
-            expect(tokenApp.icloud.logout).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(4);
         });
     });
 
@@ -369,30 +511,6 @@ describe(`App control flow`, () => {
             expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
             expect(syncApp.icloud.logout).toHaveBeenCalledTimes(1);
             expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
-        });
-
-        test(`Handle not ready`, async () => {
-            const syncApp = await appFactory(validOptions.sync) as SyncApp;
-            Resources.state().state = StateType.RUNNING
-
-            syncApp.icloud.authenticate = jest.fn<typeof syncApp.icloud.authenticate>()
-                .mockResolvedValue(true);
-            syncApp.icloud.logout = jest.fn<typeof syncApp.icloud.logout>()
-                .mockResolvedValue();
-            syncApp.syncEngine.sync = jest.fn<typeof syncApp.syncEngine.sync>()
-                .mockResolvedValue([[], []]);
-            Resources._instances.network.resetSession = jest.fn<typeof Resources._instances.network.resetSession>()
-                .mockResolvedValue();
-            Resources._instances.event.removeListenersFromRegistry = jest.fn<typeof Resources._instances.event.removeListenersFromRegistry>()
-                .mockReturnValue(Resources._instances.event);
-
-            await expect(syncApp.run()).rejects.toThrow(/^Sync failed$/);
-
-            expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(0);
-            expect(syncApp.icloud.logout).toHaveBeenCalledTimes(1);
-            expect(syncApp.syncEngine.sync).toHaveBeenCalledTimes(0);
             expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
             expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
@@ -482,34 +600,6 @@ describe(`App control flow`, () => {
             expect(archiveApp.icloud.logout).toHaveBeenCalledTimes(1);
             expect(archiveApp.syncEngine.sync).toHaveBeenCalledTimes(1);
             expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
-            expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
-        });
-
-        test(`Handle not ready`, async () => {
-            const archiveApp = await appFactory(validOptions.archive) as ArchiveApp;
-            Resources.state().state = StateType.RUNNING
-
-            archiveApp.icloud.authenticate = jest.fn<typeof archiveApp.icloud.authenticate>()
-                .mockResolvedValue(true);
-            archiveApp.icloud.logout = jest.fn<typeof archiveApp.icloud.logout>()
-                .mockResolvedValue();
-            const remoteState = [{fileChecksum: `someChecksum`}] as Asset[];
-            archiveApp.syncEngine.sync = jest.fn<typeof archiveApp.syncEngine.sync>()
-                .mockResolvedValue([remoteState, []]);
-            archiveApp.archiveEngine.archivePath = jest.fn<typeof archiveApp.archiveEngine.archivePath>()
-                .mockResolvedValue();
-            Resources._instances.network.resetSession = jest.fn<typeof Resources._instances.network.resetSession>()
-                .mockResolvedValue();
-            Resources._instances.event.removeListenersFromRegistry = jest.fn<typeof Resources._instances.event.removeListenersFromRegistry>()
-                .mockReturnValue(Resources._instances.event);
-
-            await expect(archiveApp.run()).rejects.toThrow(/^Archive failed$/);
-
-            expect(archiveApp.icloud.authenticate).toHaveBeenCalledTimes(0);
-            expect(archiveApp.icloud.logout).toHaveBeenCalledTimes(1);
-            expect(archiveApp.syncEngine.sync).toHaveBeenCalledTimes(0);
-            expect(archiveApp.archiveEngine.archivePath).toHaveBeenCalledTimes(0);
             expect(Resources._instances.network.resetSession).toHaveBeenCalledTimes(1);
             expect(Resources._instances.event.removeListenersFromRegistry).toHaveBeenCalledTimes(2);
         });
@@ -634,6 +724,44 @@ describe(`App control flow`, () => {
 
             expect(syncApp.run).toHaveBeenCalled();
             expect(successEvent).not.toHaveBeenCalled();
+        });
+
+        test(`Scheduled sync skipped while another operation is in progress`, async () => {
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+            Resources.state().state = StateType.RUNNING
+            const startEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_START);
+            const overrunEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_OVERRUN);
+            const errorEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeError.SCHEDULED_ERROR);
+
+            const syncApp = new SyncApp();
+            syncApp.run = jest.fn<typeof syncApp.run>()
+                .mockResolvedValue([[], []]);
+
+            await daemonApp.performScheduledSync(syncApp);
+
+            expect(syncApp.run).not.toHaveBeenCalled();
+            expect(startEvent).not.toHaveBeenCalled();
+            expect(overrunEvent).toHaveBeenCalled();
+            expect(errorEvent).not.toHaveBeenCalled();
+            expect(Resources.state().state).toBe(StateType.RUNNING);
+        });
+
+        test(`Scheduled sync executes after moving to running state`, async () => {
+            // Regression test: SCHEDULED_START moves the state to RUNNING, the sync must still execute
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+            Resources.state().state = StateType.READY
+            const errorEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeError.SCHEDULED_ERROR);
+
+            const syncApp = new SyncApp();
+            syncApp.icloud.authenticate = jest.fn<typeof syncApp.icloud.authenticate>()
+                .mockResolvedValue(false);
+            syncApp.clean = jest.fn<typeof syncApp.clean>()
+                .mockResolvedValue();
+
+            await daemonApp.performScheduledSync(syncApp);
+
+            expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
+            expect(errorEvent).not.toHaveBeenCalled();
         });
 
         test(`Scheduled sync fails`, async () => {

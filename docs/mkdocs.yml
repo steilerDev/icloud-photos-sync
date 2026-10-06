@@ -19,6 +19,7 @@ nav:
     - 'Error & Crash Reporting': user-guides/error-reporting.md
     - 'Health Checks': user-guides/health-checks.md
     - 'Security': user-guides/security.md
+    - 'Runtime Hardening': user-guides/hardening.md
     - 'WebUI': user-guides/web-ui.md
   - 'Development Resources':
     - 'Motivation': dev/motivation.md

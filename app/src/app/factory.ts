@@ -1,7 +1,10 @@
 import {input, password} from "@inquirer/prompts";
 import {Command, CommanderError, InvalidArgumentError, Option} from "commander";
 import {Cron} from "croner";
+import {readFileSync} from "fs";
 import {Resources} from "../lib/resources/main.js";
+import {APP_ERR} from "./error/error-codes.js";
+import {iCPSError} from "./error/error.js";
 import {ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp} from "./icloud-app.js";
 import {LogLevel} from "../lib/resources/state-manager.js";
 
@@ -99,19 +102,51 @@ function commanderParseUrl(value: string, _dummyPrevious?: unknown): string {
 }
 
 /**
+ * This function can be used as a commander argParser. It will read the content of the file at the provided path (e.g. a Docker secret) and throw an invalid argument error in case it fails. Trailing line breaks are removed, any other whitespace is preserved.
+ * @param value - The file path, read from the CLI
+ * @param _dummyPrevious - Conforming to the interface - unused
+ * @returns The content of the file
+ * @throws An InvalidArgumentError in case the file cannot be read or is empty
+ */
+function commanderReadFile(value: string, _dummyPrevious?: unknown): string {
+    let content: string;
+    try {
+        content = readFileSync(value, {encoding: `utf-8`});
+    } catch (err) {
+        throw new InvalidArgumentError(`Unable to read file: ${(err as Error).message}`);
+    }
+
+    content = content.replace(/(\r?\n)+$/, ``);
+    if (content.length === 0) {
+        throw new InvalidArgumentError(`File is empty.`);
+    }
+
+    return content;
+}
+
+/**
  * Extracts the options from the parsed commander command - and asks for user input in case it is necessary
  * @param parsedCommand - The parsed commander command returned from callback in Command.action((_, command any)
  * @returns Validated iCPSAppOptions
  */
 async function completeConfigurationOptionsFromCommand(parsedCommand: unknown): Promise<iCPSAppOptions> {
-    const opts = (parsedCommand as any).parent?.opts() as iCPSAppOptions;
+    const {usernameFile, passwordFile, ...opts} = (parsedCommand as any).parent?.opts() as iCPSAppOptions & {usernameFile?: string, passwordFile?: string};
+
+    // Commander makes sure that only one of the options was provided - file content was read during parsing
+    if (usernameFile !== undefined) {
+        opts.username = usernameFile;
+    }
+
+    if (passwordFile !== undefined) {
+        opts.password = passwordFile;
+    }
 
     while (!opts.username || opts.username.length === 0) {
         opts.username = await input({message: `Please enter your AppleID username`});
     }
 
     while (!opts.password || opts.password.length === 0) {
-        opts.password = await password({message: `Please enter your AppleID password`, mask: `*`});
+        opts.password = await password({message: `Please enter your AppleID password`, mask: `*`, toggleMask: true});
     }
 
     return opts;
@@ -171,6 +206,14 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`-p, --password <string>`, `AppleID password. Omitting the option will result in the CLI to ask for user input before startup.`)
             .env(`APPLE_ID_PWD`)
             .makeOptionMandatory(false))
+        .addOption(new Option(`--username-file <path>`, `Path to a file containing the AppleID username (e.g. a Docker secret), as an alternative to the username option. Trailing line breaks are removed.`)
+            .env(`APPLE_ID_USER_FILE`)
+            .conflicts(`username`)
+            .argParser(commanderReadFile))
+        .addOption(new Option(`--password-file <path>`, `Path to a file containing the AppleID password (e.g. a Docker secret), as an alternative to the password option. Trailing line breaks are removed.`)
+            .env(`APPLE_ID_PWD_FILE`)
+            .conflicts(`password`)
+            .argParser(commanderReadFile))
         .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, the trust token is read from the \`.icloud-photos-sync\` resource file in data dir. If no stored trust token could be loaded, a new trust token will be acquired (requiring the input of an MFA code).`)
             .env(`TRUST_TOKEN`))
         .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library.`)
@@ -290,6 +333,38 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
 }
 
 /**
+ * Permissions required when running with Node's permission model (`--permission`), mapped to the flag granting them.
+ * Node only permits `fs.symlink` (used for linking albums) with unrestricted file system read and write access.
+ */
+const REQUIRED_PERMISSIONS = {
+    'fs.read': `--allow-fs-read=*`,
+    'fs.write': `--allow-fs-write=*`,
+    net: `--allow-net`,
+};
+
+/**
+ * Makes sure the application is able to operate, if Node's permission model is enabled - instead of failing during the sync.
+ * In audit mode (`--permission-audit`), access is not denied, therefore no permissions are required.
+ * @throws An iCPSError, if required permissions are missing
+ */
+export function validatePermissions() {
+    const {permission} = process;
+    const nodeOptions = [...process.execArgv, ...(process.env.NODE_OPTIONS?.split(/\s+/) ?? [])];
+    if (!permission || nodeOptions.includes(`--permission-audit`)) {
+        return;
+    }
+
+    const missingFlags = Object.entries(REQUIRED_PERMISSIONS)
+        .filter(([scope]) => !permission.has(scope))
+        .map(([, flag]) => flag);
+
+    if (missingFlags.length > 0) {
+        throw new iCPSError(APP_ERR.INSUFFICIENT_PERMISSIONS)
+            .addMessage(`missing ${missingFlags.join(` `)}`);
+    }
+}
+
+/**
  * This function will parse the provided string array and environment variables and return the correct application object.
  * @param argv - The argument vector to be parsed
  * @returns - A promise that resolves to the correct application object. Once the promise resolves, the global resource singleton will also be available. If the program is not able to parse the options, or required options are missing, an error message is printed to stderr and the promise rejects with a CommanderError.
@@ -299,6 +374,7 @@ export async function appFactory(argv: string[]): Promise<iCPSApp> {
         try {
             argParser(async (res: iCPSApp) => {
                 try {
+                    validatePermissions()
                     Resources.state().acquireLibraryLock()
                 } catch (err) {
                     reject(err)

@@ -619,6 +619,18 @@ describe(`Validator`, () => {
             desc: `invalid security code format`,
         }, {
             data: {
+                data: ``,
+            },
+            desc: `empty body`,
+        }, {
+            data: {},
+            desc: `no body`,
+        }])(`should accept a lenient resend MFA device response: $desc`, ({data}) => {
+            expect(() => validator.validateResendMFADeviceResponse(data)).not.toThrow();
+        });
+
+        test.each([{
+            data: {
                 data: {
                     trustedDeviceCount: 1,
                     securityCode: {
@@ -716,13 +728,6 @@ describe(`Validator`, () => {
         }, {
             data: {
                 data: {
-                    trustedPhoneNumber: {
-                        id: 1,
-                        numberWithDialCode: `+1234567890`,
-                        pushMode: `sms`,
-                        obfuscatedNumber: `***-***-7890`,
-                        lastTwoDigits: `90`,
-                    },
                     trustedPhoneNumbers: [{
                         id: 1,
                         numberWithDialCode: `+1234567890`,
@@ -731,18 +736,15 @@ describe(`Validator`, () => {
                         lastTwoDigits: `90`,
                     }],
                     securityCode: {
-                        length: 5,
+                        length: 6,
                         tooManyCodesSent: false,
                         tooManyCodesValidated: false,
                         securityCodeLocked: false,
                         securityCodeCooldown: false,
                     },
-                    authenticationType: `hsa2`,
-                    hsa2Account: true,
-                    restrictedAccount: false,
                 },
             },
-            desc: `invalid security code format`,
+            desc: `missing trusted phone number`,
         }])(`should throw an error for an invalid resend MFA phone response: $desc`, ({data}) => {
             expect(() => validator.validateResendMFAPhoneResponse(data)).toThrow(VALIDATOR_ERR.RESEND_MFA_PHONE_RESPONSE);
         });

@@ -1,6 +1,5 @@
-import {AxiosError, AxiosRequestConfig} from 'axios';
+import {AxiosRequestConfig, AxiosResponse, isAxiosError} from 'axios';
 import {jsonc} from 'jsonc';
-import pTimeout from 'p-timeout';
 import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.js';
 import {iCPSError} from '../../app/error/error.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
@@ -13,6 +12,11 @@ import {MFAMethod} from './mfa/mfa-method.js';
 /**
  * This class holds the iCloud connection
  */
+/**
+ * The service error code returned by the backend, if an incorrect MFA code was entered
+ */
+const MFA_INCORRECT_CODE_ERROR = `-21669`;
+
 export class iCloud {
     /**
      * Access to the iCloud Photos service
@@ -20,9 +24,9 @@ export class iCloud {
     photos: iCloudPhotos;
 
     /**
-     * Timeout for MFA code submission
+     * Timeout for MFA code submission - set while waiting for an MFA code
      */
-    mfaTimeout: NodeJS.Timeout;
+    mfaTimeout?: NodeJS.Timeout;
 
     /**
      * Creates a new iCloud Object
@@ -66,17 +70,26 @@ export class iCloud {
      * @returns A promise that will resolve to true, if the connection was established successfully, false in case the MFA code was not provided in time or reject, in case there is an error
      */
     getReady(): Promise<boolean> {
-        return pTimeout(
-            new Promise<boolean>((resolve, reject) => {
-                Resources.events(this)
-                    .once(iCPSEventPhotos.READY, () => resolve(true))
-                    .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => resolve(false))
-                    .once(iCPSEventCloud.ERROR, err => reject(err));
-            }), {
-                milliseconds: Resources.manager().mfaTimeout  + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
-                message: new iCPSError(AUTH_ERR.SETUP_TIMEOUT),
-            },
-        );
+        return new Promise<boolean>((resolve, reject) => {
+            const timeout = setTimeout(
+                () => reject(new iCPSError(AUTH_ERR.SETUP_TIMEOUT)),
+                Resources.manager().mfaTimeout + (1000 * 60 * 5), // 5 minutes on top of mfa timeout should be sufficient
+            );
+
+            Resources.events(this)
+                .once(iCPSEventPhotos.READY, () => {
+                    clearTimeout(timeout);
+                    resolve(true);
+                })
+                .once(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
+                    clearTimeout(timeout);
+                    resolve(false);
+                })
+                .once(iCPSEventCloud.ERROR, err => {
+                    clearTimeout(timeout);
+                    reject(err);
+                });
+        });
     }
 
     /**
@@ -111,11 +124,20 @@ export class iCloud {
 
             Resources.logger(this).debug(`Acquired signin secrets`);
 
+            if (response.status === 409 && this.requiresEscrow(response)) {
+                Resources.logger(this).debug(`Response status is 409, trust token accepted but escrow required`);
+                await this.completeEscrow();
+                Resources.emit(iCPSEventCloud.TRUSTED, Resources.manager().trustToken);
+                return ready;
+            }
+
             if (response.status === 409) {
                 Resources.logger(this).debug(`Response status is 409, requiring MFA`);
-                const trustedPhoneNumbers = await this.requestMFAViaSMS();
+                const trustedPhoneNumbers = await this.getTrustedPhoneNumbers();
+                // Since iOS 26.4 the MFA code is no longer pushed to trusted devices automatically
+                await this.resendMFA(new MFAMethod(`device`));
                 Resources.emit(iCPSEventCloud.MFA_REQUIRED, trustedPhoneNumbers);
-                return;
+                return ready;
             }
 
             if (response.status === 200) {
@@ -128,13 +150,12 @@ export class iCloud {
         } catch (err) {
             if (err instanceof iCPSError) {
                 Resources.emit(iCPSEventCloud.ERROR, err);
-                return;
+                return ready;
             }
 
-            // Does not seem to work
-            // if (err instanceof AxiosError) {
-            if ((err as AxiosError).isAxiosError) {
-                switch (err.response.status) {
+            // Using the isAxiosError type guard, since `err instanceof AxiosError` does not seem to work
+            if (isAxiosError(err)) {
+                switch (err.response?.status) {
                 case 401:
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
                     break;
@@ -148,11 +169,11 @@ export class iCloud {
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNEXPECTED_RESPONSE).addCause(err));
                 }
 
-                return;
+                return ready;
             }
 
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNKNOWN).addCause(err));
-            return;
+            return ready;
         } finally {
             // Return in finally is required because control flow of try/catch block is complicated
             // eslint-disable-next-line no-unsafe-finally
@@ -217,51 +238,60 @@ export class iCloud {
         }
     }
 
+    /**
+     * Fetches the trusted phone numbers of the account, which can be used to receive MFA codes via sms or voice
+     * The backend either provides the information as JSON, or embedded in the HTML 'boot_args' of the iCloud web frontend
+     * @returns The list of trusted phone numbers, or an empty array if they could not be retrieved
+     * @emits iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR - When the phone numbers could not be retrieved - provides iCPSError as argument
+     */
     async getTrustedPhoneNumbers(): Promise<TrustedPhoneNumber[]> {
-        Resources.logger(this).info(`Getting trusted phone numbers`)
+        Resources.logger(this).info(`Getting trusted phone numbers`);
 
         try {
-            const authInformationResponse = await Resources.network().get(ENDPOINTS.AUTH.BASE)
-            const validatedAuthInformationResponse = Resources.validator().validateAuthInformationResponse(authInformationResponse)
-            return validatedAuthInformationResponse.data.trustedPhoneNumbers
+            const response = await Resources.network().get(ENDPOINTS.AUTH.BASE, {
+                headers: {
+                    Accept: `application/json`,
+                },
+            });
+
+            const authInformation = typeof response.data === `string`
+                ? this.extractBootArgsFromHTML(response.data)?.direct?.twoSV
+                : response.data;
+
+            const validatedAuthInformationResponse = Resources.validator().validateAuthInformationResponse({
+                data: {
+                    trustedPhoneNumbers: this.findTrustedPhoneNumbers(authInformation),
+                },
+            });
+            Resources.logger(this).debug(`Found ${validatedAuthInformationResponse.data.trustedPhoneNumbers.length} trusted phone number(s)`);
+            return validatedAuthInformationResponse.data.trustedPhoneNumbers;
         } catch (err) {
             Resources.emit(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, new iCPSError(MFA_ERR.NO_PHONE_NUMBERS).addCause(err));
         }
-        return []
+
+        return [];
     }
 
     /**
-     * Requests an MFA code via SMS to the first trusted phone number.
-     * Required since iOS 26.4 where device push notifications no longer arrive for third-party auth.
-     * The SMS flow still works with legacy endpoints (PUT /verify/phone).
-     * The response contains the list of trusted phone numbers (since GET /auth now returns HTML).
-     * @returns The list of trusted phone numbers from the SMS request response
+     * Locates the list of trusted phone numbers within the auth information provided by the backend
+     * Depending on the account and flow, the list is provided on top level, nested in the phone number verification object or (since iOS 26.4) nested in the bridge's initiate data
+     * @param authInformation - The auth information object provided by the backend
+     * @returns The list of trusted phone numbers, or undefined if it could not be found
      */
-    async requestMFAViaSMS(): Promise<TrustedPhoneNumber[]> {
-        try {
-            Resources.logger(this).info(`Requesting MFA code via SMS`);
+    findTrustedPhoneNumbers(authInformation: any): unknown {
+        return authInformation?.trustedPhoneNumbers
+            ?? authInformation?.phoneNumberVerification?.trustedPhoneNumbers
+            ?? authInformation?.bridgeInitiateData?.phoneNumberVerification?.trustedPhoneNumbers;
+    }
 
-            const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.MFA.PHONE_RESEND;
-            const config: AxiosRequestConfig = {
-                validateStatus: status => status === 200,
-            };
-            const data = {
-                phoneNumber: {
-                    id: 1,
-                },
-                mode: `sms`,
-            };
-
-            const response = await Resources.network().put(url, data, config);
-            const validatedResponse = Resources.validator().validateResendMFAPhoneResponse(response);
-            Resources.logger(this).info(`Successfully requested MFA code via SMS to ${validatedResponse.data.trustedPhoneNumber.numberWithDialCode}`);
-
-            return validatedResponse.data.trustedPhoneNumbers ?? [];
-        } catch (err) {
-            Resources.logger(this).warn(`Failed to request MFA via SMS: ${err}`);
-        }
-
-        return [];
+    /**
+     * Extracts the 'boot_args' object from the HTML document of the iCloud web frontend
+     * @param html - The HTML document returned by the backend
+     * @returns The parsed 'boot_args' object, or undefined if it could not be found
+     */
+    extractBootArgsFromHTML(html: string): any {
+        const bootArgs = html.match(/<script[^>]*class="boot_args"[^>]*>([\s\S]*?)<\/script>/)?.[1];
+        return bootArgs ? JSON.parse(bootArgs) : undefined;
     }
 
     /**
@@ -279,7 +309,7 @@ export class iCloud {
         };
         const data = method.getResendPayload();
 
-        Resources.logger(this).debug(`Requesting MFA code via URL ${url} with data ${jsonc.stringify(data)}`);
+        Resources.logger(this).debug(`Requesting MFA code via PUT ${url} with data ${jsonc.stringify(data)}`);
 
         try {
             const response = await Resources.network().put(url, data, config);
@@ -292,7 +322,8 @@ export class iCloud {
 
             if (method.isDevice) {
                 const validatedResponse = Resources.validator().validateResendMFADeviceResponse(response);
-                Resources.logger(this).info(`Successfully requested new MFA code using ${validatedResponse.data.trustedDeviceCount} trusted device(s)`);
+                const trustedDeviceCount = validatedResponse.data ? validatedResponse.data.trustedDeviceCount : undefined;
+                Resources.logger(this).info(`Successfully requested new MFA code using ${trustedDeviceCount ?? `all`} trusted device(s)`);
             }
         } catch (err) {
             Resources.emit(iCPSEventRuntimeWarning.MFA_ERROR, new iCPSError(MFA_ERR.RESEND_FAILED).addCause(err));
@@ -316,7 +347,26 @@ export class iCloud {
             const data = method.getEnterPayload(mfa);
 
             Resources.logger(this).debug(`Entering MFA code via URL ${url} with data ${jsonc.stringify(data)}`);
-            await Resources.network().post(url, data, config);
+            const response = await Resources.network().post(url, data, config);
+
+            if (response.status === 409) {
+                // Since iOS 26.4 the backend acknowledges a valid code with status 409
+                if (response.data?.securityCode?.valid !== true && !response.headers[`x-apple-session-token`]) {
+                    const rejectedErr = new iCPSError(MFA_ERR.CODE_REJECTED)
+                        .addContext(`responseData`, response.data);
+                    if (Array.isArray(response.data?.service_errors)) {
+                        rejectedErr.addMessage(...response.data.service_errors.map((serviceError: any) => serviceError?.message));
+                    }
+
+                    throw rejectedErr;
+                }
+
+                Resources.network().applySessionTokenUpdate(response);
+
+                if (this.requiresEscrow(response)) {
+                    await this.completeEscrow();
+                }
+            }
 
             Resources.logger(this).info(`MFA code correct!`);
             Resources.emit(iCPSEventCloud.AUTHENTICATED);
@@ -326,10 +376,15 @@ export class iCloud {
                 this.mfaTimeout = undefined
             }
         } catch (err) {
-            if (err.response?.status === 400) {
+            if (err instanceof iCPSError) {
+                Resources.emit(iCPSEventCloud.ERROR, err);
+                return;
+            }
+
+            if (isAxiosError(err) && (err.response?.status === 400 || this.hasServiceError(err.response?.data, MFA_INCORRECT_CODE_ERROR))) {
                 const augmentedErr = new iCPSError(MFA_ERR.CODE_REJECTED).addCause(err);
                 if (Array.isArray(err.response?.data?.service_errors)) {
-                    augmentedErr.addMessage(err.response.data.service_errors.map((serviceError: any) => serviceError?.message));
+                    augmentedErr.addMessage(...err.response!.data.service_errors.map((serviceError: any) => serviceError?.message));
                 }
 
                 Resources.emit(iCPSEventCloud.ERROR, augmentedErr);
@@ -338,6 +393,62 @@ export class iCloud {
 
             Resources.emit(iCPSEventCloud.ERROR, new iCPSError(MFA_ERR.SUBMIT_FAILED).addCause(err));
         }
+    }
+
+    /**
+     * Checks if the backend requires the escrow flow - signaled through the 'X-Apple-EDP' or 'X-Apple-PDP' header on a 409 response
+     * @param response - The response received from the backend
+     * @returns True, if the escrow flow needs to be completed
+     */
+    requiresEscrow(response: AxiosResponse): boolean {
+        return Boolean(response.headers[`x-apple-edp`] || response.headers[`x-apple-pdp`]);
+    }
+
+    /**
+     * Completes the escrow flow, which is a second SRP-based password proof (using an empty account name), required by the backend since iOS 26.4
+     * The backend issues an updated session token upon completion
+     * @param authenticator - The authenticator crypto instance for generating the SRP proof - parameterized for testing purposes, will be initiated by default
+     * @throws An iCPSError, if the escrow flow could not be completed
+     */
+    async completeEscrow(authenticator: iCloudCrypto = new iCloudCrypto(``)) {
+        Resources.logger(this).info(`Completing escrow password verification`);
+        try {
+            const initResponse = await Resources.network().post(ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.ESCROW.INIT, {
+                a: await authenticator.getClientEphemeral(),
+                accountName: ``,
+                protocols: [
+                    `s2k`,
+                    `s2k_fo`,
+                ],
+            });
+
+            const validatedInitResponse = Resources.validator().validateEscrowInitResponse(initResponse);
+
+            const derivedPassword = await authenticator.derivePassword(validatedInitResponse.data.protocol, validatedInitResponse.data.salt, validatedInitResponse.data.iteration);
+            const [m1Proof, m2Proof] = await authenticator.getProofValues(derivedPassword, validatedInitResponse.data.b, validatedInitResponse.data.salt);
+
+            const completeResponse = await Resources.network().post(ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.ESCROW.COMPLETE, {
+                m1: m1Proof,
+                m2: m2Proof,
+                c: validatedInitResponse.data.c,
+                k: await authenticator.getSessionKey(),
+            });
+
+            Resources.network().applySessionTokenUpdate(completeResponse);
+            Resources.logger(this).debug(`Escrow completed`);
+        } catch (err) {
+            throw new iCPSError(AUTH_ERR.ESCROW_FAILED).addCause(err);
+        }
+    }
+
+    /**
+     * Checks if the response data contains a specific service error code
+     * @param data - The response data
+     * @param code - The service error code to look for
+     * @returns True, if the service error is present
+     */
+    hasServiceError(data: any, code: string): boolean {
+        return Array.isArray(data?.service_errors) && data.service_errors.some((serviceError: any) => serviceError?.code === code);
     }
 
     /**
@@ -377,8 +488,12 @@ export class iCloud {
             Resources.logger(this).info(`Setting up iCloud connection`);
 
             const url = ENDPOINTS.SETUP.BASE() + ENDPOINTS.SETUP.PATH.ACCOUNT_LOGIN;
+            // Matching the iCloud web frontend, which provides the trust token in order to register this client as trusted browser
             const data = {
                 dsWebAuthToken: Resources.manager().sessionSecret,
+                accountCountryCode: Resources.network().accountCountry,
+                extended_login: true,
+                trustToken: Resources.manager().trustToken,
             };
 
             const response = await Resources.network().post(url, data);
@@ -392,7 +507,7 @@ export class iCloud {
             Resources.logger(this).debug(`Account ready`);
             Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
-            if ((err as any).isAxiosError && err.response.status === 421) {
+            if (isAxiosError(err) && err.response?.status === 421) {
                 Resources.logger(this).debug(`Session token expired, re-acquiring...`);
                 Resources.emit(iCPSEventCloud.SESSION_EXPIRED);
                 return;

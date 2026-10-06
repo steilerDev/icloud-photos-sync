@@ -2,3 +2,5 @@
 .vscode/*.env
 *.zip
 test-data/
+# Network captures (may contain session secrets)
+*.har

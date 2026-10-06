@@ -43,4 +43,21 @@ The following extensions are used during development and are configured as part 
     - *Description*: Show the status of the GPG signing key for your project!
     - *Publisher*: Weida Hong
     - [VS Marketplace](https://marketplace.visualstudio.com/items?itemName=wdhongtw.gpg-indicator)
- 
+
+## Docker Image
+
+The Docker image is based on [Docker Hardened Images](https://dhi.io/catalog/node). Pulling the base images requires authentication with a Docker Hub account (a [personal access token](https://docs.docker.com/security/access-tokens/) is recommended):
+
+```
+docker login dhi.io
+```
+
+The build context needs to contain the packaged application as `npm-pack.tgz`:
+
+```
+(cd app/ && npm run build && npm run dist && npm pack)
+mv app/icloud-photos-sync-*.tgz docker/npm-pack.tgz
+docker build -t steilerdev/icloud-photos-sync:local docker/
+```
+
+Since the runtime image does not include a shell, the Docker test helpers execute their commands within the container through `node -e`.

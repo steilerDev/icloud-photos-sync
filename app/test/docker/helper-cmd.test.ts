@@ -12,7 +12,7 @@ describe(`Docker Help Command`, () => {
             .withHelpCommand()
             .start();
 
-        expect(container.getFullLogs()).resolves.toEqual(`Usage: icloud-photos-sync [options] [command]
+        await expect(container.getFullLogs()).resolves.toEqual(`Usage: icloud-photos-sync [options] [command]
 
 One-way sync engine for the iCloud Photos Library into the native file system
 with archiving capabilities
@@ -25,6 +25,16 @@ Options:
   -p, --password <string>          AppleID password. Omitting the option will
                                    result in the CLI to ask for user input
                                    before startup. (env: APPLE_ID_PWD)
+  --username-file <path>           Path to a file containing the AppleID
+                                   username (e.g. a Docker secret), as an
+                                   alternative to the username option. Trailing
+                                   line breaks are removed. (env:
+                                   APPLE_ID_USER_FILE)
+  --password-file <path>           Path to a file containing the AppleID
+                                   password (e.g. a Docker secret), as an
+                                   alternative to the password option. Trailing
+                                   line breaks are removed. (env:
+                                   APPLE_ID_PWD_FILE)
   -T, --trust-token <string>       The trust token for authentication. If not
                                    provided, the trust token is read from the
                                    \`.icloud-photos-sync\` resource file in data
@@ -65,10 +75,10 @@ Options:
                                    more information. (default: false, env:
                                    ENABLE_CRASH_REPORTING)
   --mfa-timeout <number>           If a MFA code is necessary to authenticate,
-                                   wait for these many seconds before canceling 
+                                   wait for these many seconds before canceling
                                    the authentication process. Time in seconds,
-                                   should not exceed 10mins (due to server side timing).
-                                   (default: 600, env: MFA_TIMEOUT)             
+                                   should not exceed 10mins (due to server side
+                                   timing). (default: 600, env: MFA_TIMEOUT)
   --force                          Forcefully remove an existing library lock.
                                    USE WITH CAUTION! (default: false, env:
                                    FORCE)

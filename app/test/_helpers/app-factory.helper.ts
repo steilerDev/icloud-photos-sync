@@ -1,3 +1,8 @@
+import path from 'path';
+import * as Config from './_config';
+
+const customDataDir = path.join(Config.defaultConfig.dataDir, `custom`);
+
 export const rejectOptions = [
     {
         options: [
@@ -269,11 +274,11 @@ export const nonRejectOptions = [
             `-p`,
             `testPass`,
             `-d`,
-            `/some/data/dir`,
+            customDataDir,
         ],
         _desc: `Data dir set`,
         expectedOptions: {
-            dataDir: `/some/data/dir`,
+            dataDir: customDataDir,
         },
     }, {
         options: [

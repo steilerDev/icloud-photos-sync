@@ -14,8 +14,8 @@ on:
         type: boolean
     secrets:
         docker-token:
-          description: The Docker token used for releasing the image
-          required: true # Scout action will always run
+          description: The Docker token used for pulling the base images and releasing the image
+          required: true # Base images are pulled from dhi.io and Scout action will always run
         gh-token:
           description: The Github Token, in order to deploy assets to Github
           required: false # Only required for release
@@ -29,7 +29,7 @@ jobs:
     permissions: {}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/build-app
         uses: ./.github/actions/build/app-setup
       - name: action/build-app
@@ -48,7 +48,7 @@ jobs:
       url: ${{ steps.release-app.outputs.release-url }}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/release-app
         uses: ./.github/actions/release/app-setup
       - name: action/release-app
@@ -65,9 +65,11 @@ jobs:
       pull-requests: write
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/build-docker
         uses: ./.github/actions/build/docker-setup
+        with:
+          docker-token: ${{ secrets.docker-token }}
       - name: action/build-docker
         uses: ./.github/actions/build/docker
         with:
@@ -85,9 +87,11 @@ jobs:
       url: ${{ steps.release-docker.outputs.release-url }}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/release-docker
         uses: ./.github/actions/release/docker-setup
+        with:
+          docker-token: ${{ secrets.docker-token }}
       - name: action/release-docker
         id: release-docker
         uses: ./.github/actions/release/docker
@@ -101,7 +105,7 @@ jobs:
     permissions: {}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/build-docs
         uses: ./.github/actions/build/docs-setup
       - name: action/build-docs
@@ -119,7 +123,7 @@ jobs:
       url: ${{ steps.release-docs.outputs.release-url }}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/release-docs
         uses: ./.github/actions/release/docs-setup
       - name: action/release-docs
@@ -141,7 +145,7 @@ jobs:
       url: ${{ steps.release-github.outputs.release-url }}
     steps:
       - name: setup/checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: setup/release-github
         uses: ./.github/actions/release/github-setup
       - name: action/release-github

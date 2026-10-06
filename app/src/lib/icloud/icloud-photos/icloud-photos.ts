@@ -2,7 +2,7 @@ import {AxiosRequestConfig} from 'axios';
 import fs from 'fs/promises';
 import {jsonc} from 'jsonc';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
-import {iCPSError} from '../../../app/error/error.js';
+import {errorMessage, iCPSError} from '../../../app/error/error.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
@@ -272,8 +272,8 @@ export class iCloudPhotos {
             queue.push(this.fetchCPLAlbums());
 
             while (queue.length > 0) {
-                // Getting next item in the queue
-                for (const nextAlbum of await queue.shift()) {
+                // Getting next item in the queue - queue is not empty, as checked by the loop condition
+                for (const nextAlbum of await queue.shift()!) {
                     // If album is a folder, there is stuff in there, adding it to the queue
                     if (nextAlbum.albumType === AlbumType.FOLDER) {
                         Resources.logger(this).debug(`Adding child elements of ${nextAlbum.albumNameEnc} to the processing queue`);
@@ -365,7 +365,7 @@ export class iCloudPhotos {
                     cplAlbums.push(CPLAlbum.parseFromQuery(album));
                 }
             } catch (err) {
-                Resources.logger(this).info(`Error processing CPLAlbum: ${jsonc.stringify(album)}: ${err.message}`);
+                Resources.logger(this).info(`Error processing CPLAlbum: ${jsonc.stringify(album)}: ${errorMessage(err)}`);
             }
         }
 
@@ -589,6 +589,11 @@ export class iCloudPhotos {
      * @throws An error, in case the asset could not be downloaded
      */
     async downloadAsset(asset: Asset): Promise<void> {
+        if (!asset.downloadURL) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.MISSING_DOWNLOAD_URL)
+                .addContext(`asset`, asset);
+        }
+
         const location = asset.getAssetFilePath();
         await Resources.network().downloadData(asset.downloadURL, location);
         await fs.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file

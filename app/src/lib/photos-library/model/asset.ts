@@ -48,13 +48,13 @@ export class Asset implements PEntity<Asset> {
      */
     fileType: FileType;
     /**
-     * Shows which version of the asset this is
+     * Shows which version of the asset this is (only present if fetched from CPL)
      */
-    assetType: AssetType;
+    assetType?: AssetType;
     /**
-     * The original filename of this asset
+     * The original filename of this asset (only present if fetched from CPL)
      */
-    origFilename: string;
+    origFilename?: string;
 
     /**
      * The zone this file is belonging to

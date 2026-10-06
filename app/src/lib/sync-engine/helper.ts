@@ -45,7 +45,7 @@ export const SyncEngineHelper = {
  * @returns An array of all containing assets
  */
 function convertCPLAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): Asset[] {
-    const cplMasterRecords = {};
+    const cplMasterRecords: Record<string, CPLMaster> = {};
     cplMasters.forEach(masterRecord => {
         cplMasterRecords[masterRecord.recordName] = masterRecord;
     });

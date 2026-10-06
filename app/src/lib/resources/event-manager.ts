@@ -104,11 +104,12 @@ export class EventManager {
      */
     addListenerToRegistry(source: any, event: iCPSEvent, listener: ListenerFunction) {
         Resources.logger(this).debug(`Registering listener for event ${event} from source ${source.constructor.name}`);
-        if (!this._eventRegistry.has(source)) {
-            this._eventRegistry.set(source, []);
+        let sourceRegistry = this._eventRegistry.get(source);
+        if (!sourceRegistry) {
+            sourceRegistry = [];
+            this._eventRegistry.set(source, sourceRegistry);
         }
 
-        const sourceRegistry = this._eventRegistry.get(source);
         sourceRegistry.push({event, listener});
     }
 
@@ -119,7 +120,8 @@ export class EventManager {
      * @returns This instance for chaining
      */
     removeListenersFromRegistry(source: any, event?: iCPSEvent): EventManager {
-        if (!this._eventRegistry.has(source)) {
+        const sourceRegistry = this._eventRegistry.get(source);
+        if (!sourceRegistry) {
             Resources.logger(this).debug(`No listeners registered for source ${source.constructor.name}`);
             return this;
         }
@@ -129,7 +131,7 @@ export class EventManager {
         const updatedSourceRegistry: EventRegistryObject[] = [];
 
         let removedListenerCount = 0;
-        for (const registryObject of this._eventRegistry.get(source)) {
+        for (const registryObject of sourceRegistry) {
             if (event === undefined || registryObject.event === event) { // Removing listener and not pushing to new array
                 this._eventBus.removeListener(registryObject.event, registryObject.listener);
                 removedListenerCount++;

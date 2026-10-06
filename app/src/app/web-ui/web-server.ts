@@ -1,7 +1,7 @@
 import * as http from 'http';
 import {jsonc} from 'jsonc';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
-import {iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
+import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {WEB_SERVER_ERR} from '../error/error-codes.js';
 import {iCPSError} from '../error/error.js';
@@ -16,7 +16,7 @@ import {PrometheusSimpleMetric, PrometheusMetricsExporter, PrometheusMultipleVal
 import {LogLevel, StateType} from '../../lib/resources/state-manager.js';
 import {NotificationPusher} from './notification-pusher.js';
 import {URL} from 'url';
-import {pEvent} from 'p-event';
+import {once} from 'events';
 
 /**
  * Endpoint URI of Web Server, all expect POST requests
@@ -31,12 +31,12 @@ export const WEB_SERVER_API_ENDPOINTS = {
 };
 
 type WebServerResponse = {
-    code: number, 
+    code: number,
     header: {
-        "Content-Type": string, // eslint-disable-line
-        "Content-Length"?: number, //eslint-disable-line
+        "Content-Type": string,
+        "Content-Length"?: number,
         Location?: string
-    }, 
+    },
     body: any
 }
 
@@ -119,6 +119,11 @@ export class WebServer {
         this.server.unref();
 
         this.mfaMethod = new MFAMethod();
+
+        // Every new MFA flow starts with the code pushed to the trusted devices
+        Resources.events(this).on(iCPSEventCloud.MFA_REQUIRED, () => {
+            this.mfaMethod = new MFAMethod();
+        });
     }
 
     /* c8 ignore start */
@@ -167,7 +172,7 @@ export class WebServer {
     async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
         try {
             const url = new URL(
-                req.url.replace(new RegExp(`^${Resources.manager().webBasePath}`), ``), // Removing the web base path for request matching
+                (req.url ?? `/`).replace(new RegExp(`^${RegExp.escape(Resources.manager().webBasePath)}`), ``), // Removing the web base path for request matching (escaping, since it is user provided)
                 `http://localhost/` // Necessary, because the req.url is relative
             )
             const body = await this.readBody(req)
@@ -226,7 +231,7 @@ export class WebServer {
                 req.on(`data`, chunk => {
                     body += chunk.toString();
                 });
-                await pEvent(req, `end`, {rejectionEvents: [`error`]})
+                await once(req, `end`) // Rejects if an 'error' event is emitted
 
                 Resources.logger(this).debug(`Read body: ${body}`)
                 return body;
@@ -504,7 +509,8 @@ export class WebServer {
             return check;
         }
 
-        if (!url.search.match(/code=(\d{6})/)) {
+        const codeMatch = url.search.match(/code=(\d{6})/);
+        if (!codeMatch) {
             Resources.emit(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, new iCPSError(WEB_SERVER_ERR.CODE_FORMAT)
                 .addMessage(url.toString()));
             return {
@@ -518,7 +524,7 @@ export class WebServer {
             }
         }
 
-        const mfa: string = url.search.match(/code=(\d{6})/)[1]
+        const mfa: string = codeMatch[1]
 
         Resources.logger(this).debug(`Received MFA: ${mfa}`);
         Resources.emit(iCPSEventMFA.MFA_RECEIVED, this.mfaMethod, mfa);
@@ -566,7 +572,9 @@ export class WebServer {
         const phoneNumberIdMatch = url.search.match(/phoneNumberId=(\d+)/);
 
         if (phoneNumberIdMatch && methodString !== `device`) {
-            this.mfaMethod.update(methodString, parseInt(phoneNumberIdMatch[1], 10));
+            const phoneNumberId = parseInt(phoneNumberIdMatch[1], 10);
+            const trustedPhoneNumber = Resources.state().trustedPhoneNumbers?.find(phoneNumber => phoneNumber.id === phoneNumberId);
+            this.mfaMethod.update(methodString, phoneNumberId, trustedPhoneNumber?.nonFTEU);
         } else {
             this.mfaMethod.update(methodString);
         }
@@ -586,7 +594,7 @@ export class WebServer {
     
     handlePushSubscription(_url: URL, data?: string): WebServerResponse {
         try {
-            const pushSubscriptionData = Resources.validator().validatePushSubscription(jsonc.parse(data));
+            const pushSubscriptionData = Resources.validator().validatePushSubscription(jsonc.parse(data ?? ``));
             Resources.manager().addNotificationSubscription(pushSubscriptionData);
             return {
                 code: 201,

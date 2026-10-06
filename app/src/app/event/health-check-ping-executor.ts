@@ -7,7 +7,10 @@ import {LogLevel, SerializedState, StateType} from "../../lib/resources/state-ma
 
 export class HealthCheckPingExecutor {
 
-    networkInterface: AxiosInstance;
+    /**
+     * The network interface used for pinging - only set (and used), if a health check URL is configured
+     */
+    networkInterface!: AxiosInstance;
 
     public constructor() {
         if (!Resources.manager().healthCheckUrl) {
@@ -26,7 +29,7 @@ export class HealthCheckPingExecutor {
                     return
                 }
             }
-            if(state.state === StateType.RUNNING && state.progressMsg.startsWith(`Starting`) && state.progress === 0) {
+            if(state.state === StateType.RUNNING && state.progressMsg?.startsWith(`Starting`) && state.progress === 0) {
                 await this.pingStart()
                 return
             }

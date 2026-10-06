@@ -26,9 +26,9 @@ export abstract class iCPSApp {
  */
 export class DaemonApp extends iCPSApp {
     /**
-     * Holds the cron job
+     * Holds the cron job - available once the app is running
      */
-    job: Cron;
+    job?: Cron;
 
     /**
      * Schedule the synchronization based on the provided cron string
@@ -57,6 +57,13 @@ export class DaemonApp extends iCPSApp {
      * @param syncApp - Parametrized for testability - will be freshly initiated if omitted
      */
     async performScheduledSync(syncApp: SyncApp = new SyncApp()) {
+        // Another operation (e.g. a re-authentication triggered through the Web UI) is still in progress - skipping this run
+        // This needs to be checked before emitting SCHEDULED_START, since that event moves the state to RUNNING
+        if (Resources.state().state !== StateType.READY) {
+            Resources.emit(iCPSEventApp.SCHEDULED_OVERRUN, this.job?.nextRun());
+            return;
+        }
+
         try {
             Resources.emit(iCPSEventApp.SCHEDULED_START);
             const [remoteAssets] = await syncApp.run() as [Asset[], Album[]];
@@ -86,12 +93,6 @@ abstract class iCloudApp extends iCPSApp {
      * @throws An iCPSError in case an error occurs
      */
     async run(): Promise<unknown> {
-        // seems to be a bug: if the sync is triggered by the web ui, the sync start event will already have set the state to running, failing this check.
-        // if(Resources.state().state !== StateType.READY) {
-        //     throw new iCPSError(APP_ERR.NOT_READY)
-        //         .addMessage(`Application is not ready yet. Current state: ${Resources.state().state}`);
-        // }
-
         try {
             return await this.icloud.authenticate();
         } catch (err) {

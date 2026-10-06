@@ -11,9 +11,11 @@
     "declaration": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "strictNullChecks": false,
+    "strict": true,
+    "types": ["node"],
+    "rootDir": ".",
     "outDir": "build/out/",
     "skipLibCheck": true
   },
-  "include": ["src/**/*"],  
+  "include": ["src/**/*"]
 }
