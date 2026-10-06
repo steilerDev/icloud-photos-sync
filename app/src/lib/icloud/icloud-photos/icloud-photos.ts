@@ -519,7 +519,7 @@ export class iCloudPhotos {
 
             // Merging assets of shared library, if available
             if (Resources.manager().sharedZoneAvailable && typeof parentId === `undefined`) { // Only fetch shared album records if no parentId is specified, since icloud api does not yet support shared records in albums
-                Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId} for shared zone`);
+                Resources.logger(this).debug(`Fetching all picture records for album All photos for shared zone`);
                 const [sharedRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared);
                 allRecords = [...allRecords, ...sharedRecords];
                 expectedNumberOfRecords += sharedExpectedCount;
