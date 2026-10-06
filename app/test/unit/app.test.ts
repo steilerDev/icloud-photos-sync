@@ -43,6 +43,34 @@ describe(`App Factory`, () => {
         expect(setupSpy).not.toHaveBeenCalled();
     });
 
+    test(`Reject CLI with a non-zero exit code`, async () => {
+        jest.spyOn(process.stderr, `write`).mockImplementation(() => true);
+
+        await expect(appFactory(rejectOptions[0].options)).rejects.toMatchObject({exitCode: 1});
+    });
+
+    test.each([{
+        desc: `help option`,
+        options: [`--help`],
+        code: `commander.helpDisplayed`,
+    }, {
+        desc: `help command`,
+        options: [`help`],
+        code: `commander.help`,
+    }, {
+        desc: `version option`,
+        options: [`--version`],
+        code: `commander.version`,
+    }])(`Exit with code 0 for $desc`, async ({options, code}) => {
+        const setupSpy = jest.spyOn(Resources, `setup`);
+        const mockStdout = jest.spyOn(process.stdout, `write`).mockImplementation(() => true);
+
+        await expect(appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, ...options])).rejects.toMatchObject({code, exitCode: 0});
+
+        expect(mockStdout).toHaveBeenCalled();
+        expect(setupSpy).not.toHaveBeenCalled();
+    });
+
     describe.each([{
         desc: `Token App`,
         command: [`token`],
