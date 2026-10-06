@@ -1,8 +1,8 @@
-import {AxiosRequestConfig, AxiosResponse, isAxiosError} from 'axios';
 import {jsonc} from 'jsonc';
 import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.js';
 import {iCPSError} from '../../app/error/error.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
+import {HttpRequestConfig, HttpResponse, isHttpError, NO_VALIDATION} from '../resources/http-client.js';
 import {Resources} from '../resources/main.js';
 import {COOKIE_KEYS, ENDPOINTS, TrustedPhoneNumber} from '../resources/network-types.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
@@ -104,7 +104,7 @@ export class iCloud {
         Resources.logger(this).info(`Authenticating user`);
         Resources.emit(iCPSEventCloud.AUTHENTICATION_STARTED);
 
-        const config: AxiosRequestConfig = {
+        const config: HttpRequestConfig = {
             params: {
                 isRememberMeEnabled: `true`,
             },
@@ -117,10 +117,8 @@ export class iCloud {
                 ? this.getLegacyLogin()
                 : await this.getSRPLogin();
 
-            const response = await Resources.network().post(url, data, config);
-
-            const validatedResponse = Resources.validator().validateSigninResponse(response);
-            Resources.network().applySigninResponse(validatedResponse);
+            const response = await Resources.network().post(url, data, signinResponse => Resources.validator().validateSigninResponse(signinResponse), config);
+            Resources.network().applySigninResponse(response);
 
             Resources.logger(this).debug(`Acquired signin secrets`);
 
@@ -153,8 +151,7 @@ export class iCloud {
                 return ready;
             }
 
-            // Using the isAxiosError type guard, since `err instanceof AxiosError` does not seem to work
-            if (isAxiosError(err)) {
+            if (isHttpError(err)) {
                 switch (err.response?.status) {
                 case 401:
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
@@ -207,16 +204,14 @@ export class iCloud {
     async getSRPLogin(authenticator: iCloudCrypto = new iCloudCrypto()): Promise<[url: string, payload: any]> {
         Resources.logger(this).info(`Generating SRP challenge`);
         try {
-            const initResponse = await Resources.network().post(ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.SIGNIN.INIT, {
+            const validatedInitResponse = await Resources.network().post(ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.SIGNIN.INIT, {
                 a: await authenticator.getClientEphemeral(),
                 accountName: Resources.manager().username,
                 protocols: [
                     `s2k`,
                     `s2k_fo`,
                 ],
-            });
-
-            const validatedInitResponse = Resources.validator().validateSigninInitResponse(initResponse);
+            }, initResponse => Resources.validator().validateSigninInitResponse(initResponse));
 
             const derivedPassword = await authenticator.derivePassword(validatedInitResponse.data.protocol, validatedInitResponse.data.salt, validatedInitResponse.data.iteration);
             const [m1Proof, m2Proof] = await authenticator.getProofValues(derivedPassword, validatedInitResponse.data.b, validatedInitResponse.data.salt);
@@ -248,19 +243,19 @@ export class iCloud {
         Resources.logger(this).info(`Getting trusted phone numbers`);
 
         try {
-            const response = await Resources.network().get(ENDPOINTS.AUTH.BASE, {
+            const validatedAuthInformationResponse = await Resources.network().get(ENDPOINTS.AUTH.BASE, response => {
+                const authInformation = typeof response.data === `string`
+                    ? this.extractBootArgsFromHTML(response.data)?.direct?.twoSV
+                    : response.data;
+
+                return Resources.validator().validateAuthInformationResponse({
+                    data: {
+                        trustedPhoneNumbers: this.findTrustedPhoneNumbers(authInformation),
+                    },
+                });
+            }, {
                 headers: {
                     Accept: `application/json`,
-                },
-            });
-
-            const authInformation = typeof response.data === `string`
-                ? this.extractBootArgsFromHTML(response.data)?.direct?.twoSV
-                : response.data;
-
-            const validatedAuthInformationResponse = Resources.validator().validateAuthInformationResponse({
-                data: {
-                    trustedPhoneNumbers: this.findTrustedPhoneNumbers(authInformation),
                 },
             });
             Resources.logger(this).debug(`Found ${validatedAuthInformationResponse.data.trustedPhoneNumbers.length} trusted phone number(s)`);
@@ -304,7 +299,7 @@ export class iCloud {
         Resources.logger(this).info(`Resending MFA code with ${method}`);
 
         const url = method.getResendURL();
-        const config: AxiosRequestConfig = {
+        const config: HttpRequestConfig = {
             validateStatus: method.resendSuccessful.bind(method),
         };
         const data = method.getResendPayload();
@@ -312,16 +307,14 @@ export class iCloud {
         Resources.logger(this).debug(`Requesting MFA code via PUT ${url} with data ${jsonc.stringify(data)}`);
 
         try {
-            const response = await Resources.network().put(url, data, config);
-
             if (method.isSMS || method.isVoice) {
-                const validatedResponse = Resources.validator().validateResendMFAPhoneResponse(response);
+                const validatedResponse = await Resources.network().put(url, data, response => Resources.validator().validateResendMFAPhoneResponse(response), config);
                 Resources.logger(this).info(`Successfully requested new MFA code using phone ${validatedResponse.data.trustedPhoneNumber.numberWithDialCode}`);
                 return;
             }
 
             if (method.isDevice) {
-                const validatedResponse = Resources.validator().validateResendMFADeviceResponse(response);
+                const validatedResponse = await Resources.network().put(url, data, response => Resources.validator().validateResendMFADeviceResponse(response), config);
                 const trustedDeviceCount = validatedResponse.data ? validatedResponse.data.trustedDeviceCount : undefined;
                 Resources.logger(this).info(`Successfully requested new MFA code using ${trustedDeviceCount ?? `all`} trusted device(s)`);
             }
@@ -341,13 +334,14 @@ export class iCloud {
             Resources.logger(this).info(`Authenticating MFA with code ${mfa}`);
 
             const url = method.getEnterURL();
-            const config: AxiosRequestConfig = {
+            const config: HttpRequestConfig = {
                 validateStatus: method.enterSuccessful.bind(method),
             };
             const data = method.getEnterPayload(mfa);
 
             Resources.logger(this).debug(`Entering MFA code via URL ${url} with data ${jsonc.stringify(data)}`);
-            const response = await Resources.network().post(url, data, config);
+            // The response body is only relevant for status 409 and checked below
+            const response = await Resources.network().post(url, data, NO_VALIDATION, config);
 
             if (response.status === 409) {
                 // Since iOS 26.4 the backend acknowledges a valid code with status 409
@@ -381,7 +375,7 @@ export class iCloud {
                 return;
             }
 
-            if (isAxiosError(err) && (err.response?.status === 400 || this.hasServiceError(err.response?.data, MFA_INCORRECT_CODE_ERROR))) {
+            if (isHttpError(err) && (err.response?.status === 400 || this.hasServiceError(err.response?.data, MFA_INCORRECT_CODE_ERROR))) {
                 const augmentedErr = new iCPSError(MFA_ERR.CODE_REJECTED).addCause(err);
                 if (Array.isArray(err.response?.data?.service_errors)) {
                     augmentedErr.addMessage(...err.response!.data.service_errors.map((serviceError: any) => serviceError?.message));
@@ -400,7 +394,7 @@ export class iCloud {
      * @param response - The response received from the backend
      * @returns True, if the escrow flow needs to be completed
      */
-    requiresEscrow(response: AxiosResponse): boolean {
+    requiresEscrow(response: Pick<HttpResponse, `headers`>): boolean {
         return Boolean(response.headers[`x-apple-edp`] || response.headers[`x-apple-pdp`]);
     }
 
@@ -413,16 +407,14 @@ export class iCloud {
     async completeEscrow(authenticator: iCloudCrypto = new iCloudCrypto(``)) {
         Resources.logger(this).info(`Completing escrow password verification`);
         try {
-            const initResponse = await Resources.network().post(ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.ESCROW.INIT, {
+            const validatedInitResponse = await Resources.network().post(ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.ESCROW.INIT, {
                 a: await authenticator.getClientEphemeral(),
                 accountName: ``,
                 protocols: [
                     `s2k`,
                     `s2k_fo`,
                 ],
-            });
-
-            const validatedInitResponse = Resources.validator().validateEscrowInitResponse(initResponse);
+            }, initResponse => Resources.validator().validateEscrowInitResponse(initResponse));
 
             const derivedPassword = await authenticator.derivePassword(validatedInitResponse.data.protocol, validatedInitResponse.data.salt, validatedInitResponse.data.iteration);
             const [m1Proof, m2Proof] = await authenticator.getProofValues(derivedPassword, validatedInitResponse.data.b, validatedInitResponse.data.salt);
@@ -432,7 +424,7 @@ export class iCloud {
                 m2: m2Proof,
                 c: validatedInitResponse.data.c,
                 k: await authenticator.getSessionKey(),
-            });
+            }, NO_VALIDATION); // The updated session token is optional
 
             Resources.network().applySessionTokenUpdate(completeResponse);
             Resources.logger(this).debug(`Escrow completed`);
@@ -461,12 +453,11 @@ export class iCloud {
             Resources.logger(this).info(`Trusting device and acquiring trust tokens`);
 
             const url = ENDPOINTS.AUTH.BASE + ENDPOINTS.AUTH.PATH.TRUST;
-            const config: AxiosRequestConfig = {
+            const config: HttpRequestConfig = {
                 validateStatus: status => status === 204,
             };
 
-            const response = await Resources.network().get(url, config);
-            const validatedResponse = Resources.validator().validateTrustResponse(response);
+            const validatedResponse = await Resources.network().get(url, response => Resources.validator().validateTrustResponse(response), config);
             Resources.network().applyTrustResponse(validatedResponse);
 
             Resources.logger(this).debug(`Acquired account tokens`);
@@ -496,8 +487,7 @@ export class iCloud {
                 trustToken: Resources.manager().trustToken,
             };
 
-            const response = await Resources.network().post(url, data);
-            const validatedResponse = Resources.validator().validateSetupResponse(response);
+            const validatedResponse = await Resources.network().post(url, data, response => Resources.validator().validateSetupResponse(response));
             if (!Resources.network().applySetupResponse(validatedResponse)) {
                 Resources.logger(this).debug(`PCS required, acquiring...`);
                 Resources.emit(iCPSEventCloud.PCS_REQUIRED);
@@ -507,7 +497,7 @@ export class iCloud {
             Resources.logger(this).debug(`Account ready`);
             Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
-            if (isAxiosError(err) && err.response?.status === 421) {
+            if (isHttpError(err) && err.response?.status === 421) {
                 Resources.logger(this).debug(`Session token expired, re-acquiring...`);
                 Resources.emit(iCPSEventCloud.SESSION_EXPIRED);
                 return;
@@ -534,8 +524,7 @@ export class iCloud {
                 derivedFromUserAction: true,
             };
 
-            const response = await Resources.network().post(url, data);
-            const validatedResponse = Resources.validator().validatePCSResponse(response);
+            const validatedResponse = await Resources.network().post(url, data, response => Resources.validator().validatePCSResponse(response));
 
             if (validatedResponse.data.status === `failure`) {
                 Resources.logger(this).info(`Failed to acquire PCS cookies: ${validatedResponse.data.message}`);
@@ -567,14 +556,14 @@ export class iCloud {
                 allBrowsers: false,
             };
 
-            const config: AxiosRequestConfig = {
+            const config: HttpRequestConfig = {
                 // 421 is expected, if user was not logged in - 200 is expected, if logout was successful
                 validateStatus: status => status === 421 || status === 200,
             };
 
             Resources.logger(this).info(`Logging current account out`);
 
-            await Resources.network().post(url, data, config);
+            await Resources.network().post(url, data, NO_VALIDATION, config);
         } catch (err) {
             throw new iCPSError(AUTH_ERR.LOGOUT_FAILED).addCause(err);
         }

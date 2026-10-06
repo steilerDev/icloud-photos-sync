@@ -1,8 +1,8 @@
 import {beforeEach, describe, expect, jest, test} from "@jest/globals";
-import MockAdapter from 'axios-mock-adapter';
 import {HealthCheckPingExecutor} from "../../src/app/event/health-check-ping-executor";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError} from "../../src/lib/resources/events-types";
 import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general";
+import {HttpMock} from "../_helpers/http-mock.helper";
 import {LogLevel, StateManager} from "../../src/lib/resources/state-manager";
 
 const exampleHealthCheckUrl = `https://hc-ping.com/example-healthcheck-slug`;
@@ -37,12 +37,12 @@ describe(`Health check initiates`, () => {
 
 describe(`Health Check Pings`, () => {
     let healthCheckPingExecutor: HealthCheckPingExecutor;
-    let mockAdapter: MockAdapter;
+    let mockAdapter: HttpMock;
 
     beforeEach(() => {
         healthCheckPingExecutor = new HealthCheckPingExecutor();
         healthCheckPingExecutor.getLog = jest.fn<typeof healthCheckPingExecutor.getLog>().mockReturnValue(`Example log message`);
-        mockAdapter = new MockAdapter(healthCheckPingExecutor.networkInterface);
+        mockAdapter = new HttpMock(healthCheckPingExecutor.networkInterface);
         mockAdapter.onPost().reply(200);
     });
 
@@ -76,7 +76,7 @@ describe(`Health Check Pings`, () => {
     test(`Does not send data if state changes`, async () => {
         mockedEventManager.emit(iCPSEventCloud.AUTHENTICATION_STARTED);
 
-        expect(mockAdapter.history).toHaveLength(0);
+        expect(mockAdapter.history.post).toHaveLength(0);
     });
 });
 

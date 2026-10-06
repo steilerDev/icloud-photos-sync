@@ -6,7 +6,7 @@ import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {fetchAndLoadStateReturnValue, diffStateReturnValue, convertCPLAssetsReturnValue, convertCPLAlbumsReturnValue, loadAssetsReturnValue, loadAlbumsReturnValue, resolveHierarchicalDependenciesReturnValue, fetchAllCPLAssetsMastersReturnValue, fetchAllCPLAlbumsReturnValue, getRandomZone} from '../_helpers/sync-engine.helper';
 import {MockedEventManager, MockedNetworkManager, MockedResourceManager, UnknownFunction, prepareResources} from '../_helpers/_general';
-import {AxiosError, AxiosResponse} from 'axios';
+import {HttpError, HttpRequest} from '../../src/lib/resources/http-client';
 import {SyncEngineHelper} from '../../src/lib/sync-engine/helper';
 import {iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../src/lib/resources/events-types';
 import {SyncEngine} from '../../src/lib/sync-engine/sync-engine';
@@ -77,12 +77,8 @@ describe(`Coordination`, () => {
             syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
                 .mockResolvedValue(diffStateReturnValue);
 
-            const error = new Error(`Bad Request - 421`) as unknown as AxiosError;
-            error.name = `AxiosError`;
-            error.code = `ERR_BAD_REQUEST`;
-            error.response = {
-                status: 421,
-            } as unknown as AxiosResponse;
+            const request = {method: `POST`, url: `/test`, fullURL: `/test`, headers: {}, startedAt: 0} as HttpRequest;
+            const error = HttpError.fromResponse({status: 421, statusText: ``, headers: {}, data: ``, config: request});
             syncEngine.writeState = jest.fn<typeof syncEngine.writeState>()
                 .mockRejectedValueOnce(error)
                 .mockRejectedValueOnce(error)
@@ -111,7 +107,7 @@ describe(`Coordination`, () => {
 
         test.each([
             {
-                error: new AxiosError(`Bad Response`, `ERR_BAD_RESPONSE`),
+                error: new HttpError(`Bad Response`, `ERR_BAD_RESPONSE`, {method: `GET`, url: `/test`, fullURL: `/test`, headers: {}, startedAt: 0}),
                 expectedError: new iCPSError(SYNC_ERR.NETWORK),
                 desc: `Network error`,
             }, {

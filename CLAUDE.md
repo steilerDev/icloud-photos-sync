@@ -78,7 +78,7 @@ npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the
 - `Resources.event()` — EventManager: the event bus.
 - `Resources.state()` — StateManager: app state READY/RUNNING/BLOCKED and the library lock.
 - `Resources.manager()` — ResourceManager: CLI options plus the persisted `.icloud-photos-sync` file.
-- `Resources.network()` — NetworkManager: axios plus the header/cookie jar, rate limiting and HAR capture.
+- `Resources.network()` — NetworkManager: session state and rate limiting on top of `HttpClient` (`http-client.ts`, Node's built-in `fetch`), which owns the header/cookie jar and the HAR capture.
 - `Resources.validator()` — Validator: ajv validation against the generated schemas.
 
 **Event-driven side effects.** Core classes emit typed events (`events-types.ts`) via `Resources.emit(...)` and never print directly. `main.ts` instantiates independent listeners that subscribe with `Resources.events(this).on(...)`:
@@ -105,7 +105,7 @@ Read `docs/src/dev/local-file-structure.md` before changing `photos-library/` or
 
 **Persistence.** `.icloud-photos-sync` in the data dir stores only `libraryVersion`, `trustToken`, `notificationVapidCredentials` and `notificationSubscriptions` (schema-validated). Session secrets, cookies and zones stay in memory. The trust token is written only after a fresh MFA, by `/2sv/trust`. `--refresh-token` clears it at startup, which forces MFA. There is no client-side expiry check.
 
-**Validated external data.** Response and resource types live in `resource-types.ts` / `network-types.ts`. `app/build/schema.ts` generates JSON schemas from them, which `validator.ts` imports. To validate a new type, register it in `schema.ts` and change the TS type, never the generated JSON. TSDoc schema tags (`@minimum`, `@pattern`, …) shape the schema. CloudKit query responses are **not** schema-validated; `query-parser.ts` parses them defensively.
+**Validated external data.** Response and resource types live in `resource-types.ts` / `network-types.ts`. `app/build/schema.ts` generates JSON schemas from them, which `validator.ts` imports. To validate a new type, register it in `schema.ts` and change the TS type, never the generated JSON. TSDoc schema tags (`@minimum`, `@pattern`, …) shape the schema. Every `get/post/put` takes a validator as a required argument and resolves to its result (e.g. `response => Resources.validator().validateSetupResponse(response)`); `NO_VALIDATION` is the explicit opt-out. CloudKit query responses are **not** schema-validated (`NO_VALIDATION`); `query-parser.ts` parses them defensively.
 
 **Web UI and API** (`src/app/web-ui/`).
 - A dependency-free `node:http` server. Routes are the `_sitemap` map in `web-server.ts`: UI pages (`/`, `/state`, `/submit-mfa`, `/request-mfa`), PWA assets, and the JSON API under `/api/*`.
@@ -124,8 +124,8 @@ The code is the source of truth. `docs/src/dev/api.md` is mostly current. `docs/
 **Hosts.**
 - Auth: `https://idmsa.apple.com/appleauth/auth`, the same for both regions.
 - Setup: `https://setup.icloud.com` (`.com.cn` for `--region china`).
-- Photos: `<webservices.ckdatabasews.url>/database/1/com.apple.photos.cloud/production/{private|shared}`. This becomes axios `baseURL`, so photos calls use relative paths.
-- Downloads: the per-record `downloadURL`, fetched verbatim on a separate streaming axios instance (no jar headers, no cookies, no HAR).
+- Photos: `<webservices.ckdatabasews.url>/database/1/com.apple.photos.cloud/production/{private|shared}`. This becomes the client's `baseURL`, so photos calls use relative paths.
+- Downloads: the per-record `downloadURL`, fetched verbatim and streamed to disk by `HttpClient.download` (no jar headers, no cookies, no HAR; the partial file is removed on failure).
 
 **Headers.**
 - **idmsa requests:** a static set: `X-Apple-Widget-Key`/`X-Apple-OAuth-Client-Id` (`CLIENT_ID`), the `X-Apple-OAuth-*` headers, `X-Apple-I-FD-Client-Info`, `X-Apple-Domain-Id: 3`, and a per-flow UUID in `X-Apple-Frame-Id`/`X-Apple-OAuth-State`. All requests also carry a Chrome User-Agent.
@@ -217,7 +217,7 @@ The SDK chooses the project by `application.version` via the submission tokens h
 - **Attachments are not reachable with an API token.** The log (`icps.log.br`) and HAR (`icps.har.br`) are uploaded as attachments, but `/api/list?view=attachments` rejects API tokens and `/api/get?attachment_name=…` fails. If the log or HAR is needed, ask the user to download it from the web console.
 
 **Attributes that matter.**
-- `icps.rootErrorCode` and `icps.errorCodeStack`: the iCPSError root code and the full code chain, e.g. `APP_DAEMON->APP_SYNC->AUTH_FAILED->AUTH_UNEXPECTED_RESPONSE->EXT#ERR_BAD_RESPONSE`. Codes map to `src/app/error/codes/`; an `EXT#` prefix marks a wrapped non-iCPS error (axios, `ENOSPC`, …).
+- `icps.rootErrorCode` and `icps.errorCodeStack`: the iCPSError root code and the full code chain, e.g. `APP_DAEMON->APP_SYNC->AUTH_FAILED->AUTH_UNEXPECTED_RESPONSE->EXT#ERR_BAD_RESPONSE`. Codes map to `src/app/error/codes/`; an `EXT#` prefix marks a wrapped non-iCPS error (`HttpError`, `ENOSPC`, …). `HttpError` keeps axios' former codes (`ERR_BAD_REQUEST` for 4xx, `ERR_BAD_RESPONSE` otherwise, `ECONNABORTED` for timeouts) and unwraps network codes such as `ECONNREFUSED` from fetch's error cause.
 - `icps.description`: the chained messages, including the HTTP status. `icps.uuid`: shown to the user as `(error code: <uuid>)` in the error message (`iCPSError.btUUID`), so use it to find a report a user quotes in a GitHub issue.
 - `icps.filetype.extension` / `icps.filetype.descriptor`: set only on "Reporting unknown file type" reports (fingerprint `000…0`). These are requests for file-type support (`src/lib/photos-library/model/file-type.ts`), not crashes.
 - `application.version`, `guid` (one id per install), `application.session`, `timestamp`, `callstack`, `error.message`, `classifiers` (the error class, e.g. `iCloudAuthError`), `lang.version` (Node), `uname.sysname`, `cpu.arch`.
@@ -256,7 +256,7 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - Classes are PascalCase, but project-branded types use a lowercase prefix: `iCloud`, `iCloudPhotos`, `iCPSError`, `iCPSApp`, `iCPSEvent<Area>`.
 - Files are kebab-case (`sync-engine.ts`, `icloud.crypto.ts`). Tests are `<area>.<module>.test.ts`.
 - Enum members are `UPPER_SNAKE` with backtick string values. Event values look like `` `icloud-auth_started` ``.
-- Internal members use a **public `_` prefix** (`_axios`, `_resources`, `_sitemap`) so tests can reach them. `private` is rare.
+- Internal members use a **public `_` prefix** (`_http`, `_resources`, `_sitemap`) so tests can reach them. `private` is rare.
 
 **Modules.**
 - `src` relative imports end in `.js`; **test imports omit the extension** (Jest maps it).
@@ -276,8 +276,8 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - Errors:
   - Throw `new iCPSError(AREA_ERR.CODE)` and chain `.addMessage()`, `.addCause(err)`, `.addContext(key, value)`. Catch blocks wrap and rethrow.
   - Error codes are defined in `src/app/error/codes/<area>.ts` with `buildErrorStruct(name, prefix, code, message)` and re-exported as `<AREA>_ERR` from `error-codes.ts`. A new error name must also be added to the `ErrorName` union.
-  - For axios errors use the `isAxiosError` guard.
-- All HTTP goes through `Resources.network().get/post/put`, never raw axios.
+  - For HTTP errors use the `isHttpError` guard (`err.response?.status`, `err.code`).
+- All HTTP goes through `Resources.network().get/post/put` (or an own `HttpClient`, like the health check), never raw `fetch`. Proxies are only applied with `--use-system-proxy`.
 - Read JSON with `jsonc` rather than `JSON.*`. For JSON imports, use `with {type: 'json'}`.
 - **Prefer Node built-ins over small dependencies.** This is an active trend: `events.once`, `util.styleText`, `RegExp.escape`, `Error.isError`, `crypto` for SRP, native TS type stripping for `build/*.ts`. Don't add lodash-style utilities.
 - `/* c8 ignore start/stop */` marks code that can't be tested.
@@ -288,7 +288,7 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - Titles are backtick strings in nested `describe`s. `test.each`/`describe.each` take object rows with a `desc` field, used as `$desc` in the title.
 - **Resources:** `const instances = prepareResources()!` in `beforeEach` (`test/_helpers/_general.ts`). It returns typed mocks:
   - `instances.manager` — set config directly, e.g. `_resources.maxRetries = 4`; resource-file I/O is stubbed.
-  - `instances.network.mock` — an `axios-mock-adapter` with `onNoMatch: throwException`.
+  - `instances.network.mock` — an `HttpMock` (`test/_helpers/http-mock.helper.ts`, mirrors the axios-mock-adapter API: `onPost(url, body, {headers}).reply(status, data, headers)`, `history`) with `onNoMatch: throwException`. Header matchers compare the full header set.
   - `instances.event.spyOnEvent(iCPSEventX.Y)` — removes existing listeners by default.
 - **Mocking:** reassign methods with typed jest.fn, e.g. `obj.method = jest.fn<typeof obj.method>().mockResolvedValue(…)`.
 - **File system:** `test/_helpers/mock-fs.helper.ts` is a drop-in for the mock-fs API (`mockfs({...})`, `mockfs.file/directory/symlink`, `mockfs.restore()`) that writes to a **real temp dir**.

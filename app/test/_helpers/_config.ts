@@ -28,6 +28,7 @@ export const defaultConfig = {
     exportMetrics: false,
     metadataRate: [Infinity, 0],
     enableNetworkCapture: false,
+    useSystemProxy: false,
     region: `world`,
     legacyLogin: false,
 } as iCPSAppOptions;

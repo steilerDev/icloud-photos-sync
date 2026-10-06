@@ -349,6 +349,19 @@ describe(`Validator`, () => {
         test.each([
             {
                 data: {
+                    status: 409,
+                    data: {
+                        authType: `hsa2`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                        'x-apple-session-token': `sessionToken`,
+                        'set-cookie': [`aasp=123`],
+                    },
+                },
+            }, {
+                data: {
+                    status: 200,
                     data: {
                         authType: `hsa2`,
                     },
@@ -366,6 +379,7 @@ describe(`Validator`, () => {
         test.each([
             {
                 data: {
+                    status: 409,
                     data: {},
                     headers: {
                         scnt: `scntString`,
@@ -376,6 +390,20 @@ describe(`Validator`, () => {
                 desc: `missing auth type in body`,
             }, {
                 data: {
+                    status: 500,
+                    data: {
+                        authType: `hsa2`,
+                    },
+                    headers: {
+                        scnt: `scntString`,
+                        'x-apple-session-token': `sessionToken`,
+                        'set-cookie': [`aasp=123`],
+                    },
+                },
+                desc: `unexpected status`,
+            }, {
+                data: {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },
@@ -387,6 +415,7 @@ describe(`Validator`, () => {
                 desc: `missing scnt header value`,
             }, {
                 data: {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },
@@ -398,6 +427,7 @@ describe(`Validator`, () => {
                 desc: `missing session token in headers`,
             }, {
                 data: {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },
@@ -409,6 +439,7 @@ describe(`Validator`, () => {
                 desc: `missing set-cookie headers`,
             }, {
                 data: {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },

@@ -136,6 +136,10 @@ export const ENDPOINTS = {
  */
 export type SigninResponse = {
     /**
+     * 409 if MFA or escrow is required, 200 if the trust token was accepted
+     */
+    status: 200 | 409,
+    /**
      * Data should be irrelevant for this one
      */
     data: {
