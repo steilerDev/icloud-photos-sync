@@ -137,25 +137,7 @@ updates:
         patterns:
         - "*node"
 
-  # Maintain dependencies for pip (docs site)
-  - package-ecosystem: "pip"
-    labels: [ ]
-    directory: "/docs"
-    target-branch: "dev"
-    versioning-strategy: "increase"
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: "chore: [docs] "
-    schedule:
-      interval: "monthly"
-      time: "09:00"
-      timezone: "Europe/Berlin"
-    cooldown:
-      default-days: 7
-    groups:
-      mkdocs:
-        patterns:
-        - "*"
+  # pip (docs site) is intentionally not maintained: the docs toolchain is frozen in docs/requirements.txt (see #1118)
 
   # Maintain dependencies for semantic release
   - package-ecosystem: "npm"

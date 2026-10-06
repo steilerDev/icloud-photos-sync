@@ -25,6 +25,9 @@ runs:
       run: (cd ${{ inputs.app-path }}; npm run doc:cli -- "${{ github.workspace }}/${{ inputs.docs-path }}/${{ steps.get-docs-config.outputs.docs-dir }}")
     - id: build-mkdocs
       shell: bash
+      env:
+        # mkdocs-redirects nags about MkDocs 2.0 - irrelevant, since the toolchain is pinned in requirements.txt
+        DISABLE_MKDOCS_2_WARNING: true
       run: (cd ${{ inputs.docs-path }}; mkdocs build)
     - id: bundle-coverage
       uses: dawidd6/action-download-artifact@v27

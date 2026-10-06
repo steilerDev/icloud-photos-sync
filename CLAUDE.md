@@ -349,6 +349,7 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - Commit prefixes: `chore: [ci]`, `[app]`, `[docker]`, `[docs]`, `[dev]`, `[semantic-release]`.
 - Ignored majors: `@types/node` (tied to `app/node-version`), `typescript`, and `node` in Docker.
 - In the Dockerfile, `node` and `alpine` are grouped because their Alpine versions must match.
+- The docs toolchain (`docs/requirements.txt`) is **frozen on purpose** and has no Dependabot entry. MkDocs 1.x is unmaintained and Material for MkDocs is EOL, but the output is static HTML, so the maintainer accepts that. Don't upgrade it or migrate it (e.g. to Zensical) unless a new docs capability requires it (#1118).
 
 **Keep these stable when editing app scripts or CI:**
 - npm script names CI calls: `build`, `dist`, `build:dev`, `build:schema`, `test:unit`, `test:api`, `test:docker`, `test:docker:unit`, `doc:cli` (output dir as the last argument).
