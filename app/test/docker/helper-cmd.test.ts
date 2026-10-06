@@ -103,6 +103,11 @@ Options:
                                    using the Influx Line Protocol. Written to
                                    \`.icloud-photos-sync.metrics\` in the data
                                    dir. (default: false, env: EXPORT_METRICS)
+  --export-prometheus-metrics      Exposes sync metrics in the
+                                   Prometheus/OpenMetrics format on the
+                                   \`/metrics\` endpoint of the web server.
+                                   (default: false, env:
+                                   EXPORT_PROMETHEUS_METRICS)
   --enable-network-capture         Enables network capture, and generate a HAR
                                    file for debugging purposes. Written to
                                    \`.icloud-photos-sync.har\` in the data dir.
