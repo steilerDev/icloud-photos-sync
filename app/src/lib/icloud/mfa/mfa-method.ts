@@ -126,16 +126,12 @@ export class MFAMethod {
         switch (this.type) {
         case MFAMethodType.VOICE:
             return {
-                phoneNumber: {
-                    id: this.numberId,
-                },
+                phoneNumber: this.phoneNumberPayload,
                 mode: `voice`,
             };
         case MFAMethodType.SMS:
             return {
-                phoneNumber: {
-                    id: this.numberId,
-                },
+                phoneNumber: this.phoneNumberPayload,
                 mode: `sms`,
             };
         default:
@@ -208,7 +204,7 @@ export class MFAMethod {
     }
 
     /**
-     * The phone number object used in the payload when entering a code received via sms or voice
+     * The phone number object used in the payload when requesting or entering a code via sms or voice
      */
     private get phoneNumberPayload(): {id?: number, nonFTEU?: boolean} {
         return this.nonFTEU === undefined

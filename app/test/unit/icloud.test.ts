@@ -739,6 +739,50 @@ describe.each([
                     expect(warnEvent).toHaveBeenCalled();
                 });
             });
+
+            test.each([
+                {
+                    desc: `sms`,
+                    method: `sms`,
+                },
+                {
+                    desc: `voice`,
+                    method: `voice`,
+                },
+            ])(`Forwards phone number flags when requesting code via $desc`, async ({method}) => {
+                mockedNetworkManager._headerJar.setCookie(Config.aaspCookieString);
+                mockedNetworkManager._headerJar.setHeader(new Header(`idmsa.apple.com`, `scnt`, Config.iCloudAuthSecrets.scnt));
+                mockedNetworkManager.sessionId = Config.iCloudAuthSecrets.sessionSecret;
+
+                mockedValidator.validateResendMFAPhoneResponse = jest.fn<typeof mockedValidator.validateResendMFAPhoneResponse>()
+                    .mockReturnValue({
+                        data: {
+                            trustedPhoneNumber: {
+                                numberWithDialCode: `someNumber`,
+                            },
+                        },
+                    } as any);
+
+                // Mock only matches the exact payload - any other body throws
+                mockedNetworkManager.mock
+                    .onPut(`https://idmsa.apple.com/appleauth/auth/verify/phone`,
+                        {
+                            phoneNumber: {
+                                id: 2,
+                                nonFTEU: true,
+                            },
+                            mode: method,
+                        },
+                    )
+                    .reply(200);
+
+                const warnEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.MFA_ERROR);
+
+                await icloud.resendMFA(new MFAMethod(method as any, 2, true));
+
+                expect(mockedValidator.validateResendMFAPhoneResponse).toHaveBeenCalled();
+                expect(warnEvent).not.toHaveBeenCalled();
+            });
         });
 
         describe(`Enter Code`, () => {
