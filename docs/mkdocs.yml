@@ -10,6 +10,7 @@ site_dir: 'site'
 nav:
   - 'Home': README.md
   - 'Get Started': get-started.md
+  - 'Upgrading to v5': user-guides/upgrade-v5.md
   - 'User Guides':
     - 'CLI Reference': user-guides/cli.md
     - 'API Reference': user-guides/api.md

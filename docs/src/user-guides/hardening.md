@@ -4,7 +4,7 @@
 
 The Docker image is based on [Docker Hardened Images](https://dhi.io/catalog/node), a minimal, CVE-minimized Node.js runtime, shipping with a software bill of materials (SBOM) and build provenance. Besides Node.js and the application, the image contains no shell, no package manager and no other system utilities.
 
-The application is executed as non-root user with UID `100` and GID `101`. Use the [`user`](https://docs.docker.com/reference/compose-file/services/#user) option to run it with a different user.
+The application is executed as non-root user with UID `100` and GID `101`. Use the [`user`](https://docs.docker.com/reference/compose-file/services/#user) option to run it with a different user. The default library path `/opt/icloud-photos-library` is owned by `100:101` and not world-writable, therefore a different user requires a bind mount to a host directory owned by this user - a new named or anonymous volume is not writable for it (see [Upgrading to v5](upgrade-v5.md#library-volume-ownership)).
 
 !!! warning "No shell available"
     Since the image does not include a shell, `docker exec -it photos-sync sh` is no longer possible. Commands of this application can still be executed directly, e.g. `docker exec -it photos-sync icloud-photos-sync token`. In order to debug the container, use [`docker debug`](https://docs.docker.com/reference/cli/docker/debug/), which attaches a toolbox to the running container without modifying it.

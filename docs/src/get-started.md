@@ -8,6 +8,9 @@ Find examples for the various deployment options within this guide.
 ## Installation
 The `latest` tag should always represent the latest stable release, whereas the `beta` tag provides a semi-stable preview of the upcoming release, while the `nightly` tag offers the latest development build, which might not be stable.
 
+!!! info "Upgrading from v4"
+    Version 5 introduces breaking changes to the runtime, the Docker image and the proxy configuration. Check the [upgrade guide](user-guides/upgrade-v5.md) before upgrading an existing installation.
+
 === "Docker"
 
     Docker images are available on [DockerHub](https://hub.docker.com/r/steilerdev/icloud-photos-sync) for `linux/amd64` and `linux/arm64` platform. Alternatively the docker image tar archive is available from the [Github releases](https://github.com/steilerDev/icloud-photos-sync/releases) and can be installed using `docker load --input <fileName>`
@@ -77,7 +80,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
 
 === "node"
 
-    When setting up the environment, please keep the [currently recommended NodeJS version](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/node-version) in mind.
+    Node.js `26` or newer is required. When setting up the environment, please keep the [currently recommended NodeJS version](https://github.com/steilerDev/icloud-photos-sync/blob/main/app/node-version) in mind.
 
     === "NPM"
 
