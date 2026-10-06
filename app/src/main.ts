@@ -13,9 +13,10 @@ import {PrometheusMetricsExporter} from "./app/event/prometheus-metrics-exporter
 
 const app = await appFactory(process.argv)
     .catch(err => {
-        if (!(err instanceof CommanderError)) { // Commander prints its own error message
-            console.error(iCPSError.toiCPSError(err).getDescription());
+        if (err instanceof CommanderError) { // Commander prints its own output - help and version exit with code 0
+            process.exit(err.exitCode === 0 ? 0 : 3);
         }
+        console.error(iCPSError.toiCPSError(err).getDescription());
         process.exit(3);
     });
 

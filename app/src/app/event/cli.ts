@@ -6,6 +6,11 @@ import {Resources} from '../../lib/resources/main.js';
 import {iCPSError} from '../error/error.js';
 
 /**
+ * The width of the horizontal line, if the terminal does not report its width
+ */
+const DEFAULT_TERMINAL_COLUMNS = 80;
+
+/**
  * This class handles the input/output to the command line
  */
 export class CLIInterface {
@@ -291,11 +296,11 @@ export class CLIInterface {
     }
 
     /**
-     *
-     * @returns A horizontal line of the width of the screen
+     * Some terminals report 0 columns (e.g. `docker run -t`), or none at all if stdout is not a TTY
+     * @returns A horizontal line of the width of the screen, or of the default width if the terminal does not report one
      */
     getHorizontalLine(): string {
-        return `-`.repeat(process.stdout.columns);
+        return `-`.repeat(process.stdout.columns || DEFAULT_TERMINAL_COLUMNS);
     }
 
     /**
