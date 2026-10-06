@@ -1,5 +1,4 @@
-import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig} from "axios";
-import {AxiosHarTracker} from "axios-har-tracker";
+import axios, {AxiosError, AxiosHeaders, AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig, isAxiosError} from "axios";
 import {createWriteStream} from "fs";
 import fs from "fs/promises";
 import {jsonc} from "jsonc";
@@ -229,6 +228,285 @@ export class HeaderJar {
 }
 
 /**
+ * A name/value pair, as used for headers in the network capture
+ */
+type CaptureNameValue = {
+    name: string,
+    value: string,
+}
+
+/**
+ * A single captured request/response pair, loosely following the HAR 1.2 entry format, so the file can be opened in common HAR viewers
+ */
+type CaptureEntry = {
+    startedDateTime: string,
+    /**
+     * Duration of the request in milliseconds
+     */
+    time: number,
+    request: {
+        method: string,
+        url: string,
+        httpVersion: string,
+        cookies: CaptureNameValue[],
+        headers: CaptureNameValue[],
+        queryString: CaptureNameValue[],
+        postData?: {
+            mimeType: string,
+            text: string,
+        },
+        headersSize: number,
+        bodySize: number,
+    },
+    response: {
+        /**
+         * The HTTP status code, 0 if no response was received
+         */
+        status: number,
+        statusText: string,
+        httpVersion: string,
+        cookies: CaptureNameValue[],
+        headers: CaptureNameValue[],
+        content: {
+            size: number,
+            mimeType: string,
+            text?: string,
+        },
+        redirectURL: string,
+        headersSize: number,
+        bodySize: number,
+    },
+    cache: object,
+    timings: {
+        send: number,
+        wait: number,
+        receive: number,
+    },
+    /**
+     * The error code and message, if the request failed (e.g. non 2xx status, timeout or connection error)
+     */
+    _error?: string,
+}
+
+/**
+ * The captured network log, loosely following the HAR 1.2 format
+ */
+type CaptureLog = {
+    log: {
+        version: string,
+        creator: {
+            name: string,
+            version: string,
+        },
+        pages: [],
+        entries: CaptureEntry[],
+    },
+}
+
+/**
+ * Captures requests and responses of an axios instance for debugging purposes
+ * Each entry is built from the request config of the completed request, so concurrent requests are captured independently
+ */
+export class NetworkCapture {
+    /**
+     * The axios instance being captured - used to resolve the full request URL
+     */
+    _axios: AxiosInstance;
+
+    /**
+     * Start time of in-flight requests, keyed by their request config
+     */
+    _startTimes: WeakMap<InternalAxiosRequestConfig, number> = new WeakMap();
+
+    /**
+     * The captured network log
+     */
+    log!: CaptureLog;
+
+    /**
+     * Creates a new network capture and registers the relevant interceptors
+     * Should be created before any other request interceptors are registered, since axios runs request interceptors in reverse order - this way the request is captured with all headers applied
+     * @param axios - The axios instance to capture
+     */
+    constructor(axios: AxiosInstance) {
+        this._axios = axios;
+        this.reset();
+
+        axios.interceptors.request.use(config => this._recordStart(config));
+        axios.interceptors.response.use(
+            response => this._captureResponse(response),
+            err => this._captureError(err),
+        );
+    }
+
+    /**
+     * Clears all captured entries
+     */
+    reset() {
+        this.log = {
+            log: {
+                version: `1.2`,
+                creator: {
+                    name: Resources.PackageInfo.name,
+                    version: Resources.PackageInfo.version,
+                },
+                pages: [],
+                entries: [],
+            },
+        };
+    }
+
+    /**
+     * Records the start time of the request
+     * @param config - The request config
+     * @returns The unmodified request config
+     */
+    _recordStart(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
+        this._startTimes.set(config, Date.now());
+        return config;
+    }
+
+    /**
+     * Captures a successful response
+     * @param response - The axios response
+     * @returns The unmodified response
+     */
+    _captureResponse(response: AxiosResponse): AxiosResponse {
+        this.addEntry(response.config, response);
+        return response;
+    }
+
+    /**
+     * Captures a failed request, including its response if one was received
+     * @param err - The error thrown by axios
+     * @throws The unmodified error
+     */
+    _captureError(err: unknown): never {
+        if (isAxiosError(err) && err.config) {
+            this.addEntry(err.config, err.response, err);
+        }
+
+        throw err;
+    }
+
+    /**
+     * Adds an entry to the network log - failing to capture a request never fails the request itself
+     * @param config - The request config
+     * @param response - The response, if one was received
+     * @param error - The error, if the request failed
+     */
+    addEntry(config: InternalAxiosRequestConfig, response?: AxiosResponse, error?: AxiosError) {
+        try {
+            const startTime = this._startTimes.get(config) ?? Date.now();
+            const time = Date.now() - startTime;
+
+            const requestHeaders = this._toNameValue(config.headers);
+            const requestBody = this._toText(config.data);
+            const responseHeaders = this._toNameValue(response?.headers);
+            const responseBody = this._toText(response?.data);
+
+            const entry: CaptureEntry = {
+                startedDateTime: new Date(startTime).toISOString(),
+                time,
+                request: {
+                    method: (config.method ?? `get`).toUpperCase(),
+                    url: this._axios.getUri(config),
+                    httpVersion: `HTTP/1.1`,
+                    cookies: [],
+                    headers: requestHeaders,
+                    queryString: [],
+                    headersSize: -1,
+                    bodySize: requestBody?.length ?? 0,
+                },
+                response: {
+                    status: response?.status ?? 0,
+                    statusText: response?.statusText ?? ``,
+                    httpVersion: `HTTP/1.1`,
+                    cookies: [],
+                    headers: responseHeaders,
+                    content: {
+                        size: responseBody?.length ?? 0,
+                        mimeType: this._findValue(responseHeaders, `content-type`),
+                        text: responseBody,
+                    },
+                    redirectURL: ``,
+                    headersSize: -1,
+                    bodySize: responseBody?.length ?? 0,
+                },
+                cache: {},
+                timings: {
+                    send: 0,
+                    wait: time,
+                    receive: 0,
+                },
+            };
+
+            if (requestBody !== undefined) {
+                entry.request.postData = {
+                    mimeType: this._findValue(requestHeaders, `content-type`),
+                    text: requestBody,
+                };
+            }
+
+            if (error) {
+                entry._error = `${error.code ?? `UNKNOWN`}: ${error.message}`;
+            }
+
+            this.log.log.entries.push(entry);
+        } catch (err) {
+            Resources.logger(this).debug(`Unable to capture request: ${errorMessage(err)}`);
+        }
+    }
+
+    /**
+     * Converts a header object into a list of name/value pairs - multi-value headers (e.g. set-cookie) result in one pair per value
+     * @param headers - The headers to convert
+     * @returns The list of name/value pairs
+     */
+    _toNameValue(headers?: object): CaptureNameValue[] {
+        if (!headers) {
+            return [];
+        }
+
+        const plainHeaders: Record<string, unknown> = headers instanceof AxiosHeaders
+            ? headers.toJSON()
+            : {...headers};
+
+        return Object.entries(plainHeaders)
+            .flatMap(([name, value]) => (Array.isArray(value) ? value : [value])
+                .filter(v => v !== undefined && v !== null && v !== false)
+                .map(v => ({name, value: String(v)})));
+    }
+
+    /**
+     * Finds the value of the first name/value pair matching the name (case-insensitive)
+     * @param list - The list to search
+     * @param name - The name to look for
+     * @returns The value, or an empty string if not found
+     */
+    _findValue(list: CaptureNameValue[], name: string): string {
+        return list.find(item => item.name.toLowerCase() === name)?.value ?? ``;
+    }
+
+    /**
+     * Converts a request or response body into text
+     * @param data - The body - after axios transformed it, request bodies are already serialized, response bodies are parsed
+     * @returns The textual representation, or undefined if there is no body
+     */
+    _toText(data: unknown): string | undefined {
+        if (data === undefined || data === null || data === ``) {
+            return undefined;
+        }
+
+        if (typeof data === `string`) {
+            return data;
+        }
+
+        return jsonc.stringify(data);
+    }
+}
+
+/**
  * This class is responsible for keeping track of the shared network connection
  */
 export class NetworkManager {
@@ -244,7 +522,7 @@ export class NetworkManager {
 
     /**
      * A separate axios instance to handle stream based downloads of assets
-     * This allows us to bypass har files for those big files - additionally HarTracker is not handling the stream correctly
+     * This allows us to bypass har files for those big files - additionally the network capture does not handle streams
      */
     _streamingAxios: AxiosInstance;
 
@@ -264,9 +542,9 @@ export class NetworkManager {
     accountCountry?: string;
 
     /**
-     * Axios HAR tracker to capture network requests
+     * Captures network requests, if network capture is enabled
      */
-    _harTracker?: AxiosHarTracker;
+    _networkCapture?: NetworkCapture;
 
     /**
      * Creates a new network manager
@@ -286,7 +564,8 @@ export class NetworkManager {
         });
 
         if (resources.enableNetworkCapture) {
-            this._harTracker = new AxiosHarTracker(this._axios as any, {name: Resources.PackageInfo.name, version: Resources.PackageInfo.version});
+            // Needs to be created before the header jar, to capture requests with all headers applied
+            this._networkCapture = new NetworkCapture(this._axios);
         }
 
         this._headerJar = new HeaderJar(this._axios);
@@ -317,7 +596,7 @@ export class NetworkManager {
 
         if (Resources.manager().enableNetworkCapture) {
             await this.writeHarFile();
-            this._harTracker?.resetHar();
+            this._networkCapture?.reset();
         }
     }
 
@@ -369,7 +648,7 @@ export class NetworkManager {
         }
 
         try {
-            const generatedObject = this._harTracker?.getGeneratedHar();
+            const generatedObject = this._networkCapture?.log;
 
             if (!generatedObject || generatedObject.log.entries.length === 0) {
                 Resources.logger(this).debug(`Not writing HAR file because no entries were captured`);
