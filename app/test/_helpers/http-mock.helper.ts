@@ -44,6 +44,10 @@ class MockHandler {
     body?: unknown;
     matcher?: MockRequestMatcher;
     respond?: (request: HttpRequest) => Promise<HttpRawResponse>;
+    /**
+     * Number of remaining replies - unlimited if undefined
+     */
+    remaining?: number;
 
     constructor(mock: HttpMock, method?: HttpMethod, url?: string | RegExp, body?: unknown, matcher?: MockRequestMatcher) {
         this.mock = mock;
@@ -64,6 +68,15 @@ class MockHandler {
 
         this.respond = async request => toRawResponse(await replyFunction(request));
         return this.mock;
+    }
+
+    /**
+     * Replies once with the provided status, data and headers - or the result of the provided function, subsequent requests are matched against the following routes
+     * @returns The mock, for chaining
+     */
+    replyOnce(statusOrFunction: number | MockReplyFunction, data?: unknown, headers?: Record<string, string | string[]>): HttpMock {
+        this.remaining = 1;
+        return this.reply(statusOrFunction, data, headers);
     }
 
     /**
@@ -237,8 +250,12 @@ export class HttpMock {
     handle(request: HttpRequest): Promise<HttpRawResponse> {
         this.history[request.method.toLowerCase() as `get` | `post` | `put`].push(request);
 
-        const handler = this.handlers.find(h => h.respond && h.matches(request));
+        const handler = this.handlers.find(h => h.respond && h.remaining !== 0 && h.matches(request));
         if (handler) {
+            if (handler.remaining !== undefined) {
+                handler.remaining--;
+            }
+
             return handler.respond!(request);
         }
 

@@ -45,10 +45,14 @@ export class iCloudPhotos {
     }
 
     /**
-     *
+     * Listeners of a previously created promise are removed, so that a stale (already settled) promise does not consume the events of a later setup
      * @returns - A promise, that will resolve once this objects emits 'READY' or reject if it emits 'ERROR'
      */
     getReady(): Promise<void> {
+        Resources.events(this)
+            .removeListeners(iCPSEventPhotos.READY)
+            .removeListeners(iCPSEventPhotos.ERROR);
+
         return new Promise<void>((resolve, reject) => {
             Resources.events(this)
                 .once(iCPSEventPhotos.READY, () => resolve())
@@ -64,6 +68,8 @@ export class iCloudPhotos {
      * @emits iCPSEventPhotos.ERROR - In case of an error during setup - The iCPSError is provided as argument
      */
     async setup() {
+        // The setup is repeated when re-establishing the connection (e.g. on sync retries), the result of a previous setup must not be re-used
+        this.ready = this.getReady();
         try {
             Resources.logger(this).debug(`Getting iCloud Photos account information`);
 

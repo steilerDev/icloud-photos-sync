@@ -848,6 +848,15 @@ describe(`HttpClient`, () => {
             expect(headerJar.cookies.has(`aasp`)).toBe(extracted);
         });
 
+        test(`Mock replies once and falls through to the next route`, async () => {
+            mock.onGet(`https://example.com`).replyOnce(500)
+                .onGet(`https://example.com`).reply(200, `ok`);
+
+            await expect(client.get(`https://example.com`, RAW_RESPONSE)).rejects.toMatchObject({code: `ERR_BAD_RESPONSE`});
+            await expect(client.get(`https://example.com`, RAW_RESPONSE)).resolves.toMatchObject({data: `ok`});
+            await expect(client.get(`https://example.com`, RAW_RESPONSE)).resolves.toMatchObject({data: `ok`});
+        });
+
         test(`Unmatched mock request is reported as network error`, async () => {
             await expect(client.get(`https://example.com/unknown`, RAW_RESPONSE)).rejects.toMatchObject({
                 code: `ERR_NETWORK`,

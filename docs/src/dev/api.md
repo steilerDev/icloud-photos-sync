@@ -43,6 +43,7 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
     
     This happens after a validated MFA code, as well as when signing in with a valid trust token (in which case no MFA code is required - the signin `409` response carries the `X-Apple-EDP` header instead of `X-Apple-TwoSV-Trust-Eligible`).
   - **Account setup**: The `accountLogin` request provides `accountCountryCode`, `extended_login` and `trustToken` in addition to the `dsWebAuthToken`.
+  - **Incomplete account setup**: If the account requires an action through the iCloud web frontend (e.g. accepting updated terms and conditions), the `accountLogin` response sets `isRepairNeeded` or `termsUpdateNeeded`, or only provides an `X-APPLE-WEBAUTH-REPAIR` cookie instead of the `X-APPLE-WEBAUTH-TOKEN` cookie. Subsequent requests fail (e.g. `requestPCS` with `500` and `Missing X-APPLE-WEBAUTH-TOKEN cookie`), so the application aborts with `AUTH_ACCOUNT_SETUP_INCOMPLETE`, asking the user to log in to icloud.com and complete the prompts.
 
 The Postman Collection expects the following Environmental variables to be defined:
   - `username` set to the iCloud username

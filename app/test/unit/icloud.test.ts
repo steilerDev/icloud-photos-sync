@@ -121,10 +121,17 @@ describe(`Control structure`, () => {
     });
 
     test(`Authentication timeout`, async () => {
+        mockedResourceManager._resources.mfaTimeout = 60 * 10; // Seconds
         const iCloudReady = icloud.getReady();
         const timeoutValue = 1000 * 60 * (10 + 5);
+
+        jest.advanceTimersByTime(timeoutValue - 1);
+        mockedEventManager.emit(iCPSEventPhotos.READY);
+        await expect(iCloudReady).resolves.toBeTruthy();
+
+        const timedOutICloudReady = icloud.getReady();
         jest.advanceTimersByTime(timeoutValue + 1);
-        await expect(iCloudReady).rejects.toThrow(/iCloud setup did not complete successfully within expected amount of time$/);
+        await expect(timedOutICloudReady).rejects.toThrow(/iCloud setup did not complete successfully within expected amount of time$/);
     });
 });
 
@@ -1283,6 +1290,7 @@ describe.each([
                         'set-cookie': [
                             `X-APPLE-WEBAUTH-PCS-Photos="someVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
                             `X-APPLE-WEBAUTH-PCS-Sharing="someOtherVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                            `X-APPLE-WEBAUTH-TOKEN="someToken";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
                         ],
                     },
                     data: {
@@ -1329,7 +1337,9 @@ describe.each([
             mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>()
                 .mockReturnValue({
                     headers: {
-                        'set-cookie': [],   
+                        'set-cookie': [
+                            `X-APPLE-WEBAUTH-TOKEN="someToken";Path=/;Domain=.icloud.com;Secure;HttpOnly`,
+                        ],
                     },
                     data: {
                         dsInfo: {
@@ -1365,6 +1375,60 @@ describe.each([
             expect(mockedNetworkManager.applySetupResponse).toHaveBeenCalled();
             expect(pcsRequiredEvent).toHaveBeenCalledTimes(1);
             expect(icloud.photos).toBeDefined();
+        });
+
+        test.each([
+            {
+                desc: `repair needed`,
+                data: {isRepairNeeded: true},
+                cookies: [`X-APPLE-WEBAUTH-TOKEN="someToken";Path=/;Domain=.icloud.com;Secure;HttpOnly`],
+            }, {
+                desc: `terms update needed`,
+                data: {termsUpdateNeeded: true},
+                cookies: [`X-APPLE-WEBAUTH-TOKEN="someToken";Path=/;Domain=.icloud.com;Secure;HttpOnly`],
+            }, {
+                desc: `web auth token missing`,
+                data: {isRepairNeeded: false, termsUpdateNeeded: false},
+                cookies: [`X-APPLE-WEBAUTH-REPAIR="someVal";Path=/;Domain=.icloud.com;Secure;HttpOnly`],
+            },
+        ])(`Error - Account setup incomplete ($desc)`, async ({data, cookies}) => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
+
+            mockedValidator.validateSetupResponse = jest.fn<typeof mockedValidator.validateSetupResponse>()
+                .mockReturnValue({
+                    headers: {
+                        'set-cookie': cookies,
+                    },
+                    data: {
+                        ...data,
+                        dsInfo: {
+                            isWebAccessAllowed: true,
+                        },
+                        webservices: {
+                            ckdatabasews: {
+                                url: `someURL`,
+                                pcsRequired: true,
+                                status: `active`,
+                            },
+                        },
+                    },
+                });
+            mockedNetworkManager.applySetupResponse = jest.fn<typeof mockedNetworkManager.applySetupResponse>();
+
+            const pcsRequiredEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.PCS_REQUIRED);
+
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(200);
+
+            await icloud.setupAccount();
+            const err = await iCloudReady.catch(err => err) as iCPSError;
+
+            expect(err.message).toEqual(`Unable to setup iCloud Account`);
+            expect((err.cause as iCPSError).code).toEqual(AUTH_ERR.ACCOUNT_SETUP_INCOMPLETE.code);
+            expect(mockedNetworkManager.applySetupResponse).not.toHaveBeenCalled();
+            expect(pcsRequiredEvent).not.toHaveBeenCalled();
         });
 
         test(`Session expired`, async () => {
@@ -1663,6 +1727,31 @@ describe.each([
             await expect(iCloudReady).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
 
             expect(icloud.photos.setup).toHaveBeenCalled();
+        });
+
+        test(`Repeated setup rejects after previous success`, async () => {
+            icloud.photos.checkingIndexingStatus = jest.fn<typeof icloud.photos.checkingIndexingStatus>(async () => {
+                Resources.emit(iCPSEventPhotos.READY);
+            });
+            mockedValidator.validatePhotosSetupResponse = jest.fn<typeof mockedValidator.validatePhotosSetupResponse>()
+                .mockReturnValue({data: {zones: []}} as any);
+            mockedNetworkManager.applyZones = jest.fn<typeof mockedNetworkManager.applyZones>();
+            mockedNetworkManager.mock
+                .onPost(/changes\/database$/)
+                .replyOnce(200)
+                .onPost(/changes\/database$/)
+                .replyOnce(200)
+                .onPost(/changes\/database$/)
+                .replyOnce(500);
+
+            const firstICloudReady = icloud.getReady();
+            await icloud.getPhotosReady();
+            await expect(firstICloudReady).resolves.toBeTruthy();
+
+            // Re-establishing the connection, e.g. during a sync retry
+            const secondICloudReady = icloud.getReady();
+            await icloud.getPhotosReady();
+            await expect(secondICloudReady).rejects.toThrow(/^Unable to get iCloud Photos service ready$/);
         });
 
         test(`Photos Object invalid`, async () => {
