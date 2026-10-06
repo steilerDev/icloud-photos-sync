@@ -22,7 +22,11 @@ The maintainer keeps two real Apple accounts. Each has a `secrets/<name>.env` fi
 | `secrets/prod.env` | Maintainer's personal account: large library, many albums and folders, shared albums, a shared photo library | `APPLE_ID_USER`, `APPLE_ID_PWD`, `DATA_DIR`, … (the app's own option env vars) | Investigation and debugging of real-world API behaviour. Read-only use: never run `archive --remote-delete` or anything else that modifies the remote library against it. |
 | `secrets/test.env` | Dedicated test account (the library is described in `docs/src/dev/test-environment.md`) | `TEST_APPLE_ID_USER`, `TEST_APPLE_ID_PWD`, `TEST_TRUST_TOKEN` | `npm run test:api`, `npm run test:docker` and `.vscode/launch.json`. Expected API responses live in `app/test/api/_data/`. |
 
-`adp.env` is optional, for an Advanced Data Protection account. Load an env file with `set -a; . ../secrets/test.env; set +a` before running a command. Never print, log or commit the values, and never paste them into files or tool output.
+`adp.env` is optional, for an Advanced Data Protection account.
+
+Two further files hold Backtrace API tokens (see "Error reports (Backtrace)"): `secrets/backtrace.env` for the production project and `secrets/backtrace-dev.env` for the development project, each with `BACKTRACE_API_TOKEN` and `BACKTRACE_PROJECT`.
+
+Load an env file with `set -a; . ../secrets/test.env; set +a` before running a command. Never print, log or commit the values, and never paste them into files or tool output.
 
 **How trust tokens behave** (from the maintainer's experience):
 - Tokens expire roughly every 30 days. The app has no client-side expiry check, so an auth failure on a token older than about a month is most likely plain expiry.
@@ -176,6 +180,66 @@ The code is the source of truth. `docs/src/dev/api.md` is mostly current. `docs/
 - **Assets:** the original is `CPLMaster.resOriginalRes`. If `adjustmentType` is set, the edited version is `resJPEGFullRes`/`resVidFullRes`. Live-photo video is not fetched.
 - **Remote delete** (`archive --remote-delete`, non-favorites only): `POST /private/records/modify` sets `isDeleted: 1` on a `CPLAsset`.
 - **Rate limiting:** all metadata calls go through a p-queue set by `--metadata-rate`. Downloads use a separate concurrency queue (`--download-threads`, `--download-timeout`). There are no HTTP-level retries; retries happen at sync level.
+
+## Error reports (Backtrace)
+
+Users who enable crash reporting send errors to Backtrace (`ErrorHandler` in `src/app/event/error-handler.ts`). Use this data to find what fails in the field, pin it to code, and fix it. Reach it through the HTTP API with the project API tokens. Don't use morgue or the MCP server: morgue needs an SSO session token that resets with server maintenance.
+
+**Projects.** The universe is `steilerdev`, the host is `https://steilerdev.sp.backtrace.io`.
+
+| Env file | Project | Receives |
+|---|---|---|
+| `secrets/backtrace.env` | `icloud-photos-sync` | Every published build (releases and `-nightly`/`-beta`) |
+| `secrets/backtrace-dev.env` | `dev-icloud-photos-sync` | Local and CI builds (`0.0.0-development`), including test runs |
+
+The SDK chooses the project by `application.version` via the submission tokens hard-coded in `error-handler.ts`. Those are write-only and can't read anything. The production project keeps about 90 days of reports.
+
+**Calling the API.** Every call takes `universe` and `project` as query parameters and the token in the `X-Coroner-Token` header (`?token=` also works). Load the env file in the same command, as with the other secrets, and never echo the token:
+```sh
+(set -a; . ../secrets/backtrace.env; set +a
+ curl -s -X POST "https://steilerdev.sp.backtrace.io/api/query?universe=steilerdev&project=$BACKTRACE_PROJECT" \
+   -H "X-Coroner-Token: $BACKTRACE_API_TOKEN" -H 'Content-Type: application/json' -d '<query JSON>')
+```
+- **Schema:** `POST /api/query?…&action=describe` with body `{}` lists all attributes.
+- **Query** (`POST /api/query`):
+  - `filter` is `[{"<attr>": [["<op>", "<value>"]]}]`. Ops: `equal`, `not-equal`, `regular-expression`, `contains`, `not-contains`, `is-set`, `at-least`, `at-most`, `greater-than`, `less-than`. Values are strings, timestamps are Unix seconds.
+  - A query **must** have a filter that rejects missing data, e.g. `"timestamp": [["at-least", "<epoch>"]]`, otherwise it errors.
+  - Either aggregate with `group` (one attribute) + `fold` (`{"<attr>": [["head"], ["unique"], ["range"], ["distribution", 5]]}`), or list rows with `select` (an attribute list). The two are mutually exclusive.
+  - `order` is `[{"name": ";count" | "<attr>", "ordering": "descending"}]`; `limit` and `offset` paginate.
+- **Responses:** errors come back as `{"error": {"message": …}}` (often with HTTP 200). The data is in `response`:
+  - `group`: `response.values` is `[[groupKey, [one result per fold, in column order], count], …]`, e.g. `head` → `[v]`, `range` → `[min, max]`, `unique` → `[n]`. A group key `*` means the attribute is unset.
+  - `select`: `response.values` is one entry per column, **run-length encoded**: `["*", [value, runLength], …]`. Expand the runs and zip the columns into rows. Always select `_tx` to get the object id.
+- **One report in full:** `GET /api/get?…&object=<_tx in hex>&resource=json.gz` returns the gzipped report:
+  - `threads.main.stack`: source-mapped frames with `library` (a `src/…` path), `line` and `column`.
+  - `annotations.error`: the full `iCPSError` cause chain, with messages and context.
+  - `annotations["Environment Variables"]` and `["Exec Arguments"]`: the user's configuration; credentials show up masked as `<APPLE ID USERNAME>` etc.
+  - `attributes`: the runtime, OS and memory.
+- **Attachments are not reachable with an API token.** The log (`icps.log.br`) and HAR (`icps.har.br`) are uploaded as attachments, but `/api/list?view=attachments` rejects API tokens and `/api/get?attachment_name=…` fails. If the log or HAR is needed, ask the user to download it from the web console.
+
+**Attributes that matter.**
+- `icps.rootErrorCode` and `icps.errorCodeStack`: the iCPSError root code and the full code chain, e.g. `APP_DAEMON->APP_SYNC->AUTH_FAILED->AUTH_UNEXPECTED_RESPONSE->EXT#ERR_BAD_RESPONSE`. Codes map to `src/app/error/codes/`; an `EXT#` prefix marks a wrapped non-iCPS error (axios, `ENOSPC`, …).
+- `icps.description`: the chained messages, including the HTTP status. `icps.uuid`: shown to the user as `(error code: <uuid>)` in the error message (`iCPSError.btUUID`), so use it to find a report a user quotes in a GitHub issue.
+- `icps.filetype.extension` / `icps.filetype.descriptor`: set only on "Reporting unknown file type" reports (fingerprint `000…0`). These are requests for file-type support (`src/lib/photos-library/model/file-type.ts`), not crashes.
+- `application.version`, `guid` (one id per install), `application.session`, `timestamp`, `callstack`, `error.message`, `classifiers` (the error class, e.g. `iCloudAuthError`), `lang.version` (Node), `uname.sysname`, `cpu.arch`.
+- `fingerprint` groups reports into issues. Issue fields are reachable on report rows as `fingerprint;issues;<field>` (`state`, `tags`, `ticket`, `assignee`, `id`).
+
+**Triage pitfalls.**
+- **Rank by `unique(guid)`, not by report count.** Daemon mode retries on its cron schedule, so a single broken install sends thousands of identical reports. Most issues come from one or two installs.
+- **The fingerprint is a hash of the call stack**, not of the cause. One fingerprint can mix several root causes (e.g. a 503 and a 403 during `iCloud.authenticate`), and one root cause can span several fingerprints. Group by `icps.errorCodeStack` (or `icps.rootErrorCode`) to find causes, and use the fingerprint only to update issue state.
+- Many reports are environmental and need no code change: Apple 5xx/`ERR_BAD_RESPONSE`, `AUTH_SETUP_TIMEOUT`, `ENOSPC`, `ERR_SERVER_ALREADY_LISTEN` (port in use). Look for a pattern across installs or versions before you treat one as a bug. Codes on `reportDenyList` in `error-handler.ts` are never reported.
+- Compare against the latest release before you call something a regression. Old versions (e.g. 1.x) keep reporting, and their bugs are usually fixed already.
+
+**Updating issues.** Issues live in the `issues` table. Change them with `POST /api/query` and `{"table": "issues", "filter": [{"fingerprint": [["equal", "<sha256>"]]}], "set": {…}}`; `set` and `select` are mutually exclusive. To read them, `select` from the same table, e.g. `["fingerprint", "state", "tags", "ticket", "last_modified"]`.
+- `state`: the console uses `open`, `in-progress`, `resolved` and `muted`. The server accepts **any** string, so use exactly these.
+- `tags` (space-separated) and `ticket` (a URL) **replace** the current value; `null` clears it. Read the current tags first and write back the merged list.
+- The token has write access, and changes show up in the console immediately. **Ask the user before changing issues in the production project.** In the dev project, change them only as part of the task at hand.
+
+**Workflow: from a Backtrace issue to a fix.**
+1. List recent causes in the production project: filter on `timestamp`, `group` by `icps.errorCodeStack`, and fold `guid` (`unique`), `application.version` (`range`), `timestamp` (`range`), `fingerprint` (`unique`) and `fingerprint;issues;state` (`head`). Skip `resolved` and `muted` issues, and anything seen only on outdated versions.
+2. For a candidate, `select` a few recent `_tx` values and download each report (`json.gz`). Read the source-mapped stack frames and `annotations.error`, then open those lines in `src/`.
+3. Check GitHub for an existing issue (`gh issue list --search "<error code>"`). Otherwise propose one to the user, with the error code chain, the affected versions, the number of installs and a sample `icps.uuid`. Never paste raw report data into a public issue: reports contain user configuration, hostnames and library paths.
+4. Fix it on a branch from `dev`, following the normal workflow, and reference the GitHub issue.
+5. Once the fix is merged, set the Backtrace issue's `ticket` to the GitHub issue (or PR) URL and its `state` to `resolved`, after confirming with the user. After the release, check that `application.version` past the fix no longer reports this `icps.errorCodeStack`.
 
 ## Coding style (app)
 
