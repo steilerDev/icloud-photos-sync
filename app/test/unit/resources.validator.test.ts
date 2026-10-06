@@ -1414,12 +1414,16 @@ describe(`Validator`, () => {
             validate: (v: Validator, data: unknown) => v.validateHealthCheckPingResponse(data),
             error: VALIDATOR_ERR.HEALTH_CHECK_PING_RESPONSE,
             valid: [
-                {desc: `OK`, data: {status: 200, data: `OK`, headers: {}}},
-                {desc: `empty body`, data: {status: 200, data: ``, headers: {}}},
+                {desc: `OK`, data: {status: 200, data: `OK`, text: `OK`, headers: {'content-type': `text/plain; charset=utf-8`}}},
+                {desc: `empty body`, data: {status: 200, data: ``, text: ``, headers: {'content-type': `text/plain`}}},
+                {desc: `other successful status`, data: {status: 204, data: ``, text: ``, headers: {'content-type': `text/plain`}}},
             ],
             invalid: [
-                {desc: `unexpected status`, data: {status: 201, data: `OK`, headers: {}}},
-                {desc: `JSON body`, data: {status: 200, data: {ok: true}, headers: {}}},
+                {desc: `JSON response`, data: {status: 200, data: {ok: true}, text: `{"ok":true}`, headers: {'content-type': `application/json`}}},
+                {desc: `HTML response`, data: {status: 200, data: `<html></html>`, text: `<html></html>`, headers: {'content-type': `text/html`}}},
+                {desc: `missing content type`, data: {status: 200, data: `OK`, text: `OK`, headers: {}}},
+                {desc: `unsuccessful status`, data: {status: 302, data: `OK`, text: `OK`, headers: {'content-type': `text/plain`}}},
+                {desc: `missing text`, data: {status: 200, data: `OK`, headers: {'content-type': `text/plain`}}},
             ],
         },
     ])(`$desc`, ({validate, error, valid, invalid}) => {
@@ -1433,7 +1437,7 @@ describe(`Validator`, () => {
     });
 
     describe(`Response validators`, () => {
-        const response = {status: 200, statusText: ``, headers: {}, data: {}, config: {method: `GET`, url: ``, fullURL: ``, headers: {}, startedAt: 0}} as HttpResponse;
+        const response = {status: 200, statusText: ``, headers: {}, data: {}, text: `{}`, config: {method: `GET`, url: ``, fullURL: ``, headers: {}, startedAt: 0}} as HttpResponse;
 
         test.each([
             {key: `signinInit`, method: `validateSigninInitResponse`},

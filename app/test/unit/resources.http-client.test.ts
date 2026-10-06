@@ -740,6 +740,15 @@ describe(`HttpClient`, () => {
     });
 
     describe(`Response handling`, () => {
+        test(`Provides parsed and raw body`, async () => {
+            mock.onGet(`https://example.com`).reply(200, {some: `data`});
+
+            const response = await client.get(`https://example.com`, RAW_RESPONSE);
+
+            expect(response.data).toEqual({some: `data`});
+            expect(response.text).toEqual(`{"some":"data"}`);
+        });
+
         test.each([
             {desc: `JSON body`, body: `{"some":"data"}`, expected: {some: `data`}},
             {desc: `Text body`, body: `<html></html>`, expected: `<html></html>`},

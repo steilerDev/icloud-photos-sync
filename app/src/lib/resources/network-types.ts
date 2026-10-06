@@ -536,9 +536,24 @@ export type CloudKitRecordsResponse = {
 }
 
 /**
- * The expected response format for health check pings (healthchecks.io responds with a plain text 'OK')
+ * The expected response format for health check pings - a successful plain text response (healthchecks.io responds with 'OK')
  */
 export type HealthCheckPingResponse = {
-    status: 200,
-    data: string,
+    /**
+     * Any successful status (healthchecks.io responds with 200)
+     * @minimum 200
+     * @maximum 299
+     */
+    status: number,
+    headers: {
+        /**
+         * The ping endpoint responds with plain text
+         * @pattern ^text/plain
+         */
+        'content-type': string,
+    },
+    /**
+     * The raw response body
+     */
+    text: string,
 }

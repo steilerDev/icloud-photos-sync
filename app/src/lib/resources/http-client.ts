@@ -4,7 +4,6 @@ import {randomUUID} from "crypto";
 import {Readable} from "stream";
 import {pipeline} from "stream/promises";
 import {ReadableStream} from "stream/web";
-import {jsonc} from "jsonc";
 import {Cookie} from "tough-cookie";
 import {errorMessage} from "../../app/error/error.js";
 import {Resources} from "./main.js";
@@ -88,6 +87,10 @@ export type HttpResponse<T = any> = {
      * The response body - parsed JSON if possible, the raw string otherwise (an empty body results in an empty string)
      */
     data: T,
+    /**
+     * The raw response body (an empty body results in an empty string)
+     */
+    text: string,
     /**
      * The request that lead to this response
      */
@@ -521,7 +524,8 @@ export class NetworkCapture {
             const requestHeaders = this._toNameValue(request.headers);
             const requestBody = request.data;
             const responseHeaders = this._toNameValue(response?.headers);
-            const responseBody = this._toText(response?.data);
+            // Empty bodies are captured without text
+            const responseBody = response?.text || undefined;
 
             const entry: CaptureEntry = {
                 startedDateTime: new Date(request.startedAt).toISOString(),
@@ -602,22 +606,6 @@ export class NetworkCapture {
         return list.find(item => item.name.toLowerCase() === name)?.value ?? ``;
     }
 
-    /**
-     * Converts a response body into text
-     * @param data - The parsed response body
-     * @returns The textual representation, or undefined if there is no body
-     */
-    _toText(data: unknown): string | undefined {
-        if (data === undefined || data === null || data === ``) {
-            return undefined;
-        }
-
-        if (typeof data === `string`) {
-            return data;
-        }
-
-        return jsonc.stringify(data);
-    }
 }
 
 /**
@@ -913,6 +901,7 @@ export class HttpClient {
             statusText: rawResponse.statusText,
             headers,
             data: this._parseBody(rawResponse.body),
+            text: rawResponse.body,
             config: request,
         };
     }

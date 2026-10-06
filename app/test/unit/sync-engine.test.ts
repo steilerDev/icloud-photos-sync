@@ -78,7 +78,7 @@ describe(`Coordination`, () => {
                 .mockResolvedValue(diffStateReturnValue);
 
             const request = {method: `POST`, url: `/test`, fullURL: `/test`, headers: {}, startedAt: 0} as HttpRequest;
-            const error = HttpError.fromResponse({status: 421, statusText: ``, headers: {}, data: ``, config: request});
+            const error = HttpError.fromResponse({status: 421, statusText: ``, headers: {}, data: ``, text: ``, config: request});
             syncEngine.writeState = jest.fn<typeof syncEngine.writeState>()
                 .mockRejectedValueOnce(error)
                 .mockRejectedValueOnce(error)
