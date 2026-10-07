@@ -202,7 +202,7 @@ During the sync process various warning could be produced within the application
 !!! tip "Syncing large libraries"
     Initial sync of large libraries can take some time. The download URLs, which are part of the fetched metadata, expire after roughly 15 minutes. Once they expired, the tool refreshes the metadata and continues with the remaining assets. As long as assets were downloaded since the previous refresh, this does not count towards the [maximum number of retries](user-guides/cli.md#max-retries). After 8 hours the session expires, which will lead to a failure of the ongoing sync. The tool will refresh the session, unless the maximum number of retries is reached. Restarting a previously failed sync will keep all previously successfully downloaded assets.
 
-    Additionally you might need to limit the rate of metadata fetching, because the iCloud API has been observed to enforce rate limits, causing `SOCKET HANGUP` errors. This appears to be applicable for libraries holding more than 10.000 assets. Do this by [setting the metadata rate option](user-guides/cli.md#metadata-rate) - it seems `1/20` ensures sufficient throttling.
+    The iCloud API enforces rate limits, which especially affect libraries holding more than 10.000 assets. If a request is throttled, the tool waits for the time requested by iCloud and retries the request, without failing the sync. To reduce the number of throttled requests, or if you encounter `SOCKET HANGUP` errors, you can additionally [limit the rate of metadata fetching](user-guides/cli.md#metadata-rate), e.g. using `1/20`.
 
 During the sync, the WebUI will not show any detailed progress information - please check the CLI output and/or log files for more information on the sync progress.
 
