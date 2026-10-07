@@ -639,6 +639,12 @@ describe(`ResourceManager`, () => {
             });
         });
 
+        describe(`syncHidden`, () => {
+            test(`should return the sync hidden flag from the resources`, () => {
+                expect(resourceManager.syncHidden).toEqual(resources.syncHidden);
+            });
+        });
+
         describe(`trashDir`, () => {
             test(`should return undefined if soft delete is disabled`, () => {
                 resourceManager._resources.softDelete = false;

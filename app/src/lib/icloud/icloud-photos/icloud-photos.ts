@@ -11,6 +11,7 @@ import {SyncEngineHelper} from '../../sync-engine/helper.js';
 import * as QueryBuilder from './query-builder.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
 import {ZoneArea} from '../../resources/resource-types.js';
+import {HIDDEN_ALBUM_NAME, HIDDEN_ALBUM_UUID} from '../../photos-library/constants.js';
 
 /**
  * To perform an operation, a record change tag is required. Hardcoding it for now
@@ -457,6 +458,11 @@ export class iCloudPhotos {
                 }
             }
 
+            // The 'Hidden' album is not part of the album tree, adding it as top level album
+            if (Resources.manager().syncHidden) {
+                albumRecords.push(await this.fetchHiddenCPLAlbum());
+            }
+
             return albumRecords;
         } catch (err) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.FOLDER_STRUCTURE).addCause(err);
@@ -520,17 +526,7 @@ export class iCloudPhotos {
 
                 if (album.fields.albumType.value === AlbumType.ALBUM) {
                     const [albumCPLAssets, albumCPLMasters] = await this.fetchAllCPLAssetsMasters(album.recordName);
-
-                    const albumAssets: AlbumAssets = {};
-
-                    SyncEngineHelper.convertCPLAssets(albumCPLAssets, albumCPLMasters).forEach(asset => {
-                        /**
-                         * @remarks this probably needs to be more complex to support shared library folders once available from the API
-                         */
-                        albumAssets[asset.getAssetFilename()] = asset.getPrettyFilename();
-                    });
-
-                    cplAlbums.push(CPLAlbum.parseFromQuery(album, albumAssets));
+                    cplAlbums.push(CPLAlbum.parseFromQuery(album, this.getAlbumAssets(albumCPLAssets, albumCPLMasters)));
                 }
 
                 if (album.fields.albumType.value === AlbumType.FOLDER) {
@@ -545,16 +541,47 @@ export class iCloudPhotos {
     }
 
     /**
+     * Builds the album holding all hidden assets. Since this album has no representation in the iCloud backend, it is assembled from the hidden assets
+     * @returns The album record of the 'Hidden' album, containing all hidden assets
+     * @throws An iCPSError, in case the hidden records could not be fetched
+     */
+    async fetchHiddenCPLAlbum(): Promise<CPLAlbum> {
+        const [hiddenCPLAssets, hiddenCPLMasters] = await this.fetchHiddenCPLAssetsMasters();
+        const hiddenAlbum = new CPLAlbum();
+        hiddenAlbum.recordName = HIDDEN_ALBUM_UUID;
+        hiddenAlbum.albumType = AlbumType.ALBUM;
+        hiddenAlbum.albumNameEnc = Buffer.from(HIDDEN_ALBUM_NAME, `utf8`).toString(`base64`);
+        hiddenAlbum.modified = 0;
+        hiddenAlbum.assets = this.getAlbumAssets(hiddenCPLAssets, hiddenCPLMasters);
+        return hiddenAlbum;
+    }
+
+    /**
+     * Maps the provided records to the assets of an album
+     * @param cplAssets - The CPLAsset records of the album
+     * @param cplMasters - The CPLMaster records of the album
+     * @returns The assets of the album, mapping the filename in the asset folder to the filename presented to the user
+     */
+    getAlbumAssets(cplAssets: CPLAsset[], cplMasters: CPLMaster[]): AlbumAssets {
+        const albumAssets: AlbumAssets = {};
+        SyncEngineHelper.convertCPLAssets(cplAssets, cplMasters).forEach(asset => {
+            albumAssets[asset.getAssetFilename()] = asset.getPrettyFilename();
+        });
+        return albumAssets;
+    }
+
+    /**
      * Returns the number of records currently present in a given album.
      * This is necessary to properly handling splitting up the record requests (keeping iCloud API limitations in mind)
      * @param zone - Defines the zone to be used
      * @param albumId - The record name of the album, if undefined all pictures will be returned
+     * @param hidden - If set and albumId is undefined, the hidden pictures will be counted instead of all pictures
      * @returns The number of assets within the given album
      * @throws An iCPSError in case the count cannot be obtained
      */
-    async getPictureRecordsCountForZone(zone: QueryBuilder.Zones, albumId?: string): Promise<number> {
+    async getPictureRecordsCountForZone(zone: QueryBuilder.Zones, albumId?: string, hidden: boolean = false): Promise<number> {
         try {
-            const indexCountFilter = QueryBuilder.getIndexCountFilter(albumId);
+            const indexCountFilter = QueryBuilder.getIndexCountFilter(albumId, hidden);
             const countData = await this.performQuery(
                 zone,
                 QueryBuilder.RECORD_TYPES.INDEX_COUNT,
@@ -574,9 +601,10 @@ export class iCloudPhotos {
      * @param zone - Defines the zone to be used
      * @param expectedNumberOfRecords - The amount of records expected within the given album
      * @param albumId - The record name of the album, if undefined all pictures will be returned
+     * @param hidden - If set and albumId is undefined, the hidden pictures will be requested instead of all pictures
      * @returns An array of Promises, that will resolve to arrays of picture records
      */
-    buildPictureRecordsRequestsForZone(zone: QueryBuilder.Zones, expectedNumberOfRecords: number, albumId?: string): Promise<any[]>[] {
+    buildPictureRecordsRequestsForZone(zone: QueryBuilder.Zones, expectedNumberOfRecords: number, albumId?: string, hidden: boolean = false): Promise<any[]>[] {
         // On all pictures two records per photo are returned (CPLMaster & CPLAsset), on albums three (CPLMaster, CPLAsset & CPLContainerRelation) - all of them are counted against the limit
         const positionsPerRequest = albumId === undefined
             ? Math.floor(MAX_RECORDS_LIMIT / 2)
@@ -590,7 +618,7 @@ export class iCloudPhotos {
         for (let index = 0; index < numberOfRequests; index++) {
             const startRank = index * positionsPerRequest;
             const endRank = Math.min(startRank + positionsPerRequest, expectedNumberOfRecords);
-            pictureRecordsRequests.push(this.fetchPictureRecordsRange(zone, startRank, endRank, albumId));
+            pictureRecordsRequests.push(this.fetchPictureRecordsRange(zone, startRank, endRank, albumId, hidden));
         }
 
         return pictureRecordsRequests;
@@ -604,10 +632,11 @@ export class iCloudPhotos {
      * @param startRank - The first position of the range
      * @param endRank - The position after the last position of the range
      * @param albumId - The record name of the album, if undefined all pictures will be returned
+     * @param hidden - If set and albumId is undefined, the hidden pictures will be requested instead of all pictures
      * @returns The picture records within the range, as returned by the backend - might include records of re-requested positions or positions beyond the range
      * @throws An iCPSError, if a query fails
      */
-    async fetchPictureRecordsRange(zone: QueryBuilder.Zones, startRank: number, endRank: number, albumId?: string): Promise<any[]> {
+    async fetchPictureRecordsRange(zone: QueryBuilder.Zones, startRank: number, endRank: number, albumId?: string, hidden: boolean = false): Promise<any[]> {
         const records: any[] = [];
 
         // The continuation marker is only valid for the query it was returned by, therefore the start rank of that query is retained while following it
@@ -623,7 +652,9 @@ export class iCloudPhotos {
 
             const page = await this.performQueryPage(
                 zone,
-                albumId === undefined ? QueryBuilder.RECORD_TYPES.ALL_PHOTOS : QueryBuilder.RECORD_TYPES.PHOTO_RECORDS,
+                albumId !== undefined
+                    ? QueryBuilder.RECORD_TYPES.PHOTO_RECORDS
+                    : (hidden ? QueryBuilder.RECORD_TYPES.HIDDEN_PHOTOS : QueryBuilder.RECORD_TYPES.ALL_PHOTOS),
                 filters,
                 MAX_RECORDS_LIMIT,
                 QueryBuilder.QUERY_KEYS,
@@ -671,7 +702,7 @@ export class iCloudPhotos {
                 .addContext(`record`, record);
         }
 
-        if (record.fields?.isHidden?.value === 1) {
+        if (!Resources.manager().syncHidden && record.fields?.isHidden?.value === 1) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.HIDDEN_RECORD)
                 .addContext(`record`, record);
         }
@@ -700,14 +731,15 @@ export class iCloudPhotos {
      * Fetching all pictures associated to an album within the given zone, identified by parentId
      * @param zone - Defines the zone to be used
      * @param parentId - The record name of the album, if undefined all pictures will be returned
+     * @param hidden - If set and parentId is undefined, the hidden pictures will be returned instead of all pictures
      * @returns A tuple containing the plain records as returned by the backend and the expected number of assets within the album
      */
-    async fetchAllPictureRecordsForZone(zone: QueryBuilder.Zones, parentId?: string): Promise<[any[], number]> {
+    async fetchAllPictureRecordsForZone(zone: QueryBuilder.Zones, parentId?: string, hidden: boolean = false): Promise<[any[], number]> {
         // Getting number of items in folder
-        const expectedNumberOfRecords = await this.getPictureRecordsCountForZone(zone, parentId);
+        const expectedNumberOfRecords = await this.getPictureRecordsCountForZone(zone, parentId, hidden);
 
         // Creating requests, based on number of expected items
-        const pictureRecordsRequests = this.buildPictureRecordsRequestsForZone(zone, expectedNumberOfRecords, parentId);
+        const pictureRecordsRequests = this.buildPictureRecordsRequestsForZone(zone, expectedNumberOfRecords, parentId, hidden);
 
         // Merging arrays of arrays and waiting for all promises to settle - also if one of them fails, so no request is left running unobserved
         const allRecords: any[] = [];
@@ -731,7 +763,7 @@ export class iCloudPhotos {
 
     /**
      * Fetching all pictures associated to an album, identified by parentId
-     * @param parentId - The record name of the album, if undefined all pictures will be returned
+     * @param parentId - The record name of the album, if undefined all pictures will be returned (including hidden pictures, if enabled)
      * @returns An array of CPLMaster and CPLAsset records
      * @throws An iCPSError, in case the records could not be fetched
      * @emits iCPSEventRuntimeWarning.COUNT_MISMATCH - In case the number of fetched records does not match the expected number of records -  provides the album id, number of expected assets, actual CPL Assets and actual CPL Masters
@@ -739,8 +771,6 @@ export class iCloudPhotos {
     async fetchAllCPLAssetsMasters(parentId?: string): Promise<[CPLAsset[], CPLMaster[]]> {
         Resources.logger(this).debug(`Fetching all picture records for album ${parentId === undefined ? `All photos` : parentId}`);
 
-        const cplMasters: CPLMaster[] = [];
-        const cplAssets: CPLAsset[] = [];
         let allRecords: any[];
         let expectedNumberOfRecords: number;
         try {
@@ -753,15 +783,74 @@ export class iCloudPhotos {
                 allRecords = [...allRecords, ...sharedRecords];
                 expectedNumberOfRecords += sharedExpectedCount;
             }
+
+            // Merging hidden assets, if enabled, since they are not part of the 'All photos' query
+            if (Resources.manager().syncHidden && typeof parentId === `undefined`) {
+                const [hiddenRecords, hiddenExpectedCount] = await this.fetchAllHiddenPictureRecords();
+                allRecords = [...allRecords, ...hiddenRecords];
+                expectedNumberOfRecords += hiddenExpectedCount;
+            }
         } catch (err) {
             throw new iCPSError(ICLOUD_PHOTOS_ERR.FETCH_RECORDS)
                 .addMessage(`album ${parentId === undefined ? `'All photos'` : parentId}`)
                 .addCause(err);
         }
 
+        return this.parsePictureRecords(allRecords, expectedNumberOfRecords, parentId === undefined ? `All photos` : parentId);
+    }
+
+    /**
+     * Fetching all hidden pictures
+     * @returns An array of CPLMaster and CPLAsset records of all hidden pictures
+     * @throws An iCPSError, in case the records could not be fetched
+     * @emits iCPSEventRuntimeWarning.COUNT_MISMATCH - In case the number of fetched records does not match the expected number of records -  provides the album id, number of expected assets, actual CPL Assets and actual CPL Masters
+     */
+    async fetchHiddenCPLAssetsMasters(): Promise<[CPLAsset[], CPLMaster[]]> {
+        Resources.logger(this).debug(`Fetching all hidden picture records`);
+        try {
+            const [hiddenRecords, hiddenExpectedCount] = await this.fetchAllHiddenPictureRecords();
+            return this.parsePictureRecords(hiddenRecords, hiddenExpectedCount, HIDDEN_ALBUM_NAME);
+        } catch (err) {
+            throw new iCPSError(ICLOUD_PHOTOS_ERR.FETCH_RECORDS)
+                .addMessage(`album '${HIDDEN_ALBUM_NAME}'`)
+                .addCause(err);
+        }
+    }
+
+    /**
+     * Fetching the plain records of all hidden pictures of the primary and (if available) shared zone
+     * @returns A tuple containing the plain records as returned by the backend and the expected number of hidden assets
+     */
+    async fetchAllHiddenPictureRecords(): Promise<[any[], number]> {
+        let [hiddenRecords, expectedNumberOfRecords] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Primary, undefined, true);
+
+        if (Resources.manager().sharedZoneAvailable) {
+            Resources.logger(this).debug(`Fetching all hidden picture records for shared zone`);
+            const [sharedHiddenRecords, sharedExpectedCount] = await this.fetchAllPictureRecordsForZone(QueryBuilder.Zones.Shared, undefined, true);
+            hiddenRecords = [...hiddenRecords, ...sharedHiddenRecords];
+            expectedNumberOfRecords += sharedExpectedCount;
+        }
+
+        return [hiddenRecords, expectedNumberOfRecords];
+    }
+
+    /**
+     * Filters and parses the plain records returned by the backend
+     * @param allRecords - The plain records as returned by the backend
+     * @param expectedNumberOfRecords - The number of assets expected within the records
+     * @param albumName - The name of the album (used for logging)
+     * @returns An array of CPLMaster and CPLAsset records
+     * @emits iCPSEventRuntimeWarning.COUNT_MISMATCH - In case the number of fetched records does not match the expected number of records -  provides the album id, number of expected assets, actual CPL Assets and actual CPL Masters
+     */
+    parsePictureRecords(allRecords: any[], expectedNumberOfRecords: number, albumName: string): [CPLAsset[], CPLMaster[]] {
+        let cplMasters: CPLMaster[] = [];
+        const cplAssets: CPLAsset[] = [];
+
         // Post-processing response
         const seen = new Set<string>();
         const ignoredAssets: iCPSError[] = [];
+        const hiddenAssets = new Set<string>();
+        const hiddenMasters = new Set<string>();
         for (const record of allRecords) {
             try {
                 this.filterPictureRecord(record, seen);
@@ -776,30 +865,44 @@ export class iCloudPhotos {
                     seen.add(record.recordName);
                 }
             } catch (err) {
+                if ((err as iCPSError).code === ICLOUD_PHOTOS_ERR.HIDDEN_RECORD.code) {
+                    hiddenAssets.add(record.recordName);
+                    if (record.fields?.masterRef?.value?.recordName) {
+                        hiddenMasters.add(record.fields.masterRef.value.recordName);
+                    }
+                }
+
                 // Summarizing errors/warnings
                 ignoredAssets.push((err as iCPSError));
             }
         }
 
+        // Ignored hidden assets are still part of an album's count and their masters are returned as well - removing both (unless the master is still referenced)
+        if (hiddenAssets.size > 0) {
+            const referencedMasters = new Set(cplAssets.map(asset => asset.masterRef));
+            cplMasters = cplMasters.filter(master => !hiddenMasters.has(master.recordName) || referencedMasters.has(master.recordName));
+            expectedNumberOfRecords -= hiddenAssets.size;
+        }
+
         // Pretty printing ignored assets
         if (ignoredAssets.length > 0) {
-            Resources.logger(this).info(`Ignoring ${ignoredAssets.length} assets for ${parentId === undefined ? `All photos` : parentId}:`);
-            const erroredAssets = ignoredAssets.filter(err => err.code !== ICLOUD_PHOTOS_ERR.UNWANTED_RECORD_TYPE.code); // Filtering 'expected' errors
+            Resources.logger(this).info(`Ignoring ${ignoredAssets.length} assets for ${albumName}:`);
+            const erroredAssets = ignoredAssets.filter(err => err.code !== ICLOUD_PHOTOS_ERR.UNWANTED_RECORD_TYPE.code && err.code !== ICLOUD_PHOTOS_ERR.HIDDEN_RECORD.code); // Filtering 'expected' errors
             if (erroredAssets.length > 0) {
-                Resources.logger(this).warn(`${erroredAssets.length} unexpected errors for ${parentId === undefined ? `All photos` : parentId}: ${erroredAssets.map(err => err.code).join(`, `)}`);
+                Resources.logger(this).warn(`${erroredAssets.length} unexpected errors for ${albumName}: ${erroredAssets.map(err => err.code).join(`, `)}`);
             }
         }
 
         // There should be one CPLMaster and one CPLAsset per record, however the iCloud response is sometimes not adhering to this.
         if (cplMasters.length !== expectedNumberOfRecords || cplAssets.length !== expectedNumberOfRecords) {
             Resources.emit(iCPSEventRuntimeWarning.COUNT_MISMATCH,
-                parentId === undefined ? `All photos` : parentId,
+                albumName,
                 expectedNumberOfRecords,
                 cplAssets.length,
                 cplMasters.length,
             );
         } else {
-            Resources.logger(this).debug(`Received expected amount (${expectedNumberOfRecords}) of records for album ${parentId === undefined ? `'All photos'` : parentId}`);
+            Resources.logger(this).debug(`Received expected amount (${expectedNumberOfRecords}) of records for album ${albumName}`);
         }
 
         return [cplAssets, cplMasters];

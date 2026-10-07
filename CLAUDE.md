@@ -174,6 +174,7 @@ The code is the source of truth. `docs/src/dev/api.md` is mostly current. `docs/
   - `CheckIndexingState`
   - `HyperionIndexCountLookup` (counts)
   - `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted` (all photos)
+  - `CPLAssetAndMasterHiddenByAssetDate` (hidden photos, counted via `CPLAssetHiddenByAssetDate`; only with `--sync-hidden`, which also links them into the synthetic `_Hidden-Photos` album)
   - `CPLContainerRelationLiveByPosition` (album contents)
   - `CPLAlbumByPositionLive` (albums and folders, walked breadth-first, primary zone only)
 - **`desiredKeys`:** `QUERY_KEYS` in `query-builder.ts`.

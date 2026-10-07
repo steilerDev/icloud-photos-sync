@@ -88,6 +88,11 @@ Options:
                                    photos in the iCloud Photos backend upon
                                    archiving. (default: false, env:
                                    REMOTE_DELETE)
+  --sync-hidden                    If this flag is set, photos from the 'Hidden'
+                                   album are synced as well. They are linked
+                                   into the albums they belong to and into the
+                                   \`_Hidden-Photos\` album. (default: false, env:
+                                   SYNC_HIDDEN)
   --soft-delete                    If this flag is set, assets that were deleted
                                    in iCloud Photos are moved to the trash
                                    directory (see \`--trash-dir\`), instead of

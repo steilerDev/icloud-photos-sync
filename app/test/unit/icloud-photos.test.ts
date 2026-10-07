@@ -7,7 +7,7 @@ import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/
 import {AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
-import {PRIMARY_ASSET_DIR} from '../../src/lib/photos-library/constants';
+import {HIDDEN_ALBUM_NAME, HIDDEN_ALBUM_UUID, PRIMARY_ASSET_DIR} from '../../src/lib/photos-library/constants';
 import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {PhotosSetupResponse} from '../../src/lib/resources/network-types';
 import {Validator} from '../../src/lib/resources/validator';
@@ -874,6 +874,24 @@ function rawAsset(recordName: string, masterRecordName: string, zoneName: string
 }
 
 /**
+ * Builds a raw CPLAsset record of a hidden asset, as returned by the CloudKit API
+ * @param recordName - The record name of the asset
+ * @param masterRecordName - The record name of the linked master
+ * @param zoneName - The zone the record lives in
+ * @returns The raw record
+ */
+function rawHiddenAsset(recordName: string, masterRecordName: string, zoneName: string = Config.primaryZone.zoneName) {
+    const asset = rawAsset(recordName, masterRecordName, zoneName);
+    return {
+        ...asset,
+        fields: {
+            ...asset.fields,
+            isHidden: {value: 1},
+        },
+    };
+}
+
+/**
  * Builds a raw CPLAlbum record, as returned by the CloudKit API
  * @param recordName - The record name of the album
  * @param albumType - The type of the album
@@ -1042,7 +1060,71 @@ describe(`Fetch albums`, () => {
         });
     });
 
+    describe(`Fetch hidden CPL album`, () => {
+        test(`Builds the album from the hidden assets`, async () => {
+            photos.fetchHiddenCPLAssetsMasters = jest.fn<typeof photos.fetchHiddenCPLAssetsMasters>()
+                .mockResolvedValue([
+                    [CPLAsset.parseFromQuery(rawHiddenAsset(`hiddenAsset`, `hiddenMaster`))],
+                    [CPLMaster.parseFromQuery(rawMaster(`hiddenMaster`))],
+                ]);
+
+            const hiddenAlbum = await photos.fetchHiddenCPLAlbum();
+
+            expect(hiddenAlbum.recordName).toEqual(HIDDEN_ALBUM_UUID);
+            expect(hiddenAlbum.albumType).toEqual(AlbumType.ALBUM);
+            expect(Buffer.from(hiddenAlbum.albumNameEnc, `base64`).toString(`utf8`)).toEqual(HIDDEN_ALBUM_NAME);
+            expect(hiddenAlbum.parentId).toBeUndefined();
+            expect(hiddenAlbum.assets).toEqual({
+                [`${Buffer.from(`hiddenMaster`).toString(`base64url`)}.jpeg`]: `hiddenMaster.jpeg`,
+            });
+        });
+
+        test(`Fetch failure`, async () => {
+            photos.fetchHiddenCPLAssetsMasters = jest.fn<typeof photos.fetchHiddenCPLAssetsMasters>()
+                .mockRejectedValue(new Error(`Network Error`));
+
+            await expect(photos.fetchHiddenCPLAlbum()).rejects.toThrow(/^Network Error$/);
+        });
+    });
+
     describe(`Fetch all CPL albums`, () => {
+        test(`Adds the hidden album, if hidden assets are synced`, async () => {
+            mockedResourceManager._resources.syncHidden = true;
+            const rootAlbum = CPLAlbum.parseFromQuery(rawAlbum(`rootAlbum`, AlbumType.ALBUM));
+            const hiddenAlbum = new CPLAlbum();
+            hiddenAlbum.recordName = HIDDEN_ALBUM_UUID;
+
+            photos.fetchCPLAlbums = jest.fn<typeof photos.fetchCPLAlbums>()
+                .mockResolvedValue([rootAlbum]);
+            photos.fetchHiddenCPLAlbum = jest.fn<typeof photos.fetchHiddenCPLAlbum>()
+                .mockResolvedValue(hiddenAlbum);
+
+            await expect(photos.fetchAllCPLAlbums()).resolves.toEqual([rootAlbum, hiddenAlbum]);
+            expect(photos.fetchHiddenCPLAlbum).toHaveBeenCalledTimes(1);
+        });
+
+        test(`Does not add the hidden album, if hidden assets are not synced`, async () => {
+            mockedResourceManager._resources.syncHidden = false;
+            const rootAlbum = CPLAlbum.parseFromQuery(rawAlbum(`rootAlbum`, AlbumType.ALBUM));
+
+            photos.fetchCPLAlbums = jest.fn<typeof photos.fetchCPLAlbums>()
+                .mockResolvedValue([rootAlbum]);
+            photos.fetchHiddenCPLAlbum = jest.fn<typeof photos.fetchHiddenCPLAlbum>();
+
+            await expect(photos.fetchAllCPLAlbums()).resolves.toEqual([rootAlbum]);
+            expect(photos.fetchHiddenCPLAlbum).not.toHaveBeenCalled();
+        });
+
+        test(`Hidden album fetch failure`, async () => {
+            mockedResourceManager._resources.syncHidden = true;
+            photos.fetchCPLAlbums = jest.fn<typeof photos.fetchCPLAlbums>()
+                .mockResolvedValue([]);
+            photos.fetchHiddenCPLAlbum = jest.fn<typeof photos.fetchHiddenCPLAlbum>()
+                .mockRejectedValue(new Error(`Network Error`));
+
+            await expect(photos.fetchAllCPLAlbums()).rejects.toThrow(/^Unable to fetch folder structure$/);
+        });
+
         test(`Traverses the folder structure breadth-first`, async () => {
             const rootFolder = CPLAlbum.parseFromQuery(rawAlbum(`rootFolder`, AlbumType.FOLDER));
             const rootAlbum = CPLAlbum.parseFromQuery(rawAlbum(`rootAlbum`, AlbumType.ALBUM));
@@ -1122,17 +1204,24 @@ describe(`Fetch picture records`, () => {
             {
                 desc: `All photos`,
                 albumId: undefined,
+                hidden: false,
                 expectedIndexCountID: `CPLAssetByAssetDateWithoutHiddenOrDeleted`,
+            }, {
+                desc: `Hidden photos`,
+                albumId: undefined,
+                hidden: true,
+                expectedIndexCountID: `CPLAssetHiddenByAssetDate`,
             }, {
                 desc: `Album`,
                 albumId: `someAlbum`,
+                hidden: false,
                 expectedIndexCountID: `CPLContainerRelationNotDeletedByAssetDate:someAlbum`,
             },
-        ])(`Success - $desc`, async ({albumId, expectedIndexCountID}) => {
+        ])(`Success - $desc`, async ({albumId, hidden, expectedIndexCountID}) => {
             photos.performQuery = jest.fn<typeof photos.performQuery>()
                 .mockResolvedValue([{fields: {itemCount: {value: `42`}}}]);
 
-            await expect(photos.getPictureRecordsCountForZone(zone, albumId)).resolves.toEqual(42);
+            await expect(photos.getPictureRecordsCountForZone(zone, albumId, hidden)).resolves.toEqual(42);
 
             expect(photos.performQuery).toHaveBeenCalledWith(zone, `HyperionIndexCountLookup`, [{
                 fieldName: `indexCountID`,
@@ -1164,36 +1253,46 @@ describe(`Fetch picture records`, () => {
             {
                 desc: `All photos`,
                 albumId: undefined,
+                hidden: false,
                 expectedNumberOfRecords: 200,
                 expectedRanges: [[0, 99], [99, 198], [198, 200]],
             }, {
+                desc: `Hidden photos`,
+                albumId: undefined,
+                hidden: true,
+                expectedNumberOfRecords: 100,
+                expectedRanges: [[0, 99], [99, 100]],
+            }, {
                 desc: `Album`,
                 albumId: `someAlbum`,
+                hidden: false,
                 expectedNumberOfRecords: 100,
                 expectedRanges: [[0, 66], [66, 100]],
             }, {
                 desc: `Album filling the last request`,
                 albumId: `someAlbum`,
+                hidden: false,
                 expectedNumberOfRecords: 132,
                 expectedRanges: [[0, 66], [66, 132]],
             }, {
                 desc: `Empty album`,
                 albumId: `someAlbum`,
+                hidden: false,
                 expectedNumberOfRecords: 0,
                 expectedRanges: [],
             },
-        ])(`$desc`, async ({albumId, expectedNumberOfRecords, expectedRanges}) => {
+        ])(`$desc`, async ({albumId, hidden, expectedNumberOfRecords, expectedRanges}) => {
             photos.fetchPictureRecordsRange = jest.fn<typeof photos.fetchPictureRecordsRange>()
                 .mockImplementation(async (_zone, startRank) => [`records@${startRank}`]);
 
-            const requests = photos.buildPictureRecordsRequestsForZone(zone, expectedNumberOfRecords, albumId);
+            const requests = photos.buildPictureRecordsRequestsForZone(zone, expectedNumberOfRecords, albumId, hidden);
 
             expect(requests).toHaveLength(expectedRanges.length);
             await expect(Promise.all(requests)).resolves.toEqual(expectedRanges.map(([startRank]) => [`records@${startRank}`]));
 
             expect(photos.fetchPictureRecordsRange).toHaveBeenCalledTimes(expectedRanges.length);
             expectedRanges.forEach(([startRank, endRank], index) => {
-                expect(photos.fetchPictureRecordsRange).toHaveBeenNthCalledWith(index + 1, zone, startRank, endRank, albumId);
+                expect(photos.fetchPictureRecordsRange).toHaveBeenNthCalledWith(index + 1, zone, startRank, endRank, albumId, hidden);
             });
         });
     });
@@ -1238,13 +1337,20 @@ describe(`Fetch picture records`, () => {
         {
             desc: `All photos`,
             albumId: undefined,
+            hidden: false,
             expectedRecordType: `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted`,
+        }, {
+            desc: `Hidden photos`,
+            albumId: undefined,
+            hidden: true,
+            expectedRecordType: `CPLAssetAndMasterHiddenByAssetDate`,
         }, {
             desc: `Album`,
             albumId: `someAlbum`,
+            hidden: false,
             expectedRecordType: `CPLContainerRelationLiveByPosition`,
         },
-    ])(`Fetch picture records range - $desc`, ({albumId, expectedRecordType}) => {
+    ])(`Fetch picture records range - $desc`, ({albumId, hidden, expectedRecordType}) => {
         /**
          * @param startRank - The start rank of the query
          * @returns The filters expected for a query at the given start rank
@@ -1291,7 +1397,7 @@ describe(`Fetch picture records`, () => {
             photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
                 .mockResolvedValue({records: positions(`A`, `B`)});
 
-            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 12, albumId)).resolves.toEqual(positions(`A`, `B`));
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 12, albumId, hidden)).resolves.toEqual(positions(`A`, `B`));
 
             expect(photos.performQueryPage).toHaveBeenCalledTimes(1);
             expect(photos.performQueryPage).toHaveBeenCalledWith(Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, undefined);
@@ -1303,7 +1409,7 @@ describe(`Fetch picture records`, () => {
                 .mockResolvedValueOnce({records: positions(`B`), continuationMarker: `markerB`})
                 .mockResolvedValueOnce({records: positions(`C`), continuationMarker: `markerC`});
 
-            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId)).resolves.toEqual(positions(`A`, `B`, `C`));
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId, hidden)).resolves.toEqual(positions(`A`, `B`, `C`));
 
             expect(photos.performQueryPage).toHaveBeenCalledTimes(3);
             expect(photos.performQueryPage).toHaveBeenNthCalledWith(1, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, undefined);
@@ -1316,7 +1422,7 @@ describe(`Fetch picture records`, () => {
                 .mockResolvedValueOnce({records: positions(`A`, `B`)})
                 .mockResolvedValueOnce({records: positions(`C`)});
 
-            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId)).resolves.toEqual(positions(`A`, `B`, `C`));
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId, hidden)).resolves.toEqual(positions(`A`, `B`, `C`));
 
             expect(photos.performQueryPage).toHaveBeenCalledTimes(2);
             expect(photos.performQueryPage).toHaveBeenNthCalledWith(1, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, undefined);
@@ -1327,7 +1433,7 @@ describe(`Fetch picture records`, () => {
             photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
                 .mockResolvedValueOnce({records: [...positions(`A`), rawAsset(`assetB`, `masterB`)], continuationMarker: `markerA`});
 
-            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 12, albumId)).resolves.toEqual([...positions(`A`), rawAsset(`assetB`, `masterB`)]);
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 12, albumId, hidden)).resolves.toEqual([...positions(`A`), rawAsset(`assetB`, `masterB`)]);
 
             expect(photos.performQueryPage).toHaveBeenCalledTimes(1);
         });
@@ -1338,7 +1444,7 @@ describe(`Fetch picture records`, () => {
                 .mockResolvedValueOnce({records: positions(`B`), continuationMarker: `markerA`})
                 .mockResolvedValueOnce({records: positions(`C`), continuationMarker: `markerC`});
 
-            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId)).resolves.toEqual(positions(`A`, `B`, `C`));
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId, hidden)).resolves.toEqual(positions(`A`, `B`, `C`));
 
             expect(photos.performQueryPage).toHaveBeenCalledTimes(3);
             expect(photos.performQueryPage).toHaveBeenNthCalledWith(2, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, `markerA`);
@@ -1358,7 +1464,7 @@ describe(`Fetch picture records`, () => {
                 .mockResolvedValueOnce({records: positions(`A`), continuationMarker})
                 .mockResolvedValueOnce({records: [], continuationMarker});
 
-            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId)).resolves.toEqual(positions(`A`));
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId, hidden)).resolves.toEqual(positions(`A`));
 
             expect(photos.performQueryPage).toHaveBeenCalledTimes(2);
         });
@@ -1368,7 +1474,7 @@ describe(`Fetch picture records`, () => {
                 .mockResolvedValueOnce({records: positions(`A`), continuationMarker: `markerA`})
                 .mockRejectedValueOnce(new Error(`Network Error`));
 
-            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId)).rejects.toThrow(/^Network Error$/);
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId, hidden)).rejects.toThrow(/^Network Error$/);
         });
     });
 
@@ -1413,6 +1519,11 @@ describe(`Fetch picture records`, () => {
         ])(`Rejects $desc`, ({record, expectedError}) => {
             expect(() => photos.filterPictureRecord(record, new Set([`seenRecord`]))).toThrow(expectedError);
         });
+
+        test(`Accepts hidden record, if hidden assets are synced`, () => {
+            mockedResourceManager._resources.syncHidden = true;
+            expect(() => photos.filterPictureRecord(rawHiddenAsset(`someAsset`, `someMaster`), new Set())).not.toThrow();
+        });
     });
 
     describe.each([Zones.Primary, Zones.Shared])(`Fetch all picture records - %o`, zone => {
@@ -1424,8 +1535,20 @@ describe(`Fetch picture records`, () => {
 
             await expect(photos.fetchAllPictureRecordsForZone(zone, `someAlbum`)).resolves.toEqual([[`recordA`, `recordB`, `recordC`], 3]);
 
-            expect(photos.getPictureRecordsCountForZone).toHaveBeenCalledWith(zone, `someAlbum`);
-            expect(photos.buildPictureRecordsRequestsForZone).toHaveBeenCalledWith(zone, 3, `someAlbum`);
+            expect(photos.getPictureRecordsCountForZone).toHaveBeenCalledWith(zone, `someAlbum`, false);
+            expect(photos.buildPictureRecordsRequestsForZone).toHaveBeenCalledWith(zone, 3, `someAlbum`, false);
+        });
+
+        test(`Hidden records`, async () => {
+            photos.getPictureRecordsCountForZone = jest.fn<typeof photos.getPictureRecordsCountForZone>()
+                .mockResolvedValue(1);
+            photos.buildPictureRecordsRequestsForZone = jest.fn<typeof photos.buildPictureRecordsRequestsForZone>()
+                .mockReturnValue([Promise.resolve([`recordA`, `recordB`])]);
+
+            await expect(photos.fetchAllPictureRecordsForZone(zone, undefined, true)).resolves.toEqual([[`recordA`, `recordB`], 1]);
+
+            expect(photos.getPictureRecordsCountForZone).toHaveBeenCalledWith(zone, undefined, true);
+            expect(photos.buildPictureRecordsRequestsForZone).toHaveBeenCalledWith(zone, 1, undefined, true);
         });
 
         test(`Removes records received by overlapping requests`, async () => {
@@ -1550,13 +1673,76 @@ describe(`Fetch picture records`, () => {
                     {recordType: `CPLContainerRelation`, recordName: `someRelation`},
                     {recordType: `CPLSomething`, recordName: `someRecord`},
                     {...rawAsset(`invalidAsset`, `masterA`), modified: {}}, // Unparsable
-                ], 3]);
+                ], 4]); // The hidden asset is part of the count, but not expected
 
             const [assets, masters] = await photos.fetchAllCPLAssetsMasters(albumId);
 
             expect(assets.map(asset => asset.recordName)).toEqual([`assetA`, `assetB`]);
             expect(masters.map(master => master.recordName)).toEqual([`masterA`, `masterB`]);
             expect(countMismatchEvent).toHaveBeenCalledWith(expectedAlbumName, 3, 2, 2);
+        });
+
+        test(`Includes hidden assets, if hidden assets are synced`, async () => {
+            mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
+            mockedResourceManager._resources.syncHidden = true;
+            const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValueOnce([primaryRecords, 2])
+                .mockResolvedValueOnce([sharedRecords, 1])
+                .mockResolvedValueOnce([[rawMaster(`hiddenMaster`), rawHiddenAsset(`hiddenAsset`, `hiddenMaster`)], 1])
+                .mockResolvedValueOnce([[rawMaster(`sharedHiddenMaster`, Config.sharedZone.zoneName), rawHiddenAsset(`sharedHiddenAsset`, `sharedHiddenMaster`, Config.sharedZone.zoneName)], 1]);
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters();
+
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(4);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(1, Zones.Primary, undefined);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(2, Zones.Shared);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(3, Zones.Primary, undefined, true);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(4, Zones.Shared, undefined, true);
+            expect(assets.map(asset => asset.recordName)).toEqual([`assetA`, `assetB`, `sharedAsset`, `hiddenAsset`, `sharedHiddenAsset`]);
+            expect(masters.map(master => master.recordName)).toEqual([`masterA`, `masterB`, `sharedMaster`, `hiddenMaster`, `sharedHiddenMaster`]);
+            expect(countMismatchEvent).not.toHaveBeenCalled();
+        });
+
+        test(`Album with hidden assets - hidden assets not synced`, async () => {
+            mockedResourceManager._resources.sharedZone = undefined;
+            mockedResourceManager._resources.syncHidden = false;
+            const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValue([[
+                    ...primaryRecords,
+                    rawMaster(`hiddenMaster`),
+                    rawHiddenAsset(`hiddenAsset`, `hiddenMaster`),
+                    {recordType: `CPLContainerRelation`, recordName: `someRelation`},
+                ], 3]);
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters(`someAlbum`);
+
+            // The hidden asset and its master are removed, without reporting a count mismatch
+            expect(assets.map(asset => asset.recordName)).toEqual([`assetA`, `assetB`]);
+            expect(masters.map(master => master.recordName)).toEqual([`masterA`, `masterB`]);
+            expect(countMismatchEvent).not.toHaveBeenCalled();
+        });
+
+        test(`Album with hidden assets - hidden assets synced`, async () => {
+            mockedResourceManager._resources.sharedZone = undefined;
+            mockedResourceManager._resources.syncHidden = true;
+            const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValue([[
+                    ...primaryRecords,
+                    rawMaster(`hiddenMaster`),
+                    rawHiddenAsset(`hiddenAsset`, `hiddenMaster`),
+                ], 3]);
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters(`someAlbum`);
+
+            // Album contents are fetched with a single query, which already includes the hidden assets
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(1);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledWith(Zones.Primary, `someAlbum`);
+            expect(assets.map(asset => asset.recordName)).toEqual([`assetA`, `assetB`, `hiddenAsset`]);
+            expect(masters.map(master => master.recordName)).toEqual([`masterA`, `masterB`, `hiddenMaster`]);
+            expect(countMismatchEvent).not.toHaveBeenCalled();
         });
 
         test(`Only expected unwanted records`, async () => {
@@ -1592,6 +1778,61 @@ describe(`Fetch picture records`, () => {
 
             await expect(photos.fetchAllCPLAssetsMasters(albumId)).rejects.toThrow(expectedError);
         });
+    });
+});
+
+describe(`Fetch hidden picture records`, () => {
+    beforeEach(() => {
+        mockedResourceManager._resources.syncHidden = true;
+    });
+
+    test(`Primary zone only`, async () => {
+        mockedResourceManager._resources.sharedZone = undefined;
+        const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+        photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+            .mockResolvedValue([[rawMaster(`hiddenMaster`), rawHiddenAsset(`hiddenAsset`, `hiddenMaster`)], 1]);
+
+        const [assets, masters] = await photos.fetchHiddenCPLAssetsMasters();
+
+        expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(1);
+        expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledWith(Zones.Primary, undefined, true);
+        expect(assets.map(asset => asset.recordName)).toEqual([`hiddenAsset`]);
+        expect(masters.map(master => master.recordName)).toEqual([`hiddenMaster`]);
+        expect(countMismatchEvent).not.toHaveBeenCalled();
+    });
+
+    test(`Primary and shared zone`, async () => {
+        mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
+        photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+            .mockResolvedValueOnce([[rawMaster(`hiddenMaster`), rawHiddenAsset(`hiddenAsset`, `hiddenMaster`)], 1])
+            .mockResolvedValueOnce([[rawMaster(`sharedHiddenMaster`, Config.sharedZone.zoneName), rawHiddenAsset(`sharedHiddenAsset`, `sharedHiddenMaster`, Config.sharedZone.zoneName)], 1]);
+
+        const [assets, masters] = await photos.fetchHiddenCPLAssetsMasters();
+
+        expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(2);
+        expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(1, Zones.Primary, undefined, true);
+        expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(2, Zones.Shared, undefined, true);
+        expect(assets.map(asset => asset.recordName)).toEqual([`hiddenAsset`, `sharedHiddenAsset`]);
+        expect(masters.map(master => master.recordName)).toEqual([`hiddenMaster`, `sharedHiddenMaster`]);
+    });
+
+    test(`Reports count mismatch`, async () => {
+        mockedResourceManager._resources.sharedZone = undefined;
+        const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+        photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+            .mockResolvedValue([[rawMaster(`hiddenMaster`), rawHiddenAsset(`hiddenAsset`, `hiddenMaster`)], 2]);
+
+        await photos.fetchHiddenCPLAssetsMasters();
+
+        expect(countMismatchEvent).toHaveBeenCalledWith(HIDDEN_ALBUM_NAME, 2, 1, 1);
+    });
+
+    test(`Fetch failure`, async () => {
+        mockedResourceManager._resources.sharedZone = undefined;
+        photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+            .mockRejectedValue(new Error(`Network Error`));
+
+        await expect(photos.fetchHiddenCPLAssetsMasters()).rejects.toThrow(/^Unable to fetch records$/);
     });
 });
 

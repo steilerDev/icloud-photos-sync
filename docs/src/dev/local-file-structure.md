@@ -23,6 +23,7 @@ The root folder is specified through environment variable `DATA_DIR`. All assets
   * `icloud-photos-sync.har` file, that contains a HAR file capture of the last execution, if [network capture is enabled](../user-guides/cli.md#enable-network-capture)
   * `.crash-reporter` folder, that contains unsent error reports, in case the reporter was not able to send it before the application exited. Only present if [crash reporting is enabled](../user-guides/cli.md#enable-crash-reporting)
   * [User created folders](#user-folders) from the iCloud Library
+  * [`_Hidden-Photos` album](#hidden-album), if [syncing hidden photos is enabled](../user-guides/cli.md#sync-hidden)
   * lock file .library.lock
   * crash reporting db
 
@@ -59,4 +60,9 @@ For each asset within an album, a link to the (~~shared or~~ primary) asset dir 
 
 Due to current limitations of the iCloud Web API, user folders only contain assets from the primary library, assets from the shared library cannot be linked to user folders.
 
+Hidden assets are only linked into user folders, if [syncing hidden photos is enabled](../user-guides/cli.md#sync-hidden).
+
 If a user folder contains any file that is not defined as *safe*, it is marked as archived, and its content is ignored upon future syncs.
+
+### Hidden Album
+If [syncing hidden photos is enabled](../user-guides/cli.md#sync-hidden), the assets of the *Hidden* album are stored in the primary and shared asset dir, alongside all other assets. Since the *Hidden* album has no representation in the album tree of the iCloud Web API, it is created as an album named `_Hidden-Photos` in the root folder, using the static UUID `----Hidden-Photos----`. It links to all hidden assets of the primary and shared library.

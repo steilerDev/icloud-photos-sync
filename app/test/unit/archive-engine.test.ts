@@ -671,9 +671,16 @@ describe.each([{
             const result2 = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset2.getAssetFilename()), [asset1, asset2, asset3]);
             const result3 = archiveEngine.prepareForRemoteDeletion(path.join(Config.defaultConfig.dataDir, ASSET_DIR, asset3.getAssetFilename()), [asset1, asset2, asset3]);
 
-            expect(result1).toEqual(asset1.recordName);
-            expect(result2).toEqual(asset2.recordName);
-            expect(result3).toEqual(asset3.recordName);
+            // Remote deletion is only performed in the primary zone
+            if (zone === Zones.Primary) {
+                expect(result1).toEqual(asset1.recordName);
+                expect(result2).toEqual(asset2.recordName);
+                expect(result3).toEqual(asset3.recordName);
+            } else {
+                expect(result1).toBeUndefined();
+                expect(result2).toBeUndefined();
+                expect(result3).toBeUndefined();
+            }
         });
 
         test(`Unable to find remote asset`, () => {

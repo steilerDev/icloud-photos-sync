@@ -480,6 +480,20 @@ export const nonRejectOptions = [
             `test@icloud.com`,
             `-p`,
             `testPass`,
+            `--sync-hidden`,
+        ],
+        _desc: `Sync hidden enabled`,
+        expectedOptions: {
+            syncHidden: true,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
             `--soft-delete`,
         ],
         _desc: `Soft delete enabled`,

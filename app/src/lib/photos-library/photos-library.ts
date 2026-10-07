@@ -461,7 +461,7 @@ export class PhotosLibrary {
 
     /**
      * Links the assets for the given album
-     * @remarks ALbums only refer to PrimaryAssets - hardcoding this
+     * @remarks Albums usually refer to primary assets, only the 'Hidden' album might contain shared assets - those are linked, if the asset is not present in the primary asset dir
      * @param album - Album holding information about the linked assets
      * @param albumPath - Album path to link assets to
      * @emits iCPSEventRuntimeWarning.LINK_ERROR - If linking of an asset fails
@@ -472,10 +472,7 @@ export class PhotosLibrary {
                 dir: albumPath,
                 base: album.assets[assetUUID],
             });
-            const assetPath = path.format({
-                dir: this.primaryAssetDir,
-                base: assetUUID,
-            });
+            const assetPath = this.getLinkableAssetPath(assetUUID);
             // Relative asset path is relative to album, not the linkedAsset
             const relativeAssetPath = path.relative(albumPath, assetPath);
             try {
@@ -489,6 +486,25 @@ export class PhotosLibrary {
                 Resources.emit(iCPSEventRuntimeWarning.LINK_ERROR, err, assetPath, linkedAsset);
             }
         });
+    }
+
+    /**
+     * Resolves the path of an asset, that should be linked into an album
+     * @param assetFilename - The filename of the asset in the asset dir
+     * @returns The path to the asset in the primary asset dir - or the shared asset dir, if it is only present there
+     */
+    getLinkableAssetPath(assetFilename: string): string {
+        const primaryAssetPath = path.format({
+            dir: this.primaryAssetDir,
+            base: assetFilename,
+        });
+        const sharedAssetPath = path.format({
+            dir: this.sharedAssetDir,
+            base: assetFilename,
+        });
+        return !fs.existsSync(primaryAssetPath) && fs.existsSync(sharedAssetPath)
+            ? sharedAssetPath
+            : primaryAssetPath;
     }
 
     /**
