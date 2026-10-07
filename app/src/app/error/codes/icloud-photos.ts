@@ -63,6 +63,10 @@ export const UNWANTED_ALBUM: ErrorStruct = buildErrorStruct(
     name, prefix, `UNWANTED_ALBUM`, `Ignoring unwanted album`,
 );
 
+export const REQUEST_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `REQUEST_FAILED`, `CloudKit request failed`,
+);
+
 export const COUNT_DATA: ErrorStruct = buildErrorStruct(
     name, prefix, `COUNT_DATA`, `Unable to extract count data`,
 );
