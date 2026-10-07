@@ -43,9 +43,14 @@ const CONFIDENTIAL_HEADERS = [
 ];
 
 /**
- * Placeholder for masked header values
+ * Placeholder for masked values
  */
 const MASKED_VALUE = `<MASKED>`;
+
+/**
+ * Matches credentials embedded in URLs (`scheme://user:password@host`) - the scheme is captured, the credentials are replaced
+ */
+const URL_CREDENTIALS_REGEX = /\b([a-z][a-z0-9+.-]*:\/\/)[^\s/?#@"'<>]+@/gi;
 
 const BACKTRACE_SUBMISSION = {
     DOMAIN: `https://submit.backtrace.io`,
@@ -564,25 +569,67 @@ export class ErrorHandler {
     }
 
     /**
-     * This function masks confidential data from the provided input string
+     * This function masks confidential data from the provided input string:
+     *  - The configured health check URL and the endpoints of push subscriptions are replaced, keeping only their origin (their path acts as secret)
+     *  - The AppleID credentials, trust token and session secret are replaced
+     *  - Credentials embedded in any URL (e.g. `http://user:password@proxy:3128` as part of the proxy environment variables) are replaced
      * @param input - The input string to mask
      * @returns The string, with masked confidential data
      */
     static maskConfidentialData(input: string): string {
-        const masked = input
-            .replaceAll(Resources.manager().username, `<APPLE ID USERNAME>`)
-            .replaceAll(Resources.manager().password, `<APPLE ID PASSWORD>`);
+        const masked = ErrorHandler.getConfidentialValues()
+            .reduce((output, [value, placeholder]) => output.replaceAll(value, placeholder), input);
 
+        return masked.replace(URL_CREDENTIALS_REGEX, `$1${MASKED_VALUE}@`);
+    }
+
+    /**
+     * Collects the confidential values known to the application, together with their placeholder
+     * @returns A list of tuples, containing the confidential value and its placeholder - URLs first, since they might contain other confidential values
+     */
+    static getConfidentialValues(): [value: string, placeholder: string][] {
+        const resourceManager = Resources.manager();
         // Reading cached trust token, instead of re-reading from file
-        const {trustToken, sessionSecret} = Resources.manager()._resources;
-        const maskedTrustToken = trustToken
-            ? masked.replaceAll(trustToken, `<TRUST TOKEN>`)
-            : masked;
+        const {trustToken, sessionSecret} = resourceManager._resources;
 
-        // The session secret is also sent in request bodies (as dsWebAuthToken)
-        return sessionSecret
-            ? maskedTrustToken.replaceAll(sessionSecret, `<SESSION SECRET>`)
-            : maskedTrustToken;
+        const confidentialValues: [value: string | undefined, placeholder: string][] = [
+            ...ErrorHandler.getConfidentialUrlValues(resourceManager.healthCheckUrl, `<HEALTH CHECK PATH>`),
+            ...resourceManager.notificationSubscriptions
+                .flatMap(subscription => ErrorHandler.getConfidentialUrlValues(subscription.endpoint, `<PUSH SUBSCRIPTION PATH>`)),
+            [resourceManager.username, `<APPLE ID USERNAME>`],
+            [resourceManager.password, `<APPLE ID PASSWORD>`],
+            [trustToken, `<TRUST TOKEN>`],
+            // The session secret is also sent in request bodies (as dsWebAuthToken)
+            [sessionSecret, `<SESSION SECRET>`],
+        ];
+
+        // Empty values would match everywhere
+        return confidentialValues.filter((entry): entry is [string, string] => typeof entry[0] === `string` && entry[0].length > 0);
+    }
+
+    /**
+     * Creates the replacements for an URL, whose path (and query) acts as secret - only the origin of the URL is kept
+     * @param url - The URL to mask
+     * @param placeholder - The placeholder replacing the path
+     * @returns A list of tuples, containing the spellings of the URL (as configured and normalized, without trailing slash) and their replacement - longest first. The list is empty, if the URL is not set, not parsable or has no path.
+     */
+    static getConfidentialUrlValues(url: string | undefined, placeholder: string): [value: string, placeholder: string][] {
+        if (!url || !URL.canParse(url)) {
+            return [];
+        }
+
+        const parsedUrl = new URL(url);
+        if (parsedUrl.pathname === `/` && parsedUrl.search.length === 0) {
+            return [];
+        }
+
+        const maskedUrl = `${parsedUrl.origin}/${placeholder}`;
+        // Requests might use the URL as configured or normalized - trailing slashes are kept, since they might be followed by an appended path
+        const spellings = new Set([url, parsedUrl.href].map(spelling => spelling.replace(/\/+$/, ``)));
+        return [...spellings]
+            .filter(spelling => spelling !== parsedUrl.origin)
+            .sort((a, b) => b.length - a.length)
+            .map(spelling => [spelling, maskedUrl]);
     }
 
     /**
