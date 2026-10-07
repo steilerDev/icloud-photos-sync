@@ -85,6 +85,7 @@ npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the
 **Event-driven side effects.** Core classes emit typed events (`events-types.ts`) via `Resources.emit(...)` and never print directly. `main.ts` instantiates independent listeners that subscribe with `Resources.events(this).on(...)`:
 - `LogInterface` and `CLIInterface` (progress bars)
 - `MetricsExporter` (Influx line protocol)
+- `PrometheusMetricsExporter` (OpenMetrics, served by `WebServer` on `/metrics`)
 - `HealthCheckPingExecutor`
 - `WebServer`
 
@@ -109,7 +110,7 @@ Read `docs/src/dev/local-file-structure.md` before changing `photos-library/` or
 **Validated external data.** Response and resource types live in `resource-types.ts` / `network-types.ts`. `app/build/schema.ts` generates JSON schemas from them, which `validator.ts` imports. To validate a new type, register it in `schema.ts` and change the TS type, never the generated JSON. TSDoc schema tags (`@minimum`, `@pattern`, …) shape the schema. **Every request validates its response:** `get/post/put` require a `ResponseValidator` and resolve to its result, e.g. `Resources.network().post(url, data, Resources.validator().response.setup)`. `ResponseValidator` is a branded type that only `validator.ts` can create (`Validator.response`), so an ad-hoc function does not compile and there is no opt-out. A new endpoint needs a response type, a `schema.ts` entry, a `validate…Response` method and a `Validator.response` entry. Schemas should only require what the code relies on. For CloudKit queries/operations only the envelope (`data.records` array) is schema-validated; `query-parser.ts` parses the records defensively. Tests may use `RAW_RESPONSE` from `test/_helpers/http-mock.helper.ts`.
 
 **Web UI and API** (`src/app/web-ui/`).
-- A dependency-free `node:http` server. Routes are the `_sitemap` map in `web-server.ts`: UI pages (`/`, `/state`, `/submit-mfa`, `/request-mfa`), PWA assets, and the JSON API under `/api/*`.
+- A dependency-free `node:http` server. Routes are the `_sitemap` map in `web-server.ts`: UI pages (`/`, `/state`, `/submit-mfa`, `/request-mfa`), PWA assets, the JSON API under `/api/*`, and `/metrics` (only registered with `--export-prometheus-metrics`).
 - The `/api/*` endpoints are `state`, `log`, `vapid-public-key`, `reauthenticate`, `mfa`, `resend_mfa`, `sync` and `subscribe`. Parameters are passed as query strings.
 - **`docs/api/openapi.yaml` is the contract for `/api/*`.** Any change to an API route, parameter, status code or response message must update it in the same change.
 - HTML, CSS and client JS are TypeScript template strings. Views extend `View` and override `get content()`. There are no static asset files.
@@ -187,7 +188,7 @@ The code is the source of truth. `docs/src/dev/api.md` maps the full surface: ho
 - **Pagination:** `performQuery` follows the response's `continuationMarker` until it is absent (this is what pages the album listing). Asset queries take the count first, then fetch ranges of positions in parallel with `resultsLimit: 198` and `startRank` offsets. The step is 99 for all photos (asset+master per item) and 66 for albums (+relation). The 198 only plans the ranges: if iCloud returns fewer positions, `fetchPictureRecordsRange` requests the rest, following the `continuationMarker` if present, else restarting at the first missing `startRank`. Overlapping records are de-duplicated when the ranges are merged.
 - **Assets:** the original is `CPLMaster.resOriginalRes`. If `adjustmentType` is set, the edited version is `resJPEGFullRes`/`resVidFullRes`. Live-photo video is not fetched.
 - **Remote delete** (`archive --remote-delete`, non-favorites only): `POST /private/records/modify` sets `isDeleted: 1` on a `CPLAsset`.
-- **Rate limiting:** all metadata calls go through a p-queue set by `--metadata-rate`. Downloads use a separate concurrency queue (`--download-threads`, `--download-timeout`). There are no HTTP-level retries; retries happen at sync level.
+- **Rate limiting:** all metadata calls go through a p-queue set by `--metadata-rate`. Downloads use a separate concurrency queue (`--download-threads`, `--download-timeout`). The only HTTP-level retries are for throttled CloudKit requests (`429`, or `THROTTLED`/`TRY_AGAIN_LATER`): all CloudKit calls pause for `retryAfter` (default 10s, capped at 300s) and the request is retried up to 10 times (`icloud-photos.ts`). Everything else is retried at sync level.
 
 ## Error reports (Backtrace)
 
@@ -315,7 +316,7 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
   - `beta`: unit-ubuntu, e2e, api
   - `main`: unit-ubuntu, unit-macos, e2e, api
 - `event_push.yml` (push to `dev`/`beta`/`main`): runs unit-ubuntu, then `artifacts_build-release.yml` with `release: true`. Docs are built and released only on `main`. `concurrency: release` queues releases.
-- `monitor_api.yml`: API tests. The cron is **currently commented out** because the runner is unavailable, so it runs on `workflow_dispatch` only.
+- `monitor_api.yml`: API tests, on a cron (05:20 and 17:20 UTC) and on `workflow_dispatch`.
 - `artifacts_build-release.yml` and `artifacts_test.yml` are reusable (`workflow_call`) and call composite actions in `.github/actions/{build,test,release,helper}/`.
 
 **Build** (`artifacts_build-release.yml`):
@@ -364,14 +365,14 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - GitHub pauses version updates when nobody acts on Dependabot PRs for about 90 days. Merge or close them regularly.
 - Commit prefixes: `chore: [ci]`, `[app]`, `[docker]`, `[docs]`, `[dev]`, `[semantic-release]`.
 - Ignored majors: `@types/node` (tied to `app/node-version`), `typescript`, and `node` in Docker.
-- In the Dockerfile, `node` and `alpine` are grouped because their Alpine versions must match.
+- In the Dockerfile, both stages use Docker Hardened Images from `dhi.io` (Dependabot authenticates with `DOCKER_TOKEN`). The `*node` images are grouped (`base-images`) because builder and runtime must use the same Node version.
 - The docs toolchain (`docs/requirements.txt`) is **frozen on purpose** and has no Dependabot entry. MkDocs 1.x is unmaintained and Material for MkDocs is EOL, but the output is static HTML, so the maintainer accepts that. Don't upgrade it or migrate it (e.g. to Zensical) unless a new docs capability requires it (#1118).
 
 **Keep these stable when editing app scripts or CI:**
 - npm script names CI calls: `build`, `dist`, `build:dev`, `build:schema`, `test:unit`, `test:api`, `test:docker`, `test:docker:unit`, `doc:cli` (output dir as the last argument).
 - The CTRF report path `app/coverage/ctrf-report.json`.
 - `docs/mkdocs.yml` `site_dir`/`docs_dir`: these must stay single-quoted on one line, because CI greps them.
-- The Node version: it is set in `app/node-version` (drives every `setup-node`), `docker/Dockerfile` (`node:<ver>-alpine<ver>`, matching the runtime `alpine` stage) and `.devcontainer.json`. Update all three together.
+- The Node version: it is set in `app/node-version` (drives every `setup-node`), `docker/Dockerfile` (both stages: `dhi.io/node:<ver>-alpine<ver>-dev` for the builder, `dhi.io/node:<ver>-alpine<ver>` for the runtime) and `.devcontainer.json`. Update all three together.
 - Job names in `artifacts_build-release.yml` and `artifacts_test.yml`: the branch rulesets require them as `build / <job>` and `test / <job>`. Renaming a job blocks every PR until the ruleset is updated as well.
 - Actions use major tags. `actionlint.yaml` declares the `residential` label.
 
