@@ -541,6 +541,10 @@ export type LogoutResponse = {
 export type CloudKitRecordsResponse = {
     data: {
         records: any[],
+        /**
+         * Provided by queries, if more results are available - requests the next page when sent with the same query
+         */
+        continuationMarker?: string,
     },
 }
 

@@ -456,6 +456,80 @@ describe.each([
         });
     });
 
+    describe(`Perform Query with continuation marker`, () => {
+        const queryURL = `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`;
+        const expectedQuery = {
+            query: {
+                recordType: `recordType`,
+            },
+            zoneID: expectedZoneObject,
+        };
+
+        test(`Follows the continuation marker until all records are fetched`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(200, {records: [`recordA`, `recordB`], continuationMarker: `markerA`})
+                .onPost(queryURL, {...expectedQuery, continuationMarker: `markerA`})
+                .reply(200, {records: [`recordC`], continuationMarker: `markerB`})
+                .onPost(queryURL, {...expectedQuery, continuationMarker: `markerB`})
+                .reply(200, {records: [`recordD`]});
+
+            await expect(photos.performQuery(zone, `recordType`)).resolves.toEqual([`recordA`, `recordB`, `recordC`, `recordD`]);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(3);
+        });
+
+        test(`Stops on an empty page`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(200, {records: [`recordA`], continuationMarker: `markerA`})
+                .onPost(queryURL, {...expectedQuery, continuationMarker: `markerA`})
+                .reply(200, {records: [], continuationMarker: `markerB`});
+
+            await expect(photos.performQuery(zone, `recordType`)).resolves.toEqual([`recordA`]);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(2);
+        });
+
+        test(`Stops on a repeated continuation marker`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(200, {records: [`recordA`], continuationMarker: `markerA`})
+                .onPost(queryURL, {...expectedQuery, continuationMarker: `markerA`})
+                .reply(200, {records: [`recordB`], continuationMarker: `markerA`});
+
+            await expect(photos.performQuery(zone, `recordType`)).resolves.toEqual([`recordA`, `recordB`]);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(2);
+        });
+
+        test(`Fails if a following page fails`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(200, {records: [`recordA`], continuationMarker: `markerA`})
+                .onPost(queryURL, {...expectedQuery, continuationMarker: `markerA`})
+                .reply(500, {});
+
+            await expect(photos.performQuery(zone, `recordType`)).rejects.toThrow(/^CloudKit request failed$/);
+        });
+
+        test(`Single page returns the continuation marker`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, {...expectedQuery, resultsLimit: 2, continuationMarker: `markerA`})
+                .reply(200, {records: [`recordB`], continuationMarker: `markerB`});
+
+            await expect(photos.performQueryPage(zone, `recordType`, undefined, 2, undefined, `markerA`)).resolves.toEqual({records: [`recordB`], continuationMarker: `markerB`});
+        });
+
+        test(`Rejects a malformed continuation marker`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(200, {records: [`recordA`], continuationMarker: 42});
+
+            await expect(photos.performQuery(zone, `recordType`)).rejects.toThrow(/^Received unexpected query response format$/);
+        });
+    });
+
     describe.each([{
         desc: `No records`,
         operation: `someOperation`,
@@ -911,67 +985,215 @@ describe(`Fetch picture records`, () => {
     });
 
     describe.each([Zones.Primary, Zones.Shared])(`Build picture records requests - %o`, zone => {
-        beforeEach(() => {
-            photos.performQuery = jest.fn<typeof photos.performQuery>()
-                .mockResolvedValue([]);
-        });
-
         test.each([
             {
                 desc: `All photos`,
                 albumId: undefined,
                 expectedNumberOfRecords: 200,
-                expectedStartRanks: [0, 99, 198],
-                expectedRecordType: `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted`,
+                expectedRanges: [[0, 99], [99, 198], [198, 200]],
             }, {
                 desc: `Album`,
                 albumId: `someAlbum`,
                 expectedNumberOfRecords: 100,
-                expectedStartRanks: [0, 66],
-                expectedRecordType: `CPLContainerRelationLiveByPosition`,
+                expectedRanges: [[0, 66], [66, 100]],
+            }, {
+                desc: `Album filling the last request`,
+                albumId: `someAlbum`,
+                expectedNumberOfRecords: 132,
+                expectedRanges: [[0, 66], [66, 132]],
             }, {
                 desc: `Empty album`,
                 albumId: `someAlbum`,
                 expectedNumberOfRecords: 0,
-                expectedStartRanks: [],
-                expectedRecordType: `CPLContainerRelationLiveByPosition`,
+                expectedRanges: [],
             },
-        ])(`$desc`, async ({albumId, expectedNumberOfRecords, expectedStartRanks, expectedRecordType}) => {
+        ])(`$desc`, async ({albumId, expectedNumberOfRecords, expectedRanges}) => {
+            photos.fetchPictureRecordsRange = jest.fn<typeof photos.fetchPictureRecordsRange>()
+                .mockImplementation(async (_zone, startRank) => [`records@${startRank}`]);
+
             const requests = photos.buildPictureRecordsRequestsForZone(zone, expectedNumberOfRecords, albumId);
 
-            expect(requests).toHaveLength(expectedStartRanks.length);
-            await expect(Promise.all(requests)).resolves.toEqual(expectedStartRanks.map(() => []));
+            expect(requests).toHaveLength(expectedRanges.length);
+            await expect(Promise.all(requests)).resolves.toEqual(expectedRanges.map(([startRank]) => [`records@${startRank}`]));
 
-            expect(photos.performQuery).toHaveBeenCalledTimes(expectedStartRanks.length);
-            expectedStartRanks.forEach((startRank, index) => {
-                const expectedFilters: any[] = [{
-                    fieldName: `startRank`,
+            expect(photos.fetchPictureRecordsRange).toHaveBeenCalledTimes(expectedRanges.length);
+            expectedRanges.forEach(([startRank, endRank], index) => {
+                expect(photos.fetchPictureRecordsRange).toHaveBeenNthCalledWith(index + 1, zone, startRank, endRank, albumId);
+            });
+        });
+    });
+
+    describe(`Count received positions`, () => {
+        test.each([
+            {
+                desc: `Empty page`,
+                records: [],
+                expectedPositions: 0,
+            }, {
+                desc: `Complete positions`,
+                records: [rawAsset(`assetA`, `masterA`), rawMaster(`masterA`), rawAsset(`assetB`, `masterB`), rawMaster(`masterB`)],
+                expectedPositions: 2,
+            }, {
+                desc: `Complete positions with container relations`,
+                records: [{recordType: `CPLContainerRelation`, recordName: `someRelation`}, rawAsset(`assetA`, `masterA`), rawMaster(`masterA`)],
+                expectedPositions: 1,
+            }, {
+                desc: `Asset without master`,
+                records: [rawAsset(`assetA`, `masterA`), rawMaster(`masterA`), rawAsset(`assetB`, `masterB`)],
+                expectedPositions: 2,
+            }, {
+                desc: `Only assets without masters`,
+                records: [rawAsset(`assetA`, `masterA`), rawAsset(`assetB`, `masterB`)],
+                expectedPositions: 2,
+            }, {
+                desc: `Only masters`,
+                records: [rawMaster(`masterA`)],
+                expectedPositions: 0,
+            }, {
+                desc: `Malformed records`,
+                records: [null, {recordType: `CPLAsset`, recordName: `assetA`}, rawMaster(`masterA`)],
+                expectedPositions: 1,
+            },
+        ])(`$desc`, ({records, expectedPositions}) => {
+            expect(photos.countReceivedPositions(records)).toEqual(expectedPositions);
+        });
+    });
+
+    describe.each([
+        {
+            desc: `All photos`,
+            albumId: undefined,
+            expectedRecordType: `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted`,
+        }, {
+            desc: `Album`,
+            albumId: `someAlbum`,
+            expectedRecordType: `CPLContainerRelationLiveByPosition`,
+        },
+    ])(`Fetch picture records range - $desc`, ({albumId, expectedRecordType}) => {
+        /**
+         * @param startRank - The start rank of the query
+         * @returns The filters expected for a query at the given start rank
+         */
+        function expectedFilters(startRank: number): any[] {
+            const filters: any[] = [{
+                fieldName: `startRank`,
+                comparator: `EQUALS`,
+                fieldValue: {
+                    value: startRank,
+                    type: `INT64`,
+                },
+            }, {
+                fieldName: `direction`,
+                comparator: `EQUALS`,
+                fieldValue: {
+                    value: `ASCENDING`,
+                    type: `STRING`,
+                },
+            }];
+            if (albumId !== undefined) {
+                filters.push({
+                    fieldName: `parentId`,
                     comparator: `EQUALS`,
                     fieldValue: {
-                        value: startRank,
-                        type: `INT64`,
-                    },
-                }, {
-                    fieldName: `direction`,
-                    comparator: `EQUALS`,
-                    fieldValue: {
-                        value: `ASCENDING`,
+                        value: albumId,
                         type: `STRING`,
                     },
-                }];
-                if (albumId !== undefined) {
-                    expectedFilters.push({
-                        fieldName: `parentId`,
-                        comparator: `EQUALS`,
-                        fieldValue: {
-                            value: albumId,
-                            type: `STRING`,
-                        },
-                    });
-                }
+                });
+            }
 
-                expect(photos.performQuery).toHaveBeenNthCalledWith(index + 1, zone, expectedRecordType, expectedFilters, 198, QUERY_KEYS);
-            });
+            return filters;
+        }
+
+        /**
+         * @param names - The names of the positions
+         * @returns The records of complete positions
+         */
+        function positions(...names: string[]): any[] {
+            return names.flatMap(name => [rawAsset(`asset${name}`, `master${name}`), rawMaster(`master${name}`)]);
+        }
+
+        test(`Complete range in a single request`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValue({records: positions(`A`, `B`)});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 12, albumId)).resolves.toEqual(positions(`A`, `B`));
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(1);
+            expect(photos.performQueryPage).toHaveBeenCalledWith(Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, undefined);
+        });
+
+        test(`Follows the continuation marker, if fewer records are returned`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: positions(`A`), continuationMarker: `markerA`})
+                .mockResolvedValueOnce({records: positions(`B`), continuationMarker: `markerB`})
+                .mockResolvedValueOnce({records: positions(`C`), continuationMarker: `markerC`});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId)).resolves.toEqual(positions(`A`, `B`, `C`));
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(3);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(1, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, undefined);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(2, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, `markerA`);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(3, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, `markerB`);
+        });
+
+        test(`Requests the remaining positions, if fewer records are returned without continuation marker`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: positions(`A`, `B`)})
+                .mockResolvedValueOnce({records: positions(`C`)});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId)).resolves.toEqual(positions(`A`, `B`, `C`));
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(2);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(1, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, undefined);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(2, Zones.Primary, expectedRecordType, expectedFilters(12), 198, QUERY_KEYS, undefined);
+        });
+
+        test(`Counts an asset without master as received`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: [...positions(`A`), rawAsset(`assetB`, `masterB`)], continuationMarker: `markerA`});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 12, albumId)).resolves.toEqual([...positions(`A`), rawAsset(`assetB`, `masterB`)]);
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(1);
+        });
+
+        test(`Restarts at the remaining positions, if the continuation marker is not advanced`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: positions(`A`), continuationMarker: `markerA`})
+                .mockResolvedValueOnce({records: positions(`B`), continuationMarker: `markerA`})
+                .mockResolvedValueOnce({records: positions(`C`), continuationMarker: `markerC`});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId)).resolves.toEqual(positions(`A`, `B`, `C`));
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(3);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(2, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, `markerA`);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(3, Zones.Primary, expectedRecordType, expectedFilters(12), 198, QUERY_KEYS, undefined);
+        });
+
+        test.each([
+            {
+                desc: `with continuation marker`,
+                continuationMarker: `someMarker`,
+            }, {
+                desc: `without continuation marker`,
+                continuationMarker: undefined,
+            },
+        ])(`Stops once no more records are returned $desc`, async ({continuationMarker}) => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: positions(`A`), continuationMarker})
+                .mockResolvedValueOnce({records: [], continuationMarker});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId)).resolves.toEqual(positions(`A`));
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(2);
+        });
+
+        test(`Request failure`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: positions(`A`), continuationMarker: `markerA`})
+                .mockRejectedValueOnce(new Error(`Network Error`));
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId)).rejects.toThrow(/^Network Error$/);
         });
     });
 
@@ -1029,6 +1251,20 @@ describe(`Fetch picture records`, () => {
 
             expect(photos.getPictureRecordsCountForZone).toHaveBeenCalledWith(zone, `someAlbum`);
             expect(photos.buildPictureRecordsRequestsForZone).toHaveBeenCalledWith(zone, 3, `someAlbum`);
+        });
+
+        test(`Removes records received by overlapping requests`, async () => {
+            photos.getPictureRecordsCountForZone = jest.fn<typeof photos.getPictureRecordsCountForZone>()
+                .mockResolvedValue(3);
+            photos.buildPictureRecordsRequestsForZone = jest.fn<typeof photos.buildPictureRecordsRequestsForZone>()
+                .mockReturnValue([
+                    Promise.resolve([rawAsset(`assetA`, `masterA`), rawMaster(`masterA`), rawAsset(`assetB`, `masterB`), rawMaster(`masterB`)]),
+                    Promise.resolve([rawAsset(`assetB`, `masterB`), rawMaster(`masterB`), rawAsset(`assetC`, `masterC`), rawMaster(`masterC`)]),
+                ]);
+
+            const [records] = await photos.fetchAllPictureRecordsForZone(zone);
+
+            expect(records.map(record => record.recordName)).toEqual([`assetA`, `masterA`, `assetB`, `masterB`, `assetC`, `masterC`]);
         });
 
         test(`Request failure`, async () => {

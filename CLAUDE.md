@@ -177,7 +177,7 @@ The code is the source of truth. `docs/src/dev/api.md` is mostly current. `docs/
   - `CPLContainerRelationLiveByPosition` (album contents)
   - `CPLAlbumByPositionLive` (albums and folders, walked breadth-first, primary zone only)
 - **`desiredKeys`:** `QUERY_KEYS` in `query-builder.ts`.
-- **Pagination:** there is no `continuationMarker`. The code takes the count first, then fires parallel queries with `resultsLimit: 198` and `startRank` offsets. The step is 99 for all photos (asset+master per item) and 66 for albums (+relation). Results are de-duplicated afterwards.
+- **Pagination:** `performQuery` follows the response's `continuationMarker` until it is absent (this is what pages the album listing). Asset queries take the count first, then fetch ranges of positions in parallel with `resultsLimit: 198` and `startRank` offsets. The step is 99 for all photos (asset+master per item) and 66 for albums (+relation). The 198 only plans the ranges: if iCloud returns fewer positions, `fetchPictureRecordsRange` requests the rest, following the `continuationMarker` if present, else restarting at the first missing `startRank`. Overlapping records are de-duplicated when the ranges are merged.
 - **Assets:** the original is `CPLMaster.resOriginalRes`. If `adjustmentType` is set, the edited version is `resJPEGFullRes`/`resVidFullRes`. Live-photo video is not fetched.
 - **Remote delete** (`archive --remote-delete`, non-favorites only): `POST /private/records/modify` sets `isDeleted: 1` on a `CPLAsset`.
 - **Rate limiting:** all metadata calls go through a p-queue set by `--metadata-rate`. Downloads use a separate concurrency queue (`--download-threads`, `--download-timeout`). There are no HTTP-level retries; retries happen at sync level.
