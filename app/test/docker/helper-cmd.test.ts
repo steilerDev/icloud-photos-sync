@@ -88,6 +88,16 @@ Options:
                                    photos in the iCloud Photos backend upon
                                    archiving. (default: false, env:
                                    REMOTE_DELETE)
+  --soft-delete                    If this flag is set, assets that were deleted
+                                   in iCloud Photos are moved to the trash
+                                   directory (see \`--trash-dir\`), instead of
+                                   being permanently deleted from disk.
+                                   (default: false, env: SOFT_DELETE)
+  --trash-dir <path>               Directory to move deleted assets to, if soft
+                                   delete is enabled. Relative paths are
+                                   resolved against the data dir. The trash is
+                                   never cleaned automatically. (default:
+                                   "_Trash", env: TRASH_DIR)
   -l, --log-level <level>          Set the log level. (choices: "debug", "info",
                                    "warn", "error", default: "info", env:
                                    LOG_LEVEL)

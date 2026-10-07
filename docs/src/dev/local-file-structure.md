@@ -16,6 +16,7 @@ The root folder is specified through environment variable `DATA_DIR`. All assets
   * [`_All-Photos` folder](#primary-asset-dir) (aka. `PRIMARY_ASSET_DIR`)
   * [`_Shared-Photos` folder](#shared-asset-dir) (aka. `SHARED_ASSET_DIR`)
   * [`_Archive` folder](#archive-dir) (aka. `ARCHIVE_DIR`)
+  * [`_Trash` folder](#trash-dir) (aka. `TRASH_DIR`), if [soft delete is enabled](../user-guides/cli.md#soft-delete) and no other [trash dir](../user-guides/cli.md#trash-dir) is configured
   * `.icloud-photos-sync` file holding resource information about the current photos library (including authentication secrets for re-authentication without MFA)
   * `.icloud-photos-sync.log` log file (overwritten upon application restart)
   * `icloud-photos-sync.metrics` file, that [export metrics using the Influx Line Protocol](../user-guides/sync-metrics.md) (overwritten upon application restart), if [metrics export is enabled](../user-guides/cli.md#export-metrics)
@@ -42,6 +43,9 @@ The asset dir contains all assets stored in the shared iCloud Photos Library.
 
 ### Archive Dir
 If an archived folder is deleted in the iCloud backend, this folder will be moved to the archive dir. When archived folders are moved on the backend, a subfolder (`.stash`) is used to keep track of them. Files and folders in this directory are ignored by this application and can be organized in this folder as you wish.
+
+### Trash Dir
+If [soft delete is enabled](../user-guides/cli.md#soft-delete), assets that were deleted in the iCloud backend are moved into the trash dir, instead of being deleted from disk. The trash dir mirrors the asset directories (`_All-Photos` and `_Shared-Photos`) and keeps the assets' filename and m-time. Assets that are replaced (because their metadata changed) are deleted permanently. This application never reads or cleans this directory.
 
 ### User Folders
 Every user folder has two components:

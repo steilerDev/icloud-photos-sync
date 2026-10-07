@@ -84,6 +84,7 @@ This application offers the following high level functionality:
     <ul>
       <li>Each asset is only downloaded once and linked to its respective folders</li>
       <li>No need track local state in database, since state is completely reflected in filesystem (through naming & linking)</li>
+      <li>Optionally, assets deleted in iCloud can be moved into a trash folder, instead of being deleted locally</li>
     </ul>
   </p>
 </details>

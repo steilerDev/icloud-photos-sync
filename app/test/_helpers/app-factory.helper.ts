@@ -480,6 +480,37 @@ export const nonRejectOptions = [
             `test@icloud.com`,
             `-p`,
             `testPass`,
+            `--soft-delete`,
+        ],
+        _desc: `Soft delete enabled`,
+        expectedOptions: {
+            softDelete: true,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
+            `--soft-delete`,
+            `--trash-dir`,
+            `some/trash`,
+        ],
+        _desc: `Soft delete enabled with custom trash dir`,
+        expectedOptions: {
+            softDelete: true,
+            trashDir: `some/trash`,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
             `--log-level`,
             `warn`,
         ],

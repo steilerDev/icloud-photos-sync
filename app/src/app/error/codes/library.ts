@@ -58,3 +58,7 @@ export const ASSET_SIZE: ErrorStruct = buildErrorStruct(
 export const VERSION_MISMATCH: ErrorStruct = buildErrorStruct(
     name, prefix, `VERSION_MISMATCH`, `Library version mismatch`,
 );
+
+export const INVALID_TRASH_DIR: ErrorStruct = buildErrorStruct(
+    name, prefix, `INVALID_TRASH_DIR`, `Invalid trash directory`,
+);

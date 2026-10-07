@@ -639,6 +639,31 @@ describe(`ResourceManager`, () => {
             });
         });
 
+        describe(`trashDir`, () => {
+            test(`should return undefined if soft delete is disabled`, () => {
+                resourceManager._resources.softDelete = false;
+                expect(resourceManager.trashDir).toBeUndefined();
+            });
+
+            test.each([{
+                desc: `default trash dir`,
+                trashDir: `_Trash`,
+                expected: path.join(resources.dataDir, `_Trash`),
+            }, {
+                desc: `relative trash dir`,
+                trashDir: `some/../other/trash`,
+                expected: path.join(resources.dataDir, `other`, `trash`),
+            }, {
+                desc: `absolute trash dir`,
+                trashDir: `/some/trash`,
+                expected: `/some/trash`,
+            }])(`should resolve the $desc against the data dir`, ({trashDir, expected}) => {
+                resourceManager._resources.softDelete = true;
+                resourceManager._resources.trashDir = trashDir;
+                expect(resourceManager.trashDir).toEqual(expected);
+            });
+        });
+
         describe(`logLevel`, () => {
             test(`should return the log level from the resources`, () => {
                 expect(resourceManager.logLevel).toEqual(resources.logLevel);
