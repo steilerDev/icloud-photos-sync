@@ -101,15 +101,16 @@ export class NetworkManager {
      * This closes the current session, clears resources that are not persisted and writes the HAR file to disk, in case network capture is enabled
      */
     async resetSession() {
+        // Settling the queues first, so running requests still complete against the current session
+        await this.settleRateLimiter();
+        await this.settleCCYLimiter();
+
         this._http.baseURL = undefined;
 
         this._headerJar.clearHeader(HEADER_KEYS.SCNT);
         this._headerJar.clearHeader(HEADER_KEYS.SESSION_ID);
         this._headerJar.clearHeader(HEADER_KEYS.AUTH_ATTRIBUTES);
         this._headerJar.resetFrameId();
-
-        await this.settleRateLimiter();
-        await this.settleCCYLimiter();
 
         if (Resources.manager().enableNetworkCapture) {
             await this.writeHarFile();

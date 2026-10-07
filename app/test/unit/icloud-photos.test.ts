@@ -891,7 +891,7 @@ describe(`Fetch albums`, () => {
             await expect(photos.fetchAllCPLAlbums()).resolves.toEqual([rootFolder, rootAlbum, subFolder, subAlbum, subSubAlbum]);
 
             expect(photos.fetchCPLAlbums).toHaveBeenCalledTimes(3);
-            expect(photos.fetchCPLAlbums).toHaveBeenNthCalledWith(1);
+            expect(photos.fetchCPLAlbums).toHaveBeenNthCalledWith(1, undefined);
             expect(photos.fetchCPLAlbums).toHaveBeenNthCalledWith(2, `rootFolder`);
             expect(photos.fetchCPLAlbums).toHaveBeenNthCalledWith(3, `subFolder`);
         });
@@ -901,6 +901,42 @@ describe(`Fetch albums`, () => {
                 .mockRejectedValue(new Error(`Network Error`));
 
             await expect(photos.fetchAllCPLAlbums()).rejects.toThrow(/^Unable to fetch folder structure$/);
+        });
+
+        test(`Waits for all requests of a level to settle and stops traversing, if one of them fails`, async () => {
+            const folderA = CPLAlbum.parseFromQuery(rawAlbum(`folderA`, AlbumType.FOLDER));
+            const folderB = CPLAlbum.parseFromQuery(rawAlbum(`folderB`, AlbumType.FOLDER));
+            const subFolder = CPLAlbum.parseFromQuery(rawAlbum(`subFolder`, AlbumType.FOLDER, `folderB`));
+            const folderBRequest = Promise.withResolvers<CPLAlbum[]>();
+
+            photos.fetchCPLAlbums = jest.fn<typeof photos.fetchCPLAlbums>(async (parentId?: string) => {
+                switch (parentId) {
+                case undefined:
+                    return [folderA, folderB];
+                case `folderA`:
+                    throw new Error(`Network Error`);
+                case `folderB`:
+                    return folderBRequest.promise;
+                default:
+                    return [];
+                }
+            });
+
+            let settled = false;
+            const result = photos.fetchAllCPLAlbums().finally(() => {
+                settled = true;
+            });
+
+            // The failed sibling request must not settle the traversal, while another request of the level is still running
+            await new Promise(resolve => setImmediate(resolve));
+            expect(settled).toBe(false);
+
+            folderBRequest.resolve([subFolder]);
+            await expect(result).rejects.toThrow(/^Unable to fetch folder structure$/);
+
+            // The next level is not requested after a failure
+            expect(photos.fetchCPLAlbums).toHaveBeenCalledTimes(3);
+            expect(photos.fetchCPLAlbums).not.toHaveBeenCalledWith(`subFolder`);
         });
     });
 });
@@ -1238,6 +1274,25 @@ describe(`Fetch picture records`, () => {
                 .mockReturnValue([Promise.resolve([`recordA`]), Promise.reject(new Error(`Network Error`))]);
 
             await expect(photos.fetchAllPictureRecordsForZone(zone)).rejects.toThrow(/^Network Error$/);
+        });
+
+        test(`Request failure waits for all requests to settle`, async () => {
+            const slowRequest = Promise.withResolvers<any[]>();
+            photos.getPictureRecordsCountForZone = jest.fn<typeof photos.getPictureRecordsCountForZone>()
+                .mockResolvedValue(3);
+            photos.buildPictureRecordsRequestsForZone = jest.fn<typeof photos.buildPictureRecordsRequestsForZone>()
+                .mockReturnValue([Promise.reject(new Error(`Network Error`)), slowRequest.promise]);
+
+            let settled = false;
+            const result = photos.fetchAllPictureRecordsForZone(zone).finally(() => {
+                settled = true;
+            });
+
+            await new Promise(resolve => setImmediate(resolve));
+            expect(settled).toBe(false);
+
+            slowRequest.resolve([`recordA`]);
+            await expect(result).rejects.toThrow(/^Network Error$/);
         });
     });
 

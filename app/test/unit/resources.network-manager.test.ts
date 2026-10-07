@@ -169,6 +169,23 @@ describe(`NetworkManager`, () => {
             expect(networkManager._http.baseURL).toBeUndefined();
         });
 
+        test(`Reset network - Settles queues before clearing the base url`, async () => {
+            const baseURLWhileSettling: (string | undefined)[] = [];
+            networkManager.settleRateLimiter = jest.fn<typeof networkManager.settleRateLimiter>(async () => {
+                baseURLWhileSettling.push(networkManager._http.baseURL);
+            });
+            networkManager.settleCCYLimiter = jest.fn<typeof networkManager.settleCCYLimiter>(async () => {
+                baseURLWhileSettling.push(networkManager._http.baseURL);
+            });
+            networkManager._http.baseURL = `https://www.icloud.com`;
+
+            Resources.manager()._resources.enableNetworkCapture = false;
+            await networkManager.resetSession();
+
+            expect(baseURLWhileSettling).toEqual([`https://www.icloud.com`, `https://www.icloud.com`]);
+            expect(networkManager._http.baseURL).toBeUndefined();
+        });
+
         test(`Reset network - Network capture enabled`, async () => {
             networkManager._headerJar.headers.set(`scnt`, new Header(`icloud.com`, `scnt`, `value`));
             networkManager._headerJar.headers.set(`X-Apple-ID-Session-Id`, new Header(`icloud.com`, `X-Apple-ID-Session-Id`, `value`));
