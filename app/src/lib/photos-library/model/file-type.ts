@@ -49,6 +49,7 @@ const EXT: Record<string, string> = {
     'com.apple.m4a-audio': `m4a`,
     'com.canon.crw-raw-image': `crw`,
     'public.mp3': `mp3`,
+    'com.microsoft.waveform-audio': `wav`,
 };
 
 /**
