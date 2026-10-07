@@ -173,6 +173,7 @@ export type iCPSAppOptions = {
     force: boolean,
     refreshToken: boolean,
     remoteDelete: boolean,
+    syncHidden: boolean,
     logLevel: LogLevel,
     silent: boolean,
     logToCli: boolean,
@@ -258,6 +259,9 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
             .default(false))
         .addOption(new Option(`--remote-delete`, `If this flag is set, delete non-favorite photos in the iCloud Photos backend upon archiving.`)
             .env(`REMOTE_DELETE`)
+            .default(false))
+        .addOption(new Option(`--sync-hidden`, `If this flag is set, photos from the 'Hidden' album are synced as well. They are linked into the albums they belong to and into the \`_Hidden-Photos\` album.`)
+            .env(`SYNC_HIDDEN`)
             .default(false))
         .addOption(new Option(`-l, --log-level <level>`, `Set the log level.`)
             .env(`LOG_LEVEL`)

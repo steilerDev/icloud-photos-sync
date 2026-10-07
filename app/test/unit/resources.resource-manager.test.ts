@@ -639,6 +639,12 @@ describe(`ResourceManager`, () => {
             });
         });
 
+        describe(`syncHidden`, () => {
+            test(`should return the sync hidden flag from the resources`, () => {
+                expect(resourceManager.syncHidden).toEqual(resources.syncHidden);
+            });
+        });
+
         describe(`logLevel`, () => {
             test(`should return the log level from the resources`, () => {
                 expect(resourceManager.logLevel).toEqual(resources.logLevel);

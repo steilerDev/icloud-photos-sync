@@ -1,5 +1,6 @@
 import {AlbumType} from '../photos-library/model/album.js';
 import {Asset} from '../photos-library/model/asset.js';
+import {Zones} from '../icloud/icloud-photos/query-builder.js';
 import {PhotosLibrary} from '../photos-library/photos-library.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -77,7 +78,7 @@ export class ArchiveEngine {
 
         // Iterating over all album items to persist them
         const remoteDeleteList = await Promise.all(Object.keys(loadedAlbum.assets).map(async uuidFilename => {
-            const assetPath = path.join(this.photosLibrary.primaryAssetDir, uuidFilename);
+            const assetPath = this.photosLibrary.getLinkableAssetPath(uuidFilename);
             const archivedAssetPath = path.join(archivedAlbumPath, loadedAlbum.assets[uuidFilename]);
 
             try {
@@ -153,6 +154,12 @@ export class ArchiveEngine {
 
         if (asset.isFavorite) {
             Resources.logger(this).debug(`Not deleting favorite asset ${asset.getDisplayName()}`);
+            return undefined;
+        }
+
+        // Remote deletion is only performed in the primary zone, shared assets can only be part of the 'Hidden' album
+        if (asset.zone !== Zones.Primary) {
+            Resources.logger(this).debug(`Not deleting shared asset ${asset.getDisplayName()}`);
             return undefined;
         }
 

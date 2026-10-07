@@ -21,6 +21,7 @@ export const defaultConfig = {
     force: false,
     refreshToken: false,
     remoteDelete: false,
+    syncHidden: false,
     logLevel: `info`,
     silent: false,
     logToCli: false,

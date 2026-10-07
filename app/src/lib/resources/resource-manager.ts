@@ -295,6 +295,13 @@ export class ResourceManager {
     }
 
     /**
+     * @returns If the application should sync assets from the 'Hidden' album
+     */
+    get syncHidden(): boolean {
+        return this._resources.syncHidden;
+    }
+
+    /**
      * @returns The log level of the application
      */
     get logLevel(): LogLevel {

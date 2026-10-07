@@ -194,6 +194,9 @@ The remote state will always be applied:
 
 The synchronization will also create the folder structure present in the iCloud Photos Library, to achieve a user friendly navigation. If iCloud Shared Photo Library is enabled, the shared assets will be stored in the `_Shared-Photos` folder.
 
+!!! info "Hidden photos"
+    Photos in the *Hidden* album are not synced by default. Enable the [`sync-hidden`](user-guides/cli.md#sync-hidden) flag to include them: They are stored alongside all other assets, linked into the albums they belong to and additionally linked into the `_Hidden-Photos` album. Disabling the flag again will remove them from the local library upon the next sync.
+
 !!! warning "File Structure"
     Since this application does not use any local database, it is imperative, that the [file structure](dev/local-file-structure.md) is not changed by any other application or user.
 

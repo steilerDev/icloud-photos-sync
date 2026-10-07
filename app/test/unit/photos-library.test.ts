@@ -1370,6 +1370,85 @@ describe(`Write state`, () => {
 
                 expect(linkErrorEvent).toHaveBeenCalledTimes(1);
             });
+
+            test(`Album - links shared assets, if not present in primary asset dir`, async () => {
+                const albumUUID = `----Hidden-Photos----`;
+                const albumName = `_Hidden-Photos`;
+
+                const primaryAssetFilename = `AexevMtFb8wMSLb78udseVvLv-m2.jpeg`;
+                const primaryAssetPrettyFilename = `primary.jpeg`;
+                const sharedAssetFilename = `AZmQ91f-NKAp5b67HE23Fqhjt5NO.jpeg`;
+                const sharedAssetPrettyFilename = `shared.jpeg`;
+
+                mockfs({
+                    [Config.defaultConfig.dataDir]: {
+                        [PRIMARY_ASSET_DIR]: {
+                            [primaryAssetFilename]: Buffer.from([1, 1, 1, 1]),
+                        },
+                        [SHARED_ASSET_DIR]: {
+                            [sharedAssetFilename]: Buffer.from([1, 1, 1, 1]),
+                        },
+                    },
+                });
+
+                const album = new Album(albumUUID, AlbumType.ALBUM, albumName, ``);
+                album.assets = {
+                    [primaryAssetFilename]: primaryAssetPrettyFilename,
+                    [sharedAssetFilename]: sharedAssetPrettyFilename,
+                };
+                const library = new PhotosLibrary();
+                const linkErrorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.LINK_ERROR);
+
+                library.writeAlbum(album);
+
+                expect(fs.readlinkSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, primaryAssetPrettyFilename)))
+                    .toEqual(path.join(`..`, PRIMARY_ASSET_DIR, primaryAssetFilename));
+                expect(fs.readlinkSync(path.join(Config.defaultConfig.dataDir, `.${albumUUID}`, sharedAssetPrettyFilename)))
+                    .toEqual(path.join(`..`, SHARED_ASSET_DIR, sharedAssetFilename));
+                expect(linkErrorEvent).not.toHaveBeenCalled();
+
+                // Loading the album from disk yields the same album, so it is not re-written on the next sync
+                const loadedAlbums = await library.loadAlbums();
+                expect(loadedAlbums[albumUUID].equal(album)).toBeTruthy();
+            });
+        });
+
+        describe(`Linkable asset path`, () => {
+            const assetFilename = `AexevMtFb8wMSLb78udseVvLv-m2.jpeg`;
+
+            test.each([
+                {
+                    desc: `Primary asset`,
+                    primary: true,
+                    shared: false,
+                    expectedDir: PRIMARY_ASSET_DIR,
+                }, {
+                    desc: `Shared asset`,
+                    primary: false,
+                    shared: true,
+                    expectedDir: SHARED_ASSET_DIR,
+                }, {
+                    desc: `Asset in both asset dirs`,
+                    primary: true,
+                    shared: true,
+                    expectedDir: PRIMARY_ASSET_DIR,
+                }, {
+                    desc: `Missing asset`,
+                    primary: false,
+                    shared: false,
+                    expectedDir: PRIMARY_ASSET_DIR,
+                },
+            ])(`$desc`, ({primary, shared, expectedDir}) => {
+                mockfs({
+                    [Config.defaultConfig.dataDir]: {
+                        [PRIMARY_ASSET_DIR]: primary ? {[assetFilename]: Buffer.from([1])} : {},
+                        [SHARED_ASSET_DIR]: shared ? {[assetFilename]: Buffer.from([1])} : {},
+                    },
+                });
+                const library = new PhotosLibrary();
+
+                expect(library.getLinkableAssetPath(assetFilename)).toEqual(path.join(Config.defaultConfig.dataDir, expectedDir, assetFilename));
+            });
         });
 
         describe(`Delete`, () => {

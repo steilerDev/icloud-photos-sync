@@ -88,6 +88,11 @@ Options:
                                    photos in the iCloud Photos backend upon
                                    archiving. (default: false, env:
                                    REMOTE_DELETE)
+  --sync-hidden                    If this flag is set, photos from the 'Hidden'
+                                   album are synced as well. They are linked
+                                   into the albums they belong to and into the
+                                   \`_Hidden-Photos\` album. (default: false, env:
+                                   SYNC_HIDDEN)
   -l, --log-level <level>          Set the log level. (choices: "debug", "info",
                                    "warn", "error", default: "info", env:
                                    LOG_LEVEL)
