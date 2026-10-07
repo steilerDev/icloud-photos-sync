@@ -43,6 +43,7 @@ const FIELDS = {
     FILETYPE_ERROR: `warn-filetype_error`,
     MFA_RESEND_ERROR: `warn-mfa_resend_error`,
     WEB_SERVER_ERROR: `warn-web_server_error`,
+    TRUSTED_PHONE_NUMBERS_ERROR: `warn-trusted_phone_numbers_error`,
     RESOURCE_FILE_ERROR: `warn-resource_file_error`,
     ARCHIVE_ASSET_ERROR: `warn-archive_asset_error`,
     ERROR: `errors`,
@@ -353,6 +354,10 @@ export class MetricsExporter {
             .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.WEB_SERVER_ERROR, err.getDescription()));
+            })
+            .on(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, (err: iCPSError) => {
+                this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                    .addField(FIELDS.TRUSTED_PHONE_NUMBERS_ERROR, err.getDescription()));
             })
             .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: Error) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()

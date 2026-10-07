@@ -688,6 +688,15 @@ describe(`Log added`, () => {
                 message: `Error within web server: UNKNOWN: Unknown error occurred caused by Test`
             } as LogMessage
         },{
+            desc: `Should handle runtime warning: trusted phone numbers error`,
+            event: iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR,
+            args: [new Error(`Test`)],
+            serializedMessage: {
+                level: `warn`,
+                source: `RuntimeWarning`,
+                message: `Error while loading trusted phone numbers: UNKNOWN: Unknown error occurred caused by Test`
+            } as LogMessage
+        },{
             desc: `Should handle runtime warning: resource file error`,
             event: iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR,
             args: [new Error(`Test`)],

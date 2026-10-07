@@ -259,7 +259,10 @@ export class ErrorHandler {
                 breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
             })
             .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
-                breadcrumbs.warn(`MFA_ERROR`, {error: err.getDescription()});
+                breadcrumbs.warn(`WEB_SERVER_ERROR`, {error: err.getDescription()});
+            })
+            .on(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, (err: iCPSError) => {
+                breadcrumbs.warn(`TRUSTED_PHONE_NUMBERS_ERROR`, {error: err.getDescription()});
             })
             .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
                 breadcrumbs.warn(`FILETYPE_ERROR`, {ext, descriptor});

@@ -288,6 +288,9 @@ export class StateManager {
             .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
                 this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error within web server: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
+            .on(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, (err: iCPSError) => {
+                this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error while loading trusted phone numbers: ${iCPSError.toiCPSError(err).getDescription()}`);
+            })
             .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: Error) => {
                 this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error while accessing resource file: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
