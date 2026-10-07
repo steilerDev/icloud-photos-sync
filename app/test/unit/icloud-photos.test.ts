@@ -1002,9 +1002,9 @@ describe(`Fetch picture records`, () => {
                 records: [{recordType: `CPLContainerRelation`, recordName: `someRelation`}, rawAsset(`assetA`, `masterA`), rawMaster(`masterA`)],
                 expectedPositions: 1,
             }, {
-                desc: `Position cut in half`,
+                desc: `Asset without master`,
                 records: [rawAsset(`assetA`, `masterA`), rawMaster(`masterA`), rawAsset(`assetB`, `masterB`)],
-                expectedPositions: 1,
+                expectedPositions: 2,
             }, {
                 desc: `Only assets without masters`,
                 records: [rawAsset(`assetA`, `masterA`), rawAsset(`assetB`, `masterB`)],
@@ -1112,15 +1112,13 @@ describe(`Fetch picture records`, () => {
             expect(photos.performQueryPage).toHaveBeenNthCalledWith(2, Zones.Primary, expectedRecordType, expectedFilters(12), 198, QUERY_KEYS, undefined);
         });
 
-        test(`Re-requests a position that was cut in half`, async () => {
+        test(`Counts an asset without master as received`, async () => {
             photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
-                .mockResolvedValueOnce({records: [...positions(`A`), rawAsset(`assetB`, `masterB`)]})
-                .mockResolvedValueOnce({records: positions(`B`)});
+                .mockResolvedValueOnce({records: [...positions(`A`), rawAsset(`assetB`, `masterB`)], continuationMarker: `markerA`});
 
-            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 12, albumId)).resolves.toEqual([...positions(`A`), rawAsset(`assetB`, `masterB`), ...positions(`B`)]);
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 12, albumId)).resolves.toEqual([...positions(`A`), rawAsset(`assetB`, `masterB`)]);
 
-            expect(photos.performQueryPage).toHaveBeenCalledTimes(2);
-            expect(photos.performQueryPage).toHaveBeenNthCalledWith(2, Zones.Primary, expectedRecordType, expectedFilters(11), 198, QUERY_KEYS, undefined);
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(1);
         });
 
         test(`Restarts at the remaining positions, if the continuation marker is not advanced`, async () => {

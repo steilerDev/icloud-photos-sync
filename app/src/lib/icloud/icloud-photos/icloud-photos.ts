@@ -569,20 +569,13 @@ export class iCloudPhotos {
     }
 
     /**
-     * Counts the positions (photos) a page of picture records covers.
-     * A position is only counted as received, if its CPLAsset and CPLMaster are part of the page - in case the page cut a position in half, it is requested again.
+     * Counts the positions (photos) a page of picture records covers - every position has exactly one CPLAsset.
+     * @remarks The number of CPLMasters is not reliable, since iCloud does not return a master for every asset
      * @param records - The records of the page, as returned by the backend
      * @returns The number of positions covered by the page
      */
     countReceivedPositions(records: any[]): number {
-        const assets = records.filter(record => record?.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD);
-        const masterNames = new Set(records
-            .filter(record => record?.recordType === QueryBuilder.RECORD_TYPES.PHOTO_MASTER_RECORD)
-            .map(record => record.recordName));
-        const completePositions = assets.filter(asset => masterNames.has(asset.fields?.masterRef?.value?.recordName)).length;
-
-        // Positions without a matching master would otherwise be requested indefinitely
-        return completePositions > 0 ? completePositions : assets.length;
+        return records.filter(record => record?.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD).length;
     }
 
     /**
