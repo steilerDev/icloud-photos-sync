@@ -489,7 +489,7 @@ export class MetricsExporter {
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
-                    .logStatus(FIELDS.STATUS.values.WRITE_ALBUMS_COMPLETED)
+                    .logStatus(FIELDS.STATUS.values.WRITE_ALBUMS_STARTED)
                     .addField(FIELDS.ALBUMS_TO_BE_ADDED, toBeAddedCount)
                     .addField(FIELDS.ALBUMS_TO_BE_DELETED, toBeDeletedCount)
                     .addField(FIELDS.ALBUMS_TO_BE_KEPT, toBeKept),
