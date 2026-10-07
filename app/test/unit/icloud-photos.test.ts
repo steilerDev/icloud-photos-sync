@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, jest, test} from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {iCPSError} from '../../src/app/error/error';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
@@ -11,6 +11,7 @@ import {PRIMARY_ASSET_DIR} from '../../src/lib/photos-library/constants';
 import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {PhotosSetupResponse} from '../../src/lib/resources/network-types';
 import {Validator} from '../../src/lib/resources/validator';
+import {HttpError} from '../../src/lib/resources/http-client';
 import * as Config from '../_helpers/_config';
 import {MockedEventManager, MockedNetworkManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
@@ -411,7 +412,7 @@ describe.each([
         test(`Server Error with CloudKit error details`, async () => {
             const responseBody = {
                 uuid: `some-uuid`,
-                serverErrorCode: `TRY_AGAIN_LATER`,
+                serverErrorCode: `INTERNAL_ERROR`,
                 reason: `Service temporarily unavailable`,
                 retryAfter: 30,
             };
@@ -421,18 +422,18 @@ describe.each([
 
             const err = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys).catch(err => err) as iCPSError;
 
-            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 503, TRY_AGAIN_LATER: Service temporarily unavailable, retry after 30s, retry-after header 30) caused by Request failed with status code 503`);
+            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 503, INTERNAL_ERROR: Service temporarily unavailable, retry after 30s, retry-after header 30) caused by Request failed with status code 503`);
             expect(err.context.responseBody).toEqual(JSON.stringify(responseBody));
         });
 
         test(`Server Error with partial CloudKit error details`, async () => {
             mockedNetworkManager.mock
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
-                .reply(503, {serverErrorCode: `TRY_AGAIN_LATER`});
+                .reply(503, {serverErrorCode: `INTERNAL_ERROR`});
 
             const err = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys).catch(err => err) as iCPSError;
 
-            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 503, TRY_AGAIN_LATER: no reason provided) caused by Request failed with status code 503`);
+            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 503, INTERNAL_ERROR: no reason provided) caused by Request failed with status code 503`);
         });
 
         test(`Server Error with non-JSON response`, async () => {
@@ -527,6 +528,73 @@ describe.each([
                 .reply(200, {records: [`recordA`], continuationMarker: 42});
 
             await expect(photos.performQuery(zone, `recordType`)).rejects.toThrow(/^Received unexpected query response format$/);
+        });
+    });
+
+    describe(`Perform Query with throttling`, () => {
+        const queryURL = `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`;
+        const expectedQuery = {
+            query: {
+                recordType: `recordType`,
+            },
+            zoneID: expectedZoneObject,
+        };
+
+        beforeEach(() => {
+            photos.awaitThrottling = jest.fn<typeof photos.awaitThrottling>()
+                .mockResolvedValue();
+        });
+
+        test.each([
+            {
+                desc: `THROTTLED`,
+                status: 503,
+                body: {serverErrorCode: `THROTTLED`, retryAfter: 9},
+            }, {
+                desc: `TRY_AGAIN_LATER`,
+                status: 503,
+                body: {serverErrorCode: `TRY_AGAIN_LATER`, retryAfter: 9},
+            }, {
+                desc: `Too Many Requests`,
+                status: 429,
+                body: {retryAfter: 9},
+            },
+        ])(`Retries the request after the requested time - $desc`, async ({status, body}) => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .replyOnce(status, body)
+                .onPost(queryURL, expectedQuery)
+                .replyOnce(200, {records: [`recordA`]});
+
+            const requestTime = Date.now();
+            await expect(photos.performQuery(zone, `recordType`)).resolves.toEqual([`recordA`]);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(2);
+            expect(photos.awaitThrottling).toHaveBeenCalledTimes(2);
+            expect(photos._throttledUntil).toBeGreaterThanOrEqual(requestTime + 9000);
+            expect(photos._throttledUntil).toBeLessThanOrEqual(Date.now() + 9000);
+        });
+
+        test(`Fails after the maximum number of retries`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(503, {serverErrorCode: `THROTTLED`, retryAfter: 9});
+
+            const err = await photos.performQuery(zone, `recordType`).catch(err => err) as iCPSError;
+
+            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (recordType query, status 503, THROTTLED: no reason provided, retry after 9s) caused by Request failed with status code 503`);
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(11);
+        });
+
+        test(`Does not retry other errors`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(503, {serverErrorCode: `INTERNAL_ERROR`, retryAfter: 9});
+
+            await expect(photos.performQuery(zone, `recordType`)).rejects.toThrow(/^CloudKit request failed$/);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(1);
+            expect(photos._throttledUntil).toEqual(0);
         });
     });
 
@@ -631,12 +699,119 @@ describe.each([
             expect((err as iCPSError).getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${operation} operation, status 500) caused by Request failed with status code 500`);
         });
 
+        test(`Throttled`, async () => {
+            photos.awaitThrottling = jest.fn<typeof photos.awaitThrottling>()
+                .mockResolvedValue();
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
+                .replyOnce(503, {serverErrorCode: `THROTTLED`, retryAfter: 9})
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
+                .replyOnce(200, {records});
+
+            await expect(photos.performOperation(zone, operation, fields, records)).resolves.toEqual(records);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(2);
+        });
+
         test(`Network failure`, async () => {
             mockedNetworkManager.mock
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
                 .networkError();
 
             await expect(photos.performOperation(zone, operation, fields, records)).rejects.toThrow(/^Network Error$/);
+        });
+    });
+});
+
+describe(`Throttling`, () => {
+    /**
+     * Builds an HttpError, as thrown by a rejected request
+     * @param status - The response status
+     * @param data - The parsed response body
+     * @param headers - The response headers
+     * @returns The error
+     */
+    function buildHttpError(status: number, data: any, headers: Record<string, any> = {}): HttpError {
+        const request = {method: `POST`, url: `/query`, fullURL: `/query`, headers: {}, startedAt: 0};
+        return HttpError.fromResponse({status, statusText: ``, headers, data, text: JSON.stringify(data), config: request});
+    }
+
+    describe(`Get retry after`, () => {
+        test.each([
+            {
+                desc: `THROTTLED with retryAfter`,
+                err: buildHttpError(503, {serverErrorCode: `THROTTLED`, retryAfter: 9}),
+                expected: 9,
+            }, {
+                desc: `TRY_AGAIN_LATER with retryAfter`,
+                err: buildHttpError(503, {serverErrorCode: `TRY_AGAIN_LATER`, retryAfter: 30}),
+                expected: 30,
+            }, {
+                desc: `THROTTLED with retry-after header`,
+                err: buildHttpError(503, {serverErrorCode: `THROTTLED`}, {'retry-after': `5`}),
+                expected: 5,
+            }, {
+                desc: `429 without retry information`,
+                err: buildHttpError(429, ``),
+                expected: 10,
+            }, {
+                desc: `THROTTLED with invalid retryAfter`,
+                err: buildHttpError(503, {serverErrorCode: `THROTTLED`, retryAfter: `soon`}),
+                expected: 10,
+            }, {
+                desc: `THROTTLED with excessive retryAfter`,
+                err: buildHttpError(503, {serverErrorCode: `THROTTLED`, retryAfter: 3600}),
+                expected: 300,
+            }, {
+                desc: `Other server error`,
+                err: buildHttpError(503, {serverErrorCode: `INTERNAL_ERROR`, retryAfter: 9}),
+                expected: undefined,
+            }, {
+                desc: `Non-JSON response`,
+                err: buildHttpError(503, `Service Unavailable`, {'retry-after': `5`}),
+                expected: undefined,
+            }, {
+                desc: `No response`,
+                err: new HttpError(`Network Error`, `ERR_NETWORK`, {method: `POST`, url: `/query`, fullURL: `/query`, headers: {}, startedAt: 0}),
+                expected: undefined,
+            }, {
+                desc: `Other error`,
+                err: new Error(`Some error`),
+                expected: undefined,
+            },
+        ])(`$desc`, ({err, expected}) => {
+            expect(photos.getRetryAfter(err)).toEqual(expected);
+        });
+    });
+
+    describe(`Await throttling`, () => {
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
+        test(`Waits until the throttling period passed`, async () => {
+            jest.useFakeTimers();
+            photos._throttledUntil = Date.now() + 9000;
+
+            let resolved = false;
+            const waiting = photos.awaitThrottling().then(() => {
+                resolved = true;
+            });
+
+            await jest.advanceTimersByTimeAsync(8999);
+            expect(resolved).toBeFalsy();
+
+            await jest.advanceTimersByTimeAsync(1);
+            await waiting;
+            expect(resolved).toBeTruthy();
+        });
+
+        test(`Resolves immediately if not throttled`, async () => {
+            jest.useFakeTimers();
+            photos._throttledUntil = Date.now() - 1;
+
+            await expect(photos.awaitThrottling()).resolves.toBeUndefined();
+            expect(jest.getTimerCount()).toEqual(0);
         });
     });
 });

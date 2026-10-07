@@ -44,6 +44,26 @@ export type QueryPage = {
 const MAX_ERROR_BODY_LENGTH = 200;
 
 /**
+ * CloudKit server error codes, asking the client to retry the request after the provided amount of time
+ */
+const RETRYABLE_SERVER_ERROR_CODES = [`THROTTLED`, `TRY_AGAIN_LATER`];
+
+/**
+ * The number of times a single request is retried, after CloudKit asked to retry it later
+ */
+const MAX_THROTTLED_RETRIES = 10;
+
+/**
+ * The time in seconds to wait before retrying a request, if CloudKit did not provide a valid one
+ */
+const DEFAULT_RETRY_AFTER = 10;
+
+/**
+ * The maximum time in seconds to wait before retrying a request
+ */
+const MAX_RETRY_AFTER = 300;
+
+/**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
  */
 export class iCloudPhotos {
@@ -51,6 +71,11 @@ export class iCloudPhotos {
      * A promise that will resolve, once the object is ready or reject, in case there is an error
      */
     ready: Promise<void>;
+
+    /**
+     * The point in time (in ms since epoch) until which CloudKit asked to pause requests
+     */
+    _throttledUntil: number = 0;
 
     /**
      * Creates a new iCloud Photos Class
@@ -249,16 +274,15 @@ export class iCloudPhotos {
             data.continuationMarker = continuationMarker;
         }
 
-        try {
-            // Only the response format is schema validated, the records are parsed defensively
-            const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, Resources.validator().response.query, config);
-            return {
-                records: queryResponse.data.records,
-                continuationMarker: queryResponse.data.continuationMarker,
-            };
-        } catch (err) {
-            throw this.wrapRequestError(err, `${recordType} query`);
-        }
+        // Only the response format is schema validated, the records are parsed defensively
+        const queryResponse = await this.sendRequest(
+            () => Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, Resources.validator().response.query, config),
+            `${recordType} query`,
+        );
+        return {
+            records: queryResponse.data.records,
+            continuationMarker: queryResponse.data.continuationMarker,
+        };
     }
 
     /**
@@ -299,13 +323,70 @@ export class iCloudPhotos {
             },
         }));
 
-        try {
-            // Only the response format is schema validated, the records are parsed defensively
-            const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, Resources.validator().response.operation, config);
-            return operationResponse.data.records;
-        } catch (err) {
-            throw this.wrapRequestError(err, `${operationType} operation`);
+        // Only the response format is schema validated, the records are parsed defensively
+        const operationResponse = await this.sendRequest(
+            () => Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, Resources.validator().response.operation, config),
+            `${operationType} operation`,
+        );
+        return operationResponse.data.records;
+    }
+
+    /**
+     * Sends a request to the iCloud Photos Service, retrying it in case CloudKit asks to retry later (e.g. because the client is throttled).
+     * Throttling applies to all requests: While waiting, all other requests sent through this function are paused as well.
+     * @param request - A function sending the request
+     * @param description - A description of the request, used in log and error messages
+     * @returns The response of the request
+     * @throws An iCPSError, if the request was rejected (containing the CloudKit error details) or the response is invalid - an HttpError, if no response was received
+     */
+    async sendRequest<T>(request: () => Promise<T>, description: string): Promise<T> {
+        for (let retry = 0; ; retry++) {
+            await this.awaitThrottling();
+            try {
+                return await request();
+            } catch (err) {
+                const retryAfter = this.getRetryAfter(err);
+                if (retryAfter === undefined || retry >= MAX_THROTTLED_RETRIES) {
+                    throw this.wrapRequestError(err, description);
+                }
+
+                Resources.logger(this).warn(`CloudKit asked to retry ${description} after ${retryAfter}s (retry ${retry + 1}/${MAX_THROTTLED_RETRIES})`);
+                this._throttledUntil = Math.max(this._throttledUntil, Date.now() + (retryAfter * 1000));
+            }
         }
+    }
+
+    /**
+     * Waits until the throttling period requested by CloudKit has passed
+     * @returns A promise that resolves, once requests can be sent again
+     */
+    async awaitThrottling() {
+        const delay = this._throttledUntil - Date.now();
+        if (delay > 0) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
+    /**
+     * Determines if CloudKit asked to retry a failed request later and how long to wait
+     * @param err - The error thrown by the request
+     * @returns The time in seconds to wait before retrying the request, or undefined if the request should not be retried
+     */
+    getRetryAfter(err: unknown): number | undefined {
+        if (!isHttpError(err) || err.response === undefined) {
+            return undefined;
+        }
+
+        const {status, headers, data} = err.response;
+        const serverErrorCode = typeof data === `object` && data !== null ? data.serverErrorCode : undefined;
+        if (status !== 429 && !RETRYABLE_SERVER_ERROR_CODES.includes(serverErrorCode)) {
+            return undefined;
+        }
+
+        const retryAfter = Number(data?.retryAfter ?? headers[`retry-after`]);
+        return Number.isFinite(retryAfter) && retryAfter >= 0
+            ? Math.min(retryAfter, MAX_RETRY_AFTER)
+            : DEFAULT_RETRY_AFTER;
     }
 
     /**
