@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `docs/` — mkdocs site (https://icps.steiler.dev).
   - `docs/api/openapi.yaml` — contract of the app's own web API.
   - `docs/postman/` — Postman collection of the iCloud API. It is **outdated**; see "iCloud API surface" below.
-  - `docs/src/dev/` — developer docs, including `api.md` (iCloud auth flow) and `local-file-structure.md` (on-disk library layout).
+  - `docs/src/dev/` — developer docs, including `api.md` (the full iCloud API surface) and `local-file-structure.md` (on-disk library layout).
 - `secrets/` — env files for real Apple accounts (see next section).
 - `.github/` — workflows plus composite actions (see "CI/CD").
 
@@ -116,7 +116,13 @@ Read `docs/src/dev/local-file-structure.md` before changing `photos-library/` or
 
 ## iCloud API surface (as implemented)
 
-The code is the source of truth. `docs/src/dev/api.md` is mostly current. `docs/postman/` predates SRP, escrow, PCS and the iOS 26.4 MFA changes, so don't rely on it.
+The code is the source of truth. `docs/src/dev/api.md` maps the full surface: hosts, headers, cookies, payloads, status codes, record types and fields, and observed quirks. `docs/postman/` predates SRP, escrow, PCS and the iOS 26.4 MFA changes, so don't rely on it.
+
+**Keep `docs/src/dev/api.md` current.** Whenever you discover a new or changed piece of the iCloud API, update it in the same change. This applies to code changes and to findings from live probing, HAR captures or Backtrace reports, even when no code changes. Examples: a new endpoint, header, cookie, payload field, status code, error code, record type or field, or an observed behaviour such as an expiry, limit or quirk.
+- Put the finding in the matching section, and mark facts that were only observed (not implemented) with what and when they were observed.
+- Move answered items out of "Open questions", and add new unknowns there.
+- If Apple changes existing behaviour, describe the current behaviour and add a short entry to the change section (like "Changes introduced with iOS 26.4").
+- Update the summary below too, if it is affected.
 - **Endpoints and headers:** URLs live in `ENDPOINTS` in `network-types.ts`.
 - **Header/cookie jar:** `HeaderJar` in `network-manager.ts` attaches headers and cookies by matching each request URL against a domain.
 - **Request flow:** `icloud.ts` drives the requests.
