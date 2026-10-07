@@ -233,6 +233,21 @@ describe(`Web base path`, () => {
 
         expect(res._getStatusCode()).toEqual(expectedStatus)
     })
+
+    test(`Forward root to /state below the base path`, async () => {
+        mockedResourceManager._resources.webBasePath = `/icps`
+        const webServer = new WebServer()
+
+        const req = createRequest<IncomingMessage>({
+            method: `GET`,
+            url: `/icps/`,
+        })
+
+        const res = await sendMockedRequest(webServer, req)
+
+        expect(res._getStatusCode()).toEqual(302)
+        expect(res.getHeader(`Location`)).toEqual(`/icps/state`)
+    })
 })
 
 describe.each([
@@ -315,7 +330,7 @@ describe.each([
         const res = await sendMockedRequest(webServer, req)
 
         expect(res._getStatusCode()).toEqual(302)
-        expect(res.getHeader(`Location`)).toEqual(`/state`)
+        expect(res.getHeader(`Location`)).toEqual(`${webBasePath}/state`)
     })
 
     test(`Serve service worker`, async () => {
