@@ -66,9 +66,10 @@ export class DaemonApp extends iCPSApp {
 
         try {
             Resources.emit(iCPSEventApp.SCHEDULED_START);
-            const [remoteAssets] = await syncApp.run() as [Asset[], Album[]];
+            const remoteState = await syncApp.run() as [Asset[], Album[]] | undefined;
 
-            if (remoteAssets.length > 0) {
+            // No remote state means that the MFA code was not provided - the state was already updated (an empty library is a successful sync)
+            if (remoteState !== undefined) {
                 Resources.emit(iCPSEventApp.SCHEDULED_DONE, this.job?.nextRun());
             }
         } catch (err) {
@@ -177,14 +178,14 @@ export class SyncApp extends iCloudApp {
 
     /**
      * Runs the synchronization of the local Photo Library
-     * @returns A Promise that resolves to a tuple containing containing the list of assets and albums as fetched from the remote state. The returned arrays might be empty, if the iCloud connection was not established successfully.
+     * @returns A Promise that resolves to a tuple containing the list of assets and albums as fetched from the remote state, or undefined, if the iCloud connection was not established successfully (because the MFA code was not provided in time).
      * @throws An iCPSError in case an error occurs
      */
     async run(): Promise<unknown> {
         try {
             const ready = await super.run() as boolean;
             if (!ready) {
-                return [[], []];
+                return undefined;
             }
 
             return await this.syncEngine.sync();
@@ -237,8 +238,9 @@ export class ArchiveApp extends SyncApp {
      */
     async run(): Promise<unknown> {
         try {
-            const [remoteAssets] = await super.run() as [Asset[], Album[]];
-            return await this.archiveEngine.archivePath(this.archivePath, remoteAssets);
+            const remoteState = await super.run() as [Asset[], Album[]] | undefined;
+            // If the MFA code was not provided, no remote assets are available (and therefore none are deleted remotely)
+            return await this.archiveEngine.archivePath(this.archivePath, remoteState?.[0] ?? []);
         } catch (err) {
             throw new iCPSError(APP_ERR.ARCHIVE)
                 .addCause(err).addContext(`archivePath`, this.archivePath);

@@ -522,7 +522,7 @@ describe(`App control flow`, () => {
             Resources._instances.event.removeListenersFromRegistry = jest.fn<typeof Resources._instances.event.removeListenersFromRegistry>()
                 .mockReturnValue(Resources._instances.event);
 
-            await expect(syncApp.run()).resolves.toEqual([[], []]);
+            await expect(syncApp.run()).resolves.toBeUndefined();
 
             expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
             expect(syncApp.icloud.logout).toHaveBeenCalledTimes(1);
@@ -752,13 +752,27 @@ describe(`App control flow`, () => {
             expect(successEvent).toHaveBeenCalled();
         });
 
-        test(`Scheduled sync requires MFA`, async () => {
+        test(`Scheduled sync of an empty library succeeds`, async () => {
             const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
             const successEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_DONE);
 
             const syncApp = new SyncApp();
             syncApp.run = jest.fn<typeof syncApp.run>()
                 .mockResolvedValue([[], []]);
+
+            await daemonApp.performScheduledSync(syncApp);
+
+            expect(syncApp.run).toHaveBeenCalled();
+            expect(successEvent).toHaveBeenCalled();
+        });
+
+        test(`Scheduled sync requires MFA`, async () => {
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+            const successEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_DONE);
+
+            const syncApp = new SyncApp();
+            syncApp.run = jest.fn<typeof syncApp.run>()
+                .mockResolvedValue(undefined);
 
             await daemonApp.performScheduledSync(syncApp);
 
