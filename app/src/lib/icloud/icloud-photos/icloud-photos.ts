@@ -5,7 +5,7 @@ import {errorMessage, iCPSError} from '../../../app/error/error.js';
 import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {Asset} from '../../photos-library/model/asset.js';
 import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
-import {HttpRequestConfig} from '../../resources/http-client.js';
+import {HttpRequestConfig, isHttpError} from '../../resources/http-client.js';
 import {Resources} from '../../resources/main.js';
 import {ENDPOINTS, PhotosSetupResponseZone} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
@@ -23,6 +23,11 @@ const RECORD_CHANGE_TAG = `21h2`;
  * Should be 200, but in order to divide by 3 (for albums) and 2 (for all pictures) 198 is more convenient
  */
 const MAX_RECORDS_LIMIT = 198;
+
+/**
+ * The maximum length of a non-JSON response body included in an error message
+ */
+const MAX_ERROR_BODY_LENGTH = 200;
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -166,7 +171,7 @@ export class iCloudPhotos {
      * @param resultsLimit - Results limit is maxed at 66 * 3 records (because every picture is returned three times)
      * @param desiredKeys - The fields requested from the backend
      * @returns An array of records as returned by the backend
-     * @throws An iCPSError if the query fails
+     * @throws An iCPSError, if the request was rejected (containing the CloudKit error details) or the response is invalid - an HttpError, if no response was received
      */
     async performQuery(zone: QueryBuilder.Zones, recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
         const config: HttpRequestConfig = {
@@ -200,9 +205,13 @@ export class iCloudPhotos {
             data.resultsLimit = resultsLimit;
         }
 
-        // Only the response format is schema validated, the records are parsed defensively
-        const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, Resources.validator().response.query, config);
-        return queryResponse.data.records;
+        try {
+            // Only the response format is schema validated, the records are parsed defensively
+            const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, Resources.validator().response.query, config);
+            return queryResponse.data.records;
+        } catch (err) {
+            throw this.wrapRequestError(err, `${recordType} query`);
+        }
     }
 
     /**
@@ -212,6 +221,7 @@ export class iCloudPhotos {
      * @param recordNames - The list of recordNames of the asset the operation should be performed on
      * @param fields - The fields to be altered
      * @returns An array of records that have been altered
+     * @throws An iCPSError, if the request was rejected (containing the CloudKit error details) or the response is invalid - an HttpError, if no response was received
      */
     async performOperation(zone: QueryBuilder.Zones, operationType: string, fields: any, recordNames: string[]): Promise<any[]> {
         const config: HttpRequestConfig = {
@@ -242,9 +252,49 @@ export class iCloudPhotos {
             },
         }));
 
-        // Only the response format is schema validated, the records are parsed defensively
-        const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, Resources.validator().response.operation, config);
-        return operationResponse.data.records;
+        try {
+            // Only the response format is schema validated, the records are parsed defensively
+            const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, Resources.validator().response.operation, config);
+            return operationResponse.data.records;
+        } catch (err) {
+            throw this.wrapRequestError(err, `${operationType} operation`);
+        }
+    }
+
+    /**
+     * Attaches the error details provided by CloudKit to a failed request, since the HTTP status alone does not explain the failure
+     * @param err - The error thrown by the request
+     * @param request - A description of the failed request
+     * @returns An iCPSError containing the CloudKit error details, if the request received a response - the provided error otherwise
+     */
+    wrapRequestError(err: unknown, request: string): unknown {
+        if (!isHttpError(err) || err.response === undefined) {
+            return err;
+        }
+
+        const {status, headers, data, text} = err.response;
+        const wrappedError = new iCPSError(ICLOUD_PHOTOS_ERR.REQUEST_FAILED)
+            .addMessage(request)
+            .addMessage(`status ${status}`)
+            .addCause(err);
+
+        if (typeof data === `object` && data !== null) {
+            if (data.serverErrorCode !== undefined || data.reason !== undefined) {
+                wrappedError.addMessage(`${data.serverErrorCode ?? `unknown error`}: ${data.reason ?? `no reason provided`}`);
+            }
+
+            if (data.retryAfter !== undefined) {
+                wrappedError.addMessage(`retry after ${data.retryAfter}s`);
+            }
+        } else if (text.trim().length > 0) {
+            wrappedError.addMessage(`response: ${text.replace(/\s+/g, ` `).trim().slice(0, MAX_ERROR_BODY_LENGTH)}`);
+        }
+
+        if (headers[`retry-after`] !== undefined) {
+            wrappedError.addMessage(`retry-after header ${headers[`retry-after`]}`);
+        }
+
+        return wrappedError.addContext(`responseBody`, text.slice(0, 10 * MAX_ERROR_BODY_LENGTH));
     }
 
     /**

@@ -403,7 +403,57 @@ describe.each([
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
                 .reply(500, {});
 
-            await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Request failed with status code 500$/);
+            const err = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys).catch(err => err);
+
+            expect(err).toBeInstanceOf(iCPSError);
+            expect((err as iCPSError).getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 500) caused by Request failed with status code 500`);
+        });
+
+        test(`Server Error with CloudKit error details`, async () => {
+            const responseBody = {
+                uuid: `some-uuid`,
+                serverErrorCode: `TRY_AGAIN_LATER`,
+                reason: `Service temporarily unavailable`,
+                retryAfter: 30,
+            };
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
+                .reply(503, responseBody, {'retry-after': `30`});
+
+            const err = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys).catch(err => err) as iCPSError;
+
+            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 503, TRY_AGAIN_LATER: Service temporarily unavailable, retry after 30s, retry-after header 30) caused by Request failed with status code 503`);
+            expect(err.context.responseBody).toEqual(JSON.stringify(responseBody));
+        });
+
+        test(`Server Error with partial CloudKit error details`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
+                .reply(503, {serverErrorCode: `TRY_AGAIN_LATER`});
+
+            const err = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys).catch(err => err) as iCPSError;
+
+            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 503, TRY_AGAIN_LATER: no reason provided) caused by Request failed with status code 503`);
+        });
+
+        test(`Server Error with non-JSON response`, async () => {
+            const responseBody = `<html>\n  <body>Service Unavailable</body>\n</html>` + `x`.repeat(300);
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
+                .reply(503, responseBody);
+
+            const err = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys).catch(err => err) as iCPSError;
+
+            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 503, response: ${(`<html> <body>Service Unavailable</body> </html>` + `x`.repeat(300)).slice(0, 200)}) caused by Request failed with status code 503`);
+            expect(err.context.responseBody).toEqual(responseBody);
+        });
+
+        test(`Network failure`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
+                .networkError();
+
+            await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Network Error$/);
         });
     });
 
@@ -502,7 +552,10 @@ describe.each([
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
                 .reply(500, {});
 
-            await expect(photos.performOperation(zone, operation, fields, records)).rejects.toThrow(/^Request failed with status code 500$/);
+            const err = await photos.performOperation(zone, operation, fields, records).catch(err => err);
+
+            expect(err).toBeInstanceOf(iCPSError);
+            expect((err as iCPSError).getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${operation} operation, status 500) caused by Request failed with status code 500`);
         });
 
         test(`Network failure`, async () => {
