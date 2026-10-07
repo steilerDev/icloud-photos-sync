@@ -275,6 +275,32 @@ describe(`Coordination`, () => {
         SyncEngineHelper.convertCPLAssets = convertCPLAssetsOriginal;
     });
 
+    test(`Fetch & Load State - Waits for all fetches to settle on failure`, async () => {
+        const albumsRequest = Promise.withResolvers<any[]>();
+        syncEngine.icloud.photos.fetchAllCPLAssetsMasters = jest.fn<typeof syncEngine.icloud.photos.fetchAllCPLAssetsMasters>()
+            .mockRejectedValue(new Error(`Throttled`));
+        syncEngine.icloud.photos.fetchAllCPLAlbums = jest.fn<typeof syncEngine.icloud.photos.fetchAllCPLAlbums>()
+            .mockReturnValue(albumsRequest.promise);
+        syncEngine.photosLibrary.loadAssets = jest.fn<typeof syncEngine.photosLibrary.loadAssets>()
+            .mockResolvedValue(loadAssetsReturnValue);
+        syncEngine.photosLibrary.loadAlbums = jest.fn<typeof syncEngine.photosLibrary.loadAlbums>()
+            .mockResolvedValue(loadAlbumsReturnValue);
+        const fetchNLoadCompletedEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.FETCH_N_LOAD_COMPLETED);
+
+        let settled = false;
+        const result = syncEngine.fetchAndLoadState().finally(() => {
+            settled = true;
+        });
+
+        // The album fetch is still running, so the failed asset fetch must not settle the attempt
+        await new Promise(resolve => setImmediate(resolve));
+        expect(settled).toBe(false);
+
+        albumsRequest.resolve([]);
+        await expect(result).rejects.toThrow(/^Throttled$/);
+        expect(fetchNLoadCompletedEvent).not.toHaveBeenCalled();
+    });
+
     test(`Diff state`, async () => {
         const getProcessingQueuesOriginal = SyncEngineHelper.getProcessingQueues;
         const resolveHierarchicalDependenciesOriginal = SyncEngineHelper.resolveHierarchicalDependencies;

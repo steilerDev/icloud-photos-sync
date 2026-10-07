@@ -1008,3 +1008,28 @@ describe(`Sort queue`, () => {
         });
     });
 });
+
+describe(`Settle all`, () => {
+    test(`Resolves to all values in order`, async () => {
+        await expect(SyncEngineHelper.settleAll([Promise.resolve(1), Promise.resolve(`a`)])).resolves.toEqual([1, `a`]);
+    });
+
+    test(`Resolves an empty list`, async () => {
+        await expect(SyncEngineHelper.settleAll([])).resolves.toEqual([]);
+    });
+
+    test(`Rejects with the first rejection in order, once all promises settled`, async () => {
+        const slow = Promise.withResolvers<number>();
+        let settled = false;
+        const result = SyncEngineHelper.settleAll([slow.promise, Promise.reject(new Error(`first`)), Promise.reject(new Error(`second`))])
+            .finally(() => {
+                settled = true;
+            });
+
+        await new Promise(resolve => setImmediate(resolve));
+        expect(settled).toBe(false);
+
+        slow.resolve(1);
+        await expect(result).rejects.toThrow(/^first$/);
+    });
+});

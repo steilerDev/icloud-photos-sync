@@ -107,7 +107,8 @@ export class SyncEngine {
      */
     async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         Resources.emit(iCPSEventSyncEngine.FETCH_N_LOAD);
-        const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await Promise.all([
+        // Waiting for all fetches to settle, so no requests outlive a failed attempt (and e.g. hit a reset session)
+        const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await SyncEngineHelper.settleAll([
             this.icloud.photos.fetchAllCPLAssetsMasters()
                 .then(([cplAssets, cplMasters]) => SyncEngineHelper.convertCPLAssets(cplAssets, cplMasters)),
             this.icloud.photos.fetchAllCPLAlbums()
