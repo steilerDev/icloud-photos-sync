@@ -28,6 +28,25 @@ const reportDenyList = [
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
 ];
 
+/**
+ * Headers (lower case) carrying session secrets - their values are masked before submitting crash reports
+ */
+const CONFIDENTIAL_HEADERS = [
+    `cookie`,
+    `set-cookie`,
+    `scnt`,
+    `x-apple-id-session-id`,
+    `x-apple-session-token`,
+    `x-apple-twosv-trust-token`,
+    `x-apple-auth-attributes`,
+    `authorization`,
+];
+
+/**
+ * Placeholder for masked header values
+ */
+const MASKED_VALUE = `<MASKED>`;
+
 const BACKTRACE_SUBMISSION = {
     DOMAIN: `https://submit.backtrace.io`,
     UNIVERSE: `steilerdev`,
@@ -155,7 +174,7 @@ export class ErrorHandler {
                 beforeSend(data: BacktraceData) {
                     return Object.assign(
                         data,
-                        jsonc.parse(ErrorHandler.maskConfidentialData(jsonc.stringify(data))),
+                        ErrorHandler.maskConfidentialHeaders(jsonc.parse(ErrorHandler.maskConfidentialData(jsonc.stringify(data)))),
                     );
                 },
             }).build();
@@ -514,9 +533,11 @@ export class ErrorHandler {
 
         try {
             const harData = await fs.readFile(Resources.manager().harFilePath, {encoding: FILE_ENCODING});
+            // An unparsable HAR file is not attached, since its headers cannot be masked
+            const maskedHarData = jsonc.stringify(ErrorHandler.maskConfidentialHeaders(jsonc.parse(harData)));
 
             const dataStream = new Readable();
-            dataStream.push(ErrorHandler.maskConfidentialData(harData));
+            dataStream.push(ErrorHandler.maskConfidentialData(maskedHarData));
             dataStream.push(null);
 
             return this.compressStream(dataStream);
@@ -553,9 +574,81 @@ export class ErrorHandler {
             .replaceAll(Resources.manager().password, `<APPLE ID PASSWORD>`);
 
         // Reading cached trust token, instead of re-reading from file
-        const {trustToken} = Resources.manager()._resources;
-        return trustToken
+        const {trustToken, sessionSecret} = Resources.manager()._resources;
+        const maskedTrustToken = trustToken
             ? masked.replaceAll(trustToken, `<TRUST TOKEN>`)
             : masked;
+
+        // The session secret is also sent in request bodies (as dsWebAuthToken)
+        return sessionSecret
+            ? maskedTrustToken.replaceAll(sessionSecret, `<SESSION SECRET>`)
+            : maskedTrustToken;
+    }
+
+    /**
+     * Masks the values of headers carrying session secrets (e.g. cookies) within the provided data.
+     * Headers are expected in a `headers` property, either as an object (as in requests/responses of errors) or as a list of name/value pairs (as in the HAR file).
+     * Cookie names and attributes are kept, in order to keep the reports useful for debugging.
+     * @param data - The parsed data to mask
+     * @returns A copy of the data, with masked header values
+     */
+    static maskConfidentialHeaders(data: unknown): unknown {
+        if (Array.isArray(data)) {
+            return data.map(item => ErrorHandler.maskConfidentialHeaders(item));
+        }
+
+        if (typeof data !== `object` || data === null) {
+            return data;
+        }
+
+        return Object.fromEntries(Object.entries(data).map(([key, value]) => {
+            if (key !== `headers`) {
+                return [key, ErrorHandler.maskConfidentialHeaders(value)];
+            }
+
+            if (Array.isArray(value)) {
+                return [key, value.map(pair => typeof pair?.name === `string`
+                    ? {...pair, value: ErrorHandler.maskHeaderValue(pair.name, pair.value)}
+                    : ErrorHandler.maskConfidentialHeaders(pair))];
+            }
+
+            if (typeof value === `object` && value !== null) {
+                return [key, Object.fromEntries(Object.entries(value).map(([name, headerValue]) => [name, ErrorHandler.maskHeaderValue(name, headerValue)]))];
+            }
+
+            return [key, value];
+        }));
+    }
+
+    /**
+     * Masks the value of a single header, if it carries session secrets
+     * @param name - The header name
+     * @param value - The header value - a string, or a list of strings for multi-value headers (e.g. set-cookie)
+     * @returns The masked header value - cookies keep their names and attributes, other confidential headers are masked entirely
+     */
+    static maskHeaderValue(name: string, value: unknown): unknown {
+        const headerName = name.toLowerCase();
+        if (!CONFIDENTIAL_HEADERS.includes(headerName)) {
+            return value;
+        }
+
+        if (Array.isArray(value)) {
+            return value.map(item => ErrorHandler.maskHeaderValue(name, item));
+        }
+
+        if (typeof value !== `string`) {
+            return MASKED_VALUE;
+        }
+
+        switch (headerName) {
+        case `cookie`:
+            // Each cookie of the list: name=value
+            return value.replace(/([^=;\s]+)=[^;]*/g, `$1=${MASKED_VALUE}`);
+        case `set-cookie`:
+            // Only the leading name=value, followed by attributes
+            return value.replace(/^([^=;]+)=[^;]*/, `$1=${MASKED_VALUE}`);
+        default:
+            return MASKED_VALUE;
+        }
     }
 }
