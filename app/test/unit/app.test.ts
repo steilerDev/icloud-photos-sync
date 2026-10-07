@@ -147,6 +147,55 @@ describe(`App Factory`, () => {
         expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, softDelete: true, trashDir: `some/trash`});
     });
 
+    describe(`Boolean options from environment`, () => {
+        afterEach(() => {
+            delete process.env.SOFT_DELETE;
+        });
+
+        test.each([
+            {value: `true`, expected: true},
+            {value: `TRUE`, expected: true},
+            {value: `1`, expected: true},
+            {value: `yes`, expected: true},
+            {value: `on`, expected: true},
+            {value: `false`, expected: false},
+            {value: `False`, expected: false},
+            {value: `0`, expected: false},
+            {value: `no`, expected: false},
+            {value: `off`, expected: false},
+            {value: ``, expected: false},
+            {value: ` false `, expected: false},
+        ])(`Parse '$value' as $expected`, async ({value, expected}) => {
+            process.env.SOFT_DELETE = value;
+            const setupSpy = jest.spyOn(Resources, `setup`);
+
+            await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password, `sync`]);
+
+            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, softDelete: expected});
+        });
+
+        test(`CLI flag takes precedence over environment`, async () => {
+            process.env.SOFT_DELETE = `false`;
+            const setupSpy = jest.spyOn(Resources, `setup`);
+
+            await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password, `--soft-delete`, `sync`]);
+
+            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, softDelete: true});
+        });
+
+        test(`Reject invalid value`, async () => {
+            process.env.SOFT_DELETE = `maybe`;
+            const setupSpy = jest.spyOn(Resources, `setup`);
+            const mockStderr = jest.spyOn(process.stderr, `write`).mockImplementation(() => true);
+
+            await expect(appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password, `sync`]))
+                .rejects.toMatchObject({code: `commander.invalidArgument`, exitCode: 1});
+
+            expect(mockStderr).toHaveBeenCalledWith(expect.stringContaining(`environment variable 'SOFT_DELETE' value 'maybe' is invalid`));
+            expect(setupSpy).not.toHaveBeenCalled();
+        });
+    });
+
     describe(`Credentials from file`, () => {
         const secretsDir = `${Config.defaultConfig.dataDir}-secrets`;
         const usernameFile = path.join(secretsDir, `username`);
