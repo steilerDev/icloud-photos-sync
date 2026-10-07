@@ -765,6 +765,39 @@ describe(`NetworkManager`, () => {
                     expect(fs.readFileSync(downloadPath, `utf8`)).toEqual(`someData`);
                 });
 
+                test(`Download data - sets modification time`, async () => {
+                    mockfs({
+                        [Config.defaultConfig.dataDir]: {},
+                    });
+
+                    const downloadPath = path.join(Config.defaultConfig.dataDir, `some.file`);
+                    const modified = 1640995200000;
+                    networkManager._http._fetch = jest.fn<typeof networkManager._http._fetch>()
+                        .mockResolvedValue(new Response(`someData`));
+
+                    await networkManager.downloadData(`https://cvws.icloud-content.com/someAsset`, downloadPath, modified);
+
+                    expect(fs.readFileSync(downloadPath, `utf8`)).toEqual(`someData`);
+                    expect(Math.round(fs.statSync(downloadPath).mtimeMs)).toEqual(modified);
+                });
+
+                test(`Download data - sets modification time of existing file`, async () => {
+                    mockfs({
+                        [Config.defaultConfig.dataDir]: {
+                            'some.file': `someData`,
+                        },
+                    });
+
+                    const downloadPath = path.join(Config.defaultConfig.dataDir, `some.file`);
+                    const modified = 1640995200000;
+                    networkManager._http.download = jest.fn<typeof networkManager._http.download>();
+
+                    await networkManager.downloadData(`https://cvws.icloud-content.com/someAsset`, downloadPath, modified);
+
+                    expect(networkManager._http.download).not.toHaveBeenCalled();
+                    expect(Math.round(fs.statSync(downloadPath).mtimeMs)).toEqual(modified);
+                });
+
                 test(`Download data - no timeout`, async () => {
                     mockfs({
                         [Config.defaultConfig.dataDir]: {},
