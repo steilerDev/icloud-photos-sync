@@ -1,4 +1,3 @@
-import fs from 'fs/promises';
 import {jsonc} from 'jsonc';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
 import {errorMessage, iCPSError} from '../../../app/error/error.js';
@@ -638,9 +637,7 @@ export class iCloudPhotos {
                 .addContext(`asset`, asset);
         }
 
-        const location = asset.getAssetFilePath();
-        await Resources.network().downloadData(asset.downloadURL, location);
-        await fs.utimes(location, new Date(asset.modified), new Date(asset.modified)); // Setting modified date on file
+        await Resources.network().downloadData(asset.downloadURL, asset.getAssetFilePath(), asset.modified);
     }
 
     /**

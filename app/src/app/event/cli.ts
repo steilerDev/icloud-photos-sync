@@ -246,6 +246,11 @@ export class CLIInterface {
                 this.print(styleText(`magenta`, `Detected error during sync: ${err.getDescription()}`));
                 this.print(styleText(`magenta`, `Refreshing iCloud connection & retrying (attempt #${retryCount})...`));
                 this.print(styleText(`white`, this.getHorizontalLine()));
+            })
+            .on(iCPSEventSyncEngine.REFRESH, (writtenAssets: number) => {
+                this.progressBar.stop();
+                this.print(styleText(`cyan`, `Download URLs expired after writing ${writtenAssets} assets, refreshing remote state...`));
+                this.print(styleText(`white`, this.getHorizontalLine()));
             });
 
         Resources.events(this)

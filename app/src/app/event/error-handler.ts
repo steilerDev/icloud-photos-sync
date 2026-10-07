@@ -384,6 +384,9 @@ export class ErrorHandler {
             })
             .on(iCPSEventSyncEngine.RETRY, (retryCount: number, err: iCPSError) => {
                 breadcrumbs.warn(`SYNC_RETRY`, {retryCount, error: iCPSError.toiCPSError(err).getDescription()});
+            })
+            .on(iCPSEventSyncEngine.REFRESH, (writtenAssets: number) => {
+                breadcrumbs.info(`SYNC_REFRESH`, {writtenAssets});
             });
 
         Resources.events(this)

@@ -223,6 +223,9 @@ export class StateManager {
             })
             .on(iCPSEventSyncEngine.RETRY, (retryCount: number, err: iCPSError) => {
                 this.updateState(StateType.RUNNING, {progressMsg: `Detected error during sync: ${iCPSError.toiCPSError(err).getDescription()}, Refreshing iCloud connection & retrying (attempt #${retryCount})...`, progress: 15});
+            })
+            .on(iCPSEventSyncEngine.REFRESH, (writtenAssets: number) => {
+                this.updateState(StateType.RUNNING, {progressMsg: `Download URLs expired after writing ${writtenAssets} assets, refreshing remote state...`, progress: 15});
             });
 
 

@@ -1,5 +1,4 @@
 import {beforeEach, describe, expect, jest, test} from '@jest/globals';
-import fs from 'fs/promises';
 import {iCPSError} from '../../src/app/error/error';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
@@ -1141,15 +1140,12 @@ describe(`Download asset`, () => {
         });
 
         const asset = new Asset(`someChecksum`, 8, FileType.fromExtension(`jpeg`), modified, Zones.Primary, AssetType.ORIG, `someFile`, `someWrappingKey`, `someReferenceChecksum`, `https://cvws.icloud-content.com/someAsset`, `someRecord`, false);
-        mockedNetworkManager.downloadData = jest.fn<typeof mockedNetworkManager.downloadData>(async (_url: string, location: string) => {
-            await fs.writeFile(location, `someData`);
-        });
+        mockedNetworkManager.downloadData = jest.fn<typeof mockedNetworkManager.downloadData>()
+            .mockResolvedValue();
 
         await photos.downloadAsset(asset);
 
-        expect(mockedNetworkManager.downloadData).toHaveBeenCalledWith(`https://cvws.icloud-content.com/someAsset`, asset.getAssetFilePath());
-        const stats = await fs.stat(asset.getAssetFilePath());
-        expect(Math.round(stats.mtimeMs)).toEqual(modified);
+        expect(mockedNetworkManager.downloadData).toHaveBeenCalledWith(`https://cvws.icloud-content.com/someAsset`, asset.getAssetFilePath(), modified);
 
         mockfs.restore();
     });

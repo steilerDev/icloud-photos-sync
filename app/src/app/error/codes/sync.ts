@@ -30,3 +30,7 @@ export const NETWORK: ErrorStruct = buildErrorStruct(
 export const UNKNOWN: ErrorStruct = buildErrorStruct(
     name, prefix, `UNKNOWN`, `Unknown error during sync`,
 );
+
+export const DOWNLOAD_URL_EXPIRED: ErrorStruct = buildErrorStruct(
+    name, prefix, `DOWNLOAD_URL_EXPIRED`, `Download URL expired, remote state needs to be refreshed`,
+);
