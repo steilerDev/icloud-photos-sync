@@ -423,6 +423,17 @@ describe(`State changes`, () => {
                 progressMsg: `Detected error during sync: UNKNOWN: Unknown error occurred caused by Test, Refreshing iCloud connection & retrying (attempt #1)...`
             } as SerializedState
         },{
+            desc: `Should handle refresh of expired download URLs (triggered by sync)`,
+            events: [iCPSEventApp.SCHEDULED_START, [iCPSEventSyncEngine.REFRESH, 42]],
+            serializedState: {
+                state: `running`,
+                nextSync: undefined,
+                prevError: undefined,
+                prevTrigger: `sync`,
+                progress: 15,
+                progressMsg: `Download URLs expired after writing 42 assets, refreshing remote state...`
+            } as SerializedState
+        },{
             desc: `Should update state and retain trigger on sync success`,
             events: [iCPSEventApp.SCHEDULED_START, [iCPSEventApp.SCHEDULED_DONE, new Date(1)]],
             serializedState: {

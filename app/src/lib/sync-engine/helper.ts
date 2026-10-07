@@ -36,6 +36,10 @@ export const SyncEngineHelper = {
      * @see {@link resolveHierarchicalDependencies}
      */
     resolveHierarchicalDependencies,
+    /**
+     * @see {@link removeDuplicateAssets}
+     */
+    removeDuplicateAssets,
 };
 
 /**
@@ -158,6 +162,28 @@ function getProcessingQueues<T>(remoteEntities: PEntity<T>[], _localEntities: PL
     const toBeDeleted = Object.values(localEntities);
     Resources.logger(`SyncHelper`).debug(`Got ${toBeDeleted.length} remaining local entities that need to be deleted: ${toBeDeleted.map(entity => (entity as any).getDisplayName()).join(`, `)}`);
     return [toBeDeleted, toBeAdded, toBeKept];
+}
+
+/**
+ * Multiple remote assets can reference the same file (e.g. duplicated assets sharing the same master). Downloading such a file concurrently, or re-writing a kept file, leads to partially written or mismatching files.
+ * This function makes sure that every file is only written once, by removing assets from the addition queue whose file is already kept or added
+ * @param queues - The asset processing queue
+ * @returns The asset processing queue without duplicate additions
+ */
+function removeDuplicateAssets(queues: PLibraryProcessingQueues<Asset>): PLibraryProcessingQueues<Asset> {
+    const [toBeDeleted, toBeAdded, toBeKept] = queues;
+    const filePaths = new Set(toBeKept.map(asset => asset.getAssetFilePath()));
+    const uniqueToBeAdded = toBeAdded.filter(asset => {
+        const filePath = asset.getAssetFilePath();
+        if (filePaths.has(filePath)) {
+            Resources.logger(`SyncHelper`).debug(`Skipping duplicate remote entity ${asset.getDisplayName()}`);
+            return false;
+        }
+
+        filePaths.add(filePath);
+        return true;
+    });
+    return [toBeDeleted, uniqueToBeAdded, toBeKept];
 }
 
 /**

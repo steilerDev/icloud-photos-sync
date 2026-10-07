@@ -38,7 +38,7 @@ Search the log file for a `RuntimeError` of the format `Error while loading iClo
 
 ### Warning: Detected `number` errors while adding assets
 
-There are various reasons, why the application cannot write an asset to disk (e.g. network connection or permission issues). The assets experiencing this error are most likely not written to disk or corrupted.
+There are various reasons, why the application cannot write an asset to disk (e.g. network connection or permission issues). The assets experiencing this error are most likely not written to disk or corrupted. The sync continues with the remaining assets and the affected assets will be retried during the next sync.
 
 Search the log file for a `RuntimeError` of the format `Error while verifying asset ${assetName}: ${errDescription}` to understand which assets are impacted.
 

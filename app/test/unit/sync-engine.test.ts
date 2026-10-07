@@ -143,6 +143,64 @@ describe(`Coordination`, () => {
             expect(doneEvent).toHaveBeenCalledTimes(1);
         });
 
+        test(`Refresh remote state without consuming a retry, if download URLs expired after progress`, async () => {
+            mockedResourceManager._resources.maxRetries = 1;
+
+            const retryEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.RETRY);
+            const refreshEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.REFRESH);
+            const doneEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.DONE);
+            syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
+                .mockResolvedValue(fetchAndLoadStateReturnValue);
+            syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
+                .mockResolvedValue(diffStateReturnValue);
+            syncEngine.writeState = jest.fn<typeof syncEngine.writeState>()
+                .mockImplementationOnce(async () => {
+                    syncEngine._writtenAssets = 5;
+                    throw new iCPSError(SYNC_ERR.DOWNLOAD_URL_EXPIRED);
+                })
+                .mockImplementationOnce(async () => {
+                    syncEngine._writtenAssets = 3;
+                    throw new iCPSError(SYNC_ERR.DOWNLOAD_URL_EXPIRED);
+                })
+                .mockResolvedValue();
+
+            await syncEngine.sync();
+
+            expect(refreshEvent).toHaveBeenCalledTimes(2);
+            expect(refreshEvent).toHaveBeenNthCalledWith(1, 5);
+            expect(refreshEvent).toHaveBeenNthCalledWith(2, 3);
+            expect(retryEvent).not.toHaveBeenCalled();
+            expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(3);
+            expect(syncEngine.writeState).toHaveBeenCalledTimes(3);
+            expect(mockedNetworkManager.settleCCYLimiter).toHaveBeenCalledTimes(2);
+            expect(syncEngine.icloud.setupAccount).not.toHaveBeenCalled();
+            expect(doneEvent).toHaveBeenCalledTimes(1);
+        });
+
+        test(`Count expired download URLs as retry, if no progress was made`, async () => {
+            mockedResourceManager._resources.maxRetries = 2;
+
+            const retryEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.RETRY);
+            const refreshEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.REFRESH);
+            const doneEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.DONE);
+            syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
+                .mockResolvedValue(fetchAndLoadStateReturnValue);
+            syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
+                .mockResolvedValue(diffStateReturnValue);
+            syncEngine.writeState = jest.fn<typeof syncEngine.writeState>()
+                .mockRejectedValueOnce(new iCPSError(SYNC_ERR.DOWNLOAD_URL_EXPIRED))
+                .mockResolvedValue();
+
+            await syncEngine.sync();
+
+            expect(refreshEvent).not.toHaveBeenCalled();
+            expect(retryEvent).toHaveBeenCalledWith(2, new iCPSError(SYNC_ERR.NETWORK));
+            expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(2);
+            expect(mockedNetworkManager.settleCCYLimiter).toHaveBeenCalledTimes(1);
+            expect(syncEngine.icloud.setupAccount).toHaveBeenCalledTimes(1);
+            expect(doneEvent).toHaveBeenCalledTimes(1);
+        });
+
         test(`MFA timeout after retry`, async () => {
             syncEngine.icloud.getReady = jest.fn<typeof syncEngine.icloud.getReady>()
                 .mockResolvedValue(false);
@@ -220,12 +278,15 @@ describe(`Coordination`, () => {
     test(`Diff state`, async () => {
         const getProcessingQueuesOriginal = SyncEngineHelper.getProcessingQueues;
         const resolveHierarchicalDependenciesOriginal = SyncEngineHelper.resolveHierarchicalDependencies;
+        const removeDuplicateAssetsOriginal = SyncEngineHelper.removeDuplicateAssets;
 
         const diffStartEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.DIFF);
         SyncEngineHelper.getProcessingQueues = jest.fn<typeof SyncEngineHelper.getProcessingQueues<any>>()
             .mockReturnValue([[], [], []]);
         SyncEngineHelper.resolveHierarchicalDependencies = jest.fn<typeof SyncEngineHelper.resolveHierarchicalDependencies>()
             .mockReturnValue(resolveHierarchicalDependenciesReturnValue);
+        SyncEngineHelper.removeDuplicateAssets = jest.fn<typeof SyncEngineHelper.removeDuplicateAssets>()
+            .mockReturnValue([[], [], []]);
         const diffCompletedEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.DIFF_COMPLETED);
 
         const result = await syncEngine.diffState(...fetchAndLoadStateReturnValue);
@@ -234,12 +295,15 @@ describe(`Coordination`, () => {
         expect(SyncEngineHelper.getProcessingQueues).toHaveBeenCalledTimes(2);
         expect(SyncEngineHelper.getProcessingQueues).toHaveBeenNthCalledWith(1, fetchAndLoadStateReturnValue[0], fetchAndLoadStateReturnValue[2]);
         expect(SyncEngineHelper.getProcessingQueues).toHaveBeenNthCalledWith(2, fetchAndLoadStateReturnValue[1], fetchAndLoadStateReturnValue[3]);
+        expect(SyncEngineHelper.removeDuplicateAssets).toHaveBeenCalledTimes(1);
+        expect(SyncEngineHelper.removeDuplicateAssets).toHaveBeenCalledWith([[], [], []]);
         expect(SyncEngineHelper.resolveHierarchicalDependencies).toHaveBeenCalledTimes(1);
         expect(diffCompletedEvent).toHaveBeenCalledTimes(1);
         expect(result).toEqual([[[], [], []], resolveHierarchicalDependenciesReturnValue]);
 
         SyncEngineHelper.getProcessingQueues = getProcessingQueuesOriginal;
         SyncEngineHelper.resolveHierarchicalDependencies = resolveHierarchicalDependenciesOriginal;
+        SyncEngineHelper.removeDuplicateAssets = removeDuplicateAssetsOriginal;
     });
 
     test(`Write state`, async () => {
@@ -331,6 +395,7 @@ describe(`Handle processing queue`, () => {
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(1, `somechecksum1`);
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(3, `somechecksum3`);
+            expect(syncEngine._writtenAssets).toBe(3);
 
             expect(writeAssetErrorEvent).not.toHaveBeenCalled();
 
@@ -372,25 +437,54 @@ describe(`Handle processing queue`, () => {
             const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
             asset3.verify = jest.fn<typeof asset3.verify>();
 
+            const downloadError = new Error(`download error`);
             syncEngine.icloud.photos.downloadAsset = jest.fn<typeof syncEngine.icloud.photos.downloadAsset>()
                 .mockResolvedValueOnce()
-                .mockResolvedValueOnce()
-                .mockRejectedValueOnce(new Error());
+                .mockRejectedValueOnce(downloadError)
+                .mockResolvedValueOnce();
 
             const toBeAdded = [asset1, asset2, asset3];
 
-            await expect(syncEngine.writeAssets([[], toBeAdded, []])).rejects.toThrow();
+            await syncEngine.writeAssets([[], toBeAdded, []]);
 
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledTimes(3);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(1, asset1);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(2, asset2);
             expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenNthCalledWith(3, asset3);
 
+            expect(asset2.verify).not.toHaveBeenCalled();
+            expect(writeAssetErrorEvent).toHaveBeenCalledTimes(1);
+            expect(writeAssetErrorEvent).toHaveBeenCalledWith(downloadError, asset2);
+
             expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(2);
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(1, `somechecksum1`);
-            expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum2`);
+            expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(2, `somechecksum3`);
+            expect(syncEngine._writtenAssets).toBe(2);
 
             expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
+        });
+
+        test(`Only adding with expired download URL`, async () => {
+            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            asset1.verify = jest.fn<typeof asset1.verify>();
+            const asset2 = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+            asset2.verify = jest.fn<typeof asset2.verify>();
+
+            const request = {method: `GET`, url: `https://icloud.com`, fullURL: `https://icloud.com`, headers: {}, startedAt: 0} as HttpRequest;
+            const expiredError = HttpError.fromResponse({status: 410, statusText: `Gone`, headers: {}, data: ``, text: ``, config: request});
+            syncEngine.icloud.photos.downloadAsset = jest.fn<typeof syncEngine.icloud.photos.downloadAsset>()
+                .mockResolvedValueOnce()
+                .mockRejectedValueOnce(expiredError);
+
+            await expect(syncEngine.writeAssets([[], [asset1, asset2], []])).rejects.toMatchObject({
+                code: SYNC_ERR.DOWNLOAD_URL_EXPIRED.code,
+                cause: expiredError,
+            });
+
+            expect(writeAssetCompleteEvent).toHaveBeenCalledTimes(1);
+            expect(writeAssetCompleteEvent).toHaveBeenCalledWith(`somechecksum1`);
+            expect(writeAssetErrorEvent).not.toHaveBeenCalled();
+            expect(syncEngine._writtenAssets).toBe(1);
         });
 
         test(`Adding & deleting`, async () => {
