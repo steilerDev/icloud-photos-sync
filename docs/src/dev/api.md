@@ -49,3 +49,50 @@ The Postman Collection expects the following Environmental variables to be defin
   - `username` set to the iCloud username
   - `password` set to the iCloud password
   - `sharedLibrary` set to `true` in case the share library should be used
+
+## Asset downloads
+
+Asset records (`CPLMaster` and `CPLAsset`) reference their files through resource fields (e.g. `resOriginalRes` for the original, `resJPEGFullRes` or `resVidFullRes` for the edited version). Each resource provides `size`, `fileChecksum`, `referenceChecksum`, `wrappingKey` and `downloadURL`.
+
+### Download URLs
+
+The `downloadURL` is a pre-signed URL on an `icloud-content.com` host (observed: `cvws-h2.icloud-content.com`). It is requested as provided (including the literal `${f}` placeholder in its path) and does not require any session headers or cookies.
+
+  - **Expiry**: The query parameter `e` holds the expiry time as Unix timestamp (seconds). All download URLs of a records query expire **15 minutes** after the query was executed (observed in October 2026).
+  - **Expired URLs**: A request to an expired URL is answered with status `410 Gone`. The session itself is not affected, but all URLs of the same query have expired as well.
+
+Large libraries can therefore not be downloaded with a single records fetch. The application treats a `410` response as a signal to refetch the remote state and continue with the remaining assets. As long as assets were written since the previous fetch, this does not count towards the maximum number of retries.
+
+### File checksum
+
+The `fileChecksum` is a base64 encoded, 21 byte signature of the file content:
+
+  - **Byte 0**: Signature type. All observed checksums use type `0x01`.
+  - **Bytes 1-20**: SHA-1 hash over the static salt `com.apple.XattrObjectSalt\0com.apple.DataObjectSalt\0` (`\0` being a null byte), followed by the file content.
+
+```js
+import crypto from 'crypto';
+
+const SALT = Buffer.from(`com.apple.XattrObjectSalt\0com.apple.DataObjectSalt\0`);
+const signature = Buffer.concat([
+    Buffer.from([0x01]),
+    crypto.createHash(`sha1`).update(SALT).update(fileContent).digest(),
+]);
+const matches = signature.equals(Buffer.from(fileChecksum, `base64`));
+```
+
+Assets with the same `fileChecksum` therefore have identical file content. Multiple assets can reference the same file (e.g. duplicated assets sharing a master), which is why the local library stores each checksum only once. The meaning of `referenceChecksum` is unknown. It differed from the `fileChecksum` for all observed resources.
+
+!!! warning "Partially verified"
+    This format has been verified against the downloaded content of 240 files:
+
+      - 206 files from the test account: JPEG originals and edited versions.
+      - 34 files from a large personal library: HEIC, JPEG, PNG, WebP, MP4, MOV (up to 90 MB) and Sony ARW originals, as well as edited JPEG, HEIC and MOV versions.
+
+    The following cases have **not** been verified yet:
+
+      - Accounts with Advanced Data Protection enabled.
+      - Files of several GB, which might use a different signature type (e.g. a chunk based signature).
+      - Assets stored in a shared library zone.
+
+    The application does not use the checksum to verify downloaded files yet.
