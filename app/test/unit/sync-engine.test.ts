@@ -13,7 +13,7 @@ import {SyncEngine} from '../../src/lib/sync-engine/sync-engine';
 import {iCloud} from '../../src/lib/icloud/icloud';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 import {iCPSError} from '../../src/app/error/error';
-import {SYNC_ERR} from '../../src/app/error/error-codes';
+import {LIBRARY_ERR, SYNC_ERR} from '../../src/app/error/error-codes';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;
@@ -409,7 +409,7 @@ describe(`Handle processing queue`, () => {
             asset2.verify = jest.fn<typeof asset2.verify>();
             const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
             asset3.verify = jest.fn<typeof asset3.verify>()
-                .mockRejectedValue(new Error(`verification error`));
+                .mockRejectedValue(new iCPSError(LIBRARY_ERR.ASSET_SIZE));
 
             const toBeAdded = [asset1, asset2, asset3];
 
@@ -437,7 +437,7 @@ describe(`Handle processing queue`, () => {
             const asset3 = new Asset(`somechecksum3`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test3`, `somekey`, `somechecksum3`, `https://icloud.com`, `somerecordname3`, false);
             asset3.verify = jest.fn<typeof asset3.verify>();
 
-            const downloadError = new Error(`download error`);
+            const downloadError = new HttpError(`socket hang up`, `ECONNRESET`, {method: `GET`, url: `https://icloud.com`, fullURL: `https://icloud.com`, headers: {}, startedAt: 0});
             syncEngine.icloud.photos.downloadAsset = jest.fn<typeof syncEngine.icloud.photos.downloadAsset>()
                 .mockResolvedValueOnce()
                 .mockRejectedValueOnce(downloadError)
@@ -462,6 +462,20 @@ describe(`Handle processing queue`, () => {
             expect(syncEngine._writtenAssets).toBe(2);
 
             expect(syncEngine.photosLibrary.deleteAsset).not.toHaveBeenCalled();
+        });
+
+        test(`Only adding with file system error`, async () => {
+            const asset1 = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.EDIT, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            asset1.verify = jest.fn<typeof asset1.verify>();
+
+            const fsError = Object.assign(new Error(`ENOSPC: no space left on device`), {code: `ENOSPC`});
+            syncEngine.icloud.photos.downloadAsset = jest.fn<typeof syncEngine.icloud.photos.downloadAsset>()
+                .mockRejectedValue(fsError);
+
+            await expect(syncEngine.writeAssets([[], [asset1], []])).rejects.toBe(fsError);
+
+            expect(writeAssetErrorEvent).not.toHaveBeenCalled();
+            expect(writeAssetCompleteEvent).not.toHaveBeenCalled();
         });
 
         test(`Only adding with expired download URL`, async () => {

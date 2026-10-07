@@ -189,10 +189,11 @@ export class SyncEngine {
 
     /**
      * Downloads and stores a given asset, unless file is already present on disk
-     * A failed download or verification only affects this asset - it will be picked up again by the next sync
+     * A failed download (network or HTTP error) or verification only affects this asset - it will be picked up again by the next sync
      * @param asset - The asset that needs to be downloaded
      * @returns A promise that resolves, once the file has been successfully written to disk, or the error has been reported
      * @throws An iCPSError, if the download URL expired - since all URLs of a fetch expire at the same time, the remote state needs to be refreshed
+     * @throws The original error, if writing to disk failed (e.g. no space left) - since this affects all assets, the sync cannot continue
      * @emits iCPSEventSyncEngine.WRITE_ASSET_COMPLETED - When the asset has been written to disk - The first argument is the name of the asset
      * @emits iCPSEventRuntimeWarning.WRITE_ASSET_ERROR - When an error occurs while writing the asset to disk - The first argument is the error, the second argument is the asset
      */
@@ -205,6 +206,11 @@ export class SyncEngine {
                 throw new iCPSError(SYNC_ERR.DOWNLOAD_URL_EXPIRED)
                     .addMessage(asset.getDisplayName())
                     .addCause(err);
+            }
+
+            // Only network/HTTP errors and asset specific errors (e.g. a missing download URL or failed verification) are limited to this asset - file system errors are not
+            if (!isHttpError(err) && !(err instanceof iCPSError)) {
+                throw err;
             }
 
             Resources.emit(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, err, asset);
