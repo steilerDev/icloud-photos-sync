@@ -305,22 +305,22 @@ export class iCloudPhotos {
      */
     async fetchAllCPLAlbums(): Promise<CPLAlbum[]> {
         try {
-            // Processing queue
-            const queue: Promise<CPLAlbum[]>[] = [];
-
             // Final list of all albums
             const albumRecords: CPLAlbum[] = [];
 
-            // Getting root folders as an initial set for the processing queue
-            queue.push(this.fetchCPLAlbums());
+            // Folders of the current level of the directory tree, starting with the root folder
+            let currentLevel: (string | undefined)[] = [undefined];
 
-            while (queue.length > 0) {
-                // Getting next item in the queue - queue is not empty, as checked by the loop condition
-                for (const nextAlbum of await queue.shift()!) {
-                    // If album is a folder, there is stuff in there, adding it to the queue
+            while (currentLevel.length > 0) {
+                // Fetching a whole level at once and waiting for all requests to settle - this way no request is left running unobserved, in case one of them fails
+                const levelAlbums = (await SyncEngineHelper.settleAll(currentLevel.map(folderId => this.fetchCPLAlbums(folderId)))).flat();
+
+                currentLevel = [];
+                for (const nextAlbum of levelAlbums) {
+                    // If album is a folder, there is stuff in there, adding it to the next level
                     if (nextAlbum.albumType === AlbumType.FOLDER) {
                         Resources.logger(this).debug(`Adding child elements of ${nextAlbum.albumNameEnc} to the processing queue`);
-                        queue.push(this.fetchCPLAlbums(nextAlbum.recordName));
+                        currentLevel.push(nextAlbum.recordName);
                     }
 
                     // Adding completed album
@@ -539,10 +539,10 @@ export class iCloudPhotos {
         // Creating requests, based on number of expected items
         const pictureRecordsRequests = this.buildPictureRecordsRequestsForZone(zone, expectedNumberOfRecords, parentId);
 
-        // Merging arrays of arrays and waiting for all promises to settle
+        // Merging arrays of arrays and waiting for all promises to settle - also if one of them fails, so no request is left running unobserved
         const allRecords: any[] = [];
 
-        (await Promise.all(pictureRecordsRequests)).forEach(records => {
+        (await SyncEngineHelper.settleAll(pictureRecordsRequests)).forEach(records => {
             allRecords.push(...records);
         });
 

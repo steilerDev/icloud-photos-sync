@@ -40,7 +40,28 @@ export const SyncEngineHelper = {
      * @see {@link removeDuplicateAssets}
      */
     removeDuplicateAssets,
+    /**
+     * @see {@link settleAll}
+     */
+    settleAll,
 };
+
+/**
+ * Waits for all provided promises to settle, before resolving or rejecting
+ * In contrast to `Promise.all`, no work is left running in the background once this rejects - which would otherwise outlive a failed sync attempt and could interfere with the next one
+ * @param promises - The promises to wait for
+ * @returns A promise that resolves to the values of all promises, in order
+ * @throws The rejection reason of the first rejected promise (in order of the input), once all promises have settled
+ */
+async function settleAll<T extends readonly unknown[]>(promises: readonly [...{[K in keyof T]: Promise<T[K]>}]): Promise<T> {
+    const results: PromiseSettledResult<unknown>[] = await Promise.allSettled(promises);
+    const rejected = results.find((result): result is PromiseRejectedResult => result.status === `rejected`);
+    if (rejected) {
+        throw rejected.reason;
+    }
+
+    return results.map(result => (result as PromiseFulfilledResult<unknown>).value) as unknown as T;
+}
 
 /**
  * Matches CPLAsset/CPLMaster pairs and parses their associated Asset(s)
