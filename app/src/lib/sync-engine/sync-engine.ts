@@ -182,8 +182,11 @@ export class SyncEngine {
 
         Resources.logger(this).debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
 
+        // Assets that are added again are only replaced (e.g. because their modification date changed) - those are deleted permanently, instead of being moved to the trash
+        const replacedAssets = new Set(toBeAdded.map(asset => asset.getUUID()));
+
         // Deleting before downloading, in order to ensure no conflicts
-        await Promise.all(toBeDeleted.map(asset => this.photosLibrary.deleteAsset(asset)));
+        await Promise.all(toBeDeleted.map(asset => this.photosLibrary.deleteAsset(asset, replacedAssets.has(asset.getUUID()))));
         await Promise.all(toBeAdded.map(asset => this.addAsset(asset)));
     }
 

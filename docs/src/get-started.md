@@ -292,6 +292,17 @@ In order to archive an album, the [`archive` command](user-guides/cli.md#archive
             </path/to/your/local/library>/<path/to/album>
         ```
 
+### Soft Delete
+
+By default, assets that were deleted from the iCloud Photos Library are also permanently deleted from the local library during the next sync. If you are using this tool as a backup, you can enable the [`soft-delete`](user-guides/cli.md#soft-delete) flag. Deleted assets are then moved into a trash folder instead, keeping the `_All-Photos`/`_Shared-Photos` structure.
+
+The trash folder defaults to `_Trash` within the data dir and can be changed through the [`trash-dir`](user-guides/cli.md#trash-dir) option. Relative paths are resolved against the data dir, absolute paths are used as they are (make sure the path is persisted, e.g. by mounting it into the Docker container). The trash folder must not be the data dir itself, nor be located within one of the asset folders.
+
+Assets are kept in the trash folder until you remove them, the application never cleans it up. Assets that are only re-downloaded, because their metadata changed in iCloud, are replaced and not moved into the trash folder.
+
+!!! tip "Docker"
+    Use the environment variables `SOFT_DELETE=true` and (optionally) `TRASH_DIR=<path>`.
+
 ## Additional resources
 
 - Monitor the tool through [sync metrics](user-guides/sync-metrics.md)

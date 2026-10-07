@@ -7,6 +7,7 @@ import {APP_ERR} from "./error/error-codes.js";
 import {iCPSError} from "./error/error.js";
 import {ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp} from "./icloud-app.js";
 import {LogLevel} from "../lib/resources/state-manager.js";
+import {TRASH_DIR} from "../lib/photos-library/constants.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -173,6 +174,8 @@ export type iCPSAppOptions = {
     force: boolean,
     refreshToken: boolean,
     remoteDelete: boolean,
+    softDelete: boolean,
+    trashDir: string,
     logLevel: LogLevel,
     silent: boolean,
     logToCli: boolean,
@@ -259,6 +262,12 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`--remote-delete`, `If this flag is set, delete non-favorite photos in the iCloud Photos backend upon archiving.`)
             .env(`REMOTE_DELETE`)
             .default(false))
+        .addOption(new Option(`--soft-delete`, `If this flag is set, assets that were deleted in iCloud Photos are moved to the trash directory (see \`--trash-dir\`), instead of being permanently deleted from disk.`)
+            .env(`SOFT_DELETE`)
+            .default(false))
+        .addOption(new Option(`--trash-dir <path>`, `Directory to move deleted assets to, if soft delete is enabled. Relative paths are resolved against the data dir. The trash is never cleaned automatically.`)
+            .env(`TRASH_DIR`)
+            .default(TRASH_DIR))
         .addOption(new Option(`-l, --log-level <level>`, `Set the log level.`)
             .env(`LOG_LEVEL`)
             .choices(Object.values(LogLevel))

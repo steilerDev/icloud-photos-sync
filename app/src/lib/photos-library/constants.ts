@@ -7,6 +7,11 @@ export const ARCHIVE_DIR = `_Archive`;
 export const STASH_DIR = `.stash`;
 
 /**
+ * The default directory (relative to the data dir), where deleted assets are moved to, if soft delete is enabled
+ */
+export const TRASH_DIR = `_Trash`;
+
+/**
  * The version of the local photos library
  */
 export const LIBRARY_VERSION = 1;

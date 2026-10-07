@@ -21,6 +21,8 @@ export const defaultConfig = {
     force: false,
     refreshToken: false,
     remoteDelete: false,
+    softDelete: false,
+    trashDir: `_Trash`,
     logLevel: `info`,
     silent: false,
     logToCli: false,
