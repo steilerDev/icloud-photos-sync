@@ -2,7 +2,7 @@
 In this article, I want to provide some background on the intention for developing this tool and the use case it is addressing, as well as the workflow it is used in.
 
 ## Problem Statement
-Currently there is no way, to backup the iCloud Photos Library and easily access it's organized content. The only solution is Apple's *Photos.app*, which will create a `.photoslibrary` file, which is not easily accessible. Additionally, a Mac needs to run sufficiently often and have 'Keep originals' turned on, in order to make sure the data is actually synced.
+Currently there is no way, to backup the iCloud Photos Library and easily access its organized content. The only solution is Apple's *Photos.app*, which will create a `.photoslibrary` file, which is not easily accessible. Additionally, a Mac needs to run sufficiently often and have 'Keep originals' turned on, in order to make sure the data is actually synced.
 
 I am a hobby photographer, who has been using Lightroom for quite a while. However I want to move to a full mobile workflow, leveraging iCloud Photos Library for cross device sync and the interoperability of cross platform editing tools.
 

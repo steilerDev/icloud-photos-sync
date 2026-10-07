@@ -595,7 +595,9 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 
 ## Postman Collection
 
-!!! warning "Outdated"
+!!! warning "Legacy"
     The [Postman Collection](https://github.com/steilerDev/icloud-photos-sync/tree/main/docs/postman) predates SRP signin, escrow, PCS and the iOS 26.4 changes. Use it only as a starting point and rely on this page and the code instead.
+
+The collection signs in with the plain text `POST /signin` (the equivalent of `--legacy-login`), and does not cover [escrow](#escrow), [requestPCS](#requestpcs) or `continuationMarker` paging. The MFA code is submitted with `02-Enter 2FA (App)` or `02-Enter 2FA (Phone)`, followed by `03-Trust Device` and `04-Setup iCloud`.
 
 To use it, set the `username` and `password` variables (and `sharedLibrary` to `true` to use the shared library) in the selected environment. Reset the collection variables when changing the environment or to start a new session.
