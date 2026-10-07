@@ -205,7 +205,7 @@ During the sync process various warning could be produced within the application
 !!! tip "Syncing large libraries"
     Initial sync of large libraries can take some time. The download URLs, which are part of the fetched metadata, expire after roughly 15 minutes. Once they expired, the tool refreshes the metadata and continues with the remaining assets. As long as assets were downloaded since the previous refresh, this does not count towards the [maximum number of retries](user-guides/cli.md#max-retries). After 8 hours the session expires, which will lead to a failure of the ongoing sync. The tool will refresh the session, unless the maximum number of retries is reached. Restarting a previously failed sync will keep all previously successfully downloaded assets.
 
-    Additionally you might need to limit the rate of metadata fetching, because the iCloud API has been observed to enforce rate limits, causing `SOCKET HANGUP` errors. This appears to be applicable for libraries holding more than 10.000 assets. Do this by [setting the metadata rate option](user-guides/cli.md#metadata-rate) - it seems `1/20` ensures sufficient throttling.
+    The iCloud API enforces rate limits, which especially affect libraries holding more than 10.000 assets. If a request is throttled, the tool waits for the time requested by iCloud and retries the request, without failing the sync. To reduce the number of throttled requests, or if you encounter `SOCKET HANGUP` errors, you can additionally [limit the rate of metadata fetching](user-guides/cli.md#metadata-rate), e.g. using `1/20`.
 
 During the sync, the WebUI will not show any detailed progress information - please check the CLI output and/or log files for more information on the sync progress.
 
@@ -294,6 +294,17 @@ In order to archive an album, the [`archive` command](user-guides/cli.md#archive
             archive \
             </path/to/your/local/library>/<path/to/album>
         ```
+
+### Soft Delete
+
+By default, assets that were deleted from the iCloud Photos Library are also permanently deleted from the local library during the next sync. If you are using this tool as a backup, you can enable the [`soft-delete`](user-guides/cli.md#soft-delete) flag. Deleted assets are then moved into a trash folder instead, keeping the `_All-Photos`/`_Shared-Photos` structure.
+
+The trash folder defaults to `_Trash` within the data dir and can be changed through the [`trash-dir`](user-guides/cli.md#trash-dir) option. Relative paths are resolved against the data dir, absolute paths are used as they are (make sure the path is persisted, e.g. by mounting it into the Docker container). The trash folder must not be the data dir itself, nor be located within one of the asset folders.
+
+Assets are kept in the trash folder until you remove them, the application never cleans it up. Assets that are only re-downloaded, because their metadata changed in iCloud, are replaced and not moved into the trash folder.
+
+!!! tip "Docker"
+    Use the environment variables `SOFT_DELETE=true` and (optionally) `TRASH_DIR=<path>`.
 
 ## Additional resources
 

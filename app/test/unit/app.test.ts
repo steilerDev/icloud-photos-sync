@@ -135,6 +135,18 @@ describe(`App Factory`, () => {
         stdinSpy.mockRestore();
     });
 
+    test(`Read soft delete options from environment`, async () => {
+        process.env.SOFT_DELETE = `true`;
+        process.env.TRASH_DIR = `some/trash`;
+        const setupSpy = jest.spyOn(Resources, `setup`);
+        const app = await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password, `sync`]);
+        delete process.env.SOFT_DELETE;
+        delete process.env.TRASH_DIR;
+
+        expect(app).toBeInstanceOf(SyncApp);
+        expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, softDelete: true, trashDir: `some/trash`});
+    });
+
     describe(`Credentials from file`, () => {
         const secretsDir = `${Config.defaultConfig.dataDir}-secrets`;
         const usernameFile = path.join(secretsDir, `username`);

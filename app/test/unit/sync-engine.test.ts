@@ -394,9 +394,9 @@ describe(`Handle processing queue`, () => {
             await syncEngine.writeAssets([toBeDeleted, [], []]);
 
             expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenCalledTimes(3);
-            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(1, asset1);
-            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(2, asset2);
-            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(3, asset3);
+            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(1, asset1, false);
+            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(2, asset2, false);
+            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(3, asset3, false);
             expect(syncEngine.icloud.photos.downloadAsset).not.toHaveBeenCalled();
             expect(writeAssetCompleteEvent).not.toHaveBeenCalled();
         });
@@ -553,9 +553,24 @@ describe(`Handle processing queue`, () => {
             expect(writeAssetCompleteEvent).toHaveBeenNthCalledWith(3, `somechecksum3`);
 
             expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenCalledTimes(3);
-            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(1, asset4);
-            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(2, asset5);
-            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(3, asset6);
+            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(1, asset4, false);
+            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(2, asset5, false);
+            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(3, asset6, false);
+        });
+
+        test(`Permanently delete replaced assets`, async () => {
+            const zone = getRandomZone();
+            const localAsset = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 42, zone, AssetType.ORIG, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            const remoteAsset = new Asset(`somechecksum1`, 42, FileType.fromExtension(`png`), 43, zone, AssetType.ORIG, `test1`, `somekey`, `somechecksum1`, `https://icloud.com`, `somerecordname1`, false);
+            remoteAsset.verify = jest.fn<typeof remoteAsset.verify>();
+            const deletedAsset = new Asset(`somechecksum2`, 42, FileType.fromExtension(`png`), 42, zone, AssetType.ORIG, `test2`, `somekey`, `somechecksum2`, `https://icloud.com`, `somerecordname2`, false);
+
+            await syncEngine.writeAssets([[localAsset, deletedAsset], [remoteAsset], []]);
+
+            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenCalledTimes(2);
+            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(1, localAsset, true);
+            expect(syncEngine.photosLibrary.deleteAsset).toHaveBeenNthCalledWith(2, deletedAsset, false);
+            expect(syncEngine.icloud.photos.downloadAsset).toHaveBeenCalledWith(remoteAsset);
         });
     });
 

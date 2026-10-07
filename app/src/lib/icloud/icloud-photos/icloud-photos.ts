@@ -19,15 +19,50 @@ import {HIDDEN_ALBUM_NAME, HIDDEN_ALBUM_UUID} from '../../photos-library/constan
 const RECORD_CHANGE_TAG = `21h2`;
 
 /**
- * The max record limit returned by iCloud.
- * Should be 200, but in order to divide by 3 (for albums) and 2 (for all pictures) 198 is more convenient
+ * The record limit requested per query.
+ * iCloud returns at most 200 records per request, but in order to divide by 3 (for albums) and 2 (for all pictures) 198 is more convenient.
+ * Requests are only planned based on this limit - if iCloud returns fewer records, the missing records are requested again.
  */
 const MAX_RECORDS_LIMIT = 198;
+
+/**
+ * A single page of query results
+ */
+export type QueryPage = {
+    /**
+     * The records returned by the backend
+     */
+    records: any[],
+    /**
+     * The marker to request the next page of the same query, if more results are available
+     */
+    continuationMarker?: string,
+}
 
 /**
  * The maximum length of a non-JSON response body included in an error message
  */
 const MAX_ERROR_BODY_LENGTH = 200;
+
+/**
+ * CloudKit server error codes, asking the client to retry the request after the provided amount of time
+ */
+const RETRYABLE_SERVER_ERROR_CODES = [`THROTTLED`, `TRY_AGAIN_LATER`];
+
+/**
+ * The number of times a single request is retried, after CloudKit asked to retry it later
+ */
+const MAX_THROTTLED_RETRIES = 10;
+
+/**
+ * The time in seconds to wait before retrying a request, if CloudKit did not provide a valid one
+ */
+const DEFAULT_RETRY_AFTER = 10;
+
+/**
+ * The maximum time in seconds to wait before retrying a request
+ */
+const MAX_RETRY_AFTER = 300;
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -37,6 +72,11 @@ export class iCloudPhotos {
      * A promise that will resolve, once the object is ready or reject, in case there is an error
      */
     ready: Promise<void>;
+
+    /**
+     * The point in time (in ms since epoch) until which CloudKit asked to pause requests
+     */
+    _throttledUntil: number = 0;
 
     /**
      * Creates a new iCloud Photos Class
@@ -164,16 +204,42 @@ export class iCloudPhotos {
     }
 
     /**
-     * Performs a query against the iCloud Photos Service
+     * Performs a query against the iCloud Photos Service, following the continuation marker until all results are fetched
      * @param zone - Defines the zone to be used
      * @param recordType - The requested record type
      * @param filterBy - An array of filter instructions
-     * @param resultsLimit - Results limit is maxed at 66 * 3 records (because every picture is returned three times)
+     * @param resultsLimit - The number of records requested per page, iCloud returns at most 200 records per request
      * @param desiredKeys - The fields requested from the backend
      * @returns An array of records as returned by the backend
      * @throws An iCPSError, if the request was rejected (containing the CloudKit error details) or the response is invalid - an HttpError, if no response was received
      */
     async performQuery(zone: QueryBuilder.Zones, recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[]): Promise<any[]> {
+        const records: any[] = [];
+        let continuationMarker: string | undefined;
+        do {
+            const page = await this.performQueryPage(zone, recordType, filterBy, resultsLimit, desiredKeys, continuationMarker);
+            records.push(...page.records);
+            // An empty page or a repeated marker would never finish the query
+            continuationMarker = page.records.length > 0 && page.continuationMarker !== continuationMarker
+                ? page.continuationMarker
+                : undefined;
+        } while (continuationMarker);
+
+        return records;
+    }
+
+    /**
+     * Performs a single query request against the iCloud Photos Service
+     * @param zone - Defines the zone to be used
+     * @param recordType - The requested record type
+     * @param filterBy - An array of filter instructions
+     * @param resultsLimit - The number of records requested, iCloud returns at most 200 records per request
+     * @param desiredKeys - The fields requested from the backend
+     * @param continuationMarker - The marker returned by the previous page of the same query, in order to request the next page
+     * @returns The records as returned by the backend, as well as the marker for the next page if more results are available
+     * @throws An iCPSError, if the request was rejected (containing the CloudKit error details) or the response is invalid - an HttpError, if no response was received
+     */
+    async performQueryPage(zone: QueryBuilder.Zones, recordType: string, filterBy?: any[], resultsLimit?: number, desiredKeys?: string[], continuationMarker?: string): Promise<QueryPage> {
         const config: HttpRequestConfig = {
             params: {
                 remapEnums: `True`,
@@ -205,13 +271,19 @@ export class iCloudPhotos {
             data.resultsLimit = resultsLimit;
         }
 
-        try {
-            // Only the response format is schema validated, the records are parsed defensively
-            const queryResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, Resources.validator().response.query, config);
-            return queryResponse.data.records;
-        } catch (err) {
-            throw this.wrapRequestError(err, `${recordType} query`);
+        if (continuationMarker) {
+            data.continuationMarker = continuationMarker;
         }
+
+        // Only the response format is schema validated, the records are parsed defensively
+        const queryResponse = await this.sendRequest(
+            () => Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.QUERY, data, Resources.validator().response.query, config),
+            `${recordType} query`,
+        );
+        return {
+            records: queryResponse.data.records,
+            continuationMarker: queryResponse.data.continuationMarker,
+        };
     }
 
     /**
@@ -252,13 +324,70 @@ export class iCloudPhotos {
             },
         }));
 
-        try {
-            // Only the response format is schema validated, the records are parsed defensively
-            const operationResponse = await Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, Resources.validator().response.operation, config);
-            return operationResponse.data.records;
-        } catch (err) {
-            throw this.wrapRequestError(err, `${operationType} operation`);
+        // Only the response format is schema validated, the records are parsed defensively
+        const operationResponse = await this.sendRequest(
+            () => Resources.network().post(ENDPOINTS.PHOTOS.AREAS[zoneId.area] + ENDPOINTS.PHOTOS.PATH.MODIFY, data, Resources.validator().response.operation, config),
+            `${operationType} operation`,
+        );
+        return operationResponse.data.records;
+    }
+
+    /**
+     * Sends a request to the iCloud Photos Service, retrying it in case CloudKit asks to retry later (e.g. because the client is throttled).
+     * Throttling applies to all requests: While waiting, all other requests sent through this function are paused as well.
+     * @param request - A function sending the request
+     * @param description - A description of the request, used in log and error messages
+     * @returns The response of the request
+     * @throws An iCPSError, if the request was rejected (containing the CloudKit error details) or the response is invalid - an HttpError, if no response was received
+     */
+    async sendRequest<T>(request: () => Promise<T>, description: string): Promise<T> {
+        for (let retry = 0; ; retry++) {
+            await this.awaitThrottling();
+            try {
+                return await request();
+            } catch (err) {
+                const retryAfter = this.getRetryAfter(err);
+                if (retryAfter === undefined || retry >= MAX_THROTTLED_RETRIES) {
+                    throw this.wrapRequestError(err, description);
+                }
+
+                Resources.logger(this).warn(`CloudKit asked to retry ${description} after ${retryAfter}s (retry ${retry + 1}/${MAX_THROTTLED_RETRIES})`);
+                this._throttledUntil = Math.max(this._throttledUntil, Date.now() + (retryAfter * 1000));
+            }
         }
+    }
+
+    /**
+     * Waits until the throttling period requested by CloudKit has passed
+     * @returns A promise that resolves, once requests can be sent again
+     */
+    async awaitThrottling() {
+        const delay = this._throttledUntil - Date.now();
+        if (delay > 0) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
+    /**
+     * Determines if CloudKit asked to retry a failed request later and how long to wait
+     * @param err - The error thrown by the request
+     * @returns The time in seconds to wait before retrying the request, or undefined if the request should not be retried
+     */
+    getRetryAfter(err: unknown): number | undefined {
+        if (!isHttpError(err) || err.response === undefined) {
+            return undefined;
+        }
+
+        const {status, headers, data} = err.response;
+        const serverErrorCode = typeof data === `object` && data !== null ? data.serverErrorCode : undefined;
+        if (status !== 429 && !RETRYABLE_SERVER_ERROR_CODES.includes(serverErrorCode)) {
+            return undefined;
+        }
+
+        const retryAfter = Number(data?.retryAfter ?? headers[`retry-after`]);
+        return Number.isFinite(retryAfter) && retryAfter >= 0
+            ? Math.min(retryAfter, MAX_RETRY_AFTER)
+            : DEFAULT_RETRY_AFTER;
     }
 
     /**
@@ -468,53 +597,97 @@ export class iCloudPhotos {
 
     /**
      * The iCloud API is limiting the amount of records that can be obtained with a single request.
-     * This function will build separate requests, based on the expected size of the album.
+     * This function will split the album into ranges of positions, based on the expected size of the album, in order to fetch them in parallel.
      * @param zone - Defines the zone to be used
      * @param expectedNumberOfRecords - The amount of records expected within the given album
      * @param albumId - The record name of the album, if undefined all pictures will be returned
      * @param hidden - If set and albumId is undefined, the hidden pictures will be requested instead of all pictures
-     * @returns An array of Promises, that will resolve to arrays of picture records and the amount of pictures expected from the requests.
+     * @returns An array of Promises, that will resolve to arrays of picture records
      */
     buildPictureRecordsRequestsForZone(zone: QueryBuilder.Zones, expectedNumberOfRecords: number, albumId?: string, hidden: boolean = false): Promise<any[]>[] {
-        // Calculating number of concurrent requests, in order to execute in parallel
-        const numberOfRequests = albumId === undefined
-            ? Math.ceil((expectedNumberOfRecords * 2) / MAX_RECORDS_LIMIT) // On all pictures two records per photo are returned (CPLMaster & CPLAsset) which are counted against max
-            : Math.ceil((expectedNumberOfRecords * 3) / MAX_RECORDS_LIMIT); // On folders three records per photo are returned (CPLMaster, CPLAsset & CPLContainerRelation) which are counted against max
+        // On all pictures two records per photo are returned (CPLMaster & CPLAsset), on albums three (CPLMaster, CPLAsset & CPLContainerRelation) - all of them are counted against the limit
+        const positionsPerRequest = albumId === undefined
+            ? Math.floor(MAX_RECORDS_LIMIT / 2)
+            : Math.floor(MAX_RECORDS_LIMIT / 3);
+        const numberOfRequests = Math.ceil(expectedNumberOfRecords / positionsPerRequest);
 
         Resources.logger(this).debug(`Expecting ${expectedNumberOfRecords} records for album ${albumId === undefined ? `All photos` : albumId} in ${zone} library, executing ${numberOfRequests} queries`);
 
         // Collecting all promise queries for parallel execution
         const pictureRecordsRequests: Promise<any[]>[] = [];
         for (let index = 0; index < numberOfRequests; index++) {
-            const startRank = albumId === undefined // The start rank always refers to the tuple/triple of records, therefore we need to adjust the start rank based on the amount of records returned
-                ? index * Math.floor(MAX_RECORDS_LIMIT / 2)
-                : index * Math.floor(MAX_RECORDS_LIMIT / 3);
-            Resources.logger(this).debug(`Building query for records of album ${albumId === undefined ? `All photos` : albumId} in ${zone} library at index ${startRank}`);
-            const startRankFilter = QueryBuilder.getStartRankFilterForStartRank(startRank);
-            const directionFilter = QueryBuilder.getDirectionFilterForDirection();
-
-            // Different queries for 'all pictures' (or 'hidden pictures') than album pictures
-            if (albumId === undefined) {
-                pictureRecordsRequests.push(this.performQuery(
-                    zone,
-                    hidden ? QueryBuilder.RECORD_TYPES.HIDDEN_PHOTOS : QueryBuilder.RECORD_TYPES.ALL_PHOTOS,
-                    [startRankFilter, directionFilter],
-                    MAX_RECORDS_LIMIT,
-                    QueryBuilder.QUERY_KEYS,
-                ));
-            } else {
-                const parentFilter = QueryBuilder.getParentFilterForParentId(albumId);
-                pictureRecordsRequests.push(this.performQuery(
-                    zone,
-                    QueryBuilder.RECORD_TYPES.PHOTO_RECORDS,
-                    [startRankFilter, directionFilter, parentFilter],
-                    MAX_RECORDS_LIMIT,
-                    QueryBuilder.QUERY_KEYS,
-                ));
-            }
+            const startRank = index * positionsPerRequest;
+            const endRank = Math.min(startRank + positionsPerRequest, expectedNumberOfRecords);
+            pictureRecordsRequests.push(this.fetchPictureRecordsRange(zone, startRank, endRank, albumId, hidden));
         }
 
         return pictureRecordsRequests;
+    }
+
+    /**
+     * Fetches the picture records within a range of positions of an album.
+     * If iCloud returns fewer records than requested (e.g. because it lowered its record limit), the remaining positions are requested again:
+     * Following the continuation marker if one was provided, otherwise starting the query at the first position that was not yet received.
+     * @param zone - Defines the zone to be used
+     * @param startRank - The first position of the range
+     * @param endRank - The position after the last position of the range
+     * @param albumId - The record name of the album, if undefined all pictures will be returned
+     * @param hidden - If set and albumId is undefined, the hidden pictures will be requested instead of all pictures
+     * @returns The picture records within the range, as returned by the backend - might include records of re-requested positions or positions beyond the range
+     * @throws An iCPSError, if a query fails
+     */
+    async fetchPictureRecordsRange(zone: QueryBuilder.Zones, startRank: number, endRank: number, albumId?: string, hidden: boolean = false): Promise<any[]> {
+        const records: any[] = [];
+
+        // The continuation marker is only valid for the query it was returned by, therefore the start rank of that query is retained while following it
+        let queryRank = startRank;
+        let receivedRank = startRank;
+        let continuationMarker: string | undefined;
+        while (receivedRank < endRank) {
+            Resources.logger(this).debug(`Building query for records of album ${albumId === undefined ? `All photos` : albumId} in ${zone} library at index ${receivedRank}${continuationMarker ? ` (continuing query at index ${queryRank})` : ``}`);
+            const filters = [QueryBuilder.getStartRankFilterForStartRank(queryRank), QueryBuilder.getDirectionFilterForDirection()];
+            if (albumId !== undefined) {
+                filters.push(QueryBuilder.getParentFilterForParentId(albumId));
+            }
+
+            const page = await this.performQueryPage(
+                zone,
+                albumId !== undefined
+                    ? QueryBuilder.RECORD_TYPES.PHOTO_RECORDS
+                    : (hidden ? QueryBuilder.RECORD_TYPES.HIDDEN_PHOTOS : QueryBuilder.RECORD_TYPES.ALL_PHOTOS),
+                filters,
+                MAX_RECORDS_LIMIT,
+                QueryBuilder.QUERY_KEYS,
+                continuationMarker,
+            );
+
+            const receivedPositions = this.countReceivedPositions(page.records);
+            if (receivedPositions === 0) {
+                // No more records available, the count mismatch will be reported once all records are processed
+                break;
+            }
+
+            records.push(...page.records);
+            receivedRank += receivedPositions;
+            if (page.continuationMarker && page.continuationMarker !== continuationMarker) {
+                continuationMarker = page.continuationMarker;
+            } else {
+                continuationMarker = undefined;
+                queryRank = receivedRank;
+            }
+        }
+
+        return records;
+    }
+
+    /**
+     * Counts the positions (photos) a page of picture records covers - every position has exactly one CPLAsset.
+     * @remarks The number of CPLMasters is not reliable, since iCloud does not return a master for every asset
+     * @param records - The records of the page, as returned by the backend
+     * @returns The number of positions covered by the page
+     */
+    countReceivedPositions(records: any[]): number {
+        return records.filter(record => record?.recordType === QueryBuilder.RECORD_TYPES.PHOTO_ASSET_RECORD).length;
     }
 
     /**
@@ -570,9 +743,19 @@ export class iCloudPhotos {
 
         // Merging arrays of arrays and waiting for all promises to settle - also if one of them fails, so no request is left running unobserved
         const allRecords: any[] = [];
+        // Ranges might overlap, in case positions were re-requested
+        const seen = new Set<string>();
 
         (await SyncEngineHelper.settleAll(pictureRecordsRequests)).forEach(records => {
-            allRecords.push(...records);
+            for (const record of records) {
+                const recordKey = `${record?.recordType}/${record?.recordName}`;
+                if (typeof record?.recordName === `string` && seen.has(recordKey)) {
+                    continue;
+                }
+
+                seen.add(recordKey);
+                allRecords.push(record);
+            }
         });
 
         return [allRecords, expectedNumberOfRecords];

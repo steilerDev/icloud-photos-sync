@@ -3,12 +3,13 @@ import fs from 'fs';
 import mockfs from '../_helpers/mock-fs.helper';
 import path from 'path';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
-import {ARCHIVE_DIR, PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, STASH_DIR} from '../../src/lib/photos-library/constants';
+import {ARCHIVE_DIR, PRIMARY_ASSET_DIR, SHARED_ASSET_DIR, STASH_DIR, TRASH_DIR} from '../../src/lib/photos-library/constants';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
+import {LIBRARY_ERR} from '../../src/app/error/error-codes';
 import * as Config from '../_helpers/_config';
 import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 
@@ -16,6 +17,7 @@ const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DI
 const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR);
 const archiveDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR);
 const stashDir = path.join(Config.defaultConfig.dataDir, ARCHIVE_DIR, STASH_DIR);
+const trashDir = path.join(Config.defaultConfig.dataDir, TRASH_DIR);
 
 let mockedEventManager: MockedEventManager;
 let mockedResourceManager: MockedResourceManager;
@@ -85,6 +87,56 @@ test(`Should use existing directories and not overwrite content`, () => {
     expect(fs.existsSync(path.join(archiveDir, `testFile`)));
     expect(fs.existsSync(stashDir)).toBe(true);
     expect(fs.existsSync(path.join(stashDir, `testFile`)));
+});
+
+describe(`Trash directory`, () => {
+    test(`Should not create trash directory if soft delete is disabled`, () => {
+        mockfs();
+        const library = new PhotosLibrary();
+        expect(library.trashDir).toBeUndefined();
+        expect(fs.existsSync(trashDir)).toBeFalsy();
+    });
+
+    test.each([{
+        desc: `default trash directory`,
+        configuredTrashDir: TRASH_DIR,
+        expectedTrashDir: trashDir,
+    }, {
+        desc: `nested trash directory`,
+        configuredTrashDir: `some/nested/trash`,
+        expectedTrashDir: path.join(Config.defaultConfig.dataDir, `some`, `nested`, `trash`),
+    }, {
+        desc: `trash directory outside of the data dir`,
+        configuredTrashDir: `../${path.basename(Config.defaultConfig.dataDir)}-trash`,
+        expectedTrashDir: `${Config.defaultConfig.dataDir}-trash`,
+    }])(`Should create $desc if soft delete is enabled`, ({configuredTrashDir, expectedTrashDir}) => {
+        mockfs();
+        mockedResourceManager._resources.softDelete = true;
+        mockedResourceManager._resources.trashDir = configuredTrashDir;
+        const library = new PhotosLibrary();
+        expect(library.trashDir).toEqual(expectedTrashDir);
+        expect(fs.existsSync(expectedTrashDir)).toBeTruthy();
+        fs.rmSync(expectedTrashDir, {recursive: true, force: true});
+    });
+
+    test.each([{
+        desc: `the data dir`,
+        configuredTrashDir: `.`,
+    }, {
+        desc: `the primary asset dir`,
+        configuredTrashDir: PRIMARY_ASSET_DIR,
+    }, {
+        desc: `within the shared asset dir`,
+        configuredTrashDir: `${SHARED_ASSET_DIR}/trash`,
+    }, {
+        desc: `the primary asset dir as absolute path`,
+        configuredTrashDir: primaryAssetDir,
+    }])(`Should reject trash directory being $desc`, ({configuredTrashDir}) => {
+        mockfs();
+        mockedResourceManager._resources.softDelete = true;
+        mockedResourceManager._resources.trashDir = configuredTrashDir;
+        expect(() => new PhotosLibrary()).toThrow(expect.objectContaining({code: LIBRARY_ERR.INVALID_TRASH_DIR.code}));
+    });
 });
 
 describe(`Load state`, () => {
@@ -732,6 +784,88 @@ describe(`Write state`, () => {
             const asset = new Asset(assetChecksum, assetData.length, fileType, assetMTime, zone);
             await library.deleteAsset(asset);
             expect(fs.existsSync(path.join(zoneDir, assetFullFilename))).toBeFalsy();
+        });
+
+        describe(`Soft delete`, () => {
+            const assetFileName = `Aa7_yox97ecSUNmVw0xP4YzIDDKf`;
+            const assetChecksum = Buffer.from(assetFileName, `base64url`).toString(`base64`);
+            const assetExt = `jpeg`;
+            const assetData = Buffer.from([1, 1, 1, 1]);
+            const assetMTime = 1640995200000; // 01.01.2022
+            const assetFullFilename = `${assetFileName}.${assetExt}`;
+            const assetPath = path.join(zoneDir, assetFullFilename);
+            const trashedAssetPath = path.join(trashDir, path.basename(zoneDir), assetFullFilename);
+
+            let library: PhotosLibrary;
+            let asset: Asset;
+
+            beforeEach(() => {
+                mockfs({
+                    [zoneDir]: {
+                        [assetFullFilename]: mockfs.file({
+                            content: assetData,
+                            mtime: new Date(assetMTime),
+                        }),
+                    },
+                });
+                mockedResourceManager._resources.softDelete = true;
+                library = new PhotosLibrary();
+                asset = new Asset(assetChecksum, assetData.length, FileType.fromExtension(assetExt), assetMTime, zone);
+            });
+
+            afterEach(() => {
+                jest.restoreAllMocks();
+            });
+
+            test(`Move asset to trash`, async () => {
+                await library.deleteAsset(asset);
+
+                expect(fs.existsSync(assetPath)).toBeFalsy();
+                expect(fs.readFileSync(trashedAssetPath)).toEqual(assetData);
+                expect(Math.round(fs.statSync(trashedAssetPath).mtimeMs)).toEqual(assetMTime);
+            });
+
+            test(`Overwrite asset already present in trash`, async () => {
+                fs.mkdirSync(path.dirname(trashedAssetPath), {recursive: true});
+                fs.writeFileSync(trashedAssetPath, `outdated`);
+
+                await library.deleteAsset(asset);
+
+                expect(fs.existsSync(assetPath)).toBeFalsy();
+                expect(fs.readFileSync(trashedAssetPath)).toEqual(assetData);
+            });
+
+            test(`Permanently delete asset`, async () => {
+                await library.deleteAsset(asset, true);
+
+                expect(fs.existsSync(assetPath)).toBeFalsy();
+                expect(fs.existsSync(trashedAssetPath)).toBeFalsy();
+            });
+
+            test(`Ignore missing asset`, async () => {
+                fs.rmSync(assetPath);
+
+                await expect(library.deleteAsset(asset)).resolves.toBeUndefined();
+                expect(fs.existsSync(trashedAssetPath)).toBeFalsy();
+            });
+
+            test(`Copy asset to trash on a different file system`, async () => {
+                jest.spyOn(fs.promises, `rename`).mockRejectedValueOnce(Object.assign(new Error(`EXDEV: cross-device link not permitted`), {code: `EXDEV`}));
+
+                await library.deleteAsset(asset);
+
+                expect(fs.existsSync(assetPath)).toBeFalsy();
+                expect(fs.readFileSync(trashedAssetPath)).toEqual(assetData);
+                expect(Math.round(fs.statSync(trashedAssetPath).mtimeMs)).toEqual(assetMTime);
+            });
+
+            test(`Rethrow unexpected file system errors`, async () => {
+                const fsError = Object.assign(new Error(`EACCES: permission denied`), {code: `EACCES`});
+                jest.spyOn(fs.promises, `rename`).mockRejectedValueOnce(fsError);
+
+                await expect(library.deleteAsset(asset)).rejects.toBe(fsError);
+                expect(fs.existsSync(assetPath)).toBeTruthy();
+            });
         });
     });
 

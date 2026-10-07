@@ -15,14 +15,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Accounts, secrets and trust tokens
 
-The maintainer keeps two real Apple accounts. Each has a `secrets/<name>.env` file, with a `*.sample` listing its variable names.
+The maintainer keeps three real Apple accounts. Each has a `secrets/<name>.env` file, with a `*.sample` listing its variable names.
 
 | File | Account | Variables | Use |
 |---|---|---|---|
-| `secrets/prod.env` | Maintainer's personal account: large library, many albums and folders, shared albums, a shared photo library | `APPLE_ID_USER`, `APPLE_ID_PWD`, `DATA_DIR`, … (the app's own option env vars) | Investigation and debugging of real-world API behaviour. Read-only use: never run `archive --remote-delete` or anything else that modifies the remote library against it. |
+| `secrets/prod.env` | Maintainer's personal account: large library, many albums and folders, shared albums, a shared photo library | `APPLE_ID_USER`, `APPLE_ID_PWD`, `TRUST_TOKEN`, `DATA_DIR`, … (the app's own option env vars) | Investigation and debugging of real-world API behaviour. Read-only use: never run `archive --remote-delete` or anything else that modifies the remote library against it. |
 | `secrets/test.env` | Dedicated test account (the library is described in `docs/src/dev/test-environment.md`) | `TEST_APPLE_ID_USER`, `TEST_APPLE_ID_PWD`, `TEST_TRUST_TOKEN` | `npm run test:api`, `npm run test:docker` and `.vscode/launch.json`. Expected API responses live in `app/test/api/_data/`. |
-
-`adp.env` is optional, for an Advanced Data Protection account.
+| `secrets/adp.env` | Maintainer's account with Advanced Data Protection (ADP) enabled | `APPLE_ID_USER`, `APPLE_ID_PWD`, `TRUST_TOKEN`, `DATA_DIR`, … (same shape as `prod.env`) | Reproducing and debugging ADP-specific behaviour: escrow, `pcsRequired` and the `requestPCS` approval loop. **Only with the user present:** every MFA code and every PCS request has to be approved by the user on their device, so never start an ADP run while they are away. Treat it as read-only like `prod`. |
 
 Two further files hold Backtrace API tokens (see "Error reports (Backtrace)"): `secrets/backtrace.env` for the production project and `secrets/backtrace-dev.env` for the development project, each with `BACKTRACE_API_TOKEN` and `BACKTRACE_PROJECT`.
 
@@ -40,8 +39,10 @@ Load an env file with `set -a; . ../secrets/test.env; set +a` before running a c
 3. Wait until it prints "MFA code required".
    - **Test account:** its trusted devices are unreachable, so the automatic device push never arrives (a long-standing quirk). Always request an SMS to phone id `2`: `curl -X POST "localhost:8080/api/resend_mfa?method=sms&phoneNumberId=2"`. `acquire-trust-token.sh` does the same.
    - **Prod account:** the automatic trusted-device push works, so no extra request is needed.
+   - **ADP account:** the automatic trusted-device push works as well. The user must be present to read the code off their device.
    - Then ask the user for the code and submit it with `curl -X POST "localhost:8080/api/mfa?code=<code>"`. The default MFA timeout is 10 minutes, so ask promptly.
-4. The new token is printed ("Validated token") and stored in `<data-dir>/.icloud-photos-sync` (`.trustToken`). Update `TEST_TRUST_TOKEN` in `secrets/test.env` only after confirming with the user. For `prod`, the token lives in that account's own data dir.
+4. The new token is printed ("Validated token") and stored in `<data-dir>/.icloud-photos-sync` (`.trustToken`). Update the env file only after confirming with the user: `TEST_TRUST_TOKEN` in `secrets/test.env`, `TRUST_TOKEN` in `secrets/prod.env` and `secrets/adp.env` (it overrides the token stored in the data dir). `DATA_DIR` in `adp.env` points to `/opt/adp-data-dir/`, which isn't writable in the sandbox; there the ADP data dir is `~/icps-data/adp`, so pass `-d ~/icps-data/adp` to reuse it.
+   - The `token` command stops at `TRUSTED`, so it never reaches the ADP-only PCS step. Exercising `requestPCS` needs a `sync` (or `daemon`) run, during which the app polls every 10s until the user approves the request on a device.
 5. CI has its own token. The self-hosted `residential` runner keeps `TEST_*` in `/opt/actions-runner/.env`, not in GitHub secrets. Because tokens are IP-bound, it must be renewed **on the runner host** by the user, with `.github/acquire-trust-token.sh`, which runs the same flow using the published image. This is only needed when the CI API/e2e jobs fail authentication. A locally renewed token neither fixes nor breaks the runner's token.
 
 ## Commands (run in `app/`)
@@ -177,7 +178,7 @@ The code is the source of truth. `docs/src/dev/api.md` is mostly current. `docs/
   - `CPLContainerRelationLiveByPosition` (album contents)
   - `CPLAlbumByPositionLive` (albums and folders, walked breadth-first, primary zone only)
 - **`desiredKeys`:** `QUERY_KEYS` in `query-builder.ts`.
-- **Pagination:** there is no `continuationMarker`. The code takes the count first, then fires parallel queries with `resultsLimit: 198` and `startRank` offsets. The step is 99 for all photos (asset+master per item) and 66 for albums (+relation). Results are de-duplicated afterwards.
+- **Pagination:** `performQuery` follows the response's `continuationMarker` until it is absent (this is what pages the album listing). Asset queries take the count first, then fetch ranges of positions in parallel with `resultsLimit: 198` and `startRank` offsets. The step is 99 for all photos (asset+master per item) and 66 for albums (+relation). The 198 only plans the ranges: if iCloud returns fewer positions, `fetchPictureRecordsRange` requests the rest, following the `continuationMarker` if present, else restarting at the first missing `startRank`. Overlapping records are de-duplicated when the ranges are merged.
 - **Assets:** the original is `CPLMaster.resOriginalRes`. If `adjustmentType` is set, the edited version is `resJPEGFullRes`/`resVidFullRes`. Live-photo video is not fetched.
 - **Remote delete** (`archive --remote-delete`, non-favorites only): `POST /private/records/modify` sets `isDeleted: 1` on a `CPLAsset`.
 - **Rate limiting:** all metadata calls go through a p-queue set by `--metadata-rate`. Downloads use a separate concurrency queue (`--download-threads`, `--download-timeout`). There are no HTTP-level retries; retries happen at sync level.
