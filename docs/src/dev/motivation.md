@@ -8,7 +8,7 @@ I am a hobby photographer, who has been using Lightroom for quite a while. Howev
 
 However I am not comfortable storing the only copy of my pictures on a third party cloud provider. Therefore I need a mechanism to sync those files to a local machine that can be backed up using any mechanism.
 
-Additionally, I am going to import pictures from my SLT camera, shot in raw format. Those will take up large amounts of cloud storage, however I do not want to fully remove them, in case they will be necessary in the future. Therefore I need a mechanism to move pictures from the iCloud Photos Library to my local system for 'long term storage', while keeping the most important ones in the iCloud Photos Library for easy access.
+Additionally, I am going to import pictures from my mirrorless camera, shot in raw format. Those will take up large amounts of cloud storage, however I do not want to fully remove them, in case they will be necessary in the future. Therefore I need a mechanism to move pictures from the iCloud Photos Library to my local system for 'long term storage', while keeping the most important ones in the iCloud Photos Library for easy access.
 
 ## Workflow
 1. Pictures are taken on an iOS device or imported through an iOS device into the iCloud Photos Library
