@@ -698,6 +698,7 @@ describe(`App control flow`, () => {
         describe(`Scheduling`, () => {
             // Fake timers don't work with croner, so we need to wait actual time
             const executionPadding = 300; // Waiting for the croner execution to finish, in ms
+            const schedulingTimeout = 15000; // The tests wait up to 2.3s of real time - allowing for slow (CI) environments, in ms
 
             test(`Run single scheduled job`, async () => {
                 const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
@@ -718,7 +719,7 @@ describe(`App control flow`, () => {
 
                 expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
                 expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
-            });
+            }, schedulingTimeout);
 
             test(`Run multiple scheduled job`, async () => {
                 const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
@@ -741,7 +742,7 @@ describe(`App control flow`, () => {
                 expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
                 expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(2);
                 expect(eventScheduledOverrun).not.toHaveBeenCalled();
-            });
+            }, schedulingTimeout);
 
             test(`Schedule job overrun`, async () => {
                 const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
@@ -765,7 +766,7 @@ describe(`App control flow`, () => {
                 expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
                 expect(eventScheduledOverrun).toHaveBeenCalledTimes(1);
                 expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
-            });
+            }, schedulingTimeout);
 
             test(`Trigger job`, async () => {
                 const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
