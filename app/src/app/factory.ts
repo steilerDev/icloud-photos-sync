@@ -434,7 +434,7 @@ export async function appFactory(argv: string[]): Promise<iCPSApp> {
             argParser(async (res: iCPSApp) => {
                 try {
                     validatePermissions()
-                    Resources.state().acquireLibraryLock()
+                    await Resources.state().acquireLibraryLock()
                 } catch (err) {
                     reject(err)
                 }

@@ -40,7 +40,7 @@ export const NOT_EMPTY: ErrorStruct = buildErrorStruct(
 );
 
 export const LOCKED: ErrorStruct = buildErrorStruct(
-    name, prefix, `LOCKED`, `Library locked. Use --force (or FORCE env variable) to forcefully remove the lock`,
+    name, prefix, `LOCKED`, `Library is locked by another process. Stop the other process - only if no other process is using the library, use --force (or FORCE env variable) to remove the lock`,
 );
 
 export const ASSET_NOT_FOUND: ErrorStruct = buildErrorStruct(

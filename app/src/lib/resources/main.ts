@@ -9,6 +9,8 @@ import {ResourceManager} from "./resource-manager.js";
 import {StateManager} from './state-manager.js';
 import {Validator} from "./validator.js";
 import {readFileSync, statSync} from 'fs'
+import {jsonc} from "jsonc";
+import {FILE_ENCODING, LibraryLockOwner} from "./resource-types.js";
 
 /* eslint-disable @typescript-eslint/no-namespace */
 
@@ -207,24 +209,72 @@ export namespace Resources {
     }
 
     /**
-     * Returns information on the library's locking status
-     * @returns Information about the logFilePath, file exist and locking process
+     * Information about the library's locking status
      */
-    export function getLockStat() {
+    export type LockStat = {
+        /**
+         * The path to the lock file
+         */
+        lockFilePath: string,
+        /**
+         * True, if the lock file exists
+         */
+        lockFileExists: boolean,
+        /**
+         * The process holding the lock - undefined, if the lock file does not exist. If the content of the lock file cannot be parsed, the pid is NaN.
+         */
+        owner?: LibraryLockOwner,
+        /**
+         * The time of the last heartbeat (modification time of the lock file) in ms since epoch - NaN, if the lock file does not exist
+         */
+        lastHeartbeat: number,
+    }
+
+    /**
+     * Returns information on the library's locking status
+     * @returns Information about the lock file path, its existence, the locking process and its last heartbeat
+     */
+    export function getLockStat(): LockStat {
         const {lockFilePath} = Resources.manager();
-        let lockFileExists: boolean;
+        let lastHeartbeat: number;
         try {
-            lockFileExists = statSync(lockFilePath).isFile()
+            const stat = statSync(lockFilePath);
+            if (!stat.isFile()) {
+                return {lockFilePath, lockFileExists: false, lastHeartbeat: NaN};
+            }
+
+            lastHeartbeat = stat.mtimeMs;
         } catch {
-            lockFileExists = false
+            return {lockFilePath, lockFileExists: false, lastHeartbeat: NaN};
         }
 
         return {
             lockFilePath,
-            lockFileExists,
-            lockingProcess: lockFileExists ? 
-                parseInt(readFileSync(lockFilePath, `utf-8`), 10) :
-                NaN
+            lockFileExists: true,
+            owner: parseLockOwner(readFileSync(lockFilePath, FILE_ENCODING)),
+            lastHeartbeat,
+        };
+    }
+
+    /**
+     * Parses the content of the lock file
+     * @param content - The content of the lock file - either the serialized lock owner or only the process id (as written by previous versions)
+     * @returns The lock owner - with a pid of NaN, if the content cannot be parsed
+     */
+    function parseLockOwner(content: string): LibraryLockOwner {
+        if (/^\s*\d+\s*$/.test(content)) {
+            return {pid: parseInt(content, 10)};
+        }
+
+        try {
+            const owner = jsonc.parse(content) as Partial<LibraryLockOwner>;
+            return {
+                instance: typeof owner?.instance === `string` ? owner.instance : undefined,
+                pid: typeof owner?.pid === `number` ? owner.pid : NaN,
+                hostname: typeof owner?.hostname === `string` ? owner.hostname : undefined,
+            };
+        } catch {
+            return {pid: NaN};
         }
     }
 
