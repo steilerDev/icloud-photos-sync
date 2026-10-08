@@ -189,7 +189,7 @@ export enum iCPSEventRuntimeWarning {
      */
     RESOURCE_FILE_ERROR = `warn-resource_file_error`,
     /**
-     * Emitted when there is a problem acquiring the trusted phone numbers of an account
+     * Emitted when there is a problem acquiring the trusted phone numbers of an account - provides the iCPSError as argument
      */
     TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`
 }

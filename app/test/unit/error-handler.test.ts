@@ -165,6 +165,82 @@ describe(`Masking confidential data`, () => {
             expect(ErrorHandler.maskConfidentialData(`test@icloud.com some data`))
                 .toEqual(`<APPLE ID USERNAME> some data`);
         });
+
+        test(`Ignores empty values`, () => {
+            mockedResourceManager._resources.trustToken = ``;
+            mockedResourceManager._resources.sessionSecret = ``;
+
+            expect(ErrorHandler.maskConfidentialData(`some data`))
+                .toEqual(`some data`);
+        });
+
+        test.each([
+            {
+                desc: `as configured`,
+                healthCheckUrl: `https://hc-ping.com/some-uuid`,
+                input: `HEALTH_CHECK_URL=https://hc-ping.com/some-uuid`,
+                expected: `HEALTH_CHECK_URL=https://hc-ping.com/<HEALTH CHECK PATH>`,
+            }, {
+                desc: `with appended path`,
+                healthCheckUrl: `https://hc-ping.com/some-uuid/`,
+                input: `POST https://hc-ping.com/some-uuid/start`,
+                expected: `POST https://hc-ping.com/<HEALTH CHECK PATH>/start`,
+            }, {
+                desc: `normalized`,
+                healthCheckUrl: `HTTPS://HC-PING.COM/some-uuid`,
+                input: `{"baseURL":"https://hc-ping.com/some-uuid"}`,
+                expected: `{"baseURL":"https://hc-ping.com/<HEALTH CHECK PATH>"}`,
+            }, {
+                desc: `with query`,
+                healthCheckUrl: `https://example.com/ping?key=secret`,
+                input: `https://example.com/ping?key=secret`,
+                expected: `https://example.com/<HEALTH CHECK PATH>`,
+            }, {
+                desc: `without path`,
+                healthCheckUrl: `https://example.com`,
+                input: `https://example.com/start`,
+                expected: `https://example.com/start`,
+            },
+        ])(`Masks health check URL $desc`, ({healthCheckUrl, input, expected}) => {
+            mockedResourceManager._resources.healthCheckUrl = healthCheckUrl;
+
+            expect(ErrorHandler.maskConfidentialData(input)).toEqual(expected);
+        });
+
+        test(`Masks push subscription endpoints`, () => {
+            mockedResourceManager._resources.notificationSubscriptions = {
+                someEndpoint: {endpoint: `https://web.push.apple.com/someToken`, keys: {p256dh: `p256dh`, auth: `auth`}},
+            };
+
+            expect(ErrorHandler.maskConfidentialData(`Sending notification to https://web.push.apple.com/someToken`))
+                .toEqual(`Sending notification to https://web.push.apple.com/<PUSH SUBSCRIPTION PATH>`);
+        });
+
+        test.each([
+            {
+                desc: `user and password`,
+                input: `HTTPS_PROXY=http://user:pa55word@proxy.local:3128`,
+                expected: `HTTPS_PROXY=http://<MASKED>@proxy.local:3128`,
+            }, {
+                desc: `user only`,
+                input: `"HTTP_PROXY":"http://user@proxy.local:3128"`,
+                expected: `"HTTP_PROXY":"http://<MASKED>@proxy.local:3128"`,
+            }, {
+                desc: `other scheme`,
+                input: `socks5://user:pass@proxy.local`,
+                expected: `socks5://<MASKED>@proxy.local`,
+            }, {
+                desc: `no credentials`,
+                input: `http://proxy.local:3128/path@something`,
+                expected: `http://proxy.local:3128/path@something`,
+            }, {
+                desc: `mail address`,
+                input: `mailto:someone@example.com`,
+                expected: `mailto:someone@example.com`,
+            },
+        ])(`Masks credentials in URLs: $desc`, ({input, expected}) => {
+            expect(ErrorHandler.maskConfidentialData(input)).toEqual(expected);
+        });
     });
 
     describe(`Mask header value`, () => {

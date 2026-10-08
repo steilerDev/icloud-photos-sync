@@ -126,6 +126,46 @@ function commanderReadFile(value: string, _dummyPrevious?: unknown): string {
 }
 
 /**
+ * Accepted (lower case) values of environment variables for boolean options
+ */
+const BOOLEAN_ENV_VALUES = {
+    true: [`true`, `1`, `yes`, `on`],
+    false: [`false`, `0`, `no`, `off`, ``],
+};
+
+/**
+ * Commander enables a boolean option, as soon as its environment variable is defined - regardless of its value.
+ * This function registers listeners on the provided command, in order to parse the value of those environment variables instead (e.g. `false` disables the option).
+ * The listeners are invoked after commander's own listener and overwrite its value.
+ * @param program - The commander command, after all options were added
+ */
+function commanderParseBooleanEnv(program: Command) {
+    program.options
+        .filter(option => option.isBoolean() && option.envVar !== undefined)
+        .forEach(option => {
+            program.on(`optionEnv:${option.name()}`, () => {
+                const envValue = process.env[option.envVar!] ?? ``;
+                const normalizedValue = envValue.trim().toLowerCase();
+
+                if (BOOLEAN_ENV_VALUES.true.includes(normalizedValue)) {
+                    program.setOptionValueWithSource(option.attributeName(), true, `env`);
+                    return;
+                }
+
+                if (BOOLEAN_ENV_VALUES.false.includes(normalizedValue)) {
+                    program.setOptionValueWithSource(option.attributeName(), false, `env`);
+                    return;
+                }
+
+                program.error(
+                    `error: environment variable '${option.envVar}' value '${envValue}' is invalid. Expected one of ${[...BOOLEAN_ENV_VALUES.true, ...BOOLEAN_ENV_VALUES.false.filter(value => value.length > 0)].join(`, `)} (or an empty value for false).`,
+                    {code: `commander.invalidArgument`},
+                );
+            });
+        });
+}
+
+/**
  * Extracts the options from the parsed commander command - and asks for user input in case it is necessary
  * @param parsedCommand - The parsed commander command returned from callback in Command.action((_, command any)
  * @returns Validated iCPSAppOptions
@@ -247,7 +287,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
             .env(`SCHEDULE`)
             .default(`0 2 * * *`)
             .argParser(commanderParseCron))
-        .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://icps.steiler.dev/error-reporting/ for more information.`)
+        .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://icps.steiler.dev/user-guides/error-reporting/ for more information.`)
             .env(`ENABLE_CRASH_REPORTING`)
             .default(false))
         .addOption(new Option(`--mfa-timeout <number>`, `If a MFA code is necessary to authenticate, wait for these many seconds before canceling the authentication process. Time in seconds, should not exceed 10mins (due to server side timing).`)
@@ -308,10 +348,12 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`--legacy-login`, `Enables plain text legacy login method.`)
             .env(`LEGACY_LOGIN`)
             .default(false))
-        .addOption(new Option(`--health-check-url <url>`, `URL to ping to monitor the health of icloud photos sync, see https://icps.steiler.dev/health-checks/ for more information.`)
+        .addOption(new Option(`--health-check-url <url>`, `URL to ping to monitor the health of icloud photos sync, see https://icps.steiler.dev/user-guides/health-checks/ for more information.`)
             .env(`HEALTH_CHECK_URL`)
             .default(undefined)
             .argParser(commanderParseUrl));
+
+    commanderParseBooleanEnv(program);
 
     program.command(`daemon`, {isDefault: true})
         .action(async (_, command) => {
@@ -392,7 +434,7 @@ export async function appFactory(argv: string[]): Promise<iCPSApp> {
             argParser(async (res: iCPSApp) => {
                 try {
                     validatePermissions()
-                    Resources.state().acquireLibraryLock()
+                    await Resources.state().acquireLibraryLock()
                 } catch (err) {
                     reject(err)
                 }

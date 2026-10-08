@@ -147,6 +147,55 @@ describe(`App Factory`, () => {
         expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, softDelete: true, trashDir: `some/trash`});
     });
 
+    describe(`Boolean options from environment`, () => {
+        afterEach(() => {
+            delete process.env.SOFT_DELETE;
+        });
+
+        test.each([
+            {value: `true`, expected: true},
+            {value: `TRUE`, expected: true},
+            {value: `1`, expected: true},
+            {value: `yes`, expected: true},
+            {value: `on`, expected: true},
+            {value: `false`, expected: false},
+            {value: `False`, expected: false},
+            {value: `0`, expected: false},
+            {value: `no`, expected: false},
+            {value: `off`, expected: false},
+            {value: ``, expected: false},
+            {value: ` false `, expected: false},
+        ])(`Parse '$value' as $expected`, async ({value, expected}) => {
+            process.env.SOFT_DELETE = value;
+            const setupSpy = jest.spyOn(Resources, `setup`);
+
+            await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password, `sync`]);
+
+            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, softDelete: expected});
+        });
+
+        test(`CLI flag takes precedence over environment`, async () => {
+            process.env.SOFT_DELETE = `false`;
+            const setupSpy = jest.spyOn(Resources, `setup`);
+
+            await appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password, `--soft-delete`, `sync`]);
+
+            expect(setupSpy).toHaveBeenCalledWith({...Config.defaultConfig, softDelete: true});
+        });
+
+        test(`Reject invalid value`, async () => {
+            process.env.SOFT_DELETE = `maybe`;
+            const setupSpy = jest.spyOn(Resources, `setup`);
+            const mockStderr = jest.spyOn(process.stderr, `write`).mockImplementation(() => true);
+
+            await expect(appFactory([`/usr/bin/node`, `/home/icloud-photos-sync/main.js`, `-u`, Config.defaultConfig.username, `-p`, Config.defaultConfig.password, `sync`]))
+                .rejects.toMatchObject({code: `commander.invalidArgument`, exitCode: 1});
+
+            expect(mockStderr).toHaveBeenCalledWith(expect.stringContaining(`environment variable 'SOFT_DELETE' value 'maybe' is invalid`));
+            expect(setupSpy).not.toHaveBeenCalled();
+        });
+    });
+
     describe(`Credentials from file`, () => {
         const secretsDir = `${Config.defaultConfig.dataDir}-secrets`;
         const usernameFile = path.join(secretsDir, `username`);
@@ -522,7 +571,7 @@ describe(`App control flow`, () => {
             Resources._instances.event.removeListenersFromRegistry = jest.fn<typeof Resources._instances.event.removeListenersFromRegistry>()
                 .mockReturnValue(Resources._instances.event);
 
-            await expect(syncApp.run()).resolves.toEqual([[], []]);
+            await expect(syncApp.run()).resolves.toBeUndefined();
 
             expect(syncApp.icloud.authenticate).toHaveBeenCalledTimes(1);
             expect(syncApp.icloud.logout).toHaveBeenCalledTimes(1);
@@ -649,6 +698,7 @@ describe(`App control flow`, () => {
         describe(`Scheduling`, () => {
             // Fake timers don't work with croner, so we need to wait actual time
             const executionPadding = 300; // Waiting for the croner execution to finish, in ms
+            const schedulingTimeout = 15000; // The tests wait up to 2.3s of real time - allowing for slow (CI) environments, in ms
 
             test(`Run single scheduled job`, async () => {
                 const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
@@ -669,7 +719,7 @@ describe(`App control flow`, () => {
 
                 expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
                 expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
-            });
+            }, schedulingTimeout);
 
             test(`Run multiple scheduled job`, async () => {
                 const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
@@ -692,7 +742,7 @@ describe(`App control flow`, () => {
                 expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
                 expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(2);
                 expect(eventScheduledOverrun).not.toHaveBeenCalled();
-            });
+            }, schedulingTimeout);
 
             test(`Schedule job overrun`, async () => {
                 const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
@@ -716,7 +766,7 @@ describe(`App control flow`, () => {
                 expect(eventScheduledEvent).toHaveBeenCalledTimes(1);
                 expect(eventScheduledOverrun).toHaveBeenCalledTimes(1);
                 expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
-            });
+            }, schedulingTimeout);
 
             test(`Trigger job`, async () => {
                 const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
@@ -752,13 +802,27 @@ describe(`App control flow`, () => {
             expect(successEvent).toHaveBeenCalled();
         });
 
-        test(`Scheduled sync requires MFA`, async () => {
+        test(`Scheduled sync of an empty library succeeds`, async () => {
             const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
             const successEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_DONE);
 
             const syncApp = new SyncApp();
             syncApp.run = jest.fn<typeof syncApp.run>()
                 .mockResolvedValue([[], []]);
+
+            await daemonApp.performScheduledSync(syncApp);
+
+            expect(syncApp.run).toHaveBeenCalled();
+            expect(successEvent).toHaveBeenCalled();
+        });
+
+        test(`Scheduled sync requires MFA`, async () => {
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+            const successEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_DONE);
+
+            const syncApp = new SyncApp();
+            syncApp.run = jest.fn<typeof syncApp.run>()
+                .mockResolvedValue(undefined);
 
             await daemonApp.performScheduledSync(syncApp);
 
