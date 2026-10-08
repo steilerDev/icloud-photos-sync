@@ -31,21 +31,21 @@ const MEASUREMENT_NAME = `icloud_photos_sync`;
  */
 const FIELDS = {
     /**
-     * Warnings
+     * Warnings - named after the runtime warning events, in order to match the warning types of the Prometheus exporter
      */
-    COUNT_MISMATCH: `warn-count_mismatch`,
-    LIBRARY_LOAD_ERROR: `warn-library_load_error`,
-    EXTRANEOUS_FILE: `warn-extraneous_file`,
-    ICLOUD_LOAD_ERROR: `warn-icloud_load_error`,
-    WRITE_ASSET_ERROR: `warn-write_asset_error`,
-    WRITE_ALBUM_ERROR: `warn-write_album_error`,
-    LINK_ERROR: `warn-link_error`,
-    FILETYPE_ERROR: `warn-filetype_error`,
-    MFA_RESEND_ERROR: `warn-mfa_resend_error`,
-    WEB_SERVER_ERROR: `warn-web_server_error`,
-    TRUSTED_PHONE_NUMBERS_ERROR: `warn-trusted_phone_numbers_error`,
-    RESOURCE_FILE_ERROR: `warn-resource_file_error`,
-    ARCHIVE_ASSET_ERROR: `warn-archive_asset_error`,
+    COUNT_MISMATCH: iCPSEventRuntimeWarning.COUNT_MISMATCH,
+    LIBRARY_LOAD_ERROR: iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR,
+    EXTRANEOUS_FILE: iCPSEventRuntimeWarning.EXTRANEOUS_FILE,
+    ICLOUD_LOAD_ERROR: iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR,
+    WRITE_ASSET_ERROR: iCPSEventRuntimeWarning.WRITE_ASSET_ERROR,
+    WRITE_ALBUM_ERROR: iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR,
+    LINK_ERROR: iCPSEventRuntimeWarning.LINK_ERROR,
+    FILETYPE_ERROR: iCPSEventRuntimeWarning.FILETYPE_ERROR,
+    MFA_ERROR: iCPSEventRuntimeWarning.MFA_ERROR,
+    WEB_SERVER_ERROR: iCPSEventRuntimeWarning.WEB_SERVER_ERROR,
+    TRUSTED_PHONE_NUMBERS_ERROR: iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR,
+    RESOURCE_FILE_ERROR: iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR,
+    ARCHIVE_ASSET_ERROR: iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR,
     ERROR: `errors`,
     /**
      * Loading metrics
@@ -349,7 +349,7 @@ export class MetricsExporter {
             })
             .on(iCPSEventRuntimeWarning.MFA_ERROR, (err: iCPSError) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
-                    .addField(FIELDS.MFA_RESEND_ERROR, err.getDescription()));
+                    .addField(FIELDS.MFA_ERROR, err.getDescription()));
             })
             .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
