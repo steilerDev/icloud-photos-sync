@@ -48,6 +48,8 @@ jobs:
         uses: ./.github/actions/test/unit
         with:
           gh-token: ${{ secrets.GITHUB_TOKEN }}
+          # Coverage is published from the Linux run only
+          coverage: 'false'
 
   unit-docker:
     runs-on: ubuntu-latest
