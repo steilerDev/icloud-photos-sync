@@ -254,7 +254,7 @@ export class WebServer {
             code: 302,
             header: {
                 "Content-Type": `text/plain`,
-                Location: `/state`
+                Location: `${Resources.manager().webBasePath}/state`
             },
             body: ``
         }

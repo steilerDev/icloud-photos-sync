@@ -1,14 +1,21 @@
-import {beforeEach, describe, expect, jest, test} from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {iCPSError} from '../../src/app/error/error';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
-import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
-import {iCPSEventPhotos} from '../../src/lib/resources/events-types';
+import {QUERY_KEYS, Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
+import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
+import {AlbumType} from '../../src/lib/photos-library/model/album';
+import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
+import {FileType} from '../../src/lib/photos-library/model/file-type';
+import {HIDDEN_ALBUM_NAME, HIDDEN_ALBUM_UUID, PRIMARY_ASSET_DIR} from '../../src/lib/photos-library/constants';
+import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {PhotosSetupResponse} from '../../src/lib/resources/network-types';
 import {Validator} from '../../src/lib/resources/validator';
+import {HttpError} from '../../src/lib/resources/http-client';
 import * as Config from '../_helpers/_config';
 import {MockedEventManager, MockedNetworkManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
+import mockfs from '../_helpers/mock-fs.helper';
 import {ZoneArea} from '../../src/lib/resources/resource-types';
 
 let mockedResourceManager: MockedResourceManager;
@@ -396,7 +403,198 @@ describe.each([
                 .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
                 .reply(500, {});
 
-            await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Request failed with status code 500$/);
+            const err = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys).catch(err => err);
+
+            expect(err).toBeInstanceOf(iCPSError);
+            expect((err as iCPSError).getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 500) caused by Request failed with status code 500`);
+        });
+
+        test(`Server Error with CloudKit error details`, async () => {
+            const responseBody = {
+                uuid: `some-uuid`,
+                serverErrorCode: `INTERNAL_ERROR`,
+                reason: `Service temporarily unavailable`,
+                retryAfter: 30,
+            };
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
+                .reply(503, responseBody, {'retry-after': `30`});
+
+            const err = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys).catch(err => err) as iCPSError;
+
+            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 503, INTERNAL_ERROR: Service temporarily unavailable, retry after 30s, retry-after header 30) caused by Request failed with status code 503`);
+            expect(err.context.responseBody).toEqual(JSON.stringify(responseBody));
+        });
+
+        test(`Server Error with partial CloudKit error details`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
+                .reply(503, {serverErrorCode: `INTERNAL_ERROR`});
+
+            const err = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys).catch(err => err) as iCPSError;
+
+            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 503, INTERNAL_ERROR: no reason provided) caused by Request failed with status code 503`);
+        });
+
+        test(`Server Error with non-JSON response`, async () => {
+            const responseBody = `<html>\n  <body>Service Unavailable</body>\n</html>` + `x`.repeat(300);
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
+                .reply(503, responseBody);
+
+            const err = await photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys).catch(err => err) as iCPSError;
+
+            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${recordType} query, status 503, response: ${(`<html> <body>Service Unavailable</body> </html>` + `x`.repeat(300)).slice(0, 200)}) caused by Request failed with status code 503`);
+            expect(err.context.responseBody).toEqual(responseBody);
+        });
+
+        test(`Network failure`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`, expectedQuery)
+                .networkError();
+
+            await expect(photos.performQuery(zone, recordType, filterBy, resultsLimit, desiredKeys)).rejects.toThrow(/^Network Error$/);
+        });
+    });
+
+    describe(`Perform Query with continuation marker`, () => {
+        const queryURL = `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`;
+        const expectedQuery = {
+            query: {
+                recordType: `recordType`,
+            },
+            zoneID: expectedZoneObject,
+        };
+
+        test(`Follows the continuation marker until all records are fetched`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(200, {records: [`recordA`, `recordB`], continuationMarker: `markerA`})
+                .onPost(queryURL, {...expectedQuery, continuationMarker: `markerA`})
+                .reply(200, {records: [`recordC`], continuationMarker: `markerB`})
+                .onPost(queryURL, {...expectedQuery, continuationMarker: `markerB`})
+                .reply(200, {records: [`recordD`]});
+
+            await expect(photos.performQuery(zone, `recordType`)).resolves.toEqual([`recordA`, `recordB`, `recordC`, `recordD`]);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(3);
+        });
+
+        test(`Stops on an empty page`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(200, {records: [`recordA`], continuationMarker: `markerA`})
+                .onPost(queryURL, {...expectedQuery, continuationMarker: `markerA`})
+                .reply(200, {records: [], continuationMarker: `markerB`});
+
+            await expect(photos.performQuery(zone, `recordType`)).resolves.toEqual([`recordA`]);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(2);
+        });
+
+        test(`Stops on a repeated continuation marker`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(200, {records: [`recordA`], continuationMarker: `markerA`})
+                .onPost(queryURL, {...expectedQuery, continuationMarker: `markerA`})
+                .reply(200, {records: [`recordB`], continuationMarker: `markerA`});
+
+            await expect(photos.performQuery(zone, `recordType`)).resolves.toEqual([`recordA`, `recordB`]);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(2);
+        });
+
+        test(`Fails if a following page fails`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(200, {records: [`recordA`], continuationMarker: `markerA`})
+                .onPost(queryURL, {...expectedQuery, continuationMarker: `markerA`})
+                .reply(500, {});
+
+            await expect(photos.performQuery(zone, `recordType`)).rejects.toThrow(/^CloudKit request failed$/);
+        });
+
+        test(`Single page returns the continuation marker`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, {...expectedQuery, resultsLimit: 2, continuationMarker: `markerA`})
+                .reply(200, {records: [`recordB`], continuationMarker: `markerB`});
+
+            await expect(photos.performQueryPage(zone, `recordType`, undefined, 2, undefined, `markerA`)).resolves.toEqual({records: [`recordB`], continuationMarker: `markerB`});
+        });
+
+        test(`Rejects a malformed continuation marker`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(200, {records: [`recordA`], continuationMarker: 42});
+
+            await expect(photos.performQuery(zone, `recordType`)).rejects.toThrow(/^Received unexpected query response format$/);
+        });
+    });
+
+    describe(`Perform Query with throttling`, () => {
+        const queryURL = `https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/query`;
+        const expectedQuery = {
+            query: {
+                recordType: `recordType`,
+            },
+            zoneID: expectedZoneObject,
+        };
+
+        beforeEach(() => {
+            photos.awaitThrottling = jest.fn<typeof photos.awaitThrottling>()
+                .mockResolvedValue();
+        });
+
+        test.each([
+            {
+                desc: `THROTTLED`,
+                status: 503,
+                body: {serverErrorCode: `THROTTLED`, retryAfter: 9},
+            }, {
+                desc: `TRY_AGAIN_LATER`,
+                status: 503,
+                body: {serverErrorCode: `TRY_AGAIN_LATER`, retryAfter: 9},
+            }, {
+                desc: `Too Many Requests`,
+                status: 429,
+                body: {retryAfter: 9},
+            },
+        ])(`Retries the request after the requested time - $desc`, async ({status, body}) => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .replyOnce(status, body)
+                .onPost(queryURL, expectedQuery)
+                .replyOnce(200, {records: [`recordA`]});
+
+            const requestTime = Date.now();
+            await expect(photos.performQuery(zone, `recordType`)).resolves.toEqual([`recordA`]);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(2);
+            expect(photos.awaitThrottling).toHaveBeenCalledTimes(2);
+            expect(photos._throttledUntil).toBeGreaterThanOrEqual(requestTime + 9000);
+            expect(photos._throttledUntil).toBeLessThanOrEqual(Date.now() + 9000);
+        });
+
+        test(`Fails after the maximum number of retries`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(503, {serverErrorCode: `THROTTLED`, retryAfter: 9});
+
+            const err = await photos.performQuery(zone, `recordType`).catch(err => err) as iCPSError;
+
+            expect(err.getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (recordType query, status 503, THROTTLED: no reason provided, retry after 9s) caused by Request failed with status code 503`);
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(11);
+        });
+
+        test(`Does not retry other errors`, async () => {
+            mockedNetworkManager.mock
+                .onPost(queryURL, expectedQuery)
+                .reply(503, {serverErrorCode: `INTERNAL_ERROR`, retryAfter: 9});
+
+            await expect(photos.performQuery(zone, `recordType`)).rejects.toThrow(/^CloudKit request failed$/);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(1);
+            expect(photos._throttledUntil).toEqual(0);
         });
     });
 
@@ -440,6 +638,32 @@ describe.each([
             }],
             zoneID: expectedZoneObject,
         },
+    }, {
+        desc: `Multiple records`,
+        operation: `update`,
+        fields: {
+            isDeleted: {
+                value: 1,
+            },
+        },
+        records: [`recordA`, `recordB`],
+        expectedOperation: {
+            atomic: true,
+            operations: [`recordA`, `recordB`].map(recordName => ({
+                operationType: `update`,
+                record: {
+                    recordName,
+                    recordType: `CPLAsset`,
+                    recordChangeTag: `21h2`,
+                    fields: {
+                        isDeleted: {
+                            value: 1,
+                        },
+                    },
+                },
+            })),
+            zoneID: expectedZoneObject,
+        },
     }])(`Perform Operation $desc`, ({operation, fields, records, expectedOperation}) => {
         test(`Success`, async () => {
             mockedNetworkManager.mock
@@ -456,100 +680,1215 @@ describe.each([
             expect(mockedNetworkManager.mock.history.post[0].params!.remapEnums).toEqual(`True`);
         });
 
-        test.todo(`Without any content`);
-        test.todo(`Only operationType`);
-        test.todo(`Only operationType + recordName`);
-        describe(`With operationType + recordName + fields`, () => {
-            test.todo(`Success`);
-            test.todo(`No data returned`);
-            test.todo(`Network failure`);
+        test(`No data returned`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
+                .reply(200, {});
+
+            await expect(photos.performOperation(zone, operation, fields, records)).rejects.toThrow(/^Received unexpected operations response format$/);
+        });
+
+        test(`Server Error`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
+                .reply(500, {});
+
+            const err = await photos.performOperation(zone, operation, fields, records).catch(err => err);
+
+            expect(err).toBeInstanceOf(iCPSError);
+            expect((err as iCPSError).getDescription()).toEqual(`ICLOUD_PHOTOS_REQUEST_FAILED: CloudKit request failed (${operation} operation, status 500) caused by Request failed with status code 500`);
+        });
+
+        test(`Throttled`, async () => {
+            photos.awaitThrottling = jest.fn<typeof photos.awaitThrottling>()
+                .mockResolvedValue();
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
+                .replyOnce(503, {serverErrorCode: `THROTTLED`, retryAfter: 9})
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
+                .replyOnce(200, {records});
+
+            await expect(photos.performOperation(zone, operation, fields, records)).resolves.toEqual(records);
+
+            expect(mockedNetworkManager.mock.history.post).toHaveLength(2);
+        });
+
+        test(`Network failure`, async () => {
+            mockedNetworkManager.mock
+                .onPost(`https://p123-ckdatabasews.icloud.com:443/database/1/com.apple.photos.cloud/production/${areaURL}/records/modify`, expectedOperation)
+                .networkError();
+
+            await expect(photos.performOperation(zone, operation, fields, records)).rejects.toThrow(/^Network Error$/);
         });
     });
 });
 
-// Describe(`Fetch records`, () => {
-//     // Test invalid extension
-// });
+describe(`Throttling`, () => {
+    /**
+     * Builds an HttpError, as thrown by a rejected request
+     * @param status - The response status
+     * @param data - The parsed response body
+     * @param headers - The response headers
+     * @returns The error
+     */
+    function buildHttpError(status: number, data: any, headers: Record<string, any> = {}): HttpError {
+        const request = {method: `POST`, url: `/query`, fullURL: `/query`, headers: {}, startedAt: 0};
+        return HttpError.fromResponse({status, statusText: ``, headers, data, text: JSON.stringify(data), config: request});
+    }
 
-// describe(`Fetch albums`, () => {
+    describe(`Get retry after`, () => {
+        test.each([
+            {
+                desc: `THROTTLED with retryAfter`,
+                err: buildHttpError(503, {serverErrorCode: `THROTTLED`, retryAfter: 9}),
+                expected: 9,
+            }, {
+                desc: `TRY_AGAIN_LATER with retryAfter`,
+                err: buildHttpError(503, {serverErrorCode: `TRY_AGAIN_LATER`, retryAfter: 30}),
+                expected: 30,
+            }, {
+                desc: `THROTTLED with retry-after header`,
+                err: buildHttpError(503, {serverErrorCode: `THROTTLED`}, {'retry-after': `5`}),
+                expected: 5,
+            }, {
+                desc: `429 without retry information`,
+                err: buildHttpError(429, ``),
+                expected: 10,
+            }, {
+                desc: `THROTTLED with invalid retryAfter`,
+                err: buildHttpError(503, {serverErrorCode: `THROTTLED`, retryAfter: `soon`}),
+                expected: 10,
+            }, {
+                desc: `THROTTLED with excessive retryAfter`,
+                err: buildHttpError(503, {serverErrorCode: `THROTTLED`, retryAfter: 3600}),
+                expected: 300,
+            }, {
+                desc: `Other server error`,
+                err: buildHttpError(503, {serverErrorCode: `INTERNAL_ERROR`, retryAfter: 9}),
+                expected: undefined,
+            }, {
+                desc: `Non-JSON response`,
+                err: buildHttpError(503, `Service Unavailable`, {'retry-after': `5`}),
+                expected: undefined,
+            }, {
+                desc: `No response`,
+                err: new HttpError(`Network Error`, `ERR_NETWORK`, {method: `POST`, url: `/query`, fullURL: `/query`, headers: {}, startedAt: 0}),
+                expected: undefined,
+            }, {
+                desc: `Other error`,
+                err: new Error(`Some error`),
+                expected: undefined,
+            },
+        ])(`$desc`, ({err, expected}) => {
+            expect(photos.getRetryAfter(err)).toEqual(expected);
+        });
+    });
 
-// });
+    describe(`Await throttling`, () => {
+        afterEach(() => {
+            jest.useRealTimers();
+        });
 
-// describe(`Download asset`, () => {
-// test(`Write asset`, async () => {
-//     // Downloading banner of this repo
-//     const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
-//     const config: AxiosRequestConfig = {
-//         responseType: `stream`,
-//     };
-//     const fileName = `asdf`;
-//     const ext = `png`;
-//     const asset = new Asset(
-//         fileName,
-//         82215,
-//         FileType.fromExtension(ext),
-//         42,
-//         zone,
-//     );
-//     mockfs({
-//         [zoneDir]: {},
-//     });
+        test(`Waits until the throttling period passed`, async () => {
+            jest.useFakeTimers();
+            photos._throttledUntil = Date.now() + 9000;
 
-//     const library = new PhotosLibrary();
+            let resolved = false;
+            const waiting = photos.awaitThrottling().then(() => {
+                resolved = true;
+            });
 
-//     try {
-//         const response = await axios.get(url, config);
-//         await library.writeAsset(asset, response);
-//     } catch (err) {
-//         // If there is no network connectivity, pass the test and print warning
-//         expect(err).toEqual(new Error(`getaddrinfo ENOTFOUND steilerdev.github.io`));
-//         console.warn(`Unable to run test - potentially due to lacking network connectivity`);
-//     }
+            await jest.advanceTimersByTimeAsync(8999);
+            expect(resolved).toBeFalsy();
 
-//     const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
-//     expect(fs.statSync(assetPath).size).toEqual(82215);
-// });
+            await jest.advanceTimersByTimeAsync(1);
+            await waiting;
+            expect(resolved).toBeTruthy();
+        });
 
-// test(`Write asset with failing verification`, async () => {
-//     // Downloading banner of this repo
-//     const url = `https://steilerdev.github.io/icloud-photos-sync/assets/icloud-photos-sync-open-graph.png`;
-//     const config: AxiosRequestConfig = {
-//         responseType: `stream`,
-//     };
-//     const fileName = `asdf`;
-//     const ext = `png`;
-//     const asset = new Asset(
-//         fileName,
-//         82215,
-//         FileType.fromExtension(ext),
-//         42,
-//         zone,
-//     );
-//     mockfs({
-//         [zoneDir]: {},
-//     });
+        test(`Resolves immediately if not throttled`, async () => {
+            jest.useFakeTimers();
+            photos._throttledUntil = Date.now() - 1;
 
-//     const library = new PhotosLibrary();
-//     const handlerEvent = mockedEventManager.spyOnHandlerEvent();
-//     library.verifyAsset = jest.fn(() => Promise.reject(new Error(`Invalid file`)));
+            await expect(photos.awaitThrottling()).resolves.toBeUndefined();
+            expect(jest.getTimerCount()).toEqual(0);
+        });
+    });
+});
 
-//     try {
-//         const response = await axios.get(url, config);
-//         await library.writeAsset(asset, response);
-//         expect(handlerEvent).toHaveBeenCalledWith(new Error(`Unable to verify asset`));
-//     } catch (err) {
-//         // If there is no network connectivity, pass the test and print warning
-//         expect(err).toEqual(new Error(`getaddrinfo ENOTFOUND steilerdev.github.io`));
-//         console.warn(`Unable to run test - potentially due to lacking network connectivity`);
-//     }
+/**
+ * Builds a raw AssetID, as returned by the CloudKit API
+ * @param checksum - The (base64 encoded) file checksum
+ * @returns The raw AssetID
+ */
+function rawAssetID(checksum: string) {
+    return {
+        type: `ASSETID`,
+        value: {
+            fileChecksum: checksum,
+            size: 42,
+            wrappingKey: `someWrappingKey`,
+            referenceChecksum: `someReferenceChecksum`,
+            downloadURL: `https://cvws.icloud-content.com/${checksum}`,
+        },
+    };
+}
 
-//     const assetPath = path.join(zoneDir, `${fileName}.${ext}`);
-//     expect(fs.statSync(assetPath).size).toEqual(82215);
-// });
-//     test.todo(`Success`);
-//     test.todo(`No download url`);
-// });
+/**
+ * Builds a raw CPLMaster record, as returned by the CloudKit API
+ * @param recordName - The record name of the master
+ * @param zoneName - The zone the record lives in
+ * @returns The raw record
+ */
+function rawMaster(recordName: string, zoneName: string = Config.primaryZone.zoneName) {
+    return {
+        recordType: `CPLMaster`,
+        recordName,
+        modified: {timestamp: 1000},
+        fields: {
+            resOriginalRes: rawAssetID(Buffer.from(recordName).toString(`base64`)),
+            resOriginalFileType: {value: `public.jpeg`},
+            filenameEnc: {value: Buffer.from(`${recordName}.jpeg`).toString(`base64`)},
+        },
+        zoneID: {zoneName},
+    };
+}
 
-// describe(`Delete asset`, () => {
-//     test.todo(`Success`);
-// });
+/**
+ * Builds a raw CPLAsset record, as returned by the CloudKit API
+ * @param recordName - The record name of the asset
+ * @param masterRecordName - The record name of the linked master
+ * @param zoneName - The zone the record lives in
+ * @returns The raw record
+ */
+function rawAsset(recordName: string, masterRecordName: string, zoneName: string = Config.primaryZone.zoneName) {
+    return {
+        recordType: `CPLAsset`,
+        recordName,
+        modified: {timestamp: 2000},
+        fields: {
+            masterRef: {value: {recordName: masterRecordName}},
+        },
+        zoneID: {zoneName},
+    };
+}
+
+/**
+ * Builds a raw CPLAsset record of a hidden asset, as returned by the CloudKit API
+ * @param recordName - The record name of the asset
+ * @param masterRecordName - The record name of the linked master
+ * @param zoneName - The zone the record lives in
+ * @returns The raw record
+ */
+function rawHiddenAsset(recordName: string, masterRecordName: string, zoneName: string = Config.primaryZone.zoneName) {
+    const asset = rawAsset(recordName, masterRecordName, zoneName);
+    return {
+        ...asset,
+        fields: {
+            ...asset.fields,
+            isHidden: {value: 1},
+        },
+    };
+}
+
+/**
+ * Builds a raw CPLAlbum record, as returned by the CloudKit API
+ * @param recordName - The record name of the album
+ * @param albumType - The type of the album
+ * @param parentId - The record name of the parent folder
+ * @returns The raw record
+ */
+function rawAlbum(recordName: string, albumType: AlbumType, parentId?: string) {
+    return {
+        recordType: `CPLAlbum`,
+        recordName,
+        modified: {timestamp: 3000},
+        fields: {
+            albumType: {value: albumType},
+            albumNameEnc: {value: Buffer.from(recordName).toString(`base64`)},
+            ...(parentId ? {parentId: {value: parentId}} : {}),
+        },
+    };
+}
+
+describe(`Checking indexing status`, () => {
+    test(`Primary zone only`, async () => {
+        mockedResourceManager._resources.sharedZone = undefined;
+        const readyEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.READY);
+        photos.checkIndexingStatusForZone = jest.fn<typeof photos.checkIndexingStatusForZone>()
+            .mockResolvedValue();
+
+        await photos.checkingIndexingStatus();
+
+        expect(photos.checkIndexingStatusForZone).toHaveBeenCalledTimes(1);
+        expect(photos.checkIndexingStatusForZone).toHaveBeenCalledWith(Zones.Primary);
+        expect(readyEvent).toHaveBeenCalledTimes(1);
+    });
+
+    test(`Primary and shared zone`, async () => {
+        mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
+        const readyEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.READY);
+        photos.checkIndexingStatusForZone = jest.fn<typeof photos.checkIndexingStatusForZone>()
+            .mockResolvedValue();
+
+        await photos.checkingIndexingStatus();
+
+        expect(photos.checkIndexingStatusForZone).toHaveBeenCalledTimes(2);
+        expect(photos.checkIndexingStatusForZone).toHaveBeenNthCalledWith(1, Zones.Primary);
+        expect(photos.checkIndexingStatusForZone).toHaveBeenNthCalledWith(2, Zones.Shared);
+        expect(readyEvent).toHaveBeenCalledTimes(1);
+    });
+
+    test(`Indexing not finished`, async () => {
+        mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
+        const readyEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.READY);
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.ERROR);
+        photos.checkIndexingStatusForZone = jest.fn<typeof photos.checkIndexingStatusForZone>()
+            .mockResolvedValueOnce()
+            .mockRejectedValueOnce(new Error(`Indexing in progress`));
+
+        await photos.checkingIndexingStatus();
+
+        expect(readyEvent).not.toHaveBeenCalled();
+        expect(errorEvent).toHaveBeenCalledWith(new Error(`Unable to get indexing state`));
+    });
+});
+
+describe(`Fetch albums`, () => {
+    describe(`Build album records request`, () => {
+        test(`Root folder`, async () => {
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
+                .mockResolvedValue([`someRecord`]);
+
+            await expect(photos.buildAlbumRecordsRequest()).resolves.toEqual([`someRecord`]);
+
+            expect(photos.performQuery).toHaveBeenCalledWith(Zones.Primary, `CPLAlbumByPositionLive`);
+        });
+
+        test(`Sub folder`, async () => {
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
+                .mockResolvedValue([`someRecord`]);
+
+            await expect(photos.buildAlbumRecordsRequest(`someFolderId`)).resolves.toEqual([`someRecord`]);
+
+            expect(photos.performQuery).toHaveBeenCalledWith(Zones.Primary, `CPLAlbumByPositionLive`, [{
+                fieldName: `parentId`,
+                comparator: `EQUALS`,
+                fieldValue: {
+                    value: `someFolderId`,
+                    type: `STRING`,
+                },
+            }]);
+        });
+    });
+
+    describe(`Filter album record`, () => {
+        test.each([
+            {
+                desc: `Album`,
+                record: rawAlbum(`someAlbum`, AlbumType.ALBUM),
+            }, {
+                desc: `Folder`,
+                record: rawAlbum(`someFolder`, AlbumType.FOLDER),
+            },
+        ])(`Accepts $desc`, ({record}) => {
+            expect(() => photos.filterAlbumRecord(record)).not.toThrow();
+        });
+
+        test.each([
+            {
+                desc: `Deleted record`,
+                record: {...rawAlbum(`someAlbum`, AlbumType.ALBUM), deleted: true},
+                expectedError: /^Ignoring deleted record$/,
+            }, {
+                desc: `Root folder`,
+                record: rawAlbum(`----Root-Folder----`, AlbumType.FOLDER),
+                expectedError: /^Ignoring unwanted album$/,
+            }, {
+                desc: `Project root folder`,
+                record: rawAlbum(`----Project-Root-Folder----`, AlbumType.FOLDER),
+                expectedError: /^Ignoring unwanted album$/,
+            }, {
+                desc: `Unknown album type`,
+                record: rawAlbum(`someSmartAlbum`, 6 as AlbumType),
+                expectedError: /^Ignoring unknown album$/,
+            },
+        ])(`Rejects $desc`, ({record, expectedError}) => {
+            expect(() => photos.filterAlbumRecord(record)).toThrow(expectedError);
+        });
+    });
+
+    describe(`Fetch CPL albums`, () => {
+        test(`Parses albums and folders, ignoring invalid records`, async () => {
+            const folder = rawAlbum(`someFolder`, AlbumType.FOLDER, `someParent`);
+            const album = rawAlbum(`someAlbum`, AlbumType.ALBUM, `someParent`);
+            const invalidAlbum = {...rawAlbum(`invalidAlbum`, AlbumType.ALBUM), modified: {}};
+
+            photos.buildAlbumRecordsRequest = jest.fn<typeof photos.buildAlbumRecordsRequest>()
+                .mockResolvedValue([
+                    folder,
+                    album,
+                    {...rawAlbum(`deletedAlbum`, AlbumType.ALBUM), deleted: true},
+                    rawAlbum(`----Root-Folder----`, AlbumType.FOLDER),
+                    invalidAlbum,
+                ]);
+            photos.fetchAllCPLAssetsMasters = jest.fn<typeof photos.fetchAllCPLAssetsMasters>()
+                .mockResolvedValue([
+                    [CPLAsset.parseFromQuery(rawAsset(`assetA`, `masterA`))],
+                    [CPLMaster.parseFromQuery(rawMaster(`masterA`))],
+                ]);
+
+            const result = await photos.fetchCPLAlbums(`someParent`);
+
+            expect(photos.buildAlbumRecordsRequest).toHaveBeenCalledWith(`someParent`);
+            expect(photos.fetchAllCPLAssetsMasters).toHaveBeenCalledTimes(2);
+            expect(photos.fetchAllCPLAssetsMasters).toHaveBeenNthCalledWith(1, `someAlbum`);
+            expect(photos.fetchAllCPLAssetsMasters).toHaveBeenNthCalledWith(2, `invalidAlbum`);
+            expect(result).toEqual([
+                CPLAlbum.parseFromQuery(folder),
+                CPLAlbum.parseFromQuery(album, {
+                    [`${Buffer.from(`masterA`).toString(`base64url`)}.jpeg`]: `masterA.jpeg`,
+                }),
+            ]);
+        });
+
+        test(`Request failure`, async () => {
+            photos.buildAlbumRecordsRequest = jest.fn<typeof photos.buildAlbumRecordsRequest>()
+                .mockRejectedValue(new Error(`Network Error`));
+
+            await expect(photos.fetchCPLAlbums()).rejects.toThrow(/^Network Error$/);
+        });
+    });
+
+    describe(`Fetch hidden CPL album`, () => {
+        test(`Builds the album from the hidden assets`, async () => {
+            photos.fetchHiddenCPLAssetsMasters = jest.fn<typeof photos.fetchHiddenCPLAssetsMasters>()
+                .mockResolvedValue([
+                    [CPLAsset.parseFromQuery(rawHiddenAsset(`hiddenAsset`, `hiddenMaster`))],
+                    [CPLMaster.parseFromQuery(rawMaster(`hiddenMaster`))],
+                ]);
+
+            const hiddenAlbum = await photos.fetchHiddenCPLAlbum();
+
+            expect(hiddenAlbum.recordName).toEqual(HIDDEN_ALBUM_UUID);
+            expect(hiddenAlbum.albumType).toEqual(AlbumType.ALBUM);
+            expect(Buffer.from(hiddenAlbum.albumNameEnc, `base64`).toString(`utf8`)).toEqual(HIDDEN_ALBUM_NAME);
+            expect(hiddenAlbum.parentId).toBeUndefined();
+            expect(hiddenAlbum.assets).toEqual({
+                [`${Buffer.from(`hiddenMaster`).toString(`base64url`)}.jpeg`]: `hiddenMaster.jpeg`,
+            });
+        });
+
+        test(`Fetch failure`, async () => {
+            photos.fetchHiddenCPLAssetsMasters = jest.fn<typeof photos.fetchHiddenCPLAssetsMasters>()
+                .mockRejectedValue(new Error(`Network Error`));
+
+            await expect(photos.fetchHiddenCPLAlbum()).rejects.toThrow(/^Network Error$/);
+        });
+    });
+
+    describe(`Fetch all CPL albums`, () => {
+        test(`Adds the hidden album, if hidden assets are synced`, async () => {
+            mockedResourceManager._resources.syncHidden = true;
+            const rootAlbum = CPLAlbum.parseFromQuery(rawAlbum(`rootAlbum`, AlbumType.ALBUM));
+            const hiddenAlbum = new CPLAlbum();
+            hiddenAlbum.recordName = HIDDEN_ALBUM_UUID;
+
+            photos.fetchCPLAlbums = jest.fn<typeof photos.fetchCPLAlbums>()
+                .mockResolvedValue([rootAlbum]);
+            photos.fetchHiddenCPLAlbum = jest.fn<typeof photos.fetchHiddenCPLAlbum>()
+                .mockResolvedValue(hiddenAlbum);
+
+            await expect(photos.fetchAllCPLAlbums()).resolves.toEqual([rootAlbum, hiddenAlbum]);
+            expect(photos.fetchHiddenCPLAlbum).toHaveBeenCalledTimes(1);
+        });
+
+        test(`Does not add the hidden album, if hidden assets are not synced`, async () => {
+            mockedResourceManager._resources.syncHidden = false;
+            const rootAlbum = CPLAlbum.parseFromQuery(rawAlbum(`rootAlbum`, AlbumType.ALBUM));
+
+            photos.fetchCPLAlbums = jest.fn<typeof photos.fetchCPLAlbums>()
+                .mockResolvedValue([rootAlbum]);
+            photos.fetchHiddenCPLAlbum = jest.fn<typeof photos.fetchHiddenCPLAlbum>();
+
+            await expect(photos.fetchAllCPLAlbums()).resolves.toEqual([rootAlbum]);
+            expect(photos.fetchHiddenCPLAlbum).not.toHaveBeenCalled();
+        });
+
+        test(`Hidden album fetch failure`, async () => {
+            mockedResourceManager._resources.syncHidden = true;
+            photos.fetchCPLAlbums = jest.fn<typeof photos.fetchCPLAlbums>()
+                .mockResolvedValue([]);
+            photos.fetchHiddenCPLAlbum = jest.fn<typeof photos.fetchHiddenCPLAlbum>()
+                .mockRejectedValue(new Error(`Network Error`));
+
+            await expect(photos.fetchAllCPLAlbums()).rejects.toThrow(/^Unable to fetch folder structure$/);
+        });
+
+        test(`Traverses the folder structure breadth-first`, async () => {
+            const rootFolder = CPLAlbum.parseFromQuery(rawAlbum(`rootFolder`, AlbumType.FOLDER));
+            const rootAlbum = CPLAlbum.parseFromQuery(rawAlbum(`rootAlbum`, AlbumType.ALBUM));
+            const subFolder = CPLAlbum.parseFromQuery(rawAlbum(`subFolder`, AlbumType.FOLDER, `rootFolder`));
+            const subAlbum = CPLAlbum.parseFromQuery(rawAlbum(`subAlbum`, AlbumType.ALBUM, `rootFolder`));
+            const subSubAlbum = CPLAlbum.parseFromQuery(rawAlbum(`subSubAlbum`, AlbumType.ALBUM, `subFolder`));
+
+            photos.fetchCPLAlbums = jest.fn<typeof photos.fetchCPLAlbums>(async (parentId?: string) => {
+                switch (parentId) {
+                case undefined:
+                    return [rootFolder, rootAlbum];
+                case `rootFolder`:
+                    return [subFolder, subAlbum];
+                case `subFolder`:
+                    return [subSubAlbum];
+                default:
+                    return [];
+                }
+            });
+
+            await expect(photos.fetchAllCPLAlbums()).resolves.toEqual([rootFolder, rootAlbum, subFolder, subAlbum, subSubAlbum]);
+
+            expect(photos.fetchCPLAlbums).toHaveBeenCalledTimes(3);
+            expect(photos.fetchCPLAlbums).toHaveBeenNthCalledWith(1, undefined);
+            expect(photos.fetchCPLAlbums).toHaveBeenNthCalledWith(2, `rootFolder`);
+            expect(photos.fetchCPLAlbums).toHaveBeenNthCalledWith(3, `subFolder`);
+        });
+
+        test(`Fetch failure`, async () => {
+            photos.fetchCPLAlbums = jest.fn<typeof photos.fetchCPLAlbums>()
+                .mockRejectedValue(new Error(`Network Error`));
+
+            await expect(photos.fetchAllCPLAlbums()).rejects.toThrow(/^Unable to fetch folder structure$/);
+        });
+
+        test(`Waits for all requests of a level to settle and stops traversing, if one of them fails`, async () => {
+            const folderA = CPLAlbum.parseFromQuery(rawAlbum(`folderA`, AlbumType.FOLDER));
+            const folderB = CPLAlbum.parseFromQuery(rawAlbum(`folderB`, AlbumType.FOLDER));
+            const subFolder = CPLAlbum.parseFromQuery(rawAlbum(`subFolder`, AlbumType.FOLDER, `folderB`));
+            const folderBRequest = Promise.withResolvers<CPLAlbum[]>();
+
+            photos.fetchCPLAlbums = jest.fn<typeof photos.fetchCPLAlbums>(async (parentId?: string) => {
+                switch (parentId) {
+                case undefined:
+                    return [folderA, folderB];
+                case `folderA`:
+                    throw new Error(`Network Error`);
+                case `folderB`:
+                    return folderBRequest.promise;
+                default:
+                    return [];
+                }
+            });
+
+            let settled = false;
+            const result = photos.fetchAllCPLAlbums().finally(() => {
+                settled = true;
+            });
+
+            // The failed sibling request must not settle the traversal, while another request of the level is still running
+            await new Promise(resolve => setImmediate(resolve));
+            expect(settled).toBe(false);
+
+            folderBRequest.resolve([subFolder]);
+            await expect(result).rejects.toThrow(/^Unable to fetch folder structure$/);
+
+            // The next level is not requested after a failure
+            expect(photos.fetchCPLAlbums).toHaveBeenCalledTimes(3);
+            expect(photos.fetchCPLAlbums).not.toHaveBeenCalledWith(`subFolder`);
+        });
+    });
+});
+
+describe(`Fetch picture records`, () => {
+    describe.each([Zones.Primary, Zones.Shared])(`Get picture records count - %o`, zone => {
+        test.each([
+            {
+                desc: `All photos`,
+                albumId: undefined,
+                hidden: false,
+                expectedIndexCountID: `CPLAssetByAssetDateWithoutHiddenOrDeleted`,
+            }, {
+                desc: `Hidden photos`,
+                albumId: undefined,
+                hidden: true,
+                expectedIndexCountID: `CPLAssetHiddenByAssetDate`,
+            }, {
+                desc: `Album`,
+                albumId: `someAlbum`,
+                hidden: false,
+                expectedIndexCountID: `CPLContainerRelationNotDeletedByAssetDate:someAlbum`,
+            },
+        ])(`Success - $desc`, async ({albumId, hidden, expectedIndexCountID}) => {
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
+                .mockResolvedValue([{fields: {itemCount: {value: `42`}}}]);
+
+            await expect(photos.getPictureRecordsCountForZone(zone, albumId, hidden)).resolves.toEqual(42);
+
+            expect(photos.performQuery).toHaveBeenCalledWith(zone, `HyperionIndexCountLookup`, [{
+                fieldName: `indexCountID`,
+                comparator: `IN`,
+                fieldValue: {
+                    value: [expectedIndexCountID],
+                    type: `STRING_LIST`,
+                },
+            }]);
+        });
+
+        test(`Empty response`, async () => {
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
+                .mockResolvedValue([]);
+
+            await expect(photos.getPictureRecordsCountForZone(zone)).rejects.toThrow(/^Unable to extract count data$/);
+        });
+
+        test(`Query failure`, async () => {
+            photos.performQuery = jest.fn<typeof photos.performQuery>()
+                .mockRejectedValue(new Error(`Network Error`));
+
+            await expect(photos.getPictureRecordsCountForZone(zone)).rejects.toThrow(/^Unable to extract count data$/);
+        });
+    });
+
+    describe.each([Zones.Primary, Zones.Shared])(`Build picture records requests - %o`, zone => {
+        test.each([
+            {
+                desc: `All photos`,
+                albumId: undefined,
+                hidden: false,
+                expectedNumberOfRecords: 200,
+                expectedRanges: [[0, 99], [99, 198], [198, 200]],
+            }, {
+                desc: `Hidden photos`,
+                albumId: undefined,
+                hidden: true,
+                expectedNumberOfRecords: 100,
+                expectedRanges: [[0, 99], [99, 100]],
+            }, {
+                desc: `Album`,
+                albumId: `someAlbum`,
+                hidden: false,
+                expectedNumberOfRecords: 100,
+                expectedRanges: [[0, 66], [66, 100]],
+            }, {
+                desc: `Album filling the last request`,
+                albumId: `someAlbum`,
+                hidden: false,
+                expectedNumberOfRecords: 132,
+                expectedRanges: [[0, 66], [66, 132]],
+            }, {
+                desc: `Empty album`,
+                albumId: `someAlbum`,
+                hidden: false,
+                expectedNumberOfRecords: 0,
+                expectedRanges: [],
+            },
+        ])(`$desc`, async ({albumId, hidden, expectedNumberOfRecords, expectedRanges}) => {
+            photos.fetchPictureRecordsRange = jest.fn<typeof photos.fetchPictureRecordsRange>()
+                .mockImplementation(async (_zone, startRank) => [`records@${startRank}`]);
+
+            const requests = photos.buildPictureRecordsRequestsForZone(zone, expectedNumberOfRecords, albumId, hidden);
+
+            expect(requests).toHaveLength(expectedRanges.length);
+            await expect(Promise.all(requests)).resolves.toEqual(expectedRanges.map(([startRank]) => [`records@${startRank}`]));
+
+            expect(photos.fetchPictureRecordsRange).toHaveBeenCalledTimes(expectedRanges.length);
+            expectedRanges.forEach(([startRank, endRank], index) => {
+                expect(photos.fetchPictureRecordsRange).toHaveBeenNthCalledWith(index + 1, zone, startRank, endRank, albumId, hidden);
+            });
+        });
+    });
+
+    describe(`Count received positions`, () => {
+        test.each([
+            {
+                desc: `Empty page`,
+                records: [],
+                expectedPositions: 0,
+            }, {
+                desc: `Complete positions`,
+                records: [rawAsset(`assetA`, `masterA`), rawMaster(`masterA`), rawAsset(`assetB`, `masterB`), rawMaster(`masterB`)],
+                expectedPositions: 2,
+            }, {
+                desc: `Complete positions with container relations`,
+                records: [{recordType: `CPLContainerRelation`, recordName: `someRelation`}, rawAsset(`assetA`, `masterA`), rawMaster(`masterA`)],
+                expectedPositions: 1,
+            }, {
+                desc: `Asset without master`,
+                records: [rawAsset(`assetA`, `masterA`), rawMaster(`masterA`), rawAsset(`assetB`, `masterB`)],
+                expectedPositions: 2,
+            }, {
+                desc: `Only assets without masters`,
+                records: [rawAsset(`assetA`, `masterA`), rawAsset(`assetB`, `masterB`)],
+                expectedPositions: 2,
+            }, {
+                desc: `Only masters`,
+                records: [rawMaster(`masterA`)],
+                expectedPositions: 0,
+            }, {
+                desc: `Malformed records`,
+                records: [null, {recordType: `CPLAsset`, recordName: `assetA`}, rawMaster(`masterA`)],
+                expectedPositions: 1,
+            },
+        ])(`$desc`, ({records, expectedPositions}) => {
+            expect(photos.countReceivedPositions(records)).toEqual(expectedPositions);
+        });
+    });
+
+    describe.each([
+        {
+            desc: `All photos`,
+            albumId: undefined,
+            hidden: false,
+            expectedRecordType: `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted`,
+        }, {
+            desc: `Hidden photos`,
+            albumId: undefined,
+            hidden: true,
+            expectedRecordType: `CPLAssetAndMasterHiddenByAssetDate`,
+        }, {
+            desc: `Album`,
+            albumId: `someAlbum`,
+            hidden: false,
+            expectedRecordType: `CPLContainerRelationLiveByPosition`,
+        },
+    ])(`Fetch picture records range - $desc`, ({albumId, hidden, expectedRecordType}) => {
+        /**
+         * @param startRank - The start rank of the query
+         * @returns The filters expected for a query at the given start rank
+         */
+        function expectedFilters(startRank: number): any[] {
+            const filters: any[] = [{
+                fieldName: `startRank`,
+                comparator: `EQUALS`,
+                fieldValue: {
+                    value: startRank,
+                    type: `INT64`,
+                },
+            }, {
+                fieldName: `direction`,
+                comparator: `EQUALS`,
+                fieldValue: {
+                    value: `ASCENDING`,
+                    type: `STRING`,
+                },
+            }];
+            if (albumId !== undefined) {
+                filters.push({
+                    fieldName: `parentId`,
+                    comparator: `EQUALS`,
+                    fieldValue: {
+                        value: albumId,
+                        type: `STRING`,
+                    },
+                });
+            }
+
+            return filters;
+        }
+
+        /**
+         * @param names - The names of the positions
+         * @returns The records of complete positions
+         */
+        function positions(...names: string[]): any[] {
+            return names.flatMap(name => [rawAsset(`asset${name}`, `master${name}`), rawMaster(`master${name}`)]);
+        }
+
+        test(`Complete range in a single request`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValue({records: positions(`A`, `B`)});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 12, albumId, hidden)).resolves.toEqual(positions(`A`, `B`));
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(1);
+            expect(photos.performQueryPage).toHaveBeenCalledWith(Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, undefined);
+        });
+
+        test(`Follows the continuation marker, if fewer records are returned`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: positions(`A`), continuationMarker: `markerA`})
+                .mockResolvedValueOnce({records: positions(`B`), continuationMarker: `markerB`})
+                .mockResolvedValueOnce({records: positions(`C`), continuationMarker: `markerC`});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId, hidden)).resolves.toEqual(positions(`A`, `B`, `C`));
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(3);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(1, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, undefined);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(2, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, `markerA`);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(3, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, `markerB`);
+        });
+
+        test(`Requests the remaining positions, if fewer records are returned without continuation marker`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: positions(`A`, `B`)})
+                .mockResolvedValueOnce({records: positions(`C`)});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId, hidden)).resolves.toEqual(positions(`A`, `B`, `C`));
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(2);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(1, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, undefined);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(2, Zones.Primary, expectedRecordType, expectedFilters(12), 198, QUERY_KEYS, undefined);
+        });
+
+        test(`Counts an asset without master as received`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: [...positions(`A`), rawAsset(`assetB`, `masterB`)], continuationMarker: `markerA`});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 12, albumId, hidden)).resolves.toEqual([...positions(`A`), rawAsset(`assetB`, `masterB`)]);
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(1);
+        });
+
+        test(`Restarts at the remaining positions, if the continuation marker is not advanced`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: positions(`A`), continuationMarker: `markerA`})
+                .mockResolvedValueOnce({records: positions(`B`), continuationMarker: `markerA`})
+                .mockResolvedValueOnce({records: positions(`C`), continuationMarker: `markerC`});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId, hidden)).resolves.toEqual(positions(`A`, `B`, `C`));
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(3);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(2, Zones.Primary, expectedRecordType, expectedFilters(10), 198, QUERY_KEYS, `markerA`);
+            expect(photos.performQueryPage).toHaveBeenNthCalledWith(3, Zones.Primary, expectedRecordType, expectedFilters(12), 198, QUERY_KEYS, undefined);
+        });
+
+        test.each([
+            {
+                desc: `with continuation marker`,
+                continuationMarker: `someMarker`,
+            }, {
+                desc: `without continuation marker`,
+                continuationMarker: undefined,
+            },
+        ])(`Stops once no more records are returned $desc`, async ({continuationMarker}) => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: positions(`A`), continuationMarker})
+                .mockResolvedValueOnce({records: [], continuationMarker});
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId, hidden)).resolves.toEqual(positions(`A`));
+
+            expect(photos.performQueryPage).toHaveBeenCalledTimes(2);
+        });
+
+        test(`Request failure`, async () => {
+            photos.performQueryPage = jest.fn<typeof photos.performQueryPage>()
+                .mockResolvedValueOnce({records: positions(`A`), continuationMarker: `markerA`})
+                .mockRejectedValueOnce(new Error(`Network Error`));
+
+            await expect(photos.fetchPictureRecordsRange(Zones.Primary, 10, 13, albumId, hidden)).rejects.toThrow(/^Network Error$/);
+        });
+    });
+
+    describe(`Filter picture record`, () => {
+        test.each([
+            {
+                desc: `CPLMaster`,
+                record: rawMaster(`someMaster`),
+            }, {
+                desc: `CPLAsset`,
+                record: rawAsset(`someAsset`, `someMaster`),
+            }, {
+                desc: `Not hidden CPLAsset`,
+                record: {...rawAsset(`someAsset`, `someMaster`), fields: {isHidden: {value: 0}}},
+            },
+        ])(`Accepts $desc`, ({record}) => {
+            expect(() => photos.filterPictureRecord(record, new Set([`otherRecord`]))).not.toThrow();
+        });
+
+        test.each([
+            {
+                desc: `Deleted record`,
+                record: {...rawMaster(`someMaster`), deleted: true},
+                expectedError: /^Ignoring deleted record$/,
+            }, {
+                desc: `Hidden record`,
+                record: {...rawAsset(`someAsset`, `someMaster`), fields: {isHidden: {value: 1}}},
+                expectedError: /^Ignoring hidden record$/,
+            }, {
+                desc: `Duplicate record`,
+                record: rawMaster(`seenRecord`),
+                expectedError: /^Ignoring duplicate record$/,
+            }, {
+                desc: `Container relation`,
+                record: {recordType: `CPLContainerRelation`, recordName: `someRelation`},
+                expectedError: /^Ignoring unwanted record type$/,
+            }, {
+                desc: `Unknown record type`,
+                record: {recordType: `CPLSomething`, recordName: `someRecord`},
+                expectedError: /^Ignoring unknown record type$/,
+            },
+        ])(`Rejects $desc`, ({record, expectedError}) => {
+            expect(() => photos.filterPictureRecord(record, new Set([`seenRecord`]))).toThrow(expectedError);
+        });
+
+        test(`Accepts hidden record, if hidden assets are synced`, () => {
+            mockedResourceManager._resources.syncHidden = true;
+            expect(() => photos.filterPictureRecord(rawHiddenAsset(`someAsset`, `someMaster`), new Set())).not.toThrow();
+        });
+    });
+
+    describe.each([Zones.Primary, Zones.Shared])(`Fetch all picture records - %o`, zone => {
+        test(`Merges the results of all requests`, async () => {
+            photos.getPictureRecordsCountForZone = jest.fn<typeof photos.getPictureRecordsCountForZone>()
+                .mockResolvedValue(3);
+            photos.buildPictureRecordsRequestsForZone = jest.fn<typeof photos.buildPictureRecordsRequestsForZone>()
+                .mockReturnValue([Promise.resolve([`recordA`, `recordB`]), Promise.resolve([`recordC`])]);
+
+            await expect(photos.fetchAllPictureRecordsForZone(zone, `someAlbum`)).resolves.toEqual([[`recordA`, `recordB`, `recordC`], 3]);
+
+            expect(photos.getPictureRecordsCountForZone).toHaveBeenCalledWith(zone, `someAlbum`, false);
+            expect(photos.buildPictureRecordsRequestsForZone).toHaveBeenCalledWith(zone, 3, `someAlbum`, false);
+        });
+
+        test(`Hidden records`, async () => {
+            photos.getPictureRecordsCountForZone = jest.fn<typeof photos.getPictureRecordsCountForZone>()
+                .mockResolvedValue(1);
+            photos.buildPictureRecordsRequestsForZone = jest.fn<typeof photos.buildPictureRecordsRequestsForZone>()
+                .mockReturnValue([Promise.resolve([`recordA`, `recordB`])]);
+
+            await expect(photos.fetchAllPictureRecordsForZone(zone, undefined, true)).resolves.toEqual([[`recordA`, `recordB`], 1]);
+
+            expect(photos.getPictureRecordsCountForZone).toHaveBeenCalledWith(zone, undefined, true);
+            expect(photos.buildPictureRecordsRequestsForZone).toHaveBeenCalledWith(zone, 1, undefined, true);
+        });
+
+        test(`Removes records received by overlapping requests`, async () => {
+            photos.getPictureRecordsCountForZone = jest.fn<typeof photos.getPictureRecordsCountForZone>()
+                .mockResolvedValue(3);
+            photos.buildPictureRecordsRequestsForZone = jest.fn<typeof photos.buildPictureRecordsRequestsForZone>()
+                .mockReturnValue([
+                    Promise.resolve([rawAsset(`assetA`, `masterA`), rawMaster(`masterA`), rawAsset(`assetB`, `masterB`), rawMaster(`masterB`)]),
+                    Promise.resolve([rawAsset(`assetB`, `masterB`), rawMaster(`masterB`), rawAsset(`assetC`, `masterC`), rawMaster(`masterC`)]),
+                ]);
+
+            const [records] = await photos.fetchAllPictureRecordsForZone(zone);
+
+            expect(records.map(record => record.recordName)).toEqual([`assetA`, `masterA`, `assetB`, `masterB`, `assetC`, `masterC`]);
+        });
+
+        test(`Request failure`, async () => {
+            photos.getPictureRecordsCountForZone = jest.fn<typeof photos.getPictureRecordsCountForZone>()
+                .mockResolvedValue(3);
+            photos.buildPictureRecordsRequestsForZone = jest.fn<typeof photos.buildPictureRecordsRequestsForZone>()
+                .mockReturnValue([Promise.resolve([`recordA`]), Promise.reject(new Error(`Network Error`))]);
+
+            await expect(photos.fetchAllPictureRecordsForZone(zone)).rejects.toThrow(/^Network Error$/);
+        });
+
+        test(`Request failure waits for all requests to settle`, async () => {
+            const slowRequest = Promise.withResolvers<any[]>();
+            photos.getPictureRecordsCountForZone = jest.fn<typeof photos.getPictureRecordsCountForZone>()
+                .mockResolvedValue(3);
+            photos.buildPictureRecordsRequestsForZone = jest.fn<typeof photos.buildPictureRecordsRequestsForZone>()
+                .mockReturnValue([Promise.reject(new Error(`Network Error`)), slowRequest.promise]);
+
+            let settled = false;
+            const result = photos.fetchAllPictureRecordsForZone(zone).finally(() => {
+                settled = true;
+            });
+
+            await new Promise(resolve => setImmediate(resolve));
+            expect(settled).toBe(false);
+
+            slowRequest.resolve([`recordA`]);
+            await expect(result).rejects.toThrow(/^Network Error$/);
+        });
+    });
+
+    describe(`Fetch all CPL assets and masters`, () => {
+        const primaryRecords = [
+            rawMaster(`masterA`),
+            rawAsset(`assetA`, `masterA`),
+            rawMaster(`masterB`),
+            rawAsset(`assetB`, `masterB`),
+        ];
+        const sharedRecords = [
+            rawMaster(`sharedMaster`, Config.sharedZone.zoneName),
+            rawAsset(`sharedAsset`, `sharedMaster`, Config.sharedZone.zoneName),
+        ];
+
+        test(`Primary zone only`, async () => {
+            mockedResourceManager._resources.sharedZone = undefined;
+            const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValue([primaryRecords, 2]);
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters();
+
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(1);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledWith(Zones.Primary, undefined);
+            expect(assets.map(asset => asset.recordName)).toEqual([`assetA`, `assetB`]);
+            expect(masters.map(master => master.recordName)).toEqual([`masterA`, `masterB`]);
+            expect(countMismatchEvent).not.toHaveBeenCalled();
+        });
+
+        test(`Primary and shared zone`, async () => {
+            mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
+            const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValueOnce([primaryRecords, 2])
+                .mockResolvedValueOnce([sharedRecords, 1]);
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters();
+
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(2);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(1, Zones.Primary, undefined);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(2, Zones.Shared);
+            expect(assets.map(asset => asset.recordName)).toEqual([`assetA`, `assetB`, `sharedAsset`]);
+            expect(masters.map(master => master.recordName)).toEqual([`masterA`, `masterB`, `sharedMaster`]);
+            expect(countMismatchEvent).not.toHaveBeenCalled();
+        });
+
+        test(`Album does not include shared zone`, async () => {
+            mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValue([[...primaryRecords, {recordType: `CPLContainerRelation`, recordName: `someRelation`}], 2]);
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters(`someAlbum`);
+
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(1);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledWith(Zones.Primary, `someAlbum`);
+            expect(assets).toHaveLength(2);
+            expect(masters).toHaveLength(2);
+        });
+
+        test.each([
+            {
+                desc: `All photos`,
+                albumId: undefined,
+                expectedAlbumName: `All photos`,
+            }, {
+                desc: `Album`,
+                albumId: `someAlbum`,
+                expectedAlbumName: `someAlbum`,
+            },
+        ])(`Ignores unwanted records and reports count mismatch - $desc`, async ({albumId, expectedAlbumName}) => {
+            mockedResourceManager._resources.sharedZone = undefined;
+            const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValue([[
+                    ...primaryRecords,
+                    rawMaster(`masterA`), // Duplicate
+                    {...rawMaster(`deletedMaster`), deleted: true},
+                    {...rawAsset(`hiddenAsset`, `masterA`), fields: {isHidden: {value: 1}}},
+                    {recordType: `CPLContainerRelation`, recordName: `someRelation`},
+                    {recordType: `CPLSomething`, recordName: `someRecord`},
+                    {...rawAsset(`invalidAsset`, `masterA`), modified: {}}, // Unparsable
+                ], 4]); // The hidden asset is part of the count, but not expected
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters(albumId);
+
+            expect(assets.map(asset => asset.recordName)).toEqual([`assetA`, `assetB`]);
+            expect(masters.map(master => master.recordName)).toEqual([`masterA`, `masterB`]);
+            expect(countMismatchEvent).toHaveBeenCalledWith(expectedAlbumName, 3, 2, 2);
+        });
+
+        test(`Includes hidden assets, if hidden assets are synced`, async () => {
+            mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
+            mockedResourceManager._resources.syncHidden = true;
+            const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValueOnce([primaryRecords, 2])
+                .mockResolvedValueOnce([sharedRecords, 1])
+                .mockResolvedValueOnce([[rawMaster(`hiddenMaster`), rawHiddenAsset(`hiddenAsset`, `hiddenMaster`)], 1])
+                .mockResolvedValueOnce([[rawMaster(`sharedHiddenMaster`, Config.sharedZone.zoneName), rawHiddenAsset(`sharedHiddenAsset`, `sharedHiddenMaster`, Config.sharedZone.zoneName)], 1]);
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters();
+
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(4);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(1, Zones.Primary, undefined);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(2, Zones.Shared);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(3, Zones.Primary, undefined, true);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(4, Zones.Shared, undefined, true);
+            expect(assets.map(asset => asset.recordName)).toEqual([`assetA`, `assetB`, `sharedAsset`, `hiddenAsset`, `sharedHiddenAsset`]);
+            expect(masters.map(master => master.recordName)).toEqual([`masterA`, `masterB`, `sharedMaster`, `hiddenMaster`, `sharedHiddenMaster`]);
+            expect(countMismatchEvent).not.toHaveBeenCalled();
+        });
+
+        test(`Album with hidden assets - hidden assets not synced`, async () => {
+            mockedResourceManager._resources.sharedZone = undefined;
+            mockedResourceManager._resources.syncHidden = false;
+            const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValue([[
+                    ...primaryRecords,
+                    rawMaster(`hiddenMaster`),
+                    rawHiddenAsset(`hiddenAsset`, `hiddenMaster`),
+                    {recordType: `CPLContainerRelation`, recordName: `someRelation`},
+                ], 3]);
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters(`someAlbum`);
+
+            // The hidden asset and its master are removed, without reporting a count mismatch
+            expect(assets.map(asset => asset.recordName)).toEqual([`assetA`, `assetB`]);
+            expect(masters.map(master => master.recordName)).toEqual([`masterA`, `masterB`]);
+            expect(countMismatchEvent).not.toHaveBeenCalled();
+        });
+
+        test(`Album with hidden assets - hidden assets synced`, async () => {
+            mockedResourceManager._resources.sharedZone = undefined;
+            mockedResourceManager._resources.syncHidden = true;
+            const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValue([[
+                    ...primaryRecords,
+                    rawMaster(`hiddenMaster`),
+                    rawHiddenAsset(`hiddenAsset`, `hiddenMaster`),
+                ], 3]);
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters(`someAlbum`);
+
+            // Album contents are fetched with a single query, which already includes the hidden assets
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(1);
+            expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledWith(Zones.Primary, `someAlbum`);
+            expect(assets.map(asset => asset.recordName)).toEqual([`assetA`, `assetB`, `hiddenAsset`]);
+            expect(masters.map(master => master.recordName)).toEqual([`masterA`, `masterB`, `hiddenMaster`]);
+            expect(countMismatchEvent).not.toHaveBeenCalled();
+        });
+
+        test(`Only expected unwanted records`, async () => {
+            mockedResourceManager._resources.sharedZone = undefined;
+            const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockResolvedValue([[
+                    ...primaryRecords,
+                    {recordType: `CPLContainerRelation`, recordName: `someRelation`},
+                ], 2]);
+
+            const [assets, masters] = await photos.fetchAllCPLAssetsMasters(`someAlbum`);
+
+            expect(assets).toHaveLength(2);
+            expect(masters).toHaveLength(2);
+            expect(countMismatchEvent).not.toHaveBeenCalled();
+        });
+
+        test.each([
+            {
+                desc: `All photos`,
+                albumId: undefined,
+                expectedError: /^Unable to fetch records$/,
+            }, {
+                desc: `Album`,
+                albumId: `someAlbum`,
+                expectedError: /^Unable to fetch records$/,
+            },
+        ])(`Fetch failure - $desc`, async ({albumId, expectedError}) => {
+            mockedResourceManager._resources.sharedZone = undefined;
+            photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+                .mockRejectedValue(new Error(`Network Error`));
+
+            await expect(photos.fetchAllCPLAssetsMasters(albumId)).rejects.toThrow(expectedError);
+        });
+    });
+});
+
+describe(`Fetch hidden picture records`, () => {
+    beforeEach(() => {
+        mockedResourceManager._resources.syncHidden = true;
+    });
+
+    test(`Primary zone only`, async () => {
+        mockedResourceManager._resources.sharedZone = undefined;
+        const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+        photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+            .mockResolvedValue([[rawMaster(`hiddenMaster`), rawHiddenAsset(`hiddenAsset`, `hiddenMaster`)], 1]);
+
+        const [assets, masters] = await photos.fetchHiddenCPLAssetsMasters();
+
+        expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(1);
+        expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledWith(Zones.Primary, undefined, true);
+        expect(assets.map(asset => asset.recordName)).toEqual([`hiddenAsset`]);
+        expect(masters.map(master => master.recordName)).toEqual([`hiddenMaster`]);
+        expect(countMismatchEvent).not.toHaveBeenCalled();
+    });
+
+    test(`Primary and shared zone`, async () => {
+        mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
+        photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+            .mockResolvedValueOnce([[rawMaster(`hiddenMaster`), rawHiddenAsset(`hiddenAsset`, `hiddenMaster`)], 1])
+            .mockResolvedValueOnce([[rawMaster(`sharedHiddenMaster`, Config.sharedZone.zoneName), rawHiddenAsset(`sharedHiddenAsset`, `sharedHiddenMaster`, Config.sharedZone.zoneName)], 1]);
+
+        const [assets, masters] = await photos.fetchHiddenCPLAssetsMasters();
+
+        expect(photos.fetchAllPictureRecordsForZone).toHaveBeenCalledTimes(2);
+        expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(1, Zones.Primary, undefined, true);
+        expect(photos.fetchAllPictureRecordsForZone).toHaveBeenNthCalledWith(2, Zones.Shared, undefined, true);
+        expect(assets.map(asset => asset.recordName)).toEqual([`hiddenAsset`, `sharedHiddenAsset`]);
+        expect(masters.map(master => master.recordName)).toEqual([`hiddenMaster`, `sharedHiddenMaster`]);
+    });
+
+    test(`Reports count mismatch`, async () => {
+        mockedResourceManager._resources.sharedZone = undefined;
+        const countMismatchEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.COUNT_MISMATCH);
+        photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+            .mockResolvedValue([[rawMaster(`hiddenMaster`), rawHiddenAsset(`hiddenAsset`, `hiddenMaster`)], 2]);
+
+        await photos.fetchHiddenCPLAssetsMasters();
+
+        expect(countMismatchEvent).toHaveBeenCalledWith(HIDDEN_ALBUM_NAME, 2, 1, 1);
+    });
+
+    test(`Fetch failure`, async () => {
+        mockedResourceManager._resources.sharedZone = undefined;
+        photos.fetchAllPictureRecordsForZone = jest.fn<typeof photos.fetchAllPictureRecordsForZone>()
+            .mockRejectedValue(new Error(`Network Error`));
+
+        await expect(photos.fetchHiddenCPLAssetsMasters()).rejects.toThrow(/^Unable to fetch records$/);
+    });
+});
+
+describe(`Download asset`, () => {
+    const modified = 1640995200000; // 2022-01-01T00:00:00.000Z
+
+    test(`Success`, async () => {
+        mockfs({
+            [Config.defaultConfig.dataDir]: {
+                [PRIMARY_ASSET_DIR]: {},
+            },
+        });
+
+        const asset = new Asset(`someChecksum`, 8, FileType.fromExtension(`jpeg`), modified, Zones.Primary, AssetType.ORIG, `someFile`, `someWrappingKey`, `someReferenceChecksum`, `https://cvws.icloud-content.com/someAsset`, `someRecord`, false);
+        mockedNetworkManager.downloadData = jest.fn<typeof mockedNetworkManager.downloadData>()
+            .mockResolvedValue();
+
+        await photos.downloadAsset(asset);
+
+        expect(mockedNetworkManager.downloadData).toHaveBeenCalledWith(`https://cvws.icloud-content.com/someAsset`, asset.getAssetFilePath(), modified);
+
+        mockfs.restore();
+    });
+
+    test(`No download URL`, async () => {
+        const asset = new Asset(`someChecksum`, 8, FileType.fromExtension(`jpeg`), modified, Zones.Primary);
+        mockedNetworkManager.downloadData = jest.fn<typeof mockedNetworkManager.downloadData>();
+
+        await expect(photos.downloadAsset(asset)).rejects.toThrow(/^Asset has no download URL$/);
+
+        expect(mockedNetworkManager.downloadData).not.toHaveBeenCalled();
+    });
+
+    test(`Download failure`, async () => {
+        const asset = new Asset(`someChecksum`, 8, FileType.fromExtension(`jpeg`), modified, Zones.Primary, AssetType.ORIG, `someFile`, `someWrappingKey`, `someReferenceChecksum`, `https://cvws.icloud-content.com/someAsset`, `someRecord`, false);
+        mockedNetworkManager.downloadData = jest.fn<typeof mockedNetworkManager.downloadData>()
+            .mockRejectedValue(new Error(`Network Error`));
+
+        await expect(photos.downloadAsset(asset)).rejects.toThrow(/^Network Error$/);
+    });
+});
+
+describe(`Delete assets`, () => {
+    test(`Success`, async () => {
+        photos.performOperation = jest.fn<typeof photos.performOperation>()
+            .mockResolvedValue([]);
+
+        await photos.deleteAssets([`recordA`, `recordB`]);
+
+        expect(photos.performOperation).toHaveBeenCalledWith(Zones.Primary, `update`, {isDeleted: {value: 1}}, [`recordA`, `recordB`]);
+    });
+
+    test(`Operation failure`, async () => {
+        photos.performOperation = jest.fn<typeof photos.performOperation>()
+            .mockRejectedValue(new Error(`Network Error`));
+
+        await expect(photos.deleteAssets([`recordA`])).rejects.toThrow(/^Network Error$/);
+    });
+});

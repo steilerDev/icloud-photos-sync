@@ -2,38 +2,45 @@ openapi: '3.1.0'
 info:
   title: icloud-photos-sync local server API
   version: '1.0'
-  license: 
+  license:
     name: GNU General Public License v3.0
     url: https://github.com/steilerDev/icloud-photos-sync/blob/main/LICENSE
-  description: This document describes the API of icloud-photo-sync's web server
+  description: |
+    This document describes the API of icloud-photo-sync's web server. Parameters are passed as query strings.
+
+    Requests to an unknown endpoint, or with an unsupported method, are rejected with `400` and the message `Method (<method>) not supported on endpoint <url>`. Unexpected errors while handling a request are answered with `500` (see `InternalError`).
 servers:
   - url: http://localhost:80
-    description: The URL and port depend on your local setup - by default the webserver is exposed at port 80
-security: 
+    description: The URL and port depend on your local setup - by default the webserver is exposed at port 80, below the configured web base path
+security:
   -  {}
 paths:
   /api/state:
-    get: 
-      summary: Provides the current operational state of the application's
+    get:
+      summary: Provides the current operational state of the application
       operationId: getState
-      responses: 
+      responses:
         '200':
           description: Returns the current state
-          content: 
+          content:
             application/json:
-              schema: 
+              schema:
                 type: object
                 required: ['state', 'timestamp']
-                properties: 
-                  state: 
+                properties:
+                  state:
                     type: string
                     enum: ['ready', 'running', 'blocked']
+                    description: '`blocked` means the application is waiting for an MFA code'
                   timestamp:
-                    type: number
+                    type: integer
+                    description: Time of the last state change, in milliseconds since epoch
                   nextSync:
-                    type: number
+                    type: integer
+                    description: Time of the next scheduled sync, in milliseconds since epoch (daemon mode only)
                   prevError:
                     type: object
+                    description: The error of the last run, cleared when the next run starts
                     properties:
                       message:
                         type: string
@@ -46,17 +53,33 @@ paths:
                     type: string
                   progress:
                     type: number
+                    description: Progress of the current run in percent
+                  trustedPhoneNumbers:
+                    type: array
+                    description: The trusted phone numbers of the account, available once an MFA code was required - the `id` is used as `phoneNumberId` for `/api/resend_mfa`
+                    items:
+                      type: object
+                      required: ['id', 'maskedNumber']
+                      properties:
+                        id:
+                          type: integer
+                        maskedNumber:
+                          type: string
+                          example: '+49 •••• •••••12'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/log:
     get:
       summary: Provides all stored log entries since the last trigger
       operationId: getLog
-      parameters: 
+      parameters:
         - name: loglevel
           in: query
-          description: The selected log level to be returned by the response, defaults to 'none'
-          schema: 
+          description: The minimum log level of the returned entries, defaults to 'none' (returning no entries)
+          schema:
             type: string
-            enum: ['none', 'debug', 'info','warn', 'error']
+            enum: ['none', 'debug', 'info', 'warn', 'error']
+            default: 'none'
       responses:
         '200':
           description: Returns the logs
@@ -64,185 +87,212 @@ paths:
             application/json:
               schema:
                 type: array
-                items: 
+                items:
                   type: object
+                  required: ['level', 'time', 'source', 'message']
                   properties:
                     level:
                       type: string
-                      enum: ['debug', 'info','warn', 'error']
+                      enum: ['debug', 'info', 'warn', 'error']
                     time:
-                      type: number
-                    source: 
+                      type: integer
+                      description: Time of the log entry, in milliseconds since epoch
+                    source:
                       type: string
-                    message: 
+                    message:
                       type: string
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/reauthenticate:
-    post: 
+    post:
       summary: Requests the application to re-authenticate
       operationId: requestReAuthentication
-      responses: 
+      responses:
         '200':
           description: Successfully triggered re-authentication
-          content: 
+          content:
             application/json:
               schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  enum: ['Reauthentication requested']
+                type: object
+                properties:
+                  message:
+                    type: string
+                    const: 'Reauthentication requested'
+        '412':
+          $ref: '#/components/responses/SyncInProgress'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/sync:
     post:
       summary: Requests the application to execute an ad-hoc sync
+      description: The sync is only executed, if the application runs in daemon mode
       operationId: requestSync
-      responses: 
+      responses:
         '200':
           description: Successfully triggered an ad-hoc sync
-          content: 
+          content:
             application/json:
               schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  enum: ['Sync requested']
+                type: object
+                properties:
+                  message:
+                    type: string
+                    const: 'Sync requested'
+        '412':
+          $ref: '#/components/responses/SyncInProgress'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/resend_mfa:
     post:
       summary: Requests the tool to resend the MFA code utilizing the provided method
       operationId: postResendMFA
-      parameters: 
+      parameters:
         - name: method
           in: query
           description: The selected resend method
           required: true
-          schema: 
+          schema:
             type: string
             enum: ['sms', 'voice', 'device']
         - name: phoneNumberId
           in: query
-          description: Optionally defining a phone number id (in case multiple trusted phone numbers are registered with the account)
+          description: The id of the trusted phone number (see `trustedPhoneNumbers` of `/api/state`), in case multiple trusted phone numbers are registered with the account. Ignored for the `device` method.
           required: false
-          schema: 
+          schema:
             type: integer
-      responses: 
+            default: 1
+      responses:
         '200':
           description: Successfully requested MFA code resend
-          content: 
+          content:
             application/json:
               schema:
-              type: object
-              properties:
-                message:
-                  enum: ['Requesting MFA resend with method $method']
+                type: object
+                properties:
+                  message:
+                    type: string
+                    examples:
+                      - "Requesting MFA resend with method 'Device'"
+                      - "Requesting MFA resend with method 'SMS' (Number ID: 1)"
+                      - "Requesting MFA resend with method 'Voice' (Number ID: 2)"
         '400':
           description: Resend method does not match expected format
-          content: 
+          content:
             application/json:
               schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  enum: ['Resend method does not match expected format']
+                type: object
+                properties:
+                  message:
+                    type: string
+                    const: 'Resend method does not match expected format'
+        '412':
+          $ref: '#/components/responses/MFANotExpected'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/mfa:
     post:
       summary: Enters the MFA code for authentication
       operationId: postMFACode
-      parameters: 
+      parameters:
         - name: code
           in: query
           description: The MFA code provided by the trusted source
           required: true
-          schema: 
-            type: integer
-            maxLength: 6
-            minLength: 6
+          schema:
+            type: string
+            pattern: '^\d{6}$'
       responses:
         '200':
           description: MFA code read
-          content: 
+          content:
             application/json:
               schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  enum: ['Read MFA code: $code']
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Read MFA code: 123456'
         '400':
           description: MFA code does not match expected format
-          content: 
+          content:
             application/json:
               schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  enum: ['Unexpected MFA code format! Expecting 6 digits']
+                type: object
+                properties:
+                  message:
+                    type: string
+                    const: 'Unexpected MFA code format! Expecting 6 digits'
         '412':
-          description: MFA code not expected at this time
-          content: 
-            application/json:
-              schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  enum: ['MFA code not expected at this time. Taking you back home.']
-
+          $ref: '#/components/responses/MFANotExpected'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/subscribe:
     post:
       summary: Creates a notification subscription
       operationId: postSubscription
-      requestBody: 
-        content: 
+      requestBody:
+        required: true
+        description: A push subscription, as provided by the browser's Push API
+        content:
           application/json:
-            schema: 
+            schema:
               type: object
-              properties: 
+              required: ['endpoint', 'keys']
+              properties:
                 endpoint:
                   type: string
+                  minLength: 1
+                expirationTime:
+                  type: number
                 keys:
                   type: object
-                  properties: 
+                  required: ['p256dh', 'auth']
+                  properties:
                     p256dh:
                       type: string
-                    auth: 
+                      minLength: 1
+                    auth:
                       type: string
-      responses: 
-        '200':
+                      minLength: 1
+      responses:
+        '201':
           description: Successfully created a notification subscription
-          content: 
+          content:
             application/json:
               schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  enum: ['Push subscription added successfully']
+                type: object
+                properties:
+                  message:
+                    type: string
+                    const: 'Push subscription added successfully'
         '400':
           description: Invalid notification subscription request
-          content: 
+          content:
             application/json:
               schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  enum: ['Invalid request body']
+                type: object
+                properties:
+                  message:
+                    type: string
+                    const: 'Unable to add push subscription'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/vapid-public-key:
     get:
       summary: Gets the VAPID public key, required for push notification support
       operationId: getVapidPublicKey
-      responses: 
+      responses:
         '200':
           description: The VAPID Public key
-          content: 
+          content:
             application/json:
               schema:
                 type: object
                 properties:
                   publicKey:
                     type: string
+        '500':
+          $ref: '#/components/responses/InternalError'
   /metrics:
     get:
       summary: Provides sync metrics in the Prometheus/OpenMetrics exposition format
@@ -272,3 +322,38 @@ paths:
             text/plain; version=0.0.4; charset=utf-8:
               schema:
                 type: string
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  responses:
+    SyncInProgress:
+      description: The action cannot be performed, because a sync or authentication is currently in progress (the state is not `ready`)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                const: 'Cannot perform action while sync is in progress'
+    MFANotExpected:
+      description: No MFA code is expected at this time (the state is not `blocked`)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                const: 'MFA code not expected at this time.'
+    InternalError:
+      description: An unexpected error occurred while handling the request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                description: The description of the error
+                example: 'WEB_SERVER_UNKNOWN_ERR: ...'

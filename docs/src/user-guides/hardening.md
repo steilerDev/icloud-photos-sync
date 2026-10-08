@@ -4,10 +4,17 @@
 
 The Docker image is based on [Docker Hardened Images](https://dhi.io/catalog/node), a minimal, CVE-minimized Node.js runtime, shipping with a software bill of materials (SBOM) and build provenance. Besides Node.js and the application, the image contains no shell, no package manager and no other system utilities.
 
-The application is executed as non-root user with UID `100` and GID `101`. Use the [`user`](https://docs.docker.com/reference/compose-file/services/#user) option to run it with a different user.
+The application is executed as non-root user with UID `100` and GID `101`. Use the [`user`](https://docs.docker.com/reference/compose-file/services/#user) option to run it with a different user. The default library path `/opt/icloud-photos-library` is owned by `100:101` and not world-writable, therefore a different user requires a bind mount to a host directory owned by this user - a new named or anonymous volume is not writable for it.
 
 !!! warning "No shell available"
-    Since the image does not include a shell, `docker exec -it photos-sync sh` is no longer possible. Commands of this application can still be executed directly, e.g. `docker exec -it photos-sync icloud-photos-sync token`. In order to debug the container, use [`docker debug`](https://docs.docker.com/reference/cli/docker/debug/), which attaches a toolbox to the running container without modifying it.
+    Since the image does not include a shell, `docker exec -it photos-sync sh` is no longer possible. Executing another command of this application through `docker exec` fails with `LIBRARY_LOCKED`, since the running daemon holds the library lock until it exits. Instead:
+
+    - Use the 'Renew Authentication' button of the [Web UI](web-ui.md), instead of the `token` command.
+    - For `sync` or `archive`, stop the service and execute the command in a new container, e.g. `docker compose run --rm photos-sync archive <path>`.
+
+    Do not use `--force` while the daemon is running, since this starts a second process writing to the library, which also tries to start a second web server on the same port.
+
+    In order to debug the container, use [`docker debug`](https://docs.docker.com/reference/cli/docker/debug/), which attaches a toolbox to the running container without modifying it.
 
 ## Node.js Permission Model
 
@@ -57,4 +64,4 @@ If any of the required permissions are missing, the application will refuse to s
 APP_INSUFFICIENT_PERMISSIONS: Node.js permission model is enabled, but required permissions are missing (missing --allow-fs-write=*)
 ```
 
-Since the file system access cannot be restricted by Node.js, consider restricting it through Docker: The library volume is the only location the application writes to, therefore the container's root file system can be mounted [read-only](https://docs.docker.com/reference/compose-file/services/#read_only) (`read_only: true` in docker compose, `--read-only` for docker run).
+Since the file system access cannot be restricted by Node.js, consider restricting it through Docker: The library volume is the only location the application writes to, therefore the container's root file system can be mounted [read-only](https://docs.docker.com/reference/compose-file/services/#read_only) (`read_only: true` in docker compose, `--read-only` for docker run). If [soft delete](cli.md#soft-delete) is enabled with an absolute [trash directory](cli.md#trash-dir) outside of the library, this directory needs its own writable mount.

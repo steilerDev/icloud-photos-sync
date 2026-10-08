@@ -58,10 +58,12 @@ This application offers the following high level functionality:
   <p>
     <ul>
       <li>iCloud Shared Photo Library support</li>
-      <li>Support of MFA authentication through trusted devices, SMS and voice authentication - <a href="https://github.com/steilerDev/icloud-photos-sync/issues/207">Security Key Support pending, please help out if you have this use case</a>!</li>
+      <li>Support of MFA authentication through trusted devices, SMS and voice authentication (security keys are not supported)</li>
       <li>Enable autonomous operation, by caching of MFA trust token</li>
       <li>Support of large libraries, through efficient diffing algorithm instead of full library pull</li>
-      <li>Full iCloud Photos Library backup with all important files in their original state and edits - <a href="https://github.com/steilerDev/icloud-photos-sync/issues/121">Live Photos support pending</a></li>
+      <li>Full iCloud Photos Library backup with all important files in their original state and edits (the video part of Live Photos is currently not synced)</li>
+      <li>Optionally include photos from the <i>Hidden</i> album</li>
+      <li>Support of accounts with Advanced Data Protection</li>
     </ul>
   </p>
 </details>
@@ -73,6 +75,7 @@ This application offers the following high level functionality:
       <li>Checking the sync status</li>
       <li>Triggering ad-hoc sync</li>
       <li>Entering MFA code, when needed</li>
+      <li>Following the logs of the current run</li>
       <li>Receiving Push Notification about the synchronization status</li>
     </ul>
   </p>
@@ -84,6 +87,7 @@ This application offers the following high level functionality:
     <ul>
       <li>Each asset is only downloaded once and linked to its respective folders</li>
       <li>No need track local state in database, since state is completely reflected in filesystem (through naming & linking)</li>
+      <li>Optionally, assets deleted in iCloud can be moved into a trash folder, instead of being deleted locally</li>
     </ul>
   </p>
 </details>
@@ -97,6 +101,18 @@ This application offers the following high level functionality:
       <li>If the remote album is moved, the archived folder will be moved to the same location</li>
       <li>If the remote album is deleted, the archived folder will be put into a 'lost+found' type of folder</li>
       <li>Optionally all photos from the archived folder can be deleted from the iCloud Photos Library, unless they are *Favorites* (reducing cloud storage needs)</li>
+    </ul>
+  </p>
+</details>
+
+<details>
+  <summary><i>Monitoring & secure operation</i></summary>
+  <p>
+    <ul>
+      <li>Sync metrics in the Influx Line Protocol and Prometheus/OpenMetrics format</li>
+      <li>Integration with health check services</li>
+      <li>Credentials can be read from files (e.g. Docker secrets)</li>
+      <li>Shell-free Docker image based on Docker Hardened Images, optionally restricted further through Node's permission model</li>
     </ul>
   </p>
 </details>
@@ -121,7 +137,7 @@ A [*Get Started Guide* can be found on GH Pages](https://icps.steiler.dev/get-st
 As this application is using an undocumented public API, there are a couple of known limitations:
 
 - **iCloud Shared Photo Library**:
-  While this app is syncing all assets from the *Shared Photo Library*, unfortunately the API does not provide the location of shared assets within the user's folder hierarchy (when navigating to a folder on the WebUI while having *Shared Photo Library* enabled will yield an error). Until this functionality is available, *Shared Photo Library* assets will only be present in the `_Shared-Photos` folder and therefore cannot be archived.
+  While this app is syncing all assets from the *Shared Photo Library*, unfortunately the API does not provide the location of shared assets within the user's folder hierarchy (when navigating to a folder on icloud.com while having *Shared Photo Library* enabled will yield an error). Until this functionality is available, *Shared Photo Library* assets will only be present in the `_Shared-Photos` folder and therefore cannot be archived.
 - **FileType Support**:
   The support of file types needs to be hardcoded by this application, since a full list is not available or retrievable. If you come across an `Unknown filetype descriptor` error, [please report it](https://github.com/steilerDev/icloud-photos-sync/issues/143), in order for the file type to be added to the application.
 
@@ -130,7 +146,7 @@ Please also check out [open and known issues](https://github.com/steilerDev/iclo
 ## OS Support
 
 <p align="center">
-  <img alt="OS Support Debian" src="https://img.shields.io/static/v1?label=Debian-11&message=Dev%20Platform&color=informational&style=for-the-badge&logo=debian&logoColor=white">
+  <img alt="OS Support Debian" src="https://img.shields.io/static/v1?label=Debian-13&message=Dev%20Platform&color=informational&style=for-the-badge&logo=debian&logoColor=white">
   <a href="https://github.com/actions/runner-images#available-images">
     <img alt="OS Support Ubuntu" src="https://img.shields.io/static/v1?label=Ubuntu-latest&message=Unit%20Test&color=success&style=for-the-badge&logo=ubuntu&logoColor=white">
   </a>

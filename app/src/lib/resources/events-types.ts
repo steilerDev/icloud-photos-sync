@@ -189,7 +189,7 @@ export enum iCPSEventRuntimeWarning {
      */
     RESOURCE_FILE_ERROR = `warn-resource_file_error`,
     /**
-     * Emitted when there is a problem acquiring the trusted phone numbers of an account
+     * Emitted when there is a problem acquiring the trusted phone numbers of an account - provides the iCPSError as argument
      */
     TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`
 }
@@ -270,6 +270,10 @@ export enum iCPSEventSyncEngine {
      * Emitted when the sync process has experienced an error and will retry - provides the number of retries as argument as well as the iCPSError leading to the retry
      */
     RETRY = `sync-retry`,
+    /**
+     * Emitted when the download URLs expired during the sync and the remote state is refreshed - this does not count as a retry - provides the number of assets written since the last refresh as argument
+     */
+    REFRESH = `sync-refresh`,
 }
 
 /**

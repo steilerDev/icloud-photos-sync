@@ -101,15 +101,16 @@ export class NetworkManager {
      * This closes the current session, clears resources that are not persisted and writes the HAR file to disk, in case network capture is enabled
      */
     async resetSession() {
+        // Settling the queues first, so running requests still complete against the current session
+        await this.settleRateLimiter();
+        await this.settleCCYLimiter();
+
         this._http.baseURL = undefined;
 
         this._headerJar.clearHeader(HEADER_KEYS.SCNT);
         this._headerJar.clearHeader(HEADER_KEYS.SESSION_ID);
         this._headerJar.clearHeader(HEADER_KEYS.AUTH_ATTRIBUTES);
         this._headerJar.resetFrameId();
-
-        await this.settleRateLimiter();
-        await this.settleCCYLimiter();
 
         if (Resources.manager().enableNetworkCapture) {
             await this.writeHarFile();
@@ -352,11 +353,13 @@ export class NetworkManager {
     /**
      * Downloads the provided url's content and writes it to the provided location
      * Uses the CCY limiter to ensure that the network is not overwhelmed
+     * The modification time is applied within the queued job, so a settled queue guarantees completely written files
      * @param url - The url to download
      * @param location - The location to write the file to (existing files will be overwritten)
+     * @param modified - The modification time (in ms since epoch) to apply to the file, also if the file already existed
      * @returns A promise, that resolves once the download has been completed, or rejects if the download was not successful.
      */
-    async downloadData(url: string, location: string): Promise<void> {
+    async downloadData(url: string, location: string, modified?: number): Promise<void> {
         await this._streamingCCYLimiter.add(async () => {
             const locationExists = await fs.stat(location)
                 .then(() => true)
@@ -364,12 +367,15 @@ export class NetworkManager {
 
             if (locationExists) {
                 Resources.logger(this).info(`File ${location} already exists - skipping download`);
-                return;
+            } else {
+                Resources.logger(this).debug(`Starting download of ${url} to ${location}`);
+                await this._http.download(url, location, this._downloadTimeout);
+                Resources.logger(this).debug(`Finished download of ${url}`);
             }
 
-            Resources.logger(this).debug(`Starting download of ${url} to ${location}`);
-            await this._http.download(url, location, this._downloadTimeout);
-            Resources.logger(this).debug(`Finished download of ${url}`);
+            if (modified !== undefined) {
+                await fs.utimes(location, new Date(modified), new Date(modified));
+            }
         });
     }
 }

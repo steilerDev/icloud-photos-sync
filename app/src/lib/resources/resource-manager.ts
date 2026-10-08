@@ -295,6 +295,24 @@ export class ResourceManager {
     }
 
     /**
+     * @returns If the application should sync assets from the 'Hidden' album
+     */
+    get syncHidden(): boolean {
+        return this._resources.syncHidden;
+    }
+
+    /**
+     * @returns The absolute path of the directory deleted assets are moved to, or undefined if soft delete is disabled and assets are permanently deleted
+     */
+    get trashDir(): string | undefined {
+        if (!this._resources.softDelete) {
+            return undefined;
+        }
+
+        return path.resolve(this.dataDir, this._resources.trashDir);
+    }
+
+    /**
      * @returns The log level of the application
      */
     get logLevel(): LogLevel {

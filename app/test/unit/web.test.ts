@@ -233,6 +233,21 @@ describe(`Web base path`, () => {
 
         expect(res._getStatusCode()).toEqual(expectedStatus)
     })
+
+    test(`Forward root to /state below the base path`, async () => {
+        mockedResourceManager._resources.webBasePath = `/icps`
+        const webServer = new WebServer()
+
+        const req = createRequest<IncomingMessage>({
+            method: `GET`,
+            url: `/icps/`,
+        })
+
+        const res = await sendMockedRequest(webServer, req)
+
+        expect(res._getStatusCode()).toEqual(302)
+        expect(res.getHeader(`Location`)).toEqual(`/icps/state`)
+    })
 })
 
 describe.each([
@@ -315,7 +330,7 @@ describe.each([
         const res = await sendMockedRequest(webServer, req)
 
         expect(res._getStatusCode()).toEqual(302)
-        expect(res.getHeader(`Location`)).toEqual(`/state`)
+        expect(res.getHeader(`Location`)).toEqual(`${webBasePath}/state`)
     })
 
     test(`Serve service worker`, async () => {
@@ -1260,6 +1275,63 @@ describe.each([
                     expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/log?loglevel=info`, {headers: {Accept: `application/json`}})
                     expect(logLineMock.jestMock).not.toHaveBeenCalled()
 
+                })
+
+                test(`Only append new log lines`, async () => {
+                    const logLineMock = site.mockFunction(`addLogLine`)
+                    const firstLine = getByTestId(site.body, `logContent`).children[0]
+                    mockedState.log!.push({
+                        level: LogLevel.INFO,
+                        source: `SourceC`,
+                        message: `NewMsg`,
+                        time: 2
+                    })
+
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+
+                    expect(logLineMock.jestMock).toHaveBeenCalledTimes(1)
+                    expect(logLineMock.jestMock).toHaveBeenCalledWith(LogLevel.INFO, `SourceC`, `NewMsg`, 2)
+                    expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(4);
+                    expect(getByTestId(site.body, `logContent`).children[0]).toBe(firstLine)
+                    expect(getByTestId(site.body, `logContent`).children[3]).toHaveTextContent(`NewMsg`)
+                })
+
+                test(`Rebuild log view if the log was reset`, async () => {
+                    mockedState.log = [
+                        {
+                            level: LogLevel.INFO,
+                            source: `SourceC`,
+                            message: `ResetMsg`,
+                            time: 3
+                        }
+                    ]
+
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+
+                    expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(1);
+                    expect(getByTestId(site.body, `logContent`).children[0]).toHaveTextContent(`ResetMsg`)
+                })
+
+                test(`Render log messages as text`, async () => {
+                    mockedState.log = [
+                        {
+                            level: LogLevel.INFO,
+                            source: `<i>Source</i>`,
+                            message: `<img src=x onerror="alert(1)">`,
+                            time: 3
+                        }
+                    ]
+
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+
+                    const logLine = getByTestId(site.body, `logContent`).children[0]
+                    expect(logLine.querySelector(`img`)).toBeNull()
+                    expect(logLine.querySelector(`i`)).toBeNull()
+                    expect(logLine).toHaveTextContent(`<img src=x onerror="alert(1)">`)
+                    expect(logLine).toHaveTextContent(`<i>Source</i>`)
                 })
             })
         })

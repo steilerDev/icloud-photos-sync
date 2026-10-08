@@ -1192,7 +1192,7 @@
             [
               {
                 "params": [
-                  "warn-mfa_resend_error"
+                  "warn-mfa_error"
                 ],
                 "type": "field"
               },
@@ -2621,7 +2621,7 @@
             [
               {
                 "params": [
-                  "warn-mfa_resend_error"
+                  "warn-mfa_error"
                 ],
                 "type": "field"
               },

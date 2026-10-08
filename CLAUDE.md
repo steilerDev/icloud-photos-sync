@@ -9,20 +9,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `docs/` — mkdocs site (https://icps.steiler.dev).
   - `docs/api/openapi.yaml` — contract of the app's own web API.
   - `docs/postman/` — Postman collection of the iCloud API. It is **outdated**; see "iCloud API surface" below.
-  - `docs/src/dev/` — developer docs, including `api.md` (iCloud auth flow) and `local-file-structure.md` (on-disk library layout).
+  - `docs/src/dev/` — developer docs, including `api.md` (the full iCloud API surface) and `local-file-structure.md` (on-disk library layout).
 - `secrets/` — env files for real Apple accounts (see next section).
 - `.github/` — workflows plus composite actions (see "CI/CD").
 
 ## Accounts, secrets and trust tokens
 
-The maintainer keeps two real Apple accounts. Each has a `secrets/<name>.env` file, with a `*.sample` listing its variable names.
+The maintainer keeps three real Apple accounts. Each has a `secrets/<name>.env` file, with a `*.sample` listing its variable names.
 
 | File | Account | Variables | Use |
 |---|---|---|---|
-| `secrets/prod.env` | Maintainer's personal account: large library, many albums and folders, shared albums, a shared photo library | `APPLE_ID_USER`, `APPLE_ID_PWD`, `DATA_DIR`, … (the app's own option env vars) | Investigation and debugging of real-world API behaviour. Read-only use: never run `archive --remote-delete` or anything else that modifies the remote library against it. |
+| `secrets/prod.env` | Maintainer's personal account: large library, many albums and folders, shared albums, a shared photo library | `APPLE_ID_USER`, `APPLE_ID_PWD`, `TRUST_TOKEN`, `DATA_DIR`, … (the app's own option env vars) | Investigation and debugging of real-world API behaviour. Read-only use: never run `archive --remote-delete` or anything else that modifies the remote library against it. |
 | `secrets/test.env` | Dedicated test account (the library is described in `docs/src/dev/test-environment.md`) | `TEST_APPLE_ID_USER`, `TEST_APPLE_ID_PWD`, `TEST_TRUST_TOKEN` | `npm run test:api`, `npm run test:docker` and `.vscode/launch.json`. Expected API responses live in `app/test/api/_data/`. |
-
-`adp.env` is optional, for an Advanced Data Protection account.
+| `secrets/adp.env` | Maintainer's account with Advanced Data Protection (ADP) enabled | `APPLE_ID_USER`, `APPLE_ID_PWD`, `TRUST_TOKEN`, `DATA_DIR`, … (same shape as `prod.env`) | Reproducing and debugging ADP-specific behaviour: escrow, `pcsRequired` and the `requestPCS` approval loop. **Only with the user present:** every MFA code and every PCS request has to be approved by the user on their device, so never start an ADP run while they are away. Treat it as read-only like `prod`. |
 
 Two further files hold Backtrace API tokens (see "Error reports (Backtrace)"): `secrets/backtrace.env` for the production project and `secrets/backtrace-dev.env` for the development project, each with `BACKTRACE_API_TOKEN` and `BACKTRACE_PROJECT`.
 
@@ -40,8 +39,10 @@ Load an env file with `set -a; . ../secrets/test.env; set +a` before running a c
 3. Wait until it prints "MFA code required".
    - **Test account:** its trusted devices are unreachable, so the automatic device push never arrives (a long-standing quirk). Always request an SMS to phone id `2`: `curl -X POST "localhost:8080/api/resend_mfa?method=sms&phoneNumberId=2"`. `acquire-trust-token.sh` does the same.
    - **Prod account:** the automatic trusted-device push works, so no extra request is needed.
+   - **ADP account:** the automatic trusted-device push works as well. The user must be present to read the code off their device.
    - Then ask the user for the code and submit it with `curl -X POST "localhost:8080/api/mfa?code=<code>"`. The default MFA timeout is 10 minutes, so ask promptly.
-4. The new token is printed ("Validated token") and stored in `<data-dir>/.icloud-photos-sync` (`.trustToken`). Update `TEST_TRUST_TOKEN` in `secrets/test.env` only after confirming with the user. For `prod`, the token lives in that account's own data dir.
+4. The new token is printed ("Validated token") and stored in `<data-dir>/.icloud-photos-sync` (`.trustToken`). Update the env file only after confirming with the user: `TEST_TRUST_TOKEN` in `secrets/test.env`, `TRUST_TOKEN` in `secrets/prod.env` and `secrets/adp.env` (it overrides the token stored in the data dir). `DATA_DIR` in `adp.env` points to `/opt/adp-data-dir/`, which isn't writable in the sandbox; there the ADP data dir is `~/icps-data/adp`, so pass `-d ~/icps-data/adp` to reuse it.
+   - The `token` command stops at `TRUSTED`, so it never reaches the ADP-only PCS step. Exercising `requestPCS` needs a `sync` (or `daemon`) run, during which the app polls every 10s until the user approves the request on a device.
 5. CI has its own token. The self-hosted `residential` runner keeps `TEST_*` in `/opt/actions-runner/.env`, not in GitHub secrets. Because tokens are IP-bound, it must be renewed **on the runner host** by the user, with `.github/acquire-trust-token.sh`, which runs the same flow using the published image. This is only needed when the CI API/e2e jobs fail authentication. A locally renewed token neither fixes nor breaks the runner's token.
 
 ## Commands (run in `app/`)
@@ -84,6 +85,7 @@ npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the
 **Event-driven side effects.** Core classes emit typed events (`events-types.ts`) via `Resources.emit(...)` and never print directly. `main.ts` instantiates independent listeners that subscribe with `Resources.events(this).on(...)`:
 - `LogInterface` and `CLIInterface` (progress bars)
 - `MetricsExporter` (Influx line protocol)
+- `PrometheusMetricsExporter` (OpenMetrics, served by `WebServer` on `/metrics`)
 - `HealthCheckPingExecutor`
 - `WebServer`
 
@@ -108,14 +110,20 @@ Read `docs/src/dev/local-file-structure.md` before changing `photos-library/` or
 **Validated external data.** Response and resource types live in `resource-types.ts` / `network-types.ts`. `app/build/schema.ts` generates JSON schemas from them, which `validator.ts` imports. To validate a new type, register it in `schema.ts` and change the TS type, never the generated JSON. TSDoc schema tags (`@minimum`, `@pattern`, …) shape the schema. **Every request validates its response:** `get/post/put` require a `ResponseValidator` and resolve to its result, e.g. `Resources.network().post(url, data, Resources.validator().response.setup)`. `ResponseValidator` is a branded type that only `validator.ts` can create (`Validator.response`), so an ad-hoc function does not compile and there is no opt-out. A new endpoint needs a response type, a `schema.ts` entry, a `validate…Response` method and a `Validator.response` entry. Schemas should only require what the code relies on. For CloudKit queries/operations only the envelope (`data.records` array) is schema-validated; `query-parser.ts` parses the records defensively. Tests may use `RAW_RESPONSE` from `test/_helpers/http-mock.helper.ts`.
 
 **Web UI and API** (`src/app/web-ui/`).
-- A dependency-free `node:http` server. Routes are the `_sitemap` map in `web-server.ts`: UI pages (`/`, `/state`, `/submit-mfa`, `/request-mfa`), PWA assets, and the JSON API under `/api/*`.
+- A dependency-free `node:http` server. Routes are the `_sitemap` map in `web-server.ts`: UI pages (`/`, `/state`, `/submit-mfa`, `/request-mfa`), PWA assets, the JSON API under `/api/*`, and `/metrics` (only registered with `--export-prometheus-metrics`).
 - The `/api/*` endpoints are `state`, `log`, `vapid-public-key`, `reauthenticate`, `mfa`, `resend_mfa`, `sync` and `subscribe`. Parameters are passed as query strings.
 - **`docs/api/openapi.yaml` is the contract for `/api/*`.** Any change to an API route, parameter, status code or response message must update it in the same change.
 - HTML, CSS and client JS are TypeScript template strings. Views extend `View` and override `get content()`. There are no static asset files.
 
 ## iCloud API surface (as implemented)
 
-The code is the source of truth. `docs/src/dev/api.md` is mostly current. `docs/postman/` predates SRP, escrow, PCS and the iOS 26.4 MFA changes, so don't rely on it.
+The code is the source of truth. `docs/src/dev/api.md` maps the full surface: hosts, headers, cookies, payloads, status codes, record types and fields, and observed quirks. `docs/postman/` predates SRP, escrow, PCS and the iOS 26.4 MFA changes, so don't rely on it.
+
+**Keep `docs/src/dev/api.md` current.** Whenever you discover a new or changed piece of the iCloud API, update it in the same change. This applies to code changes and to findings from live probing, HAR captures or Backtrace reports, even when no code changes. Examples: a new endpoint, header, cookie, payload field, status code, error code, record type or field, or an observed behaviour such as an expiry, limit or quirk.
+- Put the finding in the matching section, and mark facts that were only observed (not implemented) with what and when they were observed.
+- Move answered items out of "Open questions", and add new unknowns there.
+- If Apple changes existing behaviour, describe the current behaviour and add a short entry to the change section (like "Changes introduced with iOS 26.4").
+- Update the summary below too, if it is affected.
 - **Endpoints and headers:** URLs live in `ENDPOINTS` in `network-types.ts`.
 - **Header/cookie jar:** `HeaderJar` in `network-manager.ts` attaches headers and cookies by matching each request URL against a domain.
 - **Request flow:** `icloud.ts` drives the requests.
@@ -173,13 +181,14 @@ The code is the source of truth. `docs/src/dev/api.md` is mostly current. `docs/
   - `CheckIndexingState`
   - `HyperionIndexCountLookup` (counts)
   - `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted` (all photos)
+  - `CPLAssetAndMasterHiddenByAssetDate` (hidden photos, counted via `CPLAssetHiddenByAssetDate`; only with `--sync-hidden`, which also links them into the synthetic `_Hidden-Photos` album)
   - `CPLContainerRelationLiveByPosition` (album contents)
   - `CPLAlbumByPositionLive` (albums and folders, walked breadth-first, primary zone only)
 - **`desiredKeys`:** `QUERY_KEYS` in `query-builder.ts`.
-- **Pagination:** there is no `continuationMarker`. The code takes the count first, then fires parallel queries with `resultsLimit: 198` and `startRank` offsets. The step is 99 for all photos (asset+master per item) and 66 for albums (+relation). Results are de-duplicated afterwards.
+- **Pagination:** `performQuery` follows the response's `continuationMarker` until it is absent (this is what pages the album listing). Asset queries take the count first, then fetch ranges of positions in parallel with `resultsLimit: 198` and `startRank` offsets. The step is 99 for all photos (asset+master per item) and 66 for albums (+relation). The 198 only plans the ranges: if iCloud returns fewer positions, `fetchPictureRecordsRange` requests the rest, following the `continuationMarker` if present, else restarting at the first missing `startRank`. Overlapping records are de-duplicated when the ranges are merged.
 - **Assets:** the original is `CPLMaster.resOriginalRes`. If `adjustmentType` is set, the edited version is `resJPEGFullRes`/`resVidFullRes`. Live-photo video is not fetched.
 - **Remote delete** (`archive --remote-delete`, non-favorites only): `POST /private/records/modify` sets `isDeleted: 1` on a `CPLAsset`.
-- **Rate limiting:** all metadata calls go through a p-queue set by `--metadata-rate`. Downloads use a separate concurrency queue (`--download-threads`, `--download-timeout`). There are no HTTP-level retries; retries happen at sync level.
+- **Rate limiting:** all metadata calls go through a p-queue set by `--metadata-rate`. Downloads use a separate concurrency queue (`--download-threads`, `--download-timeout`). The only HTTP-level retries are for throttled CloudKit requests (`429`, or `THROTTLED`/`TRY_AGAIN_LATER`): all CloudKit calls pause for `retryAfter` (default 10s, capped at 300s) and the request is retried up to 10 times (`icloud-photos.ts`). Everything else is retried at sync level.
 
 ## Error reports (Backtrace)
 
@@ -307,7 +316,7 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
   - `beta`: unit-ubuntu, e2e, api
   - `main`: unit-ubuntu, unit-macos, e2e, api
 - `event_push.yml` (push to `dev`/`beta`/`main`): runs unit-ubuntu, then `artifacts_build-release.yml` with `release: true`. Docs are built and released only on `main`. `concurrency: release` queues releases.
-- `monitor_api.yml`: API tests. The cron is **currently commented out** because the runner is unavailable, so it runs on `workflow_dispatch` only.
+- `monitor_api.yml`: API tests, on a cron (05:20 and 17:20 UTC) and on `workflow_dispatch`.
 - `artifacts_build-release.yml` and `artifacts_test.yml` are reusable (`workflow_call`) and call composite actions in `.github/actions/{build,test,release,helper}/`.
 
 **Build** (`artifacts_build-release.yml`):
@@ -356,14 +365,14 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - GitHub pauses version updates when nobody acts on Dependabot PRs for about 90 days. Merge or close them regularly.
 - Commit prefixes: `chore: [ci]`, `[app]`, `[docker]`, `[docs]`, `[dev]`, `[semantic-release]`.
 - Ignored majors: `@types/node` (tied to `app/node-version`), `typescript`, and `node` in Docker.
-- In the Dockerfile, `node` and `alpine` are grouped because their Alpine versions must match.
+- In the Dockerfile, both stages use Docker Hardened Images from `dhi.io` (Dependabot authenticates with `DOCKER_TOKEN`). The `*node` images are grouped (`base-images`) because builder and runtime must use the same Node version.
 - The docs toolchain (`docs/requirements.txt`) is **frozen on purpose** and has no Dependabot entry. MkDocs 1.x is unmaintained and Material for MkDocs is EOL, but the output is static HTML, so the maintainer accepts that. Don't upgrade it or migrate it (e.g. to Zensical) unless a new docs capability requires it (#1118).
 
 **Keep these stable when editing app scripts or CI:**
 - npm script names CI calls: `build`, `dist`, `build:dev`, `build:schema`, `test:unit`, `test:api`, `test:docker`, `test:docker:unit`, `doc:cli` (output dir as the last argument).
 - The CTRF report path `app/coverage/ctrf-report.json`.
 - `docs/mkdocs.yml` `site_dir`/`docs_dir`: these must stay single-quoted on one line, because CI greps them.
-- The Node version: it is set in `app/node-version` (drives every `setup-node`), `docker/Dockerfile` (`node:<ver>-alpine<ver>`, matching the runtime `alpine` stage) and `.devcontainer.json`. Update all three together.
+- The Node version: it is set in `app/node-version` (drives every `setup-node`), `docker/Dockerfile` (both stages: `dhi.io/node:<ver>-alpine<ver>-dev` for the builder, `dhi.io/node:<ver>-alpine<ver>` for the runtime) and `.devcontainer.json`. Update all three together.
 - Job names in `artifacts_build-release.yml` and `artifacts_test.yml`: the branch rulesets require them as `build / <job>` and `test / <job>`. Renaming a job blocks every PR until the ruleset is updated as well.
 - Actions use major tags. `actionlint.yaml` declares the `residential` label.
 

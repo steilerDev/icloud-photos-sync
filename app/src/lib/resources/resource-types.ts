@@ -16,6 +16,25 @@ export const FILE_ENCODING = `utf8`;
 export const LIBRARY_LOCK_FILE_NAME = `.library.lock`;
 
 /**
+ * Content of the library lock file, identifying the process holding the lock
+ * Lock files of previous versions only contain the process id
+ */
+export type LibraryLockOwner = {
+    /**
+     * Uniquely identifies the process holding the lock - process ids are not unique across containers
+     */
+    instance?: string,
+    /**
+     * The process id of the process holding the lock
+     */
+    pid: number,
+    /**
+     * The hostname of the host (or container) running the process holding the lock
+     */
+    hostname?: string,
+}
+
+/**
  * Filename of the resource file
  */
 export const RESOURCE_FILE_NAME = `.icloud-photos-sync`;

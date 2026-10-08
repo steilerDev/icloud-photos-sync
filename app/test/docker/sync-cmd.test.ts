@@ -32,7 +32,7 @@ describe(`Docker Daemon Command`, () => {
         const metrics = await container.syncMetrics()
         expect(metrics).toMatch(/status="SYNC_START"/)
         expect(metrics).toMatch(/status="WRITE_ASSETS_STARTED",assets_to_be_added=206i,assets_to_be_deleted=0i,assets_to_be_kept=0i/)
-        expect(metrics).toMatch(/albums_to_be_added=8i,albums_to_be_deleted=0i,albums_to_be_kept=0i/)
+        expect(metrics).toMatch(/status="WRITE_ALBUMS_STARTED",albums_to_be_added=8i,albums_to_be_deleted=0i,albums_to_be_kept=0i/)
         expect(metrics).toMatch(/status="SYNC_COMPLETED"/)
 
         const hash = await container.libraryHash()

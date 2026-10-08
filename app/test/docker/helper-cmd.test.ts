@@ -71,8 +71,8 @@ Options:
                                    *", env: SCHEDULE)
   --enable-crash-reporting         Enables automatic collection of errors and
                                    crashes, see
-                                   https://icps.steiler.dev/error-reporting/ for
-                                   more information. (default: false, env:
+                                   https://icps.steiler.dev/user-guides/error-reporting/
+                                   for more information. (default: false, env:
                                    ENABLE_CRASH_REPORTING)
   --mfa-timeout <number>           If a MFA code is necessary to authenticate,
                                    wait for these many seconds before canceling
@@ -88,6 +88,21 @@ Options:
                                    photos in the iCloud Photos backend upon
                                    archiving. (default: false, env:
                                    REMOTE_DELETE)
+  --sync-hidden                    If this flag is set, photos from the 'Hidden'
+                                   album are synced as well. They are linked
+                                   into the albums they belong to and into the
+                                   \`_Hidden-Photos\` album. (default: false, env:
+                                   SYNC_HIDDEN)
+  --soft-delete                    If this flag is set, assets that were deleted
+                                   in iCloud Photos are moved to the trash
+                                   directory (see \`--trash-dir\`), instead of
+                                   being permanently deleted from disk.
+                                   (default: false, env: SOFT_DELETE)
+  --trash-dir <path>               Directory to move deleted assets to, if soft
+                                   delete is enabled. Relative paths are
+                                   resolved against the data dir. The trash is
+                                   never cleaned automatically. (default:
+                                   "_Trash", env: TRASH_DIR)
   -l, --log-level <level>          Set the log level. (choices: "debug", "info",
                                    "warn", "error", default: "info", env:
                                    LOG_LEVEL)
@@ -131,8 +146,8 @@ Options:
                                    (default: false, env: LEGACY_LOGIN)
   --health-check-url <url>         URL to ping to monitor the health of icloud
                                    photos sync, see
-                                   https://icps.steiler.dev/health-checks/ for
-                                   more information. (env: HEALTH_CHECK_URL)
+                                   https://icps.steiler.dev/user-guides/health-checks/
+                                   for more information. (env: HEALTH_CHECK_URL)
   -h, --help                       display help for command
 
 Commands:

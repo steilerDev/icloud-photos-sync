@@ -7,6 +7,21 @@ export const ARCHIVE_DIR = `_Archive`;
 export const STASH_DIR = `.stash`;
 
 /**
+ * The name of the album, holding all assets from the 'Hidden' album (only synced if enabled)
+ */
+export const HIDDEN_ALBUM_NAME = `_Hidden-Photos`;
+
+/**
+ * The static UUID of the album holding all hidden assets, since this album has no representation in the iCloud backend
+ */
+export const HIDDEN_ALBUM_UUID = `----Hidden-Photos----`;
+
+/**
+ * The default directory (relative to the data dir), where deleted assets are moved to, if soft delete is enabled
+ */
+export const TRASH_DIR = `_Trash`;
+
+/**
  * The version of the local photos library
  */
 export const LIBRARY_VERSION = 1;

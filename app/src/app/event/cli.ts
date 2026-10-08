@@ -49,6 +49,9 @@ export class CLIInterface {
                 .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
                     this.printWarning(err.getDescription());
                 })
+                .on(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, (err: iCPSError) => {
+                    this.printWarning(err.getDescription());
+                })
                 .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
                     if (Resources.manager().enableCrashReporting) {
                         this.print(`Detected unknown filetype (${descriptor} with ${ext}): This error will be automatically reported (See GH issue 143 for more information)`);
@@ -245,6 +248,11 @@ export class CLIInterface {
                 this.progressBar.stop();
                 this.print(styleText(`magenta`, `Detected error during sync: ${err.getDescription()}`));
                 this.print(styleText(`magenta`, `Refreshing iCloud connection & retrying (attempt #${retryCount})...`));
+                this.print(styleText(`white`, this.getHorizontalLine()));
+            })
+            .on(iCPSEventSyncEngine.REFRESH, (writtenAssets: number) => {
+                this.progressBar.stop();
+                this.print(styleText(`cyan`, `Download URLs expired after writing ${writtenAssets} assets, refreshing remote state...`));
                 this.print(styleText(`white`, this.getHorizontalLine()));
             });
 

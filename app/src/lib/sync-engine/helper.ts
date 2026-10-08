@@ -36,7 +36,32 @@ export const SyncEngineHelper = {
      * @see {@link resolveHierarchicalDependencies}
      */
     resolveHierarchicalDependencies,
+    /**
+     * @see {@link removeDuplicateAssets}
+     */
+    removeDuplicateAssets,
+    /**
+     * @see {@link settleAll}
+     */
+    settleAll,
 };
+
+/**
+ * Waits for all provided promises to settle, before resolving or rejecting
+ * In contrast to `Promise.all`, no work is left running in the background once this rejects - which would otherwise outlive a failed sync attempt and could interfere with the next one
+ * @param promises - The promises to wait for
+ * @returns A promise that resolves to the values of all promises, in order
+ * @throws The rejection reason of the first rejected promise (in order of the input), once all promises have settled
+ */
+async function settleAll<T extends readonly unknown[]>(promises: readonly [...{[K in keyof T]: Promise<T[K]>}]): Promise<T> {
+    const results: PromiseSettledResult<unknown>[] = await Promise.allSettled(promises);
+    const rejected = results.find((result): result is PromiseRejectedResult => result.status === `rejected`);
+    if (rejected) {
+        throw rejected.reason;
+    }
+
+    return results.map(result => (result as PromiseFulfilledResult<unknown>).value) as unknown as T;
+}
 
 /**
  * Matches CPLAsset/CPLMaster pairs and parses their associated Asset(s)
@@ -158,6 +183,28 @@ function getProcessingQueues<T>(remoteEntities: PEntity<T>[], _localEntities: PL
     const toBeDeleted = Object.values(localEntities);
     Resources.logger(`SyncHelper`).debug(`Got ${toBeDeleted.length} remaining local entities that need to be deleted: ${toBeDeleted.map(entity => (entity as any).getDisplayName()).join(`, `)}`);
     return [toBeDeleted, toBeAdded, toBeKept];
+}
+
+/**
+ * Multiple remote assets can reference the same file (e.g. duplicated assets sharing the same master). Downloading such a file concurrently, or re-writing a kept file, leads to partially written or mismatching files.
+ * This function makes sure that every file is only written once, by removing assets from the addition queue whose file is already kept or added
+ * @param queues - The asset processing queue
+ * @returns The asset processing queue without duplicate additions
+ */
+function removeDuplicateAssets(queues: PLibraryProcessingQueues<Asset>): PLibraryProcessingQueues<Asset> {
+    const [toBeDeleted, toBeAdded, toBeKept] = queues;
+    const filePaths = new Set(toBeKept.map(asset => asset.getAssetFilePath()));
+    const uniqueToBeAdded = toBeAdded.filter(asset => {
+        const filePath = asset.getAssetFilePath();
+        if (filePaths.has(filePath)) {
+            Resources.logger(`SyncHelper`).debug(`Skipping duplicate remote entity ${asset.getDisplayName()}`);
+            return false;
+        }
+
+        filePaths.add(filePath);
+        return true;
+    });
+    return [toBeDeleted, uniqueToBeAdded, toBeKept];
 }
 
 /**

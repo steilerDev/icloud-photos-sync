@@ -59,7 +59,7 @@ body:
       label: Checklist
       description: Before submitting this issue, make sure you completed the following steps
       options:
-        - label: This is an [issue](https://github.com/steilerDev/icloud-photos-sync/blob/beta/CONTRIBUTING.md#-found-a-bug) and not [a question](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#question) or [feature request](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#feature)
+        - label: This is an [issue](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#issue) and not [a question](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#question) or [feature request](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md#feature)
           required: true
         - label: The sync was performed a couple of times and the issue is persisting and consistent
           required: true

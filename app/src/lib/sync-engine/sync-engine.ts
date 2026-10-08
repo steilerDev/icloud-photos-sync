@@ -25,6 +25,11 @@ export class SyncEngine {
     photosLibrary: PhotosLibrary;
 
     /**
+     * The number of assets written to disk since the remote state was last fetched
+     */
+    _writtenAssets: number = 0;
+
+    /**
      * Creates a new sync engine from the previously created objects and CLI options
      * @param icloud - The iCloud object
      * @param photosLibrary - The photos library object
@@ -41,6 +46,7 @@ export class SyncEngine {
      * @emits iCPSEventSyncEngine.START - When the sync starts
      * @emits iCPSEventSyncEngine.DONE - When the sync is done
      * @emits iCPSEventSyncEngine.RETRY - When the sync is retried - The first argument is the retry count, the second argument is the error that caused the retry
+     * @emits iCPSEventSyncEngine.REFRESH - When the download URLs expired after assets were written, the remote state is refreshed without counting as a retry - The first argument is the number of assets written since the last refresh
      *
      */
     async sync(): Promise<[Asset[], Album[]]> {
@@ -53,6 +59,7 @@ export class SyncEngine {
 
         while (Resources.manager().maxRetries >= retryCount) {
             Resources.logger(this).info(`Performing sync, try #${retryCount}`);
+            this._writtenAssets = 0;
             try {
                 const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await this.fetchAndLoadState();
                 const [assetQueue, albumQueue] = await this.diffState(remoteAssets, remoteAlbums, localAssets, localAlbums);
@@ -61,10 +68,19 @@ export class SyncEngine {
                 Resources.emit(iCPSEventSyncEngine.DONE);
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
+                // Download URLs are only valid for a limited amount of time (~15 minutes), large libraries need multiple passes - as long as each pass makes progress, this is not counted as a retry
+                const urlExpired = err instanceof iCPSError && err.code === SYNC_ERR.DOWNLOAD_URL_EXPIRED.code;
+                if (urlExpired && this._writtenAssets > 0) {
+                    Resources.logger(this).info(`Download URLs expired after writing ${this._writtenAssets} assets, refreshing remote state`);
+                    Resources.emit(iCPSEventSyncEngine.REFRESH, this._writtenAssets);
+                    await Resources.network().settleCCYLimiter();
+                    continue;
+                }
+
                 retryError.addContext(`error-try-${retryCount}`, err);
                 retryCount++;
 
-                Resources.emit(iCPSEventSyncEngine.RETRY, retryCount, isHttpError(err)
+                Resources.emit(iCPSEventSyncEngine.RETRY, retryCount, isHttpError(err) || urlExpired
                     ? new iCPSError(SYNC_ERR.NETWORK).addCause(err)
                     : new iCPSError(SYNC_ERR.UNKNOWN).addCause(err));
 
@@ -91,7 +107,8 @@ export class SyncEngine {
      */
     async fetchAndLoadState(): Promise<[Asset[], Album[], PLibraryEntities<Asset>, PLibraryEntities<Album>]> {
         Resources.emit(iCPSEventSyncEngine.FETCH_N_LOAD);
-        const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await Promise.all([
+        // Waiting for all fetches to settle, so no requests outlive a failed attempt (and e.g. hit a reset session)
+        const [remoteAssets, remoteAlbums, localAssets, localAlbums] = await SyncEngineHelper.settleAll([
             this.icloud.photos.fetchAllCPLAssetsMasters()
                 .then(([cplAssets, cplMasters]) => SyncEngineHelper.convertCPLAssets(cplAssets, cplMasters)),
             this.icloud.photos.fetchAllCPLAlbums()
@@ -121,9 +138,10 @@ export class SyncEngine {
             SyncEngineHelper.getProcessingQueues(remoteAssets, localAssets),
             SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums),
         ]);
+        const uniqueAssetQueue = SyncEngineHelper.removeDuplicateAssets(assetQueue);
         const resolvedAlbumQueue = SyncEngineHelper.resolveHierarchicalDependencies(albumQueue, localAlbums);
         Resources.emit(iCPSEventSyncEngine.DIFF_COMPLETED);
-        return [assetQueue, resolvedAlbumQueue];
+        return [uniqueAssetQueue, resolvedAlbumQueue];
     }
 
     /**
@@ -165,28 +183,45 @@ export class SyncEngine {
 
         Resources.logger(this).debug(`Writing data by deleting ${toBeDeleted.length} assets and adding ${toBeAdded.length} assets`);
 
+        // Assets that are added again are only replaced (e.g. because their modification date changed) - those are deleted permanently, instead of being moved to the trash
+        const replacedAssets = new Set(toBeAdded.map(asset => asset.getUUID()));
+
         // Deleting before downloading, in order to ensure no conflicts
-        await Promise.all(toBeDeleted.map(asset => this.photosLibrary.deleteAsset(asset)));
+        await Promise.all(toBeDeleted.map(asset => this.photosLibrary.deleteAsset(asset, replacedAssets.has(asset.getUUID()))));
         await Promise.all(toBeAdded.map(asset => this.addAsset(asset)));
     }
 
     /**
      * Downloads and stores a given asset, unless file is already present on disk
+     * A failed download (network or HTTP error) or verification only affects this asset - it will be picked up again by the next sync
      * @param asset - The asset that needs to be downloaded
-     * @returns A promise that resolves, once the file has been successfully written to disk
+     * @returns A promise that resolves, once the file has been successfully written to disk, or the error has been reported
+     * @throws An iCPSError, if the download URL expired - since all URLs of a fetch expire at the same time, the remote state needs to be refreshed
+     * @throws The original error, if writing to disk failed (e.g. no space left) - since this affects all assets, the sync cannot continue
      * @emits iCPSEventSyncEngine.WRITE_ASSET_COMPLETED - When the asset has been written to disk - The first argument is the name of the asset
      * @emits iCPSEventRuntimeWarning.WRITE_ASSET_ERROR - When an error occurs while writing the asset to disk - The first argument is the error, the second argument is the asset
      */
     async addAsset(asset: Asset) {
-        await this.icloud.photos.downloadAsset(asset);
-
         try {
+            await this.icloud.photos.downloadAsset(asset);
             await asset.verify();
         } catch (err) {
+            if (isHttpError(err) && err.response?.status === 410) {
+                throw new iCPSError(SYNC_ERR.DOWNLOAD_URL_EXPIRED)
+                    .addMessage(asset.getDisplayName())
+                    .addCause(err);
+            }
+
+            // Only network/HTTP errors and asset specific errors (e.g. a missing download URL or failed verification) are limited to this asset - file system errors are not
+            if (!isHttpError(err) && !(err instanceof iCPSError)) {
+                throw err;
+            }
+
             Resources.emit(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR, err, asset);
             return;
         }
 
+        this._writtenAssets++;
         Resources.emit(iCPSEventSyncEngine.WRITE_ASSET_COMPLETED, asset.getDisplayName());
     }
 
