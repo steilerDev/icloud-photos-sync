@@ -2,7 +2,7 @@
 
 By default, ICPS connects directly to the iCloud backend and ignores the proxy environment variables `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`.
 
-To route all requests (iCloud authentication and metadata, asset downloads and [health checks](health-checks.md)) through a proxy, enable it with the `--use-system-proxy` flag or the `USE_SYSTEM_PROXY` environment variable and provide the proxy configuration through the common environment variables:
+To route all outgoing requests (iCloud authentication and metadata, asset downloads, [health checks](health-checks.md), [crash reports](error-reporting.md) and [Web UI push notifications](web-ui.md)) through a proxy, enable it with the `--use-system-proxy` flag or the `USE_SYSTEM_PROXY` environment variable and provide the proxy configuration through the common environment variables:
 
 | Variable | Description |
 |---|---|
@@ -10,7 +10,7 @@ To route all requests (iCloud authentication and metadata, asset downloads and [
 | `HTTP_PROXY` | Proxy used for `http://` requests |
 | `NO_PROXY` | Comma separated list of hosts that should be reached directly |
 
-Lower case variants (`https_proxy`, `http_proxy`, `no_proxy`) are supported as well. ICPS fails on startup, if the configured proxy URL is invalid.
+Lower case variants (`https_proxy`, `http_proxy`, `no_proxy`) are supported as well. ICPS fails on startup, if the configured proxy URL is invalid. Credentials embedded in the proxy URL (e.g. `http://user:password@proxy.local:3128`) are masked in crash reports.
 
 === "docker compose"
 

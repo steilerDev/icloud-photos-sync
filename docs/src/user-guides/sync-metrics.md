@@ -7,7 +7,7 @@ This application can export various sync related metrics, which can be used to m
 
 ## Usage
 
-Set the [export metrics flag](cli.md#export-metrics), in order to activate the exporter. The file will be written to the root of the data directory and is named `.icloud-photos-sync.metrics`. This file can be consumed using [telegraf's](https://www.influxdata.com/time-series-platform/telegraf/) [tail input plugin](https://github.com/influxdata/telegraf/blob/release-1.25/plugins/inputs/tail/README.md). The following is a sample configuration:
+Set the [export metrics flag](cli.md#export-metrics), in order to activate the exporter. The file will be written to the root of the data directory and is named `.icloud-photos-sync.metrics`. It is truncated upon application start. This file can be consumed using [telegraf's](https://www.influxdata.com/time-series-platform/telegraf/) [tail input plugin](https://github.com/influxdata/telegraf/blob/release-1.25/plugins/inputs/tail/README.md). The following is a sample configuration:
 
 ```
 [[inputs.tail]]                                                                 
@@ -27,7 +27,7 @@ Additionally you need to specify the measurement name, where the sync metrics ar
 
 ## Metrics
 
-All metrics are created using the measurement name `icloud_photos_sync`. 
+All metrics are created using the measurement name `icloud_photos_sync`. Each data point carries a nanosecond precision timestamp.
 
 The following fields will be written:
 
@@ -40,6 +40,8 @@ The following fields will be written:
     - `DEVICE_TRUSTED`
     - `SESSION_EXPIRED` (if the current session expired and needs to be refreshed)
     - `ACCOUNT_READY`
+    - `PCS_REQUIRED` (the [Advanced Data Protection](adp.md) account requires the data access to be approved)
+    - `PCS_NOT_READY` (the data access was not approved yet, the request is retried)
     - `ICLOUD_READY`
     - `SYNC_START`
     - `FETCH_N_LOAD_STARTED`
@@ -58,7 +60,8 @@ The following fields will be written:
     - `SCHEDULED` (no previous run)
     - `SCHEDULED_SUCCESS` (last run successful)
     - `SCHEDULED_FAILURE` (error during last run)
-  - `status_time`: Provides the time, when the status was last updated
+    - `SCHEDULED_OVERRUN` (scheduled run skipped, because another sync or re-authentication was still in progress)
+  - `status_time`: Provides the time, when the status was last updated (integer, milliseconds since epoch)
   - Local and remote library state:
     - `local_assets_loaded`: Gives the amount of local assets loaded during a sync
     - `local_albums_loaded`: Gives the amount of local albums loaded during a sync
@@ -68,17 +71,17 @@ The following fields will be written:
     - `assets_to_be_added`: Gives the amount of assets that are meant to be added after diffing the local and remote state
     - `assets_to_be_kept`: Gives the amount of assets that are meant to be kept after diffing the local and remote state
     - `assets_to_be_deleted`: Gives the amount of assets that are meant to be deleted after diffing the local and remote state
-    - `asset_written`: The record name of each asset written to disk
+    - `asset_written`: The file checksum of each asset written to disk (the base of its file name in `_All-Photos`)
     - `albums_to_be_added`: Gives the amount of albums that are meant to be added after diffing the local and remote state
     - `albums_to_be_kept`: Gives the amount of albums that are meant to be kept after diffing the local and remote state
     - `albums_to_be_deleted`: Gives the amount of albums that are meant to be deleted after diffing the local and remote state
   - Daemon metrics:
-    - `next_schedule`: Gives the time of the next scheduled execution
+    - `next_schedule`: Gives the time of the next scheduled execution (integer, milliseconds since epoch)
   - Archive metrics:
-    - `assets_archived`: Gives the amount of assets archived during an archive operation
-    - `remote_assets_deleted`: Gives the amount of remote assets deleted during an archive operation
+    - `assets_archived`: Gives the amount of assets to be archived, written when archiving starts
+    - `remote_assets_deleted`: Gives the amount of remote assets to be deleted, written when the remote deletion starts
   - `errors`: Gives an error message for each recorded error
-  - Warnings (see [common warnings for context](common-warnings.md)), gives an error message for each recorded warning
+  - Warnings (see [common warnings for context](common-warnings.md)), gives a message for each recorded warning
     - `warn-count_mismatch`
     - `warn-library_load_error`
     - `warn-extraneous_file`
@@ -87,7 +90,9 @@ The following fields will be written:
     - `warn-write_album_error`
     - `warn-link_error`
     - `warn-filetype_error`
-    - `warn-mfa_resend_error`
+    - `warn-mfa_error`
+    - `warn-web_server_error`
+    - `warn-trusted_phone_numbers_error`
     - `warn-resource_file_error`
     - `warn-archive_asset_error`
 
@@ -130,7 +135,7 @@ All metrics are prefixed with `icps_`. State, error and schedule are read from t
 | `icps_sync_runs_total` | counter | `result` (`success`, `failure`) | Number of finished sync runs |
 | `icps_sync_retries_total` | counter | | Number of sync attempts that failed and were retried |
 | `icps_assets_written_total` | counter | | Number of assets written to the local library |
-| `icps_warnings_total` | counter | `type` | Number of runtime warnings by type (see [common warnings](common-warnings.md)) |
+| `icps_warnings_total` | counter | `type` | Number of runtime warnings by type (see [common warnings](common-warnings.md)), named like the Influx warning fields without the `warn-` prefix. One series per type, starting at `0`: `count_mismatch`, `library_load_error`, `extraneous_file`, `icloud_load_error`, `write_asset_error`, `write_album_error`, `link_error`, `filetype_error`, `mfa_error`, `web_server_error`, `archive_asset_error`, `resource_file_error`, `trusted_phone_numbers_error` |
 
 When serving OpenMetrics, counters also carry a `_created` sample. Prometheus stores those as separate series, unless the `created-timestamp-zero-ingestion` feature flag is enabled.
 

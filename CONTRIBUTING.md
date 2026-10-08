@@ -91,13 +91,13 @@ Before you submit your Pull Request (PR) consider the following guidelines:
      ```
     Note: the optional commit `-a` command line option will automatically "add" and "rm" edited files.
 
-10. Push your branch to GitHub:
+8. Push your branch to GitHub:
 
     ```shell
     git push origin my-fix-branch
     ```
 
-11. In GitHub, send a pull request targeting the `dev` branch.
+9. In GitHub, send a pull request targeting the `dev` branch.
 
 ### Reviewing a Pull Request
 
@@ -151,10 +151,10 @@ After your pull request is merged, you can safely delete your branch and pull th
     git push origin --delete my-fix-branch
     ```
 
-* Check out the main branch:
+* Check out the `dev` branch:
 
     ```shell
-    git checkout main -f
+    git checkout dev -f
     ```
 
 * Delete the local branch:
@@ -203,7 +203,7 @@ The VSCode Extension [Conventional Commits by vivaxy](https://marketplace.visual
   │           │
   │           └─⫸ Summary in present tense. Not capitalized. No period at the end.
   │
-  └─⫸ Commit Type: build|ci|docs|feat|fix|perf|refactor|test
+  └─⫸ Commit Type: majorfeat|feat|fix|docs|refactor|perf|test|build|ci|chore|revert|style|no-release
 ```
 
 The `<type>` and `<summary>` fields are mandatory.
@@ -217,13 +217,17 @@ Must be one of the following:
 * **feat**: A new feature (*minor* release)
 * **fix**: A bug fix (*patch* release)
 * **docs**: Documentation only changes (*patch* release)
-* **refactor**: A code change that neither fixes a bug nor adds a feature (*no* release)
+* **refactor**: A code change that neither fixes a bug nor adds a feature (*patch* release)
 * **perf**: A code change that improves performance (*patch* release)
 * **test**: Adding missing tests or correcting existing tests (*patch* release)
 * **build**: Changes that affect the build system or external dependencies (*patch* release)
 * **ci**: Changes to the CI configuration files and scripts (*patch* release)
 * **chore**: Dependency bumps and general maintenance task that don't directly affect the features of the application (*patch* release)
+* **revert**: Reverts a previous commit, see [Revert commits](#revert-commits) (*patch* release)
 * **style**: Changes that only affect the coding style (*no* release)
+* **no-release**: Changes that should not trigger a release (*no* release)
+
+A breaking change (`<type>!:` or a `BREAKING CHANGE:` footer) always triggers a *major* release. On the `dev` branch every push publishes a `nightly` release, regardless of the commit type: `style` and `no-release` only suppress releases on the `beta` and `main` branches.
 
 ##### Summary
 
@@ -264,13 +268,13 @@ The content of the commit message body should contain:
 
 ## <a name="release"></a> Release Process
 
-This projects' development process loosely follows git-flow by (Vincent Driessen)[http://nvie.com/]. Feature development happens on the `dev` branch, however features don't get their own feature branch, due to the lack of contribution complexity at the moment.
+This projects' development process loosely follows git-flow by (Vincent Driessen)[http://nvie.com/]. Feature development happens in branches based on the `dev` branch.
 
-External PRs should therefore target the dev branch. This will trigger unit tests, which need to pass, in order for merging to be considered. Every push to the `dev` branch will trigger a pre-release to the `nightly` channel on DockerHub and npm through [semantic-release](https://github.com/semantic-release/semantic-release). Unless all commits are of type `no-release`, at least a patch release is triggered on push.
+External PRs should therefore target the dev branch. This will trigger unit tests, which need to pass, in order for merging to be considered. Every push to the `dev` branch will trigger a pre-release to the `nightly` channel on DockerHub and npm through [semantic-release](https://github.com/semantic-release/semantic-release), regardless of the commit types.
 
 Once the `dev` branch has reached a certain stage, changes can be staged for release on the `beta` channel. This happens through a Pull Request against the `beta` branch. This will trigger more thorough checks, including building all assets necessary for release, as well as E2E and API tests. Once the pull request has been merged, [semantic release](https://github.com/semantic-release/semantic-release) will perform a release to the `beta` channel on DockerHub and npm.
 
-In order to run a production release, a PR against the main branch is required - triggering the same sanity checks as the `beta` branch. After passing and merging, a production release will deploy the artifacts to DockerHub, npm and also update documentations. After a production release was concluded, the associated nightly tags are removed (to clean up the repository) and the main branch is merged back into the dev branch, in order to update the semantic release version.
+In order to run a production release, a PR against the main branch is required - triggering the same sanity checks as the `beta` branch, as well as unit tests on macOS. After passing and merging, a production release will deploy the artifacts to DockerHub, npm and also update documentations. After a production release was concluded, the associated nightly tags are removed (to clean up the repository) and the main branch is merged back into the dev branch, in order to update the semantic release version.
 
 Before merging the PR into `beta` or `main` the following checks are enforced through branch protection rules:
 - Full build process

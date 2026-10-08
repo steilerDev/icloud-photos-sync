@@ -13,6 +13,8 @@ nav:
   - 'User Guides':
     - 'CLI Reference': user-guides/cli.md
     - 'API Reference': user-guides/api.md
+    - 'WebUI': user-guides/web-ui.md
+    - 'Troubleshooting': user-guides/troubleshooting.md
     - 'Common Warnings': user-guides/common-warnings.md
     - 'Advanced Data Protection': user-guides/adp.md
     - 'Sync Metrics': user-guides/sync-metrics.md
@@ -21,7 +23,7 @@ nav:
     - 'Proxy': user-guides/proxy.md
     - 'Security': user-guides/security.md
     - 'Runtime Hardening': user-guides/hardening.md
-    - 'WebUI': user-guides/web-ui.md
+    - 'Viewing with Photoview': user-guides/photoview.md
   - 'Development Resources':
     - 'Motivation': dev/motivation.md
     - 'iCloud API': dev/api.md
@@ -80,3 +82,4 @@ plugins:
      redirect_maps: 
         warnings.md: user-guides/common-warnings.md
         error-reporting.md: user-guides/error-reporting.md
+        health-checks.md: user-guides/health-checks.md
