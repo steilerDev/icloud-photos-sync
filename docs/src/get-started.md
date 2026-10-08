@@ -15,6 +15,7 @@ The `latest` tag should always represent the latest stable release, whereas the 
     - The Docker image no longer contains a shell and the library path is no longer world-writable, see [Runtime Hardening](user-guides/hardening.md)
     - Proxy environment variables are only applied, if [explicitly enabled](user-guides/proxy.md)
     - Boolean options set through environment variables are only enabled by `true`, `1`, `yes` or `on` - values like `false` now disable the option, see the [CLI Reference](user-guides/cli.md)
+    - The [Influx metrics](user-guides/sync-metrics.md) field of MFA warnings was renamed from `warn-mfa_resend_error` to `warn-mfa_error`
 
 === "Docker"
 

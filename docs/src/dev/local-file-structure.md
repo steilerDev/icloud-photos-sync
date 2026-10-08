@@ -21,7 +21,7 @@ The root folder is specified through environment variable `DATA_DIR`. All assets
   * `.icloud-photos-sync.log` log file (overwritten upon application restart)
   * `.icloud-photos-sync.metrics` file, that [exports metrics using the Influx Line Protocol](../user-guides/sync-metrics.md) (overwritten upon application restart), if [metrics export is enabled](../user-guides/cli.md#export-metrics)
   * `.icloud-photos-sync.har` file, that contains a HAR file capture of the last execution, if [network capture is enabled](../user-guides/cli.md#enable-network-capture)
-  * `.library.lock` lock file, holding the PID of the process currently using the library
+  * `.library.lock` lock file, identifying the process currently using the library (random instance id, PID and hostname). The holder refreshes its modification time every 15 seconds - a lock without refresh for 60 seconds (or whose process is no longer running on the same host) is considered stale
   * [User created folders](#user-folders) from the iCloud Library
   * [`_Hidden-Photos` album](#hidden-album), if [syncing hidden photos is enabled](../user-guides/cli.md#sync-hidden)
 

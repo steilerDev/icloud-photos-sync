@@ -90,7 +90,7 @@ The following fields will be written:
     - `warn-write_album_error`
     - `warn-link_error`
     - `warn-filetype_error`
-    - `warn-mfa_resend_error`
+    - `warn-mfa_error`
     - `warn-web_server_error`
     - `warn-trusted_phone_numbers_error`
     - `warn-resource_file_error`
@@ -135,7 +135,7 @@ All metrics are prefixed with `icps_`. State, error and schedule are read from t
 | `icps_sync_runs_total` | counter | `result` (`success`, `failure`) | Number of finished sync runs |
 | `icps_sync_retries_total` | counter | | Number of sync attempts that failed and were retried |
 | `icps_assets_written_total` | counter | | Number of assets written to the local library |
-| `icps_warnings_total` | counter | `type` | Number of runtime warnings by type (see [common warnings](common-warnings.md)). One series per type, starting at `0`: `count_mismatch`, `library_load_error`, `extraneous_file`, `icloud_load_error`, `write_asset_error`, `write_album_error`, `link_error`, `filetype_error`, `mfa_error`, `web_server_error`, `archive_asset_error`, `resource_file_error`, `trusted_phone_numbers_error` |
+| `icps_warnings_total` | counter | `type` | Number of runtime warnings by type (see [common warnings](common-warnings.md)), named like the Influx warning fields without the `warn-` prefix. One series per type, starting at `0`: `count_mismatch`, `library_load_error`, `extraneous_file`, `icloud_load_error`, `write_asset_error`, `write_album_error`, `link_error`, `filetype_error`, `mfa_error`, `web_server_error`, `archive_asset_error`, `resource_file_error`, `trusted_phone_numbers_error` |
 
 When serving OpenMetrics, counters also carry a `_created` sample. Prometheus stores those as separate series, unless the `created-timestamp-zero-ingestion` feature flag is enabled.
 

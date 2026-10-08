@@ -32,7 +32,7 @@ Accounts with Advanced Data Protection need to approve the access on one of thei
 
 The library is used by another process of this application - only one process can access the library at a time. This happens when running a command (e.g. `archive`) while the daemon is running: Stop the daemon first, see [Archiving](../get-started.md#archiving).
 
-If no other process is running (e.g. after a crash on another host sharing the library), the lock is stale and can be removed using the [force](cli.md#force) option. Never use this option while another process is running.
+The process holding the lock refreshes it every 15 seconds. If the process stopped without releasing the lock (e.g. because the container was killed), the lock expires after 60 seconds: A new process waits for the expiry (if the holder cannot be checked, e.g. because it was running in another container) and removes the stale lock automatically. The [force](cli.md#force) option removes a lock immediately - never use it while another process is running.
 
 ### `WEB_SERVER_ADDR_IN_USE` / `WEB_SERVER_INSUFFICIENT_PRIVILEGES`
 
