@@ -141,7 +141,7 @@ As this application is using an undocumented public API, there are a couple of k
 - **FileType Support**:
   The support of file types needs to be hardcoded by this application, since a full list is not available or retrievable. If you come across an `Unknown filetype descriptor` error, [please report it](https://github.com/steilerDev/icloud-photos-sync/issues/143), in order for the file type to be added to the application.
 
-Please also check out [open and known issues](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3Aclass%28bug%29%2Cclass%28improvement%29%2C%22class%28known+issue%29%22) and [existing feature requests](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3Aclass%28feature%29+label%3Astatus%28open%29%2Cstatus%28wontfix%29%2Cstatus%28backlog%29%2C%22status%28help+needed%29%22%2C%22status%28in+progress%29%22%2Cstatus%28investigating%29%2Cstatus%28previewed%29+) for more information.
+Please also check out [open and known issues](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3A%22class%28bug%29%22%2C%22class%28improvement%29%22%2C%22class%28known+issue%29%22) and [existing feature requests](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3A%22class%28feature%29%22+label%3A%22status%28open%29%22%2C%22status%28wontfix%29%22%2C%22status%28backlog%29%22%2C%22status%28help+needed%29%22%2C%22status%28in+progress%29%22%2C%22status%28investigating%29%22%2C%22status%28previewed%29%22) for more information.
 
 ## OS Support
 
