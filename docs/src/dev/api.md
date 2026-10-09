@@ -26,6 +26,7 @@ This page maps the reverse engineered iCloud API surface used by this applicatio
 | `https://setup.icloud.com` | Account setup, PCS, logout | `setup.icloud.com.cn` for `--region china` |
 | `<ckdatabasews.url>/database/1/com.apple.photos.cloud/production` | CloudKit Photos database | The host is provided by `accountLogin` (e.g. `https://p123-ckdatabasews.icloud.com:443`) |
 | `*.icloud-content.com` | Asset downloads | Pre-signed URLs from the records, fetched without session headers or cookies |
+| `<sharedstreams.url>` | Shared albums (not implemented) | The host is provided by `accountLogin` (e.g. `https://p123-sharedstreams.icloud.com:443`), see [Shared albums](#shared-albums) |
 
 ### Flow
 
@@ -280,6 +281,7 @@ The response sets the iCloud web session cookies and provides, among many other 
 - **`421`** means the session token expired. The application starts over with [signin](#signin).
 - **Account requires an action on icloud.com** (e.g. accepting updated terms): the response sets `isRepairNeeded` or `termsUpdateNeeded`, or only provides `X-APPLE-WEBAUTH-REPAIR` instead of `X-APPLE-WEBAUTH-TOKEN`. All further requests fail (e.g. `requestPCS` with `500` and `Missing X-APPLE-WEBAUTH-TOKEN cookie`), so the application aborts with `AUTH_ACCOUNT_SETUP_INCOMPLETE`.
 - If `pcsRequired` is set and the `X-APPLE-WEBAUTH-PCS-Photos` and `X-APPLE-WEBAUTH-PCS-Sharing` cookies were not provided, [requestPCS](#requestpcs) follows.
+- `webservices` lists every iCloud web service of the account. Besides `ckdatabasews`, `sharedstreams` (with `dsInfo.dsid`) is the entry point for [shared albums](#shared-albums), which the application does not use yet.
 
 ### requestPCS
 
@@ -572,6 +574,56 @@ Assets with the same `fileChecksum` therefore have identical file content. Multi
 
     The application does not use the checksum to verify downloaded files yet.
 
+## Shared albums
+
+!!! info "Not implemented"
+    Shared albums ([Apple support](https://support.apple.com/108314)) are not synced by the application (#930, planned for Library v2 in #354). Everything in this section was observed with the web client's endpoints against a personal account in October 2026.
+
+Shared albums are a separate web service, not a CloudKit zone: they don't show up in [Zones](#zones), and neither the primary nor the shared library zone contains their assets. The service is `webservices.sharedstreams` from [accountLogin](#accountlogin) and is authenticated by the same session cookies. All requests are `POST`s with a JSON body and answer `200`.
+
+**`POST <sharedstreams.url>/<dsid>/sharedstreams/webgetalbumslist`** with `{}` lists every shared album the user owns or subscribed to (`dsid` from `dsInfo.dsid`):
+
+```json
+{
+  "rootctag": "<change tag>",
+  "callerId": "<dsid>",
+  "albums": [
+    {
+      "albumguid": "<UUID>",
+      "albumctag": "<change tag>",
+      "albumlocation": "https://p123-sharedstreams.icloud.com:443/<id>/sharedstreams/",
+      "ownerdsid": "<dsid>",
+      "sharingtype": "owned",
+      "publicurl": "https://www.icloud.com/sharedalbum/#<token>",
+      "iswebuploadsupported": "1",
+      "attributes": {"name": "<album name>", "allowcontributions": "1", "ispublic": "1", "creationDate": 1700000000000}
+    }
+  ]
+}
+```
+
+- `sharingtype` is `owned` or `subscribed`. `publicurl` is only present if `ispublic` is `"1"`.
+- `albumlocation` is the base URL of the album's requests. Albums of one account can live on different hosts.
+- Flags are strings (`"0"`/`"1"`). `rootctag` and `albumctag` look like change tags, but whether they can drive an incremental sync has not been explored.
+
+**`POST <albumlocation>webgetassetcount`** with `{"albumguid": "<UUID>"}` returns `{"albumassetcount": <n>}`.
+
+**`POST <albumlocation>webgetassets`** with `{"albumguid": "<UUID>", "offset": "<start>", "limit": "<end>", "albumctag": "<change tag>"}` returns `{"records": [...]}`:
+
+- **`limit` is an exclusive end index, not a page size.** The response holds the assets at positions `offset` to `limit - 1`. A range past the end is clipped, a range starting at the end is empty, and `limit < offset` fails with `500` (`"unexpected runtime exception while handling request"`). Both values are strings. `albumctag` is optional.
+- Each asset is returned as a `CPLMaster` and a `CPLAsset` record (all masters first), in CloudKit record format but without `zoneID`. A range of 500 assets (1000 records) was answered in one response; the maximum is unknown.
+- **`CPLMaster`** has `filenameEnc`, `originalCreationDate`, `resourceState`, `dataClassType` and the resources `resOriginalRes`, `resJPEGMedRes`, `resJPEGThumbRes` and, for videos, `resVidMedRes` and `resVidSmallRes`, each with `…FileType`, `…FileSize`, `…Width`, `…Height` and `…Fingerprint`. The record name is a short base64-like id, not a UUID.
+- **`CPLAsset`** (record name: a UUID) has `masterRef` (a `REFERENCE` to the master), `addedDate`, `assetPosition`, `assetServerTimestampRefSec`, `batchCreateDate`, `batchGroupId`, `contributedBy`, `filenameEnc`, `adjustmentRenderType` and, for videos, `duration`. None of the library's metadata fields (`assetDate`, `isFavorite`, `locationEnc`, …) are present.
+- **Originals are reduced copies**, as described by Apple: in the sampled album, `resOriginalRes` was a JPEG with a long edge of at most about 2300 px, or an MP4 with a long edge of 1280 px. Edited versions, RAW and Live Photo videos are not available.
+- The same master (same record name and checksum) can be part of several shared albums.
+
+**Downloads** work like [library downloads](#asset-downloads), with these differences:
+
+- `resOriginalRes.size` is `0`. The file size is in `resOriginalFileSize`.
+- `wrappingKey` is `null`, and the file is not encrypted.
+- `fileChecksum` follows the same [salted SHA-1 format](#file-checksum). It matched the downloaded content of every sampled file.
+- The `downloadURL` expires **180 minutes** after the request, instead of 15.
+
 ## Changes introduced with iOS 26.4
 
 Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second wave in mid 2026). Compared to the earlier flow, the application now:
@@ -591,6 +643,7 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 - **`syncToken`** from the zones request: an incremental change feed (e.g. `changes/zone`) could replace fetching the full state on every sync, but has not been explored.
 - **Shared library albums**: album queries only return primary zone assets. It is unknown whether shared library assets in albums can be queried.
 - **Live Photos**: the video part (`resOriginalVidComplRes`) is not downloaded.
+- **Shared albums**: whether `rootctag`/`albumctag` support incremental changes, the maximum `webgetassets` range, whether comments and likes are reachable, and how shared albums behave on accounts with Advanced Data Protection (which according to Apple does not cover shared albums). See [Shared albums](#shared-albums).
 - **Checksums** of multi-GB files, ADP accounts and the shared library zone have not been verified (see [File checksum](#file-checksum)).
 
 ## Postman Collection
