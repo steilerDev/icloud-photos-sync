@@ -12,7 +12,7 @@ describe(`Docker Help Command`, () => {
             .withHelpCommand()
             .start();
 
-        expect(container.getFullLogs()).resolves.toEqual(`Usage: icloud-photos-sync [options] [command]
+        await expect(container.getFullLogs()).resolves.toEqual(`Usage: icloud-photos-sync [options] [command]
 
 One-way sync engine for the iCloud Photos Library into the native file system
 with archiving capabilities
@@ -25,6 +25,16 @@ Options:
   -p, --password <string>          AppleID password. Omitting the option will
                                    result in the CLI to ask for user input
                                    before startup. (env: APPLE_ID_PWD)
+  --username-file <path>           Path to a file containing the AppleID
+                                   username (e.g. a Docker secret), as an
+                                   alternative to the username option. Trailing
+                                   line breaks are removed. (env:
+                                   APPLE_ID_USER_FILE)
+  --password-file <path>           Path to a file containing the AppleID
+                                   password (e.g. a Docker secret), as an
+                                   alternative to the password option. Trailing
+                                   line breaks are removed. (env:
+                                   APPLE_ID_PWD_FILE)
   -T, --trust-token <string>       The trust token for authentication. If not
                                    provided, the trust token is read from the
                                    \`.icloud-photos-sync\` resource file in data
@@ -61,14 +71,14 @@ Options:
                                    *", env: SCHEDULE)
   --enable-crash-reporting         Enables automatic collection of errors and
                                    crashes, see
-                                   https://icps.steiler.dev/error-reporting/ for
-                                   more information. (default: false, env:
+                                   https://icps.steiler.dev/user-guides/error-reporting/
+                                   for more information. (default: false, env:
                                    ENABLE_CRASH_REPORTING)
   --mfa-timeout <number>           If a MFA code is necessary to authenticate,
-                                   wait for these many seconds before canceling 
+                                   wait for these many seconds before canceling
                                    the authentication process. Time in seconds,
-                                   should not exceed 10mins (due to server side timing).
-                                   (default: 600, env: MFA_TIMEOUT)             
+                                   should not exceed 10mins (due to server side
+                                   timing). (default: 600, env: MFA_TIMEOUT)
   --force                          Forcefully remove an existing library lock.
                                    USE WITH CAUTION! (default: false, env:
                                    FORCE)
@@ -78,6 +88,21 @@ Options:
                                    photos in the iCloud Photos backend upon
                                    archiving. (default: false, env:
                                    REMOTE_DELETE)
+  --sync-hidden                    If this flag is set, photos from the 'Hidden'
+                                   album are synced as well. They are linked
+                                   into the albums they belong to and into the
+                                   \`_Hidden-Photos\` album. (default: false, env:
+                                   SYNC_HIDDEN)
+  --soft-delete                    If this flag is set, assets that were deleted
+                                   in iCloud Photos are moved to the trash
+                                   directory (see \`--trash-dir\`), instead of
+                                   being permanently deleted from disk.
+                                   (default: false, env: SOFT_DELETE)
+  --trash-dir <path>               Directory to move deleted assets to, if soft
+                                   delete is enabled. Relative paths are
+                                   resolved against the data dir. The trash is
+                                   never cleaned automatically. (default:
+                                   "_Trash", env: TRASH_DIR)
   -l, --log-level <level>          Set the log level. (choices: "debug", "info",
                                    "warn", "error", default: "info", env:
                                    LOG_LEVEL)
@@ -93,10 +118,21 @@ Options:
                                    using the Influx Line Protocol. Written to
                                    \`.icloud-photos-sync.metrics\` in the data
                                    dir. (default: false, env: EXPORT_METRICS)
+  --export-prometheus-metrics      Exposes sync metrics in the
+                                   Prometheus/OpenMetrics format on the
+                                   \`/metrics\` endpoint of the web server.
+                                   (default: false, env:
+                                   EXPORT_PROMETHEUS_METRICS)
   --enable-network-capture         Enables network capture, and generate a HAR
                                    file for debugging purposes. Written to
                                    \`.icloud-photos-sync.har\` in the data dir.
                                    (default: false, env: ENABLE_NETWORK_CAPTURE)
+  --use-system-proxy               Routes all requests through the proxy
+                                   configured by the \`HTTP_PROXY\` and
+                                   \`HTTPS_PROXY\` environment variables
+                                   (honouring \`NO_PROXY\`). Proxy variables are
+                                   ignored otherwise. (default: false, env:
+                                   USE_SYSTEM_PROXY)
   --metadata-rate <interval>       Limits the rate of metadata fetching in order
                                    to avoid getting throttled by the API.
                                    Expects the format
@@ -110,8 +146,8 @@ Options:
                                    (default: false, env: LEGACY_LOGIN)
   --health-check-url <url>         URL to ping to monitor the health of icloud
                                    photos sync, see
-                                   https://icps.steiler.dev/health-checks/ for
-                                   more information. (env: HEALTH_CHECK_URL)
+                                   https://icps.steiler.dev/user-guides/health-checks/
+                                   for more information. (env: HEALTH_CHECK_URL)
   -h, --help                       display help for command
 
 Commands:

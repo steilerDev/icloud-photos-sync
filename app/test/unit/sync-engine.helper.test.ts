@@ -3,7 +3,7 @@ import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/
 import expectedAssetsAll from "../api/_data/expected.all-cpl-assets.json";
 import expectedMastersAll from "../api/_data/expected.all-cpl-masters.json";
 import expectedAlbumsAll from "../api/_data/expected.all-cpl-albums.json";
-import {describe, test, expect} from '@jest/globals';
+import {describe, test, expect, beforeEach} from '@jest/globals';
 import {SyncEngineHelper} from '../../src/lib/sync-engine/helper';
 import {getRandomZone, queueIsSorted} from '../_helpers/sync-engine.helper';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
@@ -12,6 +12,7 @@ import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {PEntity, PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
 import {prepareResources} from '../_helpers/_general';
 import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
+import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 describe(`Processing remote records`, () => {
     test(`Converting Assets - E2E Flow`, () => {
@@ -221,6 +222,56 @@ describe(`Diffing state`, () => {
             expect(toBeDeleted.length).toEqual(expected.deleted);
             expect(toBeAdded.length).toEqual(expected.added);
             expect(toBeKept.length).toEqual(expected.kept);
+        });
+
+        describe(`Remove duplicate assets`, () => {
+            beforeEach(() => {
+                prepareResources();
+            });
+
+            const asset = (checksum: string, zone: Zones, modified: number = 42) => new Asset(checksum, 42, FileType.fromExtension(`png`), modified, zone, AssetType.ORIG, `test`, `somekey`, checksum, `https://icloud.com`, `somerecordname`, false);
+
+            test(`Keeps unique additions`, () => {
+                const toBeDeleted = [asset(`del0`, Zones.Primary)];
+                const toBeAdded = [asset(`add1`, Zones.Primary), asset(`add2`, Zones.Primary)];
+                const toBeKept = [asset(`kep0`, Zones.Primary)];
+
+                const result = SyncEngineHelper.removeDuplicateAssets([toBeDeleted, toBeAdded, toBeKept]);
+
+                expect(result).toEqual([toBeDeleted, toBeAdded, toBeKept]);
+            });
+
+            test(`Removes additions referencing the same file`, () => {
+                const added1 = asset(`same`, Zones.Primary, 42);
+                const added2 = asset(`same`, Zones.Primary, 43);
+                const added3 = asset(`othr`, Zones.Primary);
+
+                const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.removeDuplicateAssets([[], [added1, added2, added3], []]);
+
+                expect(toBeDeleted).toEqual([]);
+                expect(toBeAdded).toEqual([added1, added3]);
+                expect(toBeKept).toEqual([]);
+            });
+
+            test(`Removes additions referencing a kept file`, () => {
+                const kept = asset(`same`, Zones.Primary, 42);
+                const added = asset(`same`, Zones.Primary, 43);
+
+                const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.removeDuplicateAssets([[], [added], [kept]]);
+
+                expect(toBeDeleted).toEqual([]);
+                expect(toBeAdded).toEqual([]);
+                expect(toBeKept).toEqual([kept]);
+            });
+
+            test(`Keeps additions with the same checksum in different zones`, () => {
+                const primary = asset(`same`, Zones.Primary);
+                const shared = asset(`same`, Zones.Shared);
+
+                const [, toBeAdded] = SyncEngineHelper.removeDuplicateAssets([[], [primary, shared], []]);
+
+                expect(toBeAdded).toEqual([primary, shared]);
+            });
         });
     });
 
@@ -955,5 +1006,30 @@ describe(`Sort queue`, () => {
                 expect(result3).toEqual(0);
             }
         });
+    });
+});
+
+describe(`Settle all`, () => {
+    test(`Resolves to all values in order`, async () => {
+        await expect(SyncEngineHelper.settleAll([Promise.resolve(1), Promise.resolve(`a`)])).resolves.toEqual([1, `a`]);
+    });
+
+    test(`Resolves an empty list`, async () => {
+        await expect(SyncEngineHelper.settleAll([])).resolves.toEqual([]);
+    });
+
+    test(`Rejects with the first rejection in order, once all promises settled`, async () => {
+        const slow = Promise.withResolvers<number>();
+        let settled = false;
+        const result = SyncEngineHelper.settleAll([slow.promise, Promise.reject(new Error(`first`)), Promise.reject(new Error(`second`))])
+            .finally(() => {
+                settled = true;
+            });
+
+        await new Promise(resolve => setImmediate(resolve));
+        expect(settled).toBe(false);
+
+        slow.resolve(1);
+        await expect(result).rejects.toThrow(/^first$/);
     });
 });

@@ -16,6 +16,10 @@ export const SIGNIN_INIT_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `SIGNIN_INIT_RESPONSE`, `Unable to parse and validate signin init response`,
 );
 
+export const ESCROW_INIT_RESPONSE: ErrorStruct = buildErrorStruct(
+    name, prefix, `ESCROW_INIT_RESPONSE`, `Unable to parse and validate escrow init response`,
+);
+
 export const SIGNIN_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `SIGNIN_RESPONSE`, `Unable to parse and validate signin response`,
 );
@@ -46,4 +50,20 @@ export const RESEND_MFA_PHONE_RESPONSE: ErrorStruct = buildErrorStruct(
 
 export const RESEND_MFA_DEVICE_RESPONSE: ErrorStruct = buildErrorStruct(
     name, prefix, `RESEND_MFA_DEVICE_RESPONSE`, `Unable to parse and validate resend MFA device response`,
+);
+
+export const MFA_SUBMIT_RESPONSE: ErrorStruct = buildErrorStruct(
+    name, prefix, `MFA_SUBMIT_RESPONSE`, `Unable to parse and validate MFA submit response`,
+);
+
+export const ESCROW_COMPLETE_RESPONSE: ErrorStruct = buildErrorStruct(
+    name, prefix, `ESCROW_COMPLETE_RESPONSE`, `Unable to parse and validate escrow complete response`,
+);
+
+export const LOGOUT_RESPONSE: ErrorStruct = buildErrorStruct(
+    name, prefix, `LOGOUT_RESPONSE`, `Unable to parse and validate logout response`,
+);
+
+export const HEALTH_CHECK_PING_RESPONSE: ErrorStruct = buildErrorStruct(
+    name, prefix, `HEALTH_CHECK_PING_RESPONSE`, `Unable to parse and validate health check ping response`,
 );

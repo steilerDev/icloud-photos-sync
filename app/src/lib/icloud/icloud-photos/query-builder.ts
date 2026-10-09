@@ -16,6 +16,7 @@ export const RECORD_TYPES = {
     ALBUM_RECORDS: `CPLAlbumByPositionLive`,
     INDEX_COUNT: `HyperionIndexCountLookup`,
     ALL_PHOTOS: `CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted`, // CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted
+    HIDDEN_PHOTOS: `CPLAssetAndMasterHiddenByAssetDate`,
 };
 
 /**
@@ -128,9 +129,10 @@ export function getStartRankFilterForStartRank(startRank: number): any {
 /**
  * Builds a filter, that will request the index count of a given folder, if parentId is undefined, all photos will be queried
  * @param parentId - The parentId of the folder
+ * @param hidden - If set and parentId is undefined, the hidden photos will be queried instead of all photos
  * @returns The filter object
  */
-export function getIndexCountFilter(parentId?: string): any {
+export function getIndexCountFilter(parentId?: string, hidden: boolean = false): any {
     if (parentId) {
         return {
             fieldName: `indexCountID`,
@@ -146,7 +148,7 @@ export function getIndexCountFilter(parentId?: string): any {
         fieldName: `indexCountID`,
         comparator: `IN`,
         fieldValue: {
-            value: [`CPLAssetByAssetDateWithoutHiddenOrDeleted`],
+            value: [hidden ? `CPLAssetHiddenByAssetDate` : `CPLAssetByAssetDateWithoutHiddenOrDeleted`],
             type: `STRING_LIST`,
         },
     };

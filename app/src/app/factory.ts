@@ -1,9 +1,13 @@
 import {input, password} from "@inquirer/prompts";
 import {Command, CommanderError, InvalidArgumentError, Option} from "commander";
 import {Cron} from "croner";
+import {readFileSync} from "fs";
 import {Resources} from "../lib/resources/main.js";
+import {APP_ERR} from "./error/error-codes.js";
+import {iCPSError} from "./error/error.js";
 import {ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp} from "./icloud-app.js";
 import {LogLevel} from "../lib/resources/state-manager.js";
+import {TRASH_DIR} from "../lib/photos-library/constants.js";
 
 /**
  * This function can be used as a commander argParser. It will try to parse the value as a positive integer and throw an invalid argument error in case it fails
@@ -99,19 +103,91 @@ function commanderParseUrl(value: string, _dummyPrevious?: unknown): string {
 }
 
 /**
+ * This function can be used as a commander argParser. It will read the content of the file at the provided path (e.g. a Docker secret) and throw an invalid argument error in case it fails. Trailing line breaks are removed, any other whitespace is preserved.
+ * @param value - The file path, read from the CLI
+ * @param _dummyPrevious - Conforming to the interface - unused
+ * @returns The content of the file
+ * @throws An InvalidArgumentError in case the file cannot be read or is empty
+ */
+function commanderReadFile(value: string, _dummyPrevious?: unknown): string {
+    let content: string;
+    try {
+        content = readFileSync(value, {encoding: `utf-8`});
+    } catch (err) {
+        throw new InvalidArgumentError(`Unable to read file: ${(err as Error).message}`);
+    }
+
+    content = content.replace(/(\r?\n)+$/, ``);
+    if (content.length === 0) {
+        throw new InvalidArgumentError(`File is empty.`);
+    }
+
+    return content;
+}
+
+/**
+ * Accepted (lower case) values of environment variables for boolean options
+ */
+const BOOLEAN_ENV_VALUES = {
+    true: [`true`, `1`, `yes`, `on`],
+    false: [`false`, `0`, `no`, `off`, ``],
+};
+
+/**
+ * Commander enables a boolean option, as soon as its environment variable is defined - regardless of its value.
+ * This function registers listeners on the provided command, in order to parse the value of those environment variables instead (e.g. `false` disables the option).
+ * The listeners are invoked after commander's own listener and overwrite its value.
+ * @param program - The commander command, after all options were added
+ */
+function commanderParseBooleanEnv(program: Command) {
+    program.options
+        .filter(option => option.isBoolean() && option.envVar !== undefined)
+        .forEach(option => {
+            program.on(`optionEnv:${option.name()}`, () => {
+                const envValue = process.env[option.envVar!] ?? ``;
+                const normalizedValue = envValue.trim().toLowerCase();
+
+                if (BOOLEAN_ENV_VALUES.true.includes(normalizedValue)) {
+                    program.setOptionValueWithSource(option.attributeName(), true, `env`);
+                    return;
+                }
+
+                if (BOOLEAN_ENV_VALUES.false.includes(normalizedValue)) {
+                    program.setOptionValueWithSource(option.attributeName(), false, `env`);
+                    return;
+                }
+
+                program.error(
+                    `error: environment variable '${option.envVar}' value '${envValue}' is invalid. Expected one of ${[...BOOLEAN_ENV_VALUES.true, ...BOOLEAN_ENV_VALUES.false.filter(value => value.length > 0)].join(`, `)} (or an empty value for false).`,
+                    {code: `commander.invalidArgument`},
+                );
+            });
+        });
+}
+
+/**
  * Extracts the options from the parsed commander command - and asks for user input in case it is necessary
  * @param parsedCommand - The parsed commander command returned from callback in Command.action((_, command any)
  * @returns Validated iCPSAppOptions
  */
 async function completeConfigurationOptionsFromCommand(parsedCommand: unknown): Promise<iCPSAppOptions> {
-    const opts = (parsedCommand as any).parent?.opts() as iCPSAppOptions;
+    const {usernameFile, passwordFile, ...opts} = (parsedCommand as any).parent?.opts() as iCPSAppOptions & {usernameFile?: string, passwordFile?: string};
+
+    // Commander makes sure that only one of the options was provided - file content was read during parsing
+    if (usernameFile !== undefined) {
+        opts.username = usernameFile;
+    }
+
+    if (passwordFile !== undefined) {
+        opts.password = passwordFile;
+    }
 
     while (!opts.username || opts.username.length === 0) {
         opts.username = await input({message: `Please enter your AppleID username`});
     }
 
     while (!opts.password || opts.password.length === 0) {
-        opts.password = await password({message: `Please enter your AppleID password`, mask: `*`});
+        opts.password = await password({message: `Please enter your AppleID password`, mask: `*`, toggleMask: true});
     }
 
     return opts;
@@ -133,15 +209,20 @@ export type iCPSAppOptions = {
     schedule: string,
     enableCrashReporting: boolean,
     enableNetworkCapture: boolean,
+    useSystemProxy: boolean,
     mfaTimeout: number,
     force: boolean,
     refreshToken: boolean,
     remoteDelete: boolean,
+    syncHidden: boolean,
+    softDelete: boolean,
+    trashDir: string,
     logLevel: LogLevel,
     silent: boolean,
     logToCli: boolean,
     suppressWarnings: boolean,
     exportMetrics: boolean,
+    exportPrometheusMetrics: boolean,
     region: Resources.Types.Region,
     legacyLogin: boolean,
     metadataRate: [number, number],
@@ -170,6 +251,14 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`-p, --password <string>`, `AppleID password. Omitting the option will result in the CLI to ask for user input before startup.`)
             .env(`APPLE_ID_PWD`)
             .makeOptionMandatory(false))
+        .addOption(new Option(`--username-file <path>`, `Path to a file containing the AppleID username (e.g. a Docker secret), as an alternative to the username option. Trailing line breaks are removed.`)
+            .env(`APPLE_ID_USER_FILE`)
+            .conflicts(`username`)
+            .argParser(commanderReadFile))
+        .addOption(new Option(`--password-file <path>`, `Path to a file containing the AppleID password (e.g. a Docker secret), as an alternative to the password option. Trailing line breaks are removed.`)
+            .env(`APPLE_ID_PWD_FILE`)
+            .conflicts(`password`)
+            .argParser(commanderReadFile))
         .addOption(new Option(`-T, --trust-token <string>`, `The trust token for authentication. If not provided, the trust token is read from the \`.icloud-photos-sync\` resource file in data dir. If no stored trust token could be loaded, a new trust token will be acquired (requiring the input of an MFA code).`)
             .env(`TRUST_TOKEN`))
         .addOption(new Option(`-d, --data-dir <string>`, `Directory to store local copy of library.`)
@@ -198,7 +287,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
             .env(`SCHEDULE`)
             .default(`0 2 * * *`)
             .argParser(commanderParseCron))
-        .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://icps.steiler.dev/error-reporting/ for more information.`)
+        .addOption(new Option(`--enable-crash-reporting`, `Enables automatic collection of errors and crashes, see https://icps.steiler.dev/user-guides/error-reporting/ for more information.`)
             .env(`ENABLE_CRASH_REPORTING`)
             .default(false))
         .addOption(new Option(`--mfa-timeout <number>`, `If a MFA code is necessary to authenticate, wait for these many seconds before canceling the authentication process. Time in seconds, should not exceed 10mins (due to server side timing).`)
@@ -214,6 +303,15 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`--remote-delete`, `If this flag is set, delete non-favorite photos in the iCloud Photos backend upon archiving.`)
             .env(`REMOTE_DELETE`)
             .default(false))
+        .addOption(new Option(`--sync-hidden`, `If this flag is set, photos from the 'Hidden' album are synced as well. They are linked into the albums they belong to and into the \`_Hidden-Photos\` album.`)
+            .env(`SYNC_HIDDEN`)
+            .default(false))
+        .addOption(new Option(`--soft-delete`, `If this flag is set, assets that were deleted in iCloud Photos are moved to the trash directory (see \`--trash-dir\`), instead of being permanently deleted from disk.`)
+            .env(`SOFT_DELETE`)
+            .default(false))
+        .addOption(new Option(`--trash-dir <path>`, `Directory to move deleted assets to, if soft delete is enabled. Relative paths are resolved against the data dir. The trash is never cleaned automatically.`)
+            .env(`TRASH_DIR`)
+            .default(TRASH_DIR))
         .addOption(new Option(`-l, --log-level <level>`, `Set the log level.`)
             .env(`LOG_LEVEL`)
             .choices(Object.values(LogLevel))
@@ -230,8 +328,14 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`--export-metrics`, `Enables the export of sync metrics to a file using the Influx Line Protocol. Written to \`.icloud-photos-sync.metrics\` in the data dir.`)
             .env(`EXPORT_METRICS`)
             .default(false))
+        .addOption(new Option(`--export-prometheus-metrics`, `Exposes sync metrics in the Prometheus/OpenMetrics format on the \`/metrics\` endpoint of the web server.`)
+            .env(`EXPORT_PROMETHEUS_METRICS`)
+            .default(false))
         .addOption(new Option(`--enable-network-capture`, `Enables network capture, and generate a HAR file for debugging purposes. Written to \`.icloud-photos-sync.har\` in the data dir.`)
             .env(`ENABLE_NETWORK_CAPTURE`)
+            .default(false))
+        .addOption(new Option(`--use-system-proxy`, `Routes all requests through the proxy configured by the \`HTTP_PROXY\` and \`HTTPS_PROXY\` environment variables (honouring \`NO_PROXY\`). Proxy variables are ignored otherwise.`)
+            .env(`USE_SYSTEM_PROXY`)
             .default(false))
         .addOption(new Option(`--metadata-rate <interval>`, `Limits the rate of metadata fetching in order to avoid getting throttled by the API. Expects the format \`<numberOfRequests|Infinity>/<timeInMs>\`, e.g. \`1/20\` to limit requests to one request in 20ms.`)
             .env(`METADATA_RATE`)
@@ -244,10 +348,12 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .addOption(new Option(`--legacy-login`, `Enables plain text legacy login method.`)
             .env(`LEGACY_LOGIN`)
             .default(false))
-        .addOption(new Option(`--health-check-url <url>`, `URL to ping to monitor the health of icloud photos sync, see https://icps.steiler.dev/health-checks/ for more information.`)
+        .addOption(new Option(`--health-check-url <url>`, `URL to ping to monitor the health of icloud photos sync, see https://icps.steiler.dev/user-guides/health-checks/ for more information.`)
             .env(`HEALTH_CHECK_URL`)
             .default(undefined)
             .argParser(commanderParseUrl));
+
+    commanderParseBooleanEnv(program);
 
     program.command(`daemon`, {isDefault: true})
         .action(async (_, command) => {
@@ -286,6 +392,38 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
 }
 
 /**
+ * Permissions required when running with Node's permission model (`--permission`), mapped to the flag granting them.
+ * Node only permits `fs.symlink` (used for linking albums) with unrestricted file system read and write access.
+ */
+const REQUIRED_PERMISSIONS = {
+    'fs.read': `--allow-fs-read=*`,
+    'fs.write': `--allow-fs-write=*`,
+    net: `--allow-net`,
+};
+
+/**
+ * Makes sure the application is able to operate, if Node's permission model is enabled - instead of failing during the sync.
+ * In audit mode (`--permission-audit`), access is not denied, therefore no permissions are required.
+ * @throws An iCPSError, if required permissions are missing
+ */
+export function validatePermissions() {
+    const {permission} = process;
+    const nodeOptions = [...process.execArgv, ...(process.env.NODE_OPTIONS?.split(/\s+/) ?? [])];
+    if (!permission || nodeOptions.includes(`--permission-audit`)) {
+        return;
+    }
+
+    const missingFlags = Object.entries(REQUIRED_PERMISSIONS)
+        .filter(([scope]) => !permission.has(scope))
+        .map(([, flag]) => flag);
+
+    if (missingFlags.length > 0) {
+        throw new iCPSError(APP_ERR.INSUFFICIENT_PERMISSIONS)
+            .addMessage(`missing ${missingFlags.join(` `)}`);
+    }
+}
+
+/**
  * This function will parse the provided string array and environment variables and return the correct application object.
  * @param argv - The argument vector to be parsed
  * @returns - A promise that resolves to the correct application object. Once the promise resolves, the global resource singleton will also be available. If the program is not able to parse the options, or required options are missing, an error message is printed to stderr and the promise rejects with a CommanderError.
@@ -293,7 +431,13 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
 export async function appFactory(argv: string[]): Promise<iCPSApp> {
     return new Promise((resolve, reject) => {
         try {
-            argParser((res: iCPSApp) => {
+            argParser(async (res: iCPSApp) => {
+                try {
+                    validatePermissions()
+                    await Resources.state().acquireLibraryLock()
+                } catch (err) {
+                    reject(err)
+                }
                 resolve(res);
             }).parse(argv);
         } catch (err) {

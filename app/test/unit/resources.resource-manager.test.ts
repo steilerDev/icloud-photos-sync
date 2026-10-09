@@ -1,7 +1,7 @@
 
 import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import * as fs from 'fs';
-import mockfs from 'mock-fs';
+import mockfs from '../_helpers/mock-fs.helper';
 import path from 'path';
 import {EventManager} from '../../src/lib/resources/event-manager';
 import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
@@ -639,6 +639,37 @@ describe(`ResourceManager`, () => {
             });
         });
 
+        describe(`syncHidden`, () => {
+            test(`should return the sync hidden flag from the resources`, () => {
+                expect(resourceManager.syncHidden).toEqual(resources.syncHidden);
+            });
+        });
+
+        describe(`trashDir`, () => {
+            test(`should return undefined if soft delete is disabled`, () => {
+                resourceManager._resources.softDelete = false;
+                expect(resourceManager.trashDir).toBeUndefined();
+            });
+
+            test.each([{
+                desc: `default trash dir`,
+                trashDir: `_Trash`,
+                expected: path.join(resources.dataDir, `_Trash`),
+            }, {
+                desc: `relative trash dir`,
+                trashDir: `some/../other/trash`,
+                expected: path.join(resources.dataDir, `other`, `trash`),
+            }, {
+                desc: `absolute trash dir`,
+                trashDir: `/some/trash`,
+                expected: `/some/trash`,
+            }])(`should resolve the $desc against the data dir`, ({trashDir, expected}) => {
+                resourceManager._resources.softDelete = true;
+                resourceManager._resources.trashDir = trashDir;
+                expect(resourceManager.trashDir).toEqual(expected);
+            });
+        });
+
         describe(`logLevel`, () => {
             test(`should return the log level from the resources`, () => {
                 expect(resourceManager.logLevel).toEqual(resources.logLevel);
@@ -666,6 +697,12 @@ describe(`ResourceManager`, () => {
         describe(`exportMetrics`, () => {
             test(`should return the export metrics flag from the resources`, () => {
                 expect(resourceManager.exportMetrics).toEqual(resources.exportMetrics);
+            });
+        });
+
+        describe(`exportPrometheusMetrics`, () => {
+            test(`should return the export prometheus metrics flag from the resources`, () => {
+                expect(resourceManager.exportPrometheusMetrics).toEqual(resources.exportPrometheusMetrics);
             });
         });
 

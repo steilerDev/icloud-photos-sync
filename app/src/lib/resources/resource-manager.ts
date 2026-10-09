@@ -1,4 +1,4 @@
-import {readFileSync, writeFileSync} from "fs";
+import {existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
 import {jsonc} from "jsonc";
 import * as path from 'path';
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
@@ -27,6 +27,14 @@ export class ResourceManager {
      * @param appOptions - The parsed app options
      */
     constructor(appOptions: iCPSAppOptions) {
+        // Setting data dir, before accessing it
+        this._resources.dataDir = appOptions.dataDir
+
+        // It's crucial for the data dir to exist, create if it doesn't
+        if (!existsSync(this.dataDir)) {
+            mkdirSync(this.dataDir, {recursive: true});
+        }
+
         // Assign app options & resource files to this data structure
         Object.assign(this._resources, this._readResourceFile(), appOptions);
 
@@ -67,7 +75,7 @@ export class ResourceManager {
                 notificationVapidCredentials: this._resources.notificationVapidCredentials,
                 notificationSubscriptions: this._resources.notificationSubscriptions
             };
-            const resourceFileData = jsonc.stringify(formattedResourceFile, null, 4);
+            const resourceFileData = jsonc.stringify(formattedResourceFile, undefined, 4);
             Resources.logger(this).debug(`Writing resource file to ${this.resourceFilePath}`);
 
             writeFileSync(this.resourceFilePath, resourceFileData, {encoding: FILE_ENCODING, flush: true});
@@ -182,7 +190,7 @@ export class ResourceManager {
      */
     get notificationSubscriptions(): webpush.PushSubscription[] {
         return this._resources.notificationSubscriptions 
-            ? Object.values(this._resources.notificationSubscriptions) 
+            ? Object.values(this._resources.notificationSubscriptions)
             : [];
     }
 
@@ -287,6 +295,24 @@ export class ResourceManager {
     }
 
     /**
+     * @returns If the application should sync assets from the 'Hidden' album
+     */
+    get syncHidden(): boolean {
+        return this._resources.syncHidden;
+    }
+
+    /**
+     * @returns The absolute path of the directory deleted assets are moved to, or undefined if soft delete is disabled and assets are permanently deleted
+     */
+    get trashDir(): string | undefined {
+        if (!this._resources.softDelete) {
+            return undefined;
+        }
+
+        return path.resolve(this.dataDir, this._resources.trashDir);
+    }
+
+    /**
      * @returns The log level of the application
      */
     get logLevel(): LogLevel {
@@ -322,6 +348,13 @@ export class ResourceManager {
     }
 
     /**
+     * @returns If the application should export prometheus metrics
+     */
+    get exportPrometheusMetrics(): boolean {
+        return this._resources.exportPrometheusMetrics;
+    }
+
+    /**
      * @returns The rate at which the metadata should be downloaded
      */
     get metadataRate(): [number, number] {
@@ -333,6 +366,13 @@ export class ResourceManager {
      */
     get enableNetworkCapture(): boolean {
         return this._resources.enableNetworkCapture;
+    }
+
+    /**
+     * @returns If the application should route requests through the proxy configured in the environment
+     */
+    get useSystemProxy(): boolean {
+        return this._resources.useSystemProxy;
     }
 
     /**
@@ -416,7 +456,10 @@ export class ResourceManager {
         return this._resources.legacyLogin;
     }
 
-    get healthCheckUrl(): string {
+    /**
+     * @returns The health check ping URL, if configured
+     */
+    get healthCheckUrl(): string | undefined {
         return this._resources.healthCheckUrl;
     }
 }

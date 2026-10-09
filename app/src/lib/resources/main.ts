@@ -1,4 +1,4 @@
-import PackageData from '../../../package.json' with { type: 'json' }; // eslint-disable-line
+import PackageData from '../../../package.json' with { type: 'json' };
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
 import {iCPSAppOptions} from "../../app/factory.js";
@@ -8,6 +8,9 @@ import {NetworkManager} from "./network-manager.js";
 import {ResourceManager} from "./resource-manager.js";
 import {StateManager} from './state-manager.js';
 import {Validator} from "./validator.js";
+import {readFileSync, statSync} from 'fs'
+import {jsonc} from "jsonc";
+import {FILE_ENCODING, LibraryLockOwner} from "./resource-types.js";
 
 /* eslint-disable @typescript-eslint/no-namespace */
 
@@ -201,7 +204,77 @@ export namespace Resources {
             process.kill(pid, 0);
             return true;
         } catch (e) {
-            return e.code === `EPERM`;
+            return (e as NodeJS.ErrnoException).code === `EPERM`;
+        }
+    }
+
+    /**
+     * Information about the library's locking status
+     */
+    export type LockStat = {
+        /**
+         * The path to the lock file
+         */
+        lockFilePath: string,
+        /**
+         * True, if the lock file exists
+         */
+        lockFileExists: boolean,
+        /**
+         * The process holding the lock - undefined, if the lock file does not exist. If the content of the lock file cannot be parsed, the pid is NaN.
+         */
+        owner?: LibraryLockOwner,
+        /**
+         * The time of the last heartbeat (modification time of the lock file) in ms since epoch - NaN, if the lock file does not exist
+         */
+        lastHeartbeat: number,
+    }
+
+    /**
+     * Returns information on the library's locking status
+     * @returns Information about the lock file path, its existence, the locking process and its last heartbeat
+     */
+    export function getLockStat(): LockStat {
+        const {lockFilePath} = Resources.manager();
+        let lastHeartbeat: number;
+        try {
+            const stat = statSync(lockFilePath);
+            if (!stat.isFile()) {
+                return {lockFilePath, lockFileExists: false, lastHeartbeat: NaN};
+            }
+
+            lastHeartbeat = stat.mtimeMs;
+        } catch {
+            return {lockFilePath, lockFileExists: false, lastHeartbeat: NaN};
+        }
+
+        return {
+            lockFilePath,
+            lockFileExists: true,
+            owner: parseLockOwner(readFileSync(lockFilePath, FILE_ENCODING)),
+            lastHeartbeat,
+        };
+    }
+
+    /**
+     * Parses the content of the lock file
+     * @param content - The content of the lock file - either the serialized lock owner or only the process id (as written by previous versions)
+     * @returns The lock owner - with a pid of NaN, if the content cannot be parsed
+     */
+    function parseLockOwner(content: string): LibraryLockOwner {
+        if (/^\s*\d+\s*$/.test(content)) {
+            return {pid: parseInt(content, 10)};
+        }
+
+        try {
+            const owner = jsonc.parse(content) as Partial<LibraryLockOwner>;
+            return {
+                instance: typeof owner?.instance === `string` ? owner.instance : undefined,
+                pid: typeof owner?.pid === `number` ? owner.pid : NaN,
+                hostname: typeof owner?.hostname === `string` ? owner.hostname : undefined,
+            };
+        } catch {
+            return {pid: NaN};
         }
     }
 
@@ -256,70 +329,70 @@ export namespace Resources {
         * Interface to logger event bus, with a source bound to it
         */
         export type Logger = {
-           /**
+            /**
             * Logs a message to the event bus
             * @param args - The arguments to log
             */
-           log: (...args: any[]) => void,
-           /**
+            log: (...args: any[]) => void,
+            /**
             * Logs a debug message to the event bus
             * @param args - The arguments to log
             */
-           debug: (...args: any[]) => void,
-           /**
+            debug: (...args: any[]) => void,
+            /**
             * Logs an info message to the event bus
             * @param args - The arguments to log
             */
-           info: (...args: any[]) => void,
-           /**
+            info: (...args: any[]) => void,
+            /**
             * Logs a warn message to the event bus
             * @param args - The arguments to log
             */
-           warn: (...args: any[]) => void,
-           /**
+            warn: (...args: any[]) => void,
+            /**
             * Logs an error message to the event bus
             * @param args - The arguments to log
             */
-           error: (...args: any[]) => void,
-       }
+            error: (...args: any[]) => void,
+        }
 
-       /**
+        /**
         * Interface to listener functions of the event bus, with a listener bound to it
         */
-       export type Events = {
-           /**
+        export type Events = {
+            /**
             * Registers an event listener to the event bus
             * @param event - The event to listen to
             * @param listener - The listener function to call upon the event
             * @returns This instance for chaining
             */
-           on: (event: iCPSEvent, listener: ListenerFunction) => Resources.Types.Events,
-           /**
+            on: (event: iCPSEvent, listener: ListenerFunction) => Resources.Types.Events,
+            /**
             * Registers an one-time event listener to the event bus
             * @param event - The event to listen to
             * @param listener - The listener function to call upon the event
             * @returns This instance for chaining
             */
-           once: (event: iCPSEvent, listener: ListenerFunction) => Resources.Types.Events,
-           /**
+            once: (event: iCPSEvent, listener: ListenerFunction) => Resources.Types.Events,
+            /**
             * Removes all listeners from the source from the event bus
             * @param event - Optional event to remove listeners for - otherwise all will be removed
             */
-           removeListeners: (event?: iCPSEvent) => Resources.Types.Events,
-       }
+            removeListeners: (event?: iCPSEvent) => Resources.Types.Events,
+        }
 
-       /**
+        /**
         * Possible regions for this tool to operate in
         */
-       export enum Region {
+        export enum Region {
         /**
          * Will use icloud.com
          */
-        WORLD = `world`,
-        /**
+            WORLD = `world`,
+            /**
          * Will use icloud.com.cn
          */
-        CHINA = `china`,
-       }
-   }
+            CHINA = `china`,
+        }
+    }
 }

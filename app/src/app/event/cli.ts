@@ -1,9 +1,14 @@
-import chalk from 'chalk';
+import {styleText} from 'util';
 import {SingleBar} from 'cli-progress';
 import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {iCPSError} from '../error/error.js';
+
+/**
+ * The width of the horizontal line, if the terminal does not report its width
+ */
+const DEFAULT_TERMINAL_COLUMNS = 80;
 
 /**
  * This class handles the input/output to the command line
@@ -31,10 +36,10 @@ export class CLIInterface {
 
         console.clear();
 
-        this.print(chalk.white(this.getHorizontalLine()));
-        this.print(chalk.white.bold(`Welcome to ${Resources.PackageInfo.name}, v.${Resources.PackageInfo.version}!`));
-        this.print(chalk.green(`Made with <3 by steilerDev`));
-        this.print(chalk.white(this.getHorizontalLine()));
+        this.print(styleText(`white`, this.getHorizontalLine()));
+        this.print(styleText([`white`, `bold`], `Welcome to ${Resources.PackageInfo.name}, v.${Resources.PackageInfo.version}!`));
+        this.print(styleText(`green`, `Made with <3 by steilerDev`));
+        this.print(styleText(`white`, this.getHorizontalLine()));
 
         if (!Resources.manager().suppressWarnings) {
             Resources.events(this)
@@ -42,6 +47,9 @@ export class CLIInterface {
                     this.printWarning(err.getDescription());
                 })
                 .on(iCPSEventRuntimeWarning.WEB_SERVER_ERROR, (err: iCPSError) => {
+                    this.printWarning(err.getDescription());
+                })
+                .on(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, (err: iCPSError) => {
                     this.printWarning(err.getDescription());
                 })
                 .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
@@ -61,39 +69,39 @@ export class CLIInterface {
 
         Resources.events(this)
             .on(iCPSEventCloud.AUTHENTICATION_STARTED, () => {
-                this.print(chalk.white(`Authenticating user...`));
+                this.print(styleText(`white`, `Authenticating user...`));
             })
             .on(iCPSEventCloud.AUTHENTICATED, () => {
-                this.print(chalk.white(`User authenticated`));
+                this.print(styleText(`white`, `User authenticated`));
             })
             .on(iCPSEventCloud.MFA_REQUIRED, () => {
-                this.print(chalk.yellowBright(`MFA code required`));
+                this.print(styleText(`yellowBright`, `MFA code required`));
             })
             .on(iCPSEventCloud.TRUSTED, () => {
-                this.print(chalk.white(`Device trusted`));
+                this.print(styleText(`white`, `Device trusted`));
             })
             .on(iCPSEventCloud.ACCOUNT_READY, () => {
-                this.print(chalk.white(`Sign in successful!`));
+                this.print(styleText(`white`, `Sign in successful!`));
             })
             .on(iCPSEventCloud.SESSION_EXPIRED, () => {
-                this.print(chalk.yellowBright(`Session expired, re-authenticating...`));
+                this.print(styleText(`yellowBright`, `Session expired, re-authenticating...`));
             })
             .on(iCPSEventCloud.PCS_REQUIRED, () => {
-                this.print(chalk.yellowBright(`Advanced Data Protection requires additional cookies, acquiring...`));
+                this.print(styleText(`yellowBright`, `Advanced Data Protection requires additional cookies, acquiring...`));
             })
             .on(iCPSEventCloud.PCS_NOT_READY, () => {
-                this.print(chalk.yellowBright(`Advanced Data Protection request not confirmed yet, retrying...`));
+                this.print(styleText(`yellowBright`, `Advanced Data Protection request not confirmed yet, retrying...`));
             });
 
         Resources.events(this)
             .on(iCPSEventWebServer.STARTED, port => {
-                this.print(chalk.white(`Web server is listening on port ${port}`));
+                this.print(styleText(`white`, `Web server is listening on port ${port}`));
             })
             .on(iCPSEventWebServer.SYNC_REQUESTED, () => {
-                this.print(chalk.white(`Sync requested through web interface`))
+                this.print(styleText(`white`, `Sync requested through web interface`))
             })
             .on(iCPSEventWebServer.REAUTH_REQUESTED, () => {
-                this.print(chalk.white(`Re-Auth requested through web interface`))
+                this.print(styleText(`white`, `Re-Auth requested through web interface`))
             })
             .on(iCPSEventWebServer.REAUTH_ERROR, (err) => {
                 this.printError(`Re-Auth failed: ${err.getDescription()}`)
@@ -101,56 +109,56 @@ export class CLIInterface {
 
         Resources.events(this)
             .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => {
-                this.print(chalk.white(`Resending MFA code via ${method.toString()}...`));
+                this.print(styleText(`white`, `Resending MFA code via ${method.toString()}...`));
             })
             .on(iCPSEventMFA.MFA_RECEIVED, (method: MFAMethod, code: string) => {
-                this.print(chalk.white(`MFA code received from ${method.toString()} (${code})`));
+                this.print(styleText(`white`, `MFA code received from ${method.toString()} (${code})`));
             })
             .on(iCPSEventMFA.MFA_NOT_PROVIDED, () => {
-                this.print(chalk.yellowBright(`MFA code not provided in time, aborting...`));
+                this.print(styleText(`yellowBright`, `MFA code not provided in time, aborting...`));
             });
 
         Resources.events(this)
             .on(iCPSEventPhotos.SETUP_COMPLETED, () => {
-                this.print(chalk.white(`iCloud Photos setup completed, checking indexing status...`));
+                this.print(styleText(`white`, `iCloud Photos setup completed, checking indexing status...`));
             })
             .on(iCPSEventPhotos.READY, () => {
-                this.print(chalk.white(`iCloud Photos ready!`));
+                this.print(styleText(`white`, `iCloud Photos ready!`));
             });
 
         Resources.events(this)
             .on(iCPSEventApp.TOKEN, token => {
-                this.print(chalk.green(`Validated token:\n${token}`));
+                this.print(styleText(`green`, `Validated token:\n${token}`));
             })
             .on(iCPSEventApp.SCHEDULED, (next: Date) => {
-                this.print(chalk.white(this.getHorizontalLine()));
-                this.print(chalk.white(`Started in daemon mode!`));
-                this.print(chalk.white(`Next execution: ${this.getDateTime(next)}`));
-                this.print(chalk.white(this.getHorizontalLine()));
+                this.print(styleText(`white`, this.getHorizontalLine()));
+                this.print(styleText(`white`, `Started in daemon mode!`));
+                this.print(styleText(`white`, `Next execution: ${this.getDateTime(next)}`));
+                this.print(styleText(`white`, this.getHorizontalLine()));
             })
             .on(iCPSEventApp.SCHEDULED_DONE, (next: Date) => {
-                this.print(chalk.green(this.getHorizontalLine()));
-                this.print(chalk.green(`Completed scheduled sync!`));
-                this.print(chalk.white(`Next execution: ${this.getDateTime(next)}`));
-                this.print(chalk.green(this.getHorizontalLine()));
+                this.print(styleText(`green`, this.getHorizontalLine()));
+                this.print(styleText(`green`, `Completed scheduled sync!`));
+                this.print(styleText(`white`, `Next execution: ${this.getDateTime(next)}`));
+                this.print(styleText(`green`, this.getHorizontalLine()));
             })
             .on(iCPSEventApp.SCHEDULED_RETRY, (next: Date) => {
-                this.print(chalk.green(this.getHorizontalLine()));
-                this.print(chalk.white(`Sync will retry execution at ${this.getDateTime(next)}`));
-                this.print(chalk.green(this.getHorizontalLine()));
+                this.print(styleText(`green`, this.getHorizontalLine()));
+                this.print(styleText(`white`, `Sync will retry execution at ${this.getDateTime(next)}`));
+                this.print(styleText(`green`, this.getHorizontalLine()));
             })
             .on(iCPSEventApp.SCHEDULED_OVERRUN, (next: Date) => {
-                this.print(chalk.redBright(`Sync execution skipped, because a job is still running. Next run scheduled for ${this.getDateTime(next)}`));
+                this.print(styleText(`redBright`, `Sync execution skipped, because a job is still running. Next run scheduled for ${this.getDateTime(next)}`));
             });
 
         Resources.events(this)
             .on(iCPSEventSyncEngine.START, () => {
-                this.print(chalk.white(this.getHorizontalLine()));
-                this.print(chalk.white.bold(`Starting sync at ${this.getDateTime()}`));
+                this.print(styleText(`white`, this.getHorizontalLine()));
+                this.print(styleText([`white`, `bold`], `Starting sync at ${this.getDateTime()}`));
             })
             .on(iCPSEventSyncEngine.FETCH_N_LOAD, () => {
-                this.print(chalk.white(this.getHorizontalLine()));
-                this.print(chalk.white(`Loading local & fetching remote iCloud Library state...`));
+                this.print(styleText(`white`, this.getHorizontalLine()));
+                this.print(styleText(`white`, `Loading local & fetching remote iCloud Library state...`));
                 Resources.event().resetEventCounter(iCPSEventRuntimeWarning.EXTRANEOUS_FILE);
                 Resources.event().resetEventCounter(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR);
 
@@ -158,7 +166,7 @@ export class CLIInterface {
                 Resources.event().resetEventCounter(iCPSEventRuntimeWarning.ICLOUD_LOAD_ERROR);
             })
             .on(iCPSEventSyncEngine.FETCH_N_LOAD_COMPLETED, (remoteAssetCount: number, remoteAlbumCount: number, localAssetCount: number, localAlbumCount: number) => {
-                this.print(chalk.green(`Loaded local state: ${localAssetCount} assets & ${localAlbumCount} albums`));
+                this.print(styleText(`green`, `Loaded local state: ${localAssetCount} assets & ${localAlbumCount} albums`));
 
                 const extraneousFiles = Resources.event().getEventCount(iCPSEventRuntimeWarning.EXTRANEOUS_FILE);
                 if (extraneousFiles > 0) {
@@ -170,7 +178,7 @@ export class CLIInterface {
                     this.printWarning(`Unable to load ${libraryLoadErrors} local assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
-                this.print(chalk.green(`Fetched remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
+                this.print(styleText(`green`, `Fetched remote state: ${remoteAssetCount} assets & ${remoteAlbumCount} albums`));
                 const mismatchErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.COUNT_MISMATCH);
                 if (mismatchErrors > 0) {
                     this.printWarning(`Detected ${mismatchErrors} albums, where asset counts don't match, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
@@ -182,16 +190,16 @@ export class CLIInterface {
                 }
             })
             .on(iCPSEventSyncEngine.DIFF, () => {
-                this.print(chalk.white(`Diffing remote with local state...`));
+                this.print(styleText(`white`, `Diffing remote with local state...`));
             })
             .on(iCPSEventSyncEngine.DIFF_COMPLETED, () => {
-                this.print(chalk.green(`Diffing completed!`));
+                this.print(styleText(`green`, `Diffing completed!`));
             })
             .on(iCPSEventSyncEngine.WRITE, () => {
-                this.print(chalk.white(`Writing diff to disk...`));
+                this.print(styleText(`white`, `Writing diff to disk...`));
             })
             .on(iCPSEventSyncEngine.WRITE_ASSETS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
-                this.print(chalk.cyan(`Syncing assets, by keeping ${toBeKept} and removing ${toBeDeletedCount} local assets, as well as adding ${toBeAddedCount} remote assets...`));
+                this.print(styleText(`cyan`, `Syncing assets, by keeping ${toBeKept} and removing ${toBeDeletedCount} local assets, as well as adding ${toBeAddedCount} remote assets...`));
                 this.progressBar.start(toBeAddedCount, 0);
 
                 Resources.event().resetEventCounter(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR);
@@ -205,19 +213,19 @@ export class CLIInterface {
             .on(iCPSEventSyncEngine.WRITE_ASSETS_COMPLETED, () => {
                 this.progressBar.stop();
 
-                this.print(chalk.greenBright(`Asset sync completed!`));
+                this.print(styleText(`greenBright`, `Asset sync completed!`));
                 const writeAssetErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.WRITE_ASSET_ERROR);
                 if (writeAssetErrors > 0) {
                     this.printWarning(`Detected ${writeAssetErrors} errors while adding assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS, (toBeDeletedCount: number, toBeAddedCount: number, toBeKept: number) => {
-                this.print(chalk.cyan(`Syncing albums, by keeping ${toBeKept} and removing ${toBeDeletedCount} local albums, as well as adding ${toBeAddedCount} remote albums...`));
+                this.print(styleText(`cyan`, `Syncing albums, by keeping ${toBeKept} and removing ${toBeDeletedCount} local albums, as well as adding ${toBeAddedCount} remote albums...`));
                 Resources.event().resetEventCounter(iCPSEventRuntimeWarning.WRITE_ALBUM_ERROR);
                 Resources.event().resetEventCounter(iCPSEventRuntimeWarning.LINK_ERROR);
             })
             .on(iCPSEventSyncEngine.WRITE_ALBUMS_COMPLETED, () => {
-                this.print(chalk.greenBright(`Album sync completed!`));
+                this.print(styleText(`greenBright`, `Album sync completed!`));
                 const linkErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.LINK_ERROR);
                 if (linkErrors > 0) {
                     this.printWarning(`Detected ${linkErrors} errors while linking assets to albums, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
@@ -229,40 +237,45 @@ export class CLIInterface {
                 }
             })
             .on(iCPSEventSyncEngine.WRITE_COMPLETED, () => {
-                this.print(chalk.green(`Successfully wrote diff to disk!`));
+                this.print(styleText(`green`, `Successfully wrote diff to disk!`));
             })
             .on(iCPSEventSyncEngine.DONE, () => {
-                this.print(chalk.white(this.getHorizontalLine()));
-                this.print(chalk.green.bold(`Successfully completed sync at ${this.getDateTime()}`));
-                this.print(chalk.white(this.getHorizontalLine()));
+                this.print(styleText(`white`, this.getHorizontalLine()));
+                this.print(styleText([`green`, `bold`], `Successfully completed sync at ${this.getDateTime()}`));
+                this.print(styleText(`white`, this.getHorizontalLine()));
             })
             .on(iCPSEventSyncEngine.RETRY, (retryCount: number, err: iCPSError) => {
                 this.progressBar.stop();
-                this.print(chalk.magenta(`Detected error during sync: ${err.getDescription()}`));
-                this.print(chalk.magenta(`Refreshing iCloud connection & retrying (attempt #${retryCount})...`));
-                this.print(chalk.white(this.getHorizontalLine()));
+                this.print(styleText(`magenta`, `Detected error during sync: ${err.getDescription()}`));
+                this.print(styleText(`magenta`, `Refreshing iCloud connection & retrying (attempt #${retryCount})...`));
+                this.print(styleText(`white`, this.getHorizontalLine()));
+            })
+            .on(iCPSEventSyncEngine.REFRESH, (writtenAssets: number) => {
+                this.progressBar.stop();
+                this.print(styleText(`cyan`, `Download URLs expired after writing ${writtenAssets} assets, refreshing remote state...`));
+                this.print(styleText(`white`, this.getHorizontalLine()));
             });
 
         Resources.events(this)
             .on(iCPSEventArchiveEngine.ARCHIVE_START, (path: string) => {
-                this.print(chalk.white.bold(`Archiving local path ${path}`));
+                this.print(styleText([`white`, `bold`], `Archiving local path ${path}`));
                 Resources.event().resetEventCounter(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
             })
             .on(iCPSEventArchiveEngine.PERSISTING_START, (numberOfAssets: number) => {
-                this.print(chalk.cyan(`Persisting ${numberOfAssets} assets`));
+                this.print(styleText(`cyan`, `Persisting ${numberOfAssets} assets`));
             })
             .on(iCPSEventArchiveEngine.REMOTE_DELETE, (numberOfAssets: number) => {
-                this.print(chalk.yellow(`Deleting ${numberOfAssets} remote assets`));
+                this.print(styleText(`yellow`, `Deleting ${numberOfAssets} remote assets`));
             })
             .on(iCPSEventArchiveEngine.ARCHIVE_DONE, () => {
-                this.print(chalk.white(this.getHorizontalLine()));
-                this.print(chalk.green.bold(`Successfully completed archiving`));
+                this.print(styleText(`white`, this.getHorizontalLine()));
+                this.print(styleText([`green`, `bold`], `Successfully completed archiving`));
                 const archiveAssetErrors = Resources.event().getEventCount(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR);
                 if (archiveAssetErrors > 0) {
                     this.printWarning(`Detected ${archiveAssetErrors} errors while archiving assets, please check the logs for more details (and see https://icps.steiler.dev/warnings/ for context)`);
                 }
 
-                this.print(chalk.white(this.getHorizontalLine()));
+                this.print(styleText(`white`, this.getHorizontalLine()));
             });
     }
 
@@ -279,7 +292,7 @@ export class CLIInterface {
      * @param msg - The warning string
      */
     printWarning(msg: string) {
-        this.print(chalk.yellow(`Warning: ${msg}`));
+        this.print(styleText(`yellow`, `Warning: ${msg}`));
     }
 
     /**
@@ -287,15 +300,15 @@ export class CLIInterface {
      * @param err - The error string
      */
     printError(err: string) {
-        this.print(chalk.red(`Error: ${err}`));
+        this.print(styleText(`red`, `Error: ${err}`));
     }
 
     /**
-     *
-     * @returns A horizontal line of the width of the screen
+     * Some terminals report 0 columns (e.g. `docker run -t`), or none at all if stdout is not a TTY
+     * @returns A horizontal line of the width of the screen, or of the default width if the terminal does not report one
      */
     getHorizontalLine(): string {
-        return `-`.repeat(process.stdout.columns);
+        return `-`.repeat(process.stdout.columns || DEFAULT_TERMINAL_COLUMNS);
     }
 
     /**

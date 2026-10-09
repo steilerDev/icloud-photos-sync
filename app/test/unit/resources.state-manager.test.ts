@@ -1,17 +1,26 @@
-import {beforeEach, describe, expect, jest, test} from "@jest/globals"
+import mockfs from '../_helpers/mock-fs.helper';
+import fs from 'fs';
+import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals"
 import {LogLevel, LogMessage, SerializedState, StateManager, StateTrigger} from "../../src/lib/resources/state-manager"
 import {iCPSError} from "../../src/app/error/error"
 import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from "../../src/app/error/error-codes"
-import {MockedEventManager, prepareResources} from "../_helpers/_general"
+import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general"
 import {iCPSEvent, iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "../../src/lib/resources/events-types"
+import path from 'path';
+import os from 'os';
+import * as Config from '../_helpers/_config';
+import {LIBRARY_LOCK_FILE_NAME} from '../../src/lib/resources/resource-types';
+import {Resources} from '../../src/lib/resources/main';
 
 let mockedEventManager: MockedEventManager
 let mockedState: StateManager
+let mockedResourceManager: MockedResourceManager
 
 beforeEach(() => {
     const instances = prepareResources()
     mockedEventManager = instances!.event
     mockedState = instances!.state
+    mockedResourceManager = instances!.manager
 })
 
 
@@ -415,6 +424,17 @@ describe(`State changes`, () => {
                 progressMsg: `Detected error during sync: UNKNOWN: Unknown error occurred caused by Test, Refreshing iCloud connection & retrying (attempt #1)...`
             } as SerializedState
         },{
+            desc: `Should handle refresh of expired download URLs (triggered by sync)`,
+            events: [iCPSEventApp.SCHEDULED_START, [iCPSEventSyncEngine.REFRESH, 42]],
+            serializedState: {
+                state: `running`,
+                nextSync: undefined,
+                prevError: undefined,
+                prevTrigger: `sync`,
+                progress: 15,
+                progressMsg: `Download URLs expired after writing 42 assets, refreshing remote state...`
+            } as SerializedState
+        },{
             desc: `Should update state and retain trigger on sync success`,
             events: [iCPSEventApp.SCHEDULED_START, [iCPSEventApp.SCHEDULED_DONE, new Date(1)]],
             serializedState: {
@@ -669,6 +689,15 @@ describe(`Log added`, () => {
                 message: `Error within web server: UNKNOWN: Unknown error occurred caused by Test`
             } as LogMessage
         },{
+            desc: `Should handle runtime warning: trusted phone numbers error`,
+            event: iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR,
+            args: [new Error(`Test`)],
+            serializedMessage: {
+                level: `warn`,
+                source: `RuntimeWarning`,
+                message: `Error while loading trusted phone numbers: UNKNOWN: Unknown error occurred caused by Test`
+            } as LogMessage
+        },{
             desc: `Should handle runtime warning: resource file error`,
             event: iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR,
             args: [new Error(`Test`)],
@@ -792,3 +821,282 @@ describe(`Log added`, () => {
         })
     })
 })
+
+
+describe(`Library Lock`, () => {
+    const lockFilePath = () => path.join(Config.defaultConfig.dataDir, LIBRARY_LOCK_FILE_NAME);
+    const readLock = () => JSON.parse(fs.readFileSync(lockFilePath(), {encoding: `utf-8`}));
+    const foreignOwner = (owner: Record<string, unknown> = {}) => JSON.stringify({instance: `someOtherInstance`, pid: process.pid + 1, hostname: os.hostname(), ...owner});
+    const setHeartbeat = (msAgo: number) => {
+        const time = new Date(Date.now() - msAgo);
+        fs.utimesSync(lockFilePath(), time, time);
+    };
+
+    const pidIsRunning = Resources.pidIsRunning;
+
+    beforeEach(() => {
+        mockfs({
+            [Config.defaultConfig.dataDir]: {}
+        });
+        mockedState._lockTimings = {heartbeat: 15000, stale: 300, poll: 10};
+    });
+
+    afterEach(() => {
+        mockedState.stopLockHeartbeat();
+        Resources.pidIsRunning = pidIsRunning;
+        mockfs.restore();
+    });
+
+    describe(`Acquire lock`, () => {
+        test(`Free library`, async () => {
+            await mockedState.acquireLibraryLock();
+
+            expect(readLock()).toEqual({instance: mockedState._lockInstance, pid: process.pid, hostname: os.hostname()});
+            expect(mockedState._lockHeartbeat).toBeDefined();
+        });
+
+        test(`Already locked by this process`, async () => {
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: JSON.stringify({instance: mockedState._lockInstance, pid: process.pid, hostname: os.hostname()}),
+                },
+            });
+
+            await mockedState.acquireLibraryLock();
+
+            expect(readLock().instance).toEqual(mockedState._lockInstance);
+        });
+
+        test.each([{
+            desc: `current format`,
+            content: foreignOwner(),
+        }, {
+            desc: `legacy format`,
+            content: (process.pid + 1).toString(),
+        }])(`Locked by running process on this host ($desc)`, async ({content}) => {
+            Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+                .mockReturnValue(true);
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: content,
+                },
+            });
+
+            await expect(mockedState.acquireLibraryLock()).rejects.toThrow(/^Library is locked by another process/);
+
+            expect(Resources.pidIsRunning).toHaveBeenCalledWith(process.pid + 1);
+            expect(fs.readFileSync(lockFilePath(), {encoding: `utf-8`})).toEqual(content);
+            expect(mockedState._lockHeartbeat).toBeUndefined();
+        });
+
+        test.each([{
+            desc: `current format`,
+            content: foreignOwner(),
+        }, {
+            desc: `legacy format`,
+            content: (process.pid + 1).toString(),
+        }])(`Locked by non-running process on this host ($desc)`, async ({content}) => {
+            Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+                .mockReturnValue(false);
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: content,
+                },
+            });
+
+            await mockedState.acquireLibraryLock();
+
+            expect(readLock().instance).toEqual(mockedState._lockInstance);
+        });
+
+        test(`Locked with expired heartbeat`, async () => {
+            Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>();
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: foreignOwner({hostname: `someOtherHost`}),
+                },
+            });
+            setHeartbeat(1000);
+
+            await mockedState.acquireLibraryLock();
+
+            expect(readLock().instance).toEqual(mockedState._lockInstance);
+            expect(Resources.pidIsRunning).not.toHaveBeenCalled();
+        });
+
+        test.each([{
+            desc: `another host`,
+            owner: {hostname: `someOtherHost`},
+        }, {
+            desc: `another container with the same hostname and PID`,
+            owner: {pid: process.pid},
+        }])(`Locked by process on $desc - heartbeat expires while waiting`, async ({owner}) => {
+            Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>();
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: foreignOwner(owner),
+                },
+            });
+            const start = Date.now();
+
+            await mockedState.acquireLibraryLock();
+
+            expect(Date.now() - start).toBeGreaterThanOrEqual(mockedState._lockTimings.stale - 100);
+            expect(readLock().instance).toEqual(mockedState._lockInstance);
+            expect(Resources.pidIsRunning).not.toHaveBeenCalled();
+        });
+
+        test(`Locked by process on another host - heartbeat refreshed while waiting`, async () => {
+            mockedState._lockTimings.stale = 5000;
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: foreignOwner({hostname: `someOtherHost`}),
+                },
+            });
+            setHeartbeat(1000);
+
+            const acquisition = mockedState.acquireLibraryLock();
+            await new Promise(resolve => setTimeout(resolve, 50));
+            setHeartbeat(0);
+
+            await expect(acquisition).rejects.toThrow(/^Library is locked by another process/);
+            expect(JSON.parse(fs.readFileSync(lockFilePath(), {encoding: `utf-8`})).instance).toEqual(`someOtherInstance`);
+        });
+
+        test(`Locked by process on another host - lock released while waiting`, async () => {
+            mockedState._lockTimings.stale = 5000;
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: foreignOwner({hostname: `someOtherHost`}),
+                },
+            });
+
+            const acquisition = mockedState.acquireLibraryLock();
+            await new Promise(resolve => setTimeout(resolve, 50));
+            fs.rmSync(lockFilePath());
+
+            await acquisition;
+            expect(readLock().instance).toEqual(mockedState._lockInstance);
+        });
+
+        test(`Locked by running process with --force`, async () => {
+            mockedResourceManager._resources.force = true;
+            Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+                .mockReturnValue(true);
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: foreignOwner(),
+                },
+            });
+
+            await mockedState.acquireLibraryLock();
+
+            expect(Resources.pidIsRunning).not.toHaveBeenCalled();
+            expect(readLock().instance).toEqual(mockedState._lockInstance);
+        });
+
+        test(`Lock created concurrently by another process`, async () => {
+            // Exclusive creation fails, if the path exists
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: mockfs.directory(),
+                },
+            });
+
+            await expect(mockedState.acquireLibraryLock()).rejects.toThrow(/^Library is locked by another process/);
+            expect(mockedState._lockHeartbeat).toBeUndefined();
+        });
+
+        test(`Unparsable lock file`, async () => {
+            Resources.pidIsRunning = jest.fn<typeof Resources.pidIsRunning>()
+                .mockReturnValue(true);
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: `not a lock`,
+                },
+            });
+
+            await mockedState.acquireLibraryLock();
+
+            expect(readLock().instance).toEqual(mockedState._lockInstance);
+        });
+    });
+
+    describe(`Heartbeat`, () => {
+        test(`Refreshes the modification time of the own lock`, async () => {
+            await mockedState.acquireLibraryLock();
+            setHeartbeat(10000);
+
+            mockedState.refreshLibraryLock();
+
+            expect(Date.now() - fs.statSync(lockFilePath()).mtimeMs).toBeLessThan(5000);
+            expect(mockedState._lockHeartbeat).toBeDefined();
+        });
+
+        test(`Is refreshed periodically`, async () => {
+            mockedState._lockTimings.heartbeat = 20;
+            await mockedState.acquireLibraryLock();
+            setHeartbeat(10000);
+
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            expect(Date.now() - fs.statSync(lockFilePath()).mtimeMs).toBeLessThan(5000);
+        });
+
+        test(`Stops, if the lock was acquired by another process`, async () => {
+            await mockedState.acquireLibraryLock();
+            fs.writeFileSync(lockFilePath(), foreignOwner());
+            setHeartbeat(10000);
+
+            mockedState.refreshLibraryLock();
+
+            expect(mockedState._lockHeartbeat).toBeUndefined();
+            expect(Date.now() - fs.statSync(lockFilePath()).mtimeMs).toBeGreaterThanOrEqual(9000);
+        });
+
+        test(`Stops, if the lock was removed`, async () => {
+            await mockedState.acquireLibraryLock();
+            fs.rmSync(lockFilePath());
+
+            mockedState.refreshLibraryLock();
+
+            expect(mockedState._lockHeartbeat).toBeUndefined();
+            expect(fs.existsSync(lockFilePath())).toBeFalsy();
+        });
+    });
+
+    describe(`Release lock`, () => {
+        test(`Own lock`, async () => {
+            await mockedState.acquireLibraryLock();
+
+            mockedState.releaseLibraryLock();
+
+            expect(fs.existsSync(lockFilePath())).toBeFalsy();
+            expect(mockedState._lockHeartbeat).toBeUndefined();
+        });
+
+        test.each([{
+            desc: `current format`,
+            content: foreignOwner(),
+        }, {
+            desc: `legacy format`,
+            content: (process.pid + 1).toString(),
+        }])(`Lock of another process is kept ($desc)`, async ({content}) => {
+            mockfs({
+                [Config.defaultConfig.dataDir]: {
+                    [LIBRARY_LOCK_FILE_NAME]: content,
+                },
+            });
+
+            expect(() => mockedState.releaseLibraryLock()).not.toThrow();
+
+            expect(fs.readFileSync(lockFilePath(), {encoding: `utf-8`})).toEqual(content);
+        });
+
+        test(`No lock`, () => {
+            expect(() => mockedState.releaseLibraryLock()).not.toThrow();
+
+            expect(fs.existsSync(lockFilePath())).toBeFalsy();
+        });
+    });
+});

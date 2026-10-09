@@ -1,9 +1,9 @@
 # Test Environment
 
-This file documents the test environment, used to execute the included API tests. This documentation is created, in order to re-create this environment for independent verification.
+This file documents the test environment, used to execute the included tests. The test library is documented, in order to re-create this environment for independent verification.
 
 ## Photos
-This test environment uses royalty free pictures from [Unsplash](https://unsplash.com/). The lowest possible resolution per picture was chosen, in order to keep network traffic low. Additionally, this application expects to receive a maximum of 200 records per batch request. In order to test the split of queries, we need at least 200 pictures in our test environment.
+This test environment uses royalty free pictures from [Unsplash](https://unsplash.com/). The lowest possible resolution per picture was chosen, in order to keep network traffic low. Additionally, iCloud returns a maximum of 200 records per request: the application splits its queries into ranges using `startRank` (99 pictures per request for 'All Photos', 66 for albums) and follows the `continuationMarker` of incomplete ranges. In order to test the split of queries, we need at least 200 pictures in our test environment.
 
 
 <details>
@@ -228,10 +228,73 @@ The following folder structure was created. Underscores indicate that this entry
 ```
 
 ## Asset folder relation
-All pictures are put into every folder, besides `Summer fun`, which will stay empty.
+All pictures are put into every album, besides `Summer fun`, which will stay empty. The folder `Stuff` contains no albums.
 
 ## Favorites
 The first 10 pictures are marked as 'Favorite'.
 
 ## Edits
 The first two and last two pictures will be cropped and 'one-touch' edited.
+
+## Limitations
+The test library has no hidden photos and no shared library. The API tests therefore only cover the primary library.
+
+## Test Suites
+The tests are located in `app/test/` and executed through Jest (see [Build & Test](dev-environment.md#build-test) for the commands):
+
+| Suite | Command | Description |
+|---|---|---|
+| `test/unit/` | `npm run test:unit` | Unit tests, mocking all network access |
+| `test/api/` | `npm run test:api` | Tests against the real iCloud backend, using the test account. The expected API responses are stored in `app/test/api/_data/` |
+| `test/docker/` | `npm run test:docker` | Tests of the Docker image, using [testcontainers](https://testcontainers.com/). `npm run test:docker:unit` runs the subset that requires no credentials |
+
+### Environment
+The API and Docker tests read the test account from the following environment variables (see `secrets/test.env.sample`):
+
+- `TEST_APPLE_ID_USER`: The Apple ID of the test account
+- `TEST_APPLE_ID_PWD`: The password of the test account
+- `TEST_TRUST_TOKEN`: A valid trust token of the test account, in order to sign in without MFA
+
+The Docker tests run against the image in `IMAGE_NAME` (default: `steilerdev/icloud-photos-sync:nightly`). In order to test local changes, build an image first (see [Docker Image](dev-environment.md#docker-image)):
+
+```
+cd app/
+npm run build && npm run dist && npm pack
+mv icloud-photos-sync-*.tgz ../docker/npm-pack.tgz
+docker build -t icps:local ../docker
+set -a; . ../secrets/test.env; set +a; IMAGE_NAME=icps:local npm run test:docker
+```
+
+### Trust Token
+Trust tokens expire after roughly 30 days, and are bound to the IP address they were acquired from (a token is rejected from another network, just like an expired one). Several tokens can co-exist for the same account, so every machine acquires its own token. An expired token shows up as the sign-in requiring MFA, failing the API and Docker tests during authentication. A new token can be acquired with the `token` command, using a scratch data directory:
+
+```
+APPLE_ID_USER=<test user> APPLE_ID_PWD=<test password> npm run execute -- token -d "$(mktemp -d)" -P 8080
+```
+
+Once it reports that an MFA code is required, request the code through the [web UI or its API](../user-guides/web-ui.md) and submit it (e.g. `curl -X POST "localhost:8080/api/mfa?code=<code>"`). The trusted devices of the test account don't receive the code, so request it via SMS (`curl -X POST "localhost:8080/api/resend_mfa?method=sms&phoneNumberId=2"`). The new token is printed, and can be stored as `TEST_TRUST_TOKEN`.
+
+## CI
+Tests are executed by `.github/workflows/event_pr.yml`, depending on the base branch of the pull request:
+
+| Base branch | Tests |
+|---|---|
+| `dev` | Unit tests (Ubuntu), Docker unit tests |
+| `beta` | Unit tests (Ubuntu), Docker (E2E) tests, API tests |
+| `main` | Unit tests (Ubuntu and macOS), Docker (E2E) tests, API tests |
+
+Additionally, `.github/workflows/monitor_api.yml` runs the API tests twice a day (05:20 and 17:20 UTC), in order to detect changes of the iCloud API.
+
+The E2E and API tests run on a self-hosted runner with the `residential` label, since trust tokens are bound to an IP address and GitHub-hosted runners change their IP address on every run. The test account's credentials and trust token are stored in the runner's environment. Once the token expired, it needs to be renewed on the runner host, using `.github/acquire-trust-token.sh`.
+
+## Writing Tests
+- Import the Jest globals explicitly from `@jest/globals`.
+- Use backtick strings as titles in nested `describe` blocks. `test.each`/`describe.each` take object rows with a `desc` field, used as `$desc` in the title.
+- Call `prepareResources()` (`test/_helpers/_general.ts`) in `beforeEach`, in order to get fresh, typed mocks of the resource singletons:
+    - `instances.manager`: set configuration options directly (e.g. `_resources.maxRetries = 4`), resource file I/O is stubbed.
+    - `instances.network.mock`: an `HttpMock` (`test/_helpers/http-mock.helper.ts`), mirroring the `axios-mock-adapter` API, that throws on unmatched requests.
+    - `instances.event.spyOnEvent(<event>)`: a spy on an event, removing existing listeners by default.
+- Mock methods by reassigning them with a typed `jest.fn`, e.g. `obj.method = jest.fn<typeof obj.method>().mockResolvedValue(...)`.
+- Use `test/_helpers/mock-fs.helper.ts` for file system tests. It mirrors the `mock-fs` API, but writes to a real temporary directory (only paths under `os.tmpdir()` are allowed). Round `mtimeMs` in assertions, since real file systems report sub-millisecond times.
+- Test the web server with `node-mocks-http` and `sendMockedRequest` (`test/_helpers/web.helper.ts`), and the UI with `jsdom` and `@testing-library/dom`.
+- Coverage is always collected. There is no threshold, but new code is expected to come with tests.

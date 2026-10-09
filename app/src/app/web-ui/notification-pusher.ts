@@ -2,6 +2,7 @@ import {Resources} from "../../lib/resources/main.js";
 import webpush from 'web-push';
 import {SerializedState, StateTrigger, StateType} from "../../lib/resources/state-manager.js";
 import {iCPSState} from "../../lib/resources/events-types.js";
+import {errorMessage} from "../error/error.js";
 
 export class NotificationPusher {
     constructor() {
@@ -34,7 +35,7 @@ export class NotificationPusher {
             Resources.logger(this).debug(`Sending notification to ${subscription.endpoint}`);
             await webpush.sendNotification(subscription, JSON.stringify(state));
         } catch (err) {
-            Resources.logger(this).error(`Failed to send notification to subscription: ${err.message}`);
+            Resources.logger(this).error(`Failed to send notification to subscription: ${errorMessage(err)}`);
             if (err instanceof webpush.WebPushError) {
                 Resources.logger(this).error(`WebPush error: ${err.statusCode} - ${err.body}`);
                 if (err.statusCode === 410) {

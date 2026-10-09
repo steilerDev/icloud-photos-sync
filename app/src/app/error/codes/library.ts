@@ -39,12 +39,8 @@ export const NOT_EMPTY: ErrorStruct = buildErrorStruct(
     name, prefix, `NOT_EMPTY`, `Album not empty`,
 );
 
-export const LOCK_ACQUISITION: ErrorStruct = buildErrorStruct(
-    name, prefix, `LOCK_ACQUISITION`, `Unable to acquire library lock`,
-);
-
 export const LOCKED: ErrorStruct = buildErrorStruct(
-    name, prefix, `LOCKED`, `Library locked. Use --force (or FORCE env variable) to forcefully remove the lock`,
+    name, prefix, `LOCKED`, `Library is locked by another process. Stop the other process - only if no other process is using the library, use --force (or FORCE env variable) to remove the lock`,
 );
 
 export const ASSET_NOT_FOUND: ErrorStruct = buildErrorStruct(
@@ -61,4 +57,8 @@ export const ASSET_SIZE: ErrorStruct = buildErrorStruct(
 
 export const VERSION_MISMATCH: ErrorStruct = buildErrorStruct(
     name, prefix, `VERSION_MISMATCH`, `Library version mismatch`,
+);
+
+export const INVALID_TRASH_DIR: ErrorStruct = buildErrorStruct(
+    name, prefix, `INVALID_TRASH_DIR`, `Invalid trash directory`,
 );

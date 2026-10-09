@@ -1,5 +1,5 @@
 name: clean-after-prod-release
-description: Merges the tags from the main branch to the dev branch and clears nightly tags
+description: Opens a pull request merging the main branch (and its release tags) back into the dev branch and clears nightly tags
 inputs:
   gh-token:
     description: The Github token
@@ -7,14 +7,27 @@ inputs:
 runs:
   using: composite
   steps:
+    # dev requires status checks, so the merge commit can't be pushed directly - opening a PR instead
+    # PRs opened with the GITHUB_TOKEN don't trigger workflows, so the PR needs to be merged by an admin bypassing the required checks (or closed & re-opened to run them)
     - id: merge-main-to-dev
-      uses: devmasx/merge-branch@master
-      with:
-        type: now
-        from_branch: main
-        target_branch: dev
-        message: merge main into dev
-        github_token: ${{ inputs.gh-token }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh-token }}
+      run: |
+        if [ "$(gh api "repos/${GITHUB_REPOSITORY}/compare/dev...main" --jq .ahead_by)" = "0" ]; then
+          echo "dev already contains main, nothing to merge"
+          exit 0
+        fi
+        if [ -n "$(gh pr list --repo "${GITHUB_REPOSITORY}" --base dev --head main --state open --json number --jq '.[].number')" ]; then
+          echo "::notice title=Merge main into dev::A pull request merging main into dev is already open"
+          exit 0
+        fi
+        PR_URL=$(gh pr create --repo "${GITHUB_REPOSITORY}" --base dev --head main \
+          --title "chore: merge main into dev" \
+          --body "Merges the production release (and its tags) back into \`dev\`. Created automatically by \`clean-after-prod-release\`.
+
+        Use a **merge commit** (not squash or rebase), so the release tags stay reachable from \`dev\`. Workflows don't run on pull requests opened by the \`GITHUB_TOKEN\`: either merge bypassing the required status checks, or close and re-open this pull request to run them.")
+        echo "::notice title=Merge main into dev::Opened ${PR_URL}"
     - id: clear-nightly-tags
       shell: bash
       run: git push origin --delete $(git tag -l "*-nightly*")

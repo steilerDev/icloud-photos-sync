@@ -12,14 +12,26 @@ inputs:
   gh-token:
     description: The GH token used for commenting on PR requests
     required: true
+  coverage:
+    description: Whether to collect code coverage - v8 coverage exhausts the heap of the macOS runners
+    required: false
+    default: 'true'
 runs:
   using: composite
   steps:
     - id: test-unit
       shell: bash
-      run: (cd ${{ inputs.app-path }}; npm run test:unit)
+      env:
+        COVERAGE: ${{ inputs.coverage }}
+      run: |
+        cd ${{ inputs.app-path }}
+        if [ "$COVERAGE" = "true" ]; then
+          npm run test:unit
+        else
+          npm test -- --coverage false test/unit/
+        fi
     - id: upload-artifact
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-name }}-${{ runner.os }}
         path: ${{ inputs.app-path }}/coverage/

@@ -63,10 +63,18 @@ export const UNWANTED_ALBUM: ErrorStruct = buildErrorStruct(
     name, prefix, `UNWANTED_ALBUM`, `Ignoring unwanted album`,
 );
 
+export const REQUEST_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `REQUEST_FAILED`, `CloudKit request failed`,
+);
+
 export const COUNT_DATA: ErrorStruct = buildErrorStruct(
     name, prefix, `COUNT_DATA`, `Unable to extract count data`,
 );
 
 export const FETCH_RECORDS: ErrorStruct = buildErrorStruct(
     name, prefix, `FETCH_RECORDS`, `Unable to fetch records`,
+);
+
+export const MISSING_DOWNLOAD_URL: ErrorStruct = buildErrorStruct(
+    name, prefix, `MISSING_DOWNLOAD_URL`, `Asset has no download URL`,
 );

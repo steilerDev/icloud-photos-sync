@@ -5,6 +5,10 @@ let currentLogFilter = 'none';
 let currentLogLoop;
 // Stores the paused state
 let isPaused = true
+// The number of log lines currently rendered
+let renderedLogCount = 0
+// The timestamp of the first rendered log line - used to detect a log reset on the server (e.g. upon a new sync)
+let renderedLogStart;
 
 // Listener for the pause button - will toggle the pause button UI and stop or continue the log refresh loop
 function togglePause() {
@@ -60,8 +64,15 @@ function toggleLog() {
 
 // This function refreshes the log by fetching it from the server and updating the DOM
 async function refreshLog() {
+    const filter = currentLogFilter
     const logs = await fetchLog()
-    setLog(logs)
+    if(isPaused) {
+        return
+    }
+    // Discarding responses for a filter that is no longer selected
+    if(filter === currentLogFilter) {
+        setLog(logs)
+    }
     currentLogLoop = setTimeout(() => refreshLog(), 500);
 }
 
@@ -105,59 +116,71 @@ function selectFilter(level) {
     setLogLoading()
 }
 
-// Function removes all logs from screen and puts new log lines onto the screen
+// Function renders the provided log - only new log lines are appended, the view is rebuilt if the log on the server was reset
 function setLog(log) {
     if(!log) {
         return
     }
+    const logContent = document.getElementById('logContent');
     if(log.length === 0) {
-        document.getElementById('logContent').innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">No logs to display</div>';
+        setLogPlaceholder('No logs to display')
         return
     }
-    if(log.length === document.getElementById('logContent').childElementCount) {
-        //console.log('Not refreshing view because log count is equal')
+    if(log.length < renderedLogCount || log[0].time !== renderedLogStart) {
+        logContent.replaceChildren()
+        renderedLogCount = 0
+        renderedLogStart = log[0].time
+    }
+    if(log.length === renderedLogCount) {
         return
     }
-    document.getElementById('logContent').innerHTML = '';
-    for (const logLine of log) {
-        addLogLine(logLine.level, logLine.source, logLine.message, logLine.time)
+    const newLines = document.createDocumentFragment()
+    for (const logLine of log.slice(renderedLogCount)) {
+        newLines.appendChild(addLogLine(logLine.level, logLine.source, logLine.message, logLine.time))
     }
+    logContent.appendChild(newLines)
+    renderedLogCount = log.length
+    logContent.scrollTop = logContent.scrollHeight;
 }
 
-// Adds a single log line to the screen
+// Creates a single log line element
 function addLogLine(level, source, message, time) {
-    const logContent = document.getElementById('logContent');
-    
     const logEntry = document.createElement('div');
     logEntry.className = 'log-entry';
     logEntry.dataset.level = level.toLowerCase();
     
     const logEntryTime = document.createElement('span');
     logEntryTime.className = 'log-timestamp';
-    logEntryTime.innerHTML = formatDate(time);
+    logEntryTime.textContent = formatDate(time);
     logEntry.appendChild(logEntryTime);
 
     const logLevel = document.createElement('span');
     logLevel.className = 'log-level ' + level;
-    logLevel.innerHTML = level.toUpperCase();
+    logLevel.textContent = level.toUpperCase();
     logEntry.appendChild(logLevel);
 
     const logSource = document.createElement('span');
     logSource.className = 'log-source';
-    logSource.innerHTML = source
+    logSource.textContent = source
     logEntry.appendChild(logSource)
 
     const logMessage = document.createElement('span');
     logMessage.className = 'log-message';
-    logMessage.innerHTML = message
+    logMessage.textContent = message
     logEntry.appendChild(logMessage)
     
-    logContent.appendChild(logEntry);
-    logContent.scrollTop = logContent.scrollHeight;
+    return logEntry
 }
 
 // Replaces the log content with a loading indicator
 function setLogLoading() {
-    document.getElementById('logContent').innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">Loading logs...</div>';
+    setLogPlaceholder('Loading logs...')
+}
+
+// Replaces the log content with a placeholder message
+function setLogPlaceholder(text) {
+    renderedLogCount = 0
+    renderedLogStart = undefined
+    document.getElementById('logContent').innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">' + text + '</div>';
 }
 `

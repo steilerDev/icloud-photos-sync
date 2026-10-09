@@ -4,7 +4,7 @@ import {Album, AlbumType} from './model/album.js';
 import fs from 'fs';
 import {Asset} from './model/asset.js';
 import {PLibraryEntities} from './model/photos-entity.js';
-import {iCPSError} from '../../app/error/error.js';
+import {errorMessage, iCPSError} from '../../app/error/error.js';
 import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
 import {Resources} from '../resources/main.js';
@@ -37,8 +37,13 @@ export class PhotosLibrary {
     stashDir: string;
 
     /**
+     * The full path to the directory, where deleted assets are moved to - undefined, if soft delete is disabled
+     */
+    trashDir?: string;
+
+    /**
      * Creates the local PhotoLibrary
-     * @throws An iCPSError if the library version does not match
+     * @throws An iCPSError if the library version does not match, or the trash directory is invalid
      */
     constructor() {
         if (Resources.manager().libraryVersion !== PHOTOS_LIBRARY.LIBRARY_VERSION) {
@@ -50,6 +55,30 @@ export class PhotosLibrary {
         this.sharedAssetDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.SHARED_ASSET_DIR]);
         this.archiveDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR]);
         this.stashDir = this.getFullPathAndCreate([PHOTOS_LIBRARY.ARCHIVE_DIR, PHOTOS_LIBRARY.STASH_DIR]);
+
+        const {trashDir} = Resources.manager();
+        if (trashDir) {
+            this.validateTrashDir(trashDir);
+            fs.mkdirSync(trashDir, {recursive: true});
+            this.trashDir = trashDir;
+        }
+    }
+
+    /**
+     * Makes sure the trash directory does not interfere with the library structure
+     * @param trashDir - The full path to the trash directory
+     * @throws An iCPSError, if the trash directory is the data dir or located within one of the asset directories
+     */
+    validateTrashDir(trashDir: string) {
+        const isWithin = (parentDir: string) => {
+            const relativePath = path.relative(parentDir, trashDir);
+            return relativePath === `` || (relativePath.split(path.sep)[0] !== `..` && !path.isAbsolute(relativePath));
+        };
+
+        if (path.relative(Resources.manager().dataDir, trashDir) === `` || isWithin(this.primaryAssetDir) || isWithin(this.sharedAssetDir)) {
+            throw new iCPSError(LIBRARY_ERR.INVALID_TRASH_DIR)
+                .addMessage(`${trashDir} must not be the data dir or located within an asset directory`);
+        }
     }
 
     /**
@@ -182,7 +211,7 @@ export class PhotosLibrary {
      * @param cause - Optional cause of the execution of this function
      * @throws An iCPSError in case the provided path is NOT a dead symlink
      */
-    async removeDeadSymlink(symlinkPath: string, cause?: Error) {
+    async removeDeadSymlink(symlinkPath: string, cause?: unknown) {
         try {
             // Checking if there is actually a dead symlink
             if (await fs.promises.lstat(symlinkPath) && !fs.existsSync(symlinkPath)) {
@@ -253,13 +282,53 @@ export class PhotosLibrary {
     }
 
     /**
-     * Deletes the specified asset from disk
+     * Deletes the specified asset from disk - or moves it to the trash directory, if soft delete is enabled
      * @param asset - The asset that needs to be removed
+     * @param permanently - If set, the asset is deleted from disk, even if soft delete is enabled
      * @returns A promise, that resolves once the asset was deleted from disk
      */
-    async deleteAsset(asset: Asset) {
+    async deleteAsset(asset: Asset, permanently: boolean = false) {
+        if (this.trashDir && !permanently) {
+            return this.trashAsset(asset, this.trashDir);
+        }
+
         Resources.logger(this).info(`Deleting asset ${asset.getDisplayName()}`);
         await fs.promises.rm(asset.getAssetFilePath(), {force: true});
+    }
+
+    /**
+     * Moves the specified asset into the trash directory, keeping the zone's asset directory structure. An existing asset with the same name in the trash is overwritten - since the name is derived from the checksum, it holds the same content.
+     * @param asset - The asset that needs to be moved
+     * @param trashDir - The full path to the trash directory
+     * @returns A promise, that resolves once the asset was moved
+     */
+    async trashAsset(asset: Asset, trashDir: string) {
+        const assetPath = asset.getAssetFilePath();
+        const trashZoneDir = path.join(trashDir, asset.zone === Zones.Primary ? PHOTOS_LIBRARY.PRIMARY_ASSET_DIR : PHOTOS_LIBRARY.SHARED_ASSET_DIR);
+        const trashPath = path.join(trashZoneDir, path.basename(assetPath));
+
+        Resources.logger(this).info(`Moving asset ${asset.getDisplayName()} to trash`);
+        await fs.promises.mkdir(trashZoneDir, {recursive: true});
+        try {
+            await fs.promises.rename(assetPath, trashPath);
+        } catch (err) {
+            const {code} = err as NodeJS.ErrnoException;
+            if (code === `ENOENT`) {
+                // Asset is already gone - nothing to move
+                Resources.logger(this).debug(`Asset ${asset.getDisplayName()} not found, skipping`);
+                return;
+            }
+
+            if (code !== `EXDEV`) {
+                throw err;
+            }
+
+            // Trash directory is located on a different file system - copying instead
+            const {atime, mtime} = await fs.promises.stat(assetPath);
+            await fs.promises.copyFile(assetPath, trashPath);
+            await fs.promises.utimes(trashPath, atime, mtime);
+            await fs.promises.rm(assetPath, {force: true});
+        }
     }
 
     /**
@@ -392,7 +461,7 @@ export class PhotosLibrary {
 
     /**
      * Links the assets for the given album
-     * @remarks ALbums only refer to PrimaryAssets - hardcoding this
+     * @remarks Albums usually refer to primary assets, only the 'Hidden' album might contain shared assets - those are linked, if the asset is not present in the primary asset dir
      * @param album - Album holding information about the linked assets
      * @param albumPath - Album path to link assets to
      * @emits iCPSEventRuntimeWarning.LINK_ERROR - If linking of an asset fails
@@ -403,10 +472,7 @@ export class PhotosLibrary {
                 dir: albumPath,
                 base: album.assets[assetUUID],
             });
-            const assetPath = path.format({
-                dir: this.primaryAssetDir,
-                base: assetUUID,
-            });
+            const assetPath = this.getLinkableAssetPath(assetUUID);
             // Relative asset path is relative to album, not the linkedAsset
             const relativeAssetPath = path.relative(albumPath, assetPath);
             try {
@@ -420,6 +486,25 @@ export class PhotosLibrary {
                 Resources.emit(iCPSEventRuntimeWarning.LINK_ERROR, err, assetPath, linkedAsset);
             }
         });
+    }
+
+    /**
+     * Resolves the path of an asset, that should be linked into an album
+     * @param assetFilename - The filename of the asset in the asset dir
+     * @returns The path to the asset in the primary asset dir - or the shared asset dir, if it is only present there
+     */
+    getLinkableAssetPath(assetFilename: string): string {
+        const primaryAssetPath = path.format({
+            dir: this.primaryAssetDir,
+            base: assetFilename,
+        });
+        const sharedAssetPath = path.format({
+            dir: this.sharedAssetDir,
+            base: assetFilename,
+        });
+        return !fs.existsSync(primaryAssetPath) && fs.existsSync(sharedAssetPath)
+            ? sharedAssetPath
+            : primaryAssetPath;
     }
 
     /**
@@ -518,7 +603,7 @@ export class PhotosLibrary {
             srcNameStats = fs.lstatSync(srcNamePath);
             fs.unlinkSync(srcNamePath);
         } catch (err) {
-            Resources.logger(this).debug(`Unable to unlink ${srcNamePath}: ${err.message}`);
+            Resources.logger(this).debug(`Unable to unlink ${srcNamePath}: ${errorMessage(err)}`);
         }
 
         Resources.logger(this).debug(`Re-linking ${destNamePath}`);

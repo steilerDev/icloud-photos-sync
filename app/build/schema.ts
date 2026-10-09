@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 // This script generates the json schema used for validation of externally provided date
 import fs from "fs/promises";
 import path from "path";
@@ -21,6 +21,10 @@ const schemaList = [
         allowAdditionalProperties: true,
     }, {
         typeName: `SigninInitResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `EscrowInitResponse`,
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
     }, {
@@ -49,6 +53,26 @@ const schemaList = [
         allowAdditionalProperties: true,
     }, {
         typeName: `PhotosSetupResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `MFASubmitResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `EscrowCompleteResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `LogoutResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `CloudKitRecordsResponse`,
+        srcPath: `src/lib/resources/network-types.ts`,
+        allowAdditionalProperties: true,
+    }, {
+        typeName: `HealthCheckPingResponse`,
         srcPath: `src/lib/resources/network-types.ts`,
         allowAdditionalProperties: true,
     },

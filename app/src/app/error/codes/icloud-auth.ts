@@ -35,6 +35,10 @@ export const ACCOUNT_SETUP: ErrorStruct = buildErrorStruct(
     name, prefix, `ACCOUNT_SETUP`, `Unable to setup iCloud Account`,
 );
 
+export const ACCOUNT_SETUP_INCOMPLETE: ErrorStruct = buildErrorStruct(
+    name, prefix, `ACCOUNT_SETUP_INCOMPLETE`, `iCloud requires an action on your account - log in to https://www.icloud.com and complete the shown prompts (e.g. accept updated terms and conditions)`,
+);
+
 export const SETUP_TIMEOUT: ErrorStruct = buildErrorStruct(
     name, prefix, `SETUP_TIMEOUT`, `iCloud setup did not complete successfully within expected amount of time`,
 );
@@ -49,6 +53,10 @@ export const PCS_COOKIE_MISSING: ErrorStruct = buildErrorStruct(
 
 export const SRP_INIT_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `SRP_INIT_FAILED`, `Unable to initialize SRP authentication protocol`,
+);
+
+export const ESCROW_FAILED: ErrorStruct = buildErrorStruct(
+    name, prefix, `ESCROW_FAILED`, `Unable to complete the escrow password verification`,
 );
 
 export const LOGOUT_FAILED: ErrorStruct = buildErrorStruct(

@@ -1,3 +1,8 @@
+import path from 'path';
+import * as Config from './_config';
+
+const customDataDir = path.join(Config.defaultConfig.dataDir, `custom`);
+
 export const rejectOptions = [
     {
         options: [
@@ -269,11 +274,11 @@ export const nonRejectOptions = [
             `-p`,
             `testPass`,
             `-d`,
-            `/some/data/dir`,
+            customDataDir,
         ],
         _desc: `Data dir set`,
         expectedOptions: {
-            dataDir: `/some/data/dir`,
+            dataDir: customDataDir,
         },
     }, {
         options: [
@@ -475,6 +480,51 @@ export const nonRejectOptions = [
             `test@icloud.com`,
             `-p`,
             `testPass`,
+            `--sync-hidden`,
+        ],
+        _desc: `Sync hidden enabled`,
+        expectedOptions: {
+            syncHidden: true,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
+            `--soft-delete`,
+        ],
+        _desc: `Soft delete enabled`,
+        expectedOptions: {
+            softDelete: true,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
+            `--soft-delete`,
+            `--trash-dir`,
+            `some/trash`,
+        ],
+        _desc: `Soft delete enabled with custom trash dir`,
+        expectedOptions: {
+            softDelete: true,
+            trashDir: `some/trash`,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
             `--log-level`,
             `warn`,
         ],
@@ -546,6 +596,20 @@ export const nonRejectOptions = [
             `test@icloud.com`,
             `-p`,
             `testPass`,
+            `--export-prometheus-metrics`,
+        ],
+        _desc: `Export Prometheus metrics enabled`,
+        expectedOptions: {
+            exportPrometheusMetrics: true,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
             `--metadata-rate`,
             `5/10`,
         ],
@@ -566,6 +630,20 @@ export const nonRejectOptions = [
         _desc: `Network capture enabled`,
         expectedOptions: {
             enableNetworkCapture: true,
+        },
+    }, {
+        options: [
+            `/usr/bin/node`,
+            `/home/icloud-photos-sync/main.js`,
+            `-u`,
+            `test@icloud.com`,
+            `-p`,
+            `testPass`,
+            `--use-system-proxy`,
+        ],
+        _desc: `System proxy enabled`,
+        expectedOptions: {
+            useSystemProxy: true,
         },
     }, {
         options: [

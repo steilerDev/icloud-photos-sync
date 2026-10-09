@@ -3,8 +3,8 @@ import EventEmitter from 'events';
 import * as Config from './_config';
 import {iCPSAppOptions} from '../../src/app/factory';
 import {ResourceManager} from '../../src/lib/resources/resource-manager';
-import MockAdapter from 'axios-mock-adapter';
 import {NetworkManager} from '../../src/lib/resources/network-manager';
+import {HttpMock} from './http-mock.helper';
 import {iCPSEvent} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
 import {Validator} from '../../src/lib/resources/validator';
@@ -23,7 +23,7 @@ type MockedResourceInstances = {
 }
 
 export type MockedNetworkManager = NetworkManager & {
-    mock: MockAdapter;
+    mock: HttpMock;
 };
 
 export type MockedResourceManager = ResourceManager & {
@@ -100,7 +100,8 @@ export function prepareResources(initiate: boolean = true, appOptions: iCPSAppOp
         ResourceManager.prototype._writeResourceFile = originalWriteResourceFile;
         ResourceManager.prototype._readResourceFile = originalReadResourceFile;
 
-        instances.network.mock = new MockAdapter(instances.network._axios, {onNoMatch: `throwException`});
+        instances.network._headerJar.resetFrameId(Config.frameId);
+        instances.network.mock = new HttpMock(instances.network._http, {onNoMatch: `throwException`});
         instances.event.spyOnEvent = (event: iCPSEvent, removeListeners: boolean = true) => spyOnEvent(instances.event._eventBus, event, removeListeners);
         return instances;
     }

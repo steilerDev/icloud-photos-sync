@@ -1,6 +1,7 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals";
 import {MockedEventManager, MockedResourceManager, MockedValidator, prepareResources} from "../_helpers/_general";
 import {WebServer} from "../../src/app/web-ui/web-server";
+import {Resources} from "../../src/lib/resources/main";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from "../../src/lib/resources/events-types";
 import {createRequest, RequestMethod} from 'node-mocks-http'
 import {IncomingMessage} from "http";
@@ -11,6 +12,7 @@ import webpush from 'web-push';
 import {configure, getByTestId} from "@testing-library/dom";
 import '@testing-library/jest-dom/jest-globals';
 import {LogLevel, SerializedState, StateManager, StateType} from "../../src/lib/resources/state-manager";
+import {PrometheusMetricsExporter} from "../../src/app/event/prometheus-metrics-exporter";
 
 let mockedEventManager: MockedEventManager;
 let mockedValidator: MockedValidator;
@@ -36,6 +38,16 @@ describe(`Constructor`, () => {
         const webServer = new WebServer()
         expect(webServer.mfaMethod).toBeDefined()
         expect(webServer.mfaMethod.isDevice).toBeTruthy()
+    })
+
+    test(`Should reset MFA Method when new MFA flow starts`, () => {
+        const webServer = new WebServer()
+        webServer.mfaMethod.update(`sms`, 2)
+
+        Resources.emit(iCPSEventCloud.MFA_REQUIRED, [])
+
+        expect(webServer.mfaMethod.isDevice).toBeTruthy()
+        expect(webServer.mfaMethod.numberId).toBeUndefined()
     })
 
     describe(`HTTP Server`, () => {
@@ -126,6 +138,118 @@ describe(`Notification Pusher`, () => {
     })
 })
 
+describe(`Metrics endpoint`, () => {
+    test.each([{
+        exportPrometheusMetrics: false,
+        exporter: true,
+        desc: `export disabled`
+    }, {
+        exportPrometheusMetrics: true,
+        exporter: false,
+        desc: `no exporter provided`
+    }])(`Should not expose /metrics with $desc`, async ({exportPrometheusMetrics, exporter}) => {
+        mockedResourceManager._resources.exportPrometheusMetrics = exportPrometheusMetrics
+        const webServer = new WebServer(exporter ? new PrometheusMetricsExporter() : undefined)
+
+        const req = createRequest<IncomingMessage>({
+            method: `GET`,
+            url: `/metrics`
+        })
+        const res = await sendMockedRequest(webServer, req)
+
+        expect(webServer._sitemap.GET[`/metrics`]).toBeUndefined()
+        expect(res._getStatusCode()).toEqual(400)
+    })
+
+    describe(`Enabled`, () => {
+        let webServer: WebServer
+
+        beforeEach(() => {
+            mockedResourceManager._resources.exportPrometheusMetrics = true
+            webServer = new WebServer(new PrometheusMetricsExporter())
+        })
+
+        test(`Should serve Prometheus text format by default`, async () => {
+            const req = createRequest<IncomingMessage>({
+                method: `GET`,
+                url: `/metrics`
+            })
+            const res = await sendMockedRequest(webServer, req)
+
+            expect(res._getStatusCode()).toEqual(200)
+            expect(res._getHeaders()[`content-type`]).toEqual(`text/plain; version=0.0.4; charset=utf-8`)
+            expect(res._getData()).toContain(`# TYPE icps_sync_runs_total counter`)
+            expect(res._getData()).not.toContain(`# EOF`)
+        })
+
+        test(`Should serve OpenMetrics if requested`, async () => {
+            const req = createRequest<IncomingMessage>({
+                method: `GET`,
+                url: `/metrics`,
+                headers: {
+                    accept: `application/openmetrics-text;version=1.0.0;escaping=allow-utf-8;q=0.5,text/plain;version=0.0.4;q=0.2,*/*;q=0.1`
+                }
+            })
+            const res = await sendMockedRequest(webServer, req)
+
+            expect(res._getStatusCode()).toEqual(200)
+            expect(res._getHeaders()[`content-type`]).toEqual(`application/openmetrics-text; version=1.0.0; charset=utf-8; escaping=allow-utf-8`)
+            expect(res._getData()).toContain(`# TYPE icps_sync_runs counter`)
+            expect(res._getData()).toMatch(/# EOF\n$/)
+        })
+
+        test(`Should serve metrics below the web base path`, async () => {
+            mockedResourceManager._resources.webBasePath = `/icps`
+            const req = createRequest<IncomingMessage>({
+                method: `GET`,
+                url: `/icps/metrics`
+            })
+            const res = await sendMockedRequest(webServer, req)
+
+            expect(res._getStatusCode()).toEqual(200)
+        })
+    })
+})
+
+describe(`Web base path`, () => {
+    test.each([{
+        url: `/icps.v1/service-worker.js`,
+        expectedStatus: 200,
+        desc: `Matching base path`,
+    }, {
+        url: `/icpsXv1/service-worker.js`,
+        expectedStatus: 400,
+        desc: `Regular expression characters in base path are matched literally`,
+    }])(`$desc`, async ({url, expectedStatus}) => {
+        mockedResourceManager._resources.webBasePath = `/icps.v1`
+        const webServer = new WebServer()
+
+        const req = createRequest<IncomingMessage>({
+            method: `GET`,
+            url,
+        })
+
+        const res = await sendMockedRequest(webServer, req)
+
+        expect(res._getStatusCode()).toEqual(expectedStatus)
+    })
+
+    test(`Forward root to /state below the base path`, async () => {
+        mockedResourceManager._resources.webBasePath = `/icps`
+        const webServer = new WebServer()
+
+        const req = createRequest<IncomingMessage>({
+            method: `GET`,
+            url: `/icps/`,
+        })
+
+        const res = await sendMockedRequest(webServer, req)
+
+        expect(res._getStatusCode()).toEqual(302)
+        expect(res.getHeader(`Location`)).toEqual(`/icps/state`)
+    })
+})
+
 describe.each([
     {
         webBasePath: ``,
@@ -206,7 +330,7 @@ describe.each([
         const res = await sendMockedRequest(webServer, req)
 
         expect(res._getStatusCode()).toEqual(302)
-        expect(res.getHeader(`Location`)).toEqual(`/state`)
+        expect(res.getHeader(`Location`)).toEqual(`${webBasePath}/state`)
     })
 
     test(`Serve service worker`, async () => {
@@ -585,10 +709,45 @@ describe.each([
                     message: `Requesting MFA resend with method ${mfaString}`,
                 });
                 if(phoneNumberId) {
-                    expect(updateSpy).toHaveBeenCalledWith(mfaMethod, phoneNumber)
+                    expect(updateSpy).toHaveBeenCalledWith(mfaMethod, phoneNumber, undefined)
                 } else {
                     expect(updateSpy).toHaveBeenCalledWith(mfaMethod)
                 }
+                expect(mfaEvent).toHaveBeenCalled()
+            });
+
+            test(`Resend code with sms - forwarding phone number flags`, async () => {
+                Resources.state().trustedPhoneNumbers = [{
+                    id: 2,
+                    numberWithDialCode: `+49 •••• •••••12`,
+                    nonFTEU: true,
+                }]
+                const updateSpy = jest.spyOn(webServer.mfaMethod, `update`);
+                const mfaEvent = mockedEventManager.spyOnEvent(iCPSEventMFA.MFA_RESEND);
+
+                const req = createRequest<IncomingMessage>({
+                    method: `POST`,
+                    url: `${webBasePath}/api/resend_mfa`,
+                    queryParameters: {
+                        method: `sms`,
+                        phoneNumberId: `2`
+                    }
+                })
+
+                const res = await sendMockedRequest(webServer, req)
+
+                expect(res._getStatusCode()).toBe(200);
+                expect(updateSpy).toHaveBeenCalledWith(`sms`, 2, true)
+                expect(webServer.mfaMethod.nonFTEU).toBe(true)
+                expect(webServer.mfaMethod.getResendPayload()).toEqual({
+                    phoneNumber: {id: 2, nonFTEU: true},
+                    mode: `sms`,
+                })
+                expect(webServer.mfaMethod.getEnterPayload(`123456`)).toEqual({
+                    securityCode: {code: `123456`},
+                    phoneNumber: {id: 2, nonFTEU: true},
+                    mode: `sms`,
+                })
                 expect(mfaEvent).toHaveBeenCalled()
             });
 
@@ -1116,6 +1275,63 @@ describe.each([
                     expect(site.mockedFunctions.fetch).toHaveBeenCalledWith(`${webBasePath}/api/log?loglevel=info`, {headers: {Accept: `application/json`}})
                     expect(logLineMock.jestMock).not.toHaveBeenCalled()
 
+                })
+
+                test(`Only append new log lines`, async () => {
+                    const logLineMock = site.mockFunction(`addLogLine`)
+                    const firstLine = getByTestId(site.body, `logContent`).children[0]
+                    mockedState.log!.push({
+                        level: LogLevel.INFO,
+                        source: `SourceC`,
+                        message: `NewMsg`,
+                        time: 2
+                    })
+
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+
+                    expect(logLineMock.jestMock).toHaveBeenCalledTimes(1)
+                    expect(logLineMock.jestMock).toHaveBeenCalledWith(LogLevel.INFO, `SourceC`, `NewMsg`, 2)
+                    expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(4);
+                    expect(getByTestId(site.body, `logContent`).children[0]).toBe(firstLine)
+                    expect(getByTestId(site.body, `logContent`).children[3]).toHaveTextContent(`NewMsg`)
+                })
+
+                test(`Rebuild log view if the log was reset`, async () => {
+                    mockedState.log = [
+                        {
+                            level: LogLevel.INFO,
+                            source: `SourceC`,
+                            message: `ResetMsg`,
+                            time: 3
+                        }
+                    ]
+
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+
+                    expect(getByTestId(site.body, `logContent`).childElementCount).toEqual(1);
+                    expect(getByTestId(site.body, `logContent`).children[0]).toHaveTextContent(`ResetMsg`)
+                })
+
+                test(`Render log messages as text`, async () => {
+                    mockedState.log = [
+                        {
+                            level: LogLevel.INFO,
+                            source: `<i>Source</i>`,
+                            message: `<img src=x onerror="alert(1)">`,
+                            time: 3
+                        }
+                    ]
+
+                    jest.advanceTimersByTime(1000)
+                    await mock.waitUntilCalled()
+
+                    const logLine = getByTestId(site.body, `logContent`).children[0]
+                    expect(logLine.querySelector(`img`)).toBeNull()
+                    expect(logLine.querySelector(`i`)).toBeNull()
+                    expect(logLine).toHaveTextContent(`<img src=x onerror="alert(1)">`)
+                    expect(logLine).toHaveTextContent(`<i>Source</i>`)
                 })
             })
         })

@@ -5,7 +5,7 @@ import {LIBRARY_ERR} from "../../../app/error/error-codes.js";
  * Mapping of backend provided filetype description (key) and actual file extension (value)
  * Incomplete list, due to lack of documentation
  */
-const EXT = {
+const EXT: Record<string, string> = {
     'public.png': `png`,
     'public.mpeg-4': `mp4`,
     'public.jpeg': `jpeg`,
@@ -49,6 +49,7 @@ const EXT = {
     'com.apple.m4a-audio': `m4a`,
     'com.canon.crw-raw-image': `crw`,
     'public.mp3': `mp3`,
+    'com.microsoft.waveform-audio': `wav`,
 };
 
 /**

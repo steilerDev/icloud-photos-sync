@@ -32,6 +32,9 @@ export const CLIENT_INFO = jsonc.stringify({
 export const HEADER_KEYS = {
     SCNT: `scnt`,
     SESSION_ID: `X-Apple-ID-Session-Id`,
+    AUTH_ATTRIBUTES: `X-Apple-Auth-Attributes`,
+    FRAME_ID: `X-Apple-Frame-Id`,
+    OAUTH_STATE: `X-Apple-OAuth-State`,
     COOKIE: `Cookie`,
 };
 
@@ -43,6 +46,7 @@ export const COOKIE_KEYS = {
     X_APPLE: `X-APPLE-`,
     PCS_PHOTOS: `X-APPLE-WEBAUTH-PCS-Photos`,
     PCS_SHARING: `X-APPLE-WEBAUTH-PCS-Sharing`,
+    WEBAUTH_TOKEN: `X-APPLE-WEBAUTH-TOKEN`,
 };
 
 /**
@@ -61,7 +65,10 @@ export const ENDPOINTS = {
                 COMPLETE: `/signin/complete`,
             },
             MFA: {
-                DEVICE_RESEND: `/verify/trusteddevice`,
+                /**
+                 * Since iOS 26.4, the code is no longer pushed to trusted devices automatically - it needs to be requested via a PUT request to this endpoint
+                 */
+                DEVICE_RESEND: `/verify/trusteddevice/securitycode`,
                 DEVICE_ENTER: `/verify/trusteddevice/securitycode`,
                 PHONE_RESEND: `/verify/phone`,
                 PHONE_ENTER: `/verify/phone/securitycode`,
@@ -81,6 +88,13 @@ export const ENDPOINTS = {
                  */
             },
             TRUST: `/2sv/trust`,
+            /**
+             * Since iOS 26.4 the backend might require a second SRP-based password proof ('escrow'), signaled through the 'X-Apple-EDP' or 'X-Apple-PDP' header on a 409 response
+             */
+            ESCROW: {
+                INIT: `/escrow/init`,
+                COMPLETE: `/escrow/complete`,
+            },
         },
     },
     /**
@@ -123,6 +137,10 @@ export const ENDPOINTS = {
  */
 export type SigninResponse = {
     /**
+     * 409 if MFA or escrow is required, 200 if the trust token was accepted
+     */
+    status: 200 | 409,
+    /**
      * Data should be irrelevant for this one
      */
     data: {
@@ -138,12 +156,21 @@ export type SigninResponse = {
          * Session secret - required to keep track of MFA request
          * @minLength 1
          */
-        'x-apple-session-token': string, // eslint-disable-line
+        'x-apple-session-token': string,
+        /**
+         * Session id used by the web frontend to track the authentication flow
+         * @minLength 1
+         */
+        'x-apple-id-session-id'?: string,
+        /**
+         * Country code of the account, used during account setup
+         */
+        'x-apple-id-account-country'?: string,
         /**
          * Should hold the 'aasp' cookie
          * @minItems 1
          */
-        'set-cookie': string[], // eslint-disable-line
+        'set-cookie': string[],
     }
 }
 
@@ -192,7 +219,16 @@ export type SigninInitResponse = {
 }
 
 /**
+ * The expected response format for the escrow init request - holding the same SRP challenge as the signin init response
+ * @see {@link ENDPOINTS.AUTH.PATH.ESCROW.INIT}
+ */
+export type EscrowInitResponse = {
+    data: SigninInitResponse[`data`]
+}
+
+/**
  * The expected response format when getting auth information
+ * @see {@link ENDPOINTS.AUTH.BASE}
  */
 export type AuthInformationResponse = {
     data: {
@@ -208,21 +244,23 @@ export type AuthInformationResponse = {
  * @see {@link ENDPOINTS.AUTH.PATH.MFA.DEVICE_RESEND}
  */
 export type ResendMFADeviceResponse = {
-    data: {
-         /**
+    /**
+     * Apple does not reliably return a body for this request (usually status 202 without content)
+     */
+    data?: {
+        /**
          * Number of available trusted devices
-         * @minimum 1
          */
-        trustedDeviceCount: number,
+        trustedDeviceCount?: number,
         /**
          * Properties of the requested security code
          */
-        securityCode: SecurityCodeFormat,
+        securityCode?: SecurityCodeFormat,
         /**
          * Object holding information about alternative phone number verification
          */
-        phoneNumberVerification: PhoneNumberVerification
-    }
+        phoneNumberVerification?: PhoneNumberVerification
+    } | ``
 }
 
 /**
@@ -241,11 +279,8 @@ type PhoneNumberVerification = {
      * The phone number used for verification
      */
     trustedPhoneNumber: TrustedPhoneNumber,
-    trustedPhoneNumbers: TrustedPhoneNumber[],
-    securityCode: SecurityCodeFormat,
-    authenticationType: `hsa2`,
-    hsa2Account: true,
-    restrictedAccount: false,
+    trustedPhoneNumbers?: TrustedPhoneNumber[],
+    securityCode?: SecurityCodeFormat,
 }
 
 /**
@@ -263,27 +298,28 @@ export type TrustedPhoneNumber = {
     /**
      * @pattern ^sms|voice$
      */
-    pushMode: string,
+    pushMode?: string,
+    obfuscatedNumber?: string,
+    lastTwoDigits?: string,
     /**
-     * @minLength 1
+     * Flag provided by the backend, that needs to be echoed when submitting a code received through this number
      */
-    obfuscatedNumber: string,
-    /**
-     * @minLength 1
-     * @maxLength 2
-     */
-    lastTwoDigits: string
+    nonFTEU?: boolean
 }
 
 /**
  * Format of the expected security code used in MFA resend responses
  */
 type SecurityCodeFormat = {
-    length: 6,
-    tooManyCodesSent: false,
-    tooManyCodesValidated: false,
-    securityCodeLocked: false,
-    securityCodeCooldown: false
+    length?: number,
+    tooManyCodesSent?: boolean,
+    tooManyCodesValidated?: boolean,
+    securityCodeLocked?: boolean,
+    securityCodeCooldown?: boolean,
+    /**
+     * Since iOS 26.4 a successfully validated code is acknowledged with status 409 and this flag set to true
+     */
+    valid?: boolean
 }
 
 /**
@@ -296,12 +332,12 @@ export type TrustResponse = {
          * TwoTrust token for future requests
          * @minLength 1
          */
-        'x-apple-twosv-trust-token': string, // eslint-disable-line
+        'x-apple-twosv-trust-token': string,
         /**
          * Session token to setup the account
          * @minLength 1
          */
-        'x-apple-session-token': string, // eslint-disable-line
+        'x-apple-session-token': string,
     }
 }
 
@@ -315,7 +351,7 @@ export type SetupResponse = {
          * Should hold the apple authentication
          * @minItems 1
          */
-        'set-cookie': string[],  // eslint-disable-line
+        'set-cookie': string[],
     }
     data: {
         dsInfo: {
@@ -324,6 +360,14 @@ export type SetupResponse = {
              */
             isWebAccessAllowed: true,
         }
+        /**
+         * Set, if the account requires a repair through the iCloud web frontend - if missing not necessary
+         */
+        isRepairNeeded?: boolean,
+        /**
+         * Set, if updated terms and conditions need to be accepted through the iCloud web frontend - if missing not necessary
+         */
+        termsUpdateNeeded?: boolean,
         /**
          * Holds the dynamic iCloud service URLs
          */
@@ -357,7 +401,7 @@ export type PCSResponse = {
         /**
          * Should hold the PCS cookies
          */
-        'set-cookie'?: string[],  // eslint-disable-line
+        'set-cookie'?: string[],
     }
     data: {
         /**
@@ -419,4 +463,110 @@ export type PhotosSetupResponseZone = {
      * Might be marked as deleted
      */
     deleted?: boolean
+}
+
+/**
+ * A service error, as returned by the auth backend
+ */
+type ServiceError = {
+    code?: string,
+    message?: string,
+}
+
+/**
+ * The expected response format for the MFA code submission
+ * @see {@link ENDPOINTS.AUTH.PATH.MFA.DEVICE_ENTER}
+ * @see {@link ENDPOINTS.AUTH.PATH.MFA.PHONE_ENTER}
+ */
+export type MFASubmitResponse = {
+    /**
+     * 204 (device) or 200 (phone) for an accepted code - since iOS 26.4 the backend responds with 409, the body indicates if the code was valid
+     */
+    status: 200 | 204 | 409,
+    /**
+     * Empty for status 204
+     */
+    data: {
+        /**
+         * Result of the code verification (since iOS 26.4)
+         */
+        securityCode?: {
+            valid?: boolean,
+        },
+        /**
+         * Errors, e.g. if the code was incorrect
+         */
+        service_errors?: ServiceError[],
+    } | ``,
+    headers: {
+        /**
+         * Updated session token, provided for a valid code since iOS 26.4
+         * @minLength 1
+         */
+        'x-apple-session-token'?: string,
+    },
+}
+
+/**
+ * The expected response format for the escrow completion request
+ * @see {@link ENDPOINTS.AUTH.PATH.ESCROW.COMPLETE}
+ */
+export type EscrowCompleteResponse = {
+    headers: {
+        /**
+         * Updated session token
+         * @minLength 1
+         */
+        'x-apple-session-token'?: string,
+    },
+}
+
+/**
+ * The expected response format for the logout request
+ * @see {@link ENDPOINTS.SETUP.PATH.LOGOUT}
+ */
+export type LogoutResponse = {
+    /**
+     * 200 if the logout was successful, 421 if the session was no longer valid
+     */
+    status: 200 | 421,
+}
+
+/**
+ * The expected response format for CloudKit record queries and operations
+ * The records themselves are parsed defensively by the query parser
+ * @see {@link ENDPOINTS.PHOTOS.PATH.QUERY}
+ * @see {@link ENDPOINTS.PHOTOS.PATH.MODIFY}
+ */
+export type CloudKitRecordsResponse = {
+    data: {
+        records: any[],
+        /**
+         * Provided by queries, if more results are available - requests the next page when sent with the same query
+         */
+        continuationMarker?: string,
+    },
+}
+
+/**
+ * The expected response format for health check pings - a successful plain text response (healthchecks.io responds with 'OK')
+ */
+export type HealthCheckPingResponse = {
+    /**
+     * Any successful status (healthchecks.io responds with 200)
+     * @minimum 200
+     * @maximum 299
+     */
+    status: number,
+    headers: {
+        /**
+         * The ping endpoint responds with plain text
+         * @pattern ^text/plain
+         */
+        'content-type': string,
+    },
+    /**
+     * The raw response body
+     */
+    text: string,
 }

@@ -45,7 +45,7 @@ type GlobalOption = {
 const templateInput = {
     description: program.description(),
     commandName: program.name(),
-    helpCommandName: (program as any)._helpCommandName,
+    helpCommandName: (program as any)._getHelpCommand()?.name() ?? `help`,
     synopsis: helper.commandUsage(program),
     globalCommands: [] as GlobalCommand[],
     globalOptions: [] as GlobalOption[],
