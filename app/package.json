@@ -79,7 +79,7 @@
     "knip": "6.39.0",
     "liquidjs": "10.30.0",
     "node-mocks-http": "1.18.1",
-    "tar-stream": "3.2.1",
+    "tar-stream": "3.2.2",
     "testcontainers": "12.2.0",
     "ts-jest": "29.4.14",
     "ts-json-schema-generator": "2.9.0",
