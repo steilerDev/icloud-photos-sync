@@ -406,6 +406,8 @@ Each record looks like this:
 
 Before a sync, a `CheckIndexingState` query runs against the primary zone and, if available, the shared library zone. The sync only starts if every zone reports `FINISHED`. While Apple is indexing (e.g. after enabling iCloud Photos), the state is `RUNNING`.
 
+Observed on 2026-10-11: the primary zone of a library with 32.7k assets reported `RUNNING`, without a `progress` field. At the same time, records queries returned every asset: the received count matched `HyperionIndexCountLookup`. The application still refuses to sync in that state.
+
 ### Pagination
 
 The application requests 198 records per page (`resultsLimit`), and the limit counts records, not positions. A position in "All photos" returns two records (asset and master), a position in an album three (asset, master and container relation). The application therefore fetches assets as follows:
@@ -463,12 +465,34 @@ A photo or video consists of two records:
 - The application downloads the original from the master, and if `adjustmentType` is set, the edited version from the asset (`resJPEGFullRes`, falling back to `resVidFullRes`).
 - The modification time of the original comes from the master's `modified` timestamp, the one of the edited version from the asset's.
 - File type descriptors are Uniform Type Identifiers. `file-type.ts` maps the known ones to file extensions; unknown ones are reported through crash reporting so support can be added.
+- The descriptor is not always a UTI. Crash reports from July and August 2026 contained the literal value `unsupported` as the `resOriginalFileType` of `.m4v` and `.BMP` originals; their `filenameEnc` carried the extension. The application skips such assets.
+- `filenameEnc` was present, with an extension, on every master observed:
+    - all 202 masters of the test library;
+    - all 33,270 masters of a personal library (October 2026, primary and shared library zone);
+    - every report on #143.
 
 **Fields observed but not used**
 
 - `resOriginalVidComplRes` and `resOriginalVidComplFileType` on `CPLMaster`: the video part of a Live Photo (always `com.apple.quicktime-movie`).
 - `mediaMetaDataEnc` on `CPLMaster`: a base64 encoded binary property list (`bplist00`) holding Exif and TIFF metadata (camera model, exposure, dimensions, capture time, …).
 - `timeZoneNameEnc` (type `ENCRYPTED_BYTES`).
+
+**Resource variants** (observed in October 2026 on a personal library with 33,273 assets in the primary and shared library zone, by requesting the `*FileType` fields)
+
+| Record | Resources | Present on | Types observed |
+|---|---|---|---|
+| `CPLMaster` | `resOriginalRes` | every master | `public.heic`, `public.jpeg`, `public.png`, `org.webmproject.webp`, `com.apple.quicktime-movie`, `public.mpeg-4`, `com.sony.arw-raw-image` |
+| `CPLMaster` | `resOriginalVidComplRes` | Live Photos (1,629) | `com.apple.quicktime-movie` |
+| `CPLMaster` | `resJPEGFullRes` | 23,605 of 33,270 masters. The library holds 26,972 Sony ARW originals, so this is probably a full-size JPEG rendering of RAW originals (unverified). | `public.jpeg` |
+| `CPLMaster` | `resJPEGMedRes`, `resJPEGThumbRes` | almost every master | `public.jpeg` |
+| `CPLMaster` | `resVidMedRes`, `resVidSmallRes` | videos and Live Photos | `com.apple.quicktime-movie`, `public.mpeg-4` |
+| `CPLAsset` | `resJPEGFullRes` | edited photos | `public.jpeg` (3,797), `public.heic` (31) |
+| `CPLAsset` | `resVidFullRes`, `resVidComplRes` | edited videos, edited Live Photos | `com.apple.quicktime-movie` |
+| `CPLAsset` | `resJPEGMedRes`, `resJPEGThumbRes` | edited assets: 3,829 and 3,841 of 3,841 | `public.jpeg` |
+| `CPLAsset` | `resVidMedRes`, `resVidSmallRes` | edited videos | `com.apple.quicktime-movie`, `public.mpeg-4` |
+| `CPLMaster` | `resOriginalAltRes` | none: the library has RAW originals, but no RAW+JPEG pairs | – |
+
+Edited assets carry their own reduced renders (`resJPEGMedRes`, `resJPEGThumbRes`, `resVidMedRes`, `resVidSmallRes` on the `CPLAsset`), next to the ones on the `CPLMaster`. Presumably they show the edit and the master's show the original; this is inferred from where they are stored and not verified against the content.
 
 ### Asset resources
 
@@ -645,6 +669,7 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 - **Live Photos**: the video part (`resOriginalVidComplRes`) is not downloaded.
 - **Shared albums**: whether `rootctag`/`albumctag` support incremental changes, the maximum `webgetassets` range, whether comments and likes are reachable, and how shared albums behave on accounts with Advanced Data Protection (which according to Apple does not cover shared albums). See [Shared albums](#shared-albums).
 - **Checksums** of multi-GB files, ADP accounts and the shared library zone have not been verified (see [File checksum](#file-checksum)).
+- **RAW+JPEG pairs**: `resOriginalAltRes` has not been observed yet; the sampled library had RAW originals but no pairs. Unknown: whether the alternative's file name is available anywhere, and which half (RAW or JPEG) becomes `resOriginalRes`.
 
 ## Postman Collection
 

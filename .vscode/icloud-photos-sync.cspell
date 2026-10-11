@@ -43,6 +43,7 @@ dockerhub
 Driessen
 dsid
 dslang
+DSYNC
 egor-tensin
 elif
 emhlbnl
@@ -57,14 +58,17 @@ FVJQ
 GBIE
 gkfvd
 gpgsign
+hardlink
 healthchecks
 Hqgb
 icps
 iCPSMFA
 idmsa
+Immich
 iswebuploadsupported
 JEGI
 jpeg
+jsonl
 keepalive
 kkiceenh
 knip
@@ -92,6 +96,7 @@ netcat
 Nfrb
 nofile
 nologin
+nomedia
 nylq
 openmetrics
 Orta
@@ -101,6 +106,7 @@ parens
 photoshop
 photoslibrary
 photoview
+photoviewignore
 polystat
 postbuild
 prerequest
@@ -150,6 +156,7 @@ twemoji
 twosv
 typedoc
 udse
+unparsed
 upterm
 uptermd
 viktorstrate
