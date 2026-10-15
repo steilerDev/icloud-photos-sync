@@ -41,6 +41,10 @@ export const SyncEngineHelper = {
      */
     removeDuplicateAssets,
     /**
+     * @see {@link deferAssetDeletions}
+     */
+    deferAssetDeletions,
+    /**
      * @see {@link settleAll}
      */
     settleAll,
@@ -205,6 +209,20 @@ function removeDuplicateAssets(queues: PLibraryProcessingQueues<Asset>): PLibrar
         return true;
     });
     return [toBeDeleted, uniqueToBeAdded, toBeKept];
+}
+
+/**
+ * While iCloud reports a running indexing job, the remote state might be incomplete - deleting all local assets missing from it could remove assets that still exist remotely
+ * This function keeps those assets and only deletes assets that are replaced by an addition (e.g. because their modification date changed)
+ * @param queues - The asset processing queue
+ * @returns The asset processing queue, where deletions of assets that are not replaced are moved to the kept queue
+ */
+function deferAssetDeletions(queues: PLibraryProcessingQueues<Asset>): PLibraryProcessingQueues<Asset> {
+    const [toBeDeleted, toBeAdded, toBeKept] = queues;
+    const replacedAssets = new Set(toBeAdded.map(asset => asset.getUUID()));
+    const replaced = toBeDeleted.filter(asset => replacedAssets.has(asset.getUUID()));
+    const deferred = toBeDeleted.filter(asset => !replacedAssets.has(asset.getUUID()));
+    return [replaced, toBeAdded, [...toBeKept, ...deferred]];
 }
 
 /**

@@ -6,6 +6,11 @@ addgroup
 adduser
 aditya
 Aexev
+albumassetcount
+albumctag
+albumguid
+albumlocation
+allowcontributions
 appleauth
 ASSETID
 avchd
@@ -57,6 +62,7 @@ Hqgb
 icps
 iCPSMFA
 idmsa
+iswebuploadsupported
 JEGI
 jpeg
 keepalive
@@ -89,6 +95,7 @@ nologin
 nylq
 openmetrics
 Orta
+ownerdsid
 pano
 parens
 photoshop
@@ -98,6 +105,7 @@ polystat
 postbuild
 prerequest
 preshared
+publicurl
 pymdownx
 Qtpvztd
 quicktime
@@ -108,9 +116,12 @@ rgba
 RIPEMD
 ritwickdey
 Roboto
+rootctag
 rootfs
 SCNT
 securitycode
+sharedstreams
+sharingtype
 SIGNIN
 signingkey
 somechecksum
@@ -148,6 +159,9 @@ Vvye
 vyas
 wdhongtw
 WEBAUTH
+webgetalbumslist
+webgetassetcount
+webgetassets
 webmproject
 webpush
 webservices

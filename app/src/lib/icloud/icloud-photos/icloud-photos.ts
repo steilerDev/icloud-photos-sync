@@ -79,6 +79,11 @@ export class iCloudPhotos {
     _throttledUntil: number = 0;
 
     /**
+     * Whether iCloud reported a running indexing job for any zone during the last setup - in this case the remote state might be incomplete
+     */
+    indexingInProgress: boolean = false;
+
+    /**
      * Creates a new iCloud Photos Class
      */
     constructor() {
@@ -143,13 +148,15 @@ export class iCloudPhotos {
     }
 
     /**
-     * Checking indexing state of all available zones of the photos service (sync should only safely be performed, after indexing is completed)
-     * @emits iCPSEventPhotos.READY - If indexing is completed
-     * @emits iCPSEventPhotos.ERROR - If indexing is not completed - The iCPSError is provided as argument
+     * Checking indexing state of all available zones of the photos service
+     * A running indexing job does not block the sync, since iCloud reports stale jobs as running while all records are available - instead `indexingInProgress` is set, so that local deletions can be deferred
+     * @emits iCPSEventPhotos.READY - If the indexing state could be read
+     * @emits iCPSEventPhotos.ERROR - If the indexing state is unavailable or unknown - The iCPSError is provided as argument
      * Will emit READY, or ERROR
      */
     async checkingIndexingStatus() {
         Resources.logger(this).debug(`Checking Indexing Status of iCloud Photos Account`);
+        this.indexingInProgress = false;
         try {
             await this.checkIndexingStatusForZone(QueryBuilder.Zones.Primary);
             if (Resources.manager().sharedZoneAvailable) {
@@ -165,8 +172,9 @@ export class iCloudPhotos {
     /**
      * Checks the indexing status of a given zone.
      * @param zone - The zone to check
-     * @returns If indexing is successful
-     * @throws If non-completed indexing state is found
+     * @returns If indexing is finished or still running
+     * @throws An iCPSError, if the indexing state is unavailable or unknown
+     * @emits iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS - If indexing is still running - provides the iCPSError (including zone and progress) as argument
      */
     async checkIndexingStatusForZone(zone: QueryBuilder.Zones) {
         const result = await this.performQuery(zone, `CheckIndexingState`);
@@ -179,17 +187,19 @@ export class iCloudPhotos {
                 .addContext(`icloudResult`, result);
         }
 
+        // iCloud reports stale indexing jobs as running (with progress 0), while all records are available (observed 2026-10) - therefore not blocking the sync
         if (indexingState === `RUNNING`) {
-            Resources.logger(this).debug(`Indexing for zone ${zone} in progress, sync needs to wait!`);
-            const indexingInProgressError = new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS)
+            const indexingInProgressWarning = new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS)
                 .addMessage(`zone: ${zone}`);
 
             const progress = result[0]?.fields?.progress?.value;
-            if (progress) {
-                indexingInProgressError.addMessage(`progress ${progress}`);
+            if (progress !== undefined) {
+                indexingInProgressWarning.addMessage(`progress ${progress}`);
             }
 
-            throw indexingInProgressError;
+            this.indexingInProgress = true;
+            Resources.emit(iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS, indexingInProgressWarning);
+            return;
         }
 
         if (indexingState === `FINISHED`) {

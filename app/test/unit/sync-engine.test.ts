@@ -332,6 +332,22 @@ describe(`Coordination`, () => {
         SyncEngineHelper.removeDuplicateAssets = removeDuplicateAssetsOriginal;
     });
 
+    test.each([
+        {desc: `deletes local assets missing remotely, if indexing is finished`, indexingInProgress: false, deleted: [`missing`], kept: [`present`]},
+        {desc: `defers deletion of local assets missing remotely, if indexing is in progress`, indexingInProgress: true, deleted: [], kept: [`present`, `missing`]},
+    ])(`Diff state $desc`, async ({indexingInProgress, deleted, kept}) => {
+        const asset = (checksum: string) => new Asset(checksum, 42, FileType.fromExtension(`png`), 42, getRandomZone(), AssetType.ORIG, `test`, `somekey`, checksum, `https://icloud.com`, `somerecordname`, false);
+        const present = asset(`present`);
+        const missing = asset(`missing`);
+        syncEngine.icloud.photos.indexingInProgress = indexingInProgress;
+
+        const [[toBeDeleted, toBeAdded, toBeKept]] = await syncEngine.diffState([present], [], {[present.getUUID()]: present, [missing.getUUID()]: missing}, {});
+
+        expect(toBeDeleted.map(a => a.fileChecksum)).toEqual(deleted);
+        expect(toBeAdded).toEqual([]);
+        expect(toBeKept.map(a => a.fileChecksum)).toEqual(kept);
+    });
+
     test(`Write state`, async () => {
         syncEngine.writeAssets = jest.fn<typeof syncEngine.writeAssets>()
             .mockResolvedValue();

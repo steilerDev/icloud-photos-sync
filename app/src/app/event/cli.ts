@@ -52,6 +52,9 @@ export class CLIInterface {
                 .on(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, (err: iCPSError) => {
                     this.printWarning(err.getDescription());
                 })
+                .on(iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS, (err: iCPSError) => {
+                    this.printWarning(err.getDescription());
+                })
                 .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
                     if (Resources.manager().enableCrashReporting) {
                         this.print(`Detected unknown filetype (${descriptor} with ${ext}): This error will be automatically reported (See GH issue 143 for more information)`);

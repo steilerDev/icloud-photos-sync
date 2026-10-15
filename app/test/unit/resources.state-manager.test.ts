@@ -3,7 +3,7 @@ import fs from 'fs';
 import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals"
 import {LogLevel, LogMessage, SerializedState, StateManager, StateTrigger} from "../../src/lib/resources/state-manager"
 import {iCPSError} from "../../src/app/error/error"
-import {AUTH_ERR, MFA_ERR, WEB_SERVER_ERR} from "../../src/app/error/error-codes"
+import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR, WEB_SERVER_ERR} from "../../src/app/error/error-codes"
 import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general"
 import {iCPSEvent, iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "../../src/lib/resources/events-types"
 import path from 'path';
@@ -696,6 +696,15 @@ describe(`Log added`, () => {
                 level: `warn`,
                 source: `RuntimeWarning`,
                 message: `Error while loading trusted phone numbers: UNKNOWN: Unknown error occurred caused by Test`
+            } as LogMessage
+        },{
+            desc: `Should handle runtime warning: indexing in progress`,
+            event: iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS,
+            args: [new iCPSError(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS).addMessage(`zone: PrimaryLibrary`, `progress 0`)],
+            serializedMessage: {
+                level: `warn`,
+                source: `RuntimeWarning`,
+                message: `ICLOUD_PHOTOS_INDEXING_IN_PROGRESS: iCloud reports indexing in progress, continuing sync without deleting local assets (zone: PrimaryLibrary, progress 0)`
             } as LogMessage
         },{
             desc: `Should handle runtime warning: resource file error`,
