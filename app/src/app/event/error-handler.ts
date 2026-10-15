@@ -264,6 +264,9 @@ export class ErrorHandler {
             .on(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR, (err: iCPSError) => {
                 breadcrumbs.warn(`TRUSTED_PHONE_NUMBERS_ERROR`, {error: err.getDescription()});
             })
+            .on(iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS, (err: iCPSError) => {
+                breadcrumbs.warn(`INDEXING_IN_PROGRESS`, {error: err.getDescription()});
+            })
             .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
                 breadcrumbs.warn(`FILETYPE_ERROR`, {ext, descriptor});
             })

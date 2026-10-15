@@ -46,6 +46,7 @@ const FIELDS = {
     TRUSTED_PHONE_NUMBERS_ERROR: iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR,
     RESOURCE_FILE_ERROR: iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR,
     ARCHIVE_ASSET_ERROR: iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR,
+    INDEXING_IN_PROGRESS: iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS,
     ERROR: `errors`,
     /**
      * Loading metrics
@@ -366,6 +367,10 @@ export class MetricsExporter {
             .on(iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR, (err: Error) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.ARCHIVE_ASSET_ERROR, iCPSError.toiCPSError(err).getDescription()));
+            })
+            .on(iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS, (err: iCPSError) => {
+                this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                    .addField(FIELDS.INDEXING_IN_PROGRESS, err.getDescription()));
             });
 
         Resources.events(this)

@@ -191,7 +191,11 @@ export enum iCPSEventRuntimeWarning {
     /**
      * Emitted when there is a problem acquiring the trusted phone numbers of an account - provides the iCPSError as argument
      */
-    TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`
+    TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`,
+    /**
+     * Emitted when iCloud reports that indexing of a zone is still running - provides the iCPSError (including zone and progress) as argument
+     */
+    INDEXING_IN_PROGRESS = `warn-indexing_in_progress`
 }
 
 /**
