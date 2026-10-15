@@ -299,6 +299,9 @@ export class StateManager {
             .on(iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS, (err: iCPSError) => {
                 this.addLog(LogLevel.WARN, `RuntimeWarning`, iCPSError.toiCPSError(err).getDescription());
             })
+            .on(iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY, (err: iCPSError) => {
+                this.addLog(LogLevel.WARN, `RuntimeWarning`, iCPSError.toiCPSError(err).getDescription());
+            })
             .on(iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR, (err: Error) => {
                 this.addLog(LogLevel.WARN, `RuntimeWarning`, `Error while accessing resource file: ${iCPSError.toiCPSError(err).getDescription()}`);
             })

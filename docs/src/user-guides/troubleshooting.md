@@ -18,6 +18,10 @@ If the code is not delivered to your trusted devices, use `Resend Code/Change Me
 
 `Username/Password does not seem to match` or `Username does not seem to exist`: Check the provided credentials. Application specific passwords are not supported, the Apple ID password is required. If the password contains special characters (e.g. `$`), make sure they are not interpreted by your shell (wrap the value in single quotes) or use the [password file](cli.md#password-file) option.
 
+### `AUTH_ACCOUNT_LOCKED`
+
+`Apple locked this account for security reasons`: Apple refuses any sign-in until the account is unlocked. Unlock it at [iforgot.apple.com](https://iforgot.apple.com) - this usually requires resetting the password, so update the configured password afterwards. Accounts can get locked after repeated failed sign-in attempts, e.g. with an outdated password; make sure the [schedule](cli.md#schedule) does not run more often than intended.
+
 ### `AUTH_PRECONDITION_FAILED` / `AUTH_ACCOUNT_SETUP_INCOMPLETE`
 
 iCloud requires an action on your account. Log in to [icloud.com](https://www.icloud.com) and complete the shown prompts (e.g. accept updated terms and conditions, update your password).

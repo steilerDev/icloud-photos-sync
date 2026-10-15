@@ -10,15 +10,15 @@ For most warnings, the CLI only prints a count summary, the details are written 
 
 The same warnings are also exported as `warn-*` fields of the [metrics file](sync-metrics.md#metrics) and as `type` label of the [`icps_warnings_total`](sync-metrics.md#prometheus-openmetrics) Prometheus metric.
 
-The [suppress warnings flag](cli.md#suppress-warnings) only hides the warnings printed directly to the CLI (unknown filetype, indexing, MFA, trusted phone numbers, web server and resource file warnings). The count summaries printed after each sync step, as well as the log file, are not affected.
+The [suppress warnings flag](cli.md#suppress-warnings) only hides the warnings printed directly to the CLI (unknown filetype, indexing, schedule frequency, MFA, trusted phone numbers, web server and resource file warnings). The count summaries printed after each sync step, as well as the log file, are not affected.
 
 ## Syncing
 
 ### Warning: Detected unknown filetype (`descriptor` with `ext`)
 
-Supported filetypes need to be hardcoded in the application. This error indicates that one of your assets has a filetype that is currently not supported. If you have [error reporting](error-reporting.md) enabled, your filetype is reported to the author automatically and the message is printed without the `Warning:` prefix (`...: This error will be automatically reported (See GH issue 143 for more information)`). Otherwise, report your filetype in the [open issue](https://github.com/steilerDev/icloud-photos-sync/issues/143).
+Supported filetypes need to be hardcoded in the application. This error indicates that one of your iCloud assets has a filetype that is currently not supported. If you have [error reporting](error-reporting.md) enabled, your filetype is reported to the author automatically and the message is printed without the `Warning:` prefix (`...: This error will be automatically reported (See GH issue 143 for more information)`). Otherwise, report your filetype in the [open issue](https://github.com/steilerDev/icloud-photos-sync/issues/143).
 
-The assets with unknown filetype will be ignored during syncing, the remaining files will sync as expected. Those assets are also counted towards the [unable to load remote assets](#warning-unable-to-load-number-remote-assets) (or [local assets](#warning-unable-to-load-number-local-assets)) warning.
+The assets with unknown filetype will be ignored during syncing, the remaining files will sync as expected. Those assets are also counted towards the [unable to load remote assets](#warning-unable-to-load-number-remote-assets) warning.
 
 Search the log file for a `RuntimeWarning` of the format `Unknown file extension ${ext} for descriptor ${descriptor}`.
 
@@ -30,7 +30,7 @@ Search the log file for a `RuntimeWarning` of the format `Extraneous file found 
 
 ### Warning: Unable to load `number` local assets
 
-There are various reasons, why the application cannot load an asset from the user's local library (e.g. permission issues). The assets that could not be loaded will be ignored during the synchronization.
+There are various reasons, why the application cannot load an asset from the user's local library (e.g. permission issues, or a file with an unknown or missing extension in `_All-Photos`/`_Shared-Photos`). The assets that could not be loaded will be ignored during the synchronization. Local files with an unknown extension are not reported as unknown filetype.
 
 Search the log file for a `RuntimeWarning` of the format `Error while loading file ${filePath}: ${errDescription}` to get an idea, why loading fails.
 
@@ -102,6 +102,14 @@ This message is only written to the log file.
 ### Sync execution skipped, because a job is still running
 
 In daemon mode, the scheduled sync was skipped, because the previous sync (or a re-authentication requested through the [Web UI](web-ui.md)) was still running. The message includes the time of the next scheduled run. If this happens regularly, choose a less frequent schedule.
+
+### Schedule frequency
+
+Printed as `Warning: APP_SCHEDULE_FREQUENCY: Schedule triggers syncs more often than once per hour, frequent sign-ins might be throttled by Apple (...)` when the daemon starts, if the configured [schedule](cli.md#schedule) triggers syncs less than one hour apart. Every scheduled sync signs in to iCloud, and frequent sign-ins can be throttled by Apple.
+
+This is most likely a mistake in the cron schedule: the first field of a cron schedule is the minute, so `* 2 * * *` runs every minute between 02:00 and 02:59, instead of once at 02:00. In this case, the message suggests the schedule that was most likely meant, e.g. `'* 2 * * *' runs every minute between 02:00 and 02:59 - did you mean '0 2 * * *'?`. For all other schedules, it includes the shortest interval between two runs, e.g. `'*/15 * * * *' runs as often as every 15 minutes`. Use [crontab.guru](https://crontab.guru) to check a schedule.
+
+The schedule is still applied. If the frequent syncs are intended, the warning can be ignored. It is also logged as a `RuntimeWarning`.
 
 ## Authentication & Web UI
 

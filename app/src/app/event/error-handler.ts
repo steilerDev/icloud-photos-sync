@@ -1,8 +1,6 @@
 import {BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceClientBuilder, BacktraceData, BacktraceReport, BacktraceSetupConfiguration, BreadcrumbType} from "@backtrace/node";
 import {randomUUID} from "crypto";
-import {readFileSync} from 'fs';
 import fs from 'fs/promises';
-import {hostname} from 'os';
 import {jsonc} from "jsonc";
 import {once} from 'events';
 import {Readable} from 'stream';
@@ -26,6 +24,7 @@ const reportDenyList = [
     MFA_ERR.CODE_REJECTED.code, // Only happens if MFA code is rejected from backend, e.g. if code is invalid
     LIBRARY_ERR.LOCKED.code, // Only happens if library is locked
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
+    AUTH_ERR.ACCOUNT_LOCKED.code, // Only happens if Apple locked the account - needs to be unlocked by the user
 ];
 
 /**
@@ -65,70 +64,38 @@ const BACKTRACE_SUBMISSION = {
 type BacktraceAttributeProvider = Parameters<BacktraceClientBuilder[`addAttributeProvider`]>[0];
 
 /**
- * Provides the `guid` attribute without spawning a shell.
- * Backtrace's default provider uses `execSync` to read the machine id, which requires `/bin/sh` and is denied by Node's permission model (unless `--allow-child-process` is granted).
- * On Linux, the machine id files are read directly - producing the same `guid` as the default provider. On other platforms, the default provider is only used if spawning child processes is permitted.
+ * Provides the `guid` attribute from the identifier persisted in the resource file.
+ * Backtrace's default provider derives the `guid` from the machine id, falling back to the hostname - containers usually lack a machine id, so their `guid` changes with every new container.
+ * It also spawns a shell, which is denied by Node's permission model (unless `--allow-child-process` is granted).
  */
-export class MachineIdAttributeProvider implements BacktraceAttributeProvider {
+export class PersistedGuidAttributeProvider implements BacktraceAttributeProvider {
     /**
-     * @param shellProvider - Backtrace's default machine identifier provider, used on platforms without machine id files
-     * @param machineIdFiles - Files holding the machine id, in order of precedence
+     * @returns The provider type - scoped attributes are only read once
      */
-    constructor(
-        private readonly shellProvider?: BacktraceAttributeProvider,
-        private readonly machineIdFiles: string[] = [`/var/lib/dbus/machine-id`, `/etc/machine-id`],
-    ) {}
-
     get type() {
         return `scoped` as const;
     }
 
+    /**
+     * @returns The `guid` attribute, generated and persisted on first use
+     */
     get(): Record<string, unknown> {
         return {
-            guid: this.generateGuid() || randomUUID(),
+            guid: Resources.manager().crashReportingGuid,
         };
-    }
-
-    /**
-     * @returns The normalized machine id, or undefined if it could not be determined
-     */
-    generateGuid(): string | undefined {
-        if (process.platform !== `linux`) {
-            return process.permission?.has(`child`) === false
-                ? undefined
-                : this.shellProvider?.get()[`guid`] as string | undefined;
-        }
-
-        // Equivalent to `( cat /var/lib/dbus/machine-id /etc/machine-id || hostname ) | head -n 1` - cat fails if any file is unreadable, appending the hostname
-        let output = ``;
-        let unreadable = false;
-        for (const file of this.machineIdFiles) {
-            try {
-                output += readFileSync(file, {encoding: `utf8`});
-            } catch {
-                unreadable = true;
-            }
-        }
-
-        if (unreadable) {
-            output += `${hostname()}\n`;
-        }
-
-        return output.split(`\n`)[0].replace(/\s+/g, ``).toLowerCase();
     }
 }
 
 /**
- * Backtrace client builder, replacing the default machine identifier provider with the shell-free MachineIdAttributeProvider
+ * Backtrace client builder, replacing the default machine identifier provider with the shell-free PersistedGuidAttributeProvider
  */
 export class ShellFreeBacktraceClientBuilder extends BacktraceClientBuilder {
     constructor(options: BacktraceSetupConfiguration) {
         super({options});
         const providers = this.clientSetup.attributeProviders ?? [];
         // The default provider is not exported, identifying it by its distinct method
-        const shellProvider = providers.find(provider => `generateGuid` in provider);
-        this.clientSetup.attributeProviders = providers.filter(provider => provider !== shellProvider);
-        this.addAttributeProvider(new MachineIdAttributeProvider(shellProvider));
+        this.clientSetup.attributeProviders = providers.filter(provider => !(`generateGuid` in provider));
+        this.addAttributeProvider(new PersistedGuidAttributeProvider());
     }
 }
 
@@ -266,6 +233,9 @@ export class ErrorHandler {
             })
             .on(iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS, (err: iCPSError) => {
                 breadcrumbs.warn(`INDEXING_IN_PROGRESS`, {error: err.getDescription()});
+            })
+            .on(iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY, (err: iCPSError) => {
+                breadcrumbs.warn(`SCHEDULE_FREQUENCY`, {error: err.getDescription()});
             })
             .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
                 breadcrumbs.warn(`FILETYPE_ERROR`, {ext, descriptor});

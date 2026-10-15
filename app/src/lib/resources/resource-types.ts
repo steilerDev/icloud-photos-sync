@@ -89,7 +89,12 @@ export type ResourceFile = {
      */
     notificationSubscriptions?: {
         [endpoint: string]: PushSubscription
-    }
+    },
+    /**
+     * A random identifier of this installation, used as the `guid` attribute of crash reports.
+     * Generated on first use, so it stays stable across restarts and container re-creations.
+     */
+    crashReportingGuid?: string
 }
 
 /**
