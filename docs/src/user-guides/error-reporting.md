@@ -19,7 +19,7 @@ Once enabled, the following data is sent:
     - the last 200 lines of the log file and - if [network capture](cli.md#enable-network-capture) is enabled - the HAR file,
     - the configuration (environment variables and CLI arguments) and information about the runtime (application, Node.js and OS version, architecture, memory),
     - an identifier of the installation, derived from the machine id.
-- **Unknown file types**, whenever an asset with a file type that is not yet supported is found - these reports are used to [add support for new file types](https://github.com/steilerDev/icloud-photos-sync/issues/143).
+- **Unknown file types**, whenever iCloud serves an asset with a file type that is not yet supported - these reports are used to [add support for new file types](https://github.com/steilerDev/icloud-photos-sync/issues/143).
 - **Usage statistics**, counting the execution of syncs and archive operations.
 
 Some errors are never reported, because they are caused by the environment or user input (e.g. a wrong password, an MFA code that was not provided in time or a port that is already in use).

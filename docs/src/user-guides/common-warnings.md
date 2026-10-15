@@ -16,9 +16,9 @@ The [suppress warnings flag](cli.md#suppress-warnings) only hides the warnings p
 
 ### Warning: Detected unknown filetype (`descriptor` with `ext`)
 
-Supported filetypes need to be hardcoded in the application. This error indicates that one of your assets has a filetype that is currently not supported. If you have [error reporting](error-reporting.md) enabled, your filetype is reported to the author automatically and the message is printed without the `Warning:` prefix (`...: This error will be automatically reported (See GH issue 143 for more information)`). Otherwise, report your filetype in the [open issue](https://github.com/steilerDev/icloud-photos-sync/issues/143).
+Supported filetypes need to be hardcoded in the application. This error indicates that one of your iCloud assets has a filetype that is currently not supported. If you have [error reporting](error-reporting.md) enabled, your filetype is reported to the author automatically and the message is printed without the `Warning:` prefix (`...: This error will be automatically reported (See GH issue 143 for more information)`). Otherwise, report your filetype in the [open issue](https://github.com/steilerDev/icloud-photos-sync/issues/143).
 
-The assets with unknown filetype will be ignored during syncing, the remaining files will sync as expected. Those assets are also counted towards the [unable to load remote assets](#warning-unable-to-load-number-remote-assets) (or [local assets](#warning-unable-to-load-number-local-assets)) warning.
+The assets with unknown filetype will be ignored during syncing, the remaining files will sync as expected. Those assets are also counted towards the [unable to load remote assets](#warning-unable-to-load-number-remote-assets) warning.
 
 Search the log file for a `RuntimeWarning` of the format `Unknown file extension ${ext} for descriptor ${descriptor}`.
 
@@ -30,7 +30,7 @@ Search the log file for a `RuntimeWarning` of the format `Extraneous file found 
 
 ### Warning: Unable to load `number` local assets
 
-There are various reasons, why the application cannot load an asset from the user's local library (e.g. permission issues). The assets that could not be loaded will be ignored during the synchronization.
+There are various reasons, why the application cannot load an asset from the user's local library (e.g. permission issues, or a file with an unknown or missing extension in `_All-Photos`/`_Shared-Photos`). The assets that could not be loaded will be ignored during the synchronization. Local files with an unknown extension are not reported as unknown filetype.
 
 Search the log file for a `RuntimeWarning` of the format `Error while loading file ${filePath}: ${errDescription}` to get an idea, why loading fails.
 

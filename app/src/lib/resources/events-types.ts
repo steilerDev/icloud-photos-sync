@@ -169,7 +169,7 @@ export enum iCPSEventRuntimeWarning {
      */
     LINK_ERROR = `warn-link_error`,
     /**
-     * Emitted when a filetype is unknown to the script - provides the extension and descriptor as arguments (if available)
+     * Emitted when a filetype served by iCloud is unknown to the script - provides the extension and descriptor as arguments
      */
     FILETYPE_ERROR = `warn-filetype_error`,
     /**
