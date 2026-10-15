@@ -314,6 +314,31 @@ describe.each([
                     status: 403,
                     expectedError: /^Username does not seem to exist$/,
                 }, {
+                    desc: `Account locked`,
+                    status: 403,
+                    data: {
+                        serviceErrors: [{
+                            code: `-20209`,
+                            message: `This Apple Account has been locked for security reasons. Visit iForgot to reset your account (https://iforgot.apple.com).`,
+                            suppressDismissal: false,
+                        }],
+                    },
+                    expectedError: /^Apple locked this account for security reasons - unlock it at https:\/\/iforgot.apple.com$/,
+                    expectedCode: AUTH_ERR.ACCOUNT_LOCKED.code,
+                    expectedMessages: [`This Apple Account has been locked for security reasons. Visit iForgot to reset your account (https://iforgot.apple.com).`],
+                }, {
+                    desc: `Forbidden with unknown service error`,
+                    status: 403,
+                    data: {
+                        service_errors: [{
+                            code: `-20101`,
+                            message: `Some other reason`,
+                        }],
+                    },
+                    expectedError: /^Username does not seem to exist$/,
+                    expectedCode: AUTH_ERR.FORBIDDEN.code,
+                    expectedMessages: [`Some other reason`],
+                }, {
                     desc: `Wrong username/password combination`,
                     status: 401,
                     expectedError: /^Username\/Password does not seem to match$/,
@@ -326,10 +351,10 @@ describe.each([
                     status: 500,
                     expectedError: /^Unexpected HTTP response$/,
                 },
-            ])(`$desc`, async ({status, expectedError}) => {
+            ])(`$desc`, async ({status, data, expectedError, expectedCode, expectedMessages}) => {
                 mockedNetworkManager.mock
                     .onPost(authenticationUrl, authenticationPayload, {headers: Config.REQUEST_HEADER.AUTH})
-                    .reply(status);
+                    .reply(status, data);
 
                 const authenticationEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.AUTHENTICATION_STARTED);
                 const trustedEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.TRUSTED);
@@ -341,6 +366,12 @@ describe.each([
                 expect(trustedEvent).not.toHaveBeenCalled();
                 expect(mfaEvent).not.toHaveBeenCalled();
                 expect(errorEvent).toHaveBeenCalledTimes(1);
+                if (expectedCode) {
+                    const emittedError = errorEvent.mock.calls[0][0] as iCPSError;
+                    expect(emittedError.code).toEqual(expectedCode);
+                    expect(emittedError.messages).toEqual(expectedMessages);
+                }
+
                 expect(legacy ? icloud.getLegacyLogin : icloud.getSRPLogin).toHaveBeenCalled();
             });
         });
@@ -1660,6 +1691,28 @@ describe.each([
             await expect(iCloudReady).rejects.toThrow(/^Unable to acquire PCS cookies$/);
 
             expect(mockedValidator.validatePCSResponse).not.toHaveBeenCalled();
+        });
+
+        test(`Error - Precondition failed with backend message`, async () => {
+            const iCloudReady = icloud.getReady();
+            mockedNetworkManager.sessionToken = Config.iCloudAuthSecrets.sessionSecret;
+            mockedNetworkManager.accountCountry = `DEU`;
+
+            mockedValidator.validatePCSResponse = jest.fn<typeof mockedValidator.validatePCSResponse>();
+            const errorEvent = mockedEventManager.spyOnEvent(iCPSEventCloud.ERROR, false);
+
+            mockedNetworkManager.mock
+                .onAny()
+                .reply(412, {
+                    message: `User has not disabled iCloud DRS.`,
+                    status: `failure`,
+                });
+
+            await icloud.acquirePCSCookies();
+            await expect(iCloudReady).rejects.toThrow(/^Unable to acquire PCS cookies$/);
+
+            expect(mockedValidator.validatePCSResponse).not.toHaveBeenCalled();
+            expect((errorEvent.mock.calls[0][0] as iCPSError).messages).toEqual([`User has not disabled iCloud DRS.`]);
         });
     });
 

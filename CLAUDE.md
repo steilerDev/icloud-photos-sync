@@ -153,7 +153,7 @@ The code is the source of truth. `docs/src/dev/api.md` maps the full surface: ho
    - 200: the trust token is valid, emit `TRUSTED`.
    - 409 with `X-Apple-EDP`/`X-Apple-PDP`: the token is accepted but escrow is required (step 5), then `TRUSTED`.
    - 409 without those headers: MFA is needed.
-   - 401: wrong password. 403: unknown user. 412: precondition failed.
+   - 401: wrong password. 403: unknown user, or a locked account if `serviceErrors` holds code `-20209` (`AUTH_ACCOUNT_LOCKED`). 412: precondition failed.
 3. **MFA:**
    - Trusted phones come from `GET /appleauth/auth` (JSON, or `boot_args` in the HTML).
    - Request a code:

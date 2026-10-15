@@ -26,6 +26,7 @@ const reportDenyList = [
     MFA_ERR.CODE_REJECTED.code, // Only happens if MFA code is rejected from backend, e.g. if code is invalid
     LIBRARY_ERR.LOCKED.code, // Only happens if library is locked
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
+    AUTH_ERR.ACCOUNT_LOCKED.code, // Only happens if Apple locked the account - needs to be unlocked by the user
 ];
 
 /**
