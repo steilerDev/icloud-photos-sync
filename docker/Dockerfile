@@ -1,6 +1,6 @@
 # Using Docker Hardened Images (https://dhi.io/catalog/node) - pulling requires `docker login dhi.io` with a Docker Hub account
 # The application is installed using the builder's npm and executed by the runtime's node - the version of both stages MUST match
-FROM dhi.io/node:26.11.0-alpine3.24-dev AS builder
+FROM dhi.io/node:26.11.1-alpine3.24-dev AS builder
 
 COPY npm-pack.tgz /opt/npm-pack.tgz
 
@@ -10,7 +10,7 @@ RUN npm install -g --prefix /usr/local --omit=dev /opt/npm-pack.tgz
 # Preparing the default library path, since the runtime stage has no shell
 RUN mkdir -p /opt/icloud-photos-library
 
-FROM dhi.io/node:26.11.0-alpine3.24 AS runtime
+FROM dhi.io/node:26.11.1-alpine3.24 AS runtime
 
 LABEL org.opencontainers.image.title="icloud-photos-sync" \
       org.opencontainers.image.description="One-way sync engine for the iCloud Photos Library into the native file system with archiving capabilities" \
