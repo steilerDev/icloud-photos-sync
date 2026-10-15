@@ -246,6 +246,32 @@ describe(`Load state`, () => {
             expect(Object.keys(assets).length).toEqual(expectedCount);
             expect(Object.values(assets).map(asset => asset.zone)).toEqual(expectedZones);
         });
+
+        test.each([
+            {
+                desc: `unknown extension`,
+                fileName: `Aah0dUnhGFNWjAeqKEkB_SNLNpFf.xyz`,
+            }, {
+                desc: `missing extension`,
+                fileName: `Aah0dUnhGFNWjAeqKEkB_SNLNpFf`,
+            },
+        ])(`Local file with $desc is reported as library load error, not as file type error`, async ({fileName}) => {
+            mockfs({
+                [primaryAssetDir]: {
+                    [fileName]: Buffer.from([1, 1, 1, 1]),
+                },
+            });
+            const library = new PhotosLibrary();
+            const fileTypeErrorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.FILETYPE_ERROR);
+            const libraryLoadErrorEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR);
+
+            const assets = await library.loadAssets();
+
+            expect(Object.keys(assets).length).toEqual(0);
+            expect(fileTypeErrorEvent).not.toHaveBeenCalled();
+            expect(libraryLoadErrorEvent).toHaveBeenCalledTimes(1);
+            expect(libraryLoadErrorEvent).toHaveBeenCalledWith(expect.objectContaining({code: LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION.code}), path.join(primaryAssetDir, fileName));
+        });
     });
 
     describe(`Load albums`, () => {

@@ -1,3 +1,4 @@
+import {randomUUID} from "crypto";
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
 import {jsonc} from "jsonc";
 import * as path from 'path';
@@ -73,7 +74,8 @@ export class ResourceManager {
                 libraryVersion: this._resources.libraryVersion,
                 trustToken: this._resources.trustToken,
                 notificationVapidCredentials: this._resources.notificationVapidCredentials,
-                notificationSubscriptions: this._resources.notificationSubscriptions
+                notificationSubscriptions: this._resources.notificationSubscriptions,
+                crashReportingGuid: this._resources.crashReportingGuid,
             };
             const resourceFileData = jsonc.stringify(formattedResourceFile, undefined, 4);
             Resources.logger(this).debug(`Writing resource file to ${this.resourceFilePath}`);
@@ -182,6 +184,20 @@ export class ResourceManager {
             this._writeResourceFile();
         }
         return credentials;
+    }
+
+    /**
+     * Retrieves the identifier of this installation used for crash reporting, generating and persisting it if it does not exist.
+     * @returns The crash reporting guid
+     */
+    get crashReportingGuid(): string {
+        let guid = this._resources.crashReportingGuid;
+        if (!guid) {
+            guid = randomUUID();
+            this._resources.crashReportingGuid = guid;
+            this._writeResourceFile();
+        }
+        return guid;
     }
 
     /**

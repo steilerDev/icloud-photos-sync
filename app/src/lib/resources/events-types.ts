@@ -169,7 +169,7 @@ export enum iCPSEventRuntimeWarning {
      */
     LINK_ERROR = `warn-link_error`,
     /**
-     * Emitted when a filetype is unknown to the script - provides the extension and descriptor as arguments (if available)
+     * Emitted when a filetype served by iCloud is unknown to the script - provides the extension and descriptor as arguments
      */
     FILETYPE_ERROR = `warn-filetype_error`,
     /**
@@ -191,7 +191,15 @@ export enum iCPSEventRuntimeWarning {
     /**
      * Emitted when there is a problem acquiring the trusted phone numbers of an account - provides the iCPSError as argument
      */
-    TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`
+    TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`,
+    /**
+     * Emitted when iCloud reports that indexing of a zone is still running - provides the iCPSError (including zone and progress) as argument
+     */
+    INDEXING_IN_PROGRESS = `warn-indexing_in_progress`,
+    /**
+     * Emitted when the daemon schedule triggers syncs more often than once per hour - provides the iCPSError as argument
+     */
+    SCHEDULE_FREQUENCY = `warn-schedule_frequency`
 }
 
 /**

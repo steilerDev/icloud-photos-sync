@@ -31,6 +31,7 @@ The `.icloud-photos-sync` JSON file persists the following information (validate
   * `libraryVersion`: The version of the local library layout (currently `1`). If it does not match the version expected by the application, it aborts with `LIBRARY_ERR.VERSION_MISMATCH`.
   * `trustToken`: The trust token acquired after the last MFA, used to sign in without MFA.
   * `notificationVapidCredentials` and `notificationSubscriptions`: The key pair and the subscriptions of the web UI's push notifications.
+  * `crashReportingGuid`: A random identifier of the installation, generated on first use if [error reporting](../user-guides/error-reporting.md) is enabled. It identifies the installation in crash reports, so it stays the same across restarts and re-created containers.
 
 Session secrets and cookies are only held in memory and never written to disk.
 

@@ -22,3 +22,7 @@ export const ARCHIVE: ErrorStruct = buildErrorStruct(
 export const INSUFFICIENT_PERMISSIONS: ErrorStruct = buildErrorStruct(
     name, prefix, `INSUFFICIENT_PERMISSIONS`, `Node.js permission model is enabled, but required permissions are missing`,
 );
+
+export const SCHEDULE_FREQUENCY: ErrorStruct = buildErrorStruct(
+    name, prefix, `SCHEDULE_FREQUENCY`, `Schedule triggers syncs more often than once per hour, frequent sign-ins might be throttled by Apple`,
+);
