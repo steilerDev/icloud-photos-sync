@@ -10,7 +10,7 @@ For most warnings, the CLI only prints a count summary, the details are written 
 
 The same warnings are also exported as `warn-*` fields of the [metrics file](sync-metrics.md#metrics) and as `type` label of the [`icps_warnings_total`](sync-metrics.md#prometheus-openmetrics) Prometheus metric.
 
-The [suppress warnings flag](cli.md#suppress-warnings) only hides the warnings printed directly to the CLI (unknown filetype, MFA, trusted phone numbers, web server and resource file warnings). The count summaries printed after each sync step, as well as the log file, are not affected.
+The [suppress warnings flag](cli.md#suppress-warnings) only hides the warnings printed directly to the CLI (unknown filetype, indexing, MFA, trusted phone numbers, web server and resource file warnings). The count summaries printed after each sync step, as well as the log file, are not affected.
 
 ## Syncing
 
@@ -67,6 +67,16 @@ Search the log file for a `RuntimeWarning` of the format `Error while linking ${
 There are various reasons, why the application cannot write an an album to disk (e.g. permission issues). The albums experiencing this error are most likely not written to disk or missing assets.
 
 Search the log file for a `RuntimeWarning` of the format `Error while writing album ${albumName}: ${errDescription}` to understand which albums are impacted.
+
+### Indexing in progress
+
+Printed as `Warning: ICLOUD_PHOTOS_INDEXING_IN_PROGRESS: iCloud reports indexing in progress, continuing sync anyway (zone: ${zone}, progress ${progress})`, if iCloud reports that the library (`PrimarySync`) or the shared library (`SharedSync-*`) is still being indexed.
+
+The sync continues regardless. Since October 2026, iCloud reports indexing jobs as running with a progress of `0`, even though all assets are available, and the reported state changes between requests. Earlier versions of this application refused to sync in that case (`Indexing in progress, try again later`).
+
+If the library is actually still being indexed (e.g. right after enabling iCloud Photos), assets that are not indexed yet might be missing from the remote state. Check for [count mismatch warnings](#warning-detected-number-albums-where-asset-counts-dont-match) in that case.
+
+Search the log file for a `RuntimeWarning` of the format `ICLOUD_PHOTOS_INDEXING_IN_PROGRESS: ...`.
 
 ### Detected error during sync
 

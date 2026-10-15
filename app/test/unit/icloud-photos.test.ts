@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {iCPSError} from '../../src/app/error/error';
-import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
+import {ICLOUD_PHOTOS_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
 import {iCloudPhotos} from '../../src/lib/icloud/icloud-photos/icloud-photos';
 import {QUERY_KEYS, Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
@@ -182,37 +182,29 @@ describe(`Setup iCloud Photos`, () => {
             expect(photos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
         });
 
-        test(`Indexing in progress with progress`, async () => {
+        test.each([
+            {desc: `with progress`, progress: {value: 20}, messages: [`zone: ${zone}`, `progress 20`]},
+            {desc: `with zero progress`, progress: {value: 0}, messages: [`zone: ${zone}`, `progress 0`]},
+            {desc: `without progress`, progress: undefined, messages: [`zone: ${zone}`]},
+        ])(`Indexing in progress $desc emits warning`, async ({progress, messages}) => {
+            const warningEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS);
             photos.performQuery = jest.fn<typeof photos.performQuery>()
                 .mockResolvedValue([{
                     fields: {
                         state: {
                             value: `RUNNING`,
                         },
-                        progress: {
-                            value: 20,
-                        },
+                        ...(progress ? {progress} : {}),
                     },
                 }]);
 
-            await expect(photos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
+            await expect(photos.checkIndexingStatusForZone(zone)).resolves.toBeUndefined();
 
             expect(photos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
-        });
-
-        test(`Indexing in progress without progress`, async () => {
-            photos.performQuery = jest.fn<typeof photos.performQuery>()
-                .mockResolvedValue([{
-                    fields: {
-                        state: {
-                            value: `RUNNING`,
-                        },
-                    },
-                }]);
-
-            await expect(photos.checkIndexingStatusForZone(zone)).rejects.toThrow(/^Indexing in progress, try again later$/);
-
-            expect(photos.performQuery).toHaveBeenCalledWith(zone, `CheckIndexingState`);
+            expect(warningEvent).toHaveBeenCalledTimes(1);
+            const warning = warningEvent.mock.calls[0][0] as iCPSError;
+            expect(warning.code).toEqual(ICLOUD_PHOTOS_ERR.INDEXING_IN_PROGRESS.code);
+            expect(warning.messages).toEqual(messages);
         });
 
         test(`Unknown status`, async () => {
@@ -939,13 +931,29 @@ describe(`Checking indexing status`, () => {
         expect(readyEvent).toHaveBeenCalledTimes(1);
     });
 
-    test(`Indexing not finished`, async () => {
+    test(`Indexing running does not block`, async () => {
+        mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
+        const readyEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.READY);
+        const errorEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.ERROR);
+        const warningEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS);
+        photos.performQuery = jest.fn<typeof photos.performQuery>()
+            .mockResolvedValueOnce([{fields: {state: {value: `FINISHED`}, progress: {value: 100}}}])
+            .mockResolvedValueOnce([{fields: {state: {value: `RUNNING`}, progress: {value: 0}}}]);
+
+        await photos.checkingIndexingStatus();
+
+        expect(readyEvent).toHaveBeenCalledTimes(1);
+        expect(errorEvent).not.toHaveBeenCalled();
+        expect(warningEvent).toHaveBeenCalledTimes(1);
+    });
+
+    test(`Indexing state unavailable`, async () => {
         mockedResourceManager._resources.sharedZone = Config.sharedZoneInPrivateArea;
         const readyEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.READY);
         const errorEvent = mockedEventManager.spyOnEvent(iCPSEventPhotos.ERROR);
         photos.checkIndexingStatusForZone = jest.fn<typeof photos.checkIndexingStatusForZone>()
             .mockResolvedValueOnce()
-            .mockRejectedValueOnce(new Error(`Indexing in progress`));
+            .mockRejectedValueOnce(new Error(`Unknown indexing state`));
 
         await photos.checkingIndexingStatus();
 

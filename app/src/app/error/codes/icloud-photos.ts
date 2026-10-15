@@ -16,7 +16,7 @@ export const INDEXING_STATE_UNAVAILABLE: ErrorStruct = buildErrorStruct(
 );
 
 export const INDEXING_IN_PROGRESS: ErrorStruct = buildErrorStruct(
-    name, prefix, `INDEXING_IN_PROGRESS`, `Indexing in progress, try again later`,
+    name, prefix, `INDEXING_IN_PROGRESS`, `iCloud reports indexing in progress, continuing sync anyway`,
 );
 
 export const INDEXING_STATE_UNKNOWN: ErrorStruct = buildErrorStruct(

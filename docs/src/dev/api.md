@@ -404,7 +404,14 @@ Each record looks like this:
 
 ### Indexing state
 
-Before a sync, a `CheckIndexingState` query runs against the primary zone and, if available, the shared library zone. The sync only starts if every zone reports `FINISHED`. While Apple is indexing (e.g. after enabling iCloud Photos), the state is `RUNNING`.
+Before a sync, a `CheckIndexingState` query runs against the primary zone and, if available, the shared library zone. The record carries `state` (`RUNNING` or `FINISHED`), `progress` (`INT64`, 0–100) and `indexJobId` (a UUID). While Apple is indexing (e.g. after enabling iCloud Photos), the state is `RUNNING`.
+
+A `RUNNING` state does not block the sync: the application emits an `INDEXING_IN_PROGRESS` runtime warning and continues. Only a missing or unknown state fails the setup.
+
+**Stale indexing jobs** (observed 2026-10-10 to 2026-10-15 on the test, prod and several user accounts):
+
+- Consecutive queries in the same session alternate between `FINISHED` / `100` and `RUNNING` / `0`, sometimes between two `indexJobId`s, sometimes for the same one. The `RUNNING` job never advances, and new job IDs appear over the days.
+- The records are complete while `RUNNING` is reported. On the test account, 8 full scans during `RUNNING` matched the expected fixture data exactly (202 assets, 202 masters, 8 albums). On the prod account, 3 full scans of both zones (32,709 + 576 assets, 95 albums) returned identical record names, whichever state was reported. `HyperionIndexCountLookup` returned the same count under both states.
 
 ### Pagination
 
@@ -636,6 +643,10 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 - **Sends `accountCountryCode`, `extended_login` and `trustToken`** to `accountLogin` ([accountLogin](#accountlogin)).
 - **Passes the phone number's `nonFTEU` flag** when requesting and submitting SMS or voice codes ([MFA](#mfa)).
 
+## Changes observed in October 2026
+
+- **`CheckIndexingState` reports stale jobs as `RUNNING` with progress `0`**, alternating with `FINISHED` between requests, while all records are available. The application no longer refuses to sync while indexing is running, and emits a warning instead ([Indexing state](#indexing-state)).
+
 ## Open questions
 
 - **`referenceChecksum`**: its meaning is unknown.
@@ -644,6 +655,7 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 - **Shared library albums**: album queries only return primary zone assets. It is unknown whether shared library assets in albums can be queried.
 - **Live Photos**: the video part (`resOriginalVidComplRes`) is not downloaded.
 - **Shared albums**: whether `rootctag`/`albumctag` support incremental changes, the maximum `webgetassets` range, whether comments and likes are reachable, and how shared albums behave on accounts with Advanced Data Protection (which according to Apple does not cover shared albums). See [Shared albums](#shared-albums).
+- **Indexing state**: whether a `RUNNING` state with progress above `0` (an actual indexing job) still means that records are missing, and why stale jobs appear since October 2026 (see [Indexing state](#indexing-state)).
 - **Checksums** of multi-GB files, ADP accounts and the shared library zone have not been verified (see [File checksum](#file-checksum)).
 
 ## Postman Collection
