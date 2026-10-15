@@ -25,6 +25,8 @@ Issue #354 also absorbed further features, which all depend on a new layout: XMP
 - **No database.** All state is JSON.
 - **Metadata cleaning.** A reconcile step makes the JSON match what is on disk. The diff then works on JSON and file names only, never on the (potentially large) asset files.
 - **Never lose user data.** An incomplete remote fetch never deletes anything. Foreign files are never touched.
+- **Readable without icps.** Every synced file is a plain file with its original iCloud file name in a date folder (`_All Photos/2023/07/IMG_1234.HEIC`). The library can be browsed in any file manager and over SMB, and imported as-is by Immich (external library), PhotoPrism, Synology Photos and Nextcloud. With the default hard links, removing icps or deleting `.library-data/` leaves an ordinary photo folder behind. This is the layout users know from icloudpd, and the v1 layout's checksum names and symlinks were its main usability gap (see [Views](#views)).
+- **Complete Live Photos.** The video part of a Live Photo can be synced (`live` version, [#121](https://github.com/steilerDev/icloud-photos-sync/issues/121)). It shares the still's stem in the same folder (`IMG_1234.HEIC` + `IMG_1234.mov`), so name-based viewers such as PhotoPrism stack the pair, and archiving never deletes a Live Photo whose video is missing locally (see [Archive](#archive)).
 
 ## Decisions
 
@@ -217,6 +219,7 @@ A deep check, which re-hashes every blob, will be an explicit `verify` command i
 - **Not a backup:** a selection without `original` is a space-saving copy (e.g. for a photo frame). It never allows remote deletes.
 - **Changing the selection** downloads only what was added. It releases deselected files, which can be re-downloaded, but never archived or trashed content.
 - **Stable names:** each asset reserves its whole name family (`T`, `T-edited`, `T-medium`, `T-thumb`), so adding a version never renames an existing file.
+- **Live Photos:** the still and its video always share the stem (`T.HEIC` + `T.mov`, `T-edited.jpeg` + `T-edited.mov`), even when a collision suffix is needed (`T (1).HEIC` + `T (1).mov`). Enabling `live` later only adds the videos; no still is renamed.
 
 ### Names
 
@@ -257,7 +260,9 @@ The extension is only used for view names. Stored blobs have no extension, and l
 
 ### Viewer and backup guidance
 
-- **Immich:** import `_All Photos` (and `_Shared Photos`), not the album folders. Immich identifies assets by path, so albums would duplicate them.
+- **Any file manager or SMB share:** with hard links, every entry is a plain file, so Windows, macOS Finder, Synology File Station and Nextcloud show the full library, albums included.
+- **Immich:** import `_All Photos` (and `_Shared Photos`) as an external library, not the album folders. Immich identifies assets by path, so albums would duplicate them. Immich pairs Live Photos by the content identifier embedded in both files, not by name.
+- **PhotoPrism / Synology Photos:** point the originals folder (or the shared folder) at `_All Photos`; `.library-data/` carries `.nomedia`/`.photoviewignore` and is skipped.
 - **Backups:** back up `.library-data/` plus the resource file, since views can be rebuilt without downloading anything. Alternatively use `rsync -aH`.
 
 ## Archive
@@ -271,6 +276,21 @@ The extension is only used for view names. Stored blobs have no extension, and l
     - It requires the remote delete to be sent to the shared zone, which is not verified yet.
 - **Remote deletes** only happen if every original-class file of the asset is present at the start of the sync, whatever `--versions` says: the original; the edit and the edited Live video, if edited; the Live video, if a Live Photo. They are re-verified first. Reduced resolutions never count.
 - **Archived assets** stay in `_All Photos` and their albums. Removing all of an archived asset's entries purges it locally.
+
+### Age-based archiving (6.3)
+
+Keeps the whole library locally while iCloud only holds the recent assets ([#284](https://github.com/steilerDev/icloud-photos-sync/issues/284)), so that a viewer pointed at the library still sees the whole collection. It is the counterpart of icloudpd's `--keep-icloud-recent-days`, one of its most requested features. The scope was agreed in [#354](https://github.com/steilerDev/icloud-photos-sync/issues/354); the details below are a proposal, to be decided before 6.3.
+
+- **Option:** `--archive-older-than <days>` (env `ARCHIVE_OLDER_THAN`), off by default. It runs as part of every sync (daemon or `sync`), not as a separate `archive` run.
+- **Selection:** assets older than the threshold, minus `--archive-keep` (default `favorites`; `albums` keeps every asset that is in at least one album). The Shared Library is only included with `--archive-shared-library`.
+- **Same path as `archive --remote-delete`:** a ledger intent first, then the remote delete, and only if every original-class file (including the Live video) is present and re-verified. A selection without `original` never deletes remotely.
+- **Locally:** the asset becomes `archived` and stays in `_All Photos` and its albums, also when the remote album is emptied or deleted. The ledger tells it apart from a delete on a device.
+- **Safety:**
+    - a dry run that reports what would be deleted (count, size, date range) without deleting anything;
+    - a per-sync limit on remote deletes, so that enabling the option on a large library trims iCloud over several syncs instead of all at once;
+    - a summary of every run in the log, the web UI and the metrics.
+- **Out of scope:** uploading back to iCloud. icps never uploads.
+- **Open:** whether the age is measured on the capture date (`assetDate`, as used for the view names) or the date the asset was added to iCloud (`addedDate`).
 
 ## Migration from v1
 
@@ -312,7 +332,12 @@ Migration is automatic on the first v6 sync, after authentication and under the 
     8. archive;
     9. telemetry.
 4. **Switch to 6.0.0.** One breaking PR enables the new library, removes `app/src/lib/photos-library/`, and updates the documentation and dashboards.
-5. **6.x.** 6.1 XMP sidecars, 6.2 shared albums, 6.3 age-based archiving, 6.4 fetch optimizations (change feed, `records/lookup`).
+5. **6.x.** 6.1 XMP sidecars, 6.2 shared albums, 6.3 [age-based archiving](#age-based-archiving-63), 6.4 fetch optimizations (change feed, `records/lookup`).
+6. **Distribution, after 6.0.** Comparable tools reach most of their users through NAS app catalogs: docker-icloudpd, which is listed in Unraid's Community Apps, has about 4M Docker pulls, five times as many as icloudpd's own image (October 2026). These entries wait for 6.0, so that new users start on the readable layout instead of migrating shortly after:
+    - an Unraid Community Applications template;
+    - a TrueNAS apps catalog entry;
+    - a Synology Container Manager guide in the user docs;
+    - each pinned to the major tag (`:6`) and the `/opt/icloud-photos-library` volume, and listed in the docs and the README.
 
 ## Testing
 
