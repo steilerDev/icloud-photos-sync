@@ -111,8 +111,7 @@ export class PhotosLibrary {
      * Loads all assets from disk for a given zone
      * @param zone - Either 'primary' or 'shared'
      * @returns A structured list of assets, as they are currently present on disk
-     * @emits iCPSEventRuntimeWarning.FILETYPE_ERROR - If a file with an unknown extension is found
-     * @emits iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR - If any other error occurs while loading an asset
+     * @emits iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR - If an asset cannot be loaded, e.g. because of an unknown file extension - provides the error and file path as arguments
      */
     async loadAssetsForZone(zone: Zones): Promise<PLibraryEntities<Asset>> {
         const libAssets: PLibraryEntities<Asset> = {};
@@ -131,10 +130,7 @@ export class PhotosLibrary {
                     libAssets[asset.getUUID()] = asset;
                     Resources.logger(this).debug(`Loaded asset ${asset.getDisplayName()}`);
                 } catch (err) {
-                    if (err instanceof iCPSError && err.code === LIBRARY_ERR.UNKNOWN_FILETYPE_EXTENSION.code) {
-                        Resources.emit(iCPSEventRuntimeWarning.FILETYPE_ERROR, (err.context as any).extension);
-                    }
-
+                    // Unknown local files are not reported as FILETYPE_ERROR - only file types served by iCloud are relevant for file type support
                     Resources.emit(iCPSEventRuntimeWarning.LIBRARY_LOAD_ERROR, err, filePath);
                 }
             });
