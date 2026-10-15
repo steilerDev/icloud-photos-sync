@@ -127,7 +127,7 @@ export class SyncEngine {
      * @param remoteAlbums - An array of all remote albums
      * @param localAssets - A list of local assets
      * @param localAlbums - A list of local albums
-     * @returns A promise that, once resolved, will contain processing queues that can be used in order to sync the remote state.
+     * @returns A promise that, once resolved, will contain processing queues that can be used in order to sync the remote state. While iCloud reports a running indexing job, local assets missing from the remote state are kept instead of deleted.
      * @emits iCPSEventSyncEngine.DIFF - When the diff starts
      * @emits iCPSEventSyncEngine.DIFF_COMPLETED - When the diff is done
      */
@@ -138,7 +138,16 @@ export class SyncEngine {
             SyncEngineHelper.getProcessingQueues(remoteAssets, localAssets),
             SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums),
         ]);
-        const uniqueAssetQueue = SyncEngineHelper.removeDuplicateAssets(assetQueue);
+        let uniqueAssetQueue = SyncEngineHelper.removeDuplicateAssets(assetQueue);
+        if (this.icloud.photos.indexingInProgress) {
+            const deletionCount = uniqueAssetQueue[0].length;
+            uniqueAssetQueue = SyncEngineHelper.deferAssetDeletions(uniqueAssetQueue);
+            const deferredCount = deletionCount - uniqueAssetQueue[0].length;
+            if (deferredCount > 0) {
+                Resources.logger(this).warn(`iCloud reports indexing in progress, deferring deletion of ${deferredCount} local assets until indexing has finished`);
+            }
+        }
+
         const resolvedAlbumQueue = SyncEngineHelper.resolveHierarchicalDependencies(albumQueue, localAlbums);
         Resources.emit(iCPSEventSyncEngine.DIFF_COMPLETED);
         return [uniqueAssetQueue, resolvedAlbumQueue];

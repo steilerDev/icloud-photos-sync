@@ -70,11 +70,11 @@ Search the log file for a `RuntimeWarning` of the format `Error while writing al
 
 ### Indexing in progress
 
-Printed as `Warning: ICLOUD_PHOTOS_INDEXING_IN_PROGRESS: iCloud reports indexing in progress, continuing sync anyway (zone: ${zone}, progress ${progress})`, if iCloud reports that the library (`PrimarySync`) or the shared library (`SharedSync-*`) is still being indexed.
+Printed as `Warning: ICLOUD_PHOTOS_INDEXING_IN_PROGRESS: iCloud reports indexing in progress, continuing sync without deleting local assets (zone: ${zone}, progress ${progress})`, if iCloud reports that the library (`PrimarySync`) or the shared library (`SharedSync-*`) is still being indexed.
 
-The sync continues regardless. Since October 2026, iCloud reports indexing jobs as running with a progress of `0`, even though all assets are available, and the reported state changes between requests. Earlier versions of this application refused to sync in that case (`Indexing in progress, try again later`).
+The sync continues, but local assets are not deleted. While iCloud is indexing, assets that are not indexed yet might be missing from the remote state. Deleting every local asset that is missing remotely could therefore remove assets that still exist in iCloud. Instead, those assets are kept, and the log contains `iCloud reports indexing in progress, deferring deletion of ${number} local assets until indexing has finished`. They are deleted by the first sync after iCloud reports indexing as finished. New and changed assets, as well as albums, are synced as usual.
 
-If the library is actually still being indexed (e.g. right after enabling iCloud Photos), assets that are not indexed yet might be missing from the remote state. Check for [count mismatch warnings](#warning-detected-number-albums-where-asset-counts-dont-match) in that case.
+Since October 2026, iCloud reports indexing jobs as running with a progress of `0`, even though all assets are available, and the reported state changes between requests. Deletions are therefore only delayed until a sync sees the finished state. Earlier versions of this application refused to sync in that case (`Indexing in progress, try again later`).
 
 Search the log file for a `RuntimeWarning` of the format `ICLOUD_PHOTOS_INDEXING_IN_PROGRESS: ...`.
 

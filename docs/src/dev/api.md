@@ -406,7 +406,7 @@ Each record looks like this:
 
 Before a sync, a `CheckIndexingState` query runs against the primary zone and, if available, the shared library zone. The record carries `state` (`RUNNING` or `FINISHED`), `progress` (`INT64`, 0–100) and `indexJobId` (a UUID). While Apple is indexing (e.g. after enabling iCloud Photos), the state is `RUNNING`.
 
-A `RUNNING` state does not block the sync: the application emits an `INDEXING_IN_PROGRESS` runtime warning and continues. Only a missing or unknown state fails the setup.
+A `RUNNING` state does not block the sync: the application emits an `INDEXING_IN_PROGRESS` runtime warning and continues, but defers the deletion of local assets that are missing from the remote state (assets replaced by a changed version are still replaced). A sync that reads `FINISHED` performs the deferred deletions. Only a missing or unknown state fails the setup.
 
 **Stale indexing jobs** (observed 2026-10-10 to 2026-10-15 on the test, prod and several user accounts):
 
@@ -645,7 +645,7 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 
 ## Changes observed in October 2026
 
-- **`CheckIndexingState` reports stale jobs as `RUNNING` with progress `0`**, alternating with `FINISHED` between requests, while all records are available. The application no longer refuses to sync while indexing is running, and emits a warning instead ([Indexing state](#indexing-state)).
+- **`CheckIndexingState` reports stale jobs as `RUNNING` with progress `0`**, alternating with `FINISHED` between requests, while all records are available. The application no longer refuses to sync while indexing is running. It emits a warning and defers local asset deletions instead ([Indexing state](#indexing-state)).
 
 ## Open questions
 

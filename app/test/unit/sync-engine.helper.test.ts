@@ -273,6 +273,42 @@ describe(`Diffing state`, () => {
                 expect(toBeAdded).toEqual([primary, shared]);
             });
         });
+
+        describe(`Defer asset deletions`, () => {
+            beforeEach(() => {
+                prepareResources();
+            });
+
+            const asset = (checksum: string, modified: number = 42) => new Asset(checksum, 42, FileType.fromExtension(`png`), modified, Zones.Primary, AssetType.ORIG, `test`, `somekey`, checksum, `https://icloud.com`, `somerecordname`, false);
+
+            test(`Keeps deleted assets that are not replaced`, () => {
+                const deleted = asset(`del0`);
+                const added = asset(`add0`);
+                const kept = asset(`kep0`);
+
+                const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.deferAssetDeletions([[deleted], [added], [kept]]);
+
+                expect(toBeDeleted).toEqual([]);
+                expect(toBeAdded).toEqual([added]);
+                expect(toBeKept).toEqual([kept, deleted]);
+            });
+
+            test(`Still deletes replaced assets`, () => {
+                const replacedLocal = asset(`repl`, 42);
+                const replacedRemote = asset(`repl`, 43);
+                const deleted = asset(`del0`);
+
+                const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.deferAssetDeletions([[replacedLocal, deleted], [replacedRemote], []]);
+
+                expect(toBeDeleted).toEqual([replacedLocal]);
+                expect(toBeAdded).toEqual([replacedRemote]);
+                expect(toBeKept).toEqual([deleted]);
+            });
+
+            test(`Empty queues`, () => {
+                expect(SyncEngineHelper.deferAssetDeletions([[], [], []])).toEqual([[], [], []]);
+            });
+        });
     });
 
     describe(`Album state`, () => {

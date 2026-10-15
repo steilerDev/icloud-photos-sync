@@ -704,7 +704,7 @@ describe(`Log added`, () => {
             serializedMessage: {
                 level: `warn`,
                 source: `RuntimeWarning`,
-                message: `ICLOUD_PHOTOS_INDEXING_IN_PROGRESS: iCloud reports indexing in progress, continuing sync anyway (zone: PrimaryLibrary, progress 0)`
+                message: `ICLOUD_PHOTOS_INDEXING_IN_PROGRESS: iCloud reports indexing in progress, continuing sync without deleting local assets (zone: PrimaryLibrary, progress 0)`
             } as LogMessage
         },{
             desc: `Should handle runtime warning: resource file error`,
