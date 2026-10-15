@@ -8,7 +8,8 @@ import {appFactory, iCPSAppOptions, validatePermissions} from '../../src/app/fac
 import {ArchiveApp, DaemonApp, SyncApp, TokenApp} from '../../src/app/icloud-app';
 import {WebServer} from '../../src/app/web-ui/web-server';
 import {Asset} from '../../src/lib/photos-library/model/asset';
-import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError, iCPSEventWebServer} from '../../src/lib/resources/events-types';
+import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../src/lib/resources/events-types';
+import {Cron} from 'croner';
 import {Resources} from '../../src/lib/resources/main';
 import * as Config from '../_helpers/_config';
 import {prepareResources, spyOnEvent} from '../_helpers/_general';
@@ -800,6 +801,91 @@ describe(`App control flow`, () => {
 
             expect(syncApp.run).toHaveBeenCalled();
             expect(successEvent).toHaveBeenCalled();
+        });
+
+        describe(`Schedule frequency`, () => {
+            test.each([
+                {desc: `daily schedule`, schedule: `0 2 * * *`},
+                {desc: `hourly schedule`, schedule: `0 * * * *`},
+                {desc: `every other hour`, schedule: `0 */2 * * *`},
+                {desc: `twice a day`, schedule: `0 2,14 * * *`},
+                {desc: `weekly schedule`, schedule: `0 12 * * 0`},
+            ])(`Does not warn for $desc`, async ({schedule}) => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                Resources._instances.manager._resources.schedule = schedule;
+                const warningEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY);
+
+                daemonApp.checkScheduleFrequency(new Cron(schedule));
+
+                expect(warningEvent).not.toHaveBeenCalled();
+            });
+
+            test.each([
+                {
+                    desc: `wildcard minute with fixed hour`,
+                    schedule: `* 2 * * *`,
+                    message: `'* 2 * * *' runs every minute between 02:00 and 02:59 - did you mean '0 2 * * *'?`,
+                }, {
+                    desc: `wildcard minute with fixed two-digit hour and weekday`,
+                    schedule: `* 20 * * 1`,
+                    message: `'* 20 * * 1' runs every minute between 20:00 and 20:59 - did you mean '0 20 * * 1'?`,
+                }, {
+                    desc: `every minute`,
+                    schedule: `* * * * *`,
+                    message: `'* * * * *' runs as often as every minute`,
+                }, {
+                    desc: `stepped minutes`,
+                    schedule: `*/15 * * * *`,
+                    message: `'*/15 * * * *' runs as often as every 15 minutes`,
+                }, {
+                    desc: `two runs within an hour`,
+                    schedule: `0,30 2 * * *`,
+                    message: `'0,30 2 * * *' runs as often as every 30 minutes`,
+                }, {
+                    desc: `every second`,
+                    schedule: `* * * * * *`,
+                    message: `'* * * * * *' runs as often as every second`,
+                }, {
+                    desc: `every ten seconds`,
+                    schedule: `*/10 * * * * *`,
+                    message: `'*/10 * * * * *' runs as often as every 10 seconds`,
+                },
+            ])(`Warns for $desc`, async ({schedule, message}) => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                Resources._instances.manager._resources.schedule = schedule;
+                const warningEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY);
+
+                daemonApp.checkScheduleFrequency(new Cron(schedule));
+
+                expect(warningEvent).toHaveBeenCalledTimes(1);
+                const warning = warningEvent.mock.calls[0][0] as iCPSError;
+                expect(warning.code).toEqual(`APP_SCHEDULE_FREQUENCY`);
+                expect(warning.messages).toEqual([message]);
+            });
+
+            test(`Warns when scheduling the job`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                Resources._instances.manager._resources.schedule = `* 2 * * *`;
+                const warningEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY);
+                const scheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
+
+                await daemonApp.run();
+                daemonApp.job?.stop();
+
+                expect(warningEvent).toHaveBeenCalledTimes(1);
+                expect(scheduledEvent).toHaveBeenCalledTimes(1);
+            });
+
+            test(`Does not warn if there are no upcoming runs`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                const warningEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY);
+                const job = new Cron(`* * * * *`);
+                job.nextRuns = jest.fn<typeof job.nextRuns>().mockReturnValue([]);
+
+                daemonApp.checkScheduleFrequency(job);
+
+                expect(warningEvent).not.toHaveBeenCalled();
+            });
         });
 
         test(`Scheduled sync of an empty library succeeds`, async () => {

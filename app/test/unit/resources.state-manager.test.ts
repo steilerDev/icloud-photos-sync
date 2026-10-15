@@ -3,7 +3,7 @@ import fs from 'fs';
 import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals"
 import {LogLevel, LogMessage, SerializedState, StateManager, StateTrigger} from "../../src/lib/resources/state-manager"
 import {iCPSError} from "../../src/app/error/error"
-import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR, WEB_SERVER_ERR} from "../../src/app/error/error-codes"
+import {APP_ERR, AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR, WEB_SERVER_ERR} from "../../src/app/error/error-codes"
 import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general"
 import {iCPSEvent, iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "../../src/lib/resources/events-types"
 import path from 'path';
@@ -705,6 +705,15 @@ describe(`Log added`, () => {
                 level: `warn`,
                 source: `RuntimeWarning`,
                 message: `ICLOUD_PHOTOS_INDEXING_IN_PROGRESS: iCloud reports indexing in progress, continuing sync without deleting local assets (zone: PrimaryLibrary, progress 0)`
+            } as LogMessage
+        },{
+            desc: `Should handle runtime warning: schedule frequency`,
+            event: iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY,
+            args: [new iCPSError(APP_ERR.SCHEDULE_FREQUENCY).addMessage(`'*/15 * * * *' runs as often as every 15 minutes`)],
+            serializedMessage: {
+                level: `warn`,
+                source: `RuntimeWarning`,
+                message: `APP_SCHEDULE_FREQUENCY: Schedule triggers syncs more often than once per hour, frequent sign-ins might be throttled by Apple ('*/15 * * * *' runs as often as every 15 minutes)`
             } as LogMessage
         },{
             desc: `Should handle runtime warning: resource file error`,

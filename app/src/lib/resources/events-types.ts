@@ -195,7 +195,11 @@ export enum iCPSEventRuntimeWarning {
     /**
      * Emitted when iCloud reports that indexing of a zone is still running - provides the iCPSError (including zone and progress) as argument
      */
-    INDEXING_IN_PROGRESS = `warn-indexing_in_progress`
+    INDEXING_IN_PROGRESS = `warn-indexing_in_progress`,
+    /**
+     * Emitted when the daemon schedule triggers syncs more often than once per hour - provides the iCPSError as argument
+     */
+    SCHEDULE_FREQUENCY = `warn-schedule_frequency`
 }
 
 /**

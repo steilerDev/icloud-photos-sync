@@ -47,6 +47,7 @@ const FIELDS = {
     RESOURCE_FILE_ERROR: iCPSEventRuntimeWarning.RESOURCE_FILE_ERROR,
     ARCHIVE_ASSET_ERROR: iCPSEventRuntimeWarning.ARCHIVE_ASSET_ERROR,
     INDEXING_IN_PROGRESS: iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS,
+    SCHEDULE_FREQUENCY: iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY,
     ERROR: `errors`,
     /**
      * Loading metrics
@@ -371,6 +372,10 @@ export class MetricsExporter {
             .on(iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS, (err: iCPSError) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .addField(FIELDS.INDEXING_IN_PROGRESS, err.getDescription()));
+            })
+            .on(iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY, (err: iCPSError) => {
+                this.logDataPoint(new iCPSInfluxLineProtocolPoint()
+                    .addField(FIELDS.SCHEDULE_FREQUENCY, err.getDescription()));
             });
 
         Resources.events(this)
