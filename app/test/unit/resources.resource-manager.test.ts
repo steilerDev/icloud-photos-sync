@@ -327,6 +327,26 @@ describe(`ResourceManager`, () => {
                 });
             });
 
+            test(`should persist the crash reporting guid, so it is read back on the next start`, () => {
+                mockfs({
+                    [Config.defaultConfig.dataDir]: {},
+                });
+
+                resourceManager._resources.libraryVersion = 1;
+                resourceManager._resources.crashReportingGuid = `0b6a3b0e-4d57-4c1f-9b49-1e0f8a1f2c3d`;
+
+                resourceManager._writeResourceFile();
+
+                expect(JSON.parse(fs.readFileSync(resourceFilePath, {encoding: `utf8`}))).toEqual({
+                    libraryVersion: 1,
+                    crashReportingGuid: `0b6a3b0e-4d57-4c1f-9b49-1e0f8a1f2c3d`,
+                });
+                expect(resourceManager._readResourceFile()).toEqual({
+                    libraryVersion: 1,
+                    crashReportingGuid: `0b6a3b0e-4d57-4c1f-9b49-1e0f8a1f2c3d`,
+                });
+            });
+
             test(`should emit an error event if the resource file cannot be written`, () => {
                 mockfs({
                     [resourceFilePath]: mockfs.file({
@@ -493,6 +513,29 @@ describe(`ResourceManager`, () => {
                 expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
             })
         })
+
+        describe(`Crash reporting guid`, () => {
+            test(`should return the crash reporting guid from the resources`, () => {
+                (resourceManager._writeResourceFile as jest.Mock).mockReset();
+                resourceManager._resources.crashReportingGuid = `0b6a3b0e-4d57-4c1f-9b49-1e0f8a1f2c3d`;
+                expect(resourceManager.crashReportingGuid).toEqual(`0b6a3b0e-4d57-4c1f-9b49-1e0f8a1f2c3d`);
+                expect(resourceManager._writeResourceFile).not.toHaveBeenCalled();
+            });
+
+            test(`should generate and persist a crash reporting guid if not present in the resources`, () => {
+                (resourceManager._writeResourceFile as jest.Mock).mockReset();
+                resourceManager._resources.crashReportingGuid = undefined;
+
+                const guid = resourceManager.crashReportingGuid;
+
+                expect(guid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+                expect(resourceManager._resources.crashReportingGuid).toEqual(guid);
+                expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
+                // Subsequent access reuses the guid
+                expect(resourceManager.crashReportingGuid).toEqual(guid);
+                expect(resourceManager._writeResourceFile).toHaveBeenCalledTimes(1);
+            });
+        });
 
         describe(`Notification Subscription`, () => {
             test(`should return the notification subscription from the resources`, () => {

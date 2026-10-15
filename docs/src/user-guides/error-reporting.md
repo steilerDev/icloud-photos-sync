@@ -18,7 +18,7 @@ Once enabled, the following data is sent:
     - the last 200 events of the application (breadcrumbs),
     - the last 200 lines of the log file and - if [network capture](cli.md#enable-network-capture) is enabled - the HAR file,
     - the configuration (environment variables and CLI arguments) and information about the runtime (application, Node.js and OS version, architecture, memory),
-    - an identifier of the installation, derived from the machine id.
+    - a random identifier of the installation, generated once and stored in the data directory's [resource file](../dev/local-file-structure.md#resource-file).
 - **Unknown file types**, whenever iCloud serves an asset with a file type that is not yet supported - these reports are used to [add support for new file types](https://github.com/steilerDev/icloud-photos-sync/issues/143).
 - **Usage statistics**, counting the execution of syncs and archive operations.
 
