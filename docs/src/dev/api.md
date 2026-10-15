@@ -170,8 +170,13 @@ The trust token from a previous MFA is sent in `trustTokens`. A missing or expir
 | `409` with `X-Apple-EDP` or `X-Apple-PDP` | The trust token was accepted, but a second password proof is required | [Escrow](#escrow), then [accountLogin](#accountlogin) |
 | `409` without those headers (usually with `X-Apple-TwoSV-Trust-Eligible`) | MFA is required | [MFA](#mfa) |
 | `401` | Wrong password | `AUTH_UNAUTHORIZED` |
-| `403` | Unknown Apple ID | `AUTH_FORBIDDEN` |
+| `403` with a `serviceErrors` entry with code `-20209` | The account is locked | `AUTH_ACCOUNT_LOCKED` |
+| `403` otherwise | Unknown Apple ID | `AUTH_FORBIDDEN` |
 | `412` | Precondition failed | `AUTH_PRECONDITION_FAILED` |
+
+Error bodies list the reasons as `{"serviceErrors": [{"code", "message", "suppressDismissal"}]}`. The MFA endpoints use the key `service_errors` instead (see [MFA](#mfa)), so the application reads both. Their messages are added to the error.
+
+- Observed in crash reports (October 2026): when Apple locks an account, `signin/complete` answers `403` with `serviceErrors[0].code = -20209` and the message "This Apple Account has been locked for security reasons. Visit iForgot to reset your account (https://iforgot.apple.com)". `signin/init` still succeeds. Only the user can unlock the account, so `AUTH_ACCOUNT_LOCKED` is not sent as a crash report.
 
 The body is `{"authType": "hsa2"}`. The relevant data is in the headers: `X-Apple-Session-Token`, `X-Apple-ID-Session-Id`, `X-Apple-ID-Account-Country` (used in [accountLogin](#accountlogin)), `scnt` and the `aasp` cookie.
 
@@ -297,6 +302,8 @@ Accounts with Advanced Data Protection (ADP) need PCS cookies to read the Photos
 - `success` sets both PCS cookies. A success without both cookies is an error (`AUTH_PCS_COOKIE_MISSING`).
 - Observed: on an ADP account the request confirmed on its own after one or two retries.
 - Observed: after many sign-ins in a short time, the request failed with `500` and `{"isDeviceConsentedForPCS": false, "message": "Issue requesting IDMS for arming."}`. Apple could not send the consent prompt, and waiting 5 minutes did not clear it.
+- Observed in crash reports (October 2026): the request failed with `412` and `{"status": "failure", "message": "User has not disabled iCloud DRS."}`. DRS (Data Recovery Service) being enabled suggests that ADP was not active, even though `accountLogin` had asked for PCS. The same account also hit `AUTH_ACCOUNT_SETUP_INCOMPLETE`.
+- On an HTTP error the `message` from the body is added to `AUTH_PCS_REQUEST_FAILED`.
 
 Once the PCS cookies are set, `ENCRYPTED_BYTES` record fields (e.g. `filenameEnc`) arrive readable, just like on accounts without ADP.
 
@@ -646,6 +653,7 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 ## Changes observed in October 2026
 
 - **`CheckIndexingState` reports stale jobs as `RUNNING` with progress `0`**, alternating with `FINISHED` between requests, while all records are available. The application no longer refuses to sync while indexing is running. It emits a warning and defers local asset deletions instead ([Indexing state](#indexing-state)).
+- **Locked accounts are identified by service error `-20209`** on `signin/complete` and reported as `AUTH_ACCOUNT_LOCKED` instead of `AUTH_FORBIDDEN` ([Signin](#signin)).
 
 ## Open questions
 
@@ -656,6 +664,7 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 - **Live Photos**: the video part (`resOriginalVidComplRes`) is not downloaded.
 - **Shared albums**: whether `rootctag`/`albumctag` support incremental changes, the maximum `webgetassets` range, whether comments and likes are reachable, and how shared albums behave on accounts with Advanced Data Protection (which according to Apple does not cover shared albums). See [Shared albums](#shared-albums).
 - **Indexing state**: whether a `RUNNING` state with progress above `0` (an actual indexing job) still means that records are missing, and why stale jobs appear since October 2026 (see [Indexing state](#indexing-state)).
+- **`requestPCS` 412 "User has not disabled iCloud DRS."**: why `accountLogin` asks for PCS on such an account, and whether the account needs an action (see [requestPCS](#requestpcs)).
 - **Checksums** of multi-GB files, ADP accounts and the shared library zone have not been verified (see [File checksum](#file-checksum)).
 
 ## Postman Collection

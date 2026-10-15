@@ -23,6 +23,10 @@ export const FORBIDDEN: ErrorStruct = buildErrorStruct(
     name, prefix, `FORBIDDEN`, `Username does not seem to exist`,
 );
 
+export const ACCOUNT_LOCKED: ErrorStruct = buildErrorStruct(
+    name, prefix, `ACCOUNT_LOCKED`, `Apple locked this account for security reasons - unlock it at https://iforgot.apple.com`,
+);
+
 export const PRECONDITION_FAILED: ErrorStruct = buildErrorStruct(
     name, prefix, `PRECONDITION_FAILED`, `iCloud refused login - you might need to update your password`,
 );

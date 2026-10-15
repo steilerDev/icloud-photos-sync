@@ -17,6 +17,11 @@ import {MFAMethod} from './mfa/mfa-method.js';
  */
 const MFA_INCORRECT_CODE_ERROR = `-21669`;
 
+/**
+ * The service error code returned by the backend, if the account has been locked for security reasons
+ */
+const ACCOUNT_LOCKED_ERROR = `-20209`;
+
 export class iCloud {
     /**
      * Access to the iCloud Photos service
@@ -157,7 +162,9 @@ export class iCloud {
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.UNAUTHORIZED).addCause(err));
                     break;
                 case 403:
-                    Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.FORBIDDEN).addCause(err));
+                    Resources.emit(iCPSEventCloud.ERROR, new iCPSError(this.hasServiceError(err.response?.data, ACCOUNT_LOCKED_ERROR) ? AUTH_ERR.ACCOUNT_LOCKED : AUTH_ERR.FORBIDDEN)
+                        .addMessage(...this.getServiceErrors(err.response?.data).map(serviceError => serviceError?.message))
+                        .addCause(err));
                     break;
                 case 412:
                     Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.PRECONDITION_FAILED).addCause(err));
@@ -440,7 +447,18 @@ export class iCloud {
      * @returns True, if the service error is present
      */
     hasServiceError(data: any, code: string): boolean {
-        return Array.isArray(data?.service_errors) && data.service_errors.some((serviceError: any) => serviceError?.code === code);
+        return this.getServiceErrors(data).some(serviceError => serviceError?.code === code);
+    }
+
+    /**
+     * Extracts the service errors from the response data - the backend uses both `service_errors` and `serviceErrors` as key
+     * @param data - The response data
+     * @returns The list of service errors, empty if none are present
+     */
+    getServiceErrors(data: any): any[] {
+        return [data?.service_errors, data?.serviceErrors]
+            .filter(serviceErrors => Array.isArray(serviceErrors))
+            .flat();
     }
 
     /**
@@ -551,7 +569,13 @@ export class iCloud {
             Resources.logger(this).debug(`Account ready with PCS cookies`);
             Resources.emit(iCPSEventCloud.ACCOUNT_READY);
         } catch (err) {
-            Resources.emit(iCPSEventCloud.ERROR, new iCPSError(AUTH_ERR.PCS_REQUEST_FAILED).addCause(err));
+            const pcsError = new iCPSError(AUTH_ERR.PCS_REQUEST_FAILED).addCause(err);
+            // The backend explains the failure in the response body, e.g. 412 'User has not disabled iCloud DRS.'
+            if (isHttpError(err) && typeof err.response?.data?.message === `string`) {
+                pcsError.addMessage(err.response.data.message);
+            }
+
+            Resources.emit(iCPSEventCloud.ERROR, pcsError);
         }
     }
 
