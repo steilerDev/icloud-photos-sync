@@ -267,6 +267,9 @@ export class ErrorHandler {
             .on(iCPSEventRuntimeWarning.INDEXING_IN_PROGRESS, (err: iCPSError) => {
                 breadcrumbs.warn(`INDEXING_IN_PROGRESS`, {error: err.getDescription()});
             })
+            .on(iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY, (err: iCPSError) => {
+                breadcrumbs.warn(`SCHEDULE_FREQUENCY`, {error: err.getDescription()});
+            })
             .on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor: string) => {
                 breadcrumbs.warn(`FILETYPE_ERROR`, {ext, descriptor});
             })

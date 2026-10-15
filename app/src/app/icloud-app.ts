@@ -4,7 +4,7 @@ import {iCloud} from "../lib/icloud/icloud.js";
 import {Album} from "../lib/photos-library/model/album.js";
 import {Asset} from "../lib/photos-library/model/asset.js";
 import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
-import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventWebServer} from "../lib/resources/events-types.js";
+import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventWebServer} from "../lib/resources/events-types.js";
 import {Resources} from "../lib/resources/main.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {APP_ERR, AUTH_ERR } from "./error/error-codes.js";
@@ -31,8 +31,19 @@ export class DaemonApp extends iCPSApp {
     job?: Cron;
 
     /**
+     * Schedules triggering syncs closer than this interval (in ms) are most likely misconfigured
+     */
+    static readonly MIN_SCHEDULE_INTERVAL = 60 * 60 * 1000;
+
+    /**
+     * Number of upcoming runs that are inspected to determine the schedule's frequency
+     */
+    static readonly INSPECTED_RUNS = 10;
+
+    /**
      * Schedule the synchronization based on the provided cron string
      * @returns Once the job has been scheduled
+     * @emits iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY - If the schedule triggers syncs more often than once per hour - provides the iCPSError as argument
      */
     async run() {
         this.job = new Cron(
@@ -49,7 +60,53 @@ export class DaemonApp extends iCPSApp {
         Resources.events(this).on(iCPSEventWebServer.SYNC_REQUESTED, async () => {
             this.job?.trigger();
         });
+        this.checkScheduleFrequency(this.job);
         Resources.emit(iCPSEventApp.SCHEDULED, this.job?.nextRun());
+    }
+
+    /**
+     * Warns, if the schedule triggers syncs more often than once per hour. This is most likely a misconfiguration, e.g. `* 2 * * *` (every minute between 02:00 and 02:59) instead of `0 2 * * *` (daily at 02:00).
+     * @param job - The scheduled job
+     * @emits iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY - If the schedule triggers syncs more often than once per hour - provides the iCPSError as argument
+     */
+    checkScheduleFrequency(job: Cron) {
+        const nextRuns = job.nextRuns(DaemonApp.INSPECTED_RUNS);
+        let shortestInterval = Infinity;
+        for (let i = 1; i < nextRuns.length; i++) {
+            shortestInterval = Math.min(shortestInterval, nextRuns[i].getTime() - nextRuns[i - 1].getTime());
+        }
+
+        if (shortestInterval >= DaemonApp.MIN_SCHEDULE_INTERVAL) {
+            return;
+        }
+
+        const schedule = Resources.manager().schedule;
+        const warning = new iCPSError(APP_ERR.SCHEDULE_FREQUENCY);
+
+        // The common mistake of a wildcard minute with a fixed hour - e.g. `* 2 * * *` instead of `0 2 * * *`
+        const [minute, hour, ...rest] = schedule.trim().split(/\s+/);
+        if (rest.length === 3 && minute === `*` && /^\d{1,2}$/.test(hour)) {
+            const paddedHour = hour.padStart(2, `0`);
+            warning.addMessage(`'${schedule}' runs every minute between ${paddedHour}:00 and ${paddedHour}:59 - did you mean '0 ${hour} ${rest.join(` `)}'?`);
+        } else {
+            warning.addMessage(`'${schedule}' runs as often as every ${DaemonApp.formatInterval(shortestInterval)}`);
+        }
+
+        Resources.emit(iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY, warning);
+    }
+
+    /**
+     * @param interval - The interval in ms
+     * @returns A human readable representation of the interval, in seconds or minutes
+     */
+    static formatInterval(interval: number): string {
+        if (interval < 60 * 1000) {
+            const seconds = Math.max(1, Math.round(interval / 1000));
+            return seconds === 1 ? `second` : `${seconds} seconds`;
+        }
+
+        const minutes = Math.round(interval / (60 * 1000));
+        return minutes === 1 ? `minute` : `${minutes} minutes`;
     }
 
     /**
