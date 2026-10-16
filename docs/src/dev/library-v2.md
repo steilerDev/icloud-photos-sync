@@ -57,7 +57,7 @@ The JSON never asserts that content is present. It only records references (what
 
 ### On-disk layout
 
-Store and views must be on the same mount (`DATA_DIR`).
+Store and views must be on the same mount (`DATA_DIR`), because every view entry is a hard link to its blob. In Docker this means a single volume for the data directory; mounting view folders separately breaks the links.
 
 ```
 <DATA_DIR>/
@@ -253,7 +253,9 @@ The extension is only used for view names. Stored blobs have no extension, and l
 | symlink | Linux tools, Immich, PhotoPrism; not Synology File Station/Photos, not default Nextcloud | none | under Node's permission model, needs `--allow-fs-write=*` |
 | copy | everything, including exFAT | one copy per entry | explicit only |
 
-- **Mode resolution.** `auto` probes hard links with a real file (and checks the inode). It falls back to symlinks only if the permission model allows them, otherwise it refuses with guidance.
+- **Mode resolution.** `auto` probes hard links with a real file (and checks the inode). On file systems without hard links (exFAT, some FUSE and network mounts) it falls back to symlinks only if the permission model allows them, otherwise it refuses with guidance.
+- **Space.** All names of a file share one copy on disk. Deleting a view entry therefore frees nothing while the blob or another entry still refers to it; the space is freed once icps releases the blob.
+- **No lock-in.** Only hard links (and copies) survive the removal of `.library-data/` or of icps itself. With symlinks the views break.
 - **Trash.**
     - Internal `_Trash`: hard links you can delete to free space.
     - External `--trash-dir`: an exported copy.
@@ -282,15 +284,31 @@ The extension is only used for view names. Stored blobs have no extension, and l
 Keeps the whole library locally while iCloud only holds the recent assets ([#284](https://github.com/steilerDev/icloud-photos-sync/issues/284)), so that a viewer pointed at the library still sees the whole collection. It is the counterpart of icloudpd's `--keep-icloud-recent-days`, one of its most requested features. The scope was agreed in [#354](https://github.com/steilerDev/icloud-photos-sync/issues/354); the details below are a proposal, to be decided before 6.3.
 
 - **Option:** `--archive-older-than <days>` (env `ARCHIVE_OLDER_THAN`), off by default. It runs as part of every sync (daemon or `sync`), not as a separate `archive` run.
+- **Age:** measured from the later of `addedDate` and `assetDate`, which is normally the date the asset arrived in iCloud. Every asset then stays in iCloud for at least the threshold, as with S3 lifecycle rules and Exchange retention (see the comparison below). Measuring the capture date, as icloudpd does, would delete a scanned or imported old photo from iCloud on the first sync after the import. Taking the later date also keeps assets whose capture date is in the future because of a wrong camera clock.
 - **Selection:** assets older than the threshold, minus `--archive-keep` (default `favorites`; `albums` keeps every asset that is in at least one album). The Shared Library is only included with `--archive-shared-library`.
 - **Same path as `archive --remote-delete`:** a ledger intent first, then the remote delete, and only if every original-class file (including the Live video) is present and re-verified. A selection without `original` never deletes remotely.
 - **Locally:** the asset becomes `archived` and stays in `_All Photos` and its albums, also when the remote album is emptied or deleted. The ledger tells it apart from a delete on a device.
 - **Safety:**
     - a dry run that reports what would be deleted (count, size, date range) without deleting anything;
-    - a per-sync limit on remote deletes, so that enabling the option on a large library trims iCloud over several syncs instead of all at once;
+    - a per-sync limit on remote deletes, so that enabling the option on a large library trims iCloud over several syncs instead of all at once. None of the compared tools limits a run, but here the local copy becomes the only one;
     - a summary of every run in the log, the web UI and the metrics.
+- **Undo:** a remote delete moves the asset to iCloud's *Recently Deleted* (see [Modify records](api.md#modify-records)), which Apple keeps for 30 days. That is the undo window, just as the trash is for the other tools. The run summary points to it.
 - **Out of scope:** uploading back to iCloud. icps never uploads.
-- **Open:** whether the age is measured on the capture date (`assetDate`, as used for the view names) or the date the asset was added to iCloud (`addedDate`).
+- **Seen elsewhere, not proposed:** a "keep the newest N assets" rule (restic `--keep-last`) and a low-space trigger (Windows Storage Sense). None of the compared tools offers a size target such as "keep iCloud below X GB".
+
+**How other tools handle retention** (from their documentation and, for icloudpd and Immich, their source; October 2026):
+
+| Tool | Age measured from | Kept regardless of age | Preview | Undo |
+|---|---|---|---|---|
+| icloudpd `--keep-icloud-recent-days` | capture date (`assetDate`) | nothing, favourites are not exempt | `--dry-run` | iCloud Recently Deleted |
+| Immich app *Free up space* | the device's creation date | favourites and chosen albums (default: favourites) | review screen | the phone's trash |
+| Google Photos *Free up space* | manual, no age | items younger than 30 days may stay | space estimate | the cloud copy stays |
+| AWS S3 lifecycle rules | object creation | filters (prefix, tag, size), Object Lock | none | noncurrent versions |
+| Exchange Online retention | delivery | retention tags, holds | none | Recoverable Items |
+| Windows Storage Sense (OneDrive) | last opened | *Always keep on this device* | none | the file stays in OneDrive |
+| rclone `move --min-age` | modification time | filters | `--dry-run` | none |
+
+On the first run, S3 queues the whole backlog at once and Exchange works through it on its weekly cycle. Immich and icloudpd delete everything that matches in one action (Immich in batches of 2,000 on Android and 10,000 on iOS).
 
 ## Migration from v1
 
