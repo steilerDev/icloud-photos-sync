@@ -17,133 +17,109 @@
     <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/steilerdev/icloud-photos-sync?style=for-the-badge&logo=docker&logoColor=white">
   </a>
 </p>
-<hr>
+
 <p align="center">
-  <a href="https://icps.steiler.dev/get-started/">
-    <img alt="Get Started" src="https://img.shields.io/static/v1?label=&message=Get%20Started&color=important&style=for-the-badge&logo=readthedocs&logoColor=white" style="width: 50%;">
-  </a>
+  <strong>Back up your complete iCloud Photos Library to your own disk or NAS, and keep it in sync.</strong><br>
+  Runs unattended in Docker. A small web UI handles the Apple sign-in, including MFA codes and Advanced Data Protection.
 </p>
+
 <p align="center">
-  <a href="https://icps.steiler.dev/user-guides/cli">
-    <img alt="CLI Reference" src="https://img.shields.io/static/v1?label=&message=CLI%20Reference&color=grey&style=for-the-badge" style="width: 30%;">
-  </a>
+  <a href="#quick-start"><strong>Quick start</strong></a> ·
+  <a href="https://icps.steiler.dev/get-started/">Get Started guide</a> ·
+  <a href="https://icps.steiler.dev/user-guides/cli">CLI reference</a>
 </p>
-<hr>
-<p align="center">
-  <a href="https://icps.steiler.dev/dev/coverage/">
-    <img alt="Test Coverage (Lines)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Lines%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.lines.pct&suffix=%25&url=https%3A%2F%2Ficps.steiler.dev%2Fdev%2Fcoverage%2Fcoverage-summary.json">
-  </a>
-  <a href="https://icps.steiler.dev/dev/coverage/">
-    <img alt="Test Coverage (Functions)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Functions%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.functions.pct&suffix=%25&url=https%3A%2F%2Ficps.steiler.dev%2Fdev%2Fcoverage%2Fcoverage-summary.json">
-  </a>
-</p>
-<p align="center">
-  <a href="https://github.com/steilerDev/icloud-photos-sync/blob/main/CODE_OF_CONDUCT.md">
-    <img alt="Code of Conduct" src="https://img.shields.io/badge/Contributor_Covenant-2.1-blue?style=for-the-badge">
-  </a>
-</p>
+
 <hr>
 
-## Overview
-This project provides a one-way sync engine for the iCloud Photos Library. The intention behind this project is to provide an easy way to backup the full iCloud Photos Library to the native filesystem.
+## Quick start
 
-Currently, this can only be achieved, by having a Mac continuously run the *Photos.app* (with `Keep originals` enabled). With this method, the files cannot be easily viewed without the *Photos.app*.
+You need Docker with [docker compose](https://docs.docker.com/compose/install/) and an Apple ID with two-factor authentication.
+
+**1. Create a folder for the library and a `docker-compose.yml` next to it.**
+
+```sh
+mkdir library
+```
+
+```yaml
+services:
+  photos-sync:
+    image: steilerdev/icloud-photos-sync:latest
+    container_name: photos-sync
+    restart: unless-stopped
+    user: "1000:1000"                  # your user's `id -u`:`id -g`, needs write access to ./library
+    environment:
+      APPLE_ID_USER: "<iCloud username>"
+      APPLE_ID_PWD: "<iCloud password>"
+      TZ: "Europe/Berlin"
+      SCHEDULE: "0 2 * * *"            # sync every night at 2:00
+      ENABLE_CRASH_REPORTING: true     # optional, helps fixing bugs
+    ports:
+      - 80:80                          # web UI
+    volumes:
+      - ./library:/opt/icloud-photos-library
+```
+
+**2. Start it.**
+
+```sh
+docker compose up -d
+```
+
+**3. Sign in through the web UI.** Open `http://<your-host>` and select *Renew Authentication*. Apple sends a code to your trusted devices; enter it in the web UI. Then select *Sync Now* to start the first sync, or wait for the schedule.
+
+That's it. From now on the library syncs on the schedule. Apple asks for a new MFA code about every 30 days: select *Enable Notifications* in the web UI to get a push notification when that happens.
+
+Good to know:
+
+- **Advanced Data Protection:** turn on *Access iCloud Data on the Web* and approve the request that shows up on your device during the first sync. See [Advanced Data Protection](https://icps.steiler.dev/user-guides/adp/).
+- **No plain-text password:** use `APPLE_ID_PWD_FILE` with Docker secrets, or leave the password out and enter it on startup. See [Installation](https://icps.steiler.dev/get-started/#installation).
+- **Large libraries:** the first sync of a large library takes hours and may need a higher open-file limit. See [Ad-Hoc Sync](https://icps.steiler.dev/get-started/#ad-hoc-sync).
+
+**Where are my photos?** Every photo and video is in `library/_All-Photos` (and `library/_Shared-Photos` for the iCloud Shared Library), named by its iCloud checksum. Your iCloud folders and albums appear as folders next to it, linking to those files. A readable, date-based layout with the original file names is planned for v6 ([#354](https://github.com/steilerDev/icloud-photos-sync/issues/354)).
+
+**Without Docker:** `npm install -g icloud-photos-sync` (Node.js 26 or newer), then run `icloud-photos-sync --help`. See the [Get Started guide](https://icps.steiler.dev/get-started/) for all options.
+
+## Features
+
+- **Complete library:** all originals plus their edits, the iCloud Shared Photo Library and, optionally, the *Hidden* album
+- **Your folders and albums** mirrored locally, without storing any photo twice
+- **Advanced Data Protection** supported
+- **MFA made easy:** codes through trusted devices, SMS or voice, entered in the web UI. The trust token is cached, so syncs run unattended for about 30 days.
+- **Efficient incremental sync:** only new and changed assets are downloaded; large libraries are supported
+- **Web UI:** sync status, ad-hoc syncs, live logs and push notifications. It can be installed as an app (PWA).
+- **Safe deletes:** assets deleted in iCloud can go to a trash folder instead of being removed
+- **Archiving:** keep an album locally forever and, optionally, delete its non-favorite photos from iCloud to free up storage
+- **Monitoring:** Influx and Prometheus metrics, health check pings
+- **Secure operation:** credentials from files (Docker secrets), shell-free image based on Docker Hardened Images, optional Node.js permission model
 
 *icloud-photos-sync is an independent project, and is not affiliated, endorsed, recommended by or otherwise affiliated with Apple Inc.*
 
-This application offers the following high level functionality:
+## Why
 
-<details>
-  <summary><i>Continuously sync your complete remote iCloud Photos Library to your local file system efficiently</i></summary>
-  <p>
-    <ul>
-      <li>iCloud Shared Photo Library support</li>
-      <li>Support of MFA authentication through trusted devices, SMS and voice authentication (security keys are not supported)</li>
-      <li>Enable autonomous operation, by caching of MFA trust token</li>
-      <li>Support of large libraries, through efficient diffing algorithm instead of full library pull</li>
-      <li>Full iCloud Photos Library backup with all important files in their original state and edits (the video part of Live Photos is currently not synced)</li>
-      <li>Optionally include photos from the <i>Hidden</i> album</li>
-      <li>Support of accounts with Advanced Data Protection</li>
-    </ul>
-  </p>
-</details>
-
-<details>
-  <summary><i>Using the application through a simple and easy to use WebUI</i></summary>
-  <p>
-    <ul>
-      <li>Checking the sync status</li>
-      <li>Triggering ad-hoc sync</li>
-      <li>Entering MFA code, when needed</li>
-      <li>Following the logs of the current run</li>
-      <li>Receiving Push Notification about the synchronization status</li>
-    </ul>
-  </p>
-</details>
-
-<details>
-  <summary><i>Efficient handling of local state</i></summary>
-  <p>
-    <ul>
-      <li>Each asset is only downloaded once and linked to its respective folders</li>
-      <li>No need track local state in database, since state is completely reflected in filesystem (through naming & linking)</li>
-      <li>Optionally, assets deleted in iCloud can be moved into a trash folder, instead of being deleted locally</li>
-    </ul>
-  </p>
-</details>
-
-<details>
-  <summary><i>Archiving of folders (optional)</i></summary>
-  <p>
-    <ul>
-      <li>Archiving an album will persist all assets in the respective folder in the local filesystem</li>
-      <li>Future syncs will ignore the folder (so those assets will not be changed/deleted)</li>
-      <li>If the remote album is moved, the archived folder will be moved to the same location</li>
-      <li>If the remote album is deleted, the archived folder will be put into a 'lost+found' type of folder</li>
-      <li>Optionally all photos from the archived folder can be deleted from the iCloud Photos Library, unless they are *Favorites* (reducing cloud storage needs)</li>
-    </ul>
-  </p>
-</details>
-
-<details>
-  <summary><i>Monitoring & secure operation</i></summary>
-  <p>
-    <ul>
-      <li>Sync metrics in the Influx Line Protocol and Prometheus/OpenMetrics format</li>
-      <li>Integration with health check services</li>
-      <li>Credentials can be read from files (e.g. Docker secrets)</li>
-      <li>Shell-free Docker image based on Docker Hardened Images, optionally restricted further through Node's permission model</li>
-    </ul>
-  </p>
-</details>
-
-<details>
-  <summary><i>Single purpose iCloud Photos application</i></summary>
-  <p>
-    <ul>
-      <li>No reliance on full fledged third-party libraries that provide access to iCloud</li>
-      <li>No configuration needed for continuous full backup</li>
-      <li>Quicker support of use-case specific needs</li>
-    </ul>
-  </p>
-</details>
+The only official way to keep a local copy of the full library is a Mac that keeps *Photos.app* running with *Download Originals* enabled, and those files can't easily be used outside *Photos.app*. This project syncs the library to a plain folder on any Linux host or NAS. Read more about the [motivation and the maintainer's own workflow](https://icps.steiler.dev/dev/motivation/).
 
 ## Documentation
 
-A [*Get Started Guide* can be found on GH Pages](https://icps.steiler.dev/get-started/). Additional documentation and further resources - including my [personal use case / workflow](https://icps.steiler.dev/dev/motivation/) - are published there as well. 
+- [Get Started guide](https://icps.steiler.dev/get-started/): installation, authentication, syncing, archiving
+- [CLI reference](https://icps.steiler.dev/user-guides/cli): every option and its environment variable
+- [Web UI](https://icps.steiler.dev/user-guides/web-ui/), [Advanced Data Protection](https://icps.steiler.dev/user-guides/adp/), [Health Checks](https://icps.steiler.dev/user-guides/health-checks/), [Sync Metrics](https://icps.steiler.dev/user-guides/sync-metrics/), [Runtime Hardening](https://icps.steiler.dev/user-guides/hardening/), [Viewing with Photoview](https://icps.steiler.dev/user-guides/photoview/)
+- [Troubleshooting](https://icps.steiler.dev/user-guides/troubleshooting/) and [common warnings](https://icps.steiler.dev/user-guides/common-warnings/)
 
 ## Limitations
 
-As this application is using an undocumented public API, there are a couple of known limitations:
+This application uses an undocumented iCloud API, which comes with a few limitations:
 
-- **iCloud Shared Photo Library**:
-  While this app is syncing all assets from the *Shared Photo Library*, unfortunately the API does not provide the location of shared assets within the user's folder hierarchy (when navigating to a folder on icloud.com while having *Shared Photo Library* enabled will yield an error). Until this functionality is available, *Shared Photo Library* assets will only be present in the `_Shared-Photos` folder and therefore cannot be archived.
-- **FileType Support**:
-  The support of file types needs to be hardcoded by this application, since a full list is not available or retrievable. If you come across an `Unknown filetype descriptor` error, [please report it](https://github.com/steilerDev/icloud-photos-sync/issues/143), in order for the file type to be added to the application.
+- **Live Photos:** only the still image is synced, not the video part ([#121](https://github.com/steilerDev/icloud-photos-sync/issues/121)).
+- **iCloud Shared Photo Library:** the API doesn't tell where shared assets sit in your folders and albums. Shared assets therefore only appear in `_Shared-Photos` and can't be archived.
+- **File types:** supported file types are hard-coded, because no complete list is available. If you see an `Unknown filetype descriptor` warning, [please report it](https://github.com/steilerDev/icloud-photos-sync/issues/143).
+- **Security keys** can't be used as the second factor.
 
-Please also check out [open and known issues](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3A%22class%28bug%29%22%2C%22class%28improvement%29%22%2C%22class%28known+issue%29%22) and [existing feature requests](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3A%22class%28feature%29%22+label%3A%22status%28open%29%22%2C%22status%28wontfix%29%22%2C%22status%28backlog%29%22%2C%22status%28help+needed%29%22%2C%22status%28in+progress%29%22%2C%22status%28investigating%29%22%2C%22status%28previewed%29%22) for more information.
+Please also check the [open and known issues](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3A%22class%28bug%29%22%2C%22class%28improvement%29%22%2C%22class%28known+issue%29%22) and [existing feature requests](https://github.com/steilerDev/icloud-photos-sync/issues?q=is%3Aopen+is%3Aissue+label%3A%22class%28feature%29%22+label%3A%22status%28open%29%22%2C%22status%28wontfix%29%22%2C%22status%28backlog%29%22%2C%22status%28help+needed%29%22%2C%22status%28in+progress%29%22%2C%22status%28investigating%29%22%2C%22status%28previewed%29%22).
 
 ## OS Support
+
+The Docker image is available for `linux/amd64` and `linux/arm64`. The npm package runs wherever Node.js 26 runs, except Windows.
 
 <p align="center">
   <img alt="OS Support Debian" src="https://img.shields.io/static/v1?label=Debian-13&message=Dev%20Platform&color=informational&style=for-the-badge&logo=debian&logoColor=white">
@@ -161,6 +137,18 @@ Please also check out [open and known issues](https://github.com/steilerDev/iclo
 ## Contributing & Feedback
 
 Please check the [contributing guidelines](https://github.com/steilerDev/icloud-photos-sync/blob/main/CONTRIBUTING.md) to learn how to engage with this project.
+
+<p align="center">
+  <a href="https://icps.steiler.dev/dev/coverage/">
+    <img alt="Test Coverage (Lines)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Lines%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.lines.pct&suffix=%25&url=https%3A%2F%2Ficps.steiler.dev%2Fdev%2Fcoverage%2Fcoverage-summary.json">
+  </a>
+  <a href="https://icps.steiler.dev/dev/coverage/">
+    <img alt="Test Coverage (Functions)" src="https://img.shields.io/badge/dynamic/json?color=success&label=Coverage%20%28Functions%29&style=for-the-badge&logo=jest&logoColor=white&query=%24.total.functions.pct&suffix=%25&url=https%3A%2F%2Ficps.steiler.dev%2Fdev%2Fcoverage%2Fcoverage-summary.json">
+  </a>
+  <a href="https://github.com/steilerDev/icloud-photos-sync/blob/main/CODE_OF_CONDUCT.md">
+    <img alt="Code of Conduct" src="https://img.shields.io/badge/Contributor_Covenant-2.1-blue?style=for-the-badge">
+  </a>
+</p>
 
 ## Acknowledgments
 
