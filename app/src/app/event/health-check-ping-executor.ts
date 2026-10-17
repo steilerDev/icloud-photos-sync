@@ -4,7 +4,7 @@ import {Resources} from "../../lib/resources/main.js";
 import {FILE_ENCODING} from "../../lib/resources/resource-types.js";
 import {LogInterface} from "./log.js";
 import {errorMessage} from "../error/error.js";
-import {LogLevel, SerializedState, StateType} from "../../lib/resources/state-manager.js";
+import {LogLevel, type SerializedState, StateType} from "../../lib/resources/state-manager.js";
 
 export class HealthCheckPingExecutor {
 

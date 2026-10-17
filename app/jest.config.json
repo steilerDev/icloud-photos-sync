@@ -6,7 +6,6 @@
         "parser": {"syntax": "typescript"},
         "target": "es2024",
         "keepClassNames": true,
-        "transform": {"tsEnumIsMutable": true},
         "experimental": {"keepImportAttributes": true}
       },
       "module": {"type": "es6"},

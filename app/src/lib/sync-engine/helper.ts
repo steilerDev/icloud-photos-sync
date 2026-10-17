@@ -1,10 +1,10 @@
 import path from "path";
 import {LIBRARY_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
-import {CPLAlbum, CPLAsset, CPLMaster} from "../icloud/icloud-photos/query-parser.js";
+import type {CPLAlbum, CPLAsset, CPLMaster} from "../icloud/icloud-photos/query-parser.js";
 import {Album} from "../photos-library/model/album.js";
 import {Asset, AssetType} from "../photos-library/model/asset.js";
-import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../photos-library/model/photos-entity.js";
+import type {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../photos-library/model/photos-entity.js";
 import {Resources} from "../resources/main.js";
 import {iCPSEventRuntimeWarning} from "../resources/events-types.js";
 

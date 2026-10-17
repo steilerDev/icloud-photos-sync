@@ -5,7 +5,7 @@ import {readFileSync} from "fs";
 import {Resources} from "../lib/resources/main.js";
 import {APP_ERR} from "./error/error-codes.js";
 import {errorMessage, iCPSError} from "./error/error.js";
-import {ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp} from "./icloud-app.js";
+import {ArchiveApp, DaemonApp, type iCPSApp, SyncApp, TokenApp} from "./icloud-app.js";
 import {LogLevel} from "../lib/resources/state-manager.js";
 import {TRASH_DIR} from "../lib/photos-library/constants.js";
 

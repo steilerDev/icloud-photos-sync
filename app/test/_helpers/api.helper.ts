@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import {CPLAlbum, CPLAsset, CPLMaster} from "../../src/lib/icloud/icloud-photos/query-parser";
+import type {CPLAlbum, CPLAsset, CPLMaster} from "../../src/lib/icloud/icloud-photos/query-parser";
 import path from "path";
 
 /**

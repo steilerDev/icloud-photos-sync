@@ -1,9 +1,9 @@
 
 import {createHash} from 'crypto';
 import {describe, test, beforeEach, expect} from '@jest/globals';
-import {MockedResourceManager, prepareResources} from '../_helpers/_general';
+import {type MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {iCloudCrypto} from '../../src/lib/icloud/icloud.crypto';
-import {SRPProtocol} from '../../src/lib/resources/network-types';
+import type {SRPProtocol} from '../../src/lib/resources/network-types';
 
 let mockedResourceManager: MockedResourceManager;
 

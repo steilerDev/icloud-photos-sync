@@ -1,11 +1,11 @@
-import {BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceClientBuilder, BacktraceData, BacktraceReport, BacktraceSetupConfiguration, BreadcrumbType} from "@backtrace/node";
+import {type BacktraceAttachment, BacktraceBufferAttachment, type BacktraceClient, BacktraceClientBuilder, type BacktraceData, BacktraceReport, type BacktraceSetupConfiguration, BreadcrumbType} from "@backtrace/node";
 import {randomUUID} from "crypto";
 import fs from 'fs/promises';
 import {jsonc} from "jsonc";
 import {once} from 'events';
 import {Readable} from 'stream';
 import * as zlib from 'zlib';
-import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
+import type {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';

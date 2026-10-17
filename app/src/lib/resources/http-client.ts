@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import {randomUUID} from "crypto";
 import {Readable} from "stream";
 import {pipeline} from "stream/promises";
-import {ReadableStream} from "stream/web";
+import type {ReadableStream} from "stream/web";
 import {Cookie} from "tough-cookie";
 import {errorMessage} from "../../app/error/error.js";
 import {Resources} from "./main.js";

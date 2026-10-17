@@ -1,8 +1,8 @@
-import {iCloud} from '../icloud/icloud.js';
-import {PhotosLibrary} from '../photos-library/photos-library.js';
-import {Asset} from '../photos-library/model/asset.js';
-import {Album, AlbumType} from '../photos-library/model/album.js';
-import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
+import type {iCloud} from '../icloud/icloud.js';
+import type {PhotosLibrary} from '../photos-library/photos-library.js';
+import type {Asset} from '../photos-library/model/asset.js';
+import {type Album, AlbumType} from '../photos-library/model/album.js';
+import type {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
 import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
 import {isHttpError} from '../resources/http-client.js';

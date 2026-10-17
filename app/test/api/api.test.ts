@@ -14,7 +14,7 @@ import {Asset, AssetType} from '../../src/lib/photos-library/model/asset.js';
 import {FileType} from '../../src/lib/photos-library/model/file-type.js';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder.js';
 import {prepareResourceForApiTests} from '../_helpers/_general.js';
-import {Resources} from '../../src/lib/resources/main.js';
+import type {Resources} from '../../src/lib/resources/main.js';
 import fs from 'fs';
 
 // Setting timeout to 20sec, since all of those integration tests might take a while due to hitting multiple remote APIs

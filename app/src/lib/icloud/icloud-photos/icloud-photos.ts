@@ -1,16 +1,16 @@
 import {jsonc} from 'jsonc';
 import {ICLOUD_PHOTOS_ERR} from '../../../app/error/error-codes.js';
 import {errorMessage, iCPSError} from '../../../app/error/error.js';
-import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
-import {Asset} from '../../photos-library/model/asset.js';
+import {type AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
+import type {Asset} from '../../photos-library/model/asset.js';
 import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../resources/events-types.js';
-import {HttpRequestConfig, isHttpError} from '../../resources/http-client.js';
+import {type HttpRequestConfig, isHttpError} from '../../resources/http-client.js';
 import {Resources} from '../../resources/main.js';
-import {ENDPOINTS, PhotosSetupResponseZone} from '../../resources/network-types.js';
+import {ENDPOINTS, type PhotosSetupResponseZone} from '../../resources/network-types.js';
 import {SyncEngineHelper} from '../../sync-engine/helper.js';
 import * as QueryBuilder from './query-builder.js';
 import {CPLAlbum, CPLAsset, CPLMaster} from './query-parser.js';
-import {ZoneArea} from '../../resources/resource-types.js';
+import type {ZoneArea} from '../../resources/resource-types.js';
 import {HIDDEN_ALBUM_NAME, HIDDEN_ALBUM_UUID} from '../../photos-library/constants.js';
 
 /**

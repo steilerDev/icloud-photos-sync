@@ -1,15 +1,15 @@
 import {jest} from '@jest/globals';
-import EventEmitter from 'events';
+import type EventEmitter from 'events';
 import * as Config from './_config';
-import {iCPSAppOptions} from '../../src/app/factory';
+import type {iCPSAppOptions} from '../../src/app/factory';
 import {ResourceManager} from '../../src/lib/resources/resource-manager';
-import {NetworkManager} from '../../src/lib/resources/network-manager';
+import type {NetworkManager} from '../../src/lib/resources/network-manager';
 import {HttpMock} from './http-mock.helper';
-import {iCPSEvent} from '../../src/lib/resources/events-types';
+import type {iCPSEvent} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
-import {Validator} from '../../src/lib/resources/validator';
-import {EventManager} from '../../src/lib/resources/event-manager';
-import {StateManager} from '../../src/lib/resources/state-manager';
+import type {Validator} from '../../src/lib/resources/validator';
+import type {EventManager} from '../../src/lib/resources/event-manager';
+import type {StateManager} from '../../src/lib/resources/state-manager';
 
 export type UnknownFunction = (...args: Array<unknown>) => unknown
 export type UnknownAsyncFunction = (...args: Array<unknown>) => Promise<unknown>

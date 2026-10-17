@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 // This script generates the CLI reference documentation from the CLI options - if doc root path is provided, it will write the output to the provided path, otherwise it will print to stdout
 
-import {Argument, Help} from 'commander';
+import {type Argument, Help} from 'commander';
 import fs from 'fs/promises';
 import {Liquid} from 'liquidjs';
 import path from 'path';

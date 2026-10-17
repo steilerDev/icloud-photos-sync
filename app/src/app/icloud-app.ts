@@ -1,8 +1,8 @@
 import {Cron} from "croner";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {iCloud} from "../lib/icloud/icloud.js";
-import {Album} from "../lib/photos-library/model/album.js";
-import {Asset} from "../lib/photos-library/model/asset.js";
+import type {Album} from "../lib/photos-library/model/album.js";
+import type {Asset} from "../lib/photos-library/model/asset.js";
 import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventWebServer} from "../lib/resources/events-types.js";
 import {Resources} from "../lib/resources/main.js";

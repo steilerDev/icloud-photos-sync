@@ -8,9 +8,9 @@ import { MFAMethod } from '../../src/lib/icloud/mfa/mfa-method';
 import { iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning } from '../../src/lib/resources/events-types';
 import { Resources } from '../../src/lib/resources/main';
 import { Header } from '../../src/lib/resources/http-client';
-import { SigninInitResponse } from '../../src/lib/resources/network-types';
+import type { SigninInitResponse } from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
-import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
+import { type MockedEventManager, type MockedNetworkManager, type MockedResourceManager, type MockedValidator, type UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;

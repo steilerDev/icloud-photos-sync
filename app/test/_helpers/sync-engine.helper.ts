@@ -2,7 +2,7 @@ import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
 import {Asset} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
-import {PLibraryEntities, PLibraryProcessingQueues} from '../../src/lib/photos-library/model/photos-entity';
+import type {PLibraryEntities, PLibraryProcessingQueues} from '../../src/lib/photos-library/model/photos-entity';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 
 /**

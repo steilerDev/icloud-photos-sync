@@ -1,11 +1,11 @@
 import mockfs from '../_helpers/mock-fs.helper';
 import fs from 'fs';
 import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals"
-import {LogLevel, LogMessage, SerializedState, StateManager, StateTrigger} from "../../src/lib/resources/state-manager"
+import {LogLevel, type LogMessage, type SerializedState, type StateManager, StateTrigger} from "../../src/lib/resources/state-manager"
 import {iCPSError} from "../../src/app/error/error"
 import {APP_ERR, AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR, WEB_SERVER_ERR} from "../../src/app/error/error-codes"
-import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general"
-import {iCPSEvent, iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "../../src/lib/resources/events-types"
+import {type MockedEventManager, type MockedResourceManager, prepareResources} from "../_helpers/_general"
+import {type iCPSEvent, iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "../../src/lib/resources/events-types"
 import path from 'path';
 import os from 'os';
 import * as Config from '../_helpers/_config';
