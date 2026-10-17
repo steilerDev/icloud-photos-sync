@@ -32,7 +32,7 @@ A single test file or test can be executed through:
 npm test -- --coverage false test/unit/sync-engine.test.ts -t "<test name>"
 ```
 
-Tests always need to be executed through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (required by the ESM Jest setup). Running `npx jest` directly fails.
+Tests always need to be executed through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (required by the ESM Jest setup). Running `npx jest` directly fails. Tests are transpiled with `@swc/jest`, which does not type-check; type errors are reported by `tsc` (TypeScript 7) during `npm run build:dev`.
 
 The docs can be previewed with `python3 -m mkdocs serve` from the `docs/` folder, after generating the CLI reference.
 

@@ -64,6 +64,8 @@
     "@backtrace/javascript-cli": "0.3.2",
     "@jest/globals": "30.5.2",
     "@stylistic/eslint-plugin": "5.10.0",
+    "@swc/core": "1.16.18",
+    "@swc/jest": "0.2.39",
     "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "7.0.1",
     "@types/cli-progress": "3.11.6",
@@ -80,10 +82,9 @@
     "oxlint": "1.88.0",
     "tar-stream": "3.2.2",
     "testcontainers": "12.2.0",
-    "ts-jest": "29.4.14",
     "ts-json-schema-generator": "2.9.0",
     "tsx": "4.23.15",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   },
   "dependencies": {
     "@backtrace/node": "0.8.3",

@@ -58,7 +58,11 @@ npm run execute -- sync    # run the compiled CLI (subcommands: daemon (default)
 npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the commander options (build artifact, not committed)
 ```
 
-- Tests must go through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (ts-jest ESM preset). Running `npx jest` directly fails.
+- Tests must go through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (ESM Jest setup). Running `npx jest` directly fails.
+- **TypeScript 7 and test transpilation.** The project uses TypeScript 7 (the native `tsc`), which ships no JS compiler API. Tests are therefore transpiled with `@swc/jest` (configured in `jest.config.json`), which strips types without type-checking; `tsc` (`npm run build:dev`) remains the type check. Two swc options must stay:
+  - `jsc.keepClassNames`: `clean()` relies on `this.constructor.name`.
+  - `jsc.transform.tsEnumIsMutable`: without it swc inlines same-file enum members, and the source maps then attribute coverage of whole files to the enum declaration (coverage drops, e.g. half of `asset.ts` shows as uncovered).
+  - Tools that need the classic compiler API can't import `typescript` any more. `ts-json-schema-generator` bundles its own TypeScript 5.x, so `build:schema` is unaffected.
 - **Running the API tests and the full Docker tests:** always use the stored test account credentials from `secrets/test.env`. Never use the prod account for them, and never ask the user to type credentials. Load the file into the environment of the same command:
   ```sh
   set -a; . ../secrets/test.env; set +a; npm run test:api
@@ -364,7 +368,7 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - Dependabot reads `dependabot.yml` **from the default branch (`main`)**, so a config change on `dev` takes effect only after the next production release.
 - GitHub pauses version updates when nobody acts on Dependabot PRs for about 90 days. Merge or close them regularly.
 - Commit prefixes: `chore: [ci]`, `[app]`, `[docker]`, `[docs]`, `[dev]`, `[semantic-release]`.
-- Ignored majors: `@types/node` (tied to `app/node-version`), `typescript`, and `node` in Docker.
+- Ignored majors: `@types/node` (tied to `app/node-version`) and `node` in Docker.
 - In the Dockerfile, both stages use Docker Hardened Images from `dhi.io` (Dependabot authenticates with `DOCKER_TOKEN`). The `*node` images are grouped (`base-images`) because builder and runtime must use the same Node version.
 - The docs toolchain (`docs/requirements.txt`) is **frozen on purpose** and has no Dependabot entry. MkDocs 1.x is unmaintained and Material for MkDocs is EOL, but the output is static HTML, so the maintainer accepts that. Don't upgrade it or migrate it (e.g. to Zensical) unless a new docs capability requires it (#1118).
 
