@@ -26,7 +26,7 @@ Issue #354 also absorbed further features, which all depend on a new layout: XMP
 - **Metadata cleaning.** A reconcile step makes the JSON match what is on disk. The diff then works on JSON and file names only, never on the (potentially large) asset files.
 - **Never lose user data.** An incomplete remote fetch never deletes anything. Foreign files are never touched.
 - **Readable without icps.** Every synced file is a plain file with its original iCloud file name in a date folder (`_All Photos/2023/07/IMG_1234.HEIC`). The library can be browsed in any file manager and over SMB, and imported as-is by Immich (external library), PhotoPrism, Synology Photos and Nextcloud. With the default hard links, removing icps or deleting `.library-data/` leaves an ordinary photo folder behind. This is the layout users know from icloudpd, and the v1 layout's checksum names and symlinks were its main usability gap (see [Views](#views)).
-- **Complete Live Photos.** The video part of a Live Photo can be synced (`live` version, [#121](https://github.com/steilerDev/icloud-photos-sync/issues/121)). It shares the still's stem in the same folder (`IMG_1234.HEIC` + `IMG_1234.mov`), so name-based viewers such as PhotoPrism stack the pair, and archiving never deletes a Live Photo whose video is missing locally (see [Archive](#archive)).
+- **Complete Live Photos.** The video part of a Live Photo is synced by default (`live` version, [#121](https://github.com/steilerDev/icloud-photos-sync/issues/121)), as icloudpd does. It shares the still's stem in the same folder (`IMG_1234.HEIC` + `IMG_1234.mov`), so name-based viewers such as PhotoPrism stack the pair, and archiving never deletes a Live Photo whose video is missing locally (see [Archive](#archive)).
 
 ## Decisions
 
@@ -39,7 +39,7 @@ Issue #354 also absorbed further features, which all depend on a new layout: XMP
 | Release | v5.1.0 guards → 6.0.0 core → 6.1 XMP → 6.2 shared albums → 6.3 age-based archive |
 | Extensions | Originals: from their iCloud file name. Rendered files: iCloud's type string plus Apple render-type exceptions. No UTI map, no content sniffing. |
 | Extension case | Originals keep their file name's case; rendered files are lower case (`IMG_1234.HEIC`, `IMG_1234-edited.jpeg`, `IMG_1234.mov`) |
-| Versions | `--versions` with `original`, `edited`, `live`, `medium`, `thumb`. The default `original,edited` keeps today's behaviour. |
+| Versions | `--versions` with `original`, `edited`, `live`, `medium`, `thumb`. The default is `original,edited,live`: today's files plus the Live Photo videos. |
 | Reduced versions | `medium` and `thumb` show the asset's current look (the edit if edited) |
 | Archive | `archive <path>` accepts album and meta-view folders. `--archive-keep` defaults to `favorites`. `--archive-shared-library` is an explicit opt-in. |
 
@@ -73,7 +73,7 @@ Store and views must be on the same mount (`DATA_DIR`), because every view entry
 │  └─ migration/                       verification progress, path map, report
 ├─ _All Photos/2023/07/IMG_1234.HEIC          personal library, not hidden
 │                     IMG_1234-edited.jpeg
-│                     IMG_1234.mov            Live Photo video (opt-in)
+│                     IMG_1234.mov            Live Photo video
 ├─ _Shared Photos/YYYY/MM/…                   iCloud Shared Library
 ├─ _Hidden Photos/YYYY/MM/…                   with --sync-hidden
 ├─ _Trash/<view path>                         soft-deleted content
@@ -203,7 +203,7 @@ A deep check, which re-hashes every blob, will be an explicit `verify` command i
 
 ### Versions and resolutions
 
-`--versions <list>` (env `VERSIONS`) selects what is synced. The default `original,edited` matches today's behaviour.
+`--versions <list>` (env `VERSIONS`) selects what is synced. The default is `original,edited,live`. `--versions original,edited` keeps v5's selection and skips the Live videos.
 
 | Value | iCloud resource | View name |
 |---|---|---|
@@ -326,13 +326,14 @@ Migration is automatic on the first v6 sync, after authentication and under the 
     - `_All-Photos`/`_Shared-Photos` names are removed once everything is linked.
     - v1-archived albums become frozen albums with their files untouched. `_Archive` is left alone.
 6. **Path map.** `migration/path-map.jsonl` maps every old visible path to its new one, so that viewer databases (e.g. Immich) can be re-mapped.
+7. **Live videos.** v1 never downloaded them, so with the default selection the syncs after the migration download one video per Live Photo as ordinary additions. The migration itself still downloads nothing, and the preflight's free-space check doesn't include them. Setting `--versions original,edited` before upgrading skips them.
 
 !!! warning "Path-based viewers"
     Viewers that identify photos by path (Immich, Photoview) will see every photo as new after the migration. Pin the `:5` Docker tag to postpone the upgrade.
 
 ## Delivery
 
-1. **Probes.** Live probes of the remaining unknowns (checksums of large/ADP/shared files, Recently Deleted index, zone moves, render types, shared-zone deletes, completeness rates). Findings are documented in [iCloud API](api.md).
+1. **Probes.** Live probes of the remaining unknowns (checksums of large/ADP/shared files, Recently Deleted index, zone moves, render types, shared-zone deletes, completeness rates, the size of Live videos relative to their stills, for the upgrade notes). Findings are documented in [iCloud API](api.md).
 2. **v5.1.0, non-breaking:**
     - a major-version Docker tag (`:5`) and a `5.x` maintenance branch;
     - a guard that refuses libraries written by a newer layout;
