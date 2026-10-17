@@ -40,7 +40,8 @@
                 "ritwickdey.LiveServer",
                 "vscodevim.vim",
                 "wdhongtw.gpg-indicator",
-                "docker.docker"
+                "docker.docker",
+                "TypeScriptTeam.native-preview"
             ]
         }
     },
