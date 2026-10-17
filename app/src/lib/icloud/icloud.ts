@@ -34,9 +34,7 @@ export class iCloud {
     mfaTimeout?: NodeJS.Timeout;
 
     /**
-     * Creates a new iCloud Object
-     * @param ignoreFailOnMfa - If set to true, the authentication will still continue even if MFA is required and the failOnMfa flag is set
-     * @emits iCPSEventCloud.ERROR - If the MFA code is required and the failOnMfa flag is set - the iCPSError is provided as argument
+     * Creates a new iCloud Object and registers the listeners driving the authentication flow
      */
     constructor() {
         Resources.events(this)

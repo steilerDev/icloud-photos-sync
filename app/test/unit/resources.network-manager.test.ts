@@ -359,6 +359,7 @@ describe(`NetworkManager`, () => {
         describe(`Apply methods`, () => {
             test(`Apply SigninResponse`, () => {
                 const signinResponse = {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },
@@ -379,6 +380,7 @@ describe(`NetworkManager`, () => {
 
             test(`Apply SigninResponse - with session id and account country`, () => {
                 const signinResponse = {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },

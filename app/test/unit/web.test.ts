@@ -465,7 +465,7 @@ describe.each([
 
             const res = await sendMockedRequest(webServer, req)
             expect(res._getStatusCode()).toBe(200)
-            expect(res._getJSONData().length).toEqual(0)
+            expect(res._getJSONData()).toHaveLength(0)
         })
 
         test.each([
@@ -493,7 +493,7 @@ describe.each([
 
             const res = await sendMockedRequest(webServer, req)
             expect(res._getStatusCode()).toBe(200)
-            expect(res._getJSONData().length).toEqual(expectedLength)
+            expect(res._getJSONData()).toHaveLength(expectedLength)
         })
     })
 

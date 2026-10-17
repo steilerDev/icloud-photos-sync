@@ -37,7 +37,7 @@ describe(`Processing remote records`, () => {
             expect(asset.modified).toBeGreaterThan(0);
             expect(asset.fileType).toBeDefined();
             expect(asset.assetType).toBeDefined();
-            expect(asset.origFilename.length).toBeGreaterThan(0);
+            expect(asset.origFilename?.length).toBeGreaterThan(0);
             expect(asset.wrappingKey).toBeDefined();
             expect(asset.wrappingKey?.length).toBeGreaterThan(0);
             expect(asset.referenceChecksum).toBeDefined();

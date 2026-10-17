@@ -725,7 +725,7 @@ describe(`Throttling`, () => {
      * @returns The error
      */
     function buildHttpError(status: number, data: any, headers: Record<string, any> = {}): HttpError {
-        const request = {method: `POST`, url: `/query`, fullURL: `/query`, headers: {}, startedAt: 0};
+        const request = {method: `POST` as const, url: `/query`, fullURL: `/query`, headers: {}, startedAt: 0};
         return HttpError.fromResponse({status, statusText: ``, headers, data, text: JSON.stringify(data), config: request});
     }
 

@@ -19,7 +19,7 @@
     "prebuild:knip": "npx knip --no-exit-code --config knip.config.jsonc",
     "prebuild": "npm run prebuild:lint && npm run prebuild:knip",
     "build:schema": "node build/schema.ts",
-    "build:typescript": "npx tsc",
+    "build:typescript": "npx tsc && npx tsc -p tsconfig.typecheck.json",
     "build:dev": "npm run build:schema && npm run build:typescript",
     "build": "npm run prebuild && npm run build:dev",
     "dist:clean": "rm -rf bin/ && mkdir -p bin/",

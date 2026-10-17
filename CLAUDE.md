@@ -59,7 +59,7 @@ npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the
 ```
 
 - Tests must go through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (ESM Jest setup). Running `npx jest` directly fails.
-- **TypeScript 7 and test transpilation.** The project uses TypeScript 7 (the native `tsc`), which ships no JS compiler API. Tests are therefore transpiled with `@swc/jest` (configured in `jest.config.json`), which strips types without type-checking; `tsc` (`npm run build:dev`) remains the type check. Two swc options must stay:
+- **TypeScript 7 and test transpilation.** The project uses TypeScript 7 (the native `tsc`), which ships no JS compiler API. Tests are therefore transpiled with `@swc/jest` (configured in `jest.config.json`), which strips types without type-checking. `npm run build:typescript` (part of `build:dev`) is the type check: `tsc` compiles `src/` with `tsconfig.json`, then `tsc -p tsconfig.typecheck.json` checks `src/`, `test/` and `build/*.ts` without emitting. That config uses `Bundler` resolution, because test imports omit the `.js` extension. Two swc options must stay:
   - `jsc.keepClassNames`: `clean()` relies on `this.constructor.name`.
   - `jsc.transform.tsEnumIsMutable`: without it swc inlines same-file enum members, and the source maps then attribute coverage of whole files to the enum declaration (coverage drops, e.g. half of `asset.ts` shows as uncovered).
   - Tools that need the classic compiler API can't import `typescript` any more. `ts-json-schema-generator` bundles its own TypeScript 5.x, so `build:schema` is unaffected.

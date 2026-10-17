@@ -573,7 +573,7 @@ describe.each([
                 ])(`$desc`, async ({response}) => {
                     const runtimeWarningEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR);
                     mockedNetworkManager.mock
-                        .onGet(`https://idmsa.apple.com/appleauth/auth`, undefined, {headers: {...Config.REQUEST_HEADER.AUTH, Accept: `application/json`}})
+                        .onGet(`https://idmsa.apple.com/appleauth/auth`, {headers: {...Config.REQUEST_HEADER.AUTH, Accept: `application/json`}})
                         .reply(200, response);
 
                     await expect(icloud.getTrustedPhoneNumbers()).resolves.toEqual([trustedPhoneNumber]);
@@ -1010,7 +1010,7 @@ describe.each([
                             .reply(409, data, headers);
                     };
 
-                    test.each([
+                    test.each<{desc: string, data: unknown, headers: Record<string, string>, expectedSessionSecret: string}>([
                         {
                             desc: `valid code flag and session token`,
                             data: {securityCode: {code: `123456`, valid: true}},

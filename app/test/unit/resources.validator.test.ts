@@ -1,7 +1,7 @@
 import {describe, test, expect, beforeEach, jest} from '@jest/globals';
 import {Validator} from '../../src/lib/resources/validator';
-import {ICLOUD_PHOTOS_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
-import {ResendMFADeviceResponse, ResendMFAPhoneResponse, TrustResponse} from '../../src/lib/resources/network-types';
+import {ErrorStruct, ICLOUD_PHOTOS_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
+import {TrustResponse} from '../../src/lib/resources/network-types';
 import {getICloudCookieHeader} from '../_helpers/icloud.helper';
 import * as Config from '../_helpers/_config';
 import {HttpResponse} from '../../src/lib/resources/http-client';
@@ -528,7 +528,8 @@ describe(`Validator`, () => {
 
     describe(`validateResendMFADeviceResponse`, () => {
         test(`should validate a valid resend MFA device response`, () => {
-            const data: ResendMFADeviceResponse = {
+            // Not typed as ResendMFADeviceResponse on purpose: the fixture carries fields Apple sends that the type doesn't model
+            const data = {
                 data: {
                     trustedDeviceCount: 1,
                     securityCode: {
@@ -696,7 +697,8 @@ describe(`Validator`, () => {
 
     describe(`validateResendMFAPhoneResponse`, () => {
         test(`should validate a valid resend MFA phone response`, () => {
-            const data: ResendMFAPhoneResponse = {
+            // Not typed as ResendMFAPhoneResponse on purpose: the fixture carries fields Apple sends that the type doesn't model
+            const data = {
                 data: {
                     trustedPhoneNumber: {
                         id: 1,
@@ -1366,7 +1368,8 @@ describe(`Validator`, () => {
             expect(() => validator.validatePhotosSetupResponse(data)).toThrow(VALIDATOR_ERR.PHOTOS_SETUP_RESPONSE);
         });
     });
-    describe.each([
+    type ResponseCase = {desc: string, data: unknown};
+    describe.each<{desc: string, validate: (v: Validator, data: unknown) => unknown, error: ErrorStruct, valid: ResponseCase[], invalid: ResponseCase[]}>([
         {
             desc: `MFA submit response`,
             validate: (v: Validator, data: unknown) => v.validateMFASubmitResponse(data),
@@ -1485,7 +1488,7 @@ describe(`Validator`, () => {
 
         test(`authInformation validates the extracted value`, () => {
             validator.validateAuthInformationResponse = jest.fn<typeof validator.validateAuthInformationResponse>(() => `validated` as any);
-            const extract = jest.fn(() => `extracted`);
+            const extract = jest.fn((_response: HttpResponse) => `extracted`);
 
             expect(validator.response.authInformation(extract)(response)).toEqual(`validated`);
             expect(extract).toHaveBeenCalledWith(response);
