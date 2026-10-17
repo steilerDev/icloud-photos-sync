@@ -18,7 +18,7 @@ All npm commands are run from the `app/` folder.
 | `npm ci` | Installs the dependencies (`.npmrc` sets `ignore-scripts` and `save-exact`) |
 | `npm run build:schema` | Generates the JSON schemas used for validation (`src/lib/resources/schemas/*.json`, gitignored). **Required before running `tsc` or any tests** |
 | `npm run build:dev` | Generates the schemas and compiles the TypeScript sources to `build/out/` |
-| `npm run build` | Runs `eslint --fix` and `knip` before `build:dev` (this is what CI runs, followed by `npm run dist`) |
+| `npm run build` | Runs `oxlint --fix` and `knip` before `build:dev` (this is what CI runs, followed by `npm run dist`) |
 | `npm run test:unit` | Runs the unit tests (coverage is collected by default) |
 | `npm run test:api` | Runs the API tests against the real iCloud backend (requires `secrets/test.env`) |
 | `npm run test:docker` | Runs the Docker tests against `$IMAGE_NAME` |
