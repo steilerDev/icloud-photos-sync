@@ -478,7 +478,7 @@ describe(`NetworkCapture`, () => {
 
         await expect(client.get(`https://example.com/path`, (() => {
             throw validationError;
-        }) as ResponseValidator<never>)).rejects.toBe(validationError);
+        }) as unknown as ResponseValidator<never>)).rejects.toBe(validationError);
 
         expect(networkCapture.log.log.entries).toHaveLength(1);
         expect(networkCapture.log.log.entries[0]._error).toBeUndefined();
@@ -581,7 +581,7 @@ describe(`HttpClient`, () => {
     });
 
     describe(`Request building`, () => {
-        test.each([
+        test.each<{desc: string, baseURL: string | undefined, url: string, params: Record<string, string> | undefined, expected: string}>([
             {
                 desc: `Absolute URL without base URL`,
                 baseURL: undefined,
@@ -822,7 +822,7 @@ describe(`HttpClient`, () => {
 
             await expect(client.get(`https://example.com`, (() => {
                 throw validationError;
-            }) as ResponseValidator<never>)).rejects.toBe(validationError);
+            }) as unknown as ResponseValidator<never>)).rejects.toBe(validationError);
         });
 
         test(`Does not validate rejected status`, async () => {

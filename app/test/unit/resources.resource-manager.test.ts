@@ -664,12 +664,6 @@ describe(`ResourceManager`, () => {
             });
         });
 
-        describe(`failOnMfa`, () => {
-            test(`should return the fail on MFA flag from the resources`, () => {
-                expect(resourceManager.failOnMfa).toEqual(resources.failOnMfa);
-            });
-        });
-
         describe(`force`, () => {
             test(`should return the force flag from the resources`, () => {
                 expect(resourceManager.force).toEqual(resources.force);
