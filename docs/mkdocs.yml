@@ -28,6 +28,7 @@ nav:
     - 'Motivation': dev/motivation.md
     - 'iCloud API': dev/api.md
     - 'Local File Structure': dev/local-file-structure.md
+    - 'Library v2 (Design)': dev/library-v2.md
     - 'Development Environment': dev/dev-environment.md
     - 'Test & Deployment':
       - 'Test Environment': dev/test-environment.md
