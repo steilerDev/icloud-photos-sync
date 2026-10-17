@@ -59,7 +59,7 @@ describe(`Setup iCloud Photos`, () => {
                 data: {
                     zones: []
                 } as Partial<PhotosSetupResponse[`data`]> as PhotosSetupResponse[`data`],
-            } as Partial<PhotosSetupResponse> as PhotosSetupResponse);
+            });
         mockedNetworkManager.applyZones = jest.fn<typeof mockedNetworkManager.applyZones>();
 
         mockedNetworkManager.mock
@@ -117,7 +117,7 @@ describe(`Setup iCloud Photos`, () => {
                 data: {
                     zones: []
                 } as Partial<PhotosSetupResponse[`data`]> as PhotosSetupResponse[`data`],
-            } as Partial<PhotosSetupResponse> as PhotosSetupResponse);
+            });
         mockedNetworkManager.applyZones = jest.fn<typeof mockedNetworkManager.applyZones>();
 
         mockedNetworkManager.mock
@@ -142,7 +142,7 @@ describe(`Setup iCloud Photos`, () => {
                 data: {
                     zones: []
                 } as Partial<PhotosSetupResponse[`data`]> as PhotosSetupResponse[`data`],
-            } as Partial<PhotosSetupResponse> as PhotosSetupResponse);
+            });
         mockedNetworkManager.applyZones = jest.fn<typeof mockedNetworkManager.applyZones>();
 
         mockedNetworkManager.mock

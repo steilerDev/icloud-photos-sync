@@ -10,7 +10,7 @@ describe(`Docker Daemon Command`, () => {
     // Implementing simple lock with timeout to ensure serial execution of tests
     let releaseLock: (value: unknown) => void
     const executionLock = new Promise((resolve, reject) => {
-        setTimeout(() => reject(`Timeout`), timeoutSeconds * 1000)
+        setTimeout(() => reject(new Error(`Timeout`)), timeoutSeconds * 1000)
         releaseLock = resolve
     })
     jest.setTimeout(timeoutSeconds * 1000);

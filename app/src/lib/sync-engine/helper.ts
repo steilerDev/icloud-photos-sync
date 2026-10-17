@@ -58,6 +58,7 @@ export const SyncEngineHelper = {
  * @throws The rejection reason of the first rejected promise (in order of the input), once all promises have settled
  */
 async function settleAll<T extends readonly unknown[]>(promises: readonly [...{[K in keyof T]: Promise<T[K]>}]): Promise<T> {
+    // oxlint-disable-next-line typescript/await-thenable -- false positive: the rule does not resolve the mapped tuple, every element is a Promise
     const results: PromiseSettledResult<unknown>[] = await Promise.allSettled(promises);
     const rejected = results.find((result): result is PromiseRejectedResult => result.status === `rejected`);
     if (rejected) {

@@ -11,7 +11,7 @@ import {Resources} from '../../src/lib/resources/main';
 import {Header, HeaderJar, HttpClient, HttpResponse, NetworkCapture, ResponseValidator} from '../../src/lib/resources/http-client';
 import {RAW_RESPONSE} from '../_helpers/http-mock.helper';
 import {NetworkManager} from "../../src/lib/resources/network-manager";
-import {PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse} from '../../src/lib/resources/network-types';
+import {PhotosSetupResponseZone, SetupResponse, SigninResponse} from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
 import {defaultConfig} from '../_helpers/_config';
 import {prepareResources} from '../_helpers/_general';
@@ -242,7 +242,7 @@ describe(`NetworkManager`, () => {
                     queue: (() => {
                         const queue = new PQueue({concurrency: 2, autoStart: false});
                         for (let i = 0; i < 10; i++) {
-                            queue.add(() => new Promise(resolve => setTimeout(resolve, 100)));
+                            void queue.add(() => new Promise(resolve => setTimeout(resolve, 100)));
                         }
 
                         return queue;
@@ -253,7 +253,7 @@ describe(`NetworkManager`, () => {
                     queue: (() => {
                         const queue = new PQueue({concurrency: 2, autoStart: true});
                         for (let i = 0; i < 10; i++) {
-                            queue.add(() => new Promise(resolve => setTimeout(resolve, 100)));
+                            void queue.add(() => new Promise(resolve => setTimeout(resolve, 100)));
                         }
 
                         return queue;
@@ -417,7 +417,7 @@ describe(`NetworkManager`, () => {
             ])(`Apply MFA response $desc`, ({headers, expected}) => {
                 Resources.manager()._resources.sessionSecret = `oldSessionToken`;
 
-                networkManager.applySessionTokenUpdate({headers} as any);
+                networkManager.applySessionTokenUpdate({headers});
 
                 expect(Resources.manager()._resources.sessionSecret).toEqual(expected);
             });
@@ -428,7 +428,7 @@ describe(`NetworkManager`, () => {
                         'x-apple-twosv-trust-token': `someTrustToken`,
                         'x-apple-session-token': `someSessionToken`,
                     },
-                } as TrustResponse;
+                };
 
                 networkManager.applyTrustResponse(trustResponse);
 
@@ -689,7 +689,7 @@ describe(`NetworkManager`, () => {
                 networkManager._http.get = jest.fn<typeof networkManager._http.get>() as any;
                 networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
-                networkManager.get(`someUrl`, validator, {params: {some: `params`}});
+                void networkManager.get(`someUrl`, validator, {params: {some: `params`}});
 
                 // Making sure request is added to the rate limiter queue
                 expect(networkManager._rateLimiter.add).toHaveBeenCalledTimes(1);
@@ -705,7 +705,7 @@ describe(`NetworkManager`, () => {
                 networkManager._http.post = jest.fn<typeof networkManager._http.post>() as any;
                 networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
-                networkManager.post(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
+                void networkManager.post(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
 
                 // Making sure request is added to the rate limiter queue
                 expect(networkManager._rateLimiter.add).toHaveBeenCalledTimes(1);
@@ -721,7 +721,7 @@ describe(`NetworkManager`, () => {
                 networkManager._http.put = jest.fn<typeof networkManager._http.put>() as any;
                 networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
-                networkManager.put(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
+                void networkManager.put(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
 
                 // Making sure request is added to the rate limiter queue
                 expect(networkManager._rateLimiter.add).toHaveBeenCalledTimes(1);
@@ -757,7 +757,7 @@ describe(`NetworkManager`, () => {
                     networkManager._http.download = jest.fn<typeof networkManager._http.download>()
                         .mockResolvedValue();
 
-                    networkManager.downloadData(url, downloadPath);
+                    void networkManager.downloadData(url, downloadPath);
 
                     // Making sure request is added to CCY limiter queue
                     expect(networkManager._streamingCCYLimiter.add).toHaveBeenCalledTimes(1);
@@ -844,9 +844,9 @@ describe(`NetworkManager`, () => {
                     });
 
                     networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>() as any;
-                    networkManager._http.download = jest.fn<typeof networkManager._http.download>() as any;
+                    networkManager._http.download = jest.fn<typeof networkManager._http.download>();
 
-                    networkManager.downloadData(url, downloadPath);
+                    void networkManager.downloadData(url, downloadPath);
 
                     // Making sure request is added to CCY limiter queue
                     expect(networkManager._streamingCCYLimiter.add).toHaveBeenCalledTimes(1);
@@ -871,9 +871,9 @@ describe(`NetworkManager`, () => {
                     });
 
                     networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>() as any;
-                    networkManager._http.download = jest.fn<typeof networkManager._http.download>() as any;
+                    networkManager._http.download = jest.fn<typeof networkManager._http.download>();
 
-                    networkManager.downloadData(url, downloadPath);
+                    void networkManager.downloadData(url, downloadPath);
 
                     // Making sure request is added to CCY limiter queue
                     expect(networkManager._streamingCCYLimiter.add).toHaveBeenCalledTimes(1);

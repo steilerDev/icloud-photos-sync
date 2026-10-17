@@ -15,7 +15,7 @@ export class NotificationPusher {
         Resources.events(this).on(iCPSState.STATE_CHANGED, (state: SerializedState) => {
             if((state.state === StateType.READY   && state.prevTrigger === StateTrigger.SYNC) || 
                (state.state === StateType.BLOCKED && state.progressMsg === `Waiting for MFA code...`)) {
-                this.sendNotifications(state);
+                void this.sendNotifications(state);
             } 
         });
     }

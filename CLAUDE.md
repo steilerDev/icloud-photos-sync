@@ -59,8 +59,9 @@ npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the
 ```
 
 - Tests must go through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (ESM Jest setup). Running `npx jest` directly fails.
-- **TypeScript 7 and test transpilation.** The project uses TypeScript 7 (the native `tsc`), which ships no JS compiler API. Tests are therefore transpiled with `@swc/jest` (configured in `jest.config.json`), which strips types without type-checking. `npm run build:typescript` (part of `build:dev`) is the type check: `tsc` compiles `src/` with `tsconfig.json`, then `tsc -p tsconfig.typecheck.json` checks `src/`, `test/` and `build/*.ts` without emitting. That config uses `Bundler` resolution, because test imports omit the `.js` extension. Two swc options must stay:
+- **TypeScript 7 and test transpilation.** The project uses TypeScript 7 (the native `tsc`), which ships no JS compiler API. Tests are therefore transpiled with `@swc/jest` (configured in `jest.config.json`), which strips types without type-checking. `npm run build:typescript` (part of `build:dev`) is the type check: `tsc` compiles `src/` with `tsconfig.json`, then `tsc -p tsconfig.typecheck.json` checks `src/`, `test/` and `build/*.ts` without emitting. That config uses `Bundler` resolution, because test imports omit the `.js` extension. Three swc options must stay:
   - `jsc.keepClassNames`: `clean()` relies on `this.constructor.name`.
+  - `jsc.experimental.keepImportAttributes`: keeps `with {type: 'json'}`. Without it Jest warns about every JSON import (a hard error from the next Jest major).
   - `jsc.transform.tsEnumIsMutable`: without it swc inlines same-file enum members, and the source maps then attribute coverage of whole files to the enum declaration (coverage drops, e.g. half of `asset.ts` shows as uncovered).
   - Tools that need the classic compiler API can't import `typescript` any more. `ts-json-schema-generator` bundles its own TypeScript 5.x, so `build:schema` is unaffected.
 - **Running the API tests and the full Docker tests:** always use the stored test account credentials from `secrets/test.env`. Never use the prod account for them, and never ask the user to type credentials. Load the file into the environment of the same command:
@@ -256,7 +257,7 @@ The SDK chooses the project by `application.version` via the submission tokens h
 
 ## Coding style (app)
 
-Lint is oxlint (`app/.oxlintrc.json`) with the rules of `eslint recommended` + `typescript-eslint recommended` (non-type-aware) and `no-useless-assignment`, plus the `@stylistic` rules run as an oxlint JS plugin:
+Lint is oxlint (`app/.oxlintrc.json`) with the rules of `eslint recommended` + `typescript-eslint recommended` and `no-useless-assignment`, plus the `@stylistic` rules run as an oxlint JS plugin. `prebuild:lint` runs it twice: once with `--fix`, then with `--type-aware` (via `oxlint-tsgolint`, built on TypeScript 7) for the type-checked rules of `recommended-type-checked`, without `--fix`. The `no-unsafe-*` rules are off, since `any` is allowed. `no-unnecessary-type-assertion` and `require-await` are off too: the former's fixes broke generic inference, and the latter would force signature churn. Promises in void positions (event listeners, fire-and-forget calls) must be marked `void`, and only where the callee cannot reject. Anything that can reject needs a `.catch`, since there is no global `unhandledRejection` handler.
 - `@stylistic/quotes: backtick` — **every string literal is a template literal**, even without interpolation. Normal quotes appear only where template literals aren't allowed: imports, object keys, `with {type: 'json'}`.
 - 4-space indent, with `case` at the same level as `switch`.
 - `quote-props: as-needed`, and braces without inner spaces (`{foo}`).

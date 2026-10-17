@@ -234,7 +234,7 @@ export const rejectOptions = [
             `asdf`,
         ],
         _desc: `Mis-formatted healthcheck ping URL`,
-        expected: `error: option '--health-check-url <url>' argument 'asdf' is invalid. Not a valid URL: TypeError: Invalid URL`,
+        expected: `error: option '--health-check-url <url>' argument 'asdf' is invalid. Not a valid URL: Invalid URL`,
     },
 ];
 

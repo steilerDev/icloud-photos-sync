@@ -87,9 +87,8 @@ export class iCloudPhotos {
      * Creates a new iCloud Photos Class
      */
     constructor() {
-        Resources.events(this).on(iCPSEventPhotos.SETUP_COMPLETED, async () => {
-            await this.checkingIndexingStatus();
-        });
+        // checkingIndexingStatus() never rejects, it emits iCPSEventPhotos.ERROR instead
+        Resources.events(this).on(iCPSEventPhotos.SETUP_COMPLETED, () => void this.checkingIndexingStatus());
 
         this.ready = this.getReady();
     }
