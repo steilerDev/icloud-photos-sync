@@ -171,7 +171,7 @@ function commanderParseBooleanEnv(program: Command) {
  * @returns Validated iCPSAppOptions
  */
 async function completeConfigurationOptionsFromCommand(parsedCommand: unknown): Promise<iCPSAppOptions> {
-    const {usernameFile, passwordFile, ...opts} = (parsedCommand as any).parent?.opts() as iCPSAppOptions & {usernameFile?: string, passwordFile?: string};
+    const {usernameFile, passwordFile, ...opts} = (parsedCommand as any).parent.opts() as iCPSAppOptions & {usernameFile?: string, passwordFile?: string};
 
     // Commander makes sure that only one of the options was provided - file content was read during parsing
     if (usernameFile !== undefined) {

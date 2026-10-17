@@ -72,7 +72,7 @@ updates:
       # Types need to match the Node.js runtime (app/node-version), which is updated manually
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # TypeScript 7 is not yet supported by typescript-eslint and ts-jest
+      # TypeScript 7 is not yet supported by ts-jest
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
     groups:
@@ -80,12 +80,12 @@ updates:
       typescript:
         patterns:
         - "typescript"
-        - "typescript-eslint"
-        - "@typescript-eslint/*"
-        - "eslint"
-        - "@eslint/*"
-        - "@stylistic/*"
         - "tsx"
+      lint:
+        patterns:
+        - "oxlint"
+        - "oxlint-*"
+        - "@stylistic/*"
       jest:
         patterns:
         - "jest"

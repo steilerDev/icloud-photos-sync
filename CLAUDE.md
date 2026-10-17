@@ -51,7 +51,7 @@ Load an env file with `set -a; . ../secrets/test.env; set +a` before running a c
 npm ci                     # .npmrc sets ignore-scripts and save-exact
 npm run build:schema       # REQUIRED before tests/tsc: generates gitignored src/lib/resources/schemas/*.json
 npm run build:dev          # schema + tsc -> build/out/
-npm run build              # eslint --fix + knip, then build:dev (what CI runs, followed by `npm run dist`)
+npm run build              # oxlint --fix + knip, then build:dev (what CI runs, followed by `npm run dist`)
 npm run test:unit          # jest unit tests (coverage on by default)
 npm test -- --coverage false test/unit/sync-engine.test.ts -t "<test name>"   # single file / single test
 npm run execute -- sync    # run the compiled CLI (subcommands: daemon (default), sync, token, archive <path>)
@@ -252,7 +252,7 @@ The SDK chooses the project by `application.version` via the submission tokens h
 
 ## Coding style (app)
 
-Lint is `eslint recommended` + `typescript-eslint recommended`, plus:
+Lint is oxlint (`app/.oxlintrc.json`) with the rules of `eslint recommended` + `typescript-eslint recommended` (non-type-aware) and `no-useless-assignment`, plus the `@stylistic` rules run as an oxlint JS plugin:
 - `@stylistic/quotes: backtick` — **every string literal is a template literal**, even without interpolation. Normal quotes appear only where template literals aren't allowed: imports, object keys, `with {type: 'json'}`.
 - 4-space indent, with `case` at the same level as `switch`.
 - `quote-props: as-needed`, and braces without inner spaces (`{foo}`).

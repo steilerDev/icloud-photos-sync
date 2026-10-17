@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "clean": "rm -rf LICENSE README.md build/out/ bin/ coverage/ doc/ node_modules/ package-lock.json src/lib/resources/schemas/",
-    "prebuild:lint": "npx eslint --fix ./src ./test ./build/*.ts",
+    "prebuild:lint": "npx oxlint --fix ./src ./test ./build/*.ts",
     "prebuild:knip": "npx knip --no-exit-code --config knip.config.jsonc",
     "prebuild": "npm run prebuild:lint && npm run prebuild:knip",
     "build:schema": "node build/schema.ts",
@@ -62,7 +62,6 @@
   ],
   "devDependencies": {
     "@backtrace/javascript-cli": "0.3.2",
-    "@eslint/js": "10.0.1",
     "@jest/globals": "30.5.2",
     "@stylistic/eslint-plugin": "5.10.0",
     "@testing-library/dom": "10.4.2",
@@ -72,20 +71,19 @@
     "@types/jsdom": "30.0.0",
     "@types/node": "26.6.5",
     "@types/web-push": "3.6.4",
-    "eslint": "10.12.0",
     "jest": "30.5.2",
     "jest-ctrf-json-reporter": "0.1.0",
     "jsdom": "30.1.2",
     "knip": "6.41.0",
     "liquidjs": "10.30.0",
     "node-mocks-http": "1.18.1",
+    "oxlint": "1.88.0",
     "tar-stream": "3.2.2",
     "testcontainers": "12.2.0",
     "ts-jest": "29.4.14",
     "ts-json-schema-generator": "2.9.0",
     "tsx": "4.23.15",
-    "typescript": "6.0.3",
-    "typescript-eslint": "8.71.1"
+    "typescript": "6.0.3"
   },
   "dependencies": {
     "@backtrace/node": "0.8.3",
