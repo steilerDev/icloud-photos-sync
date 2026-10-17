@@ -50,6 +50,20 @@ describe(`App Factory`, () => {
         await expect(appFactory(rejectOptions[0].options)).rejects.toMatchObject({exitCode: 1});
     });
 
+    test(`Reject when setting up the app fails`, async () => {
+        // Regression test: errors in the (asynchronous) commander actions used to be dropped by parse(), leaving the promise unsettled
+        const setupError = new Error(`setup failed`);
+        const setupSpy = jest.spyOn(Resources, `setup`).mockImplementation(() => {
+            throw setupError;
+        });
+
+        try {
+            await expect(appFactory(validOptions.sync)).rejects.toBe(setupError);
+        } finally {
+            setupSpy.mockRestore();
+        }
+    });
+
     test.each([{
         desc: `help option`,
         options: [`--help`],
@@ -968,6 +982,22 @@ describe(`App control flow`, () => {
             expect(syncApp.run).toHaveBeenCalled();
             expect(retryEvent).toHaveBeenCalled();
             expect(errorEvent).toHaveBeenCalled();
+        });
+
+        test(`Scheduled sync fails while setting up the sync app`, async () => {
+            // Regression test: the sync app used to be created outside of the try block, rejecting the (unobserved) scheduled run
+            const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+            const retryEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED_RETRY);
+            const errorEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventRuntimeError.SCHEDULED_ERROR);
+            Resources.manager()._resources.libraryVersion = -1;
+
+            await expect(daemonApp.performScheduledSync()).resolves.toBeUndefined();
+
+            expect(retryEvent).toHaveBeenCalled();
+            expect(errorEvent).toHaveBeenCalledWith(expect.objectContaining({
+                code: `APP_DAEMON`,
+                cause: expect.objectContaining({code: `LIBRARY_VERSION_MISMATCH`}),
+            }));
         });
     });
 });

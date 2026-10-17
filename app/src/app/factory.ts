@@ -4,7 +4,7 @@ import {Cron} from "croner";
 import {readFileSync} from "fs";
 import {Resources} from "../lib/resources/main.js";
 import {APP_ERR} from "./error/error-codes.js";
-import {iCPSError} from "./error/error.js";
+import {errorMessage, iCPSError} from "./error/error.js";
 import {ArchiveApp, DaemonApp, iCPSApp, SyncApp, TokenApp} from "./icloud-app.js";
 import {LogLevel} from "../lib/resources/state-manager.js";
 import {TRASH_DIR} from "../lib/photos-library/constants.js";
@@ -98,7 +98,7 @@ function commanderParseUrl(value: string, _dummyPrevious?: unknown): string {
         const _url = new URL(value);
         return value;
     } catch (err) {
-        throw new InvalidArgumentError(`Not a valid URL: ${err}`);
+        throw new InvalidArgumentError(`Not a valid URL: ${errorMessage(err)}`);
     }
 }
 
@@ -232,9 +232,9 @@ export type iCPSAppOptions = {
 /**
  * Creates the argument parser for the CLI and environment variables
  * @param callback - A callback function that will be called with the created app, based on the provided options.
- * @returns The commander command object, awaiting .parse() to be called
+ * @returns The commander command object, awaiting .parseAsync() to be called (the actions are asynchronous)
  */
-export function argParser(callback: (res: iCPSApp) => void): Command {
+export function argParser(callback: (res: iCPSApp) => void | Promise<void>): Command {
     // Overwriting commander\`s _exit function, because exitOverwrite will still call process.exit
     (Command.prototype as any)._exit = (exitCode: number, code: string, message: string) => {
         throw new CommanderError(exitCode, code, message); // Function needs to return \`never\`, otherwise errors will be ignored
@@ -359,7 +359,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .action(async (_, command) => {
             const opts = await completeConfigurationOptionsFromCommand(command);
             Resources.setup(opts);
-            callback(new DaemonApp());
+            await callback(new DaemonApp());
         })
         .description(`Starts the synchronization in scheduled daemon mode - continuously running based on the provided cron schedule.`);
 
@@ -367,7 +367,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .action(async (_, command) => {
             const opts = await completeConfigurationOptionsFromCommand(command);
             Resources.setup(opts);
-            callback(new TokenApp());
+            await callback(new TokenApp());
         })
         .description(`Validates the current trust token, fetches a new one (if necessary) and prints it to the CLI.`);
 
@@ -375,7 +375,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .action(async (_, command) => {
             const opts = await completeConfigurationOptionsFromCommand(command);
             Resources.setup(opts);
-            callback(new SyncApp());
+            await callback(new SyncApp());
         })
         .description(`Fetches the remote state and persist it to the local disk once.`);
 
@@ -383,7 +383,7 @@ export function argParser(callback: (res: iCPSApp) => void): Command {
         .action(async (archivePath, _, command) => {
             const opts = await completeConfigurationOptionsFromCommand(command);
             Resources.setup(opts);
-            callback(new ArchiveApp(archivePath));
+            await callback(new ArchiveApp(archivePath));
         })
         .description(`Archives a given folder. Before archiving, it will first perform a sync, to make sure the correct state is archived.`)
         .argument(`<path>`, `Path to the folder that should be archived`);
@@ -430,18 +430,15 @@ export function validatePermissions() {
  */
 export async function appFactory(argv: string[]): Promise<iCPSApp> {
     return new Promise((resolve, reject) => {
-        try {
-            argParser(async (res: iCPSApp) => {
-                try {
-                    validatePermissions()
-                    await Resources.state().acquireLibraryLock()
-                } catch (err) {
-                    reject(err)
-                }
-                resolve(res);
-            }).parse(argv);
-        } catch (err) {
-            reject(err);
-        }
+        // The actions are asynchronous (prompts, app setup), so only parseAsync() surfaces their errors
+        argParser(async (res: iCPSApp) => {
+            try {
+                validatePermissions()
+                await Resources.state().acquireLibraryLock()
+            } catch (err) {
+                reject(err)
+            }
+            resolve(res);
+        }).parseAsync(argv).catch(reject);
     });
 }

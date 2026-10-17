@@ -60,7 +60,7 @@ export class LogInterface {
      * @param msg The log message to format
      * @returns A string representation for the log message
      */
-    static logToString(msg: LogMessage): string {
+    static logToString(this: void, msg: LogMessage): string {
         return `[${new Date(msg.time).toISOString()}] ${msg.level.toUpperCase()} ${msg.source}: ${msg.message}\n`;
     }
 }

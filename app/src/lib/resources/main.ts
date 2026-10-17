@@ -137,7 +137,7 @@ export namespace Resources {
      * @param source - The source of the log message - either an object or a string
      * @returns The logger interface
      */
-    export function logger(source: any | string): Resources.Types.Logger {
+    export function logger(source: object | string): Resources.Types.Logger {
         const format = function (...args: unknown[]): string {
             return args.map(arg => String(arg)).join(` `);
         };

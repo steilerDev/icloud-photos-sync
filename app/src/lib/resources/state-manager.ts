@@ -1,4 +1,4 @@
-import {iCPSError} from "../../app/error/error.js";
+import {errorMessage, iCPSError} from "../../app/error/error.js";
 import {MFA_ERR, AUTH_ERR, WEB_SERVER_ERR, LIBRARY_ERR} from "../../app/error/error-codes.js";
 import {Resources} from "./main.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "./events-types.js";
@@ -260,9 +260,9 @@ export class StateManager {
 
         // Logs
         Resources.events(this)
-            .on(iCPSEventLog.DEBUG, (source: unknown, msg: string) => this.addLog(LogLevel.DEBUG, source, msg))
-            .on(iCPSEventLog.INFO, (source: unknown, msg: string) => this.addLog(LogLevel.INFO, source, msg))
-            .on(iCPSEventLog.WARN, (source: unknown, msg: string) => this.addLog(LogLevel.WARN, source, msg))
+            .on(iCPSEventLog.DEBUG, (source: object | string, msg: string) => this.addLog(LogLevel.DEBUG, source, msg))
+            .on(iCPSEventLog.INFO, (source: object | string, msg: string) => this.addLog(LogLevel.INFO, source, msg))
+            .on(iCPSEventLog.WARN, (source: object | string, msg: string) => this.addLog(LogLevel.WARN, source, msg))
             .on(iCPSEventRuntimeWarning.COUNT_MISMATCH, (album: string, expectedCount: number, actualCPLAssets: number, actualCPLMasters: number) => {
                 this.addLog(LogLevel.WARN, `RuntimeWarning`, `Expected ${expectedCount} CPLAssets & CPLMasters, but got ${actualCPLAssets} CPLAssets and ${actualCPLMasters} CPLMasters for album ${album}`);
             })
@@ -311,7 +311,7 @@ export class StateManager {
             .on(iCPSEventSyncEngine.RETRY, (_retryCount: number, err: Error) => {
                 this.addLog(LogLevel.WARN, `RuntimeWarning`, `Detected error during sync: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
-            .on(iCPSEventLog.ERROR, (source: unknown, msg: string) => this.addLog(LogLevel.ERROR, source, msg))
+            .on(iCPSEventLog.ERROR, (source: object | string, msg: string) => this.addLog(LogLevel.ERROR, source, msg))
             .on(iCPSEventRuntimeError.HANDLED_ERROR, (err: iCPSError) => this.addLog(LogLevel.ERROR, `RuntimeError`, iCPSError.toiCPSError(err).getDescription()));
     }
 
@@ -360,7 +360,7 @@ export class StateManager {
         this.updateState(StateType.RUNNING, {progress: 0, progressMsg: `Starting ${trigger}...`})
     }
 
-    addLog(level: LogLevel, source: string | any, message: string) {
+    addLog(level: LogLevel, source: object | string, message: string) {
         if(!this.log) {
             this.log = []
         }
@@ -615,7 +615,7 @@ export class StateManager {
             const now = new Date();
             fs.utimesSync(lockFilePath, now, now);
         } catch (err) {
-            Resources.logger(this).warn(`Unable to refresh library lock: ${err}`);
+            Resources.logger(this).warn(`Unable to refresh library lock: ${errorMessage(err)}`);
         }
     }
 

@@ -174,7 +174,7 @@ export class Validator {
 
         if (validator.errors) {
             throw new iCPSError(errorStruct)
-                .addMessage(`${validator.errors![0].message} (${validator.errors![0].instancePath})`)
+                .addMessage(`${validator.errors[0].message} (${validator.errors[0].instancePath})`)
                 .addContext(`data`, data);
         }
 

@@ -50,7 +50,7 @@ export function prepareResourceForApiTests(): Resources.Types.Instances {
         password: process.env.TEST_APPLE_ID_PWD!,
         trustToken: process.env.TEST_TRUST_TOKEN!,
         mfaTimeout: 0,
-    })!;
+    });
 
     instances.manager._writeResourceFile = jest.fn<typeof instances.manager._writeResourceFile>()
         .mockReturnValue();

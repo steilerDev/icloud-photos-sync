@@ -4,7 +4,7 @@
  */
 
 import {iCPSError} from '../../../app/error/error.js';
-import {AlbumAssets} from '../../photos-library/model/album.js';
+import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {QUERY_PARSER_ERR} from '../../../app/error/error-codes.js';
 
 /**
@@ -322,7 +322,7 @@ export class CPLAlbum {
     /**
      * AlbumType representation (e.g. Album or Folder)
      */
-    albumType!: number;
+    albumType!: AlbumType;
     /**
      * Base64 encoded album name
      */

@@ -395,7 +395,7 @@ describe(`ResourceManager`, () => {
         };
 
         beforeEach(() => {
-            resourceManager = prepareResources(true, resources as any)!.manager;
+            resourceManager = prepareResources(true, resources)!.manager;
         });
 
         describe(`dataDir`, () => {

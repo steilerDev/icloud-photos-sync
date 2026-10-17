@@ -120,7 +120,29 @@
     "typescript/no-wrapper-object-types": "error",
     "typescript/prefer-as-const": "error",
     "typescript/prefer-namespace-keyword": "error",
-    "typescript/triple-slash-reference": "error"
+    "typescript/triple-slash-reference": "error",
+    "typescript/await-thenable": "error",
+    "typescript/no-array-delete": "error",
+    "typescript/no-base-to-string": "error",
+    "typescript/no-duplicate-type-constituents": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-for-in-array": "error",
+    "typescript/no-implied-eval": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-redundant-type-constituents": "error",
+    "typescript/no-unsafe-enum-comparison": "error",
+    "typescript/no-unsafe-unary-minus": "error",
+    "typescript/only-throw-error": "error",
+    "typescript/prefer-promise-reject-errors": [
+      "error",
+      {
+        "allowThrowingAny": true,
+        "allowThrowingUnknown": true
+      }
+    ],
+    "typescript/restrict-plus-operands": "error",
+    "typescript/restrict-template-expressions": "error",
+    "typescript/unbound-method": "error"
   },
   "overrides": [
     {
@@ -151,6 +173,14 @@
         "prefer-const": "error",
         "prefer-rest-params": "error",
         "prefer-spread": "error"
+      }
+    },
+    {
+      "files": [
+        "test/**"
+      ],
+      "rules": {
+        "typescript/unbound-method": "off"
       }
     }
   ]

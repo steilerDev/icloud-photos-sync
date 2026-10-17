@@ -562,7 +562,7 @@ describe.each([{
                 .mockReturnValueOnce(asset1.recordName)
                 .mockReturnValueOnce(asset2.recordName)
                 .mockReturnValueOnce(asset3.recordName);
-            archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.reject());
+            archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.reject(new Error(`Remote deletion failed`)));
 
             await expect(archiveEngine.archivePath(path.join(Config.defaultConfig.dataDir, `Random`), [asset1, asset2, asset3])).rejects.toThrow(/^Unable to delete remote assets$/);
 

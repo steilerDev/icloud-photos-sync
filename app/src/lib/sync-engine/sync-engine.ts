@@ -88,7 +88,7 @@ export class SyncEngine {
 
                 Resources.logger(this).debug(`Refreshing iCloud connection...`);
                 const iCloudReady = this.icloud.getReady();
-                this.icloud.setupAccount();
+                void this.icloud.setupAccount();
                 if (!await iCloudReady) {
                     return [[], []];
                 }
@@ -134,10 +134,8 @@ export class SyncEngine {
     async diffState(remoteAssets: Asset[], remoteAlbums: Album[], localAssets: PLibraryEntities<Asset>, localAlbums: PLibraryEntities<Album>): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
         Resources.emit(iCPSEventSyncEngine.DIFF);
         Resources.logger(this).info(`Diffing state`);
-        const [assetQueue, albumQueue] = await Promise.all([
-            SyncEngineHelper.getProcessingQueues(remoteAssets, localAssets),
-            SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums),
-        ]);
+        const assetQueue = SyncEngineHelper.getProcessingQueues(remoteAssets, localAssets);
+        const albumQueue = SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums);
         let uniqueAssetQueue = SyncEngineHelper.removeDuplicateAssets(assetQueue);
         if (this.icloud.photos.indexingInProgress) {
             const deletionCount = uniqueAssetQueue[0].length;

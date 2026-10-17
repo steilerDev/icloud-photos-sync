@@ -218,7 +218,7 @@ describe(`Diffing state`, () => {
                 },
             },
         ])(`$desc`, ({remoteAssets, localAssets, expected}) => {
-            const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAssets as Asset[], localAssets as PLibraryEntities<Asset>);
+            const [toBeDeleted, toBeAdded, toBeKept] = SyncEngineHelper.getProcessingQueues(remoteAssets, localAssets as PLibraryEntities<Asset>);
             expect(toBeDeleted.length).toEqual(expected.deleted);
             expect(toBeAdded.length).toEqual(expected.added);
             expect(toBeKept.length).toEqual(expected.kept);

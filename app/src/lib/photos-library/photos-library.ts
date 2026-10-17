@@ -614,7 +614,7 @@ export class PhotosLibrary {
         Resources.logger(this).debug(`Cleaning archived orphans`);
         const archivedOrphans = await this.loadAlbum(Album.getStashAlbum(), this.stashDir);
         for (const album of archivedOrphans) {
-            Resources.logger(this).debug(`Found orphaned album ${album}`);
+            Resources.logger(this).debug(`Found orphaned album ${album.albumName} (${album.uuid})`);
             const [namePath, uuidPath] = this.findStashAlbumPaths(album);
             let targetPath: string;
             let index = 0;

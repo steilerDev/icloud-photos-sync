@@ -4,7 +4,7 @@ import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeWarning, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {WEB_SERVER_ERR} from '../error/error-codes.js';
-import {iCPSError} from '../error/error.js';
+import {errorMessage, iCPSError} from '../error/error.js';
 import {TokenApp} from '../icloud-app.js';
 import {faviconBase64, iconBase64} from './assets/icons.js';
 import {manifest} from './assets/manifest.js';
@@ -104,7 +104,8 @@ export class WebServer {
      */
     constructor(prometheusMetricsExporter?: PrometheusMetricsExporter) {
         Resources.logger(this).debug(`Preparing web server on port ${Resources.manager().webServerPort}`);
-        this.server = http.createServer(this.handleRequest.bind(this));
+        // handleRequest() catches its errors and answers with an error response
+        this.server = http.createServer((req, res) => void this.handleRequest(req, res));
 
         // allow the process to exit, if this server is the only thing left running
         this.server.unref();
@@ -551,7 +552,7 @@ export class WebServer {
                 "Content-Type": `application/json`
             },
             body: {
-                message: `Requesting MFA resend with method ${this.mfaMethod}`
+                message: `Requesting MFA resend with method ${this.mfaMethod.toString()}`
             }
         }
     }
@@ -570,7 +571,7 @@ export class WebServer {
                 }
             }
         } catch (err) {
-            Resources.logger(this).error(`Unable to register push subscription: ${err}`);
+            Resources.logger(this).error(`Unable to register push subscription: ${errorMessage(err)}`);
             return {
                 code: 400,
                 header: {

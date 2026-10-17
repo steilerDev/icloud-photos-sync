@@ -66,6 +66,19 @@ describe(`Control structure`, () => {
         expect(icloud.authenticate).toHaveBeenCalled();
     });
 
+    test(`SESSION_EXPIRED event handles a failing re-authentication`, () => {
+        // Regression test: the rejection used to escape the listener as an unhandled rejection, crashing the process
+        const failedAuthentication = Promise.reject(new Error(`re-authentication failed`));
+        const catchSpy = jest.spyOn(failedAuthentication, `catch`);
+        icloud.authenticate = jest.fn<typeof icloud.authenticate>()
+            .mockReturnValue(failedAuthentication);
+
+        mockedEventManager.emit(iCPSEventCloud.SESSION_EXPIRED);
+
+        expect(icloud.authenticate).toHaveBeenCalled();
+        expect(catchSpy).toHaveBeenCalled();
+    });
+
     test(`PCS_REQUIRED event triggered`, () => {
         icloud.acquirePCSCookies = jest.fn<typeof icloud.acquirePCSCookies>()
             .mockResolvedValue();
@@ -665,7 +678,7 @@ describe.each([
 
                     if (method === `device`) {
                         mockedValidator.validateResendMFADeviceResponse = jest.fn<typeof mockedValidator.validateResendMFADeviceResponse>()
-                            .mockReturnValue(validatedResponse as any);
+                            .mockReturnValue(validatedResponse);
                     }
 
                     if (method === `sms` || method === `voice`) {
