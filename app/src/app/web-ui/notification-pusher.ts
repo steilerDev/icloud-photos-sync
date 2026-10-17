@@ -1,6 +1,6 @@
 import {Resources} from "../../lib/resources/main.js";
 import webpush from 'web-push';
-import {SerializedState, StateTrigger, StateType} from "../../lib/resources/state-manager.js";
+import {type SerializedState, StateTrigger, StateType} from "../../lib/resources/state-manager.js";
 import {iCPSState} from "../../lib/resources/events-types.js";
 import {errorMessage} from "../error/error.js";
 

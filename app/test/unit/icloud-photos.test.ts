@@ -9,14 +9,14 @@ import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {HIDDEN_ALBUM_NAME, HIDDEN_ALBUM_UUID, PRIMARY_ASSET_DIR} from '../../src/lib/photos-library/constants';
 import {iCPSEventPhotos, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
-import {PhotosSetupResponse} from '../../src/lib/resources/network-types';
-import {Validator} from '../../src/lib/resources/validator';
+import type {PhotosSetupResponse} from '../../src/lib/resources/network-types';
+import type {Validator} from '../../src/lib/resources/validator';
 import {HttpError} from '../../src/lib/resources/http-client';
 import * as Config from '../_helpers/_config';
-import {MockedEventManager, MockedNetworkManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
+import {type MockedEventManager, type MockedNetworkManager, type MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {getICloudCookieHeader, iCloudCookieRequestHeader} from '../_helpers/icloud.helper';
 import mockfs from '../_helpers/mock-fs.helper';
-import {ZoneArea} from '../../src/lib/resources/resource-types';
+import type {ZoneArea} from '../../src/lib/resources/resource-types';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedNetworkManager: MockedNetworkManager;

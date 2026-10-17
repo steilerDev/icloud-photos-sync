@@ -1,5 +1,5 @@
 
-import {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
+import type {CPLAlbum, CPLAsset, CPLMaster} from '../../src/lib/icloud/icloud-photos/query-parser';
 import expectedAssetsAll from "../api/_data/expected.all-cpl-assets.json";
 import expectedMastersAll from "../api/_data/expected.all-cpl-masters.json";
 import expectedAlbumsAll from "../api/_data/expected.all-cpl-albums.json";
@@ -9,7 +9,7 @@ import {getRandomZone, queueIsSorted} from '../_helpers/sync-engine.helper';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import {Album, AlbumType} from '../../src/lib/photos-library/model/album';
-import {PEntity, PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
+import type {PEntity, PLibraryEntities} from '../../src/lib/photos-library/model/photos-entity';
 import {prepareResources} from '../_helpers/_general';
 import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';

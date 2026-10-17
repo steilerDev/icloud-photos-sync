@@ -1,18 +1,23 @@
 import {jsonc} from "jsonc";
 import {LIBRARY_ERR} from "../../../app/error/error-codes.js";
 import {iCPSError} from "../../../app/error/error.js";
-import {CPLAlbum} from "../../icloud/icloud-photos/query-parser.js";
+import type {CPLAlbum} from "../../icloud/icloud-photos/query-parser.js";
 import {STASH_DIR} from "../constants.js";
-import {PEntity} from "./photos-entity.js";
+import type {PEntity} from "./photos-entity.js";
 
 /**
  * Potential AlbumTypes
  */
-export enum AlbumType {
-    FOLDER = 3,
-    ALBUM = 0,
-    ARCHIVED = 99
-}
+export const AlbumType = {
+    FOLDER: 3,
+    ALBUM: 0,
+    ARCHIVED: 99,
+} as const;
+
+/**
+ * The values of {@link AlbumType}
+ */
+export type AlbumType = typeof AlbumType[keyof typeof AlbumType];
 
 /**
  * This type is mapping the filename in the asset folder, to the filename how the asset should be presented to the user

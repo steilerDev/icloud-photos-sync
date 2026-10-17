@@ -59,10 +59,9 @@ npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the
 ```
 
 - Tests must go through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (ESM Jest setup). Running `npx jest` directly fails.
-- **TypeScript 7 and test transpilation.** The project uses TypeScript 7 (the native `tsc`), which ships no JS compiler API. Tests are therefore transpiled with `@swc/jest` (configured in `jest.config.json`), which strips types without type-checking. `npm run build:typescript` (part of `build:dev`) is the type check: `tsc` compiles `src/` with `tsconfig.json`, then `tsc -p tsconfig.typecheck.json` checks `src/`, `test/` and `build/*.ts` without emitting. That config uses `Bundler` resolution, because test imports omit the `.js` extension. Three swc options must stay:
+- **TypeScript 7 and test transpilation.** The project uses TypeScript 7 (the native `tsc`), which ships no JS compiler API. Tests are therefore transpiled with `@swc/jest` (configured in `jest.config.json`), which strips types without type-checking. `npm run build:typescript` (part of `build:dev`) is the type check: `tsc` compiles `src/` with `tsconfig.json`, then `tsc -p tsconfig.typecheck.json` checks `src/`, `test/` and `build/*.ts` without emitting. That config uses `Bundler` resolution, because test imports omit the `.js` extension. Two swc options must stay:
   - `jsc.keepClassNames`: `clean()` relies on `this.constructor.name`.
   - `jsc.experimental.keepImportAttributes`: keeps `with {type: 'json'}`. Without it Jest warns about every JSON import (a hard error from the next Jest major).
-  - `jsc.transform.tsEnumIsMutable`: without it swc inlines same-file enum members, and the source maps then attribute coverage of whole files to the enum declaration (coverage drops, e.g. half of `asset.ts` shows as uncovered).
   - Tools that need the classic compiler API can't import `typescript` any more. `ts-json-schema-generator` bundles its own TypeScript 5.x, so `build:schema` is unaffected.
 - **Running the API tests and the full Docker tests:** always use the stored test account credentials from `secrets/test.env`. Never use the prod account for them, and never ask the user to type credentials. Load the file into the environment of the same command:
   ```sh
@@ -80,7 +79,7 @@ npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the
 - `DaemonApp` — a cron schedule that runs `SyncApp`.
 - `TokenApp`, `SyncApp`, `ArchiveApp` — an inheritance chain: `ArchiveApp` extends `SyncApp`, which extends the abstract `iCloudApp`. Each `run()` calls `super.run()` first, and only the concrete class that was instantiated calls `clean()` (checked via `this.constructor.name`).
 
-**Resources singleton (`src/lib/resources/main.ts`).** A namespace that holds the process-wide singletons. Code reaches them through static accessors instead of injecting them; constructors take only domain objects, e.g. `new SyncEngine(icloud, photosLibrary)`:
+**Resources singleton (`src/lib/resources/main.ts`).** A plain object (`export const Resources = {…}`) that holds the process-wide singletons, with its types in a type-only namespace of the same name (`Resources.Types`, `Resources.LockStat`). It stays a mutable object, so tests can reset `Resources._instances` and spy on its functions. Code reaches them through static accessors instead of injecting them; constructors take only domain objects, e.g. `new SyncEngine(icloud, photosLibrary)`:
 - `Resources.event()` — EventManager: the event bus.
 - `Resources.state()` — StateManager: app state READY/RUNNING/BLOCKED and the library lock.
 - `Resources.manager()` — ResourceManager: CLI options plus the persisted `.icloud-photos-sync` file.
@@ -269,18 +268,22 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 **Naming.**
 - Classes are PascalCase, but project-branded types use a lowercase prefix: `iCloud`, `iCloudPhotos`, `iCPSError`, `iCPSApp`, `iCPSEvent<Area>`.
 - Files are kebab-case (`sync-engine.ts`, `icloud.crypto.ts`). Tests are `<area>.<module>.test.ts`.
-- Enum members are `UPPER_SNAKE` with backtick string values. Event values look like `` `icloud-auth_started` ``.
+- There are no TS enums. Enum-like values are `as const` objects with a same-named union type: ``export const X = {A: `a`} as const;`` plus `export type X = typeof X[keyof typeof X];`. Members are `UPPER_SNAKE` with backtick string values. Event values look like `` `icloud-auth_started` ``.
 - Internal members use a **public `_` prefix** (`_http`, `_resources`, `_sitemap`) so tests can reach them. `private` is rare.
 
 **Modules.**
 - `src` relative imports end in `.js`; **test imports omit the extension** (Jest maps it).
 - Named exports only, no `export default` in src.
 - Node built-ins are imported without the `node:` prefix (`'fs'`, `'path'`, `'events'`).
-- The only TS namespace is `Resources`; shared types live in `Resources.Types`.
+- `tsconfig.json` sets `erasableSyntaxOnly`: no enums, no namespaces with runtime code, no constructor parameter properties. The only namespace is the type-only `Resources` namespace; shared types live in `Resources.Types`.
+- `verbatimModuleSyntax` is on, so type-only imports need `type`.
+  - If every specifier is a type, use `import type {X}`. An inline `import {type X}` would remain as a side-effect import at runtime (`no-import-type-side-effects`).
+  - In mixed imports, mark the types inline: `import {type X, Y}`.
+  - `oxlint --fix` (`consistent-type-imports`) adds the markers.
 - Object shapes are `type X = {…}`, not `interface`. Labeled tuples and tuple returns are common (`Promise<[Asset[], Album[]]>`).
 - Static helper bundles are exported object literals (`SyncEngineHelper`).
 
-**Docs.** Every class, member, enum member and type field in `lib/` gets TSDoc:
+**Docs.** Every class, member, enum-like object member and type field in `lib/` gets TSDoc:
 - `@param name - …`, `@returns …`, `@throws An iCPSError, if …`
 - The custom `@emits iCPSEventX.MEMBER - when … - payload …`, listed for every emitted event.
 

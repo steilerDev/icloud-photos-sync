@@ -2,8 +2,8 @@
  * This file holds relevant information about the resources used by this application
  */
 
-import {iCPSAppOptions} from "../../app/factory.js";
-import { PushSubscription } from "./web-server-types.js";
+import type {iCPSAppOptions} from "../../app/factory.js";
+import type { PushSubscription } from "./web-server-types.js";
 
 /**
  * File encoding for all text based files written by this application

@@ -4,7 +4,7 @@
  */
 
 import {iCPSError} from '../../../app/error/error.js';
-import {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
+import type {AlbumAssets, AlbumType} from '../../photos-library/model/album.js';
 import {QUERY_PARSER_ERR} from '../../../app/error/error-codes.js';
 
 /**
@@ -349,7 +349,7 @@ export class CPLAlbum {
         const album = new CPLAlbum();
         album.recordName = cplRecord.recordName;
         album.modified = cplRecord.modified.timestamp;
-        album.albumType = cplRecord.fields.albumType.value;
+        album.albumType = cplRecord.fields.albumType.value as AlbumType; // Unknown values are rejected when the albums are fetched
         album.albumNameEnc = cplRecord.fields.albumNameEnc.value;
         album.parentId = cplRecord.fields.parentId?.value;
         album.assets = assets;

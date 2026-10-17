@@ -1,4 +1,4 @@
-import {ErrorStruct, ERR_UNKNOWN} from "./error-codes.js";
+import {type ErrorStruct, ERR_UNKNOWN} from "./error-codes.js";
 
 /**
  * Custom error class

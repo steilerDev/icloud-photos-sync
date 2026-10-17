@@ -11,7 +11,7 @@ import {PhotosLibrary} from '../../src/lib/photos-library/photos-library';
 import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {LIBRARY_ERR} from '../../src/app/error/error-codes';
 import * as Config from '../_helpers/_config';
-import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
+import {type MockedEventManager, type MockedResourceManager, prepareResources} from '../_helpers/_general';
 
 const primaryAssetDir = path.join(Config.defaultConfig.dataDir, PRIMARY_ASSET_DIR);
 const sharedAssetDir = path.join(Config.defaultConfig.dataDir, SHARED_ASSET_DIR);

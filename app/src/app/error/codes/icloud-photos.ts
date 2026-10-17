@@ -1,4 +1,4 @@
-import {buildErrorStruct, ErrorStruct} from "../error-codes.js";
+import {buildErrorStruct, type ErrorStruct} from "../error-codes.js";
 
 const name = `iCloudPhotosError`;
 const prefix = `ICLOUD_PHOTOS`;

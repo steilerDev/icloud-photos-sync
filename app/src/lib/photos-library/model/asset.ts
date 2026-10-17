@@ -1,9 +1,9 @@
 import path from 'path';
-import {AssetID} from '../../icloud/icloud-photos/query-parser.js';
+import type {AssetID} from '../../icloud/icloud-photos/query-parser.js';
 import {FileType} from './file-type.js';
-import {Stats} from 'fs';
+import type {Stats} from 'fs';
 import fs from 'fs/promises';
-import {PEntity} from './photos-entity.js';
+import type {PEntity} from './photos-entity.js';
 import {iCPSError} from '../../../app/error/error.js';
 import {LIBRARY_ERR} from '../../../app/error/error-codes.js';
 import {Zones} from '../../icloud/icloud-photos/query-builder.js';
@@ -13,20 +13,25 @@ import {Resources} from '../../resources/main.js';
 /**
  * Representing the possible asset types
  */
-export enum AssetType {
+export const AssetType = {
     /**
      * Shows that this is the original file
      */
-    ORIG = 0,
+    ORIG: 0,
     /**
      * Shows that this is the latest edit
      */
-    EDIT = 1,
+    EDIT: 1,
     /**
      * Shows that this is a live photo
      */
-    LIVE = 2
-}
+    LIVE: 2,
+} as const;
+
+/**
+ * The values of {@link AssetType}
+ */
+export type AssetType = typeof AssetType[keyof typeof AssetType];
 /**
  * This class represents an Asset in the Photo Library
  */

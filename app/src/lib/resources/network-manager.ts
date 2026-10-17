@@ -4,11 +4,11 @@ import {jsonc} from "jsonc";
 import PQueue from "p-queue";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {errorMessage, iCPSError} from "../../app/error/error.js";
-import {iCPSAppOptions} from "../../app/factory.js";
-import {HeaderJar, Header, HttpClient, HttpRequestConfig, NetworkCapture, ResponseValidator} from "./http-client.js";
+import type {iCPSAppOptions} from "../../app/factory.js";
+import {HeaderJar, Header, HttpClient, type HttpRequestConfig, NetworkCapture, type ResponseValidator} from "./http-client.js";
 import {Resources} from "./main.js";
-import {COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse} from "./network-types.js";
-import {PhotosAccountZone, ZoneArea} from "./resource-types.js";
+import {COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, type PhotosSetupResponseZone, type SetupResponse, type SigninResponse, type TrustResponse} from "./network-types.js";
+import type {PhotosAccountZone, ZoneArea} from "./resource-types.js";
 
 /**
  * This class is responsible for keeping track of the shared network connection

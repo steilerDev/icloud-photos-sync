@@ -2,40 +2,55 @@ import {errorMessage, iCPSError} from "../../app/error/error.js";
 import {MFA_ERR, AUTH_ERR, WEB_SERVER_ERR, LIBRARY_ERR} from "../../app/error/error-codes.js";
 import {Resources} from "./main.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "./events-types.js";
-import {CPLAsset} from "../icloud/icloud-photos/query-parser.js";
-import {Asset} from "../photos-library/model/asset.js";
-import {Album} from "../photos-library/model/album.js";
-import {MFAMethod} from "../icloud/mfa/mfa-method.js";
-import {TrustedPhoneNumber} from "./network-types.js";
+import type {CPLAsset} from "../icloud/icloud-photos/query-parser.js";
+import type {Asset} from "../photos-library/model/asset.js";
+import type {Album} from "../photos-library/model/album.js";
+import type {MFAMethod} from "../icloud/mfa/mfa-method.js";
+import type {TrustedPhoneNumber} from "./network-types.js";
 import * as fs from 'fs';
 import {hostname} from 'os';
 import {randomUUID} from 'crypto';
 import {setTimeout} from 'timers/promises';
 import {jsonc} from "jsonc";
-import {FILE_ENCODING, LibraryLockOwner} from "./resource-types.js";
+import {FILE_ENCODING, type LibraryLockOwner} from "./resource-types.js";
 
-export enum StateType {
-    READY = `ready`,
-    RUNNING = `running`,
-    BLOCKED = `blocked`,
-}
+export const StateType = {
+    READY: `ready`,
+    RUNNING: `running`,
+    BLOCKED: `blocked`,
+} as const;
 
-export enum StateTrigger {
-    SYNC = `sync`,
-    AUTH = `auth`,
-}
+/**
+ * The values of {@link StateType}
+ */
+export type StateType = typeof StateType[keyof typeof StateType];
+
+export const StateTrigger = {
+    SYNC: `sync`,
+    AUTH: `auth`,
+} as const;
+
+/**
+ * The values of {@link StateTrigger}
+ */
+export type StateTrigger = typeof StateTrigger[keyof typeof StateTrigger];
 
 type LogFilter = {
     level: LogLevel | `none`,
     source?: RegExp
 }
 
-export enum LogLevel {
-    DEBUG = `debug`,
-    INFO = `info`,
-    WARN = `warn`,
-    ERROR = `error`,
-}
+export const LogLevel = {
+    DEBUG: `debug`,
+    INFO: `info`,
+    WARN: `warn`,
+    ERROR: `error`,
+} as const;
+
+/**
+ * The values of {@link LogLevel}
+ */
+export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
 
 export type LogMessage = {
     level: LogLevel,

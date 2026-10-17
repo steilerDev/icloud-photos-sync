@@ -142,7 +142,15 @@
     ],
     "typescript/restrict-plus-operands": "error",
     "typescript/restrict-template-expressions": "error",
-    "typescript/unbound-method": "error"
+    "typescript/unbound-method": "error",
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports",
+        "fixStyle": "separate-type-imports"
+      }
+    ],
+    "typescript/no-import-type-side-effects": "error"
   },
   "overrides": [
     {

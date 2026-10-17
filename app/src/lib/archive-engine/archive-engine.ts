@@ -1,10 +1,10 @@
 import {AlbumType} from '../photos-library/model/album.js';
-import {Asset} from '../photos-library/model/asset.js';
+import type {Asset} from '../photos-library/model/asset.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
-import {PhotosLibrary} from '../photos-library/photos-library.js';
+import type {PhotosLibrary} from '../photos-library/photos-library.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {iCloud} from '../icloud/icloud.js';
+import type {iCloud} from '../icloud/icloud.js';
 import {iCPSError} from '../../app/error/error.js';
 import {ARCHIVE_ERR} from '../../app/error/error-codes.js';
 import {Resources} from '../resources/main.js';

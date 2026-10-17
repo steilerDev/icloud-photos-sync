@@ -3,11 +3,16 @@ import {ENDPOINTS} from '../../resources/network-types.js';
 /**
  * Indicating, which MFA method should be used
  */
-enum MFAMethodType {
-    DEVICE = 1,
-    SMS = 2,
-    VOICE = 3
-}
+const MFAMethodType = {
+    DEVICE: 1,
+    SMS: 2,
+    VOICE: 3,
+} as const;
+
+/**
+ * The values of {@link MFAMethodType}
+ */
+type MFAMethodType = typeof MFAMethodType[keyof typeof MFAMethodType];
 
 /**
  * A class to hold the status of the currently executed MFA method

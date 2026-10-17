@@ -6,7 +6,7 @@ import path from 'path';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
-import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
+import {type MockedEventManager, type MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 import {iCPSEventArchiveEngine, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {ArchiveEngine} from '../../src/lib/archive-engine/archive-engine';

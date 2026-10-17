@@ -1,8 +1,8 @@
 
 import {test, beforeEach, expect, jest, describe} from '@jest/globals';
-import {EventManager} from "../../src/lib/resources/event-manager";
+import type {EventManager} from "../../src/lib/resources/event-manager";
 import {prepareResources} from '../_helpers/_general';
-import {iCPSEvent} from '../../src/lib/resources/events-types';
+import type {iCPSEvent} from '../../src/lib/resources/events-types';
 
 let eventManager: EventManager;
 

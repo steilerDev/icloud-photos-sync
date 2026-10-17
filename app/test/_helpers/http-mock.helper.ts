@@ -1,5 +1,5 @@
 import {isDeepStrictEqual} from 'util';
-import {HttpClient, HttpMethod, HttpRawResponse, HttpRequest, HttpResponse, ResponseValidator} from '../../src/lib/resources/http-client';
+import type {HttpClient, HttpMethod, HttpRawResponse, HttpRequest, HttpResponse, ResponseValidator} from '../../src/lib/resources/http-client';
 
 /**
  * Test only: Passes the raw response through - production code needs to use the schema backed validators provided by the Validator

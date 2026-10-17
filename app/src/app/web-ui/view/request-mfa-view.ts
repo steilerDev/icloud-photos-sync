@@ -1,5 +1,5 @@
 import {Resources} from "../../../lib/resources/main.js";
-import {TrustedPhoneNumber} from "../../../lib/resources/network-types.js";
+import type {TrustedPhoneNumber} from "../../../lib/resources/network-types.js";
 import {requestMfaCSS, requestMfaCSSDark} from "../css/request-mfa-css.js";
 import {requestMfaScript} from "../scripts/request-mfa-scripts.js";
 import {View} from "./base.js";

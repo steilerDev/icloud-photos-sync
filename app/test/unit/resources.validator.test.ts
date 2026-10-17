@@ -1,10 +1,10 @@
 import {describe, test, expect, beforeEach, jest} from '@jest/globals';
 import {Validator} from '../../src/lib/resources/validator';
-import {ErrorStruct, ICLOUD_PHOTOS_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
-import {TrustResponse} from '../../src/lib/resources/network-types';
+import {type ErrorStruct, ICLOUD_PHOTOS_ERR, VALIDATOR_ERR} from '../../src/app/error/error-codes';
+import type {TrustResponse} from '../../src/lib/resources/network-types';
 import {getICloudCookieHeader} from '../_helpers/icloud.helper';
 import * as Config from '../_helpers/_config';
-import {HttpResponse} from '../../src/lib/resources/http-client';
+import type {HttpResponse} from '../../src/lib/resources/http-client';
 
 describe(`Validator`, () => {
     let validator: Validator;

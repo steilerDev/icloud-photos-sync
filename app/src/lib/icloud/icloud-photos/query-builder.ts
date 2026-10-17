@@ -2,7 +2,7 @@
  * This file helps building queries for the iCloud Photos backend service
  */
 import {Resources} from "../../resources/main.js";
-import {PhotosAccountZone} from "../../resources/resource-types.js";
+import type {PhotosAccountZone} from "../../resources/resource-types.js";
 
 /**
  * All relevant record types for this application
@@ -60,10 +60,15 @@ export const QUERY_KEYS = [
 /**
  * Aliases for the different available libraries
  */
-export enum Zones {
-    Primary = `PrimaryLibrary`,
-    Shared = `SharedLibrary`
-}
+export const Zones = {
+    Primary: `PrimaryLibrary`,
+    Shared: `SharedLibrary`,
+} as const;
+
+/**
+ * The values of {@link Zones}
+ */
+export type Zones = typeof Zones[keyof typeof Zones];
 
 /**
  * Returns the zoneID object needed as part of requests against the iCloudPhotos backend
