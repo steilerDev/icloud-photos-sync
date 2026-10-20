@@ -81,11 +81,24 @@ class MockHandler {
 
     /**
      * Rejects matching requests like a failed connection
+     * @param code - The network error code provided by the error's cause (like Node's fetch does), e.g. EAI_AGAIN - no cause is attached if omitted
      * @returns The mock, for chaining
      */
-    networkError(): HttpMock {
-        this.respond = () => Promise.reject(new TypeError(`Network Error`));
+    networkError(code?: string): HttpMock {
+        this.respond = () => Promise.reject(code === undefined
+            ? new TypeError(`Network Error`)
+            : new TypeError(`fetch failed`, {cause: Object.assign(new Error(`getaddrinfo ${code}`), {code})}));
         return this.mock;
+    }
+
+    /**
+     * Rejects the next matching request like a failed connection, subsequent requests are matched against the following routes
+     * @param code - The network error code provided by the error's cause, see `networkError`
+     * @returns The mock, for chaining
+     */
+    networkErrorOnce(code?: string): HttpMock {
+        this.remaining = 1;
+        return this.networkError(code);
     }
 
     /**
