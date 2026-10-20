@@ -1,11 +1,11 @@
 
 import * as Ajv from 'ajv';
-import {ErrorStruct, ICLOUD_PHOTOS_ERR, VALIDATOR_ERR} from "../../app/error/error-codes.js";
+import {type ErrorStruct, ICLOUD_PHOTOS_ERR, VALIDATOR_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
-import {HttpResponse, ResponseValidator} from "./http-client.js";
-import {AuthInformationResponse, CloudKitRecordsResponse, COOKIE_KEYS, EscrowCompleteResponse, EscrowInitResponse, HealthCheckPingResponse, LogoutResponse, MFASubmitResponse, PCSResponse, PhotosSetupResponse, ResendMFADeviceResponse, ResendMFAPhoneResponse, SetupResponse, SigninInitResponse, SigninResponse, TrustResponse} from "./network-types.js";
-import {ResourceFile} from "./resource-types.js";
-import {PushSubscription} from './web-server-types.js';
+import type {HttpResponse, ResponseValidator} from "./http-client.js";
+import {type AuthInformationResponse, type CloudKitRecordsResponse, COOKIE_KEYS, type EscrowCompleteResponse, type EscrowInitResponse, type HealthCheckPingResponse, type LogoutResponse, type MFASubmitResponse, type PCSResponse, type PhotosSetupResponse, type ResendMFADeviceResponse, type ResendMFAPhoneResponse, type SetupResponse, type SigninInitResponse, type SigninResponse, type TrustResponse} from "./network-types.js";
+import type {ResourceFile} from "./resource-types.js";
+import type {PushSubscription} from './web-server-types.js';
 import PCSResponseSchema from "./schemas/pcs-response.json" with { type: "json" };
 import PhotosSetupResponseSchema from "./schemas/photos-setup-response.json" with { type: "json" };
 import AuthInformationResponseSchema from "./schemas/auth-information-response.json" with { type: "json" };
@@ -174,7 +174,7 @@ export class Validator {
 
         if (validator.errors) {
             throw new iCPSError(errorStruct)
-                .addMessage(`${validator.errors![0].message} (${validator.errors![0].instancePath})`)
+                .addMessage(`${validator.errors[0].message} (${validator.errors[0].instancePath})`)
                 .addContext(`data`, data);
         }
 

@@ -1,36 +1,56 @@
 import PackageData from '../../../package.json' with { type: 'json' };
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
-import {iCPSAppOptions} from "../../app/factory.js";
-import {EventManager, ListenerFunction} from "./event-manager.js";
-import {iCPSEvent, iCPSEventLog} from "./events-types.js";
+import type {iCPSAppOptions} from "../../app/factory.js";
+import {EventManager, type ListenerFunction} from "./event-manager.js";
+import {type iCPSEvent, iCPSEventLog} from "./events-types.js";
 import {NetworkManager} from "./network-manager.js";
 import {ResourceManager} from "./resource-manager.js";
 import {StateManager} from './state-manager.js';
 import {Validator} from "./validator.js";
 import {readFileSync, statSync} from 'fs'
 import {jsonc} from "jsonc";
-import {FILE_ENCODING, LibraryLockOwner} from "./resource-types.js";
-
-/* eslint-disable @typescript-eslint/no-namespace */
+import {FILE_ENCODING, type LibraryLockOwner} from "./resource-types.js";
 
 /**
- * This namespace handles the static access to the singleton functions of the ResourceManager, NetworkManager, Validator and EventManager
+ * Possible regions for this tool to operate in
  */
-export namespace Resources {
+const Region = {
+    /**
+     * Will use icloud.com
+     */
+    WORLD: `world`,
+    /**
+     * Will use icloud.com.cn
+     */
+    CHINA: `china`,
+} as const;
+
+/**
+ * This object handles the static access to the singleton functions of the ResourceManager, NetworkManager, Validator and EventManager.
+ * It is a plain (mutable) object, so tests can replace the instances and spy on its functions. Its types live in the namespace of the same name below.
+ */
+export const Resources = {
     /**
      * The singleton instances of the shared resources
      */
-    export let _instances: Resources.Types.Instances;
+    _instances: undefined as unknown as Resources.Types.Instances,
 
     /**
      * Static package info
      */
-    export const PackageInfo: Resources.Types.PackageInfo = {
+    PackageInfo: {
         name: PackageData.name,
         version: PackageData.version,
         description: PackageData.description,
-    };
+    } as Resources.Types.PackageInfo,
+
+    /**
+     * Runtime values, whose types are part of {@link Resources.Types}
+     */
+    Types: {
+        Region,
+    },
 
     /**
      * Prepares the global singleton instances. This includes the ResourceManager, NetworkManager, Validator and EventManager.
@@ -39,97 +59,98 @@ export namespace Resources {
      * @returns The singleton instances
      * @throws If the function is called with an already initiated singleton
      */
-    export function setup(appOptions: iCPSAppOptions): Resources.Types.Instances {
-        if (_instances) {
+    setup(appOptions: iCPSAppOptions): Resources.Types.Instances {
+        if (Resources._instances) {
             throw new iCPSError(RESOURCES_ERR.ALREADY_INITIATED);
         }
 
-        _instances = {} as Resources.Types.Instances; // Creating one-by one, so they are available as soon as possible
-        _instances.event = new EventManager();
-        _instances.state = new StateManager();
-        _instances.validator = new Validator();
-        _instances.manager = new ResourceManager(appOptions);
-        _instances.network = new NetworkManager(appOptions);
+        const instances = {} as Resources.Types.Instances; // Creating one-by one, so they are available as soon as possible
+        Resources._instances = instances;
+        instances.event = new EventManager();
+        instances.state = new StateManager();
+        instances.validator = new Validator();
+        instances.manager = new ResourceManager(appOptions);
+        instances.network = new NetworkManager(appOptions);
 
-        return _instances;
-    }
+        return instances;
+    },
 
     /**
      * @returns The singleton instances of the shared resources
      * @throws If the function is called before the singleton is initiated
      */
-    export function instances(): Resources.Types.Instances {
-        if (!_instances) {
+    instances(): Resources.Types.Instances {
+        if (!Resources._instances) {
             throw new iCPSError(RESOURCES_ERR.NOT_INITIATED);
         }
 
-        return _instances;
-    }
+        return Resources._instances;
+    },
 
     /**
      * @returns The singleton instances of the shared event manager
      * @throws If the function is called before the singleton is initiated
      */
-    export function event(): EventManager {
-        const {event} = instances();
+    event(): EventManager {
+        const {event} = Resources.instances();
         if (!event) {
             throw new iCPSError(RESOURCES_ERR.EVENT_NOT_INITIATED);
         }
 
         return event;
-    }
+    },
 
     /**
      * @returns The singleton instances of the shared network manager
      * @throws If the function is called before the singleton is initiated
      */
-    export function network(): NetworkManager {
-        const {network} = instances();
+    network(): NetworkManager {
+        const {network} = Resources.instances();
         if (!network) {
             throw new iCPSError(RESOURCES_ERR.NETWORK_NOT_INITIATED);
         }
 
         return network;
-    }
+    },
 
     /**
      * @returns The singleton instances of the shared resource manager
      * @throws If the function is called before the singleton is initiated
      */
-    export function manager(): ResourceManager {
-        const {manager} = instances();
+    manager(): ResourceManager {
+        const {manager} = Resources.instances();
         if (!manager) {
             throw new iCPSError(RESOURCES_ERR.RESOURCE_NOT_INITIATED);
         }
 
         return manager;
-    }
+    },
 
     /**
      * @returns The singleton instances of the shared validator
      * @throws If the function is called before the singleton is initiated
      */
-    export function validator(): Validator {
-        const {validator} = instances();
+    validator(): Validator {
+        const {validator} = Resources.instances();
         if (!validator) {
             throw new iCPSError(RESOURCES_ERR.VALIDATOR_NOT_INITIATED);
         }
 
         return validator;
-    }
+    },
 
     /**
      * @returns THe Singleton instance of the shared state
      * @throws If the function is called before the singleton is initiated
      */
-    export function state(): StateManager {
-        const {state} = instances()
+    state(): StateManager {
+        const {state} = Resources.instances()
         if(!state) {
             throw new iCPSError(RESOURCES_ERR.STATE_NOT_INITIATED);
         }
 
         return state;
-    }
+    },
 
     /**
      * Returns a logger interface, that allows emitting log events to the event bus by providing a source object
@@ -137,29 +158,29 @@ export namespace Resources {
      * @param source - The source of the log message - either an object or a string
      * @returns The logger interface
      */
-    export function logger(source: any | string): Resources.Types.Logger {
+    logger(source: object | string): Resources.Types.Logger {
         const format = function (...args: unknown[]): string {
             return args.map(arg => String(arg)).join(` `);
         };
 
         return {
-            log(...args: any[]) {
+            log(...args: any[]): void {
                 Resources.event().emit(iCPSEventLog.INFO, source, format(args));
             },
-            debug(...args: any[]) {
+            debug(...args: any[]): void {
                 Resources.event().emit(iCPSEventLog.DEBUG, source, format(args));
             },
-            info(...args: any[]) {
+            info(...args: any[]): void {
                 Resources.event().emit(iCPSEventLog.INFO, source, format(args));
             },
-            warn(...args: any[]) {
+            warn(...args: any[]): void {
                 Resources.event().emit(iCPSEventLog.WARN, source, format(args));
             },
-            error(...args: any[]) {
+            error(...args: any[]): void {
                 Resources.event().emit(iCPSEventLog.ERROR, source, format(args));
             },
         };
-    }
+    },
 
     /**
      * Returns an event interface, that allows listening to events emitted on the event bus, while binding the listener to the registry
@@ -167,22 +188,22 @@ export namespace Resources {
      * @param listenerObject - The source of the registration request, used to track the listeners and enable cleanup
      * @returns The events interface
      */
-    export function events(listenerObject: any): Resources.Types.Events {
+    events(listenerObject: any): Resources.Types.Events {
         return {
-            on(event: iCPSEvent, listener: ListenerFunction) {
+            on(event: iCPSEvent, listener: ListenerFunction): Resources.Types.Events {
                 Resources.event().on(listenerObject, event, listener);
                 return Resources.events(listenerObject); // Returning for chaining
             },
-            once(event: iCPSEvent, listener: ListenerFunction) {
+            once(event: iCPSEvent, listener: ListenerFunction): Resources.Types.Events {
                 Resources.event().once(listenerObject, event, listener);
                 return Resources.events(listenerObject); // Returning for chaining
             },
-            removeListeners(event?: iCPSEvent) {
+            removeListeners(event?: iCPSEvent): Resources.Types.Events {
                 Resources.event().removeListenersFromRegistry(listenerObject, event);
                 return Resources.events(listenerObject); // Returning for chaining
             },
         };
-    }
+    },
 
     /**
      * Emits an event on the central event bus
@@ -190,24 +211,79 @@ export namespace Resources {
      * @param args - Optional arguments to pass to the event
      * @returns True if the event had listeners
      */
-    export function emit(event: iCPSEvent, ...args: any[]): boolean {
+    emit(event: iCPSEvent, ...args: any[]): boolean {
         return Resources.event().emit(event, ...args);
-    }
+    },
 
     /**
      * Can be used to check if a process is running
      * @param pid - The process id to check
      * @returns True if the process is running or the user does not have the necessary permissions to check this, false otherwise
      */
-    export function pidIsRunning(pid: number): boolean {
+    pidIsRunning(pid: number): boolean {
         try {
             process.kill(pid, 0);
             return true;
         } catch (e) {
             return (e as NodeJS.ErrnoException).code === `EPERM`;
         }
+    },
+
+    /**
+     * Returns information on the library's locking status
+     * @returns Information about the lock file path, its existence, the locking process and its last heartbeat
+     */
+    getLockStat(): Resources.LockStat {
+        const {lockFilePath} = Resources.manager();
+        let lastHeartbeat: number;
+        try {
+            const stat = statSync(lockFilePath);
+            if (!stat.isFile()) {
+                return {lockFilePath, lockFileExists: false, lastHeartbeat: NaN};
+            }
+
+            lastHeartbeat = stat.mtimeMs;
+        } catch {
+            return {lockFilePath, lockFileExists: false, lastHeartbeat: NaN};
+        }
+
+        return {
+            lockFilePath,
+            lockFileExists: true,
+            owner: parseLockOwner(readFileSync(lockFilePath, FILE_ENCODING)),
+            lastHeartbeat,
+        };
+    },
+};
+
+/**
+ * Parses the content of the lock file
+ * @param content - The content of the lock file - either the serialized lock owner or only the process id (as written by previous versions)
+ * @returns The lock owner - with a pid of NaN, if the content cannot be parsed
+ */
+function parseLockOwner(content: string): LibraryLockOwner {
+    if (/^\s*\d+\s*$/.test(content)) {
+        return {pid: parseInt(content, 10)};
     }
 
+    try {
+        const owner = jsonc.parse(content) as Partial<LibraryLockOwner>;
+        return {
+            instance: typeof owner?.instance === `string` ? owner.instance : undefined,
+            pid: typeof owner?.pid === `number` ? owner.pid : NaN,
+            hostname: typeof owner?.hostname === `string` ? owner.hostname : undefined,
+        };
+    } catch {
+        return {pid: NaN};
+    }
+}
+
+/* eslint-disable @typescript-eslint/no-namespace */
+
+/**
+ * The types belonging to the {@link Resources} object - a type-only namespace, which is erased at runtime
+ */
+export namespace Resources {
     /**
      * Information about the library's locking status
      */
@@ -228,54 +304,6 @@ export namespace Resources {
          * The time of the last heartbeat (modification time of the lock file) in ms since epoch - NaN, if the lock file does not exist
          */
         lastHeartbeat: number,
-    }
-
-    /**
-     * Returns information on the library's locking status
-     * @returns Information about the lock file path, its existence, the locking process and its last heartbeat
-     */
-    export function getLockStat(): LockStat {
-        const {lockFilePath} = Resources.manager();
-        let lastHeartbeat: number;
-        try {
-            const stat = statSync(lockFilePath);
-            if (!stat.isFile()) {
-                return {lockFilePath, lockFileExists: false, lastHeartbeat: NaN};
-            }
-
-            lastHeartbeat = stat.mtimeMs;
-        } catch {
-            return {lockFilePath, lockFileExists: false, lastHeartbeat: NaN};
-        }
-
-        return {
-            lockFilePath,
-            lockFileExists: true,
-            owner: parseLockOwner(readFileSync(lockFilePath, FILE_ENCODING)),
-            lastHeartbeat,
-        };
-    }
-
-    /**
-     * Parses the content of the lock file
-     * @param content - The content of the lock file - either the serialized lock owner or only the process id (as written by previous versions)
-     * @returns The lock owner - with a pid of NaN, if the content cannot be parsed
-     */
-    function parseLockOwner(content: string): LibraryLockOwner {
-        if (/^\s*\d+\s*$/.test(content)) {
-            return {pid: parseInt(content, 10)};
-        }
-
-        try {
-            const owner = jsonc.parse(content) as Partial<LibraryLockOwner>;
-            return {
-                instance: typeof owner?.instance === `string` ? owner.instance : undefined,
-                pid: typeof owner?.pid === `number` ? owner.pid : NaN,
-                hostname: typeof owner?.hostname === `string` ? owner.hostname : undefined,
-            };
-        } catch {
-            return {pid: NaN};
-        }
     }
 
     /**
@@ -382,17 +410,8 @@ export namespace Resources {
         }
 
         /**
-        * Possible regions for this tool to operate in
-        */
-        export enum Region {
-        /**
-         * Will use icloud.com
+         * Possible regions for this tool to operate in (see {@link Resources.Types.Region} for the values)
          */
-            WORLD = `world`,
-            /**
-         * Will use icloud.com.cn
-         */
-            CHINA = `china`,
-        }
+        export type Region = typeof Region[keyof typeof Region];
     }
 }

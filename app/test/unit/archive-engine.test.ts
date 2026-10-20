@@ -6,7 +6,7 @@ import path from 'path';
 import {Asset, AssetType} from '../../src/lib/photos-library/model/asset';
 import {FileType} from '../../src/lib/photos-library/model/file-type';
 import fs from 'fs';
-import {MockedEventManager, MockedResourceManager, prepareResources} from '../_helpers/_general';
+import {type MockedEventManager, type MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {Zones} from '../../src/lib/icloud/icloud-photos/query-builder';
 import {iCPSEventArchiveEngine, iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {ArchiveEngine} from '../../src/lib/archive-engine/archive-engine';
@@ -562,7 +562,7 @@ describe.each([{
                 .mockReturnValueOnce(asset1.recordName)
                 .mockReturnValueOnce(asset2.recordName)
                 .mockReturnValueOnce(asset3.recordName);
-            archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.reject());
+            archiveEngine.icloud.photos.deleteAssets = jest.fn(() => Promise.reject(new Error(`Remote deletion failed`)));
 
             await expect(archiveEngine.archivePath(path.join(Config.defaultConfig.dataDir, `Random`), [asset1, asset2, asset3])).rejects.toThrow(/^Unable to delete remote assets$/);
 

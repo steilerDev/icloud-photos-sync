@@ -2,9 +2,9 @@ import {jsonc} from 'jsonc';
 import {AUTH_ERR, ICLOUD_PHOTOS_ERR, MFA_ERR} from '../../app/error/error-codes.js';
 import {iCPSError} from '../../app/error/error.js';
 import {iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning} from '../resources/events-types.js';
-import {HttpRequestConfig, HttpResponse, isHttpError} from '../resources/http-client.js';
+import {type HttpRequestConfig, type HttpResponse, isHttpError} from '../resources/http-client.js';
 import {Resources} from '../resources/main.js';
-import {COOKIE_KEYS, ENDPOINTS, TrustedPhoneNumber} from '../resources/network-types.js';
+import {COOKIE_KEYS, ENDPOINTS, type TrustedPhoneNumber} from '../resources/network-types.js';
 import {iCloudPhotos} from './icloud-photos/icloud-photos.js';
 import {iCloudCrypto} from './icloud.crypto.js';
 import {MFAMethod} from './mfa/mfa-method.js';
@@ -34,14 +34,13 @@ export class iCloud {
     mfaTimeout?: NodeJS.Timeout;
 
     /**
-     * Creates a new iCloud Object
-     * @param ignoreFailOnMfa - If set to true, the authentication will still continue even if MFA is required and the failOnMfa flag is set
-     * @emits iCPSEventCloud.ERROR - If the MFA code is required and the failOnMfa flag is set - the iCPSError is provided as argument
+     * Creates a new iCloud Object and registers the listeners driving the authentication flow
      */
     constructor() {
+        // The handlers below never reject: they catch their errors and emit iCPSEventCloud.ERROR instead
         Resources.events(this)
-            .on(iCPSEventMFA.MFA_RECEIVED, this.submitMFA.bind(this))
-            .on(iCPSEventMFA.MFA_RESEND, this.resendMFA.bind(this));
+            .on(iCPSEventMFA.MFA_RECEIVED, (method: MFAMethod, mfa: string) => void this.submitMFA(method, mfa))
+            .on(iCPSEventMFA.MFA_RESEND, (method: MFAMethod) => void this.resendMFA(method));
 
         this.photos = new iCloudPhotos();
 
@@ -53,21 +52,15 @@ export class iCloud {
                     Resources.emit(iCPSEventMFA.MFA_NOT_PROVIDED, new iCPSError(MFA_ERR.MFA_TIMEOUT));
                 }, Resources.manager().mfaTimeout * 1000);
             })
-            .on(iCPSEventCloud.TRUSTED, async () => {
-                await this.setupAccount();
+            .on(iCPSEventCloud.TRUSTED, () => void this.setupAccount())
+            .on(iCPSEventCloud.AUTHENTICATED, () => void this.getTokens())
+            .on(iCPSEventCloud.ACCOUNT_READY, () => void this.getPhotosReady())
+            .on(iCPSEventCloud.SESSION_EXPIRED, () => {
+                // authenticate() resolves with the readiness of the new session and rejects if it fails - that failure is
+                // already emitted as iCPSEventCloud.ERROR (observed by whoever awaits getReady()), so it must not escape here
+                this.authenticate().catch(() => {});
             })
-            .on(iCPSEventCloud.AUTHENTICATED, async () => {
-                await this.getTokens();
-            })
-            .on(iCPSEventCloud.ACCOUNT_READY, async () => {
-                await this.getPhotosReady();
-            })
-            .on(iCPSEventCloud.SESSION_EXPIRED, async () => {
-                await this.authenticate();
-            })
-            .on(iCPSEventCloud.PCS_REQUIRED, async () => {
-                await this.acquirePCSCookies();
-            });
+            .on(iCPSEventCloud.PCS_REQUIRED, () => void this.acquirePCSCookies());
     }
 
     /**
@@ -303,7 +296,7 @@ export class iCloud {
      * @emits iCPSEventRuntimeWarning.MFA_ERROR - When the resend failed - provides iCPSError as argument
      */
     async resendMFA(method: MFAMethod) {
-        Resources.logger(this).info(`Resending MFA code with ${method}`);
+        Resources.logger(this).info(`Resending MFA code with ${method.toString()}`);
 
         const url = method.getResendURL();
         const config: HttpRequestConfig = {
@@ -385,7 +378,7 @@ export class iCloud {
             if (isHttpError(err) && (err.response?.status === 400 || this.hasServiceError(err.response?.data, MFA_INCORRECT_CODE_ERROR))) {
                 const augmentedErr = new iCPSError(MFA_ERR.CODE_REJECTED).addCause(err);
                 if (Array.isArray(err.response?.data?.service_errors)) {
-                    augmentedErr.addMessage(...err.response!.data.service_errors.map((serviceError: any) => serviceError?.message));
+                    augmentedErr.addMessage(...err.response.data.service_errors.map((serviceError: any) => serviceError?.message));
                 }
 
                 Resources.emit(iCPSEventCloud.ERROR, augmentedErr);

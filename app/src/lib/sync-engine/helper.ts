@@ -1,10 +1,10 @@
 import path from "path";
 import {LIBRARY_ERR} from "../../app/error/error-codes.js";
 import {iCPSError} from "../../app/error/error.js";
-import {CPLAlbum, CPLAsset, CPLMaster} from "../icloud/icloud-photos/query-parser.js";
+import type {CPLAlbum, CPLAsset, CPLMaster} from "../icloud/icloud-photos/query-parser.js";
 import {Album} from "../photos-library/model/album.js";
 import {Asset, AssetType} from "../photos-library/model/asset.js";
-import {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../photos-library/model/photos-entity.js";
+import type {PEntity, PLibraryEntities, PLibraryProcessingQueues} from "../photos-library/model/photos-entity.js";
 import {Resources} from "../resources/main.js";
 import {iCPSEventRuntimeWarning} from "../resources/events-types.js";
 
@@ -58,6 +58,7 @@ export const SyncEngineHelper = {
  * @throws The rejection reason of the first rejected promise (in order of the input), once all promises have settled
  */
 async function settleAll<T extends readonly unknown[]>(promises: readonly [...{[K in keyof T]: Promise<T[K]>}]): Promise<T> {
+    // oxlint-disable-next-line typescript/await-thenable -- false positive: the rule does not resolve the mapped tuple, every element is a Promise
     const results: PromiseSettledResult<unknown>[] = await Promise.allSettled(promises);
     const rejected = results.find((result): result is PromiseRejectedResult => result.status === `rejected`);
     if (rejected) {

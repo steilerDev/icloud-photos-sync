@@ -16,335 +16,390 @@ export type iCPSEvent = iCPSEventArchiveEngine
 /**
  * Possible log events
  */
-export enum iCPSEventLog {
+export const iCPSEventLog = {
     /**
      * Emitted when a log message with level debug was created
      */
-    DEBUG = `log-debug`,
+    DEBUG: `log-debug`,
     /**
      * Emitted when a log message with level info was created
      */
-    INFO = `log-info`,
+    INFO: `log-info`,
     /**
      * Emitted when a log message with level warn was created
      */
-    WARN = `log-warn`,
+    WARN: `log-warn`,
     /**
      * Emitted when a log message with level error was created
      */
-    ERROR = `log-error`
-}
+    ERROR: `log-error`,
+} as const;
+
+/**
+ * The values of {@link iCPSEventLog}
+ */
+export type iCPSEventLog = typeof iCPSEventLog[keyof typeof iCPSEventLog];
 
 /**
  * Possible iCloud events
  */
-export enum iCPSEventCloud {
+export const iCPSEventCloud = {
     /**
      * Emitted when the iCloud authentication process has started
      */
-    AUTHENTICATION_STARTED = `icloud-auth_started`,
+    AUTHENTICATION_STARTED: `icloud-auth_started`,
     /**
      * Emitted when the iCloud authentication process requires MFA input. Provides an array of TrustedPhoneNumber objects
      */
-    MFA_REQUIRED = `icloud-mfa_req`,
+    MFA_REQUIRED: `icloud-mfa_req`,
     /**
      * Emitted when the iCloud authentication process has completed after the MFA code has been submitted successfully
      */
-    AUTHENTICATED = `icloud-auth_done`,
+    AUTHENTICATED: `icloud-auth_done`,
     /**
      * Emitted when the iCloud authentication trusted this device and stored the trust token for future requests - provides the trust token as argument
      */
-    TRUSTED = `icloud-trusted`,
+    TRUSTED: `icloud-trusted`,
     /**
      * Emitted when ADP is enabled and PCS Cookies are required
      */
-    PCS_REQUIRED = `icloud-pcs_req`,
+    PCS_REQUIRED: `icloud-pcs_req`,
     /**
      * Emitted when the access request has not been granted and the cookies are not ready yet
      */
-    PCS_NOT_READY = `icloud-pcs_not_ready`,
+    PCS_NOT_READY: `icloud-pcs_not_ready`,
     /**
      * Emitted when the iCloud account information have been retrieved
      */
-    ACCOUNT_READY = `icloud-account_ready`,
+    ACCOUNT_READY: `icloud-account_ready`,
     /**
      * Emitted if the session token expired
      */
-    SESSION_EXPIRED = `icloud-session_expired`,
+    SESSION_EXPIRED: `icloud-session_expired`,
     /**
      * Emitted when the iCloud connection has experienced an error - provides an iCPSError as argument
      */
-    ERROR = `icloud-error`,
-}
+    ERROR: `icloud-error`,
+} as const;
+
+/**
+ * The values of {@link iCPSEventCloud}
+ */
+export type iCPSEventCloud = typeof iCPSEventCloud[keyof typeof iCPSEventCloud];
 
 /**
  * Possible MFA server events
  */
-export enum iCPSEventMFA {
+export const iCPSEventMFA = {
     /**
      * Emitted when the app received a valid MFA code - provides the method and code as arguments
      */
-    MFA_RECEIVED = `mfa-received`,
+    MFA_RECEIVED: `mfa-received`,
     /**
      * Emitted when the app received a request to resend the MFA code - provides the method as argument
      */
-    MFA_RESEND = `mfa-resend`,
+    MFA_RESEND: `mfa-resend`,
     /**
      * Emitted when the app did not received a valid MFA code within the timeout period
      */
-    MFA_NOT_PROVIDED = `mfa-not_provided`,
-}
+    MFA_NOT_PROVIDED: `mfa-not_provided`,
+} as const;
 
-export enum iCPSEventWebServer {
+/**
+ * The values of {@link iCPSEventMFA}
+ */
+export type iCPSEventMFA = typeof iCPSEventMFA[keyof typeof iCPSEventMFA];
+
+export const iCPSEventWebServer = {
     /**
      * Emitted when the Web server has started - provides the port as argument
      */
-    STARTED = `web-started`,
+    STARTED: `web-started`,
 
     /**
      * Emitted when a sync is requested via the web server
      */
-    SYNC_REQUESTED = `web-sync_requested`,
+    SYNC_REQUESTED: `web-sync_requested`,
 
     /**
      * Emitted when a reauthentication is requested
      */
-    REAUTH_REQUESTED = `web-reauth_requested`,
+    REAUTH_REQUESTED: `web-reauth_requested`,
 
     /**
      * Emitted when reauth failed
      * provides the error as argument
      */
-    REAUTH_ERROR = `web-reauth_failed`,
-}
+    REAUTH_ERROR: `web-reauth_failed`,
+} as const;
+
+/**
+ * The values of {@link iCPSEventWebServer}
+ */
+export type iCPSEventWebServer = typeof iCPSEventWebServer[keyof typeof iCPSEventWebServer];
 
 /**
  * Possible icloud photos events
  */
-export enum iCPSEventPhotos {
+export const iCPSEventPhotos = {
     /**
      * Emitted when the photos library has completed it's setup
      */
-    SETUP_COMPLETED = `photos-setup-complete`,
+    SETUP_COMPLETED: `photos-setup-complete`,
     /**
      * Emitted when the photos library is ready to use
      */
-    READY = `photos-ready`,
+    READY: `photos-ready`,
     /**
      * Emitted when the icloud photos library has experienced an error - provides an iCPSError as argument
      */
-    ERROR = `error-photos`,
-}
+    ERROR: `error-photos`,
+} as const;
+
+/**
+ * The values of {@link iCPSEventPhotos}
+ */
+export type iCPSEventPhotos = typeof iCPSEventPhotos[keyof typeof iCPSEventPhotos];
 
 /**
  * Runtime warnings, that are handled appropriately (e.g. by printing a summary and/or logging to the console and/or file)
  */
-export enum iCPSEventRuntimeWarning {
+export const iCPSEventRuntimeWarning = {
     /**
      * Emitted, if the number of remote assets is not matching our expectation during sync - provides the album id, number of expected assets, actual CPL Assets and actual CPL Masters
      */
-    COUNT_MISMATCH = `warn-count_mismatch`,
+    COUNT_MISMATCH: `warn-count_mismatch`,
     /**
      * Emitted, if a local asset could not be loaded - provides the error and file path as arguments
      */
-    LIBRARY_LOAD_ERROR = `warn-library_load_error`,
+    LIBRARY_LOAD_ERROR: `warn-library_load_error`,
     /**
      * Emitted, if an extraneous file was found while loading the album tree - provides the parent directory as argument
      */
-    EXTRANEOUS_FILE = `warn-extraneous_file`,
+    EXTRANEOUS_FILE: `warn-extraneous_file`,
     /**
      * Emitted, if an iCloud asset could not be loaded - provides the error, asset and master object as arguments
      */
-    ICLOUD_LOAD_ERROR = `warn-icloud_load_error`,
+    ICLOUD_LOAD_ERROR: `warn-icloud_load_error`,
     /**
      * Emitted when the write process has experienced an error while verifying a written asset - provides the error and asset as argument
      */
-    WRITE_ASSET_ERROR = `warn-write_asset_error`,
+    WRITE_ASSET_ERROR: `warn-write_asset_error`,
     /**
      * Emitted when the write process has experienced an error while writing an album - provides the error and album as argument
      */
-    WRITE_ALBUM_ERROR = `warn-write_album_error`,
+    WRITE_ALBUM_ERROR: `warn-write_album_error`,
     /**
      * Emitted when an asset cannot be linked to an album - provides the error, src and destination path as arguments
      */
-    LINK_ERROR = `warn-link_error`,
+    LINK_ERROR: `warn-link_error`,
     /**
      * Emitted when a filetype served by iCloud is unknown to the script - provides the extension and descriptor as arguments
      */
-    FILETYPE_ERROR = `warn-filetype_error`,
+    FILETYPE_ERROR: `warn-filetype_error`,
     /**
      * Emitted when there is an error related to the MFA flow - provides an iCPS error as argument
      */
-    MFA_ERROR = `warn-mfa_error`,
+    MFA_ERROR: `warn-mfa_error`,
     /**
      * Emitted when there is an error related to the web server - provides an iCPS error as argument
      */
-    WEB_SERVER_ERROR = `warn-web_server_error`,
+    WEB_SERVER_ERROR: `warn-web_server_error`,
     /**
      * Emitted when an asset could not be archived - provides the error and errored asset file path as argument
      */
-    ARCHIVE_ASSET_ERROR = `warn-archive_asset_error`,
+    ARCHIVE_ASSET_ERROR: `warn-archive_asset_error`,
     /**
      * Emitted when there is a problem reading/writing the resource file - provides the iCPSError as argument
      */
-    RESOURCE_FILE_ERROR = `warn-resource_file_error`,
+    RESOURCE_FILE_ERROR: `warn-resource_file_error`,
     /**
      * Emitted when there is a problem acquiring the trusted phone numbers of an account - provides the iCPSError as argument
      */
-    TRUSTED_PHONE_NUMBERS_ERROR = `warn-trusted_phone_numbers_error`,
+    TRUSTED_PHONE_NUMBERS_ERROR: `warn-trusted_phone_numbers_error`,
     /**
      * Emitted when iCloud reports that indexing of a zone is still running - provides the iCPSError (including zone and progress) as argument
      */
-    INDEXING_IN_PROGRESS = `warn-indexing_in_progress`,
+    INDEXING_IN_PROGRESS: `warn-indexing_in_progress`,
     /**
      * Emitted when the daemon schedule triggers syncs more often than once per hour - provides the iCPSError as argument
      */
-    SCHEDULE_FREQUENCY = `warn-schedule_frequency`
-}
+    SCHEDULE_FREQUENCY: `warn-schedule_frequency`,
+} as const;
+
+/**
+ * The values of {@link iCPSEventRuntimeWarning}
+ */
+export type iCPSEventRuntimeWarning = typeof iCPSEventRuntimeWarning[keyof typeof iCPSEventRuntimeWarning];
 
 /**
  * Runtime errors
  */
-export enum iCPSEventRuntimeError {
+export const iCPSEventRuntimeError = {
     /**
      * Emitted upon a fatal error during the scheduled execution - provides an iCPSError as argument
      * Should only be handled by the error handler
      */
-    SCHEDULED_ERROR = `scheduled-error`,
+    SCHEDULED_ERROR: `scheduled-error`,
     /**
      * Emitted upon after an unexpected error was handled by the error handler for it to get logged - provides an iCPSError as argument
      * Should be used to log/print fatal errors
      */
-    HANDLED_ERROR = `error-handled`,
-}
+    HANDLED_ERROR: `error-handled`,
+} as const;
+
+/**
+ * The values of {@link iCPSEventRuntimeError}
+ */
+export type iCPSEventRuntimeError = typeof iCPSEventRuntimeError[keyof typeof iCPSEventRuntimeError];
 
 /**
  * Possible sync engine events
  */
-export enum iCPSEventSyncEngine {
+export const iCPSEventSyncEngine = {
     /**
      * Emitted when the sync process has started
      */
-    START = `sync-start`,
+    START: `sync-start`,
     /**
      * Emitted when the fetch and load process has started
      */
-    FETCH_N_LOAD = `sync-fetch_n_load`,
+    FETCH_N_LOAD: `sync-fetch_n_load`,
     /**
      * Emitted when the fetch and load process has completed - provides the number of remote assets and albums as well as the number of local assets and albums as arguments
      */
-    FETCH_N_LOAD_COMPLETED = `sync-fetch_n_load_completed`,
+    FETCH_N_LOAD_COMPLETED: `sync-fetch_n_load_completed`,
     /**
      * Emitted when the diff process has started
      */
-    DIFF = `sync-diff`,
+    DIFF: `sync-diff`,
     /**
      * Emitted when the diff process has completed
      */
-    DIFF_COMPLETED = `sync-diff_completed`,
+    DIFF_COMPLETED: `sync-diff_completed`,
     /**
      * Emitted when the write process has started
      */
-    WRITE = `sync-write`,
+    WRITE: `sync-write`,
     /**
      * Emitted when the write process has started writing assets - provides the number of assets to be deleted, added and kept as arguments
      */
-    WRITE_ASSETS = `sync-write_assets`,
+    WRITE_ASSETS: `sync-write_assets`,
     /**
      * Emitted when the write process has completed writing an asset - provides the asset name as argument
      */
-    WRITE_ASSET_COMPLETED = `sync-write_asset_completed`,
+    WRITE_ASSET_COMPLETED: `sync-write_asset_completed`,
     /**
      * Emitted when the write process has completed writing all assets
      */
-    WRITE_ASSETS_COMPLETED = `sync-write_assets_completed`,
+    WRITE_ASSETS_COMPLETED: `sync-write_assets_completed`,
     /**
      * Emitted when the write process has started writing albums - provides the number of albums to be deleted, added and kept as arguments
      */
-    WRITE_ALBUMS = `sync-write_albums`,
+    WRITE_ALBUMS: `sync-write_albums`,
     /**
      * Emitted when the write process has completed writing all albums
      */
-    WRITE_ALBUMS_COMPLETED = `sync-write_albums_completed`,
+    WRITE_ALBUMS_COMPLETED: `sync-write_albums_completed`,
     /**
      * Emitted when the write process has completed
      */
-    WRITE_COMPLETED = `sync-write_completed`,
+    WRITE_COMPLETED: `sync-write_completed`,
     /**
      * Emitted when the sync process has completed
      */
-    DONE = `sync-done`,
+    DONE: `sync-done`,
     /**
      * Emitted when the sync process has experienced an error and will retry - provides the number of retries as argument as well as the iCPSError leading to the retry
      */
-    RETRY = `sync-retry`,
+    RETRY: `sync-retry`,
     /**
      * Emitted when the download URLs expired during the sync and the remote state is refreshed - this does not count as a retry - provides the number of assets written since the last refresh as argument
      */
-    REFRESH = `sync-refresh`,
-}
+    REFRESH: `sync-refresh`,
+} as const;
+
+/**
+ * The values of {@link iCPSEventSyncEngine}
+ */
+export type iCPSEventSyncEngine = typeof iCPSEventSyncEngine[keyof typeof iCPSEventSyncEngine];
 
 /**
  * Possible archive engine events
  */
-export enum iCPSEventArchiveEngine {
+export const iCPSEventArchiveEngine = {
     /**
      * Emitted when the archive engine starts archiving a path - provides the path as argument
      */
-    ARCHIVE_START = `archive-start`,
+    ARCHIVE_START: `archive-start`,
     /**
      * Emitted when the archive engine starts persisting assets - provides the number of assets as argument
      */
-    PERSISTING_START = `archive-persist_start`,
+    PERSISTING_START: `archive-persist_start`,
     /**
      * Emitted when the archive engine starts deleting remote assets - provides the number of assets as argument
      */
-    REMOTE_DELETE = `archive-remote_delete`,
+    REMOTE_DELETE: `archive-remote_delete`,
     /**
      * Emitted when the archive engine is done archiving a path
      */
-    ARCHIVE_DONE = `archive-done`
-}
+    ARCHIVE_DONE: `archive-done`,
+} as const;
+
+/**
+ * The values of {@link iCPSEventArchiveEngine}
+ */
+export type iCPSEventArchiveEngine = typeof iCPSEventArchiveEngine[keyof typeof iCPSEventArchiveEngine];
 
 /**
  * Possible app events
  */
-export enum iCPSEventApp {
+export const iCPSEventApp = {
     /**
      * Emitted when the app has scheduled the next execution, but has not have previous executions - provides a date object for the next run as argument
      */
-    SCHEDULED = `scheduled`,
+    SCHEDULED: `scheduled`,
     /**
      * Emitted when the app has started the next execution
      */
-    SCHEDULED_START = `scheduled-start`,
+    SCHEDULED_START: `scheduled-start`,
     /**
      * Emitted when the app has successfully completed an execution - provides a date object for the next run as argument
      */
-    SCHEDULED_DONE = `scheduled-done`,
+    SCHEDULED_DONE: `scheduled-done`,
     /**
      * Emitted when the app has experienced an error and will retry - provides a date object for the next run as argument
      */
-    SCHEDULED_RETRY = `scheduled-retry`,
+    SCHEDULED_RETRY: `scheduled-retry`,
     /**
      * Emitted when a scheduled execution was skipped, because there is already an execution running - provides a date object for the next run as argument
      */
-    SCHEDULED_OVERRUN = `scheduled-overrun`,
+    SCHEDULED_OVERRUN: `scheduled-overrun`,
     /**
      * Emitted when the app should display the latest acquired token - provides the token as argument
      */
-    TOKEN = `token`
-}
+    TOKEN: `token`,
+} as const;
 
-export enum iCPSState {
+/**
+ * The values of {@link iCPSEventApp}
+ */
+export type iCPSEventApp = typeof iCPSEventApp[keyof typeof iCPSEventApp];
+
+export const iCPSState = {
     /**
      * Emitted when the application state changes
      * Will emit a SerializedState object
      */
-    STATE_CHANGED = `state-changed`,
+    STATE_CHANGED: `state-changed`,
     /**
      * Emitted when the application registered a new log entry
      * Will emit a SerializedLog object
      */
-    LOG_ADDED = `log-added`
-}
+    LOG_ADDED: `log-added`,
+} as const;
+
+/**
+ * The values of {@link iCPSState}
+ */
+export type iCPSState = typeof iCPSState[keyof typeof iCPSState];

@@ -18,7 +18,7 @@ All npm commands are run from the `app/` folder.
 | `npm ci` | Installs the dependencies (`.npmrc` sets `ignore-scripts` and `save-exact`) |
 | `npm run build:schema` | Generates the JSON schemas used for validation (`src/lib/resources/schemas/*.json`, gitignored). **Required before running `tsc` or any tests** |
 | `npm run build:dev` | Generates the schemas and compiles the TypeScript sources to `build/out/` |
-| `npm run build` | Runs `eslint --fix` and `knip` before `build:dev` (this is what CI runs, followed by `npm run dist`) |
+| `npm run build` | Runs `oxlint --fix` and `knip` before `build:dev` (this is what CI runs, followed by `npm run dist`) |
 | `npm run test:unit` | Runs the unit tests (coverage is collected by default) |
 | `npm run test:api` | Runs the API tests against the real iCloud backend (requires `secrets/test.env`) |
 | `npm run test:docker` | Runs the Docker tests against `$IMAGE_NAME` |
@@ -32,7 +32,7 @@ A single test file or test can be executed through:
 npm test -- --coverage false test/unit/sync-engine.test.ts -t "<test name>"
 ```
 
-Tests always need to be executed through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (required by the ESM Jest setup). Running `npx jest` directly fails.
+Tests always need to be executed through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (required by the ESM Jest setup). Running `npx jest` directly fails. Tests are transpiled with `@swc/jest`, which does not type-check; type errors in `src/`, `test/` and `build/*.ts` are reported by `tsc` (TypeScript 7) during `npm run build:dev`.
 
 The docs can be previewed with `python3 -m mkdocs serve` from the `docs/` folder, after generating the CLI reference.
 

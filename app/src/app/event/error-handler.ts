@@ -1,11 +1,11 @@
-import {BacktraceAttachment, BacktraceBufferAttachment, BacktraceClient, BacktraceClientBuilder, BacktraceData, BacktraceReport, BacktraceSetupConfiguration, BreadcrumbType} from "@backtrace/node";
+import {type BacktraceAttachment, BacktraceBufferAttachment, type BacktraceClient, BacktraceClientBuilder, type BacktraceData, BacktraceReport, type BacktraceSetupConfiguration, BreadcrumbType} from "@backtrace/node";
 import {randomUUID} from "crypto";
 import fs from 'fs/promises';
 import {jsonc} from "jsonc";
 import {once} from 'events';
 import {Readable} from 'stream';
 import * as zlib from 'zlib';
-import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
+import type {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
@@ -110,18 +110,13 @@ export class ErrorHandler {
 
     constructor() {
         // Register handlers for interrupts
-        process.on(`SIGTERM`, async () => {
-            await this.handleError(new iCPSError(ERR_SIGTERM));
-            process.exit(2);
-        });
+        // handleError() and handleFiletype() never reject, reporting failures are logged
+        process.on(`SIGTERM`, () => void this.handleError(new iCPSError(ERR_SIGTERM)).finally(() => process.exit(2)));
 
-        process.on(`SIGINT`, async () => {
-            await this.handleError(new iCPSError(ERR_SIGINT));
-            process.exit(2);
-        });
+        process.on(`SIGINT`, () => void this.handleError(new iCPSError(ERR_SIGINT)).finally(() => process.exit(2)));
 
         // Register handler for errors during scheduled execution
-        Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, this.handleError.bind(this));
+        Resources.events(this).on(iCPSEventRuntimeError.SCHEDULED_ERROR, (err: unknown) => void this.handleError(err));
 
         if (Resources.manager().enableCrashReporting) {
             const endpoint = `${BACKTRACE_SUBMISSION.DOMAIN}/${BACKTRACE_SUBMISSION.UNIVERSE}/`
@@ -154,16 +149,16 @@ export class ErrorHandler {
             this.btClient = btClient;
 
             // Register listener for unknown filetypes
-            Resources.events(this).on(iCPSEventRuntimeWarning.FILETYPE_ERROR, this.handleFiletype.bind(this));
+            Resources.events(this).on(iCPSEventRuntimeWarning.FILETYPE_ERROR, (ext: string, descriptor?: string) => void this.handleFiletype(ext, descriptor));
 
             // Usage statistics
             Resources.events(this).on(iCPSEventSyncEngine.START, () => {
                 btClient.metrics?.addSummedEvent(`SyncExecution`);
-                btClient.metrics?.send();
+                void btClient.metrics?.send();
             });
             Resources.events(this).on(iCPSEventArchiveEngine.ARCHIVE_START, () => {
                 btClient.metrics?.addSummedEvent(`ArchiveExecution`);
-                btClient.metrics?.send();
+                void btClient.metrics?.send();
             });
 
             this.registerBreadcrumbs();
@@ -181,9 +176,13 @@ export class ErrorHandler {
 
         Resources.logger(this).info(`Handling error ${_err.code} caused by ${rootErrorCode}`);
 
-        // Report error and append error code
+        // Report error and append error code - a failing report must not swallow the error itself
         if (reportDenyList.indexOf(rootErrorCode) === -1) {
-            _err.btUUID = await this.reportError(_err);
+            try {
+                _err.btUUID = await this.reportError(_err);
+            } catch (reportErr) {
+                Resources.logger(this).warn(`Unable to report error: ${errorMessage(reportErr)}`);
+            }
         }
 
         Resources.emit(iCPSEventRuntimeError.HANDLED_ERROR, _err);
@@ -209,7 +208,11 @@ export class ErrorHandler {
                 skipFrames: Infinity,
             });
 
-        await this.btClient.send(report);
+        try {
+            await this.btClient.send(report);
+        } catch (err) {
+            Resources.logger(this).warn(`Unable to report unknown file type: ${errorMessage(err)}`);
+        }
     }
 
     /**
@@ -521,7 +524,7 @@ export class ErrorHandler {
             dataStream.push(ErrorHandler.maskConfidentialData(maskedHarData));
             dataStream.push(null);
 
-            return this.compressStream(dataStream);
+            return await this.compressStream(dataStream);
         } catch (err) {
             Resources.logger(this).warn(`Unable to prepare HAR file for crash report: ${errorMessage(err)}`);
             return undefined;

@@ -21,20 +21,25 @@ export type SyncPhase = typeof SYNC_PHASES[number];
  * The exposition formats supported by this exporter
  * @see https://prometheus.io/docs/instrumenting/content_negotiation/
  */
-export enum ExpositionFormat {
+export const ExpositionFormat = {
     /**
      * Prometheus text format 0.0.4 - the mandatory fallback
      */
-    PROMETHEUS_TEXT_0_0_4 = `PrometheusText0.0.4`,
+    PROMETHEUS_TEXT_0_0_4: `PrometheusText0.0.4`,
     /**
      * Prometheus text format 1.0.0 - identical body to 0.0.4, since all names are legacy compliant, but requires the escaping parameter
      */
-    PROMETHEUS_TEXT_1_0_0 = `PrometheusText1.0.0`,
+    PROMETHEUS_TEXT_1_0_0: `PrometheusText1.0.0`,
     /**
      * OpenMetrics 1.0.0
      */
-    OPEN_METRICS_TEXT_1_0_0 = `OpenMetricsText1.0.0`,
-}
+    OPEN_METRICS_TEXT_1_0_0: `OpenMetricsText1.0.0`,
+} as const;
+
+/**
+ * The values of {@link ExpositionFormat}
+ */
+export type ExpositionFormat = typeof ExpositionFormat[keyof typeof ExpositionFormat];
 
 /**
  * The escaping schemes a scraper might request for UTF-8 metric and label names

@@ -3,7 +3,8 @@ import {HttpClient, isHttpError} from "../../lib/resources/http-client.js";
 import {Resources} from "../../lib/resources/main.js";
 import {FILE_ENCODING} from "../../lib/resources/resource-types.js";
 import {LogInterface} from "./log.js";
-import {LogLevel, SerializedState, StateType} from "../../lib/resources/state-manager.js";
+import {errorMessage} from "../error/error.js";
+import {LogLevel, type SerializedState, StateType} from "../../lib/resources/state-manager.js";
 
 export class HealthCheckPingExecutor {
 
@@ -20,18 +21,19 @@ export class HealthCheckPingExecutor {
         // Neither header jar nor network capture, the health check endpoint is not related to iCloud
         this.networkInterface = new HttpClient({baseURL: Resources.manager().healthCheckUrl});
 
-        Resources.events(this).on(iCPSState.STATE_CHANGED, async (state: SerializedState) => {
+        // The ping functions never reject, failures are logged
+        Resources.events(this).on(iCPSState.STATE_CHANGED, (state: SerializedState) => {
             if(state.state === StateType.READY && state.prevTrigger) {
                 if(state.prevError) {
-                    await this.pingError()
+                    void this.pingError()
                     return
                 } else {
-                    await this.pingSuccess()
+                    void this.pingSuccess()
                     return
                 }
             }
             if(state.state === StateType.RUNNING && state.progressMsg?.startsWith(`Starting`) && state.progress === 0) {
-                await this.pingStart()
+                void this.pingStart()
                 return
             }
         })
@@ -45,7 +47,7 @@ export class HealthCheckPingExecutor {
             if(isHttpError(err)) {
                 Resources.logger(this).error(`Failed to send start health check ping: ${err.message}, got response: ${JSON.stringify(err.response?.data)}`);
             } else {
-                Resources.logger(this).error(`Failed to send start health check ping: ${err}`);
+                Resources.logger(this).error(`Failed to send start health check ping: ${errorMessage(err)}`);
             }
         }
     }
@@ -58,7 +60,7 @@ export class HealthCheckPingExecutor {
             if(isHttpError(err)) {
                 Resources.logger(this).error(`Failed to send success health check ping: ${err.message}, got response: ${JSON.stringify(err.response?.data)}`);
             } else {
-                Resources.logger(this).error(`Failed to send success health check ping: ${err}`);
+                Resources.logger(this).error(`Failed to send success health check ping: ${errorMessage(err)}`);
             }
         }
     }
@@ -71,7 +73,7 @@ export class HealthCheckPingExecutor {
             if(isHttpError(err)) {
                 Resources.logger(this).error(`Failed to send error health check ping: ${err.message}, got response: ${JSON.stringify(err.response?.data)}`);
             } else {
-                Resources.logger(this).error(`Failed to send error health check ping: ${err}`);
+                Resources.logger(this).error(`Failed to send error health check ping: ${errorMessage(err)}`);
             }
         }
     }

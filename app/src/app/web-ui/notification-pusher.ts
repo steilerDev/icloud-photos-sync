@@ -1,6 +1,6 @@
 import {Resources} from "../../lib/resources/main.js";
 import webpush from 'web-push';
-import {SerializedState, StateTrigger, StateType} from "../../lib/resources/state-manager.js";
+import {type SerializedState, StateTrigger, StateType} from "../../lib/resources/state-manager.js";
 import {iCPSState} from "../../lib/resources/events-types.js";
 import {errorMessage} from "../error/error.js";
 
@@ -15,7 +15,7 @@ export class NotificationPusher {
         Resources.events(this).on(iCPSState.STATE_CHANGED, (state: SerializedState) => {
             if((state.state === StateType.READY   && state.prevTrigger === StateTrigger.SYNC) || 
                (state.state === StateType.BLOCKED && state.progressMsg === `Waiting for MFA code...`)) {
-                this.sendNotifications(state);
+                void this.sendNotifications(state);
             } 
         });
     }

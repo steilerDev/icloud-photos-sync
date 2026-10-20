@@ -1,9 +1,9 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals";
-import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general";
+import {type MockedEventManager, type MockedResourceManager, prepareResources} from "../_helpers/_general";
 import {ExpositionFormat, PrometheusMetricsExporter} from "../../src/app/event/prometheus-metrics-exporter";
 import {Resources} from "../../src/lib/resources/main";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from "../../src/lib/resources/events-types";
-import {StateManager, StateType} from "../../src/lib/resources/state-manager";
+import {type StateManager, StateType} from "../../src/lib/resources/state-manager";
 import {iCPSError} from "../../src/app/error/error";
 import {APP_ERR} from "../../src/app/error/error-codes";
 

@@ -1,17 +1,17 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from "@jest/globals";
-import {MockedEventManager, MockedResourceManager, MockedValidator, prepareResources} from "../_helpers/_general";
+import {type MockedEventManager, type MockedResourceManager, type MockedValidator, prepareResources} from "../_helpers/_general";
 import {WebServer} from "../../src/app/web-ui/web-server";
 import {Resources} from "../../src/lib/resources/main";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventMFA, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from "../../src/lib/resources/events-types";
-import {createRequest, RequestMethod} from 'node-mocks-http'
-import {IncomingMessage} from "http";
-import {iCPSMockedUIFunction, iCPSMockedUISite, sendMockedRequest} from "../_helpers/web.helper";
+import {createRequest, type RequestMethod} from 'node-mocks-http'
+import type {IncomingMessage} from "http";
+import {type iCPSMockedUIFunction, iCPSMockedUISite, sendMockedRequest} from "../_helpers/web.helper";
 import {MFAMethod} from "../../src/lib/icloud/mfa/mfa-method";
-import {TokenApp} from "../../src/app/icloud-app";
+import type {TokenApp} from "../../src/app/icloud-app";
 import webpush from 'web-push';
 import {configure, getByTestId} from "@testing-library/dom";
 import '@testing-library/jest-dom/jest-globals';
-import {LogLevel, SerializedState, StateManager, StateType} from "../../src/lib/resources/state-manager";
+import {LogLevel, type SerializedState, type StateManager, StateType} from "../../src/lib/resources/state-manager";
 import {PrometheusMetricsExporter} from "../../src/app/event/prometheus-metrics-exporter";
 
 let mockedEventManager: MockedEventManager;
@@ -465,7 +465,7 @@ describe.each([
 
             const res = await sendMockedRequest(webServer, req)
             expect(res._getStatusCode()).toBe(200)
-            expect(res._getJSONData().length).toEqual(0)
+            expect(res._getJSONData()).toHaveLength(0)
         })
 
         test.each([
@@ -493,7 +493,7 @@ describe.each([
 
             const res = await sendMockedRequest(webServer, req)
             expect(res._getStatusCode()).toBe(200)
-            expect(res._getJSONData().length).toEqual(expectedLength)
+            expect(res._getJSONData()).toHaveLength(expectedLength)
         })
     })
 

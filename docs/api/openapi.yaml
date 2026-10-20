@@ -18,6 +18,25 @@ paths:
   /api/state:
     get:
       summary: Provides the current operational state of the application
+      description: |
+        `state` only describes what the application is doing *right now* - it does not indicate whether the last run succeeded. A failed run returns to `ready` (waiting for the next scheduled run), and the failure is reported in `prevError`.
+
+        To monitor the application, check both fields:
+
+        | `state` | `prevError` | Meaning |
+        |---|---|---|
+        | `ready` | not set | The last run succeeded (or no run happened yet) |
+        | `ready` | set | The last run failed - see `prevError.code` |
+        | `running` | not set | A run is in progress |
+        | `blocked` | not set | The trust token expired and the application is waiting for an MFA code (up to `--mfa-timeout`). Enter the code through the web UI or `/api/mfa` |
+
+        `prevError` is cleared when the next run starts, so it reflects the outcome of the most recent run. The following `prevError.code` values indicate that user action is required:
+
+        - `WEB_SERVER_MFA_CODE_NOT_PROVIDED`: an MFA code was required, but not provided within the timeout. Renew the authentication through the web UI or `/api/reauthenticate`.
+        - `MFA_FAIL_ON_MFA`: an MFA code was required and `--fail-on-mfa` is set.
+        - `AUTH_UNAUTHORIZED`: the username or password is invalid.
+
+        Codes prefixed with `EXT#` are caused by the environment, e.g. `EXT#EAI_AGAIN` or `EXT#ENOTFOUND` (DNS resolution failed) or `EXT#ECONNREFUSED`. Requests failing with such a network error are retried a few times before the run fails, so a persistent code points to a network or DNS issue of the host.
       operationId: getState
       responses:
         '200':
@@ -31,7 +50,7 @@ paths:
                   state:
                     type: string
                     enum: ['ready', 'running', 'blocked']
-                    description: '`blocked` means the application is waiting for an MFA code'
+                    description: 'The current activity of the application - `ready` means idle (the last run might have failed, see `prevError`), `blocked` means the application is waiting for an MFA code'
                   timestamp:
                     type: integer
                     description: Time of the last state change, in milliseconds since epoch
@@ -40,12 +59,19 @@ paths:
                     description: Time of the next scheduled sync, in milliseconds since epoch (daemon mode only)
                   prevError:
                     type: object
-                    description: The error of the last run, cleared when the next run starts
+                    description: The error of the last run, cleared when the next run starts - only present if the last run failed
                     properties:
                       message:
                         type: string
+                        description: Human readable description of the error, including its causes
                       code:
                         type: string
+                        description: The root cause's error code, e.g. `WEB_SERVER_MFA_CODE_NOT_PROVIDED` or `EXT#EAI_AGAIN` (see the endpoint description)
+                        examples:
+                          - WEB_SERVER_MFA_CODE_NOT_PROVIDED
+                          - MFA_FAIL_ON_MFA
+                          - AUTH_UNAUTHORIZED
+                          - EXT#EAI_AGAIN
                   prevTrigger:
                     type: string
                     enum: ['sync', 'auth']

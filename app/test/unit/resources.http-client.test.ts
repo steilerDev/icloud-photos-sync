@@ -1,13 +1,13 @@
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import fs from 'fs';
 import http from 'http';
-import {AddressInfo} from 'net';
+import type {AddressInfo} from 'net';
 import path from 'path';
 import {gzipSync} from 'zlib';
 import {Cookie} from 'tough-cookie';
 import {iCPSError} from '../../src/app/error/error';
 import {VALIDATOR_ERR} from '../../src/app/error/error-codes';
-import {Header, HeaderJar, HttpClient, HttpError, HttpRequest, HttpResponse, isHttpError, NetworkCapture, ResponseValidator} from '../../src/lib/resources/http-client';
+import {Header, HeaderJar, HttpClient, HttpError, type HttpRequest, type HttpResponse, isHttpError, NetworkCapture, type ResponseValidator} from '../../src/lib/resources/http-client';
 import {NetworkManager} from '../../src/lib/resources/network-manager';
 import * as Config from '../_helpers/_config';
 import {defaultConfig} from '../_helpers/_config';
@@ -478,7 +478,7 @@ describe(`NetworkCapture`, () => {
 
         await expect(client.get(`https://example.com/path`, (() => {
             throw validationError;
-        }) as ResponseValidator<never>)).rejects.toBe(validationError);
+        }) as unknown as ResponseValidator<never>)).rejects.toBe(validationError);
 
         expect(networkCapture.log.log.entries).toHaveLength(1);
         expect(networkCapture.log.log.entries[0]._error).toBeUndefined();
@@ -581,7 +581,7 @@ describe(`HttpClient`, () => {
     });
 
     describe(`Request building`, () => {
-        test.each([
+        test.each<{desc: string, baseURL: string | undefined, url: string, params: Record<string, string> | undefined, expected: string}>([
             {
                 desc: `Absolute URL without base URL`,
                 baseURL: undefined,
@@ -822,7 +822,7 @@ describe(`HttpClient`, () => {
 
             await expect(client.get(`https://example.com`, (() => {
                 throw validationError;
-            }) as ResponseValidator<never>)).rejects.toBe(validationError);
+            }) as unknown as ResponseValidator<never>)).rejects.toBe(validationError);
         });
 
         test(`Does not validate rejected status`, async () => {

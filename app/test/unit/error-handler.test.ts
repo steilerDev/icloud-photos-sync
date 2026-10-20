@@ -3,7 +3,7 @@ import {BacktraceClientBuilder} from '@backtrace/node';
 import fs from 'fs';
 import zlib from 'zlib';
 import {ErrorHandler, PersistedGuidAttributeProvider, ShellFreeBacktraceClientBuilder} from '../../src/app/event/error-handler';
-import {MockedResourceManager, prepareResources} from '../_helpers/_general';
+import {type MockedResourceManager, prepareResources} from '../_helpers/_general';
 
 type AttributeProvider = Parameters<BacktraceClientBuilder[`addAttributeProvider`]>[0]
 

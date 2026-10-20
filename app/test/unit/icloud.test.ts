@@ -8,9 +8,9 @@ import { MFAMethod } from '../../src/lib/icloud/mfa/mfa-method';
 import { iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeWarning } from '../../src/lib/resources/events-types';
 import { Resources } from '../../src/lib/resources/main';
 import { Header } from '../../src/lib/resources/http-client';
-import { SigninInitResponse } from '../../src/lib/resources/network-types';
+import type { SigninInitResponse } from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
-import { MockedEventManager, MockedNetworkManager, MockedResourceManager, MockedValidator, UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
+import { type MockedEventManager, type MockedNetworkManager, type MockedResourceManager, type MockedValidator, type UnknownAsyncFunction, prepareResources } from '../_helpers/_general';
 
 let mockedResourceManager: MockedResourceManager;
 let mockedEventManager: MockedEventManager;
@@ -64,6 +64,19 @@ describe(`Control structure`, () => {
         mockedEventManager.emit(iCPSEventCloud.SESSION_EXPIRED);
 
         expect(icloud.authenticate).toHaveBeenCalled();
+    });
+
+    test(`SESSION_EXPIRED event handles a failing re-authentication`, () => {
+        // Regression test: the rejection used to escape the listener as an unhandled rejection, crashing the process
+        const failedAuthentication = Promise.reject(new Error(`re-authentication failed`));
+        const catchSpy = jest.spyOn(failedAuthentication, `catch`);
+        icloud.authenticate = jest.fn<typeof icloud.authenticate>()
+            .mockReturnValue(failedAuthentication);
+
+        mockedEventManager.emit(iCPSEventCloud.SESSION_EXPIRED);
+
+        expect(icloud.authenticate).toHaveBeenCalled();
+        expect(catchSpy).toHaveBeenCalled();
     });
 
     test(`PCS_REQUIRED event triggered`, () => {
@@ -482,6 +495,48 @@ describe.each([
                 await expect(icloud.getSRPLogin()).rejects.toThrow(/^Unable to initialize SRP authentication protocol$/);
             });
 
+            test(`Init request recovers from a temporary DNS failure`, async () => {
+                mockedNetworkManager._transientRetryDelays = [0, 0, 0];
+                const authenticator = new iCloudCrypto();
+                authenticator.getClientEphemeral = jest.fn<typeof authenticator.getClientEphemeral>()
+                    .mockResolvedValue(`clientEphemeral`);
+
+                authenticator.getProofValues = jest.fn<typeof authenticator.getProofValues>()
+                    .mockResolvedValue([`m1Proof`, `m2Proof`]);
+
+                mockedNetworkManager.mock
+                    .onPost(`https://idmsa.apple.com/appleauth/auth/signin/init`)
+                    .networkErrorOnce(`EAI_AGAIN`)
+                    .onPost(`https://idmsa.apple.com/appleauth/auth/signin/init`)
+                    .reply(200);
+
+                mockedValidator.validateSigninInitResponse = jest.fn<typeof mockedValidator.validateSigninInitResponse>()
+                    .mockReturnValue({
+                        data: {
+                            protocol: `s2k`,
+                            salt: `salt`,
+                            iteration: 1,
+                            b: `b`,
+                            c: `c`,
+                        },
+                    } as SigninInitResponse);
+
+                await expect(icloud.getSRPLogin(authenticator)).resolves.toHaveLength(2);
+                expect(mockedNetworkManager.mock.history.post).toHaveLength(2);
+            });
+
+            test(`Init request fails with persistent DNS failure`, async () => {
+                mockedNetworkManager._transientRetryDelays = [0, 0, 0];
+                mockedNetworkManager.mock
+                    .onAny()
+                    .networkError(`EAI_AGAIN`);
+
+                const err = await icloud.getSRPLogin().catch(err => err);
+                expect(err).toBeInstanceOf(iCPSError);
+                expect((err as iCPSError).getErrorCodeStack()).toEqual([`AUTH_SRP_INIT_FAILED`, `EXT#EAI_AGAIN`]);
+                expect(mockedNetworkManager.mock.history.post).toHaveLength(4);
+            });
+
             test(`Init response does not match validator`, async () => {
                 const authenticator = new iCloudCrypto();
                 authenticator.getClientEphemeral = jest.fn<typeof authenticator.getClientEphemeral>()
@@ -573,7 +628,7 @@ describe.each([
                 ])(`$desc`, async ({response}) => {
                     const runtimeWarningEvent = mockedEventManager.spyOnEvent(iCPSEventRuntimeWarning.TRUSTED_PHONE_NUMBERS_ERROR);
                     mockedNetworkManager.mock
-                        .onGet(`https://idmsa.apple.com/appleauth/auth`, undefined, {headers: {...Config.REQUEST_HEADER.AUTH, Accept: `application/json`}})
+                        .onGet(`https://idmsa.apple.com/appleauth/auth`, {headers: {...Config.REQUEST_HEADER.AUTH, Accept: `application/json`}})
                         .reply(200, response);
 
                     await expect(icloud.getTrustedPhoneNumbers()).resolves.toEqual([trustedPhoneNumber]);
@@ -665,7 +720,7 @@ describe.each([
 
                     if (method === `device`) {
                         mockedValidator.validateResendMFADeviceResponse = jest.fn<typeof mockedValidator.validateResendMFADeviceResponse>()
-                            .mockReturnValue(validatedResponse as any);
+                            .mockReturnValue(validatedResponse);
                     }
 
                     if (method === `sms` || method === `voice`) {
@@ -1010,7 +1065,7 @@ describe.each([
                             .reply(409, data, headers);
                     };
 
-                    test.each([
+                    test.each<{desc: string, data: unknown, headers: Record<string, string>, expectedSessionSecret: string}>([
                         {
                             desc: `valid code flag and session token`,
                             data: {securityCode: {code: `123456`, valid: true}},
