@@ -495,6 +495,48 @@ describe.each([
                 await expect(icloud.getSRPLogin()).rejects.toThrow(/^Unable to initialize SRP authentication protocol$/);
             });
 
+            test(`Init request recovers from a temporary DNS failure`, async () => {
+                mockedNetworkManager._transientRetryDelays = [0, 0, 0];
+                const authenticator = new iCloudCrypto();
+                authenticator.getClientEphemeral = jest.fn<typeof authenticator.getClientEphemeral>()
+                    .mockResolvedValue(`clientEphemeral`);
+
+                authenticator.getProofValues = jest.fn<typeof authenticator.getProofValues>()
+                    .mockResolvedValue([`m1Proof`, `m2Proof`]);
+
+                mockedNetworkManager.mock
+                    .onPost(`https://idmsa.apple.com/appleauth/auth/signin/init`)
+                    .networkErrorOnce(`EAI_AGAIN`)
+                    .onPost(`https://idmsa.apple.com/appleauth/auth/signin/init`)
+                    .reply(200);
+
+                mockedValidator.validateSigninInitResponse = jest.fn<typeof mockedValidator.validateSigninInitResponse>()
+                    .mockReturnValue({
+                        data: {
+                            protocol: `s2k`,
+                            salt: `salt`,
+                            iteration: 1,
+                            b: `b`,
+                            c: `c`,
+                        },
+                    } as SigninInitResponse);
+
+                await expect(icloud.getSRPLogin(authenticator)).resolves.toHaveLength(2);
+                expect(mockedNetworkManager.mock.history.post).toHaveLength(2);
+            });
+
+            test(`Init request fails with persistent DNS failure`, async () => {
+                mockedNetworkManager._transientRetryDelays = [0, 0, 0];
+                mockedNetworkManager.mock
+                    .onAny()
+                    .networkError(`EAI_AGAIN`);
+
+                const err = await icloud.getSRPLogin().catch(err => err);
+                expect(err).toBeInstanceOf(iCPSError);
+                expect((err as iCPSError).getErrorCodeStack()).toEqual([`AUTH_SRP_INIT_FAILED`, `EXT#EAI_AGAIN`]);
+                expect(mockedNetworkManager.mock.history.post).toHaveLength(4);
+            });
+
             test(`Init response does not match validator`, async () => {
                 const authenticator = new iCloudCrypto();
                 authenticator.getClientEphemeral = jest.fn<typeof authenticator.getClientEphemeral>()

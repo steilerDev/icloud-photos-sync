@@ -130,7 +130,10 @@ The `X-Apple-Session-Token` response header carries the session secret. It is se
 
 - All metadata requests (auth, setup and CloudKit) go through one queue, limited by `--metadata-rate`.
 - Downloads use a separate queue, limited by `--download-threads` and `--download-timeout`.
-- There are no HTTP-level retries, except for [throttled CloudKit requests](#errors-and-throttling). Other failures are retried by the sync engine, which reconnects (`accountLogin`) before every retry.
+- HTTP-level retries exist for two cases only:
+    - [Throttled CloudKit requests](#errors-and-throttling).
+    - Requests that never reached the server (`EAI_AGAIN`, `ENOTFOUND`, `ECONNREFUSED`, `ENETUNREACH`, `EHOSTUNREACH`) are retried by `NetworkManager` after 5s, 15s and 45s, for every host. This covers short DNS outages, which otherwise fail the whole run during authentication (observed in Backtrace on SRP init, `accountLogin` and `requestPCS`, 2026-10). Errors after the request was sent (`ECONNRESET`, timeouts) are not retried, since SRP and MFA requests can't be replayed.
+- Other failures are retried by the sync engine, which reconnects (`accountLogin`) before every retry.
 
 ## Authentication
 

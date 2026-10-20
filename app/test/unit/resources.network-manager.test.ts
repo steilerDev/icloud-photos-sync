@@ -9,7 +9,7 @@ import path from 'path';
 import type {Cookie} from 'tough-cookie';
 import {Resources} from '../../src/lib/resources/main';
 import {Header, HeaderJar, HttpClient, type HttpResponse, NetworkCapture, type ResponseValidator} from '../../src/lib/resources/http-client';
-import {RAW_RESPONSE} from '../_helpers/http-mock.helper';
+import {HttpMock, RAW_RESPONSE} from '../_helpers/http-mock.helper';
 import {NetworkManager} from "../../src/lib/resources/network-manager";
 import type {PhotosSetupResponseZone, SetupResponse, SigninResponse} from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
@@ -731,6 +731,65 @@ describe(`NetworkManager`, () => {
                 await (networkManager._rateLimiter.add as any).mock.calls[0][0]();
 
                 expect(networkManager._http.put).toHaveBeenCalledWith(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
+            });
+
+            describe(`Transient network errors`, () => {
+                const url = `https://idmsa.apple.com/appleauth/auth/signin/init`;
+                let mock: HttpMock;
+
+                beforeEach(() => {
+                    networkManager._transientRetryDelays = [0, 0, 0];
+                    mock = new HttpMock(networkManager._http, {onNoMatch: `throwException`});
+                });
+
+                afterEach(() => {
+                    mock.restore();
+                });
+
+                test.each([
+                    {desc: `GET`, method: `get` as const, request: () => networkManager.get(url, validator)},
+                    {desc: `POST`, method: `post` as const, request: () => networkManager.post(url, {some: `data`}, validator)},
+                    {desc: `PUT`, method: `put` as const, request: () => networkManager.put(url, {some: `data`}, validator)},
+                ])(`$desc request is retried after a transient network error`, async ({method, request}) => {
+                    mock.onAny(url).networkErrorOnce(`EAI_AGAIN`);
+                    mock.onAny(url).networkErrorOnce(`ECONNREFUSED`);
+                    mock.onAny(url).reply(200, {some: `response`});
+
+                    await expect(request()).resolves.toEqual({some: `response`});
+                    expect(mock.history[method]).toHaveLength(3);
+                });
+
+                test(`Fails with the last error once all retries are used up`, async () => {
+                    mock.onPost(url).networkError(`EAI_AGAIN`);
+
+                    await expect(networkManager.post(url, {}, validator)).rejects.toMatchObject({
+                        name: `HttpError`,
+                        code: `EAI_AGAIN`,
+                    });
+                    expect(mock.history.post).toHaveLength(4);
+                });
+
+                test(`Waits for the configured delays between attempts`, async () => {
+                    networkManager._transientRetryDelays = [20, 40];
+                    mock.onPost(url).networkError(`ENOTFOUND`);
+
+                    const start = Date.now();
+                    await expect(networkManager.post(url, {}, validator)).rejects.toMatchObject({code: `ENOTFOUND`});
+                    expect(Date.now() - start).toBeGreaterThanOrEqual(55);
+                    expect(mock.history.post).toHaveLength(3);
+                });
+
+                test.each([
+                    {desc: `unknown network error`, setup: (handler: ReturnType<HttpMock[`onPost`]>) => handler.networkError()},
+                    {desc: `connection reset`, setup: (handler: ReturnType<HttpMock[`onPost`]>) => handler.networkError(`ECONNRESET`)},
+                    {desc: `timeout`, setup: (handler: ReturnType<HttpMock[`onPost`]>) => handler.timeout()},
+                    {desc: `error status`, setup: (handler: ReturnType<HttpMock[`onPost`]>) => handler.reply(503)},
+                ])(`Does not retry - $desc`, async ({setup}) => {
+                    setup(mock.onPost(url));
+
+                    await expect(networkManager.post(url, {}, validator)).rejects.toMatchObject({name: `HttpError`});
+                    expect(mock.history.post).toHaveLength(1);
+                });
             });
 
             test(`metadata request returns validated response`, async () => {
