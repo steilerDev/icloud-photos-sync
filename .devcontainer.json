@@ -18,7 +18,7 @@
             "version": "latest"
         },
         "ghcr.io/devcontainers/features/node:2": {
-            "version": "26.12.0"
+            "version": "26.12.1"
         },
         "ghcr.io/devcontainers/features/python:1": {
             "version": "3.13"
