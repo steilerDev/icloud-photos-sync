@@ -3,7 +3,7 @@ import * as PHOTOS_LIBRARY from './constants.js';
 import {Album, AlbumType} from './model/album.js';
 import fs from 'fs';
 import {Asset} from './model/asset.js';
-import {PLibraryEntities} from './model/photos-entity.js';
+import type {PLibraryEntities} from './model/photos-entity.js';
 import {errorMessage, iCPSError} from '../../app/error/error.js';
 import {LIBRARY_ERR} from '../../app/error/error-codes.js';
 import {Zones} from '../icloud/icloud-photos/query-builder.js';
@@ -614,7 +614,7 @@ export class PhotosLibrary {
         Resources.logger(this).debug(`Cleaning archived orphans`);
         const archivedOrphans = await this.loadAlbum(Album.getStashAlbum(), this.stashDir);
         for (const album of archivedOrphans) {
-            Resources.logger(this).debug(`Found orphaned album ${album}`);
+            Resources.logger(this).debug(`Found orphaned album ${album.albumName} (${album.uuid})`);
             const [namePath, uuidPath] = this.findStashAlbumPaths(album);
             let targetPath: string;
             let index = 0;

@@ -51,14 +51,18 @@ Load an env file with `set -a; . ../secrets/test.env; set +a` before running a c
 npm ci                     # .npmrc sets ignore-scripts and save-exact
 npm run build:schema       # REQUIRED before tests/tsc: generates gitignored src/lib/resources/schemas/*.json
 npm run build:dev          # schema + tsc -> build/out/
-npm run build              # eslint --fix + knip, then build:dev (what CI runs, followed by `npm run dist`)
+npm run build              # oxlint --fix + knip, then build:dev (what CI runs, followed by `npm run dist`)
 npm run test:unit          # jest unit tests (coverage on by default)
 npm test -- --coverage false test/unit/sync-engine.test.ts -t "<test name>"   # single file / single test
 npm run execute -- sync    # run the compiled CLI (subcommands: daemon (default), sync, token, archive <path>)
 npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the commander options (build artifact, not committed)
 ```
 
-- Tests must go through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (ts-jest ESM preset). Running `npx jest` directly fails.
+- Tests must go through `npm test`, which sets `TZ=UTC` and `NODE_OPTIONS=--experimental-vm-modules` (ESM Jest setup). Running `npx jest` directly fails.
+- **TypeScript 7 and test transpilation.** The project uses TypeScript 7 (the native `tsc`), which ships no JS compiler API. Tests are therefore transpiled with `@swc/jest` (configured in `jest.config.json`), which strips types without type-checking. `npm run build:typescript` (part of `build:dev`) is the type check: `tsc` compiles `src/` with `tsconfig.json`, then `tsc -p tsconfig.typecheck.json` checks `src/`, `test/` and `build/*.ts` without emitting. That config uses `Bundler` resolution, because test imports omit the `.js` extension. Two swc options must stay:
+  - `jsc.keepClassNames`: `clean()` relies on `this.constructor.name`.
+  - `jsc.experimental.keepImportAttributes`: keeps `with {type: 'json'}`. Without it Jest warns about every JSON import (a hard error from the next Jest major).
+  - Tools that need the classic compiler API can't import `typescript` any more. `ts-json-schema-generator` bundles its own TypeScript 5.x, so `build:schema` is unaffected.
 - **Running the API tests and the full Docker tests:** always use the stored test account credentials from `secrets/test.env`. Never use the prod account for them, and never ask the user to type credentials. Load the file into the environment of the same command:
   ```sh
   set -a; . ../secrets/test.env; set +a; npm run test:api
@@ -75,7 +79,7 @@ npm run doc:cli -- ../docs/src   # generate docs/src/user-guides/cli.md from the
 - `DaemonApp` — a cron schedule that runs `SyncApp`.
 - `TokenApp`, `SyncApp`, `ArchiveApp` — an inheritance chain: `ArchiveApp` extends `SyncApp`, which extends the abstract `iCloudApp`. Each `run()` calls `super.run()` first, and only the concrete class that was instantiated calls `clean()` (checked via `this.constructor.name`).
 
-**Resources singleton (`src/lib/resources/main.ts`).** A namespace that holds the process-wide singletons. Code reaches them through static accessors instead of injecting them; constructors take only domain objects, e.g. `new SyncEngine(icloud, photosLibrary)`:
+**Resources singleton (`src/lib/resources/main.ts`).** A plain object (`export const Resources = {…}`) that holds the process-wide singletons, with its types in a type-only namespace of the same name (`Resources.Types`, `Resources.LockStat`). It stays a mutable object, so tests can reset `Resources._instances` and spy on its functions. Code reaches them through static accessors instead of injecting them; constructors take only domain objects, e.g. `new SyncEngine(icloud, photosLibrary)`:
 - `Resources.event()` — EventManager: the event bus.
 - `Resources.state()` — StateManager: app state READY/RUNNING/BLOCKED and the library lock.
 - `Resources.manager()` — ResourceManager: CLI options plus the persisted `.icloud-photos-sync` file.
@@ -188,7 +192,7 @@ The code is the source of truth. `docs/src/dev/api.md` maps the full surface: ho
 - **Pagination:** `performQuery` follows the response's `continuationMarker` until it is absent (this is what pages the album listing). Asset queries take the count first, then fetch ranges of positions in parallel with `resultsLimit: 198` and `startRank` offsets. The step is 99 for all photos (asset+master per item) and 66 for albums (+relation). The 198 only plans the ranges: if iCloud returns fewer positions, `fetchPictureRecordsRange` requests the rest, following the `continuationMarker` if present, else restarting at the first missing `startRank`. Overlapping records are de-duplicated when the ranges are merged.
 - **Assets:** the original is `CPLMaster.resOriginalRes`. If `adjustmentType` is set, the edited version is `resJPEGFullRes`/`resVidFullRes`. Live-photo video is not fetched.
 - **Remote delete** (`archive --remote-delete`, non-favorites only): `POST /private/records/modify` sets `isDeleted: 1` on a `CPLAsset`.
-- **Rate limiting:** all metadata calls go through a p-queue set by `--metadata-rate`. Downloads use a separate concurrency queue (`--download-threads`, `--download-timeout`). The only HTTP-level retries are for throttled CloudKit requests (`429`, or `THROTTLED`/`TRY_AGAIN_LATER`): all CloudKit calls pause for `retryAfter` (default 10s, capped at 300s) and the request is retried up to 10 times (`icloud-photos.ts`). Everything else is retried at sync level.
+- **Rate limiting:** all metadata calls go through a p-queue set by `--metadata-rate`. Downloads use a separate concurrency queue (`--download-threads`, `--download-timeout`). There are two HTTP-level retries. Throttled CloudKit requests (`429`, or `THROTTLED`/`TRY_AGAIN_LATER`): all CloudKit calls pause for `retryAfter` (default 10s, capped at 300s) and the request is retried up to 10 times (`icloud-photos.ts`). Requests that never reached the server (`TRANSIENT_NETWORK_ERROR_CODES`, e.g. `EAI_AGAIN`) are retried by `NetworkManager.get/post/put` after 5s, 15s and 45s (`_transientRetryDelays`). Everything else is retried at sync level.
 
 ## Error reports (Backtrace)
 
@@ -252,7 +256,7 @@ The SDK chooses the project by `application.version` via the submission tokens h
 
 ## Coding style (app)
 
-Lint is `eslint recommended` + `typescript-eslint recommended`, plus:
+Lint is oxlint (`app/.oxlintrc.json`) with the rules of `eslint recommended` + `typescript-eslint recommended` and `no-useless-assignment`, plus the `@stylistic` rules run as an oxlint JS plugin. `prebuild:lint` runs it twice: once with `--fix`, then with `--type-aware` (via `oxlint-tsgolint`, built on TypeScript 7) for the type-checked rules of `recommended-type-checked`, without `--fix`. The `no-unsafe-*` rules are off, since `any` is allowed. `no-unnecessary-type-assertion` and `require-await` are off too: the former's fixes broke generic inference, and the latter would force signature churn. Promises in void positions (event listeners, fire-and-forget calls) must be marked `void`, and only where the callee cannot reject. Anything that can reject needs a `.catch`, since there is no global `unhandledRejection` handler.
 - `@stylistic/quotes: backtick` — **every string literal is a template literal**, even without interpolation. Normal quotes appear only where template literals aren't allowed: imports, object keys, `with {type: 'json'}`.
 - 4-space indent, with `case` at the same level as `switch`.
 - `quote-props: as-needed`, and braces without inner spaces (`{foo}`).
@@ -264,18 +268,22 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 **Naming.**
 - Classes are PascalCase, but project-branded types use a lowercase prefix: `iCloud`, `iCloudPhotos`, `iCPSError`, `iCPSApp`, `iCPSEvent<Area>`.
 - Files are kebab-case (`sync-engine.ts`, `icloud.crypto.ts`). Tests are `<area>.<module>.test.ts`.
-- Enum members are `UPPER_SNAKE` with backtick string values. Event values look like `` `icloud-auth_started` ``.
+- There are no TS enums. Enum-like values are `as const` objects with a same-named union type: ``export const X = {A: `a`} as const;`` plus `export type X = typeof X[keyof typeof X];`. Members are `UPPER_SNAKE` with backtick string values. Event values look like `` `icloud-auth_started` ``.
 - Internal members use a **public `_` prefix** (`_http`, `_resources`, `_sitemap`) so tests can reach them. `private` is rare.
 
 **Modules.**
 - `src` relative imports end in `.js`; **test imports omit the extension** (Jest maps it).
 - Named exports only, no `export default` in src.
 - Node built-ins are imported without the `node:` prefix (`'fs'`, `'path'`, `'events'`).
-- The only TS namespace is `Resources`; shared types live in `Resources.Types`.
+- `tsconfig.json` sets `erasableSyntaxOnly`: no enums, no namespaces with runtime code, no constructor parameter properties. The only namespace is the type-only `Resources` namespace; shared types live in `Resources.Types`.
+- `verbatimModuleSyntax` is on, so type-only imports need `type`.
+  - If every specifier is a type, use `import type {X}`. An inline `import {type X}` would remain as a side-effect import at runtime (`no-import-type-side-effects`).
+  - In mixed imports, mark the types inline: `import {type X, Y}`.
+  - `oxlint --fix` (`consistent-type-imports`) adds the markers.
 - Object shapes are `type X = {…}`, not `interface`. Labeled tuples and tuple returns are common (`Promise<[Asset[], Album[]]>`).
 - Static helper bundles are exported object literals (`SyncEngineHelper`).
 
-**Docs.** Every class, member, enum member and type field in `lib/` gets TSDoc:
+**Docs.** Every class, member, enum-like object member and type field in `lib/` gets TSDoc:
 - `@param name - …`, `@returns …`, `@throws An iCPSError, if …`
 - The custom `@emits iCPSEventX.MEMBER - when … - payload …`, listed for every emitted event.
 
@@ -364,7 +372,7 @@ Semicolons and import order are not enforced, so match the surrounding file. Add
 - Dependabot reads `dependabot.yml` **from the default branch (`main`)**, so a config change on `dev` takes effect only after the next production release.
 - GitHub pauses version updates when nobody acts on Dependabot PRs for about 90 days. Merge or close them regularly.
 - Commit prefixes: `chore: [ci]`, `[app]`, `[docker]`, `[docs]`, `[dev]`, `[semantic-release]`.
-- Ignored majors: `@types/node` (tied to `app/node-version`), `typescript`, and `node` in Docker.
+- Ignored majors: `@types/node` (tied to `app/node-version`) and `node` in Docker.
 - In the Dockerfile, both stages use Docker Hardened Images from `dhi.io` (Dependabot authenticates with `DOCKER_TOKEN`). The `*node` images are grouped (`base-images`) because builder and runtime must use the same Node version.
 - The docs toolchain (`docs/requirements.txt`) is **frozen on purpose** and has no Dependabot entry. MkDocs 1.x is unmaintained and Material for MkDocs is EOL, but the output is static HTML, so the maintainer accepts that. Don't upgrade it or migrate it (e.g. to Zensical) unless a new docs capability requires it (#1118).
 

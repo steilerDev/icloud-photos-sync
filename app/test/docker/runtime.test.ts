@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, jest, test} from "@jest/globals";
-import {ICPSContainer, StartedICPSContainer} from "../_helpers/testcontainers.helper";
+import {ICPSContainer, type StartedICPSContainer} from "../_helpers/testcontainers.helper";
 
 describe(`Docker Runtime`, () => {
     let container: StartedICPSContainer

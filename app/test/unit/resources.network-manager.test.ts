@@ -2,16 +2,16 @@
 import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import fs from 'fs';
 import http from 'http';
-import {AddressInfo} from 'net';
+import type {AddressInfo} from 'net';
 import mockfs from '../_helpers/mock-fs.helper';
 import PQueue from 'p-queue';
 import path from 'path';
-import {Cookie} from 'tough-cookie';
+import type {Cookie} from 'tough-cookie';
 import {Resources} from '../../src/lib/resources/main';
-import {Header, HeaderJar, HttpClient, HttpResponse, NetworkCapture, ResponseValidator} from '../../src/lib/resources/http-client';
-import {RAW_RESPONSE} from '../_helpers/http-mock.helper';
+import {Header, HeaderJar, HttpClient, type HttpResponse, NetworkCapture, type ResponseValidator} from '../../src/lib/resources/http-client';
+import {HttpMock, RAW_RESPONSE} from '../_helpers/http-mock.helper';
 import {NetworkManager} from "../../src/lib/resources/network-manager";
-import {PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse} from '../../src/lib/resources/network-types';
+import type {PhotosSetupResponseZone, SetupResponse, SigninResponse} from '../../src/lib/resources/network-types';
 import * as Config from '../_helpers/_config';
 import {defaultConfig} from '../_helpers/_config';
 import {prepareResources} from '../_helpers/_general';
@@ -242,7 +242,7 @@ describe(`NetworkManager`, () => {
                     queue: (() => {
                         const queue = new PQueue({concurrency: 2, autoStart: false});
                         for (let i = 0; i < 10; i++) {
-                            queue.add(() => new Promise(resolve => setTimeout(resolve, 100)));
+                            void queue.add(() => new Promise(resolve => setTimeout(resolve, 100)));
                         }
 
                         return queue;
@@ -253,7 +253,7 @@ describe(`NetworkManager`, () => {
                     queue: (() => {
                         const queue = new PQueue({concurrency: 2, autoStart: true});
                         for (let i = 0; i < 10; i++) {
-                            queue.add(() => new Promise(resolve => setTimeout(resolve, 100)));
+                            void queue.add(() => new Promise(resolve => setTimeout(resolve, 100)));
                         }
 
                         return queue;
@@ -359,6 +359,7 @@ describe(`NetworkManager`, () => {
         describe(`Apply methods`, () => {
             test(`Apply SigninResponse`, () => {
                 const signinResponse = {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },
@@ -379,6 +380,7 @@ describe(`NetworkManager`, () => {
 
             test(`Apply SigninResponse - with session id and account country`, () => {
                 const signinResponse = {
+                    status: 409,
                     data: {
                         authType: `hsa2`,
                     },
@@ -415,7 +417,7 @@ describe(`NetworkManager`, () => {
             ])(`Apply MFA response $desc`, ({headers, expected}) => {
                 Resources.manager()._resources.sessionSecret = `oldSessionToken`;
 
-                networkManager.applySessionTokenUpdate({headers} as any);
+                networkManager.applySessionTokenUpdate({headers});
 
                 expect(Resources.manager()._resources.sessionSecret).toEqual(expected);
             });
@@ -426,7 +428,7 @@ describe(`NetworkManager`, () => {
                         'x-apple-twosv-trust-token': `someTrustToken`,
                         'x-apple-session-token': `someSessionToken`,
                     },
-                } as TrustResponse;
+                };
 
                 networkManager.applyTrustResponse(trustResponse);
 
@@ -687,7 +689,7 @@ describe(`NetworkManager`, () => {
                 networkManager._http.get = jest.fn<typeof networkManager._http.get>() as any;
                 networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
-                networkManager.get(`someUrl`, validator, {params: {some: `params`}});
+                void networkManager.get(`someUrl`, validator, {params: {some: `params`}});
 
                 // Making sure request is added to the rate limiter queue
                 expect(networkManager._rateLimiter.add).toHaveBeenCalledTimes(1);
@@ -703,7 +705,7 @@ describe(`NetworkManager`, () => {
                 networkManager._http.post = jest.fn<typeof networkManager._http.post>() as any;
                 networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
-                networkManager.post(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
+                void networkManager.post(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
 
                 // Making sure request is added to the rate limiter queue
                 expect(networkManager._rateLimiter.add).toHaveBeenCalledTimes(1);
@@ -719,7 +721,7 @@ describe(`NetworkManager`, () => {
                 networkManager._http.put = jest.fn<typeof networkManager._http.put>() as any;
                 networkManager._rateLimiter.add = jest.fn<typeof networkManager._rateLimiter.add>() as any;
 
-                networkManager.put(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
+                void networkManager.put(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
 
                 // Making sure request is added to the rate limiter queue
                 expect(networkManager._rateLimiter.add).toHaveBeenCalledTimes(1);
@@ -729,6 +731,65 @@ describe(`NetworkManager`, () => {
                 await (networkManager._rateLimiter.add as any).mock.calls[0][0]();
 
                 expect(networkManager._http.put).toHaveBeenCalledWith(`someUrl`, {some: `data`}, validator, {params: {some: `params`}});
+            });
+
+            describe(`Transient network errors`, () => {
+                const url = `https://idmsa.apple.com/appleauth/auth/signin/init`;
+                let mock: HttpMock;
+
+                beforeEach(() => {
+                    networkManager._transientRetryDelays = [0, 0, 0];
+                    mock = new HttpMock(networkManager._http, {onNoMatch: `throwException`});
+                });
+
+                afterEach(() => {
+                    mock.restore();
+                });
+
+                test.each([
+                    {desc: `GET`, method: `get` as const, request: () => networkManager.get(url, validator)},
+                    {desc: `POST`, method: `post` as const, request: () => networkManager.post(url, {some: `data`}, validator)},
+                    {desc: `PUT`, method: `put` as const, request: () => networkManager.put(url, {some: `data`}, validator)},
+                ])(`$desc request is retried after a transient network error`, async ({method, request}) => {
+                    mock.onAny(url).networkErrorOnce(`EAI_AGAIN`);
+                    mock.onAny(url).networkErrorOnce(`ECONNREFUSED`);
+                    mock.onAny(url).reply(200, {some: `response`});
+
+                    await expect(request()).resolves.toEqual({some: `response`});
+                    expect(mock.history[method]).toHaveLength(3);
+                });
+
+                test(`Fails with the last error once all retries are used up`, async () => {
+                    mock.onPost(url).networkError(`EAI_AGAIN`);
+
+                    await expect(networkManager.post(url, {}, validator)).rejects.toMatchObject({
+                        name: `HttpError`,
+                        code: `EAI_AGAIN`,
+                    });
+                    expect(mock.history.post).toHaveLength(4);
+                });
+
+                test(`Waits for the configured delays between attempts`, async () => {
+                    networkManager._transientRetryDelays = [20, 40];
+                    mock.onPost(url).networkError(`ENOTFOUND`);
+
+                    const start = Date.now();
+                    await expect(networkManager.post(url, {}, validator)).rejects.toMatchObject({code: `ENOTFOUND`});
+                    expect(Date.now() - start).toBeGreaterThanOrEqual(55);
+                    expect(mock.history.post).toHaveLength(3);
+                });
+
+                test.each([
+                    {desc: `unknown network error`, setup: (handler: ReturnType<HttpMock[`onPost`]>) => handler.networkError()},
+                    {desc: `connection reset`, setup: (handler: ReturnType<HttpMock[`onPost`]>) => handler.networkError(`ECONNRESET`)},
+                    {desc: `timeout`, setup: (handler: ReturnType<HttpMock[`onPost`]>) => handler.timeout()},
+                    {desc: `error status`, setup: (handler: ReturnType<HttpMock[`onPost`]>) => handler.reply(503)},
+                ])(`Does not retry - $desc`, async ({setup}) => {
+                    setup(mock.onPost(url));
+
+                    await expect(networkManager.post(url, {}, validator)).rejects.toMatchObject({name: `HttpError`});
+                    expect(mock.history.post).toHaveLength(1);
+                });
             });
 
             test(`metadata request returns validated response`, async () => {
@@ -755,7 +816,7 @@ describe(`NetworkManager`, () => {
                     networkManager._http.download = jest.fn<typeof networkManager._http.download>()
                         .mockResolvedValue();
 
-                    networkManager.downloadData(url, downloadPath);
+                    void networkManager.downloadData(url, downloadPath);
 
                     // Making sure request is added to CCY limiter queue
                     expect(networkManager._streamingCCYLimiter.add).toHaveBeenCalledTimes(1);
@@ -842,9 +903,9 @@ describe(`NetworkManager`, () => {
                     });
 
                     networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>() as any;
-                    networkManager._http.download = jest.fn<typeof networkManager._http.download>() as any;
+                    networkManager._http.download = jest.fn<typeof networkManager._http.download>();
 
-                    networkManager.downloadData(url, downloadPath);
+                    void networkManager.downloadData(url, downloadPath);
 
                     // Making sure request is added to CCY limiter queue
                     expect(networkManager._streamingCCYLimiter.add).toHaveBeenCalledTimes(1);
@@ -869,9 +930,9 @@ describe(`NetworkManager`, () => {
                     });
 
                     networkManager._streamingCCYLimiter.add = jest.fn<typeof networkManager._streamingCCYLimiter.add>() as any;
-                    networkManager._http.download = jest.fn<typeof networkManager._http.download>() as any;
+                    networkManager._http.download = jest.fn<typeof networkManager._http.download>();
 
-                    networkManager.downloadData(url, downloadPath);
+                    void networkManager.downloadData(url, downloadPath);
 
                     // Making sure request is added to CCY limiter queue
                     expect(networkManager._streamingCCYLimiter.add).toHaveBeenCalledTimes(1);

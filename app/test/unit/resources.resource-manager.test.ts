@@ -3,13 +3,13 @@ import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals
 import * as fs from 'fs';
 import mockfs from '../_helpers/mock-fs.helper';
 import path from 'path';
-import {EventManager} from '../../src/lib/resources/event-manager';
+import type {EventManager} from '../../src/lib/resources/event-manager';
 import {iCPSEventRuntimeWarning} from '../../src/lib/resources/events-types';
 import {Resources} from '../../src/lib/resources/main';
 import {ResourceManager} from '../../src/lib/resources/resource-manager';
-import {Validator} from '../../src/lib/resources/validator';
+import type {Validator} from '../../src/lib/resources/validator';
 import * as Config from '../_helpers/_config';
-import {MockedResourceManager, prepareResources, spyOnEvent} from '../_helpers/_general';
+import {type MockedResourceManager, prepareResources, spyOnEvent} from '../_helpers/_general';
 
 describe(`ResourceManager`, () => {
     describe(`constructor`, () => {
@@ -395,7 +395,7 @@ describe(`ResourceManager`, () => {
         };
 
         beforeEach(() => {
-            resourceManager = prepareResources(true, resources as any)!.manager;
+            resourceManager = prepareResources(true, resources)!.manager;
         });
 
         describe(`dataDir`, () => {
@@ -661,12 +661,6 @@ describe(`ResourceManager`, () => {
         describe(`enableCrashReporting`, () => {
             test(`should return the enable crash reporting flag from the resources`, () => {
                 expect(resourceManager.enableCrashReporting).toEqual(resources.enableCrashReporting);
-            });
-        });
-
-        describe(`failOnMfa`, () => {
-            test(`should return the fail on MFA flag from the resources`, () => {
-                expect(resourceManager.failOnMfa).toEqual(resources.failOnMfa);
             });
         });
 

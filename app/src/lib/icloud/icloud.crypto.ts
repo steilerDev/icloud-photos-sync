@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import {Resources} from "../resources/main.js";
-import {SRPProtocol} from "../resources/network-types.js";
+import type {SRPProtocol} from "../resources/network-types.js";
 
 /**
  * The 2048-bit group used by Apple's SRP implementation (RFC 5054, Appendix A)

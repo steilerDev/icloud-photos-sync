@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import {iCPSState} from "../../lib/resources/events-types.js";
 import {Resources} from "../../lib/resources/main.js";
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
-import {LogLevel, LogMessage} from '../../lib/resources/state-manager.js';
+import {LogLevel, type LogMessage} from '../../lib/resources/state-manager.js';
 
 /**
  * This class handles the input/output to a log file
@@ -60,7 +60,7 @@ export class LogInterface {
      * @param msg The log message to format
      * @returns A string representation for the log message
      */
-    static logToString(msg: LogMessage): string {
+    static logToString(this: void, msg: LogMessage): string {
         return `[${new Date(msg.time).toISOString()}] ${msg.level.toUpperCase()} ${msg.source}: ${msg.message}\n`;
     }
 }

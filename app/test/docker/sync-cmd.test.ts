@@ -1,6 +1,6 @@
 import {beforeAll, afterEach, describe, expect, jest, test} from "@jest/globals";
 
-import {ICPSContainer, LIBRARY_HASH, StartedICPSContainer} from "../_helpers/testcontainers.helper";
+import {ICPSContainer, LIBRARY_HASH, type StartedICPSContainer} from "../_helpers/testcontainers.helper";
 
 describe(`Docker Daemon Command`, () => {
     // Increased timeout due to time consuming tasks
@@ -10,7 +10,7 @@ describe(`Docker Daemon Command`, () => {
     // Implementing simple lock with timeout to ensure serial execution of tests
     let releaseLock: (value: unknown) => void
     const executionLock = new Promise((resolve, reject) => {
-        setTimeout(() => reject(`Timeout`), timeoutSeconds * 1000)
+        setTimeout(() => reject(new Error(`Timeout`)), timeoutSeconds * 1000)
         releaseLock = resolve
     })
     jest.setTimeout(timeoutSeconds * 1000);

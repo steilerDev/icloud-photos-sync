@@ -1,14 +1,14 @@
 import {Cron} from "croner";
 import {ArchiveEngine} from "../lib/archive-engine/archive-engine.js";
 import {iCloud} from "../lib/icloud/icloud.js";
-import {Album} from "../lib/photos-library/model/album.js";
-import {Asset} from "../lib/photos-library/model/asset.js";
+import type {Album} from "../lib/photos-library/model/album.js";
+import type {Asset} from "../lib/photos-library/model/asset.js";
 import {PhotosLibrary} from "../lib/photos-library/photos-library.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventWebServer} from "../lib/resources/events-types.js";
 import {Resources} from "../lib/resources/main.js";
 import {SyncEngine} from "../lib/sync-engine/sync-engine.js";
 import {APP_ERR, AUTH_ERR } from "./error/error-codes.js";
-import {iCPSError} from "./error/error.js";
+import {errorMessage, iCPSError} from "./error/error.js";
 import {StateType} from "../lib/resources/state-manager.js";
 
 /**
@@ -57,9 +57,8 @@ export class DaemonApp extends iCPSApp {
                 },
             },
         );
-        Resources.events(this).on(iCPSEventWebServer.SYNC_REQUESTED, async () => {
-            this.job?.trigger();
-        });
+        // performScheduledSync() never rejects, errors are emitted as iCPSEventRuntimeError.SCHEDULED_ERROR
+        Resources.events(this).on(iCPSEventWebServer.SYNC_REQUESTED, () => void this.job?.trigger());
         this.checkScheduleFrequency(this.job);
         Resources.emit(iCPSEventApp.SCHEDULED, this.job?.nextRun());
     }
@@ -113,7 +112,7 @@ export class DaemonApp extends iCPSApp {
      * Perform a scheduled sync
      * @param syncApp - Parametrized for testability - will be freshly initiated if omitted
      */
-    async performScheduledSync(syncApp: SyncApp = new SyncApp()) {
+    async performScheduledSync(syncApp?: SyncApp) {
         // Another operation (e.g. a re-authentication triggered through the Web UI) is still in progress - skipping this run
         // This needs to be checked before emitting SCHEDULED_START, since that event moves the state to RUNNING
         if (Resources.state().state !== StateType.READY) {
@@ -123,6 +122,8 @@ export class DaemonApp extends iCPSApp {
 
         try {
             Resources.emit(iCPSEventApp.SCHEDULED_START);
+            // Created within the try block, since setting up the library can fail (e.g. VERSION_MISMATCH)
+            syncApp ??= new SyncApp();
             const remoteState = await syncApp.run() as [Asset[], Album[]] | undefined;
 
             // No remote state means that the MFA code was not provided - the state was already updated (an empty library is a successful sync)
@@ -170,7 +171,7 @@ abstract class iCloudApp extends iCPSApp {
         try {
             await this.icloud.logout();
         } catch (err) {
-            Resources.logger(this).warn(`Failed to logout from iCloud: ${err}`);
+            Resources.logger(this).warn(`Failed to logout from iCloud: ${errorMessage(err)}`);
         }
     }
 

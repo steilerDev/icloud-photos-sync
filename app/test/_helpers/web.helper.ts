@@ -1,6 +1,6 @@
-import {IncomingMessage, ServerResponse} from "http"
-import {createRequest, createResponse, MockRequest, MockResponse, RequestMethod} from "node-mocks-http"
-import {WebServer} from "../../src/app/web-ui/web-server"
+import type {IncomingMessage, ServerResponse} from "http"
+import {createRequest, createResponse, type MockRequest, type MockResponse, type RequestMethod} from "node-mocks-http"
+import type {WebServer} from "../../src/app/web-ui/web-server"
 import {JSDOM} from "jsdom";
 import {jest} from "@jest/globals";
 import {EventEmitter} from "events";

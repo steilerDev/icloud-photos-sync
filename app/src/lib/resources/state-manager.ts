@@ -1,41 +1,56 @@
-import {iCPSError} from "../../app/error/error.js";
+import {errorMessage, iCPSError} from "../../app/error/error.js";
 import {MFA_ERR, AUTH_ERR, WEB_SERVER_ERR, LIBRARY_ERR} from "../../app/error/error-codes.js";
 import {Resources} from "./main.js";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer, iCPSState} from "./events-types.js";
-import {CPLAsset} from "../icloud/icloud-photos/query-parser.js";
-import {Asset} from "../photos-library/model/asset.js";
-import {Album} from "../photos-library/model/album.js";
-import {MFAMethod} from "../icloud/mfa/mfa-method.js";
-import {TrustedPhoneNumber} from "./network-types.js";
+import type {CPLAsset} from "../icloud/icloud-photos/query-parser.js";
+import type {Asset} from "../photos-library/model/asset.js";
+import type {Album} from "../photos-library/model/album.js";
+import type {MFAMethod} from "../icloud/mfa/mfa-method.js";
+import type {TrustedPhoneNumber} from "./network-types.js";
 import * as fs from 'fs';
 import {hostname} from 'os';
 import {randomUUID} from 'crypto';
 import {setTimeout} from 'timers/promises';
 import {jsonc} from "jsonc";
-import {FILE_ENCODING, LibraryLockOwner} from "./resource-types.js";
+import {FILE_ENCODING, type LibraryLockOwner} from "./resource-types.js";
 
-export enum StateType {
-    READY = `ready`,
-    RUNNING = `running`,
-    BLOCKED = `blocked`,
-}
+export const StateType = {
+    READY: `ready`,
+    RUNNING: `running`,
+    BLOCKED: `blocked`,
+} as const;
 
-export enum StateTrigger {
-    SYNC = `sync`,
-    AUTH = `auth`,
-}
+/**
+ * The values of {@link StateType}
+ */
+export type StateType = typeof StateType[keyof typeof StateType];
+
+export const StateTrigger = {
+    SYNC: `sync`,
+    AUTH: `auth`,
+} as const;
+
+/**
+ * The values of {@link StateTrigger}
+ */
+export type StateTrigger = typeof StateTrigger[keyof typeof StateTrigger];
 
 type LogFilter = {
     level: LogLevel | `none`,
     source?: RegExp
 }
 
-export enum LogLevel {
-    DEBUG = `debug`,
-    INFO = `info`,
-    WARN = `warn`,
-    ERROR = `error`,
-}
+export const LogLevel = {
+    DEBUG: `debug`,
+    INFO: `info`,
+    WARN: `warn`,
+    ERROR: `error`,
+} as const;
+
+/**
+ * The values of {@link LogLevel}
+ */
+export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
 
 export type LogMessage = {
     level: LogLevel,
@@ -260,9 +275,9 @@ export class StateManager {
 
         // Logs
         Resources.events(this)
-            .on(iCPSEventLog.DEBUG, (source: unknown, msg: string) => this.addLog(LogLevel.DEBUG, source, msg))
-            .on(iCPSEventLog.INFO, (source: unknown, msg: string) => this.addLog(LogLevel.INFO, source, msg))
-            .on(iCPSEventLog.WARN, (source: unknown, msg: string) => this.addLog(LogLevel.WARN, source, msg))
+            .on(iCPSEventLog.DEBUG, (source: object | string, msg: string) => this.addLog(LogLevel.DEBUG, source, msg))
+            .on(iCPSEventLog.INFO, (source: object | string, msg: string) => this.addLog(LogLevel.INFO, source, msg))
+            .on(iCPSEventLog.WARN, (source: object | string, msg: string) => this.addLog(LogLevel.WARN, source, msg))
             .on(iCPSEventRuntimeWarning.COUNT_MISMATCH, (album: string, expectedCount: number, actualCPLAssets: number, actualCPLMasters: number) => {
                 this.addLog(LogLevel.WARN, `RuntimeWarning`, `Expected ${expectedCount} CPLAssets & CPLMasters, but got ${actualCPLAssets} CPLAssets and ${actualCPLMasters} CPLMasters for album ${album}`);
             })
@@ -311,7 +326,7 @@ export class StateManager {
             .on(iCPSEventSyncEngine.RETRY, (_retryCount: number, err: Error) => {
                 this.addLog(LogLevel.WARN, `RuntimeWarning`, `Detected error during sync: ${iCPSError.toiCPSError(err).getDescription()}`);
             })
-            .on(iCPSEventLog.ERROR, (source: unknown, msg: string) => this.addLog(LogLevel.ERROR, source, msg))
+            .on(iCPSEventLog.ERROR, (source: object | string, msg: string) => this.addLog(LogLevel.ERROR, source, msg))
             .on(iCPSEventRuntimeError.HANDLED_ERROR, (err: iCPSError) => this.addLog(LogLevel.ERROR, `RuntimeError`, iCPSError.toiCPSError(err).getDescription()));
     }
 
@@ -360,7 +375,7 @@ export class StateManager {
         this.updateState(StateType.RUNNING, {progress: 0, progressMsg: `Starting ${trigger}...`})
     }
 
-    addLog(level: LogLevel, source: string | any, message: string) {
+    addLog(level: LogLevel, source: object | string, message: string) {
         if(!this.log) {
             this.log = []
         }
@@ -615,7 +630,7 @@ export class StateManager {
             const now = new Date();
             fs.utimesSync(lockFilePath, now, now);
         } catch (err) {
-            Resources.logger(this).warn(`Unable to refresh library lock: ${err}`);
+            Resources.logger(this).warn(`Unable to refresh library lock: ${errorMessage(err)}`);
         }
     }
 

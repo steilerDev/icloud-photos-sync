@@ -35,15 +35,27 @@ type MockSymlinkOptions = {
 }
 
 class MockFile {
-    constructor(public options: MockFileOptions) {}
+    options: MockFileOptions;
+
+    constructor(options: MockFileOptions) {
+        this.options = options;
+    }
 }
 
 class MockDirectory {
-    constructor(public options: MockDirectoryOptions) {}
+    options: MockDirectoryOptions;
+
+    constructor(options: MockDirectoryOptions) {
+        this.options = options;
+    }
 }
 
 class MockSymlink {
-    constructor(public options: MockSymlinkOptions) {}
+    options: MockSymlinkOptions;
+
+    constructor(options: MockSymlinkOptions) {
+        this.options = options;
+    }
 }
 
 type MockTreeEntry = string | Buffer | MockFile | MockDirectory | MockSymlink | MockTree

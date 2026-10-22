@@ -1,8 +1,8 @@
-import {iCloud} from '../icloud/icloud.js';
-import {PhotosLibrary} from '../photos-library/photos-library.js';
-import {Asset} from '../photos-library/model/asset.js';
-import {Album, AlbumType} from '../photos-library/model/album.js';
-import {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
+import type {iCloud} from '../icloud/icloud.js';
+import type {PhotosLibrary} from '../photos-library/photos-library.js';
+import type {Asset} from '../photos-library/model/asset.js';
+import {type Album, AlbumType} from '../photos-library/model/album.js';
+import type {PLibraryEntities, PLibraryProcessingQueues} from '../photos-library/model/photos-entity.js';
 import {iCPSError} from '../../app/error/error.js';
 import {SYNC_ERR} from '../../app/error/error-codes.js';
 import {isHttpError} from '../resources/http-client.js';
@@ -88,7 +88,7 @@ export class SyncEngine {
 
                 Resources.logger(this).debug(`Refreshing iCloud connection...`);
                 const iCloudReady = this.icloud.getReady();
-                this.icloud.setupAccount();
+                void this.icloud.setupAccount();
                 if (!await iCloudReady) {
                     return [[], []];
                 }
@@ -134,10 +134,8 @@ export class SyncEngine {
     async diffState(remoteAssets: Asset[], remoteAlbums: Album[], localAssets: PLibraryEntities<Asset>, localAlbums: PLibraryEntities<Album>): Promise<[PLibraryProcessingQueues<Asset>, PLibraryProcessingQueues<Album>]> {
         Resources.emit(iCPSEventSyncEngine.DIFF);
         Resources.logger(this).info(`Diffing state`);
-        const [assetQueue, albumQueue] = await Promise.all([
-            SyncEngineHelper.getProcessingQueues(remoteAssets, localAssets),
-            SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums),
-        ]);
+        const assetQueue = SyncEngineHelper.getProcessingQueues(remoteAssets, localAssets);
+        const albumQueue = SyncEngineHelper.getProcessingQueues(remoteAlbums, localAlbums);
         let uniqueAssetQueue = SyncEngineHelper.removeDuplicateAssets(assetQueue);
         if (this.icloud.photos.indexingInProgress) {
             const deletionCount = uniqueAssetQueue[0].length;

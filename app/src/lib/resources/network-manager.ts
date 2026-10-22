@@ -1,19 +1,37 @@
 import fs from "fs/promises";
 import {setGlobalProxyFromEnv} from "http";
+import {setTimeout} from "timers/promises";
 import {jsonc} from "jsonc";
 import PQueue from "p-queue";
 import {RESOURCES_ERR} from "../../app/error/error-codes.js";
 import {errorMessage, iCPSError} from "../../app/error/error.js";
-import {iCPSAppOptions} from "../../app/factory.js";
-import {HeaderJar, Header, HttpClient, HttpRequestConfig, NetworkCapture, ResponseValidator} from "./http-client.js";
+import type {iCPSAppOptions} from "../../app/factory.js";
+import {HeaderJar, Header, HttpClient, type HttpRequestConfig, NetworkCapture, type ResponseValidator, isHttpError} from "./http-client.js";
 import {Resources} from "./main.js";
-import {COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, PhotosSetupResponseZone, SetupResponse, SigninResponse, TrustResponse} from "./network-types.js";
-import {PhotosAccountZone, ZoneArea} from "./resource-types.js";
+import {COOKIE_KEYS, ENDPOINTS, HEADER_KEYS, type PhotosSetupResponseZone, type SetupResponse, type SigninResponse, type TrustResponse} from "./network-types.js";
+import type {PhotosAccountZone, ZoneArea} from "./resource-types.js";
+
+/**
+ * Network error codes indicating that the request never reached the server (e.g. a temporary DNS outage) - those requests can safely be retried, even if they are not idempotent
+ * Errors that might occur after the request was sent (e.g. ECONNRESET or timeouts) are not retried, since retrying a consumed SRP or MFA request would fail regardless
+ */
+export const TRANSIENT_NETWORK_ERROR_CODES = [
+    `EAI_AGAIN`,
+    `ENOTFOUND`,
+    `ECONNREFUSED`,
+    `ENETUNREACH`,
+    `EHOSTUNREACH`,
+];
 
 /**
  * This class is responsible for keeping track of the shared network connection
  */
 export class NetworkManager {
+    /**
+     * Delays (in ms) between retries of requests that failed with a transient network error - the number of entries defines the number of retries
+     */
+    _transientRetryDelays: number[] = [5000, 15000, 45000];
+
     /**
      * HTTP client handling all network requests - applies the header jar and (if enabled) the network capture
      */
@@ -310,6 +328,31 @@ export class NetworkManager {
     }
 
     /**
+     * Performs the provided request and retries it with an increasing delay, as long as it fails with a transient network error (see `TRANSIENT_NETWORK_ERROR_CODES`)
+     * Each attempt is queued separately, so the delay does not block the rate limiter
+     * @param method - The request method, for logging
+     * @param url - The requested url, for logging
+     * @param request - Performs a single attempt of the request
+     * @returns A promise, that resolves to the result of the first successful attempt
+     * @throws The error of the last attempt, or the first error that is not a transient network error
+     */
+    async retryTransientErrors<T>(method: string, url: string, request: () => Promise<T>): Promise<T> {
+        for (let attempt = 0; ; attempt++) {
+            try {
+                return await request();
+            } catch (err) {
+                if (attempt >= this._transientRetryDelays.length || !isHttpError(err) || !TRANSIENT_NETWORK_ERROR_CODES.includes(err.code)) {
+                    throw err;
+                }
+
+                const delay = this._transientRetryDelays[attempt];
+                Resources.logger(this).warn(`${method} ${url} failed with transient network error ${err.code} (${err.message}), retrying in ${delay / 1000}s (attempt ${attempt + 1}/${this._transientRetryDelays.length})`);
+                await setTimeout(delay);
+            }
+        }
+    }
+
+    /**
      * Perform a POST request using the HTTP client
      * Uses metadata rate limiting to ensure that the request is not sent too often
      * @param url - The url to request
@@ -317,10 +360,10 @@ export class NetworkManager {
      * @param validate - Validates the response and provides the return value - created by the Validator (see `Validator.response`)
      * @param config - Additional configuration
      * @returns A promise, that resolves to the validated response once the request has been completed
-     * @throws An HttpError if the request was not successful, the validator's error if the response is invalid
+     * @throws An HttpError if the request was not successful (after retrying transient network errors), the validator's error if the response is invalid
      */
     async post<T>(url: string, data: unknown, validate: ResponseValidator<T>, config?: HttpRequestConfig): Promise<T> {
-        return this._rateLimiter.add(async () => this._http.post(url, data, validate, config));
+        return this.retryTransientErrors(`POST`, url, async () => this._rateLimiter.add(async () => this._http.post(url, data, validate, config)));
     }
 
     /**
@@ -330,10 +373,10 @@ export class NetworkManager {
      * @param validate - Validates the response and provides the return value - created by the Validator (see `Validator.response`)
      * @param config - Additional configuration
      * @returns A promise, that resolves to the validated response once the request has been completed
-     * @throws An HttpError if the request was not successful, the validator's error if the response is invalid
+     * @throws An HttpError if the request was not successful (after retrying transient network errors), the validator's error if the response is invalid
      */
     async get<T>(url: string, validate: ResponseValidator<T>, config?: HttpRequestConfig): Promise<T> {
-        return this._rateLimiter.add(async () => this._http.get(url, validate, config));
+        return this.retryTransientErrors(`GET`, url, async () => this._rateLimiter.add(async () => this._http.get(url, validate, config)));
     }
 
     /**
@@ -344,10 +387,10 @@ export class NetworkManager {
      * @param validate - Validates the response and provides the return value - created by the Validator (see `Validator.response`)
      * @param config - Additional configuration
      * @returns A promise, that resolves to the validated response once the request has been completed
-     * @throws An HttpError if the request was not successful, the validator's error if the response is invalid
+     * @throws An HttpError if the request was not successful (after retrying transient network errors), the validator's error if the response is invalid
      */
     async put<T>(url: string, data: unknown, validate: ResponseValidator<T>, config?: HttpRequestConfig): Promise<T> {
-        return this._rateLimiter.add(async () => this._http.put(url, data, validate, config));
+        return this.retryTransientErrors(`PUT`, url, async () => this._rateLimiter.add(async () => this._http.put(url, data, validate, config)));
     }
 
     /**

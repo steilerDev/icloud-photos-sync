@@ -3,11 +3,16 @@ import {ENDPOINTS} from '../../resources/network-types.js';
 /**
  * Indicating, which MFA method should be used
  */
-enum MFAMethodType {
-    DEVICE = 1,
-    SMS = 2,
-    VOICE = 3
-}
+const MFAMethodType = {
+    DEVICE: 1,
+    SMS: 2,
+    VOICE: 3,
+} as const;
+
+/**
+ * The values of {@link MFAMethodType}
+ */
+type MFAMethodType = typeof MFAMethodType[keyof typeof MFAMethodType];
 
 /**
  * A class to hold the status of the currently executed MFA method
@@ -38,11 +43,11 @@ export class MFAMethod {
 
     /**
      * Updates this object to the given method and number id
-     * @param mfaMethod - The method to be used. Defaults to `device`
+     * @param mfaMethod - The method to be used: `device`, `voice` or `sms` (anything else falls back to `device`). Defaults to `device`
      * @param numberId - The number id used for sending sms or voice codes. Defaults to 1
      * @param nonFTEU - The backend's 'nonFTEU' flag of the phone number used for sending sms or voice codes
      */
-    update(mfaMethod: `device` | `voice` | `sms` | string = `device`, numberId: number = 1, nonFTEU?: boolean) {
+    update(mfaMethod: string = `device`, numberId: number = 1, nonFTEU?: boolean) {
         switch (mfaMethod) {
         case `sms`:
             this.type = MFAMethodType.SMS;

@@ -1,8 +1,8 @@
 
 import {test, beforeEach, expect, jest, describe} from '@jest/globals';
 import * as Config from '../_helpers/_config';
-import {EventManager} from "../../src/lib/resources/event-manager";
-import {iCPSEvent, iCPSEventLog} from "../../src/lib/resources/events-types";
+import type {EventManager} from "../../src/lib/resources/event-manager";
+import {type iCPSEvent, iCPSEventLog} from "../../src/lib/resources/events-types";
 import {prepareResources} from '../_helpers/_general';
 import {Resources} from '../../src/lib/resources/main';
 

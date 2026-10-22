@@ -1,9 +1,9 @@
 import {styleText} from 'util';
 import {SingleBar} from 'cli-progress';
-import {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
+import type {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
-import {iCPSError} from '../error/error.js';
+import type {iCPSError} from '../error/error.js';
 
 /**
  * The width of the horizontal line, if the terminal does not report its width

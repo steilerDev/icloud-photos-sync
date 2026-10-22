@@ -1,5 +1,5 @@
 import {Resources} from "../../../lib/resources/main.js";
-import {TrustedPhoneNumber} from "../../../lib/resources/network-types.js";
+import type {TrustedPhoneNumber} from "../../../lib/resources/network-types.js";
 import {requestMfaCSS, requestMfaCSSDark} from "../css/request-mfa-css.js";
 import {requestMfaScript} from "../scripts/request-mfa-scripts.js";
 import {View} from "./base.js";
@@ -34,7 +34,7 @@ export class RequestMfaView extends View {
                     <div id="sms-option-${value.id}" class="request-buttons phone-option" onclick="requestMfaWithMethod('sms', ${value.id})">
                         <span class="phone-display">${value.numberWithDialCode}</span>
                     </div>
-                `))}
+                `)).join(``)}
             </div>
 
             <!-- Voice button with expandable phone options -->
@@ -46,7 +46,7 @@ export class RequestMfaView extends View {
                     <div id="voice-option-${value.id}" class="request-buttons phone-option" onclick="requestMfaWithMethod('voice', ${value.id})">
                         <span class="phone-display">${value.numberWithDialCode}</span>
                     </div>
-                `))}
+                `)).join(``)}
             </div>
 
             <button class="inverted" onclick="navigate('${Resources.manager().webBasePath}/submit-mfa')" id="cancel-button">Cancel</button>

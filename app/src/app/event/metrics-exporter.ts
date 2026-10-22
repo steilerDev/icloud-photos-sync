@@ -1,7 +1,7 @@
 import * as fs from "fs";
-import {CPLAsset} from "../../lib/icloud/icloud-photos/query-parser.js";
-import {Album} from "../../lib/photos-library/model/album.js";
-import {Asset} from "../../lib/photos-library/model/asset.js";
+import type {CPLAsset} from "../../lib/icloud/icloud-photos/query-parser.js";
+import type {Album} from "../../lib/photos-library/model/album.js";
+import type {Asset} from "../../lib/photos-library/model/asset.js";
 import {iCPSEventApp, iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine} from '../../lib/resources/events-types.js';
 import {Resources} from "../../lib/resources/main.js";
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';

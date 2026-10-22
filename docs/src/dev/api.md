@@ -130,7 +130,10 @@ The `X-Apple-Session-Token` response header carries the session secret. It is se
 
 - All metadata requests (auth, setup and CloudKit) go through one queue, limited by `--metadata-rate`.
 - Downloads use a separate queue, limited by `--download-threads` and `--download-timeout`.
-- There are no HTTP-level retries, except for [throttled CloudKit requests](#errors-and-throttling). Other failures are retried by the sync engine, which reconnects (`accountLogin`) before every retry.
+- HTTP-level retries exist for two cases only:
+    - [Throttled CloudKit requests](#errors-and-throttling).
+    - Requests that never reached the server (`EAI_AGAIN`, `ENOTFOUND`, `ECONNREFUSED`, `ENETUNREACH`, `EHOSTUNREACH`) are retried by `NetworkManager` after 5s, 15s and 45s, for every host. This covers short DNS outages, which otherwise fail the whole run during authentication (observed in Backtrace on SRP init, `accountLogin` and `requestPCS`, 2026-10). Errors after the request was sent (`ECONNRESET`, timeouts) are not retried, since SRP and MFA requests can't be replayed.
+- Other failures are retried by the sync engine, which reconnects (`accountLogin`) before every retry.
 
 ## Authentication
 
@@ -420,6 +423,8 @@ A `RUNNING` state does not block the sync: the application emits an `INDEXING_IN
 - Consecutive queries in the same session alternate between `FINISHED` / `100` and `RUNNING` / `0`, sometimes between two `indexJobId`s, sometimes for the same one. The `RUNNING` job never advances, and new job IDs appear over the days.
 - The records are complete while `RUNNING` is reported. On the test account, 8 full scans during `RUNNING` matched the expected fixture data exactly (202 assets, 202 masters, 8 albums). On the prod account, 3 full scans of both zones (32,709 + 576 assets, 95 albums) returned identical record names, whichever state was reported. `HyperionIndexCountLookup` returned the same count under both states.
 
+Observed on 2026-10-11: the primary zone of a library with 32.7k assets reported `RUNNING`, without a `progress` field. At the same time, records queries returned every asset: the received count matched `HyperionIndexCountLookup`. The application still refuses to sync in that state.
+
 ### Pagination
 
 The application requests 198 records per page (`resultsLimit`), and the limit counts records, not positions. A position in "All photos" returns two records (asset and master), a position in an album three (asset, master and container relation). The application therefore fetches assets as follows:
@@ -477,12 +482,34 @@ A photo or video consists of two records:
 - The application downloads the original from the master, and if `adjustmentType` is set, the edited version from the asset (`resJPEGFullRes`, falling back to `resVidFullRes`).
 - The modification time of the original comes from the master's `modified` timestamp, the one of the edited version from the asset's.
 - File type descriptors are Uniform Type Identifiers. `file-type.ts` maps the known ones to file extensions; unknown ones are reported through crash reporting so support can be added.
+- The descriptor is not always a UTI. Crash reports from July and August 2026 contained the literal value `unsupported` as the `resOriginalFileType` of `.m4v` and `.BMP` originals; their `filenameEnc` carried the extension. The application skips such assets.
+- `filenameEnc` was present, with an extension, on every master observed:
+    - all 202 masters of the test library;
+    - all 33,270 masters of a personal library (October 2026, primary and shared library zone);
+    - every report on #143.
 
 **Fields observed but not used**
 
 - `resOriginalVidComplRes` and `resOriginalVidComplFileType` on `CPLMaster`: the video part of a Live Photo (always `com.apple.quicktime-movie`).
 - `mediaMetaDataEnc` on `CPLMaster`: a base64 encoded binary property list (`bplist00`) holding Exif and TIFF metadata (camera model, exposure, dimensions, capture time, …).
 - `timeZoneNameEnc` (type `ENCRYPTED_BYTES`).
+
+**Resource variants** (observed in October 2026 on a personal library with 33,273 assets in the primary and shared library zone, by requesting the `*FileType` fields)
+
+| Record | Resources | Present on | Types observed |
+|---|---|---|---|
+| `CPLMaster` | `resOriginalRes` | every master | `public.heic`, `public.jpeg`, `public.png`, `org.webmproject.webp`, `com.apple.quicktime-movie`, `public.mpeg-4`, `com.sony.arw-raw-image` |
+| `CPLMaster` | `resOriginalVidComplRes` | Live Photos (1,629) | `com.apple.quicktime-movie` |
+| `CPLMaster` | `resJPEGFullRes` | 23,605 of 33,270 masters. The library holds 26,972 Sony ARW originals, so this is probably a full-size JPEG rendering of RAW originals (unverified). | `public.jpeg` |
+| `CPLMaster` | `resJPEGMedRes`, `resJPEGThumbRes` | almost every master | `public.jpeg` |
+| `CPLMaster` | `resVidMedRes`, `resVidSmallRes` | videos and Live Photos | `com.apple.quicktime-movie`, `public.mpeg-4` |
+| `CPLAsset` | `resJPEGFullRes` | edited photos | `public.jpeg` (3,797), `public.heic` (31) |
+| `CPLAsset` | `resVidFullRes`, `resVidComplRes` | edited videos, edited Live Photos | `com.apple.quicktime-movie` |
+| `CPLAsset` | `resJPEGMedRes`, `resJPEGThumbRes` | edited assets: 3,829 and 3,841 of 3,841 | `public.jpeg` |
+| `CPLAsset` | `resVidMedRes`, `resVidSmallRes` | edited videos | `com.apple.quicktime-movie`, `public.mpeg-4` |
+| `CPLMaster` | `resOriginalAltRes` | none: the library has RAW originals, but no RAW+JPEG pairs | – |
+
+Edited assets carry their own reduced renders (`resJPEGMedRes`, `resJPEGThumbRes`, `resVidMedRes`, `resVidSmallRes` on the `CPLAsset`), next to the ones on the `CPLMaster`. Presumably they show the edit and the master's show the original; this is inferred from where they are stored and not verified against the content.
 
 ### Asset resources
 
@@ -666,6 +693,7 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 - **Indexing state**: whether a `RUNNING` state with progress above `0` (an actual indexing job) still means that records are missing, and why stale jobs appear since October 2026 (see [Indexing state](#indexing-state)).
 - **`requestPCS` 412 "User has not disabled iCloud DRS."**: why `accountLogin` asks for PCS on such an account, and whether the account needs an action (see [requestPCS](#requestpcs)).
 - **Checksums** of multi-GB files, ADP accounts and the shared library zone have not been verified (see [File checksum](#file-checksum)).
+- **RAW+JPEG pairs**: `resOriginalAltRes` has not been observed yet; the sampled library had RAW originals but no pairs. Unknown: whether the alternative's file name is available anywhere, and which half (RAW or JPEG) becomes `resOriginalRes`.
 
 ## Postman Collection
 

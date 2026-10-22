@@ -1,4 +1,4 @@
-import { GenericContainer, StartedTestContainer, AbstractStartedContainer, Wait, ExecResult, PullPolicy } from "testcontainers";
+import { GenericContainer, type StartedTestContainer, AbstractStartedContainer, Wait, type ExecResult, PullPolicy } from "testcontainers";
 import  {extract} from 'tar-stream'
 import {createHash} from 'crypto'
 
@@ -231,7 +231,7 @@ export class StartedICPSContainer extends AbstractStartedContainer {
         for await (const entry of extractStream) {
             if(entry.header.type === `file`) {
                 let content =``
-                for await (const buffer of entry) {
+                for await (const buffer of entry as AsyncIterable<Buffer>) {
                     content += buffer.toString()
                 }
                 return content
@@ -274,7 +274,7 @@ export class StartedICPSContainer extends AbstractStartedContainer {
             }
             if(header.type === `file`) {
                 hash.update(header.name)
-                for await (const chunk of entry) {
+                for await (const chunk of entry as AsyncIterable<Buffer>) {
                     hash.update(chunk)
                 }
             }

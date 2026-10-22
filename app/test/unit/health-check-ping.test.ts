@@ -1,9 +1,9 @@
 import {beforeEach, describe, expect, jest, test} from "@jest/globals";
 import {HealthCheckPingExecutor} from "../../src/app/event/health-check-ping-executor";
 import {iCPSEventApp, iCPSEventCloud, iCPSEventLog, iCPSEventRuntimeError} from "../../src/lib/resources/events-types";
-import {MockedEventManager, MockedResourceManager, prepareResources} from "../_helpers/_general";
+import {type MockedEventManager, type MockedResourceManager, prepareResources} from "../_helpers/_general";
 import {HttpMock} from "../_helpers/http-mock.helper";
-import {LogLevel, StateManager} from "../../src/lib/resources/state-manager";
+import {LogLevel, type StateManager} from "../../src/lib/resources/state-manager";
 
 const exampleHealthCheckUrl = `https://hc-ping.com/example-healthcheck-slug`;
 let mockedResourceManager: MockedResourceManager;
