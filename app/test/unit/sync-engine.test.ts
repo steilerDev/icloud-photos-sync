@@ -177,6 +177,34 @@ describe(`Coordination`, () => {
             expect(doneEvent).toHaveBeenCalledTimes(1);
         });
 
+        test(`Count downloads completing while settling as progress, if download URLs expired`, async () => {
+            mockedResourceManager._resources.maxRetries = 1;
+
+            const retryEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.RETRY);
+            const refreshEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.REFRESH);
+            const doneEvent = mockedEventManager.spyOnEvent(iCPSEventSyncEngine.DONE);
+            mockedNetworkManager.settleCCYLimiter = jest.fn<typeof mockedNetworkManager.settleCCYLimiter>()
+                .mockImplementationOnce(async () => {
+                    // Download that was already running when the URL of another asset expired
+                    syncEngine._writtenAssets = 1;
+                });
+            syncEngine.fetchAndLoadState = jest.fn<typeof syncEngine.fetchAndLoadState>()
+                .mockResolvedValue(fetchAndLoadStateReturnValue);
+            syncEngine.diffState = jest.fn<typeof syncEngine.diffState>()
+                .mockResolvedValue(diffStateReturnValue);
+            syncEngine.writeState = jest.fn<typeof syncEngine.writeState>()
+                .mockRejectedValueOnce(new iCPSError(SYNC_ERR.DOWNLOAD_URL_EXPIRED))
+                .mockResolvedValue();
+
+            await syncEngine.sync();
+
+            expect(refreshEvent).toHaveBeenCalledWith(1);
+            expect(retryEvent).not.toHaveBeenCalled();
+            expect(syncEngine.fetchAndLoadState).toHaveBeenCalledTimes(2);
+            expect(syncEngine.icloud.setupAccount).not.toHaveBeenCalled();
+            expect(doneEvent).toHaveBeenCalledTimes(1);
+        });
+
         test(`Count expired download URLs as retry, if no progress was made`, async () => {
             mockedResourceManager._resources.maxRetries = 2;
 

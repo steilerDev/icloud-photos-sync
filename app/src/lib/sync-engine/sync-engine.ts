@@ -68,12 +68,14 @@ export class SyncEngine {
                 Resources.emit(iCPSEventSyncEngine.DONE);
                 return [remoteAssets, remoteAlbums];
             } catch (err) {
+                // Downloads that were already running when the pass failed are still completing - waiting for them, so they are counted as progress
+                await Resources.network().settleCCYLimiter();
+
                 // Download URLs are only valid for a limited amount of time (~15 minutes), large libraries need multiple passes - as long as each pass makes progress, this is not counted as a retry
                 const urlExpired = err instanceof iCPSError && err.code === SYNC_ERR.DOWNLOAD_URL_EXPIRED.code;
                 if (urlExpired && this._writtenAssets > 0) {
                     Resources.logger(this).info(`Download URLs expired after writing ${this._writtenAssets} assets, refreshing remote state`);
                     Resources.emit(iCPSEventSyncEngine.REFRESH, this._writtenAssets);
-                    await Resources.network().settleCCYLimiter();
                     continue;
                 }
 
@@ -83,8 +85,6 @@ export class SyncEngine {
                 Resources.emit(iCPSEventSyncEngine.RETRY, retryCount, isHttpError(err) || urlExpired
                     ? new iCPSError(SYNC_ERR.NETWORK).addCause(err)
                     : new iCPSError(SYNC_ERR.UNKNOWN).addCause(err));
-
-                await Resources.network().settleCCYLimiter();
 
                 Resources.logger(this).debug(`Refreshing iCloud connection...`);
                 const iCloudReady = this.icloud.getReady();

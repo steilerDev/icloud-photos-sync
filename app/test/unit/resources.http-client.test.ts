@@ -923,6 +923,19 @@ describe(`HttpClient`, () => {
             expect(HttpError.fromNetworkError(httpError, request)).toBe(httpError);
         });
 
+        test(`Serializes the message`, () => {
+            const httpError = HttpError.fromNetworkError(new TypeError(`fetch failed`, {cause: Object.assign(new Error(`HTTP/2: stream closed before response headers`), {code: `UND_ERR_INFO`})}), request);
+
+            expect(JSON.parse(JSON.stringify({cause: httpError}))).toEqual({
+                cause: {
+                    name: `HttpError`,
+                    message: `HTTP/2: stream closed before response headers`,
+                    code: `UND_ERR_INFO`,
+                    request,
+                },
+            });
+        });
+
         test(`Type guard`, () => {
             expect(isHttpError(new HttpError(`some error`, `SOME_CODE`, request))).toBeTruthy();
             expect(isHttpError(new Error(`some error`))).toBeFalsy();

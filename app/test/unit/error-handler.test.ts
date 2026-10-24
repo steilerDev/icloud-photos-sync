@@ -1,9 +1,11 @@
-import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {BacktraceClientBuilder} from '@backtrace/node';
 import fs from 'fs';
 import zlib from 'zlib';
 import {ErrorHandler, PersistedGuidAttributeProvider, ShellFreeBacktraceClientBuilder} from '../../src/app/event/error-handler';
 import {type MockedResourceManager, prepareResources} from '../_helpers/_general';
+import {iCPSError} from '../../src/app/error/error';
+import {APP_ERR, AUTH_ERR} from '../../src/app/error/error-codes';
 
 type AttributeProvider = Parameters<BacktraceClientBuilder[`addAttributeProvider`]>[0]
 
@@ -64,6 +66,58 @@ describe(`ShellFreeBacktraceClientBuilder`, () => {
 
         expect(btClient.attributes[`guid`]).toEqual(`0b6a3b0e-4d57-4c1f-9b49-1e0f8a1f2c3d`);
         btClient.dispose();
+    });
+});
+
+describe(`Handle error`, () => {
+    let errorHandler: ErrorHandler;
+    let signalListeners: Record<string, unknown[]>;
+
+    beforeEach(() => {
+        prepareResources();
+        signalListeners = {SIGTERM: process.listeners(`SIGTERM`), SIGINT: process.listeners(`SIGINT`)};
+        errorHandler = new ErrorHandler();
+        errorHandler.reportError = jest.fn<typeof errorHandler.reportError>()
+            .mockResolvedValue(`some-uuid`);
+    });
+
+    afterEach(() => {
+        // Removing the signal handlers registered by the error handler
+        for (const signal of [`SIGTERM`, `SIGINT`] as const) {
+            process.listeners(signal)
+                .filter(listener => !signalListeners[signal].includes(listener))
+                .forEach(listener => process.removeListener(signal, listener as () => void));
+        }
+    });
+
+    test.each([
+        {
+            desc: `Account locked`,
+            rootError: AUTH_ERR.ACCOUNT_LOCKED,
+        }, {
+            desc: `Account setup incomplete`,
+            rootError: AUTH_ERR.ACCOUNT_SETUP_INCOMPLETE,
+        },
+    ])(`Does not report errors that need to be resolved by the user - $desc`, async ({rootError}) => {
+        const err = new iCPSError(APP_ERR.DAEMON)
+            .addCause(new iCPSError(AUTH_ERR.FAILED)
+                .addCause(new iCPSError(rootError)));
+
+        await errorHandler.handleError(err);
+
+        expect(errorHandler.reportError).not.toHaveBeenCalled();
+        expect(err.btUUID).toBeUndefined();
+    });
+
+    test(`Reports other errors`, async () => {
+        const err = new iCPSError(APP_ERR.DAEMON)
+            .addCause(new iCPSError(AUTH_ERR.FAILED)
+                .addCause(new iCPSError(AUTH_ERR.UNEXPECTED_RESPONSE)));
+
+        await errorHandler.handleError(err);
+
+        expect(errorHandler.reportError).toHaveBeenCalledWith(err);
+        expect(err.btUUID).toEqual(`some-uuid`);
     });
 });
 
