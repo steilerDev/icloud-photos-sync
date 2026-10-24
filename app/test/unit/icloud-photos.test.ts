@@ -403,6 +403,8 @@ describe.each([
         });
 
         test(`Server Error with CloudKit error details`, async () => {
+            photos.awaitThrottling = jest.fn<typeof photos.awaitThrottling>()
+                .mockResolvedValue();
             const responseBody = {
                 uuid: `some-uuid`,
                 serverErrorCode: `INTERNAL_ERROR`,
@@ -551,11 +553,20 @@ describe.each([
                 desc: `Too Many Requests`,
                 status: 429,
                 body: {retryAfter: 9},
+            }, {
+                desc: `Other server error with retryAfter`,
+                status: 503,
+                body: {serverErrorCode: `INTERNAL_ERROR`, retryAfter: 9},
+            }, {
+                desc: `Service Unavailable with Retry-After header`,
+                status: 503,
+                body: ``,
+                headers: {'retry-after': `9`},
             },
-        ])(`Retries the request after the requested time - $desc`, async ({status, body}) => {
+        ])(`Retries the request after the requested time - $desc`, async ({status, body, headers}) => {
             mockedNetworkManager.mock
                 .onPost(queryURL, expectedQuery)
-                .replyOnce(status, body)
+                .replyOnce(status, body, headers)
                 .onPost(queryURL, expectedQuery)
                 .replyOnce(200, {records: [`recordA`]});
 
@@ -582,7 +593,7 @@ describe.each([
         test(`Does not retry other errors`, async () => {
             mockedNetworkManager.mock
                 .onPost(queryURL, expectedQuery)
-                .reply(503, {serverErrorCode: `INTERNAL_ERROR`, retryAfter: 9});
+                .reply(503, {serverErrorCode: `INTERNAL_ERROR`});
 
             await expect(photos.performQuery(zone, `recordType`)).rejects.toThrow(/^CloudKit request failed$/);
 
@@ -752,16 +763,28 @@ describe(`Throttling`, () => {
                 err: buildHttpError(503, {serverErrorCode: `THROTTLED`, retryAfter: `soon`}),
                 expected: 10,
             }, {
-                desc: `THROTTLED with excessive retryAfter`,
-                err: buildHttpError(503, {serverErrorCode: `THROTTLED`, retryAfter: 3600}),
-                expected: 300,
+                desc: `THROTTLED with empty retry-after header`,
+                err: buildHttpError(503, {serverErrorCode: `THROTTLED`}, {'retry-after': ` `}),
+                expected: 10,
             }, {
-                desc: `Other server error`,
+                desc: `THROTTLED with long retryAfter`,
+                err: buildHttpError(503, {serverErrorCode: `THROTTLED`, retryAfter: 3600}),
+                expected: 3600,
+            }, {
+                desc: `Other server error with retryAfter`,
                 err: buildHttpError(503, {serverErrorCode: `INTERNAL_ERROR`, retryAfter: 9}),
+                expected: 9,
+            }, {
+                desc: `Non-JSON response with retry-after header`,
+                err: buildHttpError(503, `Service Unavailable`, {'retry-after': `1261`}),
+                expected: 1261,
+            }, {
+                desc: `Other server error without retry information`,
+                err: buildHttpError(503, {serverErrorCode: `INTERNAL_ERROR`}),
                 expected: undefined,
             }, {
-                desc: `Non-JSON response`,
-                err: buildHttpError(503, `Service Unavailable`, {'retry-after': `5`}),
+                desc: `Non-JSON response without retry information`,
+                err: buildHttpError(503, `Service Unavailable`),
                 expected: undefined,
             }, {
                 desc: `No response`,

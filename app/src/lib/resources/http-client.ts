@@ -155,6 +155,20 @@ export class HttpError extends Error {
     }
 
     /**
+     * Serializes the error, e.g. when it is attached as context to an iCPSError - the message is not an own enumerable property and would be lost otherwise
+     * @returns A plain object holding the error's name, message, code, request and response
+     */
+    toJSON() {
+        return {
+            name: this.name,
+            message: this.message,
+            code: this.code,
+            request: this.request,
+            response: this.response,
+        };
+    }
+
+    /**
      * Creates an error for a response with a rejected status
      * @param response - The response
      * @returns The error

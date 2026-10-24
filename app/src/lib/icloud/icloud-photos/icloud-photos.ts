@@ -55,14 +55,9 @@ const RETRYABLE_SERVER_ERROR_CODES = [`THROTTLED`, `TRY_AGAIN_LATER`];
 const MAX_THROTTLED_RETRIES = 10;
 
 /**
- * The time in seconds to wait before retrying a request, if CloudKit did not provide a valid one
+ * The time in seconds to wait before retrying a throttled request, if CloudKit did not provide a valid one
  */
 const DEFAULT_RETRY_AFTER = 10;
-
-/**
- * The maximum time in seconds to wait before retrying a request
- */
-const MAX_RETRY_AFTER = 300;
 
 /**
  * This class holds connection and state with the iCloud Photos Backend and provides functions to access the data stored there
@@ -379,6 +374,8 @@ export class iCloudPhotos {
 
     /**
      * Determines if CloudKit asked to retry a failed request later and how long to wait
+     * Any error response providing a wait time (`retryAfter` in the body or the `Retry-After` header) is retried after exactly that time, e.g. 503s with a wait time of more than 20 minutes.
+     * Throttled requests (429, or THROTTLED/TRY_AGAIN_LATER) without a valid wait time are retried after a default time.
      * @param err - The error thrown by the request
      * @returns The time in seconds to wait before retrying the request, or undefined if the request should not be retried
      */
@@ -388,15 +385,18 @@ export class iCloudPhotos {
         }
 
         const {status, headers, data} = err.response;
-        const serverErrorCode = typeof data === `object` && data !== null ? data.serverErrorCode : undefined;
-        if (status !== 429 && !RETRYABLE_SERVER_ERROR_CODES.includes(serverErrorCode)) {
-            return undefined;
+        const body = typeof data === `object` && data !== null ? data : {};
+        const rawRetryAfter = body.retryAfter ?? headers[`retry-after`];
+        const retryAfter = typeof rawRetryAfter === `number` || (typeof rawRetryAfter === `string` && rawRetryAfter.trim().length > 0)
+            ? Number(rawRetryAfter)
+            : NaN;
+        if (Number.isFinite(retryAfter) && retryAfter >= 0) {
+            return retryAfter;
         }
 
-        const retryAfter = Number(data?.retryAfter ?? headers[`retry-after`]);
-        return Number.isFinite(retryAfter) && retryAfter >= 0
-            ? Math.min(retryAfter, MAX_RETRY_AFTER)
-            : DEFAULT_RETRY_AFTER;
+        return status === 429 || RETRYABLE_SERVER_ERROR_CODES.includes(body.serverErrorCode)
+            ? DEFAULT_RETRY_AFTER
+            : undefined;
     }
 
     /**

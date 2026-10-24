@@ -25,6 +25,7 @@ const reportDenyList = [
     LIBRARY_ERR.LOCKED.code, // Only happens if library is locked
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
     AUTH_ERR.ACCOUNT_LOCKED.code, // Only happens if Apple locked the account - needs to be unlocked by the user
+    AUTH_ERR.ACCOUNT_SETUP_INCOMPLETE.code, // Only happens if the account requires an action on icloud.com (e.g. accepting updated terms) - needs to be resolved by the user
 ];
 
 /**

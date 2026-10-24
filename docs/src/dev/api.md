@@ -565,7 +565,9 @@ Rejected CloudKit requests return a JSON body:
 ```
 
 - Too many requests are answered with `503` and `serverErrorCode` `THROTTLED` or `TRY_AGAIN_LATER`, or with `429`. The wait time is in `retryAfter` (seconds) or the `Retry-After` header.
-- The application then pauses all CloudKit requests for the requested time (10 seconds if none is given, at most 5 minutes) and retries up to 10 times.
+- Observed in crash reports (October 2026): a plain `503` with an empty body and a `Retry-After` header of 1200 to 2100 seconds (20 to 35 minutes) on `records/query`. One install received these repeatedly over several days, together with dropped connections (undici `UND_ERR_INFO`).
+- Any error response that provides a wait time is retried after exactly that time, whatever its status or `serverErrorCode`. There is no upper limit. Throttled responses (`429`, `THROTTLED`, `TRY_AGAIN_LATER`) without a valid wait time are retried after 10 seconds.
+- While waiting, the application pauses all CloudKit requests, and retries the request up to 10 times.
 - Other errors are wrapped in `ICLOUD_PHOTOS_REQUEST_FAILED`, including status, `serverErrorCode`, `reason` and `retryAfter` (or the start of a non-JSON body).
 
 ## Asset downloads
@@ -685,6 +687,7 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 ## Open questions
 
 - **`referenceChecksum`**: its meaning is unknown.
+- **`503` with a long `Retry-After`** (see [Errors and throttling](#errors-and-throttling)): whether it throttles the account or the client IP, and whether waiting the full time clears it.
 - **`wrappingKey`**: downloads are readable without it. Its purpose is unknown, and downloads from ADP accounts have not been checked.
 - **`syncToken`** from the zones request: an incremental change feed (e.g. `changes/zone`) could replace fetching the full state on every sync, but has not been explored.
 - **Shared library albums**: album queries only return primary zone assets. It is unknown whether shared library assets in albums can be queried.
