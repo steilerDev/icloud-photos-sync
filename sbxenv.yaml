@@ -1,0 +1,8 @@
+schemaVersion: "1"
+name: icps
+agent: sbx-templates
+workspace: .
+
+kits:
+  - dhi.io/sbx-templates:claude-code-docker
+  - git.steiler.dev/steilerdev/sbx-kit-session:latest
