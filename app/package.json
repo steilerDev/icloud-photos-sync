@@ -79,7 +79,7 @@
     "knip": "6.41.0",
     "liquidjs": "10.30.0",
     "node-mocks-http": "1.18.1",
-    "oxlint": "1.88.0",
+    "oxlint": "1.89.0",
     "oxlint-tsgolint": "7.0.2004",
     "tar-stream": "3.2.2",
     "testcontainers": "12.2.1",
