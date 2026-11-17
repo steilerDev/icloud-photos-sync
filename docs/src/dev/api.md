@@ -180,6 +180,7 @@ The trust token from a previous MFA is sent in `trustTokens`. A missing or expir
 Error bodies list the reasons as `{"serviceErrors": [{"code", "message", "suppressDismissal"}]}`. The MFA endpoints use the key `service_errors` instead (see [MFA](#mfa)), so the application reads both. Their messages are added to the error.
 
 - Observed in crash reports (October 2026): when Apple locks an account, `signin/complete` answers `403` with `serviceErrors[0].code = -20209` and the message "This Apple Account has been locked for security reasons. Visit iForgot to reset your account (https://iforgot.apple.com)". `signin/init` still succeeds. Only the user can unlock the account, so `AUTH_ACCOUNT_LOCKED` is not sent as a crash report.
+- Observed in crash reports (30 October to 17 November 2026): `signin/init` sporadically answers `400` with `{"iteration": 0, "serviceErrors": [{"code": "-900007", "suppressDismissal": false}]}` (no `message`). At least 9 installs on versions 4.0.0 to 5.0.2 were affected, mostly with a single failed run per day and install, peaking on 12 November. The request itself was well-formed and identical to successful ones. The application does not handle this code, so it surfaces as `AUTH_SRP_INIT_FAILED`.
 
 The body is `{"authType": "hsa2"}`. The relevant data is in the headers: `X-Apple-Session-Token`, `X-Apple-ID-Session-Id`, `X-Apple-ID-Account-Country` (used in [accountLogin](#accountlogin)), `scnt` and the `aasp` cookie.
 
@@ -694,6 +695,7 @@ Apple changed the authentication flow of icloud.com with iOS 26.4 (and a second 
 - **Live Photos**: the video part (`resOriginalVidComplRes`) is not downloaded.
 - **Shared albums**: whether `rootctag`/`albumctag` support incremental changes, the maximum `webgetassets` range, whether comments and likes are reachable, and how shared albums behave on accounts with Advanced Data Protection (which according to Apple does not cover shared albums). See [Shared albums](#shared-albums).
 - **Indexing state**: whether a `RUNNING` state with progress above `0` (an actual indexing job) still means that records are missing, and why stale jobs appear since October 2026 (see [Indexing state](#indexing-state)).
+- **`signin/init` 400 with service error `-900007`**: what the code means (a transient backend problem, or throttling of the account or client IP), and whether an immediate retry succeeds (see [Signin](#signin)).
 - **`requestPCS` 412 "User has not disabled iCloud DRS."**: why `accountLogin` asks for PCS on such an account, and whether the account needs an action (see [requestPCS](#requestpcs)).
 - **Checksums** of multi-GB files, ADP accounts and the shared library zone have not been verified (see [File checksum](#file-checksum)).
 - **RAW+JPEG pairs**: `resOriginalAltRes` has not been observed yet; the sampled library had RAW originals but no pairs. Unknown: whether the alternative's file name is available anywhere, and which half (RAW or JPEG) becomes `resOriginalRes`.
