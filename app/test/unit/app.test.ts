@@ -741,6 +741,22 @@ describe(`App control flow`, () => {
                 expect(daemonApp.performScheduledSync).toHaveBeenCalledTimes(1);
             });
 
+            test(`Schedule without upcoming run`, async () => {
+                const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
+                daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()
+                    .mockResolvedValue();
+                Resources._instances.manager._resources.schedule = `0 0 31 2 *`; // 31st of February - never triggers
+                const eventScheduledEvent = spyOnEvent(Resources._instances.event._eventBus, iCPSEventApp.SCHEDULED);
+
+                await daemonApp.run();
+                daemonApp.job?.stop();
+
+                expect(daemonApp.nextRun()).toBeUndefined();
+                expect(eventScheduledEvent).toHaveBeenCalledWith(undefined);
+                expect(Resources.state().serialize().nextSync).toBeUndefined();
+                expect(daemonApp.performScheduledSync).not.toHaveBeenCalled();
+            });
+
             test(`Run multiple scheduled job`, async () => {
                 const daemonApp = await appFactory(validOptions.daemon) as DaemonApp;
                 daemonApp.performScheduledSync = jest.fn<typeof daemonApp.performScheduledSync>()

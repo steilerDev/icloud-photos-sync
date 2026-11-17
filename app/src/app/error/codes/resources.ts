@@ -35,6 +35,10 @@ export const UNABLE_TO_WRITE_FILE: ErrorStruct = buildErrorStruct(
     name, prefix, `UNABLE_TO_WRITE_FILE`, `Unable to write resource file`,
 );
 
+export const UNABLE_TO_OPEN_LOG_FILE: ErrorStruct = buildErrorStruct(
+    name, prefix, `UNABLE_TO_OPEN_LOG_FILE`, `Unable to open log file, make sure the data directory exists and is writable`,
+);
+
 export const UNABLE_TO_READ_FILE: ErrorStruct = buildErrorStruct(
     name, prefix, `UNABLE_TO_READ_FILE`, `Unable to read resource file`,
 );

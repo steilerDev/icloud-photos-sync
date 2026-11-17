@@ -1,4 +1,6 @@
 import * as fs from 'fs';
+import {iCPSError} from "../error/error.js";
+import {RESOURCES_ERR} from "../error/error-codes.js";
 import {iCPSState} from "../../lib/resources/events-types.js";
 import {Resources} from "../../lib/resources/main.js";
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
@@ -15,9 +17,20 @@ export class LogInterface {
 
     private logLevels: LogLevel[] = []
 
+    /**
+     * Opens the log file and starts listening for log messages
+     * @throws An iCPSError, if the log file cannot be opened (e.g. the data directory is missing or not writable)
+     */
     constructor() {
         // Try opening the file - truncate if exists
-        this.logFileDescriptor = fs.openSync(Resources.manager().logFilePath, `w`);
+        const logFilePath = Resources.manager().logFilePath;
+        try {
+            this.logFileDescriptor = fs.openSync(logFilePath, `w`);
+        } catch (err) {
+            throw new iCPSError(RESOURCES_ERR.UNABLE_TO_OPEN_LOG_FILE)
+                .addMessage(logFilePath)
+                .addCause(err);
+        }
 
         Resources.events(this).on(iCPSState.LOG_ADDED, (logMsg: LogMessage) => {
             if(this.logLevels.includes(logMsg.level)) {

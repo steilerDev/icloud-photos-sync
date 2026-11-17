@@ -5,7 +5,7 @@ import zlib from 'zlib';
 import {ErrorHandler, PersistedGuidAttributeProvider, ShellFreeBacktraceClientBuilder} from '../../src/app/event/error-handler';
 import {type MockedResourceManager, prepareResources} from '../_helpers/_general';
 import {iCPSError} from '../../src/app/error/error';
-import {APP_ERR, AUTH_ERR} from '../../src/app/error/error-codes';
+import {APP_ERR, AUTH_ERR, RESOURCES_ERR} from '../../src/app/error/error-codes';
 
 type AttributeProvider = Parameters<BacktraceClientBuilder[`addAttributeProvider`]>[0]
 
@@ -97,6 +97,9 @@ describe(`Handle error`, () => {
         }, {
             desc: `Account setup incomplete`,
             rootError: AUTH_ERR.ACCOUNT_SETUP_INCOMPLETE,
+        }, {
+            desc: `Log file cannot be opened`,
+            rootError: RESOURCES_ERR.UNABLE_TO_OPEN_LOG_FILE,
         },
     ])(`Does not report errors that need to be resolved by the user - $desc`, async ({rootError}) => {
         const err = new iCPSError(APP_ERR.DAEMON)

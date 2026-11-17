@@ -9,7 +9,7 @@ import type {MFAMethod} from '../../lib/icloud/mfa/mfa-method.js';
 import {iCPSEventArchiveEngine, iCPSEventCloud, iCPSEventMFA, iCPSEventPhotos, iCPSEventRuntimeError, iCPSEventRuntimeWarning, iCPSEventSyncEngine, iCPSEventWebServer} from '../../lib/resources/events-types.js';
 import {Resources} from '../../lib/resources/main.js';
 import {FILE_ENCODING} from '../../lib/resources/resource-types.js';
-import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR, WEB_SERVER_ERR} from "../error/error-codes.js";
+import {AUTH_ERR, ERR_SIGINT, ERR_SIGTERM, FILETYPE_REPORT, LIBRARY_ERR, MFA_ERR, RESOURCES_ERR, WEB_SERVER_ERR} from "../error/error-codes.js";
 import {errorMessage, iCPSError} from "../error/error.js";
 
 /**
@@ -25,6 +25,7 @@ const reportDenyList = [
     LIBRARY_ERR.LOCKED.code, // Only happens if library is locked
     AUTH_ERR.UNAUTHORIZED.code, // Only happens if username/password don't match
     AUTH_ERR.ACCOUNT_LOCKED.code, // Only happens if Apple locked the account - needs to be unlocked by the user
+    RESOURCES_ERR.UNABLE_TO_OPEN_LOG_FILE.code, // Only happens if the data directory is missing or not writable - needs to be resolved by the user
     AUTH_ERR.ACCOUNT_SETUP_INCOMPLETE.code, // Only happens if the account requires an action on icloud.com (e.g. accepting updated terms) - needs to be resolved by the user
 ];
 
