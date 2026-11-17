@@ -41,6 +41,14 @@ export class DaemonApp extends iCPSApp {
     static readonly INSPECTED_RUNS = 10;
 
     /**
+     * A valid schedule does not necessarily have an upcoming run: `0 0 31 2 *` never triggers (commonly used to only sync on demand through the Web UI) and schedules can end
+     * @returns The date of the next scheduled run, or undefined if the schedule has no upcoming run
+     */
+    nextRun(): Date | undefined {
+        return this.job?.nextRun() ?? undefined;
+    }
+
+    /**
      * Schedule the synchronization based on the provided cron string
      * @returns Once the job has been scheduled
      * @emits iCPSEventRuntimeWarning.SCHEDULE_FREQUENCY - If the schedule triggers syncs more often than once per hour - provides the iCPSError as argument
@@ -53,14 +61,14 @@ export class DaemonApp extends iCPSApp {
             },
             {
                 protect: () => {
-                    Resources.emit(iCPSEventApp.SCHEDULED_OVERRUN, this.job?.nextRun());
+                    Resources.emit(iCPSEventApp.SCHEDULED_OVERRUN, this.nextRun());
                 },
             },
         );
         // performScheduledSync() never rejects, errors are emitted as iCPSEventRuntimeError.SCHEDULED_ERROR
         Resources.events(this).on(iCPSEventWebServer.SYNC_REQUESTED, () => void this.job?.trigger());
         this.checkScheduleFrequency(this.job);
-        Resources.emit(iCPSEventApp.SCHEDULED, this.job?.nextRun());
+        Resources.emit(iCPSEventApp.SCHEDULED, this.nextRun());
     }
 
     /**
@@ -116,7 +124,7 @@ export class DaemonApp extends iCPSApp {
         // Another operation (e.g. a re-authentication triggered through the Web UI) is still in progress - skipping this run
         // This needs to be checked before emitting SCHEDULED_START, since that event moves the state to RUNNING
         if (Resources.state().state !== StateType.READY) {
-            Resources.emit(iCPSEventApp.SCHEDULED_OVERRUN, this.job?.nextRun());
+            Resources.emit(iCPSEventApp.SCHEDULED_OVERRUN, this.nextRun());
             return;
         }
 
@@ -128,11 +136,11 @@ export class DaemonApp extends iCPSApp {
 
             // No remote state means that the MFA code was not provided - the state was already updated (an empty library is a successful sync)
             if (remoteState !== undefined) {
-                Resources.emit(iCPSEventApp.SCHEDULED_DONE, this.job?.nextRun());
+                Resources.emit(iCPSEventApp.SCHEDULED_DONE, this.nextRun());
             }
         } catch (err) {
             Resources.emit(iCPSEventRuntimeError.SCHEDULED_ERROR, new iCPSError(APP_ERR.DAEMON).addCause(err));
-            Resources.emit(iCPSEventApp.SCHEDULED_RETRY, this.job?.nextRun());
+            Resources.emit(iCPSEventApp.SCHEDULED_RETRY, this.nextRun());
         }
     }
 }

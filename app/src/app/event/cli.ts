@@ -136,25 +136,25 @@ export class CLIInterface {
             .on(iCPSEventApp.TOKEN, token => {
                 this.print(styleText(`green`, `Validated token:\n${token}`));
             })
-            .on(iCPSEventApp.SCHEDULED, (next: Date) => {
+            .on(iCPSEventApp.SCHEDULED, (next?: Date) => {
                 this.print(styleText(`white`, this.getHorizontalLine()));
                 this.print(styleText(`white`, `Started in daemon mode!`));
-                this.print(styleText(`white`, `Next execution: ${this.getDateTime(next)}`));
+                this.print(styleText(`white`, `Next execution: ${this.getNextRun(next)}`));
                 this.print(styleText(`white`, this.getHorizontalLine()));
             })
-            .on(iCPSEventApp.SCHEDULED_DONE, (next: Date) => {
+            .on(iCPSEventApp.SCHEDULED_DONE, (next?: Date) => {
                 this.print(styleText(`green`, this.getHorizontalLine()));
                 this.print(styleText(`green`, `Completed scheduled sync!`));
-                this.print(styleText(`white`, `Next execution: ${this.getDateTime(next)}`));
+                this.print(styleText(`white`, `Next execution: ${this.getNextRun(next)}`));
                 this.print(styleText(`green`, this.getHorizontalLine()));
             })
-            .on(iCPSEventApp.SCHEDULED_RETRY, (next: Date) => {
+            .on(iCPSEventApp.SCHEDULED_RETRY, (next?: Date) => {
                 this.print(styleText(`green`, this.getHorizontalLine()));
-                this.print(styleText(`white`, `Sync will retry execution at ${this.getDateTime(next)}`));
+                this.print(styleText(`white`, `Sync failed, next execution: ${this.getNextRun(next)}`));
                 this.print(styleText(`green`, this.getHorizontalLine()));
             })
-            .on(iCPSEventApp.SCHEDULED_OVERRUN, (next: Date) => {
-                this.print(styleText(`redBright`, `Sync execution skipped, because a job is still running. Next run scheduled for ${this.getDateTime(next)}`));
+            .on(iCPSEventApp.SCHEDULED_OVERRUN, (next?: Date) => {
+                this.print(styleText(`redBright`, `Sync execution skipped, because a job is still running. Next execution: ${this.getNextRun(next)}`));
             });
 
         Resources.events(this)
@@ -323,5 +323,15 @@ export class CLIInterface {
      */
     getDateTime(date: Date = new Date()): string {
         return date.toLocaleString();
+    }
+
+    /**
+     * @param next - The date of the next scheduled run, undefined if the schedule has no upcoming run
+     * @returns A local date time string of the next run, or a hint that syncs need to be triggered manually
+     */
+    getNextRun(next?: Date): string {
+        return next === undefined
+            ? `none, the schedule has no upcoming run (a sync can be triggered through the Web UI)`
+            : this.getDateTime(next);
     }
 }

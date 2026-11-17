@@ -289,6 +289,19 @@ class iCPSInfluxLineProtocolPoint extends InfluxLineProtocolPoint {
 
         return this;
     }
+
+    /**
+     * Logs the time of the next scheduled run
+     * @param next - The date of the next scheduled run - the field is omitted, if the schedule has no upcoming run
+     * @returns This object for chaining
+     */
+    logNextSchedule(next?: Date): iCPSInfluxLineProtocolPoint {
+        if (next !== undefined) {
+            this.addField(FIELDS.NEXT_SCHEDULE, next.getTime());
+        }
+
+        return this;
+    }
 }
 
 /**
@@ -429,25 +442,25 @@ export class MetricsExporter {
             });
 
         Resources.events(this)
-            .on(iCPSEventApp.SCHEDULED, (next: Date) => {
+            .on(iCPSEventApp.SCHEDULED, (next?: Date) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.SCHEDULED)
-                    .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+                    .logNextSchedule(next));
             })
-            .on(iCPSEventApp.SCHEDULED_DONE, (next: Date) => {
+            .on(iCPSEventApp.SCHEDULED_DONE, (next?: Date) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.SCHEDULED_SUCCESS)
-                    .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+                    .logNextSchedule(next));
             })
-            .on(iCPSEventApp.SCHEDULED_RETRY, (next: Date) => {
+            .on(iCPSEventApp.SCHEDULED_RETRY, (next?: Date) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.SCHEDULED_FAILURE)
-                    .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+                    .logNextSchedule(next));
             })
-            .on(iCPSEventApp.SCHEDULED_OVERRUN, (next: Date) => {
+            .on(iCPSEventApp.SCHEDULED_OVERRUN, (next?: Date) => {
                 this.logDataPoint(new iCPSInfluxLineProtocolPoint()
                     .logStatus(FIELDS.STATUS.values.SCHEDULED_OVERRUN)
-                    .addField(FIELDS.NEXT_SCHEDULE, next.getTime()));
+                    .logNextSchedule(next));
             });
 
         Resources.events(this)

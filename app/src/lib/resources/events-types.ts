@@ -356,7 +356,7 @@ export type iCPSEventArchiveEngine = typeof iCPSEventArchiveEngine[keyof typeof 
  */
 export const iCPSEventApp = {
     /**
-     * Emitted when the app has scheduled the next execution, but has not have previous executions - provides a date object for the next run as argument
+     * Emitted when the app has scheduled the next execution, but has not have previous executions - provides a date object for the next run as argument, or undefined if the schedule has no upcoming run
      */
     SCHEDULED: `scheduled`,
     /**
@@ -364,15 +364,15 @@ export const iCPSEventApp = {
      */
     SCHEDULED_START: `scheduled-start`,
     /**
-     * Emitted when the app has successfully completed an execution - provides a date object for the next run as argument
+     * Emitted when the app has successfully completed an execution - provides a date object for the next run as argument, or undefined if the schedule has no upcoming run
      */
     SCHEDULED_DONE: `scheduled-done`,
     /**
-     * Emitted when the app has experienced an error and will retry - provides a date object for the next run as argument
+     * Emitted when the app has experienced an error and will retry - provides a date object for the next run as argument, or undefined if the schedule has no upcoming run
      */
     SCHEDULED_RETRY: `scheduled-retry`,
     /**
-     * Emitted when a scheduled execution was skipped, because there is already an execution running - provides a date object for the next run as argument
+     * Emitted when a scheduled execution was skipped, because there is already an execution running - provides a date object for the next run as argument, or undefined if the schedule has no upcoming run
      */
     SCHEDULED_OVERRUN: `scheduled-overrun`,
     /**

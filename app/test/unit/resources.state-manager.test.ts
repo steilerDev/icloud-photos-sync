@@ -468,6 +468,28 @@ describe(`State changes`, () => {
                 progressMsg: undefined
             } as SerializedState
         },{
+            desc: `Should update state without nextSync on scheduled event, if the schedule has no upcoming run`,
+            events: [[iCPSEventApp.SCHEDULED, undefined]],
+            serializedState: {
+                state: `ready`,
+                nextSync: undefined,
+                prevError: undefined,
+                prevTrigger: undefined,
+                progress: undefined,
+                progressMsg: undefined
+            } as SerializedState
+        },{
+            desc: `Should update state without nextSync on scheduled done event, if the schedule has no upcoming run`,
+            events: [[iCPSEventApp.SCHEDULED_DONE, undefined]],
+            serializedState: {
+                state: `ready`,
+                nextSync: undefined,
+                prevError: undefined,
+                prevTrigger: undefined,
+                progress: undefined,
+                progressMsg: undefined
+            } as SerializedState
+        },{
             desc: `Should set error on scheduled error`,
             events: [iCPSEventApp.SCHEDULED_START, [iCPSEventRuntimeError.SCHEDULED_ERROR, new Error(`Test`)]],
             serializedState: {

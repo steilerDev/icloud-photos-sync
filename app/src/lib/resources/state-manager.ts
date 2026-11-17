@@ -251,14 +251,14 @@ export class StateManager {
 
         // SUCCESS
         Resources.events(this)
-            .on(iCPSEventApp.SCHEDULED_DONE, (nextSync: Date) => {
-                this.updateState(StateType.READY, {nextSync: nextSync.getTime()});
+            .on(iCPSEventApp.SCHEDULED_DONE, (nextSync?: Date) => {
+                this.updateState(StateType.READY, {nextSync: nextSync?.getTime()});
             })
             .on(iCPSEventApp.TOKEN, () => {
                 this.updateState(StateType.READY);
             })
-            .on(iCPSEventApp.SCHEDULED, (timestamp: Date) => {
-                this.updateState(StateType.READY, {nextSync: timestamp.getTime()});
+            .on(iCPSEventApp.SCHEDULED, (timestamp?: Date) => {
+                this.updateState(StateType.READY, {nextSync: timestamp?.getTime()});
             });
 
         // ERROR
