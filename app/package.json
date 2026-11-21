@@ -89,7 +89,7 @@
   },
   "dependencies": {
     "@backtrace/node": "0.8.4",
-    "@inquirer/prompts": "8.7.5",
+    "@inquirer/prompts": "8.8.0",
     "ajv": "8.20.0",
     "cli-progress": "3.12.0",
     "commander": "15.1.0",
