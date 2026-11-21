@@ -95,7 +95,7 @@
     "commander": "15.1.0",
     "croner": "10.0.1",
     "jsonc": "3.0.0",
-    "p-queue": "9.3.5",
+    "p-queue": "10.0.0",
     "tough-cookie": "6.1.0",
     "web-push": "3.6.7"
   }
